@@ -15,13 +15,8 @@ Hệ thống Web tập trung vào 2 vai trò quản trị theo tài liệu đặ
   - Giám sát tiến độ thi công toàn tuyến theo thời gian thực.
   - Tổ chức nghiệm thu chính thức các hạng mục sửa chữa (Approval Track).
 
-## 2. Công nghệ đề xuất (Theo đặc tả `09_Frontend`)
-- **Framework:** React 18+ / Vite / TypeScript
-- **State & Data Fetching:** TanStack Query (React Query)
-- **Styling:** TailwindCSS / Component Design System
-- **Contracts:** Schema & Types trích xuất từ `09_Frontend/contracts/openapi.baseline.yaml`
 
-## 3. Quy ước phân nhánh Git (Branch Strategy)
+## 2. Quy ước phân nhánh Git (Branch Strategy)
 - `main`: Nhánh production/release chính, chứa mã nguồn đã kiểm thử và ổn định.
 - `tung`: Nhánh làm việc của Nguyễn Văn Tùng (FE Lead).
 - `hoang`: Nhánh làm việc của Hoàng (Web Developer phụ trách 2 luồng PM & Supervisor).
