@@ -1,0 +1,226 @@
+<!DOCTYPE html><html lang="vi"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dashboard Danh Mục Bảo Hành - Hoàng Hải</title>
+<!-- Tailwind CSS CDN with Forms & Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Custom Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#7D7935',
+              hover: '#6b672d',
+              accent: '#8E8A3E',
+            },
+            bgApp: '#F6F7FB',
+            cardBg: '#FFFFFF',
+            kpi: {
+              blue: '#EAF4FB',
+              rose: '#FDEAEB',
+              sand: '#F5EFE6',
+              mint: '#EEF7EE',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Lucide Icons Library -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Custom Styles for Fine Visual Tuning -->
+<style data-purpose="custom-scrollbars">
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #E2E8F0;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #CBD5E1;
+    }
+  </style>
+<style data-purpose="map-satellite-styling">
+    .gis-map-viewport {
+      background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBCM0rVGVCoFNHcs6BnUwAqKlVeEEmGKs4-JWObY8cn6_lX8Xlj8HvsibSHqThal24KEuD6MwY9RD5ygMJqA4tR2qOb7LF7N2zx_QHKjy5Le8w8NrUzeFwFq9dDOwebJTGwjU00Fbdsu-ZwlL6DgMN_rQKkQjJzlYIaqAfvH2XKFiPVSTHTvAus3dZca01xyc9vtZ7WrWH4kdZcUe8ea6MDCQ3OA4jEX20g2-pubznfd_CYQXehSnQhV5IENPkJh3fEG_4');
+      background-size: cover;
+      background-position: center;
+    }
+  </style>
+</head>
+<body class="bg-[#F4F5F8] text-[#1E293B] antialiased min-h-screen font-sans" style="background-color: rgb(248, 249, 250);">
+<!-- BEGIN: ApplicationLayout -->
+<div class="flex min-h-screen max-w-[1600px] mx-auto p-3 sm:p-5 lg:p-6 gap-6">
+<!-- BEGIN: LeftSidebar -->
+<aside class="w-64 shrink-0 flex flex-col justify-between py-2 pl-1 pr-3" data-purpose="sidebar">
+<div class="space-y-6">
+<!-- Brand / Logo -->
+<div class="flex items-center gap-3 px-3 py-1"><div class="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-md" style="background: linear-gradient(135deg, #C9A227 0%, #E3BA3D 100%); box-shadow: 0 4px 12px rgba(201, 162, 39, 0.25);"><i class="w-5 h-5 stroke-[2.2]" data-lucide="truck"></i></div><span class="font-sansation font-bold text-2xl tracking-tight text-[#1F2937]">Hoàng Hải</span></div>
+<!-- Navigation Menu -->
+<nav aria-label="Main Navigation" class="space-y-1.5">
+<!-- Active Item: Dashboard -->
+<a class="flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-white text-gray-900 font-semibold shadow-sm border border-gray-100/90 transition-all" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="layout-grid" aria-hidden="true" class="lucide lucide-layout-grid w-5 h-5 text-gray-900 stroke-[2.2]"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg>
+<span class="">Dashboard</span>
+</a>
+<!-- Menu Item: Dự án -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bar-chart-2" aria-hidden="true" class="lucide lucide-bar-chart-2 w-5 h-5 text-gray-500 stroke-[2]"><path d="M5 21v-6"></path><path d="M12 21V3"></path><path d="M19 21V9"></path></svg>
+<span class="">Dự án</span>
+</a>
+<!-- Menu Item: Đoạn đường -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="route" aria-hidden="true" class="lucide lucide-route w-5 h-5 text-gray-500 stroke-[2]"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>
+<span class="">Đoạn đường</span>
+</a>
+<!-- Menu Item: Khảo sát -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clipboard-list" aria-hidden="true" class="lucide lucide-clipboard-list w-5 h-5 text-gray-500 stroke-[2]"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
+<span class="">Khảo sát</span>
+</a>
+<!-- Menu Item: Khiếm khuyết -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="triangle-alert" aria-hidden="true" class="lucide lucide-triangle-alert w-5 h-5 text-gray-500 stroke-[2]"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+<span class="">Khiếm khuyết</span>
+</a>
+<!-- Menu Item: Sửa chữa -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="wrench" aria-hidden="true" class="lucide lucide-wrench w-5 h-5 text-gray-500 stroke-[2]"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"></path></svg>
+<span class="">Sửa chữa</span>
+</a>
+<!-- Menu Item: Báo cáo -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-text" aria-hidden="true" class="lucide lucide-file-text w-5 h-5 text-gray-500 stroke-[2]"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+<span class="">Báo cáo</span>
+</a>
+<!-- Menu Item: Cấu hình -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" aria-hidden="true" class="lucide lucide-settings w-5 h-5 text-gray-500 stroke-[2]"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
+<span class="">Cấu hình</span>
+</a>
+<!-- Menu Item: Người dùng -->
+<a class="flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all font-medium text-[15px]" href="#">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="users" aria-hidden="true" class="lucide lucide-users w-5 h-5 text-gray-500 stroke-[2]"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M16 3.128a4 4 0 0 1 0 7.744"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><circle cx="9" cy="7" r="4"></circle></svg>
+<span class="">Người dùng</span>
+</a>
+</nav>
+</div>
+<!-- Plan Manager Usage Widget -->
+<div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-xs">
+<div class="flex justify-between items-center font-bold text-gray-800 mb-2">
+<span class="">Projects</span>
+<span class="">6/20</span>
+</div>
+<div class="w-full bg-gray-100 rounded-full h-2 mb-2 overflow-hidden">
+<div class="bg-[#7D7935] h-2 rounded-full w-[30%]" style="background-color: rgb(201, 162, 39);"></div>
+</div>
+<p class="text-gray-400 text-[11px] mb-3">Monthly usage resets in 29 days</p>
+<span class="block text-[10px] tracking-wider text-gray-400 font-semibold mb-2 uppercase">PLAN MANAGER</span>
+<button class="w-full py-2 px-3 border border-gray-300 hover:border-gray-400 rounded-xl font-medium text-gray-700 bg-white hover:bg-gray-50 transition text-center text-xs" style="border-color: rgb(201, 162, 39); color: rgb(154, 119, 20); background-color: rgb(255, 253, 245);">
+          Upgrade
+        </button>
+</div>
+</aside>
+<!-- END: LeftSidebar -->
+<!-- BEGIN: MainContentArea -->
+<main class="flex-1 flex flex-col gap-6">
+<!-- Top Header Bar: Search & User Profile -->
+<header class="flex items-center justify-between gap-4">
+<!-- Search Project Input -->
+<div class="relative w-full max-w-md">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="search" aria-hidden="true" class="lucide lucide-search w-4 h-4"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+</span>
+<input class="w-full pl-10 pr-4 py-2 text-sm bg-[#ECEFF3] placeholder-gray-400 text-gray-800 rounded-full border-none focus:ring-2 focus:ring-[#7D7935] focus:bg-white transition" placeholder="Search Project" type="text">
+</div>
+<!-- Header Actions & Avatar -->
+<div class="flex items-center gap-4">
+<button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-white rounded-full transition relative">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="bell" aria-hidden="true" class="lucide lucide-bell w-5 h-5"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+</button>
+<button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-white rounded-full transition">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="settings" aria-hidden="true" class="lucide lucide-settings w-5 h-5"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg>
+</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200 shadow-sm shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaYxUrOBcpKsBSUKeK3auDZhBVi-bfEspyjEcWFMspPDW5YHBUzwzzyS_9KByuzyqavqYmz8IwXx977Xs9he-ES4gLhdk5S6lw3O-zsJl8e36das_fXw7LGYAzqqKnpjVgGlcj7DQPaqN0OyLimCpWHWX0RTZD4go8CWq-ggH2RirvKpvy7IFNrHn6jDZCXyVbaxzZGDrUtSUGMlHFGGYWdTalTxH4nYA79AYj9mkIsOdmwc72BrVkiQZFZFa6GqS9JYk">
+</div>
+</div>
+</header>
+<!-- Dashboard Title & Actions Row -->
+<div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100/90 space-y-6">
+<!-- Breadcrumb & Top Actions Header -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 text-xs font-medium text-gray-500 mb-1.5">
+<a class="hover:text-gray-800" href="#">Trang chủ</a>
+<span class="">&gt;</span>
+<span class="text-[#7D7935]" style="color: rgb(201, 162, 39);">Dashboard</span>
+</div>
+<h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-gray-900 font-sansation">
+              Dashboard danh mục bảo hành
+            </h1>
+<p class="text-sm text-gray-500 mt-1">
+              Theo dõi dự án, tình trạng đường, rủi ro bảo hành và công việc cần ưu tiên.
+            </p>
+</div>
+<!-- Timestamp & Top Action Buttons -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start lg:self-center">
+<div class="text-xs text-gray-500 flex items-center gap-1.5 mb-1 sm:mb-0 sm:mr-2">
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clock" aria-hidden="true" class="lucide lucide-clock w-3.5 h-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+<span class="">Dữ liệu cập nhật lúc 21:45, ngày 25/08/2026</span>
+</div>
+<div class="flex items-center gap-2.5"><button class="px-4 py-2 text-xs font-semibold text-gray-700 bg-white rounded-xl transition shadow-sm hover:bg-gray-50" style="border: 1px solid rgb(226, 229, 233);">Xuất báo cáo</button><button class="font-sansation px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5" style="background-color: rgb(201, 162, 39); box-shadow: rgba(201, 162, 39, 0.28) 0px 2px 8px;" onmouseover="this.style.backgroundColor='#B38E1F'" onmouseout="this.style.backgroundColor='#C9A227'"><i class="w-3.5 h-3.5" data-lucide="plus-circle"></i><span class="">Tạo work order</span></button></div>
+</div>
+</div>
+<!-- Filter Controls Bar -->
+<div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl" style="border: 1px solid rgb(226, 229, 233);"><div class="flex flex-wrap items-center gap-2.5"><button class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-gray-700 bg-white rounded-xl shadow-xs hover:bg-gray-50 transition" style="border: 1px solid #E2E5E9;"><i class="w-3.5 h-3.5 text-gray-500" data-lucide="calendar"></i><span class="">Tháng 8, 2026</span><i class="w-3.5 h-3.5 text-gray-400" data-lucide="chevron-down"></i></button><button class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-gray-700 bg-white rounded-xl shadow-xs hover:bg-gray-50 transition" style="border: 1px solid #E2E5E9;"><span class="">Khu vực: Tất cả</span><i class="w-3.5 h-3.5 text-gray-400" data-lucide="chevron-down"></i></button><button class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium text-gray-700 bg-white rounded-xl shadow-xs hover:bg-gray-50 transition" style="border: 1px solid #E2E5E9;"><span class="">Dự án: Tất cả</span><i class="w-3.5 h-3.5 text-gray-400" data-lucide="chevron-down"></i></button></div><div class="flex items-center gap-3"><button class="text-xs font-medium text-gray-500 hover:text-gray-800 transition">Đặt lại</button><button class="font-sansation px-5 py-1.5 text-xs font-bold text-white rounded-xl transition shadow-sm" style="background-color: #C9A227; box-shadow: 0 2px 6px rgba(201, 162, 39, 0.25);" onmouseover="this.style.backgroundColor='#B38E1F'" onmouseout="this.style.backgroundColor='#C9A227'">Áp dụng</button></div></div>
+<!-- BEGIN: KPI & Main Dashboard Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+<!-- Left & Center Sub-Column (9 Cols in XL) -->
+<div class="xl:col-span-8 flex flex-col gap-6">
+<!-- 3 Pastel Metric Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4"><div class="bg-white rounded-xl p-4 flex flex-col justify-between shadow-xs" style="border: 1px solid #E2E5E9;"><div class="flex items-start justify-between"><span class="text-xs font-bold text-gray-700">Dự án đang bảo hành</span><div class="w-7 h-7 rounded-full flex items-center justify-center text-blue-600" style="background-color: #EAF4FB;"><i class="w-4 h-4" data-lucide="bar-chart-3"></i></div></div><div class="mt-4"><div class="font-sansation text-3xl font-bold text-gray-900 tracking-tight">42</div><div class="flex items-center gap-1.5 mt-2 text-[11px] text-gray-600 font-medium"><span class="inline-flex items-center px-2 py-0.5 rounded-full font-semibold text-emerald-700 bg-emerald-50" style="border: 1px solid #D1FAE5;"><i class="w-3 h-3 mr-0.5" data-lucide="trending-up"></i>+2</span><span class="">so với tháng trước</span><span class="text-gray-300">•</span><span class="">156 đoạn</span></div></div></div><div class="bg-white rounded-xl p-4 flex flex-col justify-between shadow-xs" style="border: 1px solid #E2E5E9;"><div class="flex items-start justify-between"><span class="text-xs font-bold text-gray-700">Dự án sắp hết hạn</span><div class="w-7 h-7 rounded-full flex items-center justify-center text-rose-500" style="background-color: #FEE2E2;"><i class="w-4 h-4" data-lucide="alarm-clock"></i></div></div><div class="mt-4"><div class="font-sansation text-3xl font-bold text-gray-900 tracking-tight">5</div><div class="flex items-center gap-1.5 mt-2 text-[11px]"><span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold text-rose-600 bg-red-50" style="border: 1px solid #FEE2E2;"><i class="w-3 h-3" data-lucide="triangle-alert"></i><span class="">Cảnh báo: &lt; 30 ngày</span></span></div></div></div><div class="bg-white rounded-xl p-4 flex flex-col justify-between shadow-xs" style="border: 1px solid #E2E5E9;"><div class="flex items-start justify-between"><span class="text-xs font-bold text-gray-700 leading-snug">Đoạn đường chưa baseline</span><div class="w-7 h-7 rounded-full flex items-center justify-center" style="background-color: #FEF9C3; color: #C9A227;"><i class="w-4 h-4" data-lucide="route"></i></div></div><div class="mt-4"><div class="flex items-baseline gap-1"><span class="font-sansation text-3xl font-bold text-gray-900 tracking-tight">12</span><span class="text-xs font-semibold text-gray-600">đoạn</span></div><div class="flex items-center gap-1 mt-2 text-[11px] text-gray-600"><i class="w-3.5 h-3.5 text-gray-400" data-lucide="info"></i><span class="">Thuộc 4 dự án</span></div></div></div></div>
+<!-- GIS Satellite Map Card -->
+<div class="bg-white rounded-xl overflow-hidden shadow-xs" style="border: 1px solid rgb(226, 229, 233);"><div class="p-4 flex items-center justify-between" style="border-bottom: 1px solid #E2E5E9;"><h3 class="font-sansation font-bold text-gray-900 text-sm">Bản đồ danh mục rủi ro</h3><div class="flex items-center gap-2"><span class="px-2.5 py-0.5 text-[11px] font-semibold text-red-600 bg-red-100 rounded-full" style="border: 1px solid #FEE2E2;">High Risk</span><span class="px-2.5 py-0.5 text-[11px] font-semibold text-sky-600 bg-sky-100 rounded-full" style="border: 1px solid #BAE6FD;">Watch</span></div></div><div class="relative w-full h-[360px] bg-slate-900 gis-map-viewport overflow-hidden"><div class="absolute bottom-4 right-4 flex flex-col gap-1.5 shadow-md"><button class="w-8 h-8 bg-white hover:bg-gray-50 text-gray-800 rounded-lg flex items-center justify-center text-base font-bold transition shadow-xs" style="border: 1px solid #E2E5E9;">+</button><button class="w-8 h-8 bg-white hover:bg-gray-50 text-gray-800 rounded-lg flex items-center justify-center text-base font-bold transition shadow-xs" style="border: 1px solid #E2E5E9;">-</button></div></div></div>
+<!-- High Risk Data Table -->
+<div class="bg-white rounded-xl p-5 shadow-xs" style="border: 1px solid rgb(226, 229, 233);"><div class="flex items-center justify-between mb-4"><h3 class="font-sansation font-bold text-gray-900 text-sm">Danh sách rủi ro cao</h3><a class="text-xs font-semibold hover:underline" href="#" style="color: #C9A227;">Xem tất cả</a></div><div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs"><thead><tr class="text-[11px] font-bold text-gray-400 uppercase tracking-wider" style="border-bottom: 1px solid #E2E5E9;"><th class="pb-3 font-semibold">MỨC RỦI RO</th><th class="pb-3 font-semibold">DỰ ÁN</th><th class="pb-3 font-semibold">ĐOẠN ĐƯỜNG</th><th class="pb-3 font-semibold">LỖI MỞ</th><th class="pb-3 font-semibold text-right">CHI PHÍ DỰ KIẾN</th></tr></thead><tbody class="divide-y divide-gray-50 font-medium"><tr class="hover:bg-gray-50/70 transition"><td class="py-3.5"><span class="px-3 py-1 text-[11px] font-semibold text-red-600 bg-red-100 rounded-full inline-block" style="border: 1px solid #FEE2E2;">Critical</span></td><td class="py-3.5 font-bold text-gray-900">QL1A - Giai đoạn 2</td><td class="py-3.5 text-gray-600">Km 1024 - Km 1045</td><td class="py-3.5 font-bold text-rose-600">12</td><td class="py-3.5 text-right font-bold text-gray-900 font-sansation">450M VNĐ</td></tr><tr class="hover:bg-gray-50/70 transition"><td class="py-3.5"><span class="px-3 py-1 text-[11px] font-semibold text-sky-600 bg-sky-100 rounded-full inline-block" style="border: 1px solid #BAE6FD;">Watch</span></td><td class="py-3.5 font-bold text-gray-900">Cao tốc Bắc Nam</td><td class="py-3.5 text-gray-600">Đoạn Diễn Châu</td><td class="py-3.5 font-semibold text-gray-800">5</td><td class="py-3.5 text-right font-bold text-gray-900 font-sansation">120M VNĐ</td></tr></tbody></table></div></div>
+</div>
+<!-- END: Left & Center Sub-Column -->
+<!-- BEGIN: Right Widgets Column (4 Cols in XL) -->
+<div class="xl:col-span-4 flex flex-col gap-6">
+<!-- Card: Chi phí bảo hành -->
+<div class="bg-white rounded-xl p-5 shadow-xs flex flex-col justify-between" style="border: 1px solid rgb(226, 229, 233);"><div><div class="flex items-center gap-2 text-gray-900 font-bold text-sm mb-4"><div class="w-6 h-6 rounded-full flex items-center justify-center" style="background-color: #FEF9C3; color: #C9A227;"><i class="w-3.5 h-3.5" data-lucide="wallet"></i></div><span class="font-sansation font-bold">Chi phí bảo hành</span></div><span class="text-xs text-gray-500 font-medium">Dự kiến tổng (2026)</span><div class="font-sansation text-3xl font-bold tracking-tight mt-1 mb-5" style="color: #C9A227;">1.2B <span class="text-2xl font-normal text-gray-700">VNĐ</span></div><div class="space-y-1.5 mb-4"><div class="flex justify-between items-center text-xs font-semibold"><span class="text-gray-700">Đã phát sinh</span><span class="text-rose-600 font-bold">450M</span></div><div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #F3F4F6;"><div class="bg-rose-500 h-2 rounded-full w-[45%]"></div></div></div><div class="space-y-1.5"><div class="flex justify-between items-center text-xs font-semibold"><span class="text-gray-700">Chờ phê duyệt</span><span class="font-bold" style="color: #C9A227;">120M</span></div><div class="w-full rounded-full h-2 overflow-hidden" style="background-color: #F3F4F6;"><div class="h-2 rounded-full w-[25%]" style="background-color: #C9A227;"></div></div></div></div></div>
+<!-- Card: Hoạt động gần đây -->
+<div class="bg-white rounded-xl p-5 shadow-xs flex-1 flex flex-col" style="border: 1px solid rgb(226, 229, 233);"><h3 class="font-sansation font-bold text-gray-900 text-sm mb-4">Hoạt động gần đây</h3><div class="space-y-4"><div class="flex items-start gap-3"><div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style="background-color: #F3E8FF; color: #7E22CE;"><i class="w-4 h-4 stroke-[2.5]" data-lucide="check"></i></div><div class="flex-1 rounded-xl p-3" style="background-color: #F9FAFB; border: 1px solid #E2E5E9;"><div class="flex items-center justify-between mb-1.5"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold" style="background-color: #FEF3C7; color: #D97706;">Duyệt AI</span><span class="text-[11px] text-gray-400">10 phút trước</span></div><p class="text-xs text-gray-700 font-medium leading-relaxed">Hoàn tất scan 15km QL1A.</p></div></div></div></div>
+</div>
+<!-- END: Right Widgets Column -->
+</div>
+<!-- END: KPI & Main Dashboard Grid -->
+</div>
+<!-- END: Dashboard Title & Actions Row -->
+</main>
+<!-- END: MainContentArea -->
+</div>
+<!-- END: ApplicationLayout -->
+<!-- BEGIN: LucideIconInitializer -->
+<script data-purpose="lucide-icon-init">
+    // Initialize icons dynamically
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  </script>
+<!-- END: LucideIconInitializer -->
+
+
+</body></html>
