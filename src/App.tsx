@@ -6,6 +6,7 @@ import { RoleCode } from './types/enums'
 // Auth Pages
 import { Login } from './pages/(auth)/Login'
 import { ForceChangePassword } from './pages/(auth)/ForceChangePassword'
+import { AcceptInvitation } from './pages/(auth)/AcceptInvitation'
 
 // PM Pages
 import { PMLayout } from './pages/(pm)/PMLayout'
@@ -39,6 +40,8 @@ export const App: React.FC = () => {
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/force-change-password" element={<ForceChangePassword />} />
+        <Route path="/accept-invitation" element={<AcceptInvitation />} />
+        <Route path="/invite/:token" element={<AcceptInvitation />} />
 
         {/* Project Manager routes */}
         <Route path="/pm" element={<PMLayout />}>

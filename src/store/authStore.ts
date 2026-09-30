@@ -21,7 +21,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (role: RoleCode) => {
     const user = mockUsers.find((u) => u.role === role) || mockUsers[0]
     set({
-      user,
+      user: { ...user },
       token: `mock-jwt-token-${user.id}`,
       isAuthenticated: true,
     })
@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const user = mockUsers.find((u) => u.role === role)
     if (user) {
       set({
-        user,
+        user: { ...user },
         token: `mock-jwt-token-${user.id}`,
         isAuthenticated: true,
       })

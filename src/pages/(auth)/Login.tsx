@@ -27,16 +27,16 @@ export const Login: React.FC = () => {
   // Chế độ xem: 'login' (Form Đăng nhập chính WF-01) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
   const [viewMode, setViewMode] = useState<'login' | 'force'>('login')
 
-  // State cho Form Đăng nhập
-  const [email, setEmail] = useState('hoang.ks@hoanghai-infra.vn')
-  const [password, setPassword] = useState('••••••••••••')
+  // State cho Form Đăng nhập (Mặc định tài khoản PM của Hoàng)
+  const [email, setEmail] = useState('pmhoang@gmail.com')
+  const [password, setPassword] = useState('123456')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loginError, setLoginError] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   // State cho Form Đổi mật khẩu bắt buộc
-  const [tempPassword, setTempPassword] = useState('TempPass#2026')
+  const [tempPassword, setTempPassword] = useState('123456')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -59,19 +59,31 @@ export const Login: React.FC = () => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setLoginError(false)
 
     setTimeout(() => {
       setIsLoading(false)
-      login(RoleCode.PROJECT_MANAGER)
+      const trimmedEmail = email.trim().toLowerCase()
+      let matchedRole: RoleCode | null = null
 
-      // Kiểm tra cờ must_change_password: nếu true, chặn lại và chuyển sang View B đổi mật khẩu
-      const currentUser = useAuthStore.getState().user
-      if (currentUser?.must_change_password) {
-        setViewMode('force')
-      } else {
-        navigate('/pm/dashboard')
+      if (trimmedEmail === 'pmhoang@gmail.com' && password === '123456') {
+        matchedRole = RoleCode.PROJECT_MANAGER
+      } else if (
+        (trimmedEmail === 'suphoang@gmail.com' || trimmedEmail === 'suphoang@gamail.com') &&
+        password === '123456'
+      ) {
+        matchedRole = RoleCode.SUPERVISOR
       }
-    }, 800)
+
+      if (!matchedRole) {
+        setLoginError(true)
+        return
+      }
+
+      login(matchedRole)
+      // Tạm thời tắt chặn đổi mật khẩu để Hoàng tiện test nhanh giao diện
+      navigate(matchedRole === RoleCode.PROJECT_MANAGER ? '/pm/dashboard' : '/sup/dashboard')
+    }, 600)
   }
 
   const handleForcePasswordSubmit = (e: React.FormEvent) => {
@@ -85,7 +97,7 @@ export const Login: React.FC = () => {
       if (currentUser) {
         currentUser.must_change_password = false
       }
-      navigate('/pm/dashboard')
+      navigate(currentUser?.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard')
     }, 1000)
   }
 
@@ -217,7 +229,8 @@ export const Login: React.FC = () => {
                 <div className="p-3.5 rounded-2xl bg-[#FDEAEB] border border-red-200/70 text-[#D9383A] text-xs leading-relaxed flex items-start gap-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#D9383A]" />
                   <div className="flex-1">
-                    <span className="font-semibold">Đăng nhập không thành công:</span> Email hoặc mật khẩu không chính xác.
+                    <span className="font-semibold">Đăng nhập không thành công:</span> Email hoặc mật khẩu không đúng.
+                    Tài khoản mẫu: <strong>pmhoang@gmail.com</strong> hoặc <strong>suphoang@gmail.com</strong> (mật khẩu: <strong>123456</strong>).
                   </div>
                   <button
                     type="button"
@@ -241,7 +254,7 @@ export const Login: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="ten.nguoidung@hoanghai-infra.vn"
+                      placeholder="pmhoang@gmail.com hoặc suphoang@gmail.com"
                       required
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50/60 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/20 focus:border-[#C9A227] transition-all"
                     />
