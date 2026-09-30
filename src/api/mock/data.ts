@@ -8,7 +8,7 @@ export const mockUsers: User[] = [
     full_name: 'Nguyễn Văn Hoàng (PM)',
     email: 'hoang.pm@cattuong.vn',
     role: RoleCode.PROJECT_MANAGER,
-    must_change_password: false,
+    must_change_password: true,
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
   },
   {

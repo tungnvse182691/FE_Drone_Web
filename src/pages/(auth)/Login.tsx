@@ -62,10 +62,15 @@ export const Login: React.FC = () => {
 
     setTimeout(() => {
       setIsLoading(false)
-      // Giả lập kiểm tra: nếu tài khoản có cờ đổi mật khẩu lần đầu
-      // Đăng nhập và chuyển sang Dashboard
       login(RoleCode.PROJECT_MANAGER)
-      navigate('/pm/dashboard')
+
+      // Kiểm tra cờ must_change_password: nếu true, chặn lại và chuyển sang View B đổi mật khẩu
+      const currentUser = useAuthStore.getState().user
+      if (currentUser?.must_change_password) {
+        setViewMode('force')
+      } else {
+        navigate('/pm/dashboard')
+      }
     }, 800)
   }
 
@@ -75,7 +80,11 @@ export const Login: React.FC = () => {
 
     setIsForceSuccess(true)
     setTimeout(() => {
-      login(RoleCode.PROJECT_MANAGER)
+      // Đánh dấu đã đổi mật khẩu thành công
+      const currentUser = useAuthStore.getState().user
+      if (currentUser) {
+        currentUser.must_change_password = false
+      }
       navigate('/pm/dashboard')
     }, 1000)
   }
