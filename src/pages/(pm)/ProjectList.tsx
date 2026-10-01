@@ -798,7 +798,8 @@ export const ProjectList: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          showToast(`Điều hướng sang phân hệ thiết lập tim tuyến & phân đoạn (WF-02) cho ${prj.code}`)
+                          const base = isSupervisor ? '/sup' : '/pm'
+                          navigate(`${base}/projects/${prj.id}/alignment`)
                         }}
                         className="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                       >

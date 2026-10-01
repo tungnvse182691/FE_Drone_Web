@@ -13,6 +13,7 @@ import { PMLayout } from './pages/(pm)/PMLayout'
 import { PMDashboard } from './pages/(pm)/PMDashboard'
 import { ProjectList } from './pages/(pm)/ProjectList'
 import { ProjectOverview } from './pages/(pm)/ProjectOverview'
+import { AlignmentSegments } from './pages/(pm)/AlignmentSegments'
 import { SurveyRequests } from './pages/(pm)/SurveyRequests'
 import { CreateSurvey } from './pages/(pm)/CreateSurvey'
 import { AIReviewInbox } from './pages/(pm)/AIReviewInbox'
@@ -50,6 +51,8 @@ export const App: React.FC = () => {
           <Route path="dashboard" element={<PMDashboard />} />
           <Route path="projects" element={<ProjectList />} />
           <Route path="projects/:id" element={<ProjectOverview />} />
+          <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
+          <Route path="alignment" element={<AlignmentSegments />} />
           <Route path="surveys" element={<SurveyRequests />} />
           <Route path="surveys/create" element={<CreateSurvey />} />
           <Route path="ai-inbox" element={<AIReviewInbox />} />
@@ -67,6 +70,8 @@ export const App: React.FC = () => {
           <Route path="dashboard" element={<SupDashboard />} />
           <Route path="projects" element={<ProjectList />} />
           <Route path="projects/:id" element={<ProjectOverview />} />
+          <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
+          <Route path="alignment" element={<AlignmentSegments />} />
           <Route path="approvals" element={<BatchApprovals />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<FieldAcceptance />} />

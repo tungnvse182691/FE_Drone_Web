@@ -613,11 +613,11 @@ export const ProjectOverview: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => showToast('Mở chế độ bản đồ GIS nắn chỉnh tim tuyến (Màn 05 WF-02)...')}
+                onClick={() => navigate(`${basePath}/projects/prj-ql1a-02/alignment`)}
                 type="button"
                 className="text-xs text-[#8F7212] hover:text-[#C9A227] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
               >
-                <span>Xem bản đồ GIS phân đoạn</span>
+                <span>Xem bản đồ GIS phân đoạn (WF-02)</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
