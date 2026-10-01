@@ -21,6 +21,7 @@ import { DefectDetailVerify } from './pages/(pm)/DefectDetailVerify'
 import { RepairBatching } from './pages/(pm)/RepairBatching'
 import { SubmitApproval } from './pages/(pm)/SubmitApproval'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
+import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
 import { WorkOrderConfirm } from './pages/(pm)/WorkOrderConfirm'
 
@@ -55,6 +56,10 @@ export const App: React.FC = () => {
           <Route path="alignment" element={<AlignmentSegments />} />
           <Route path="surveys" element={<SurveyRequests />} />
           <Route path="surveys/create" element={<CreateSurvey />} />
+          <Route path="surveys/:id" element={<DroneMissionAIReview />} />
+          <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
+          <Route path="drone-mission" element={<DroneMissionAIReview />} />
+          <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
           <Route path="ai-inbox" element={<AIReviewInbox />} />
           <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
           <Route path="repair-batches/create" element={<RepairBatching />} />
@@ -72,6 +77,8 @@ export const App: React.FC = () => {
           <Route path="projects/:id" element={<ProjectOverview />} />
           <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
           <Route path="alignment" element={<AlignmentSegments />} />
+          <Route path="surveys/:id" element={<DroneMissionAIReview />} />
+          <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
           <Route path="approvals" element={<BatchApprovals />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<FieldAcceptance />} />

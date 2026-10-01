@@ -528,6 +528,16 @@ export const ProjectOverview: React.FC = () => {
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Đã nắn 14 đỉnh tọa độ góc, chia 5 phân đoạn lý trình chuẩn. Supervisor đã ký duyệt chứng thư số mã hóa tọa độ WGS84 lên hệ thống bảo an.
                   </p>
+                  <div className="mt-2 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/pm/projects/prj-ql1a-02/alignment')}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-dark bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded shadow-2xs transition-colors"
+                    >
+                      <Map className="w-3 h-3 text-[#C9A227]" />
+                      Xem bản đồ tim tuyến & Slabs (WF-02) →
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -546,6 +556,16 @@ export const ProjectOverview: React.FC = () => {
                   <p className="text-xs text-slate-600 leading-relaxed">
                     Đội bay hoàn thành quét không ảnh 21.5 km với độ phân giải 1.2 cm/pixel, lập mây điểm 3D và khóa mốc mặt đường làm căn cứ đối soát khiếu nại phát sinh.
                   </p>
+                  <div className="mt-2 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/pm/surveys/srv-01/review')}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8F7212] bg-[#C9A227]/10 hover:bg-[#C9A227]/20 border border-[#C9A227]/30 px-2.5 py-1 rounded shadow-2xs transition-colors"
+                    >
+                      <PlaneTakeoff className="w-3 h-3 text-[#C9A227]" />
+                      Mở Canvas Thẩm định AI (WF-09) →
+                    </button>
+                  </div>
                 </div>
               </div>
 
