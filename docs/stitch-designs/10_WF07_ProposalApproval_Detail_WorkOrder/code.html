@@ -187,17 +187,7 @@
 </nav>
 </div>
 <!-- Plan Manager Usage Widget -->
-<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm"><div class="flex justify-between items-center font-label-md text-label-md text-on-surface mb-space-xs">
-<span class="">Dự án hoạt động</span>
-<span class="font-stationing-mono text-stationing-mono text-[#C9A227] font-bold">6/20</span>
-</div>
-<div class="w-full bg-[#E2E5E9] rounded-full h-1.5 mb-space-xs overflow-hidden">
-<div class="h-1.5 rounded-full w-[30%] bg-[#C9A227]"></div>
-</div>
-<p class="font-label-sm text-label-sm text-secondary mb-space-sm">Chu kỳ còn 29 ngày làm việc</p>
-<button class="w-full py-space-xs px-space-sm border border-[#C9A227] text-[#C9A227] hover:bg-[#C9A227] hover:text-white rounded-lg font-sansation font-bold text-label-sm bg-white transition text-center shadow-sm">
-  Nâng cấp
-</button></div>
+<div class="bg-white border border-[#E2E5E9] rounded-xl p-3 shadow-sm"><div class="flex items-center gap-1.5 mb-1"><span class="w-2 h-2 rounded-full bg-[#1B5E20]"></span><span class="font-sansation font-bold text-label-sm text-on-surface leading-tight">Thẩm quyền: Supervisor</span></div><p class="font-label-sm text-label-sm text-secondary mb-2 pl-3.5">(Duyệt kỹ thuật)</p><div class="flex items-center justify-between pt-1 border-t border-[#E2E5E9]"><span class="font-label-sm text-label-sm text-secondary">SLA phản hồi</span><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92700C] font-semibold text-label-sm"><span class="material-symbols-outlined text-[14px]">schedule</span>Còn 14h</span></div></div>
 </aside>
 <!-- END: LeftSidebar -->
 <!-- BEGIN: TopBar Header -->
@@ -317,7 +307,7 @@
 <span class="material-symbols-outlined text-[#C9A227] text-[22px] shrink-0 mt-0.5">policy</span>
 <div class="flex-1">
 <span class="font-label-lg text-label-lg text-on-surface font-bold">Quy định thẩm quyền kỹ thuật:</span>
-<span class="ml-1">Supervisor chịu trách nhiệm phê duyệt giải pháp vật liệu &amp; định mức kinh phí từng vị trí hỏng hóc. PM chỉ được phát lệnh hiện trường (Dispatch) cho các hạng mục đã hoàn tất phê duyệt (<strong class="text-[#1B5E20]">APPROVED</strong>).</span>
+<span class="ml-1">Supervisor chịu trách nhiệm phê duyệt giải pháp vật liệu, phương pháp kỹ thuật &amp; khối lượng thi công từng vị trí hỏng hóc. PM chỉ được phát lệnh hiện trường (Dispatch) cho các hạng mục đã hoàn tất phê duyệt (<strong class="text-[#1B5E20]">APPROVED</strong>).</span>
 </div>
 </div>
 <!-- APPROVAL SUMMARY BAR & BUDGET OVERVIEW -->
@@ -361,22 +351,7 @@
 </div>
 </div>
 <!-- Right: Civil Budget Breakdown (Structured Card) -->
-<div class="lg:col-span-5 bg-[#F8F9FA] border border-[#E2E5E9] p-space-md rounded-xl space-y-space-sm">
-<div class="flex items-center justify-between text-body-sm font-body-sm text-secondary">
-<span class="">Tổng dự toán gói đề xuất:</span>
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">350.000.000 VNĐ</span>
-</div>
-<div class="flex items-baseline justify-between pt-1">
-<div>
-<span class="font-label-sm text-label-sm text-[#92700C] font-semibold uppercase tracking-wider block">Ngân sách đã phê duyệt:</span>
-<span class="font-headline-md text-headline-md text-[#92700C] font-bold">210.000.000 <span class="text-body-sm font-normal">VNĐ</span></span>
-</div>
-<div class="text-right">
-<span class="font-label-sm text-label-sm text-secondary font-medium block">Treo/Từ chối:</span>
-<span class="font-stationing-mono text-stationing-mono text-error font-semibold">140.000.000 VNĐ</span>
-</div>
-</div>
-</div>
+<div class="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-space-sm"><div class="bg-[#F8F9FA] border border-[#E2E5E9] p-space-md rounded-xl space-y-space-xs"><span class="font-label-sm text-label-sm text-[#92700C] font-semibold uppercase tracking-wider block">Tổng diện tích thi công đã duyệt:</span><span class="font-headline-md text-headline-md text-[#92700C] font-bold">145.5 <span class="text-body-sm font-normal">m²</span></span><span class="font-label-sm text-label-sm text-secondary block">Trên tổng số 320 m² đề xuất</span></div><div class="bg-[#F8F9FA] border border-[#E2E5E9] p-space-md rounded-xl space-y-space-xs"><span class="font-label-sm text-label-sm text-secondary font-semibold uppercase tracking-wider block">Thời gian thi công dự kiến:</span><span class="font-headline-md text-headline-md text-on-surface font-bold">4 <span class="text-body-sm font-normal">ngày</span></span><span class="font-label-sm text-label-sm text-secondary block">Thời hạn hoàn thành: 28/08/2026</span></div></div>
 </div>
 </section>
 <!-- WORK PACKAGE ITEMS LIST TABLE SECTION -->
@@ -419,7 +394,7 @@
 <th class="py-space-sm px-space-md">Vị trí &amp; Lý trình</th>
 <th class="py-space-sm px-space-md">Hư hại &amp; Đo đạc</th>
 <th class="py-space-sm px-space-md">Phương án kỹ thuật</th>
-<th class="py-space-sm px-space-md text-right">Dự toán</th>
+<th class="py-space-sm px-space-md text-right">Khối lượng kỹ thuật</th>
 <th class="py-space-sm px-space-md text-center">Trạng thái duyệt</th>
 <th class="py-space-sm px-space-md text-center">Thao tác Thẩm định</th>
 <th class="py-space-sm px-space-md rounded-r-lg">Phân công Crew (PM)</th>
@@ -444,10 +419,7 @@
 <span class="text-on-surface font-medium block">Trám vá nhựa nguội khẩn cấp</span>
 <span class="text-secondary text-label-sm font-label-sm">Tiêu chuẩn vá nhanh TCVN 8819</span>
 </td>
-<td class="py-space-md px-space-md text-right whitespace-nowrap">
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">18.500.000</span>
-<span class="text-label-sm font-label-sm text-secondary block">VNĐ</span>
-</td>
+<td class="py-space-md px-space-md text-right whitespace-nowrap"><span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">18.5 m²</span><span class="text-label-sm font-label-sm text-secondary block">Sâu 5.0 cm</span></td>
 <td class="py-space-md px-space-md text-center whitespace-nowrap">
 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-label-sm font-bold">
 <span class="material-symbols-outlined text-[14px]">check_circle</span>
@@ -503,10 +475,7 @@
 <span class="material-symbols-outlined text-[14px]">info</span> Đang mở phiên giải trình
 </span>
 </td>
-<td class="py-space-md px-space-md text-right whitespace-nowrap">
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">65.000.000</span>
-<span class="text-label-sm font-label-sm text-secondary block">VNĐ</span>
-</td>
+<td class="py-space-md px-space-md text-right whitespace-nowrap"><span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">45.0 m</span><span class="text-label-sm font-label-sm text-secondary block">Trám vết nứt (BTN C12.5)</span></td>
 <td class="py-space-md px-space-md text-center whitespace-nowrap">
 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E0F2FE] text-[#0284C7] font-label-sm text-label-sm font-bold">
 <span class="material-symbols-outlined text-[14px]">error</span>
@@ -558,10 +527,7 @@
 <span class="text-on-surface font-medium block">Xử lý bù lún cấp phối &amp; chèn Mastic</span>
 <span class="text-secondary text-label-sm font-label-sm">Trám khe co giãn nhựa đường 60/70</span>
 </td>
-<td class="py-space-md px-space-md text-right whitespace-nowrap">
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">32.000.000</span>
-<span class="text-label-sm font-label-sm text-secondary block">VNĐ</span>
-</td>
+<td class="py-space-md px-space-md text-right whitespace-nowrap"><span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">2.5 m³</span><span class="text-label-sm font-label-sm text-secondary block">Bù lún cấp phối &amp; Mastic</span></td>
 <td class="py-space-md px-space-md text-center whitespace-nowrap">
 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-label-sm font-bold">
 <span class="material-symbols-outlined text-[14px]">check_circle</span>
@@ -610,10 +576,7 @@
 <span class="text-on-surface font-medium block">Cào gọt phẳng &amp; lu nén lại</span>
 <span class="text-secondary text-label-sm font-label-sm">Đơn giá định mức ca máy cào bóc</span>
 </td>
-<td class="py-space-md px-space-md text-right whitespace-nowrap">
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">12.000.000</span>
-<span class="text-label-sm font-label-sm text-secondary block">VNĐ</span>
-</td>
+<td class="py-space-md px-space-md text-right whitespace-nowrap"><span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">14.2 m²</span><span class="text-label-sm font-label-sm text-secondary block">Cào bóc san phẳng</span></td>
 <td class="py-space-md px-space-md text-center whitespace-nowrap">
 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEE2E2] text-[#DC2626] font-label-sm text-label-sm font-bold">
 <span class="material-symbols-outlined text-[14px]">cancel</span>
@@ -660,10 +623,7 @@
 <span class="text-on-surface font-medium block">Tưới nhựa láng mặt &amp; dải sợi thủy tinh</span>
 <span class="text-secondary text-label-sm font-label-sm">Chống nứt phản xạ mặt đường BTN</span>
 </td>
-<td class="py-space-md px-space-md text-right whitespace-nowrap">
-<span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">45.000.000</span>
-<span class="text-label-sm font-label-sm text-secondary block">VNĐ</span>
-</td>
+<td class="py-space-md px-space-md text-right whitespace-nowrap"><span class="font-stationing-mono text-stationing-mono font-bold text-on-surface">32.0 m²</span><span class="text-label-sm font-label-sm text-secondary block">Tưới nhựa &amp; dải sợi TT</span></td>
 <td class="py-space-md px-space-md text-center whitespace-nowrap">
 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-label-sm font-bold">
 <span class="material-symbols-outlined text-[14px]">check_circle</span>
@@ -728,9 +688,7 @@
 <span class="material-symbols-outlined text-[24px]">contact_support</span>
 </div>
 <div>
-<h3 class="font-sansation font-bold text-headline-sm text-on-surface" id="modal-title">
-  Yêu cầu bổ sung bằng chứng / Từ chối duyệt phương án
-</h3>
+<h3 class="font-sansation font-bold text-headline-sm text-on-surface" id="modal-title">Yêu cầu bổ sung bằng chứng / Từ chối duyệt phương án</h3>
 <p class="font-label-sm text-label-sm text-secondary font-stationing-mono">
   Mã hạng mục: #ITEM-02 (DEF-2026-0092)
 </p>
@@ -748,7 +706,7 @@
 <span class="text-outline-variant">•</span>
 <span class="text-secondary">Cắt cào thảm lại BTN C12.5</span>
 </div>
-<span class="font-stationing-mono text-stationing-mono font-bold text-[#92700C]">65.000.000 VNĐ</span>
+<span class="font-stationing-mono text-stationing-mono font-bold text-[#92700C]">Diện tích: 18.5 m² • Sâu: 5.0 cm • Thể tích BTN C19: 0.93 m³</span>
 </div>
 <!-- Radio Switch for Technical Action Type -->
 <div class="space-y-space-xs">
@@ -765,7 +723,7 @@
 <input class="mt-0.5 text-error focus:ring-error" name="feedback-type" type="radio">
 <div class="text-body-sm font-body-sm">
 <span class="font-sansation font-bold text-label-md text-error block">Từ chối giải pháp kỹ thuật</span>
-<span class="text-secondary text-label-sm font-label-sm">Sai quy chuẩn, định mức tính toán vượt trần</span>
+<span class="text-secondary text-label-sm font-label-sm">Sai quy chuẩn kết cấu, không đáp ứng điều kiện an toàn giao thông</span>
 </div>
 </label>
 </div>
@@ -790,13 +748,7 @@
   Yêu cầu đo đạc lại hiện trường bằng máy laser thủy bình hoặc thước 3m
 </span>
 </label>
-<label class="flex items-center gap-space-sm text-body-sm font-body-sm text-on-surface cursor-pointer pt-1">
-<input class="rounded accent-[#C9A227]" type="checkbox">
-<span class="flex items-center gap-1.5">
-<span class="material-symbols-outlined text-[16px] text-secondary">request_quote</span>
-  Yêu cầu PM lập lại dự toán tách riêng chi phí phụ gia liên kết nhựa đường
-</span>
-</label>
+<label class="flex items-center gap-space-sm text-body-sm font-body-sm text-on-surface cursor-pointer pt-1"><input class="rounded accent-[#C9A227]" type="checkbox"><span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-secondary">straighten</span> Yêu cầu đo đạc lại cao độ trắc dọc và bề dày lớp móng cấp phối đá dăm</span></label>
 </div>
 <!-- Visual Evidence Preview Thumbnail -->
 <div class="flex items-center gap-space-sm bg-[#F8F9FA] border border-[#E2E5E9] p-space-xs rounded-xl">
@@ -827,6 +779,10 @@
 </div>
 </main>
 <!-- END: MainContentArea -->
+
+
+
+
 
 
 </body></html>
