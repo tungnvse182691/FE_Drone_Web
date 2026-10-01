@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
+import * as maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   Home,
   ChevronRight,
@@ -346,8 +348,159 @@ export const DroneMissionAIReview: React.FC = () => {
   const reviewedCount = approvedCount + rejectedCount
   const reviewProgressPercent = Math.round((reviewedCount / totalCount) * 100)
 
+  // Chế độ hiển thị: Không ảnh trắc địa ('ORTHO') hoặc Bản đồ bay GIS ('GIS_MAP')
+  const [viewerMode, setViewerMode] = useState<'ORTHO' | 'GIS_MAP'>('ORTHO')
+  const corridorMapContainerRef = useRef<HTMLDivElement>(null)
+  const corridorMapInstanceRef = useRef<maplibregl.Map | null>(null)
+
   // Điều kiện để được khóa Baseline: Độ phủ >= 95% và giải quyết 100% mục phát hiện
   const isBaselineLocked = coveragePercentage >= 95 && pendingCount === 0
+
+  // Effect: Khởi tạo MapLibre hiển thị toàn tuyến hành lang bay 6km và 8 điểm khiếm khuyết
+  useEffect(() => {
+    if (viewerMode !== 'GIS_MAP' || !corridorMapContainerRef.current) return
+
+    if (corridorMapInstanceRef.current) {
+      corridorMapInstanceRef.current.remove()
+      corridorMapInstanceRef.current = null
+    }
+
+    const corridorCoords: [number, number][] = [
+      [108.1940, 16.0490],
+      [108.1970, 16.0520],
+      [108.2000, 16.0545],
+      [108.2030, 16.0570],
+      [108.2060, 16.0600],
+      [108.2090, 16.0630],
+      [108.2120, 16.0665]
+    ]
+
+    const map = new maplibregl.Map({
+      container: corridorMapContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'google-satellite': {
+            type: 'raster',
+            tiles: [
+              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+            ],
+            tileSize: 256,
+            maxzoom: 20,
+            attribution: '&copy; Google Satellite'
+          }
+        },
+        layers: [
+          {
+            id: 'satellite-layer',
+            type: 'raster',
+            source: 'google-satellite',
+            minzoom: 0,
+            maxzoom: 24
+          }
+        ]
+      },
+      center: [108.2025, 16.0560],
+      zoom: 14.5,
+      minZoom: 10,
+      maxZoom: 20,
+      pitch: 35,
+      bearing: -20
+    })
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
+
+    map.on('load', () => {
+      // 1. Thêm tuyến bay Drone Corridor
+      map.addSource('corridor-route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: corridorCoords },
+          properties: {}
+        }
+      })
+
+      map.addLayer({
+        id: 'corridor-glow',
+        type: 'line',
+        source: 'corridor-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#000',
+          'line-width': 10,
+          'line-opacity': 0.6
+        }
+      })
+
+      map.addLayer({
+        id: 'corridor-line',
+        type: 'line',
+        source: 'corridor-route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#C9A227',
+          'line-width': 5
+        }
+      })
+
+      // 2. Thêm Markers cho 8 điểm khiếm khuyết
+      const markerCoords: [number, number][] = [
+        [108.1960, 16.0510],
+        [108.1985, 16.0532],
+        [108.2010, 16.0551],
+        [108.2032, 16.0571],
+        [108.2052, 16.0592],
+        [108.2072, 16.0612],
+        [108.2091, 16.0631],
+        [108.2112, 16.0655]
+      ]
+
+      detections.forEach((det, idx) => {
+        const pt = markerCoords[idx] || [108.2025, 16.0560]
+        const isCurrent = det.id === selectedDetectionId
+        const el = document.createElement('div')
+        el.className = 'cursor-pointer'
+        el.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center;">
+            <div style="background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); margin-bottom:2px; white-space:nowrap; border:1px solid #fff;">
+              ${det.code || det.id} (${det.stationing})
+            </div>
+            <div style="width:${isCurrent ? '20px' : '14px'}; height:${isCurrent ? '20px' : '14px'}; background:${det.severityLevel.includes('Khẩn cấp') ? '#DC2626' : det.severityLevel.includes('Nghiêm trọng') ? '#D97706' : '#2563EB'}; border:2px solid #fff; border-radius:50%; box-shadow:${isCurrent ? '0 0 10px #C9A227' : 'none'};"></div>
+          </div>
+        `
+        el.onclick = () => {
+          handleSelectDetection(det)
+          map.flyTo({ center: pt, zoom: 17, speed: 1.2 })
+        }
+
+        new maplibregl.Marker({ element: el })
+          .setLngLat(pt)
+          .setPopup(
+            new maplibregl.Popup({ offset: 25 }).setHTML(`
+              <div style="font-family:sans-serif; font-size:12px; padding:4px;">
+                <strong style="color:#C9A227;">${det.code || det.id} - ${det.type}</strong><br/>
+                <span style="color:#64748B;">${det.stationing} (${det.lane})</span><br/>
+                <span style="font-weight:bold;">Độ tin cậy AI: ${det.confidence}%</span>
+              </div>
+            `)
+          )
+          .addTo(map)
+      })
+    })
+
+    corridorMapInstanceRef.current = map
+
+    return () => {
+      if (corridorMapInstanceRef.current) {
+        corridorMapInstanceRef.current.remove()
+        corridorMapInstanceRef.current = null
+      }
+    }
+  }, [viewerMode, selectedDetectionId, detections])
 
   // Duyệt phát hiện AI -> Tạo Defect OPEN
   const handleApproveDetection = (id: string) => {
@@ -773,57 +926,103 @@ export const DroneMissionAIReview: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
-              {/* Toggle AI Layer Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAiOverlayVisible(!isAiOverlayVisible)
-                  showToast(isAiOverlayVisible ? 'Đã tắt lớp AI Bounding Box.' : 'Đã bật lớp AI Bounding Box.')
-                }}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer ${
-                  isAiOverlayVisible
-                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {isAiOverlayVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                <span>Lớp AI ({isAiOverlayVisible ? 'Bật' : 'Tắt'})</span>
-              </button>
+            <div className="flex items-center gap-1.5">
+              {/* Mode Switcher: Ortho vs Live MapLibre Map */}
+              <div className="flex items-center gap-1 p-0.5 bg-slate-200/80 rounded-lg text-xs font-semibold mr-1">
+                <button
+                  type="button"
+                  onClick={() => setViewerMode('ORTHO')}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    viewerMode === 'ORTHO'
+                      ? 'bg-white text-brand-dark shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Không ảnh Drone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewerMode('GIS_MAP')}
+                  className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+                    viewerMode === 'GIS_MAP'
+                      ? 'bg-[#C9A227] text-white shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>Bản đồ bay GIS (MapLibre)</span>
+                </button>
+              </div>
 
-              {/* Snapshot Button */}
-              <button
-                onClick={() => showToast(`Đã xuất ảnh chụp trắc địa khung hình #FR-${currentFrame}.png`)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="Chụp ảnh khung hình"
-                type="button"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
+              {viewerMode === 'ORTHO' && (
+                <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+                  {/* Toggle AI Layer Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAiOverlayVisible(!isAiOverlayVisible)
+                      showToast(isAiOverlayVisible ? 'Đã tắt lớp AI Bounding Box.' : 'Đã bật lớp AI Bounding Box.')
+                    }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer ${
+                      isAiOverlayVisible
+                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {isAiOverlayVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>Lớp AI ({isAiOverlayVisible ? 'Bật' : 'Tắt'})</span>
+                  </button>
 
-              {/* Fullscreen Button */}
-              <button
-                onClick={() => setIsCanvasFullscreen(!isCanvasFullscreen)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="Toàn màn hình Canvas"
-                type="button"
-              >
-                {isCanvasFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-              </button>
+                  {/* Snapshot Button */}
+                  <button
+                    onClick={() => showToast(`Đã xuất ảnh chụp trắc địa khung hình #FR-${currentFrame}.png`)}
+                    className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                    title="Chụp ảnh khung hình"
+                    type="button"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+
+                  {/* Fullscreen Button */}
+                  <button
+                    onClick={() => setIsCanvasFullscreen(!isCanvasFullscreen)}
+                    className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
+                    title="Toàn màn hình Canvas"
+                    type="button"
+                  >
+                    {isCanvasFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Canvas Viewport with Asphalt Drone Photo + Dynamic AI Bounding Boxes */}
+          {/* Canvas Viewport: Ortho Photo vs Real MapLibre Map */}
           <div className="relative w-full aspect-[16/10] bg-slate-950 overflow-hidden select-none group">
-            {/* Ảnh chụp trắc địa mặt đường thực tế từ trên cao */}
-            <img
-              alt="Surface Road Drone Frame"
-              className="w-full h-full object-cover"
-              src="https://images.unsplash.com/photo-1578873375969-d65275e7a938?w=1400&auto=format&fit=crop&q=80"
-            />
+            {viewerMode === 'GIS_MAP' ? (
+              <div className="w-full h-full relative">
+                <div ref={corridorMapContainerRef} className="w-full h-full" />
+                <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 z-10 pointer-events-none shadow-lg">
+                  <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
+                    <PlaneTakeoff className="w-3.5 h-3.5" />
+                    <span>Hành lang bay Drone 6.0 km (Km 1024+000 → Km 1030+000)</span>
+                  </div>
+                  <div className="text-slate-300 text-[10px] mt-0.5">
+                    8 điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Ảnh chụp trắc địa mặt đường thực tế từ trên cao */}
+                <img
+                  alt="Surface Road Drone Frame"
+                  className="w-full h-full object-cover"
+                  src="https://images.unsplash.com/photo-1578873375969-d65275e7a938?w=1400&auto=format&fit=crop&q=80"
+                />
 
-            {/* Vignette Gradient Shadow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none"></div>
+                {/* Vignette Gradient Shadow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none"></div>
 
             {/* AI Bounding Boxes (Chỉ hiển thị khi isAiOverlayVisible === true) */}
             {isAiOverlayVisible && (
@@ -909,6 +1108,8 @@ export const DroneMissionAIReview: React.FC = () => {
               <span className="text-slate-500">|</span>
               <span className="text-[#FEF08A] font-bold">GSD: 0.35 cm/px</span>
             </div>
+              </>
+            )}
           </div>
 
           {/* Video Timeline Scrubber & Player Controls */}

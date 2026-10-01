@@ -32,7 +32,9 @@ import {
   FileSpreadsheet,
   Check,
   TrendingUp,
-  Tag
+  Tag,
+  UserPlus,
+  Mail
 } from 'lucide-react'
 
 // Interface mở rộng cho dự án trong Hub
@@ -232,6 +234,8 @@ export const ProjectList: React.FC = () => {
   const [newProjectCode, setNewProjectCode] = useState('PRJ-QL14-01')
   const [newProjectRegion, setNewProjectRegion] = useState('Bình Phước - Bình Dương')
   const [newProjectPM, setNewProjectPM] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
+  const [newPMNameCustom, setNewPMNameCustom] = useState('')
+  const [newPMEmailCustom, setNewPMEmailCustom] = useState('')
   const [newStartDate, setNewStartDate] = useState('2026-10-01')
   const [newEndDate, setNewEndDate] = useState('2029-10-01')
   const [newStartKm, setNewStartKm] = useState('Km 0+000')
@@ -257,6 +261,10 @@ export const ProjectList: React.FC = () => {
   const handleCreateProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const parsedLength = parseFloat(newLengthKm) || 28.5
+    const isInvitingNew = newProjectPM === 'INVITE_NEW'
+    const pmName = isInvitingNew ? (newPMNameCustom || 'Kỹ sư mới được mời') : newProjectPM.split(' (')[0]
+    const pmEmail = isInvitingNew ? (newPMEmailCustom || 'pm.moi@cat-tuong.vn') : (newProjectPM.includes('(') ? newProjectPM.split('(')[1].replace(')', '') : 'pmhoang@gmail.com')
+
     const newProject: HubProject = {
       id: `prj-${Date.now()}`,
       code: newProjectCode || `PRJ-AUTO-${Math.floor(Math.random() * 900 + 100)}`,
@@ -269,9 +277,9 @@ export const ProjectList: React.FC = () => {
       status: 'PENDING_ALIGNMENT',
       status_label: 'Chờ duyệt tuyến',
       status_color: '#D97706',
-      pm_name: newProjectPM.split(' (')[0],
-      pm_email: newProjectPM.includes('(') ? newProjectPM.split('(')[1].replace(')', '') : 'pmhoang@gmail.com',
-      pm_role_badge: 'PM Tuyến',
+      pm_name: pmName,
+      pm_email: pmEmail,
+      pm_role_badge: isInvitingNew ? 'Chờ kích hoạt' : 'PM Tuyến',
       warranty_passed_percent: 0,
       days_remaining: 1095,
       length_km: parsedLength,
@@ -285,7 +293,11 @@ export const ProjectList: React.FC = () => {
 
     setProjects([newProject, ...projects])
     setIsModalOpen(false)
-    showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
+    if (isInvitingNew) {
+      showToast(`Đã khởi tạo dự án [${newProject.code}] và gửi link mời kích hoạt tới ${pmEmail}! (Mã: #IVT-2026-08F)`)
+    } else {
+      showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
+    }
   }
 
   // Submit Gán PM nhanh
@@ -1065,8 +1077,57 @@ export const ProjectList: React.FC = () => {
                     <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
                     <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
                     <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+                    <option value="INVITE_NEW">+ Mời Kỹ sư PM mới (Gửi qua Email kích hoạt)...</option>
                     <option value="-- Để trống --">-- Để trống (Chưa gán) --</option>
                   </select>
+
+                  {newProjectPM === 'INVITE_NEW' && (
+                    <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 mt-2 animate-in fade-in duration-150">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#8F7212]">
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Mời PM mới vào hệ thống (Tình huống 2)</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Họ và tên PM mới <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="VD: Nguyễn Văn B..."
+                            value={newPMNameCustom}
+                            onChange={(e) => setNewPMNameCustom(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
+                            Email công vụ nhận thư mời <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            required
+                            placeholder="pm.moi@cat-tuong.vn..."
+                            value={newPMEmailCustom}
+                            onChange={(e) => setNewPMEmailCustom(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                        <span>Hệ thống sẽ gửi link <strong>/invite/token-...</strong> để PM tự tạo mật khẩu lần đầu.</span>
+                        <a
+                          href="/accept-invitation"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[#8F7212] font-bold hover:underline inline-flex items-center gap-0.5"
+                        >
+                          Xem mẫu màn hình nhận lời mời ↗
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

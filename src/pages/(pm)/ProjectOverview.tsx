@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import * as maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import {
@@ -62,6 +64,7 @@ interface ProjectMember {
 
 export const ProjectOverview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
+  const projectId = id || 'prj-ql1a-02'
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
@@ -211,6 +214,124 @@ export const ProjectOverview: React.FC = () => {
     setNewMemberUnit('')
     showToast(`Đã gửi thư mời và gán thành công nhân sự: ${newMemberName}`)
   }
+
+  // Ref và Effect khởi tạo bản đồ MapLibre vệ tinh cho Preview card
+  const previewMapContainerRef = useRef<HTMLDivElement>(null)
+  const previewMapInstanceRef = useRef<maplibregl.Map | null>(null)
+
+  useEffect(() => {
+    if (!previewMapContainerRef.current) return
+
+    if (previewMapInstanceRef.current) {
+      previewMapInstanceRef.current.remove()
+      previewMapInstanceRef.current = null
+    }
+
+    const corridorCoords: [number, number][] = [
+      [108.0825, 16.1420],
+      [108.1210, 16.1750],
+      [108.1651, 16.2052],
+      [108.2040, 16.2380],
+      [108.2418, 16.2690]
+    ]
+
+    const map = new maplibregl.Map({
+      container: previewMapContainerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          'google-satellite': {
+            type: 'raster',
+            tiles: [
+              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+            ],
+            tileSize: 256,
+            maxzoom: 20,
+            attribution: '&copy; Google Satellite'
+          }
+        },
+        layers: [
+          {
+            id: 'satellite-layer',
+            type: 'raster',
+            source: 'google-satellite',
+            minzoom: 0,
+            maxzoom: 24
+          }
+        ]
+      },
+      center: [108.1651, 16.2052],
+      zoom: 10.8,
+      minZoom: 8,
+      maxZoom: 18,
+      pitch: 28
+    })
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+
+    map.on('load', () => {
+      // Tuyến đường
+      map.addSource('corridor-line', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: corridorCoords },
+          properties: {}
+        }
+      })
+
+      map.addLayer({
+        id: 'corridor-glow',
+        type: 'line',
+        source: 'corridor-line',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#C9A227',
+          'line-width': 4,
+          'line-opacity': 0.95
+        }
+      })
+
+      // 5 Markers cho 5 segments
+      const segmentMarkers = [
+        { code: 'SEG-01', coords: [108.0825, 16.1420] as [number, number] },
+        { code: 'SEG-02', coords: [108.1210, 16.1750] as [number, number] },
+        { code: 'SEG-03', coords: [108.1651, 16.2052] as [number, number] },
+        { code: 'SEG-04', coords: [108.2040, 16.2380] as [number, number] },
+        { code: 'SEG-05', coords: [108.2418, 16.2690] as [number, number] }
+      ]
+
+      segmentMarkers.forEach((seg) => {
+        const el = document.createElement('div')
+        el.className = 'cursor-pointer'
+        el.innerHTML = `
+          <div style="background:#1E293B; color:#C9A227; font-size:9px; font-weight:bold; font-family:monospace; padding:2px 5px; border-radius:4px; border:1px solid #C9A227; box-shadow:0 2px 5px rgba(0,0,0,0.6); white-space:nowrap; transform:translateY(-4px);">
+            ${seg.code}
+          </div>
+        `
+        el.onclick = () => {
+          navigate(`/pm/projects/${projectId}/segments`)
+        }
+        new maplibregl.Marker({ element: el })
+          .setLngLat(seg.coords)
+          .addTo(map)
+      })
+
+      setTimeout(() => map.resize(), 100)
+    })
+
+    previewMapInstanceRef.current = map
+
+    return () => {
+      if (previewMapInstanceRef.current) {
+        previewMapInstanceRef.current.remove()
+        previewMapInstanceRef.current = null
+      }
+    }
+  }, [projectId, navigate])
 
   // Chuyển hướng theo role hiện tại
   const basePath = activeRole === 'SUPERVISOR' ? '/sup' : '/pm'
@@ -826,26 +947,23 @@ export const ProjectOverview: React.FC = () => {
               <span className="font-mono text-[10px] text-slate-500">WGS84 EPSG:4326</span>
             </div>
 
-            {/* GIS Map Box */}
-            <div
-              className="w-full h-44 rounded-xl bg-slate-200 bg-cover bg-center relative overflow-hidden flex items-end p-2.5 shadow-xs border border-slate-200"
-              style={{
-                backgroundImage: `url('https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=800&auto=format&fit=crop&q=80')`
-              }}
-            >
-              <div className="bg-slate-900/85 backdrop-blur-sm text-white p-2 rounded-lg text-[11px] font-mono flex items-center justify-between w-full">
+            {/* GIS Map Box (Real MapLibre Map) */}
+            <div className="w-full h-48 rounded-xl relative overflow-hidden shadow-xs border border-slate-200">
+              <div ref={previewMapContainerRef} className="w-full h-full" />
+              <div className="absolute top-2 left-2 bg-slate-900/85 backdrop-blur-sm text-white px-2 py-1 rounded-md text-[10px] font-mono flex items-center justify-between gap-2 pointer-events-none z-10 border border-white/10">
                 <span>Km 1024+000 ➔ Km 1045+500</span>
                 <span className="text-[#ebe695] font-bold">5 Segments</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
-              <span>Tọa độ trung tâm: 16.241°N, 107.982°E</span>
+              <span>Tọa độ trung tâm: 16.205°N, 108.165°E</span>
               <button
-                onClick={() => showToast('Mở bản đồ lớp chi tiết...')}
-                className="text-[#8F7212] font-semibold hover:underline cursor-pointer"
+                onClick={() => navigate(`/pm/projects/${projectId}/segments`)}
+                className="text-[#8F7212] font-semibold hover:underline cursor-pointer flex items-center gap-1"
               >
-                Mở bản đồ lớp →
+                <span>Mở bản đồ lớp tim tuyến (WF-02)</span>
+                <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           </div>
