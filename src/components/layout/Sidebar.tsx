@@ -15,7 +15,8 @@ import {
   BarChart3,
   ShieldCheck,
   FileSignature,
-  Zap
+  Zap,
+  Route
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -25,10 +26,12 @@ export const Sidebar: React.FC = () => {
   const pmNavItems = [
     { label: 'Tổng quan (Dashboard)', path: '/pm/dashboard', icon: LayoutDashboard },
     { label: 'Danh mục dự án', path: '/pm/projects', icon: FolderKanban },
-    { label: 'Yêu cầu bay khảo sát', path: '/pm/surveys', icon: PlaneTakeoff },
+    { label: 'Tuyến đường & Phân đoạn', path: '/pm/alignment', icon: Route },
+    { label: 'Khảo sát Drone & Không ảnh', path: '/pm/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư phát hiện AI', path: '/pm/ai-inbox', icon: Inbox },
     { label: 'Chính sách & Giao việc (WF-05)', path: '/pm/fast-track', icon: Zap },
-    { label: 'Gom đợt & Lập dự toán', path: '/pm/repair-batches/create', icon: Boxes },
+    { label: 'Gói đề xuất sửa chữa (Màn 09)', path: '/pm/proposals', icon: Boxes },
+    { label: 'Gom đợt sửa chữa', path: '/pm/repair-batches/create', icon: Boxes },
     { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
     { label: 'Nhiệm vụ đo hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
     { label: 'Xác nhận hoàn thành', path: '/pm/work-orders/confirm', icon: CheckCircle2 },
@@ -37,6 +40,11 @@ export const Sidebar: React.FC = () => {
   const supNavItems = [
     { label: 'Tổng quan Giám sát', path: '/sup/dashboard', icon: LayoutDashboard },
     { label: 'Danh mục dự án', path: '/sup/projects', icon: FolderKanban },
+    { label: 'Tuyến đường & Phân đoạn', path: '/sup/alignment', icon: Route },
+    { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
+    { label: 'Hộp thư tiếp nhận & Triage', path: '/sup/ai-inbox', icon: Inbox },
+    { label: 'Giám sát chính sách Fast-Track', path: '/sup/fast-track', icon: Zap },
+    { label: 'Gói đề xuất kỹ thuật (Màn 09)', path: '/sup/proposals', icon: Boxes },
     { label: 'Thẩm duyệt đợt sửa', path: '/sup/approvals', icon: FileCheck2 },
     { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
     { label: 'Phân tích rủi ro & PCI', path: '/sup/risk-analytics', icon: BarChart3 },

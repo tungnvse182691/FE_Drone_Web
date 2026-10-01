@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 import {
   PlaneTakeoff,
   PlusCircle,
@@ -44,6 +46,10 @@ interface SurveyMission {
 
 export const SurveyRequests: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
+
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -149,7 +155,7 @@ export const SurveyRequests: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1 font-medium">
-            <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate('/pm/dashboard')}>Dashboard</span>
+            <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/dashboard`)}>Dashboard</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             <span className="text-brand-dark font-semibold">Khảo Sát Drone & Thẩm Định AI</span>
           </div>
@@ -162,21 +168,23 @@ export const SurveyRequests: React.FC = () => {
         </div>
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => navigate('/pm/surveys/srv-01/review')}
+            onClick={() => navigate(`${basePath}/surveys/srv-01/review`)}
             type="button"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             <span>Mở Canvas Thẩm Định AI (#MS-2026-0924)</span>
           </button>
-          <button
-            onClick={() => navigate('/pm/surveys/create')}
-            type="button"
-            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4 text-slate-500" />
-            <span>Tạo Yêu Cầu Bay Mới</span>
-          </button>
+          {!isSupervisor && (
+            <button
+              onClick={() => navigate('/pm/surveys/create')}
+              type="button"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4 text-slate-500" />
+              <span>Tạo Yêu Cầu Bay Mới</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -263,7 +271,7 @@ export const SurveyRequests: React.FC = () => {
           </div>
         </div>
         <button
-          onClick={() => navigate('/pm/surveys/srv-01/review')}
+          onClick={() => navigate(`${basePath}/surveys/srv-01/review`)}
           type="button"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
         >
@@ -354,7 +362,7 @@ export const SurveyRequests: React.FC = () => {
                 return (
                   <tr
                     key={survey.id}
-                    onClick={() => navigate(`/pm/surveys/${survey.id}/review`)}
+                    onClick={() => navigate(`${basePath}/surveys/${survey.id}/review`)}
                     className={`transition-colors cursor-pointer group ${
                       isNeedReview
                         ? 'bg-amber-50/30 hover:bg-amber-50/60'
@@ -464,7 +472,7 @@ export const SurveyRequests: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/pm/surveys/${survey.id}/review`)
+                              navigate(`${basePath}/surveys/${survey.id}/review`)
                             }}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
                           >
@@ -476,7 +484,7 @@ export const SurveyRequests: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              navigate(`/pm/surveys/${survey.id}/review`)
+                              navigate(`${basePath}/surveys/${survey.id}/review`)
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                           >

@@ -44,12 +44,23 @@
 <label class="font-label-md text-label-md text-on-surface">Tên gói đề xuất công việc <span class="text-error">*</span></label>
 <input class="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-low font-body-md text-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container transition-all" type="text" value="Khắc phục hằn lún bánh xe &amp; trám nứt Km 1030 - Km 1035">
 </div>
-<!-- Form Row: Chainage segment & Contractor -->
+<!-- Form Row: Route & Chainage segment -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface">Dự án / Tuyến đường <span class="text-error">*</span></label>
+<div class="relative">
+<select id="routeSelect" class="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-low font-body-md text-body-md text-on-surface appearance-none focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container transition-all">
+<option value="QL1A_PK04" selected="">QL1A - Giai đoạn 2 (Km 1024 - Km 1045)</option>
+<option value="QL1A_PK01">QL1A - Giai đoạn 1 (Km 1000 - Km 1024)</option>
+<option value="EXPR_NORTH_SOUTH">Đường nối Cao tốc Bắc - Nam</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
 <div class="flex flex-col gap-1.5">
 <label class="font-label-md text-label-md text-on-surface">Phạm vi lý trình / Phân đoạn <span class="text-error">*</span></label>
 <div class="relative">
-<select class="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-low font-body-md text-body-md text-on-surface appearance-none focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container transition-all">
+<select id="segmentSelect" class="w-full px-3.5 py-2.5 rounded-lg bg-surface-container-low font-body-md text-body-md text-on-surface appearance-none focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container transition-all">
 <option selected="">SEG-02: Km 1028+000 đến Km 1033+500</option>
 <option>SEG-01: Km 1024+000 đến Km 1028+000</option>
 <option>SEG-03: Km 1033+500 đến Km 1039+000</option>
@@ -58,6 +69,9 @@
 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
 </div>
 </div>
+</div>
+<!-- Form Row: Contractor & Duration -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
 <div class="flex flex-col gap-1.5">
 <label class="font-label-md text-label-md text-on-surface">Đơn vị thi công dự kiến <span class="text-error">*</span></label>
 <div class="relative">
@@ -67,6 +81,13 @@
 <option>Đội cơ động khắc phục sự cố khẩn cấp Sơn Trà</option>
 </select>
 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface">Thời gian thi công dự kiến</label>
+<div class="flex items-center gap-space-sm">
+<input class="w-28 px-3.5 py-2.5 rounded-lg bg-surface-container-low font-body-md text-body-md text-on-surface focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container transition-all" max="30" min="1" type="number" value="3">
+<span class="font-body-sm text-body-sm text-on-surface-variant">ngày kể từ khi duyệt</span>
 </div>
 </div>
 </div>
@@ -83,7 +104,7 @@
 <!-- Defect Item 1 -->
 <label class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex items-center gap-space-sm min-w-0">
-<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-cost="15000000" onchange="recalculateCost()" type="checkbox">
+<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-area="0.45" onchange="recalculateCost()" type="checkbox">
 <div class="flex flex-col min-w-0">
 <div class="flex items-center gap-2">
 <span class="font-stationing-mono text-[12px] font-bold text-primary-container">DEF-102</span>
@@ -93,12 +114,12 @@
 <span class="font-body-sm text-[12px] text-on-surface-variant">Vị trí: Làn phải sát lề • Mức độ: Khẩn cấp</span>
 </div>
 </div>
-<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">15.000.000 đ</span>
+<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">0.45 m² (Sâu 5.2cm)</span>
 </label>
 <!-- Defect Item 2 -->
 <label class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex items-center gap-space-sm min-w-0">
-<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-cost="22000000" onchange="recalculateCost()" type="checkbox">
+<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-area="0.85" onchange="recalculateCost()" type="checkbox">
 <div class="flex flex-col min-w-0">
 <div class="flex items-center gap-2">
 <span class="font-stationing-mono text-[12px] font-bold text-primary-container">DEF-105</span>
@@ -108,12 +129,12 @@
 <span class="font-body-sm text-[12px] text-on-surface-variant">Vị trí: Giữa hai làn xe • Cần xẻ rãnh rót nhựa mastic</span>
 </div>
 </div>
-<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">22.000.000 đ</span>
+<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">0.85 m² (Sâu 3.1cm)</span>
 </label>
 <!-- Defect Item 3 -->
 <label class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex items-center gap-space-sm min-w-0">
-<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-cost="48000000" onchange="recalculateCost()" type="checkbox">
+<input checked="" class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-area="1.25" onchange="recalculateCost()" type="checkbox">
 <div class="flex flex-col min-w-0">
 <div class="flex items-center gap-2">
 <span class="font-stationing-mono text-[12px] font-bold text-primary-container">DEF-108</span>
@@ -123,12 +144,12 @@
 <span class="font-body-sm text-[12px] text-on-surface-variant">Chiều dài: 45 mét vệt lún • Nguy cơ đọng nước mưa</span>
 </div>
 </div>
-<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">48.000.000 đ</span>
+<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">1.25 m² (Sâu 4.5cm)</span>
 </label>
 <!-- Defect Item 4 -->
 <label class="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-high transition-colors cursor-pointer">
 <div class="flex items-center gap-space-sm min-w-0">
-<input class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-cost="12000000" onchange="recalculateCost()" type="checkbox">
+<input class="defect-checkbox w-4 h-4 rounded text-primary-container focus:ring-primary-container accent-[#7D7935]" data-area="0.35" onchange="recalculateCost()" type="checkbox">
 <div class="flex flex-col min-w-0">
 <div class="flex items-center gap-2">
 <span class="font-stationing-mono text-[12px] font-bold text-primary-container">DEF-114</span>
@@ -138,7 +159,7 @@
 <span class="font-body-sm text-[12px] text-on-surface-variant">Mức độ nhẹ, chưa lan tỏa mặt đường lớn</span>
 </div>
 </div>
-<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">12.000.000 đ</span>
+<span class="font-stationing-mono text-[13px] font-bold text-on-surface shrink-0 ml-2">0.35 m² (Sâu 1.8cm)</span>
 </label>
 </div>
 </div>
@@ -174,7 +195,7 @@
       
       roleBadge.textContent = 'VAI TRÒ: QUẢN LÝ DỰ ÁN (PM)';
       roleBadge.className = 'px-2 py-0.5 rounded-full font-stationing-mono text-[11px] font-semibold bg-primary-container text-on-primary-container';
-      roleNotice.textContent = 'Bạn đang có toàn quyền khởi tạo gói đề xuất, gán khiếm khuyết hiện trường, thiết lập đơn giá dự toán và Khóa/Trình duyệt lên Giám sát trưởng.';
+      roleNotice.textContent = 'Bạn đang có toàn quyền khởi tạo gói đề xuất, gán khiếm khuyết hiện trường, xác định biện pháp kỹ thuật và Khóa/Trình duyệt lên Giám sát trưởng.';
 
       // PM has create button and submit draft capability
       btnCreate.classList.remove('hidden');
@@ -186,7 +207,7 @@
 
       roleBadge.textContent = 'VAI TRÒ: GIÁM SÁT TRƯỞNG (SUPERVISOR)';
       roleBadge.className = 'px-2 py-0.5 rounded-full font-stationing-mono text-[11px] font-semibold bg-[#1b5e20] text-white';
-      roleNotice.textContent = 'Chế độ Thẩm định viên: Quyền kiểm tra hồ sơ dự toán, chấp thuận/bác bỏ biện pháp kỹ thuật và ký phê duyệt ban hành lệnh thi công.';
+      roleNotice.textContent = 'Chế độ Thẩm định viên: Quyền kiểm tra hồ sơ kỹ thuật, chấp thuận/bác bỏ biện pháp kỹ thuật và ký phê duyệt ban hành lệnh thi công.';
 
       // Supervisor cannot create packages, they approve submitted packages
       btnCreate.classList.add('hidden');
@@ -206,18 +227,18 @@
 
   function recalculateCost() {
     const checkboxes = document.querySelectorAll('.defect-checkbox');
-    let total = 0;
+    let totalArea = 0;
     let count = 0;
 
     checkboxes.forEach(cb => {
       if (cb.checked) {
-        total += parseInt(cb.getAttribute('data-cost') || '0', 10);
+        totalArea += parseFloat(cb.getAttribute('data-area') || '0');
         count++;
       }
     });
 
     document.getElementById('selectedDefectsSummary').textContent = `Đã chọn: ${count} hạng mục khiếm khuyết`;
-    document.getElementById('totalCostDisplay').textContent = `${total.toLocaleString('vi-VN')} VNĐ`;
+    document.getElementById('totalCostDisplay').textContent = `${totalArea.toFixed(2)} m² cào bóc / ${count * 15}m trám`;
   }
 
   function handleSaveDraft() {

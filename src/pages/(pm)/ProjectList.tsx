@@ -62,7 +62,6 @@ export interface HubProject {
   image_url: string
   is_assigned: boolean
   is_restricted_for_pm?: boolean
-  escrow_budget?: string
   kml_status?: string
 }
 
@@ -92,7 +91,6 @@ const INITIAL_PROJECTS: HubProject[] = [
     image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
     is_assigned: true,
     is_restricted_for_pm: false,
-    escrow_budget: '8,200,000,000 VNĐ',
     kml_status: 'Đã phê duyệt'
   },
   {
@@ -118,7 +116,6 @@ const INITIAL_PROJECTS: HubProject[] = [
     image_url: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80',
     is_assigned: true,
     is_restricted_for_pm: false,
-    escrow_budget: '5,600,000,000 VNĐ',
     kml_status: 'Đã phê duyệt'
   },
   {
@@ -144,7 +141,6 @@ const INITIAL_PROJECTS: HubProject[] = [
     image_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=800&auto=format&fit=crop&q=80',
     is_assigned: false,
     is_restricted_for_pm: false,
-    escrow_budget: '3,800,000,000 VNĐ',
     kml_status: 'Đang thẩm định'
   },
   {
@@ -170,7 +166,6 @@ const INITIAL_PROJECTS: HubProject[] = [
     image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80',
     is_assigned: true,
     is_restricted_for_pm: true, // Khi PM Đỗ Quốc Hoàng xem thì bị 403 IDOR
-    escrow_budget: '12,500,000,000 VNĐ',
     kml_status: 'Đã phê duyệt'
   },
   {
@@ -197,7 +192,6 @@ const INITIAL_PROJECTS: HubProject[] = [
     image_url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
     is_assigned: true,
     is_restricted_for_pm: false,
-    escrow_budget: '6,900,000,000 VNĐ',
     kml_status: 'Đã phê duyệt'
   }
 ]
@@ -206,12 +200,7 @@ export const ProjectList: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // Chế độ mô phỏng vai trò (SUPERVISOR hoặc PM) để dễ dàng kiểm thử kịch bản IDOR và nút tạo dự án
-  const [activeRole, setActiveRole] = useState<'SUPERVISOR' | 'PROJECT_MANAGER'>(
-    user?.role === RoleCode.SUPERVISOR ? 'SUPERVISOR' : 'PROJECT_MANAGER'
-  )
-
-  const isSupervisor = activeRole === 'SUPERVISOR'
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
   // Projects state
   const [projects, setProjects] = useState<HubProject[]>(INITIAL_PROJECTS)
@@ -245,17 +234,6 @@ export const ProjectList: React.FC = () => {
   // Modal Gán PM nhanh cho dự án
   const [assignModalProject, setAssignModalProject] = useState<HubProject | null>(null)
   const [selectedPMAssign, setSelectedPMAssign] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
-
-  // Xử lý đổi vai trò mô phỏng
-  const handleToggleRoleSimulation = () => {
-    const nextRole = isSupervisor ? 'PROJECT_MANAGER' : 'SUPERVISOR'
-    setActiveRole(nextRole)
-    if (nextRole === 'SUPERVISOR') {
-      showToast('Đã chuyển sang vai trò SUPERVISOR: Hiển thị nút Khởi tạo dự án & mở khóa toàn quyền truy cập.')
-    } else {
-      showToast('Đã chuyển sang vai trò PROJECT MANAGER: Khóa dự án ngoài phạm vi theo chính sách 403 Scope IDOR.')
-    }
-  }
 
   // Submit tạo dự án mới
   const handleCreateProjectSubmit = (e: React.FormEvent) => {
@@ -372,35 +350,6 @@ export const ProjectList: React.FC = () => {
           </span>
         </div>
 
-        {/* Live Scope & Security Role Simulator Switcher */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border shadow-2xs transition-all ${
-              isSupervisor
-                ? 'bg-[#C9A227]/10 border-[#C9A227]/30 text-[#8C6D1F]'
-                : 'bg-slate-100 border-slate-200 text-slate-700'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isSupervisor ? 'bg-[#C9A227] animate-pulse' : 'bg-slate-500'
-              }`}
-            ></span>
-            <span className="font-semibold">
-              Chế độ hiện tại: {isSupervisor ? 'SUPERVISOR (Toàn quyền quản trị & phân quyền)' : 'PROJECT MANAGER (Chỉ xem dự án được gán)'}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleToggleRoleSimulation}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
-            title="Nhấn để chuyển đổi qua lại giữa góc nhìn Supervisor và PM"
-          >
-            <ArrowLeftRight className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>Mô phỏng đổi vai trò (PM/Super)</span>
-          </button>
-        </div>
       </div>
 
       {/* ======================================================== */}
@@ -928,7 +877,10 @@ export const ProjectList: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       <button
                         type="button"
-                        onClick={() => showToast(`Xem dự án ${prj.code}`)}
+                        onClick={() => {
+                          const base = isSupervisor ? '/sup' : '/pm'
+                          navigate(`${base}/projects/${prj.id}`)
+                        }}
                         className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-[#C9A227] hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs"
                       >
                         Chi tiết

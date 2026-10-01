@@ -25,6 +25,7 @@ import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
 import { WorkOrderConfirm } from './pages/(pm)/WorkOrderConfirm'
 import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
+import { RepairProposals } from './pages/(pm)/RepairProposals'
 
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
@@ -71,6 +72,9 @@ export const App: React.FC = () => {
           <Route path="field-tasks" element={<FieldTasks />} />
           <Route path="fast-track" element={<FastTrackDispatch />} />
           <Route path="dispatch" element={<FastTrackDispatch />} />
+          <Route path="proposals" element={<RepairProposals />} />
+          <Route path="work-packages" element={<RepairProposals />} />
+          <Route path="repair-batches" element={<RepairProposals />} />
           <Route path="work-orders/confirm" element={<WorkOrderConfirm />} />
         </Route>
 
@@ -82,8 +86,16 @@ export const App: React.FC = () => {
           <Route path="projects/:id" element={<ProjectOverview />} />
           <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
           <Route path="alignment" element={<AlignmentSegments />} />
+          <Route path="surveys" element={<SurveyRequests />} />
           <Route path="surveys/:id" element={<DroneMissionAIReview />} />
           <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
+          <Route path="drone-mission" element={<DroneMissionAIReview />} />
+          <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
+          <Route path="ai-inbox" element={<AIReviewInbox />} />
+          <Route path="fast-track" element={<FastTrackDispatch />} />
+          <Route path="dispatch" element={<FastTrackDispatch />} />
+          <Route path="proposals" element={<RepairProposals />} />
+          <Route path="work-packages" element={<RepairProposals />} />
           <Route path="approvals" element={<BatchApprovals />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<FieldAcceptance />} />

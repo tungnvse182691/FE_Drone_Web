@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Card } from '../../components/ui/Card'
@@ -162,6 +164,9 @@ interface CrewTeam {
 
 export const FastTrackDispatch: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   // 1. DỮ LIỆU CHÍNH SÁCH FAST TRACK HIỆN HÀNH
   const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig>({
@@ -1084,7 +1089,7 @@ export const FastTrackDispatch: React.FC = () => {
         <div className="space-y-1">
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
             <button
-              onClick={() => navigate('/pm/dashboard')}
+              onClick={() => navigate(`${basePath}/dashboard`)}
               className="hover:text-brand-gold cursor-pointer transition-colors"
             >
               Trang chủ

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
@@ -75,6 +77,9 @@ interface AIDetectionItem {
 export const DroneMissionAIReview: React.FC = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   // Trạng thái bật/tắt lớp AI Bounding Box trên Canvas
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
@@ -642,12 +647,12 @@ export const DroneMissionAIReview: React.FC = () => {
       <section className="bg-white rounded-xl px-5 py-4 shadow-2xs border border-brand-border flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-            <Link to="/pm/dashboard" className="hover:text-brand-gold transition-colors flex items-center gap-1">
+            <Link to={`${basePath}/dashboard`} className="hover:text-brand-gold transition-colors flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               <span>Trang chủ</span>
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <Link to="/pm/surveys" className="hover:text-brand-gold transition-colors">
+            <Link to={`${basePath}/surveys`} className="hover:text-brand-gold transition-colors">
               Khảo sát
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />

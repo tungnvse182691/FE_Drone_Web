@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
@@ -90,6 +92,9 @@ export interface TriageCase {
 
 export const AIReviewInbox: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   // Dữ liệu mock 8 hồ sơ tiếp nhận phong phú
   const [cases, setCases] = useState<TriageCase[]>([
@@ -728,9 +733,9 @@ export const AIReviewInbox: React.FC = () => {
       {/* Top Breadcrumb & Status Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-          <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate('/pm/dashboard')}>Trang chủ</span>
+          <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/dashboard`)}>Trang chủ</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate('/pm/surveys')}>Khiếm khuyết</span>
+          <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/surveys`)}>Khiếm khuyết</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           <span className="font-semibold text-[#8F7212]">Hộp thư tiếp nhận (Triage WF-04)</span>
         </nav>
@@ -748,7 +753,7 @@ export const AIReviewInbox: React.FC = () => {
               Hộp Thư Tiếp Nhận Sự Cố &amp; Triage Khiếm Khuyết
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#C9A227]/15 text-[#8F7212] border border-[#C9A227]/30">
-              PM Triage Hub
+              {isSupervisor ? 'Giám sát Triage Hub' : 'PM Triage Hub'}
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
               {pendingCount} ca chờ duyệt
@@ -1517,7 +1522,7 @@ export const AIReviewInbox: React.FC = () => {
               <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <span>
-                  Sau khi gộp, các hồ sơ phụ sẽ được chuyển sang trạng thái <strong>MERGED (Đã gộp trùng)</strong>, ảnh bằng chứng hiện trường sẽ được đính kèm vào Case gốc, tránh trùng lặp 2 lần chi phí dự toán BOQ.
+                  Sau khi gộp, các hồ sơ phụ sẽ được chuyển sang trạng thái <strong>MERGED (Đã gộp trùng)</strong>, ảnh bằng chứng hiện trường sẽ được đính kèm vào Case gốc, tránh trùng lặp khối lượng kỹ thuật sửa chữa.
                 </span>
               </div>
             </div>

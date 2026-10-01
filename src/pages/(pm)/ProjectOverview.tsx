@@ -68,10 +68,7 @@ export const ProjectOverview: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // Chế độ xem mô phỏng PM vs Supervisor
-  const [activeRole, setActiveRole] = useState<'PM' | 'SUPERVISOR'>(
-    user?.role === RoleCode.SUPERVISOR ? 'SUPERVISOR' : 'PM'
-  )
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
   // Danh sách các phân đoạn tuyến (5 Segments chuẩn Stitch)
   const [segments] = useState<Segment[]>([
@@ -334,7 +331,7 @@ export const ProjectOverview: React.FC = () => {
   }, [projectId, navigate])
 
   // Chuyển hướng theo role hiện tại
-  const basePath = activeRole === 'SUPERVISOR' ? '/sup' : '/pm'
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   return (
     <div className="space-y-6">
@@ -374,39 +371,6 @@ export const ProjectOverview: React.FC = () => {
             <span className="text-brand-gold font-bold">Tổng quan & Nhân sự</span>
           </nav>
 
-          {/* Role switcher toggle */}
-          <div className="flex items-center gap-2 bg-white border border-brand-border p-1 rounded-full shadow-xs">
-            <span className="text-[11px] text-slate-500 pl-2.5 uppercase tracking-wider font-semibold">
-              Chế độ xem:
-            </span>
-            <div className="inline-flex rounded-full bg-slate-50 p-0.5 border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setActiveRole('PM')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeRole === 'PM'
-                    ? 'bg-[#C9A227] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-brand-dark'
-                }`}
-              >
-                PM (Quản lý)
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveRole('SUPERVISOR')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeRole === 'SUPERVISOR'
-                    ? 'bg-[#C9A227] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-brand-dark'
-                }`}
-              >
-                Supervisor (Giám sát)
-              </button>
-            </div>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#C9A227]/15 text-[#8F7212] border border-[#C9A227]/30">
-              Quyền: Toàn phần
-            </span>
-          </div>
         </div>
 
         {/* Main Header Card */}
@@ -652,7 +616,7 @@ export const ProjectOverview: React.FC = () => {
                   <div className="mt-2 flex items-center justify-end">
                     <button
                       type="button"
-                      onClick={() => navigate('/pm/projects/prj-ql1a-02/alignment')}
+                      onClick={() => navigate(`${basePath}/projects/${projectId}/alignment`)}
                       className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-dark bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded shadow-2xs transition-colors"
                     >
                       <Map className="w-3 h-3 text-[#C9A227]" />
@@ -680,7 +644,7 @@ export const ProjectOverview: React.FC = () => {
                   <div className="mt-2 flex items-center justify-end">
                     <button
                       type="button"
-                      onClick={() => navigate('/pm/surveys/srv-01/review')}
+                      onClick={() => navigate(`${basePath}/surveys/srv-01/review`)}
                       className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8F7212] bg-[#C9A227]/10 hover:bg-[#C9A227]/20 border border-[#C9A227]/30 px-2.5 py-1 rounded shadow-2xs transition-colors"
                     >
                       <PlaneTakeoff className="w-3 h-3 text-[#C9A227]" />
@@ -959,7 +923,7 @@ export const ProjectOverview: React.FC = () => {
             <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
               <span>Tọa độ trung tâm: 16.205°N, 108.165°E</span>
               <button
-                onClick={() => navigate(`/pm/projects/${projectId}/segments`)}
+                onClick={() => navigate(`${basePath}/projects/${projectId}/alignment`)}
                 className="text-[#8F7212] font-semibold hover:underline cursor-pointer flex items-center gap-1"
               >
                 <span>Mở bản đồ lớp tim tuyến (WF-02)</span>
