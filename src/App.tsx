@@ -32,6 +32,7 @@ import { SupLayout } from './pages/(sup)/SupLayout'
 import { SupDashboard } from './pages/(sup)/SupDashboard'
 import { BatchApprovals } from './pages/(sup)/BatchApprovals'
 import { BatchRejection } from './pages/(sup)/BatchRejection'
+import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { SignOffClosure } from './pages/(sup)/SignOffClosure'
@@ -73,8 +74,11 @@ export const App: React.FC = () => {
           <Route path="fast-track" element={<FastTrackDispatch />} />
           <Route path="dispatch" element={<FastTrackDispatch />} />
           <Route path="proposals" element={<RepairProposals />} />
+          <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
           <Route path="work-packages" element={<RepairProposals />} />
+          <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
           <Route path="repair-batches" element={<RepairProposals />} />
+          <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
           <Route path="work-orders/confirm" element={<WorkOrderConfirm />} />
         </Route>
 
@@ -95,8 +99,13 @@ export const App: React.FC = () => {
           <Route path="fast-track" element={<FastTrackDispatch />} />
           <Route path="dispatch" element={<FastTrackDispatch />} />
           <Route path="proposals" element={<RepairProposals />} />
+          <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
           <Route path="work-packages" element={<RepairProposals />} />
+          <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
+          <Route path="repair-batches" element={<RepairProposals />} />
+          <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
           <Route path="approvals" element={<BatchApprovals />} />
+          <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<FieldAcceptance />} />
           <Route path="acceptance/:batchId" element={<FieldAcceptance />} />

@@ -1162,8 +1162,10 @@ export const RepairProposals: React.FC = () => {
                     <tr key={pkg.id} className="hover:bg-slate-50/80 transition-colors group">
                       {/* Mã gói */}
                       <td className="py-4 px-4 align-top whitespace-nowrap">
-                        <span
-                          className={`font-mono text-xs font-bold px-2.5 py-1 rounded-full shadow-2xs ${
+                        <button
+                          onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+                          type="button"
+                          className={`font-mono text-xs font-bold px-2.5 py-1 rounded-full shadow-2xs cursor-pointer hover:opacity-90 transition ${
                             pkg.status === 'SUBMITTED'
                               ? 'bg-[#C9A227] text-white'
                               : pkg.status === 'DECIDED'
@@ -1172,18 +1174,20 @@ export const RepairProposals: React.FC = () => {
                               ? 'bg-blue-50 text-blue-800 border border-blue-200'
                               : 'bg-slate-100 text-slate-600 border border-slate-200'
                           }`}
+                          title="Bấm để mở chi tiết thẩm duyệt (WF-07)"
                         >
                           {pkg.code}
-                        </span>
+                        </button>
                       </td>
 
                       {/* Tên gói công việc & Lý trình */}
                       <td className="py-4 px-4 align-top max-w-xs">
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => setSelectedPackageForDetail(pkg)}
+                            onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
                             type="button"
                             className="text-left font-bold text-sm text-brand-dark group-hover:text-[#C9A227] transition-colors line-clamp-1 cursor-pointer"
+                            title="Bấm để mở chi tiết thẩm duyệt (WF-07)"
                           >
                             {pkg.title}
                           </button>
@@ -1347,7 +1351,7 @@ export const RepairProposals: React.FC = () => {
 
                           {/* Nút xem chi tiết / thẩm định */}
                           <button
-                            onClick={() => setSelectedPackageForDetail(pkg)}
+                            onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
                             type="button"
                             className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
                           >
@@ -1367,7 +1371,7 @@ export const RepairProposals: React.FC = () => {
 
                           {/* Dropdown Menu Tùy Chọn */}
                           {activeRowMenuId === pkg.id && (
-                            <div className="absolute right-0 top-8 z-30 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-left text-xs animate-in fade-in">
+                            <div className="absolute right-0 top-8 z-30 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-left text-xs animate-in fade-in">
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(pkg.code)
@@ -1381,13 +1385,13 @@ export const RepairProposals: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => {
-                                  setSelectedPackageForDetail(pkg)
+                                  navigate(`${basePath}/proposals/${pkg.id}`)
                                   setActiveRowMenuId(null)
                                 }}
                                 className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                               >
                                 <FileText className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Xem chi tiết hạng mục</span>
+                                <span>Thẩm định chi tiết (WF-07)</span>
                               </button>
                               <button
                                 onClick={() => {
