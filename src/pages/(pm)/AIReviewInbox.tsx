@@ -772,10 +772,18 @@ export const AIReviewInbox: React.FC = () => {
           <button
             onClick={() => setIsMergeModalOpen(true)}
             type="button"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+          >
+            <Merge className="w-4 h-4 text-[#C9A227]" />
+            <span>Gộp trùng lặp (2)</span>
+          </button>
+          <button
+            onClick={() => navigate('/pm/fast-track')}
+            type="button"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <Merge className="w-4 h-4" />
-            <span>Gộp phản ánh trùng lặp (2)</span>
+            <span>Điều phối Fast Track (WF-05)</span>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -1419,10 +1427,30 @@ export const AIReviewInbox: React.FC = () => {
               </div>
             </div>
 
-            {/* Compliance Note */}
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-slate-600 text-[11px]">
-              <ShieldCheck className="w-4 h-4 text-[#C9A227] shrink-0" />
-              <span>Đã đủ điều kiện kích hoạt lệnh thi công sửa chữa cấp bách (WF-05).</span>
+            {/* Compliance Note & Direct Action Links */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-slate-600 text-[11px]">
+                <ShieldCheck className="w-4 h-4 text-[#C9A227] shrink-0" />
+                <span>Đã đủ điều kiện kích hoạt lệnh thi công sửa chữa cấp bách (WF-05).</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/pm/defects/${selectedCase.id}/verify`)}
+                  className="py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5 text-[#C9A227]" />
+                  <span>So sánh đa kỳ & BBox</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/pm/fast-track')}
+                  className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-lg border border-amber-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5 text-[#C9A227]" />
+                  <span>Điều phối Fast Track</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

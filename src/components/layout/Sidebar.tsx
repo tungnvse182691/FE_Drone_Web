@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   BarChart3,
   ShieldCheck,
-  FileSignature
+  FileSignature,
+  Zap
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -26,6 +27,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Danh mục dự án', path: '/pm/projects', icon: FolderKanban },
     { label: 'Yêu cầu bay khảo sát', path: '/pm/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư phát hiện AI', path: '/pm/ai-inbox', icon: Inbox },
+    { label: 'Chính sách & Giao việc (WF-05)', path: '/pm/fast-track', icon: Zap },
     { label: 'Gom đợt & Lập dự toán', path: '/pm/repair-batches/create', icon: Boxes },
     { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
     { label: 'Nhiệm vụ đo hiện trường', path: '/pm/field-tasks', icon: ClipboardList },

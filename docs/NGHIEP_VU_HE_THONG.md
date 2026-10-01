@@ -12,7 +12,7 @@
 | **Màn 03/04 $\longleftrightarrow$ Màn 02** | *Gửi lời mời nhân sự $\leftrightarrow$ Tiếp nhận thư mời Onboarding* | <span style="color:orange">**⏳ ĐANG DANG DỞ (Mới xong Màn 02 - Tiếp nhận, Chờ Màn 04)**</span> | - **Màn 03/04:** Supervisor bấm *"Mời nhân sự"* $\rightarrow$ Nhập email, chọn vai trò PM $\rightarrow$ Hệ thống sinh mã token link `/invite/:token`.<br>- **Màn 02:** PM nhận link, mở trang kích hoạt tài khoản và vào dự án. | ⚠️ **TODO KHI LÀM MÀN 04 (Chi tiết dự án):**<br>1. Xây dựng Modal *"Mời nhân sự vào dự án"* (Nhập email, phân quyền, gửi link).<br>2. Hiển thị danh sách lời mời đang chờ (`PENDING`) kèm nút copy link invite `/invite/:token` để test trực tiếp sang Màn 02.<br>3. Nút hủy/thu hồi lời mời nếu gửi nhầm. |
 | **Màn 01 $\longleftrightarrow$ Màn 02** | *Đăng nhập $\leftrightarrow$ Kích hoạt thư mời Onboarding* | <span style="color:green">**✅ HOÀN THÀNH (100%)**</span> | - Màn 02 nhận token (`/invite/:token`).<br>- PM thiết lập mật khẩu mới $\rightarrow$ Kích hoạt tài khoản và chuyển thẳng vào PM Dashboard (`/pm/dashboard`). | *Đã hoàn tất cả 2 màn hình. Mật khẩu đạt chuẩn Enterprise và cờ `must_change_password` được gỡ bỏ.* |
 | **Màn 03 $\longleftrightarrow$ Màn 05** | *Khởi tạo dự án $\leftrightarrow$ Thiết lập tim tuyến MapLibre (WF-02)* | <span style="color:orange">**⏳ ĐANG DANG DỞ (Mới xong Màn 03, Chờ Màn 05)**</span> | - **Màn 03:** Sup tạo dự án, nhập lý trình Km đầu, Km cuối, chiều dài $\rightarrow$ Dự án ở trạng thái `PENDING_ALIGNMENT`.<br>- **Màn 05:** Tải file CAD (`.sxf`), nắn chỉnh tim tuyến trên MapLibre. | ⚠️ **TODO KHI LÀM MÀN 05:**<br>1. Đo cự ly giữa các mốc trên MapLibre, kiểm tra không được lệch quá $\pm 10\%$ so với Màn 03.<br>2. Bật cảnh báo đỏ nếu người dùng chấm lệch quá xa.<br>3. Tạo nút *"Đồng bộ ngược lại Màn 03"* theo số đo thực tế GIS. |
-| **Màn 03 $\longleftrightarrow$ Màn 04** | *Danh mục dự án $\leftrightarrow$ Chi tiết dự án (Handoff & Timeline)* | <span style="color:orange">**⏳ ĐANG DANG DỞ (Mới xong Màn 03, Chờ Màn 04)**</span> | - Nút *"Vào quản lý dự án"* ở từng card Màn 03 sẽ bấm để chuyển sang Màn 04 theo `project_id`. | ⚠️ **TODO KHI LÀM MÀN 04:**<br>1. Tiếp nhận `project_id` từ Màn 03.<br>2. Hiển thị thông số chi tiết hợp đồng, timeline bàn giao.<br>3. Áp dụng chặn 403 IDOR nếu PM xem dự án ngoài thẩm quyền. |
+| **Màn 07 $\longleftrightarrow$ Màn 08** | *Hộp thư tiếp nhận AI $\leftrightarrow$ Fast Track & Thẩm định BBox (WF-05)* | <span style="color:green">**✅ HOÀN THÀNH (100%)**</span> | - **Màn 07:** Sau khi PM bấm *"Xác minh hợp lệ"*, hệ thống có nút chuyển thẳng sang Màn 08 (`/pm/fast-track`) để phát lệnh thi công nhanh hoặc sang Màn 08/09 (`/pm/defects/:id/verify`) để so sánh ảnh đa kỳ. | *Đã hoàn tất liên kết điều hướng trực tiếp giữa các màn hình.* |
 
 ---
 
@@ -70,4 +70,22 @@
 
 ---
 
-*(Các màn hình tiếp theo từ Màn 04 đến Màn 18 sẽ được tiếp tục bổ sung tuần tự vào tài liệu này sau khi hoàn thiện từng màn)*
+### 🖥️ MÀN HÌNH 08: CHÍNH SÁCH FAST TRACK & ĐIỀU PHỐI HIỆN TRƯỜNG (`08_WF05_FastTrackPolicy_FieldDispatch`)
+* **Mục đích:** Thiết lập phiên bản chính sách Fast Track và điều phối lực lượng kỹ thuật/cứu hộ ra hiện trường theo 3 chế độ công tác.
+* **Quy chuẩn nghiệp vụ đã chốt:**
+  1. **3 Chế độ giao việc (Dispatch Modes):**
+     - **Gom lô đo đạc (`MEASURE_ONLY`):** Cho phép chọn nhiều lỗi cùng tuyến để tổ trắc địa tuần tra 1 vòng lấy số liệu, tuyệt đối nghiêm cấm cào bóc hay tự ý sửa khi chưa lập dự toán BOQ.
+     - **Đo và Sửa ngay (`INSPECT_AND_REPAIR` — Fast Track Direct):** Tuân thủ **Quy tắc BR-08**, chỉ cho phép chọn đúng **1 lỗi đơn lẻ** đạt chuẩn chính sách (diện tích $\le 0.5\text{ m}^2$, sâu $\le 5\text{ cm}$). Cho phép thợ mang vật liệu vá nguội xử lý dứt điểm tại chỗ.
+     - **Xử lý khẩn cấp 24/7 (`EMERGENCY`):** Chỉ chọn đúng **1 vị trí nguy hiểm** (sụt lún sâu, ổ voi gây lật xe) để điều động xe cơ động cứu hộ, cắm cọc tiêu phân luồng và khắc phục tạm thời để thông xe. Không đóng trạng thái lỗi gốc trên hệ thống.
+  2. **Ràng buộc an toàn & Chống lạm dụng điều xe khẩn cấp:**
+     - Nếu PM chọn lỗi nhỏ chưa vượt ngưỡng an toàn ở chế độ `EMERGENCY`: Hệ thống nhấp nháy cảnh báo trực quan trên thanh đáy, hiển thị Banner cảnh báo trong Modal và **bắt buộc PM phải nhập lý do giải trình đặc biệt** ($\ge 15$ ký tự) mới cho phép phát lệnh xuất quân.
+  3. **Quản lý phiên bản chính sách (Policy Versioning):**
+     - Hỗ trợ tạo phiên bản chính sách mới kế thừa từ phiên bản hiện hành, điều chỉnh ngưỡng diện tích tối đa và độ sâu tối đa.
+     - Nút kích hoạt phiên bản chính thức để áp dụng tức thì cho các chuyến bay quét tiếp theo.
+  4. **Bản đồ GIS MapLibre tương tác trực tiếp:**
+     - Tự động vẽ hành lang tuyến và các Marker khiếm khuyết tương ứng với từng tuyến đường lựa chọn (`QL1A_PK04`, `QL1A_PK01`, `EXPRESSWAY_LINK`, `PHANTHIET_DAUGIAY`).
+     - Tích hợp chọn tổ đội phân công trực tiếp tại từng dòng và Modal phát lệnh xuất quân đồng bộ sang App Mobile.
+
+---
+
+*(Các màn hình tiếp theo từ Màn 09 đến Màn 18 sẽ được tiếp tục bổ sung tuần tự vào tài liệu này sau khi hoàn thiện từng màn)*

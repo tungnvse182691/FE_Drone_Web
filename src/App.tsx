@@ -24,6 +24,7 @@ import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
 import { WorkOrderConfirm } from './pages/(pm)/WorkOrderConfirm'
+import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
 
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
@@ -62,10 +63,14 @@ export const App: React.FC = () => {
           <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
           <Route path="ai-inbox" element={<AIReviewInbox />} />
           <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
+          <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
+          <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
           <Route path="repair-batches/create" element={<RepairBatching />} />
           <Route path="repair-batches/:id/submit" element={<SubmitApproval />} />
           <Route path="repair-batches/assign" element={<AssignCrew />} />
           <Route path="field-tasks" element={<FieldTasks />} />
+          <Route path="fast-track" element={<FastTrackDispatch />} />
+          <Route path="dispatch" element={<FastTrackDispatch />} />
           <Route path="work-orders/confirm" element={<WorkOrderConfirm />} />
         </Route>
 
@@ -82,6 +87,7 @@ export const App: React.FC = () => {
           <Route path="approvals" element={<BatchApprovals />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<FieldAcceptance />} />
+          <Route path="acceptance/:batchId" element={<FieldAcceptance />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="signoff" element={<SignOffClosure />} />
         </Route>
