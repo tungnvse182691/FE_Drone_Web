@@ -25,10 +25,10 @@ export const BatchApprovals: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-          Màn 12: Thẩm Duyệt Hồ Sơ Đợt Sửa Chữa (Supervisor Authority)
+          Thẩm Duyệt Hồ Sơ Đợt Sửa Chữa &amp; Dự Toán BOQ (WF-07)
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Chỉ vai trò Giám sát / Chủ đầu tư mới có thẩm quyền Phê duyệt thông qua hoặc Trả về yêu cầu sửa đổi
+          Thẩm quyền Tư vấn Giám sát: Kiểm tra định mức đơn giá vật liệu, phê duyệt từng hạng mục công việc hoặc yêu cầu chỉnh sửa hồ sơ (Revision Required)
         </p>
       </div>
 
@@ -83,7 +83,15 @@ export const BatchApprovals: React.FC = () => {
               </div>
 
               {/* Action Buttons for Supervisor */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/sup/approvals/${batch.id}`)}
+                  icon={<FileText className="w-4 h-4 text-brand-gold" />}
+                >
+                  Xem Bóc Tách &amp; Thẩm Duyệt Chi Tiết
+                </Button>
+
                 {batch.status === RepairBatchStatus.PENDING_APPROVAL ? (
                   <>
                     <Button
@@ -92,7 +100,7 @@ export const BatchApprovals: React.FC = () => {
                       className="text-brand-error border-rose-200 hover:bg-rose-50"
                       icon={<XCircle className="w-4 h-4" />}
                     >
-                      Màn 13: Yêu Cầu Chỉnh Sửa
+                      Yêu Cầu Chỉnh Sửa
                     </Button>
                     <Button
                       onClick={() => handleApprove(batch.id)}

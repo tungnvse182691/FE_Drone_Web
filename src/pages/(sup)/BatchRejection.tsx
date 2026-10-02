@@ -13,24 +13,24 @@ export const BatchRejection: React.FC = () => {
   const handleReject = (e: React.FormEvent) => {
     e.preventDefault()
     alert('Đã gửi yêu cầu chỉnh sửa hồ sơ (REVISION_REQUIRED) về cho Chỉ huy trưởng (PM)!')
-    navigate('/sup/approvals')
+    navigate('/sup/proposals')
   }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/sup/approvals')}
+          onClick={() => navigate('/sup/proposals')}
           className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-            Màn 13: Yêu Cầu Sửa Đổi Hồ Sơ Đợt Sửa Chữa
+            Yêu Cầu Sửa Đổi Hồ Sơ Đợt Sửa Chữa (Revision Required)
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gửi phản hồi yêu cầu PM giải trình hoặc tính toán lại định mức dự toán
+            Phản hồi kỹ thuật của Tư vấn Giám sát yêu cầu PM giải trình hoặc tính toán lại định mức dự toán
           </p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export const BatchRejection: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={() => navigate('/sup/approvals')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/sup/proposals')}>
               Hủy Bỏ
             </Button>
             <Button

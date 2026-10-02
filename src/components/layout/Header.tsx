@@ -58,9 +58,13 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-slate-500 hover:text-brand-dark hover:bg-slate-100 rounded-lg transition-colors cursor-pointer">
+        <button
+          onClick={() => navigate(user?.role === RoleCode.SUPERVISOR ? '/sup/notifications' : '/pm/notifications')}
+          title="Trung tâm thông báo & Bàn giao (WF-14)"
+          className="relative p-2 text-slate-500 hover:text-brand-dark hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+        >
           <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-gold rounded-full ring-2 ring-white"></span>
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-gold rounded-full ring-2 ring-white animate-pulse"></span>
         </button>
 
         {/* User Profile */}

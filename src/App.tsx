@@ -23,14 +23,13 @@ import { SubmitApproval } from './pages/(pm)/SubmitApproval'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
-import { WorkOrderConfirm } from './pages/(pm)/WorkOrderConfirm'
 import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
 import { RepairProposals } from './pages/(pm)/RepairProposals'
+import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
 
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
 import { SupDashboard } from './pages/(sup)/SupDashboard'
-import { BatchApprovals } from './pages/(sup)/BatchApprovals'
 import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
@@ -87,6 +86,7 @@ export const App: React.FC = () => {
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
+          <Route path="notifications" element={<NotificationsHandoffHub />} />
         </Route>
 
         {/* Supervisor routes */}
@@ -110,8 +110,7 @@ export const App: React.FC = () => {
           <Route path="work-packages" element={<RepairProposals />} />
           <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
           <Route path="repair-batches" element={<RepairProposals />} />
-          <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
-          <Route path="approvals" element={<BatchApprovals />} />
+          <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
           <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
@@ -121,6 +120,7 @@ export const App: React.FC = () => {
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="signoff" element={<SignOffClosure />} />
+          <Route path="notifications" element={<NotificationsHandoffHub />} />
         </Route>
 
         {/* Default route */}
@@ -132,6 +132,22 @@ export const App: React.FC = () => {
                 <Navigate to="/sup/dashboard" replace />
               ) : (
                 <Navigate to="/pm/dashboard" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        {/* Top-level Notifications route */}
+        <Route
+          path="/notifications"
+          element={
+            isAuthenticated ? (
+              user?.role === RoleCode.SUPERVISOR ? (
+                <Navigate to="/sup/notifications" replace />
+              ) : (
+                <Navigate to="/pm/notifications" replace />
               )
             ) : (
               <Navigate to="/login" replace />

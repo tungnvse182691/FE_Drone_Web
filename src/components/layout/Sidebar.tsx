@@ -8,7 +8,6 @@ import {
   PlaneTakeoff,
   Inbox,
   Boxes,
-  FileCheck2,
   Users2,
   ClipboardList,
   CheckCircle2,
@@ -16,7 +15,8 @@ import {
   ShieldCheck,
   FileSignature,
   Zap,
-  Route
+  Route,
+  Bell
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -25,6 +25,7 @@ export const Sidebar: React.FC = () => {
 
   const pmNavItems = [
     { label: 'Tổng quan (Dashboard)', path: '/pm/dashboard', icon: LayoutDashboard },
+    { label: 'Thông báo & Bàn giao (WF-14)', path: '/pm/notifications', icon: Bell },
     { label: 'Danh mục dự án', path: '/pm/projects', icon: FolderKanban },
     { label: 'Tuyến đường & Phân đoạn', path: '/pm/alignment', icon: Route },
     { label: 'Khảo sát Drone & Không ảnh', path: '/pm/surveys', icon: PlaneTakeoff },
@@ -40,13 +41,13 @@ export const Sidebar: React.FC = () => {
 
   const supNavItems = [
     { label: 'Dashboard Danh mục bảo hành', path: '/sup/dashboard', icon: LayoutDashboard },
+    { label: 'Thông báo & Bàn giao (WF-14)', path: '/sup/notifications', icon: Bell },
     { label: 'Danh mục dự án', path: '/sup/projects', icon: FolderKanban },
     { label: 'Tuyến đường & Phân đoạn', path: '/sup/alignment', icon: Route },
     { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư tiếp nhận & Triage', path: '/sup/ai-inbox', icon: Inbox },
     { label: 'Giám sát chính sách Fast-Track', path: '/sup/fast-track', icon: Zap },
     { label: 'Gói đề xuất kỹ thuật', path: '/sup/proposals', icon: Boxes },
-    { label: 'Thẩm duyệt đợt sửa', path: '/sup/approvals', icon: FileCheck2 },
     { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
     { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/sup/risk-analytics', icon: BarChart3 },
     { label: 'Ký số đóng đợt', path: '/sup/signoff', icon: FileSignature },
