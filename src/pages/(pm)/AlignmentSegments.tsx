@@ -15,17 +15,13 @@ import {
   Plus,
   Minus,
   Ruler,
-  Undo2,
   AlertTriangle,
   CheckCircle2,
   Sparkles,
-  Link as LinkIcon,
   SplitSquareVertical,
   Edit2,
   Trash2,
   BarChart2,
-  Wand2,
-  Crosshair,
   ShieldCheck,
   Building,
   User,
@@ -77,36 +73,20 @@ const SEGMENT_COLORS = [
   '#2563EB'  // Blue
 ]
 
-// Tuyến ban đầu: Chứa vòng xoắn lỗi tự cắt tại V-04 (Km 1030+000)
-const ROUTE_WITH_CONFLICT: [number, number][] = [
+// Tọa độ tim tuyến chuẩn QL1A Km 1020 - Km 1045 (Chuẩn hình học không có lỗi tự cắt hay khoảng hở)
+const ROUTE_COORDINATES: [number, number][] = [
   [108.0825, 16.2731], // P0 - Km 1020+000 (Huế)
   [108.1054, 16.2589], // P1 - Km 1022+500
   [108.1287, 16.2415], // P2 - Km 1025+000 (Điểm giáp Seg 1-2)
   [108.1492, 16.2238], // P3 - Km 1027+500
-  [108.1651, 16.2052], // P4 - Km 1030+000 V-04 (Điểm bắt đầu xoắn)
-  [108.1695, 16.2090], // V-04 loop 1 (Xoắn ngược bán kính hẹp R=42m)
-  [108.1638, 16.2085], // V-04 loop 2
-  [108.1678, 16.2032], // V-04 loop 3 (Tự cắt qua thân tuyến)
+  [108.1695, 16.2085], // P4 - Km 1030+000
   [108.1884, 16.1843], // P5 - Km 1035+000
   [108.2152, 16.1521], // P6 - Km 1040+000
   [108.2418, 16.1215]  // P7 - Km 1045+000 (Đà Nẵng)
 ]
 
-// Tuyến sau khi nắn mượt Bezier: Đỉnh V-04 được làm mượt chuẩn R=75m
-const ROUTE_SMOOTHED: [number, number][] = [
-  [108.0825, 16.2731], // P0 - Km 1020+000
-  [108.1054, 16.2589], // P1 - Km 1022+500
-  [108.1287, 16.2415], // P2 - Km 1025+000
-  [108.1492, 16.2238], // P3 - Km 1027+500
-  [108.1695, 16.2085], // V-04 đã nắn bán kính cong chuẩn R=75m
-  [108.1884, 16.1843], // P5 - Km 1035+000
-  [108.2152, 16.1521], // P6 - Km 1040+000
-  [108.2418, 16.1215]  // P7 - Km 1045+000
-]
-
 // Các mốc lý trình ứng với các điểm trên tuyến (25.0 km)
-const ROUTE_KM_MARKERS_CONFLICT = [1020, 1022.5, 1025, 1027.5, 1030, 1030.5, 1031, 1031.5, 1035, 1040, 1045]
-const ROUTE_KM_MARKERS_SMOOTHED = [1020, 1022.5, 1025, 1027.5, 1030, 1035, 1040, 1045]
+const ROUTE_KM_POINTS = [1020, 1022.5, 1025, 1027.5, 1030, 1035, 1040, 1045]
 
 // Hàm nội suy tọa độ [lng, lat] theo Km lý trình
 function interpolateCoordAtKm(
@@ -194,10 +174,6 @@ export const AlignmentSegments: React.FC = () => {
   const [splitDistance, setSplitDistance] = useState<number>(5.0)
   const [splitSortOrder, setSplitSortOrder] = useState<'asc' | 'desc'>('asc')
 
-  // Tình trạng lỗi hình học
-  const [hasSelfIntersection, setHasSelfIntersection] = useState<boolean>(true) // V-04
-  const [hasGapError, setHasGapError] = useState<boolean>(true) // Khoảng hở 12.4m giữa Seg 1 và Seg 2
-
   // Chế độ đo khoảng cách (Ruler)
   const [rulerActive, setRulerActive] = useState<boolean>(false)
   const [rulerPoints, setRulerPoints] = useState<[number, number][]>([])
@@ -205,9 +181,9 @@ export const AlignmentSegments: React.FC = () => {
   // Modal nạp file GeoJSON / KML
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
 
-  // Danh sách tọa độ và mốc km hiện tại
-  const currentCoords = hasSelfIntersection ? ROUTE_WITH_CONFLICT : ROUTE_SMOOTHED
-  const currentKmPoints = hasSelfIntersection ? ROUTE_KM_MARKERS_CONFLICT : ROUTE_KM_MARKERS_SMOOTHED
+  // Danh sách tọa độ và mốc km chuẩn của dự án (Km 1020 - Km 1045)
+  const currentCoords = ROUTE_COORDINATES
+  const currentKmPoints = ROUTE_KM_POINTS
 
   // Live cursor position
   const [cursorPos, setCursorPos] = useState({
@@ -224,7 +200,7 @@ export const AlignmentSegments: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500)
   }
 
-  // Danh sách Phân đoạn
+  // Danh sách Phân đoạn chuẩn theo thiết kế
   const [segments, setSegments] = useState<SegmentItem[]>([
     {
       id: 'seg-1',
@@ -244,13 +220,11 @@ export const AlignmentSegments: React.FC = () => {
       startKm: 1025.0,
       endKm: 1030.0,
       lengthKm: 5.0,
-      status: 'GAP_WARNING',
-      statusText: 'HỞ PHÂN ĐOẠN (Gap)',
+      status: 'VALID',
+      statusText: 'HỢP LỆ (Valid)',
       laneCount: 4,
       surfaceMaterial: 'Mặt BTN C12.5',
-      color: SEGMENT_COLORS[1],
-      hasGap: true,
-      gapDistance: 12.4
+      color: SEGMENT_COLORS[1]
     },
     {
       id: 'seg-3',
@@ -392,19 +366,13 @@ export const AlignmentSegments: React.FC = () => {
         data: buildPlanningCorridorGeoJSON(currentCoords)
       })
 
-      // 3. Thêm GeoJSON Source cho điểm khoảng hở Gap
-      map.addSource('gap-source', {
+      // 2. Thêm GeoJSON Source cho hành lang quy hoạch 30m (Planning corridor)
+      map.addSource('planning-corridor-source', {
         type: 'geojson',
-        data: buildGapGeoJSON(hasGapError)
+        data: buildPlanningCorridorGeoJSON(currentCoords)
       })
 
-      // 4. Thêm GeoJSON Source cho điểm xung đột V-04
-      map.addSource('conflict-source', {
-        type: 'geojson',
-        data: buildConflictGeoJSON(hasSelfIntersection)
-      })
-
-      // 5. Layers: Hành lang quy hoạch (Ẩn mặc định, bật khi chọn tab Planning)
+      // 3. Layers: Hành lang quy hoạch (Ẩn mặc định, bật khi chọn tab Planning)
       map.addLayer({
         id: 'planning-corridor-layer',
         type: 'fill',
@@ -417,7 +385,7 @@ export const AlignmentSegments: React.FC = () => {
         }
       })
 
-      // 6. Layers: Viền bóng tim tuyến phân đoạn
+      // 4. Layers: Viền bóng tim tuyến phân đoạn (Tự động phóng to theo tỷ lệ zoom bản đồ)
       map.addLayer({
         id: 'segments-casing-layer',
         type: 'line',
@@ -425,12 +393,23 @@ export const AlignmentSegments: React.FC = () => {
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': '#0F172A',
-          'line-width': 10,
+          'line-width': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            6, 4,
+            9, 7,
+            11, 11,
+            14, 20,
+            16, 36,
+            18, 64,
+            20, 100
+          ],
           'line-opacity': 0.85
         }
       })
 
-      // 7. Layers: Đường phân đoạn đa màu (Mỗi đoạn mang màu riêng)
+      // 5. Layers: Đường phân đoạn đa màu (Tự động phóng to theo zoom để quan sát rõ mặt đường)
       map.addLayer({
         id: 'segments-main-layer',
         type: 'line',
@@ -438,11 +417,22 @@ export const AlignmentSegments: React.FC = () => {
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 6
+          'line-width': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            6, 2.5,
+            9, 5,
+            11, 8,
+            14, 15,
+            16, 28,
+            18, 52,
+            20, 84
+          ]
         }
       })
 
-      // 8. Layers: Vạch đứt tim đường
+      // 6. Layers: Vạch đứt tim đường (Tự động nở to theo zoom)
       map.addLayer({
         id: 'segments-dash-layer',
         type: 'line',
@@ -450,13 +440,23 @@ export const AlignmentSegments: React.FC = () => {
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': '#FFFFFF',
-          'line-width': 1.5,
+          'line-width': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            6, 1,
+            11, 1.8,
+            14, 3,
+            16, 5,
+            18, 8,
+            20, 12
+          ],
           'line-dasharray': [3, 2],
-          'line-opacity': 0.9
+          'line-opacity': 0.95
         }
       })
 
-      // 9. Layers: Đoạn đang chọn Highlight (Glow vàng/xanh)
+      // 7. Layers: Đoạn đang chọn Highlight (Glow vàng nở to theo zoom)
       map.addLayer({
         id: 'segments-highlight-layer',
         type: 'line',
@@ -464,26 +464,22 @@ export const AlignmentSegments: React.FC = () => {
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
           'line-color': '#FDE047',
-          'line-width': 12,
-          'line-opacity': ['case', ['get', 'isSelected'], 0.6, 0]
+          'line-width': [
+            'interpolate',
+            ['exponential', 1.5],
+            ['zoom'],
+            6, 6,
+            11, 14,
+            14, 26,
+            16, 44,
+            18, 76,
+            20, 116
+          ],
+          'line-opacity': ['case', ['get', 'isSelected'], 0.65, 0]
         }
       })
 
-      // 10. Layers: Đốm cảnh báo khoảng hở Gap đỏ rực
-      map.addLayer({
-        id: 'gap-glow-layer',
-        type: 'circle',
-        source: 'gap-source',
-        paint: {
-          'circle-radius': 14,
-          'circle-color': '#EF4444',
-          'circle-opacity': 0.45,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#B91C1C'
-        }
-      })
-
-      // 11. Click vào line phân đoạn trên map để chọn
+      // 8. Click vào line phân đoạn trên map để chọn
       map.on('click', 'segments-main-layer', (e: maplibregl.MapLayerMouseEvent) => {
         if (!e.features || e.features.length === 0) return
         const segId = e.features[0].properties?.id
@@ -517,7 +513,7 @@ export const AlignmentSegments: React.FC = () => {
       })
 
       // Render các mốc lý trình ban đầu
-      renderMarkers(map, segments, currentCoords, currentKmPoints, hasSelfIntersection, hasGapError)
+      renderMarkers(map, segments, currentCoords, currentKmPoints)
     })
 
     mapRef.current = map
@@ -528,7 +524,7 @@ export const AlignmentSegments: React.FC = () => {
     }
   }, [])
 
-  // 2. Đồng bộ GeoJSON và Markers mỗi khi segments, coordinates, gap hoặc selection thay đổi
+  // 2. Đồng bộ GeoJSON và Markers mỗi khi segments hoặc selection thay đổi
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
@@ -540,22 +536,10 @@ export const AlignmentSegments: React.FC = () => {
         segSource.setData(buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId))
       }
 
-      // Cập nhật GeoJSON Khoảng hở
-      const gapSource = map.getSource('gap-source') as maplibregl.GeoJSONSource
-      if (gapSource) {
-        gapSource.setData(buildGapGeoJSON(hasGapError))
-      }
-
-      // Cập nhật GeoJSON Xung đột
-      const conflictSource = map.getSource('conflict-source') as maplibregl.GeoJSONSource
-      if (conflictSource) {
-        conflictSource.setData(buildConflictGeoJSON(hasSelfIntersection))
-      }
-
-      // Cập nhật Markers trên bản đồ
-      renderMarkers(map, segments, currentCoords, currentKmPoints, hasSelfIntersection, hasGapError)
+      // Cập nhật Markers mốc lý trình trên bản đồ
+      renderMarkers(map, segments, currentCoords, currentKmPoints)
     }
-  }, [segments, hasSelfIntersection, hasGapError, selectedSegmentId])
+  }, [segments, selectedSegmentId])
 
   // 3. Chuyển đổi lớp bản đồ (Vệ tinh / Vector / Quy hoạch)
   useEffect(() => {
@@ -590,14 +574,12 @@ export const AlignmentSegments: React.FC = () => {
     }
   }, [mapLayer])
 
-  // Render các Marker lý trình và điểm lỗi
+  // Render các Marker lý trình các phân đoạn
   const renderMarkers = (
     map: maplibregl.Map,
     segList: SegmentItem[],
     coords: [number, number][],
-    kmPts: number[],
-    isConflict: boolean,
-    isGap: boolean
+    kmPts: number[]
   ) => {
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
@@ -637,51 +619,6 @@ export const AlignmentSegments: React.FC = () => {
     `
     const endMarker = new maplibregl.Marker({ element: endEl }).setLngLat(endCoord).addTo(map)
     markersRef.current.push(endMarker)
-
-    // 2. Marker cảnh báo lỗi tự cắt V-04 (nếu chưa nắn)
-    if (isConflict) {
-      const v04Coord: [number, number] = [108.1651, 16.2052]
-      const v04El = document.createElement('div')
-      v04El.className = 'flex flex-col items-center cursor-pointer group animate-bounce'
-      v04El.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <span class="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-red-400 opacity-75"></span>
-          <div class="w-6 h-6 rounded-full bg-red-600 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold shadow-lg">
-            !
-          </div>
-        </div>
-        <div class="mt-1 px-2 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold shadow-md whitespace-nowrap">
-          V-04 (Tự cắt R=42m)
-        </div>
-      `
-      v04El.addEventListener('click', handleZoomToError)
-      const v04Marker = new maplibregl.Marker({ element: v04El }).setLngLat(v04Coord).addTo(map)
-      markersRef.current.push(v04Marker)
-    }
-
-    // 3. Marker cảnh báo khoảng hở 12.4m giữa Seg 1 và Seg 2
-    if (isGap) {
-      const gapCoord: [number, number] = [108.1287, 16.2415]
-      const gapEl = document.createElement('div')
-      gapEl.className = 'flex flex-col items-center cursor-pointer group'
-      gapEl.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <span class="animate-ping absolute inline-flex h-5 w-5 rounded-full bg-amber-400 opacity-75"></span>
-          <div class="w-5 h-5 rounded-full bg-amber-500 border-2 border-white flex items-center justify-center text-white text-[9px] font-bold shadow-lg">
-            ⇥⇤
-          </div>
-        </div>
-        <div class="mt-1 px-2 py-0.5 rounded bg-amber-700 text-white text-[10px] font-bold shadow-md whitespace-nowrap">
-          Hở 12.4m (Seg 1-2)
-        </div>
-      `
-      gapEl.addEventListener('click', () => {
-        map.flyTo({ center: gapCoord, zoom: 14.5 })
-        showToast('Khoảng hở tiếp giáp 12.4m tại Km 1025+000! Bấm "Snap tiếp giáp" để tự động khép kín.')
-      })
-      const gapMarker = new maplibregl.Marker({ element: gapEl }).setLngLat(gapCoord).addTo(map)
-      markersRef.current.push(gapMarker)
-    }
   }
 
   // Helper build GeoJSON FeatureCollection cho Segments
@@ -692,9 +629,7 @@ export const AlignmentSegments: React.FC = () => {
     activeSegId: string | null
   ): GeoJSON.FeatureCollection {
     const features: GeoJSON.Feature[] = segList.map((seg) => {
-      // Nếu seg 2 có lỗi hở thì đẩy nhẹ điểm bắt đầu để tạo khe hở thị giác trên bản đồ
-      const segStartKm = seg.hasGap ? seg.startKm + 0.05 : seg.startKm
-      const lineCoords = getSubLineCoordinates(segStartKm, seg.endKm, coords, kmPts)
+      const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
 
       return {
         type: 'Feature',
@@ -705,8 +640,7 @@ export const AlignmentSegments: React.FC = () => {
           endKm: seg.endKm,
           lengthKm: seg.lengthKm,
           color: seg.color,
-          isSelected: seg.id === activeSegId,
-          hasGap: !!seg.hasGap
+          isSelected: seg.id === activeSegId
         },
         geometry: {
           type: 'LineString',
@@ -743,42 +677,6 @@ export const AlignmentSegments: React.FC = () => {
     }
   }
 
-  // Helper build GeoJSON cho điểm Gap
-  function buildGapGeoJSON(isGap: boolean): GeoJSON.FeatureCollection {
-    if (!isGap) return { type: 'FeatureCollection', features: [] }
-    return {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: { label: 'Khoảng hở 12.4m' },
-          geometry: {
-            type: 'Point',
-            coordinates: [108.1287, 16.2415]
-          }
-        }
-      ]
-    }
-  }
-
-  // Helper build GeoJSON cho điểm Conflict
-  function buildConflictGeoJSON(isConflict: boolean): GeoJSON.FeatureCollection {
-    if (!isConflict) return { type: 'FeatureCollection', features: [] }
-    return {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: { label: 'Đỉnh tự cắt V-04' },
-          geometry: {
-            type: 'Point',
-            coordinates: [108.1651, 16.2052]
-          }
-        }
-      ]
-    }
-  }
-
   // Tương tác: ÁP DỤNG CHIA ĐOẠN TỰ ĐỘNG (Phản ánh trực tiếp lên Map và List)
   const handleApplyAutoSplit = () => {
     const totalKm = 25.0
@@ -792,7 +690,6 @@ export const AlignmentSegments: React.FC = () => {
     while (currentKm < startBaseKm + totalKm) {
       const nextKm = Math.min(currentKm + dist, startBaseKm + totalKm)
       const len = parseFloat((nextKm - currentKm).toFixed(2))
-      const isGap = idx === 2 && hasGapError
 
       newSegments.push({
         id: `seg-${idx}`,
@@ -800,13 +697,11 @@ export const AlignmentSegments: React.FC = () => {
         startKm: currentKm,
         endKm: nextKm,
         lengthKm: len,
-        status: isGap ? 'GAP_WARNING' : 'VALID',
-        statusText: isGap ? 'HỞ PHÂN ĐOẠN (Gap)' : 'HỢP LỆ (Valid)',
+        status: 'VALID',
+        statusText: 'HỢP LỆ (Valid)',
         laneCount: 4,
         surfaceMaterial: idx % 2 === 0 ? 'Mặt BTN C19' : 'Mặt BTN C12.5',
-        color: SEGMENT_COLORS[(idx - 1) % SEGMENT_COLORS.length],
-        hasGap: isGap,
-        gapDistance: isGap ? 12.4 : undefined
+        color: SEGMENT_COLORS[(idx - 1) % SEGMENT_COLORS.length]
       })
 
       currentKm = nextKm
@@ -821,67 +716,8 @@ export const AlignmentSegments: React.FC = () => {
     setSlabs(generateMockSlabs(newSegments.length))
     setSelectedSegmentId(newSegments[0]?.id || null)
 
-    showToast(`Đã chia tự động thành ${newSegments.length} phân đoạn (${dist} km/đoạn). Toàn bộ bản đồ MapLibre đã cập nhật!`)
-
-    // Camera fly fit bounds
+    showToast(`Đã chia thành ${newSegments.length} phân đoạn (${dist} km/đoạn). Tuyến đường hiển thị liên tục chuẩn thiết kế!`)
     handleFitBounds()
-  }
-
-  // Tương tác: SNAP TIẾP GIÁP TỰ ĐỘNG (Xóa khoảng hở trên Map và List)
-  const handleAutoSnap = () => {
-    setHasGapError(false)
-    setSegments((prev) =>
-      prev.map((s) =>
-        s.hasGap
-          ? {
-              ...s,
-              status: 'VALID',
-              statusText: 'HỢP LỆ (Valid)',
-              hasGap: false,
-              gapDistance: undefined
-            }
-          : s
-      )
-    )
-
-    if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: [108.1287, 16.2415],
-        zoom: 14.2,
-        speed: 1.2
-      })
-    }
-
-    showToast('Đã snap khép kín 12.4m khoảng hở tại Km 1025+000! Tuyến đường đã liền mạch trên bản đồ.')
-  }
-
-  // Tương tác: NẮN TỰ ĐỘNG BEZIER (Xóa lỗi tự cắt V-04 trên Map)
-  const handleAutoSmooth = () => {
-    setHasSelfIntersection(false)
-
-    if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: [108.1695, 16.2085],
-        zoom: 13.8,
-        pitch: 38,
-        speed: 1.2
-      })
-    }
-
-    showToast('Đã nắn mượt đỉnh V-04 bằng đường cong Bezier! Vòng tự cắt đã được loại bỏ, R = 75m > 60m (Đạt chuẩn TCVN).')
-  }
-
-  // Zoom tới đỉnh V-04
-  const handleZoomToError = () => {
-    if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: [108.1651, 16.2052],
-        zoom: 14.5,
-        pitch: 42,
-        speed: 1.2
-      })
-      showToast('Đã di chuyển camera MapLibre trực tiếp tới đỉnh xung đột V-04!')
-    }
   }
 
   // Reset góc nhìn vừa khung hình toàn tuyến 25km
@@ -912,19 +748,11 @@ export const AlignmentSegments: React.FC = () => {
 
   // PM Trình duyệt tim tuyến
   const handleSubmitAlignment = () => {
-    if (hasSelfIntersection || hasGapError) {
-      alert('Không thể trình duyệt: Vẫn còn lỗi xung đột hình học hoặc khoảng hở phân đoạn chưa được khắc phục!')
-      return
-    }
     showToast('Đã gửi hồ sơ thiết lập tim tuyến (WF-02) sang Supervisor để thẩm duyệt & ký số!')
   }
 
   // Supervisor Xác nhận khóa tim tuyến
   const handleLockAlignment = () => {
-    if (hasSelfIntersection || hasGapError) {
-      alert('Không thể khóa: Vẫn còn cảnh báo hình học chưa xử lý!')
-      return
-    }
     setAlignmentStatus('CONFIRMED')
     showToast('Dự án đã chính thức KHÓA TIM TUYẾN (CONFIRMED)! Chữ ký số SHA-256 đã được gắn bất biến.')
   }
@@ -932,8 +760,6 @@ export const AlignmentSegments: React.FC = () => {
   // Nạp kịch bản mẫu GeoJSON
   const handleLoadPreset = (name: string, dist: number) => {
     setSplitDistance(dist)
-    setHasSelfIntersection(false)
-    setHasGapError(false)
     setIsImportModalOpen(false)
 
     // Khởi tạo các phân đoạn mới
@@ -963,7 +789,6 @@ export const AlignmentSegments: React.FC = () => {
     handleFitBounds()
   }
 
-  const isBlockedSubmit = hasSelfIntersection || hasGapError
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   return (
@@ -1114,39 +939,29 @@ export const AlignmentSegments: React.FC = () => {
 
           {/* PM: Submit Approval */}
           {!isSupervisor && (
-            <div className="relative group">
-              <button
-                onClick={handleSubmitAlignment}
-                disabled={isBlockedSubmit || alignmentStatus === 'CONFIRMED'}
-                className={`h-8 px-3.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
-                  isBlockedSubmit || alignmentStatus === 'CONFIRMED'
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                    : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white shadow-xs cursor-pointer'
-                }`}
-                type="button"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Trình duyệt tim tuyến</span>
-              </button>
-              {isBlockedSubmit && (
-                <div className="absolute bottom-full right-0 mb-2 hidden group-hover:flex items-center gap-1.5 w-64 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-xl z-50 pointer-events-none">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  <span>Cần xử lý hết lỗi tự cắt V-04 và khoảng hở trước khi gửi!</span>
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handleSubmitAlignment}
+              disabled={alignmentStatus === 'CONFIRMED'}
+              className={`h-8 px-3.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
+                alignmentStatus === 'CONFIRMED'
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                  : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white shadow-xs cursor-pointer'
+              }`}
+              type="button"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Trình duyệt tim tuyến</span>
+            </button>
           )}
 
           {/* Supervisor: Lock Baseline */}
           {isSupervisor && (
             <button
               onClick={handleLockAlignment}
-              disabled={alignmentStatus === 'CONFIRMED' || isBlockedSubmit}
+              disabled={alignmentStatus === 'CONFIRMED'}
               className={`h-8 px-3.5 rounded-lg font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all ${
                 alignmentStatus === 'CONFIRMED'
                   ? 'bg-emerald-600 text-white opacity-90 cursor-default'
-                  : isBlockedSubmit
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white cursor-pointer active:scale-98'
               }`}
               type="button"
@@ -1207,7 +1022,7 @@ export const AlignmentSegments: React.FC = () => {
 
               {/* Live Cursor Readout */}
               <div className="pointer-events-auto hidden lg:flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs text-white shadow-lg border border-slate-700/60">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                 <span>{cursorPos.lat}° N, {cursorPos.lng}° E</span>
                 <span className="text-slate-500">|</span>
                 <span className="text-[#C9A227] font-semibold">H: {cursorPos.elevation}</span>
@@ -1247,22 +1062,9 @@ export const AlignmentSegments: React.FC = () => {
                 <button
                   onClick={handleFitBounds}
                   className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-                  title="Vừa khung hình"
+                  title="Vừa khung hình toàn tuyến"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-                <div className="w-px h-4 bg-slate-700 my-auto mx-0.5"></div>
-                <button
-                  onClick={() => {
-                    setHasSelfIntersection(true)
-                    setHasGapError(true)
-                    showToast('Đã hoàn tác về trạng thái ban đầu có cảnh báo hình học.')
-                  }}
-                  className="px-2 h-7 rounded bg-slate-800 hover:bg-slate-700 text-amber-200 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Đặt lại trạng thái lỗi ban đầu để kiểm thử"
-                >
-                  <Undo2 className="w-3 h-3" />
-                  <span>Hoàn tác</span>
                 </button>
               </div>
             </div>
@@ -1289,59 +1091,7 @@ export const AlignmentSegments: React.FC = () => {
                   <span className="w-4 h-2 rounded bg-sky-400 border border-sky-300 inline-block"></span>
                   <span className="text-slate-200 text-[11px]">Các phân đoạn màu riêng</span>
                 </div>
-                {hasGapError && (
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-amber-500 border border-white inline-block"></span>
-                    <span className="text-amber-300 text-[11px] font-semibold">Khoảng hở 12.4m (Seg 1-2)</span>
-                  </div>
-                )}
-                {hasSelfIntersection && (
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-600 border border-white inline-block"></span>
-                    <span className="text-red-300 text-[11px] font-semibold">Xung đột V-04 (Tự cắt R=42m)</span>
-                  </div>
-                )}
               </div>
-
-              {/* Bottom Right: Geometry Validation Alert Flyout (nếu còn lỗi V-04) */}
-              {hasSelfIntersection && (
-                <div className="pointer-events-auto max-w-md bg-white border border-red-200 p-3.5 rounded-xl shadow-xl flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-red-700 font-bold uppercase tracking-tight">
-                        Lỗi tự cắt nhau tại V-04
-                      </span>
-                      <span className="font-mono text-red-700 bg-red-100 px-2 py-0.5 rounded text-[10px] font-bold">
-                        R = 42m &lt; 60m
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 leading-snug">
-                      Đỉnh <strong>V-04 [108.1651, 16.2052]</strong> tự cắt qua thân tuyến. Cần nắn mượt để đạt bán kính cong tiêu chuẩn.
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        onClick={handleAutoSmooth}
-                        className="px-3 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        type="button"
-                      >
-                        <Wand2 className="w-3 h-3" />
-                        <span>Nắn tự động (Bezier Smooth)</span>
-                      </button>
-                      <button
-                        onClick={handleZoomToError}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-all flex items-center gap-1 cursor-pointer"
-                        type="button"
-                      >
-                        <Crosshair className="w-3 h-3" />
-                        <span>Zoom tới đỉnh</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1462,13 +1212,7 @@ export const AlignmentSegments: React.FC = () => {
                             </div>
                           </div>
 
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                              seg.hasGap
-                                ? 'bg-amber-100 text-amber-800 border-amber-300'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}
-                          >
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
                             {seg.statusText}
                           </span>
                         </div>
@@ -1479,56 +1223,34 @@ export const AlignmentSegments: React.FC = () => {
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full">{seg.surfaceMaterial}</span>
                         </div>
 
-                        {/* Gap Warning & Action Button */}
-                        {seg.hasGap && (
-                          <div className="flex flex-col gap-2 pt-1 border-t border-amber-200/60 mt-1">
-                            <p className="text-[11px] text-amber-800 bg-amber-100/60 p-2 rounded-lg leading-relaxed">
-                              Khoảng hở <strong>{seg.gapDistance}m</strong> tại Km 1025+000. Dữ liệu trắc địa chưa khép kín.
-                            </p>
+                        <div className="flex items-center justify-between pt-1 text-slate-500 text-xs border-t border-slate-100 mt-0.5">
+                          <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Tiếp giáp khép kín liên tục
+                          </span>
+                          <div className="flex items-center gap-1">
                             <button
-                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleAutoSnap()
+                                showToast(`Chỉnh sửa hình học ${seg.code}`)
                               }}
-                              className="w-full py-1.5 px-3 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-98"
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                              title="Chỉnh tọa độ"
                             >
-                              <LinkIcon className="w-3.5 h-3.5" />
-                              <span>Snap tiếp giáp tự động</span>
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                showToast(`Xem biểu đồ trắc dọc ${seg.code}`)
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                              title="Xem trắc dọc"
+                            >
+                              <BarChart2 className="w-3 h-3" />
                             </button>
                           </div>
-                        )}
-
-                        {!seg.hasGap && (
-                          <div className="flex items-center justify-between pt-1 text-slate-500 text-xs border-t border-slate-100 mt-0.5">
-                            <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-                              <Check className="w-3 h-3 text-emerald-600" />
-                              Tiếp giáp khép kín
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  showToast(`Chỉnh sửa hình học ${seg.code}`)
-                                }}
-                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                                title="Chỉnh tọa độ"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  showToast(`Xem biểu đồ trắc dọc ${seg.code}`)
-                                }}
-                                className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                                title="Xem trắc dọc"
-                              >
-                                <BarChart2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </div>
                     )
                   })}
@@ -1590,15 +1312,11 @@ export const AlignmentSegments: React.FC = () => {
                   <span className="text-[10px] text-slate-500">Phân đoạn</span>
                 </div>
                 <div className="flex flex-col">
-                  <span
-                    className={`text-sm font-bold font-mono ${
-                      isBlockedSubmit ? 'text-red-600' : 'text-emerald-600'
-                    }`}
-                  >
-                    {isBlockedSubmit ? `${(hasSelfIntersection ? 1 : 0) + (hasGapError ? 1 : 0)} cảnh báo` : 'Đạt chuẩn'}
+                  <span className="text-sm font-bold font-mono text-emerald-600">
+                    Đạt chuẩn
                   </span>
                   <span className="text-[10px] text-slate-500">
-                    {isBlockedSubmit ? 'Cần xử lý' : 'Sẵn sàng duyệt'}
+                    Sẵn sàng duyệt
                   </span>
                 </div>
               </div>
