@@ -646,9 +646,20 @@ export const ProposalApprovalDetail: React.FC = () => {
           <span className="font-semibold text-slate-900">Gói đề xuất {packageCode}</span>
         </nav>
 
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs self-start sm:self-auto">
-          <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
-          <span>Quy trình kỹ thuật: WF-07 (Thẩm duyệt &amp; Điều phối)</span>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => navigate(`${basePath}/proposals`)}
+            type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E2E5E9] hover:bg-slate-100 text-slate-700 rounded-full text-xs font-semibold shadow-2xs transition cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Quay lại danh sách</span>
+          </button>
+
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs">
+            <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+            <span>Quy trình kỹ thuật: WF-07 (Thẩm duyệt &amp; Điều phối)</span>
+          </div>
         </div>
       </div>
 

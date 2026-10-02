@@ -1132,19 +1132,19 @@ export const RepairProposals: React.FC = () => {
         </div>
 
         {/* Responsive Table */}
-        <div className="overflow-x-auto w-full rounded-xl border border-slate-200">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <table className="w-full text-left border-collapse text-xs min-w-[1240px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-4">Mã gói</th>
-                <th className="py-3 px-4">Tên gói công việc &amp; Phạm vi lý trình</th>
-                <th className="py-3 px-4">Hạng mục lỗi</th>
-                <th className="py-3 px-4">Khối lượng kỹ thuật dự kiến</th>
-                <th className="py-3 px-4">Thời gian thi công</th>
-                <th className="py-3 px-4">Người lập / Ngày trình</th>
-                <th className="py-3 px-4">Trạng thái</th>
-                <th className="py-3 px-4 min-w-[160px]">Tiến độ phê duyệt</th>
-                <th className="py-3 px-4 text-right">Hành động</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Mã gói</th>
+                <th className="py-3.5 px-4 min-w-[320px] whitespace-nowrap">Tên gói công việc &amp; Phạm vi lý trình</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Hạng mục lỗi</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Khối lượng kỹ thuật dự kiến</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Thời gian thi công</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Người lập / Ngày trình</th>
+                <th className="py-3.5 px-4 whitespace-nowrap">Trạng thái</th>
+                <th className="py-3.5 px-4 min-w-[160px] whitespace-nowrap">Tiến độ phê duyệt</th>
+                <th className="py-3.5 px-4 text-right whitespace-nowrap">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1181,23 +1181,23 @@ export const RepairProposals: React.FC = () => {
                       </td>
 
                       {/* Tên gói công việc & Lý trình */}
-                      <td className="py-4 px-4 align-top max-w-xs">
-                        <div className="flex flex-col gap-1">
+                      <td className="py-4 px-4 align-top min-w-[320px] max-w-md">
+                        <div className="flex flex-col gap-1.5">
                           <button
                             onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
                             type="button"
-                            className="text-left font-bold text-sm text-brand-dark group-hover:text-[#C9A227] transition-colors line-clamp-1 cursor-pointer"
+                            className="text-left font-bold text-sm text-slate-900 group-hover:text-[#C9A227] transition-colors leading-snug cursor-pointer"
                             title="Bấm để mở chi tiết thẩm duyệt (WF-07)"
                           >
                             {pkg.title}
                           </button>
-                          <div className="flex items-center gap-1.5 text-slate-500 font-mono text-[11px]">
-                            <Layers className="w-3.5 h-3.5 text-[#C9A227]" />
-                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 font-semibold border border-slate-200">
-                              {pkg.chainage_display}
+                          <div className="flex items-center gap-2 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-800 font-semibold border border-slate-200 shrink-0 min-w-[210px]">
+                              <Layers className="w-3.5 h-3.5 text-[#C9A227] shrink-0" />
+                              <span>{pkg.chainage_display}</span>
                             </span>
-                            <span>•</span>
-                            <span className="text-slate-500 font-sans">{pkg.segments_count} phân đoạn</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-500 font-sans whitespace-nowrap shrink-0">{pkg.segments_count} phân đoạn</span>
                           </div>
                         </div>
                       </td>
@@ -1312,17 +1312,42 @@ export const RepairProposals: React.FC = () => {
                       </td>
 
                       {/* Hành động */}
-                      <td className="py-4 px-4 align-top text-right whitespace-nowrap">
-                        <div className="relative flex items-center justify-end gap-1.5">
-                          {/* Vai trò Supervisor: Thẩm định hoặc Duyệt nhanh */}
+                      <td className="py-4 px-4 align-top text-right whitespace-nowrap min-w-[280px]">
+                        <div className="relative flex items-center justify-end gap-2">
+                          {/* Vai trò Supervisor: Nút trạng thái/hành động tương ứng từng dòng để đảm bảo đồng đều */}
                           {isSupervisor && pkg.status === 'SUBMITTED' && (
                             <button
                               onClick={() => handleQuickApprove(pkg.id, pkg.code)}
                               type="button"
                               className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                              title="Phê duyệt nhanh toàn bộ hạng mục"
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>Phê duyệt nhanh</span>
+                            </button>
+                          )}
+
+                          {isSupervisor && pkg.status === 'DECIDED' && (
+                            <button
+                              onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+                              type="button"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-xs transition-all cursor-pointer"
+                              title="Xem kết luận phê duyệt hồ sơ"
+                            >
+                              <FileCheck2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Biên bản duyệt</span>
+                            </button>
+                          )}
+
+                          {isSupervisor && pkg.status === 'DISPATCHED' && (
+                            <button
+                              onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+                              type="button"
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold text-xs transition-all cursor-pointer"
+                              title="Theo dõi thi công hiện trường"
+                            >
+                              <Construction className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Đang thi công</span>
                             </button>
                           )}
 

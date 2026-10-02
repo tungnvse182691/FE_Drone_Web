@@ -33,6 +33,7 @@ import { SupDashboard } from './pages/(sup)/SupDashboard'
 import { BatchApprovals } from './pages/(sup)/BatchApprovals'
 import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
+import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { SignOffClosure } from './pages/(sup)/SignOffClosure'
@@ -79,7 +80,12 @@ export const App: React.FC = () => {
           <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
           <Route path="repair-batches" element={<RepairProposals />} />
           <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
-          <Route path="work-orders/confirm" element={<WorkOrderConfirm />} />
+          <Route path="work-orders/confirm" element={<EvidenceCloseoutDetail />} />
+          <Route path="work-orders/:id/confirm" element={<EvidenceCloseoutDetail />} />
+          <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
+          <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
+          <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+          <Route path="acceptance/:id" element={<EvidenceCloseoutDetail />} />
         </Route>
 
         {/* Supervisor routes */}
@@ -107,8 +113,10 @@ export const App: React.FC = () => {
           <Route path="approvals" element={<BatchApprovals />} />
           <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
-          <Route path="acceptance" element={<FieldAcceptance />} />
-          <Route path="acceptance/:batchId" element={<FieldAcceptance />} />
+          <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+          <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
+          <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
+          <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="signoff" element={<SignOffClosure />} />
         </Route>

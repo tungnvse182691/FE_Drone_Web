@@ -30,12 +30,11 @@ export const Sidebar: React.FC = () => {
     { label: 'Khảo sát Drone & Không ảnh', path: '/pm/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư phát hiện AI', path: '/pm/ai-inbox', icon: Inbox },
     { label: 'Chính sách & Giao việc (WF-05)', path: '/pm/fast-track', icon: Zap },
-    { label: 'Gói đề xuất sửa chữa (Màn 09)', path: '/pm/proposals', icon: Boxes },
-    { label: 'Thẩm duyệt chi tiết WF-07 (Màn 10)', path: '/pm/proposals/PKG-2026-08', icon: FileCheck2 },
+    { label: 'Gói đề xuất sửa chữa', path: '/pm/proposals', icon: Boxes },
     { label: 'Gom đợt sửa chữa', path: '/pm/repair-batches/create', icon: Boxes },
     { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
     { label: 'Nhiệm vụ đo hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
-    { label: 'Xác nhận hoàn thành', path: '/pm/work-orders/confirm', icon: CheckCircle2 },
+    { label: 'Rà soát & Nghiệm thu chất lượng', path: '/pm/acceptance', icon: ShieldCheck },
   ]
 
   const supNavItems = [
@@ -45,8 +44,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư tiếp nhận & Triage', path: '/sup/ai-inbox', icon: Inbox },
     { label: 'Giám sát chính sách Fast-Track', path: '/sup/fast-track', icon: Zap },
-    { label: 'Gói đề xuất kỹ thuật (Màn 09)', path: '/sup/proposals', icon: Boxes },
-    { label: 'Thẩm định chi tiết WF-07 (Màn 10)', path: '/sup/proposals/PKG-2026-08', icon: FileCheck2 },
+    { label: 'Gói đề xuất kỹ thuật', path: '/sup/proposals', icon: Boxes },
     { label: 'Thẩm duyệt đợt sửa', path: '/sup/approvals', icon: FileCheck2 },
     { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
     { label: 'Phân tích rủi ro & PCI', path: '/sup/risk-analytics', icon: BarChart3 },
