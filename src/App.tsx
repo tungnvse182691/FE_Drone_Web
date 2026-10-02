@@ -85,7 +85,8 @@ export const App: React.FC = () => {
           <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
-          <Route path="acceptance/:id" element={<EvidenceCloseoutDetail />} />
+          <Route path="reports" element={<RiskAnalytics />} />
+          <Route path="risk-analytics" element={<RiskAnalytics />} />
         </Route>
 
         {/* Supervisor routes */}
@@ -117,6 +118,7 @@ export const App: React.FC = () => {
           <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
+          <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="signoff" element={<SignOffClosure />} />
         </Route>

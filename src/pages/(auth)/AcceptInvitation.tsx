@@ -121,7 +121,7 @@ export const AcceptInvitation: React.FC = () => {
             <Route className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-base text-slate-900 tracking-tight font-headline">Hoàng Hải RoadGuard</span>
+            <span className="font-bold text-base text-slate-900 tracking-tight font-headline">Cát Tường RoadGuard</span>
             <span className="text-[11px] text-slate-500 font-mono uppercase tracking-wider">Civil Asset &amp; Highway Telemetry</span>
           </div>
         </div>
@@ -203,10 +203,10 @@ export const AcceptInvitation: React.FC = () => {
                     </div>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-lg font-bold tracking-tight text-slate-900 font-headline">Hoàng Hải</span>
+                        <span className="text-lg font-bold tracking-tight text-slate-900 font-headline">Cát Tường</span>
                         <span className="px-1.5 py-0.5 rounded bg-[#C9A227]/10 text-[#8C6D1F] font-mono text-[11px] font-bold">PRO</span>
                       </div>
-                      <span className="text-xs text-slate-500">RoadGuard Civil Platform v2.4.1</span>
+                      <span className="text-xs text-slate-500">RoadGuard Civil Platform v2.2</span>
                     </div>
                   </div>
 
@@ -550,7 +550,7 @@ export const AcceptInvitation: React.FC = () => {
                 <div className="flex items-center gap-2 font-mono">
                   <span>TCVN 8819:2011</span>
                   <span>•</span>
-                  <span>Viettel-CA Verified</span>
+                  <span>SHA-256 Verified</span>
                 </div>
               </div>
             </div>
@@ -599,7 +599,7 @@ export const AcceptInvitation: React.FC = () => {
                 </div>
 
                 <p className="text-xs text-slate-500 mb-6">
-                  Vui lòng liên hệ <strong className="text-slate-800">Giám sát trưởng</strong> hoặc Quản trị viên hệ thống Hoàng Hải RoadGuard để được tái cấp liên kết truy cập mới.
+                  Vui lòng liên hệ <strong className="text-slate-800">Giám sát trưởng</strong> hoặc Quản trị viên hệ thống Cát Tường RoadGuard để được tái cấp liên kết truy cập mới.
                 </p>
 
                 {/* Actions */}
@@ -624,8 +624,8 @@ export const AcceptInvitation: React.FC = () => {
 
           {/* Sub-footer Legal */}
           <div className="w-full max-w-2xl text-center mt-6 space-y-1 px-4 pb-2 text-[11px] text-slate-400">
-            <p>Hệ thống bảo mật hạ tầng số Hoàng Hải RoadGuard • Tuân thủ TCVN 8819:2011 • Mã hóa End-to-End TLS 1.3 • Chữ ký số Viettel-CA</p>
-            <p>© 2026 Hoang Hai Infrastructure Management Group. All rights reserved.</p>
+            <p>Hệ thống bảo mật hạ tầng số RoadGuard • Nhà thầu Cát Tường • Tuân thủ TCVN 8819:2011 • Mã hóa End-to-End TLS 1.3 • Toàn vẹn SHA-256</p>
+            <p>© 2026 Cát Tường Infrastructure Management Group. All rights reserved.</p>
           </div>
         </div>
       </main>

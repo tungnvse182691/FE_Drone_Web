@@ -133,7 +133,7 @@ const MOCK_RISK_ITEMS: RiskPortfolioItem[] = [
     gps_lat: 18.7231,
     gps_lng: 105.6542,
     pm_name: 'Trần Minh Tâm',
-    pm_email: 'tam.tm@hoanghai-infra.vn',
+    pm_email: 'tam.tm@cattuong-infra.vn',
     proposal_id: 'PKG-2026-02'
   },
   {
@@ -153,7 +153,7 @@ const MOCK_RISK_ITEMS: RiskPortfolioItem[] = [
     gps_lat: 16.4637,
     gps_lng: 107.5908,
     pm_name: 'Lê Văn Cường',
-    pm_email: 'cuong.lv@hoanghai-infra.vn',
+    pm_email: 'cuong.lv@cattuong-infra.vn',
     proposal_id: 'PKG-2026-03'
   }
 ]

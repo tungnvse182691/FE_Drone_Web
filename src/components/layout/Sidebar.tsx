@@ -35,6 +35,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
     { label: 'Nhiệm vụ đo hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
     { label: 'Rà soát & Nghiệm thu chất lượng', path: '/pm/acceptance', icon: ShieldCheck },
+    { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
   ]
 
   const supNavItems = [
@@ -47,7 +48,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Gói đề xuất kỹ thuật', path: '/sup/proposals', icon: Boxes },
     { label: 'Thẩm duyệt đợt sửa', path: '/sup/approvals', icon: FileCheck2 },
     { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
-    { label: 'Phân tích rủi ro & PCI', path: '/sup/risk-analytics', icon: BarChart3 },
+    { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/sup/risk-analytics', icon: BarChart3 },
     { label: 'Ký số đóng đợt', path: '/sup/signoff', icon: FileSignature },
   ]
 

@@ -305,7 +305,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
 
   // Đếm số hạng mục đã hoàn thành
   const acceptedCount = useMemo(() => {
-    return caseItems.filter((i) => i.status === 'ACCEPTED' || item.status === 'CLOSED').length
+    return caseItems.filter((i) => i.status === 'ACCEPTED' || i.status === 'CLOSED').length
   }, [caseItems])
 
   // --- Handlers Nghiệp Vụ Chuẩn Backend v2.2 ---
@@ -364,7 +364,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         return it
       })
     )
-    showToast(`Supervisor đã chấp thuận nghiệm thu thành công hạng mục ${currentItem.item_code} (Ký số PKI Viettel-CA)!`)
+    showToast(`Supervisor đã chấp thuận nghiệm thu thành công hạng mục ${currentItem.item_code} (Xác thực toàn vẹn SHA-256)!`)
   }
 
   // 3. PM: Chấp thuận & Đóng lỗi Fast Track (POST /api/v1/repair-attempts/{id}/review với reviewResult: "ACCEPTED")
@@ -1221,10 +1221,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
               H
             </div>
             <div className="space-y-0.5 text-xs">
-              <div className="font-bold text-sm text-slate-900 font-sansation">Kỹ sư Hoàng Hải (ID: GS-2041)</div>
+              <div className="font-bold text-sm text-slate-900 font-sansation">Kỹ sư Giám sát trưởng (ID: GS-2041)</div>
               <div className="text-slate-600">Kỹ sư Giám sát trưởng hiện trường • Ban Quản lý Hạ tầng Cát Tường Miền Trung</div>
-              <div className="font-mono text-[11px] text-purple-800">
-                Chứng thư số PKI Viettel-CA: CN=HOANG HAI, OU=SUPERVISOR, SERIAL=54:02:11:AB:89
+              <div className="font-mono text-[11px] text-emerald-800">
+                Mã xác thực toàn vẹn biên bản: SHA256: 540211ab89c9a227e2e5e9
               </div>
             </div>
           </div>
@@ -1615,7 +1615,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
                   <div className="space-y-0.5">
                     <span className="font-bold text-slate-900 block">Biên bản nghiệm thu kỹ thuật (PDF/A)</span>
                     <span className="text-slate-500 text-[11px] block">
-                      Tệp PDF chuẩn lưu trữ lâu dài (ISO 19005), tích hợp hình ảnh Before/After, thông số K98, chữ ký số điện tử PKI Viettel-CA.
+                      Tệp PDF chuẩn lưu trữ lâu dài (ISO 19005), tích hợp hình ảnh Before/After, thông số K98 và mã băm SHA-256 Checksum bảo mật.
                     </span>
                   </div>
                 </div>

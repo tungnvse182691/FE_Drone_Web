@@ -1899,6 +1899,34 @@ export const FastTrackDispatch: React.FC = () => {
                 </div>
               </div>
 
+              {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
+              <div>
+                <label className="block font-bold text-slate-700 uppercase mb-1">
+                  Mức độ nghiêm trọng cho phép áp dụng Fast Track
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>LOW (Nhẹ)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>MEDIUM (Vừa)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi nặng">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>HIGH (Khóa)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi khẩn cấp/nguy hiểm">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>CRITICAL (Khóa)</span>
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  🔒 <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, Fast Track chỉ áp dụng cho hư hỏng nhỏ/vừa (LOW &amp; MEDIUM). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Supervisor hoặc Đội cứu hộ khẩn cấp.
+                </span>
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chú căn cứ & lý do ban hành</label>
                 <textarea

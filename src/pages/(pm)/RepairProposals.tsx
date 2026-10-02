@@ -441,7 +441,7 @@ export const RepairProposals: React.FC = () => {
       status_label: 'Chờ duyệt',
       approved_items: 8,
       total_items: 12,
-      contractor_name: 'Tổ vá dặm cơ giới 01 - Đội Hoàng Hải Express'
+      contractor_name: 'Đội thi công sửa chữa Cát Tường 01'
     },
     {
       id: 'pkg-07',
@@ -545,7 +545,7 @@ export const RepairProposals: React.FC = () => {
       status_label: 'Đã phê duyệt',
       approved_items: 8,
       total_items: 8,
-      contractor_name: 'Tổ vá dặm cơ giới 01 - Đội Hoàng Hải Express'
+      contractor_name: 'Đội thi công sửa chữa Cát Tường 01'
     },
     {
       id: 'pkg-04',
@@ -686,7 +686,7 @@ export const RepairProposals: React.FC = () => {
   const [formRouteId, setFormRouteId] = useState('QL1A_PK04')
   const [formSegmentId, setFormSegmentId] = useState('seg-02')
   const [formPackageName, setFormPackageName] = useState('Khắc phục hằn lún bánh xe & trám nứt Km 1028 - Km 1033')
-  const [formContractor, setFormContractor] = useState('Tổ vá dặm cơ giới 01 - Đội Hoàng Hải Express')
+  const [formContractor, setFormContractor] = useState('Đội thi công sửa chữa Cát Tường 01')
   const [formDurationDays, setFormDurationDays] = useState(3)
 
   // Tuyến đường và phân đoạn hiện tại đang chọn trong form
@@ -1579,8 +1579,8 @@ export const RepairProposals: React.FC = () => {
                     onChange={(e) => setFormContractor(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                   >
-                    <option value="Tổ vá dặm cơ giới 01 - Đội Hoàng Hải Express">
-                      Tổ vá dặm cơ giới 01 - Đội Hoàng Hải Express
+                    <option value="Đội thi công sửa chữa Cát Tường 01">
+                      Đội thi công sửa chữa Cát Tường 01
                     </option>
                     <option value="Tổ rải thảm nóng Polime 02 - Xí nghiệp Cầu Đường 4">
                       Tổ rải thảm nóng Polime 02 - Xí nghiệp Cầu Đường 4

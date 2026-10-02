@@ -106,7 +106,7 @@ const INITIAL_PROJECTS: HubProject[] = [
     status_label: 'Sắp hết hạn',
     status_color: '#BA1A1A',
     pm_name: 'Trần Minh Tâm',
-    pm_email: 'tam.tm@hoanghai-infra.vn',
+    pm_email: 'tam.tm@cattuong-infra.vn',
     pm_role_badge: 'PM Tuyến',
     warranty_passed_percent: 92,
     days_remaining: 25,
@@ -156,7 +156,7 @@ const INITIAL_PROJECTS: HubProject[] = [
     status_label: 'Đang bảo hành',
     status_color: '#1B5E20',
     pm_name: 'Lê Văn Cường',
-    pm_email: 'cuong.lv@hoanghai-infra.vn',
+    pm_email: 'cuong.lv@cattuong-infra.vn',
     pm_role_badge: 'PM Phụ trách',
     warranty_passed_percent: 38,
     days_remaining: 450,
@@ -1027,8 +1027,8 @@ export const ProjectList: React.FC = () => {
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                   >
                     <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
-                    <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
-                    <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+                    <option value="Trần Minh Tâm (tam.tm@cattuong-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@cattuong-infra.vn)</option>
+                    <option value="Lê Văn Cường (cuong.lv@cattuong-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@cattuong-infra.vn)</option>
                     <option value="INVITE_NEW">+ Mời Kỹ sư PM mới (Gửi qua Email kích hoạt)...</option>
                     <option value="-- Để trống --">-- Để trống (Chưa gán) --</option>
                   </select>
@@ -1231,8 +1231,8 @@ export const ProjectList: React.FC = () => {
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                 >
                   <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
-                  <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
-                  <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+                  <option value="Trần Minh Tâm (tam.tm@cattuong-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@cattuong-infra.vn)</option>
+                  <option value="Lê Văn Cường (cuong.lv@cattuong-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@cattuong-infra.vn)</option>
                 </select>
               </div>
 
