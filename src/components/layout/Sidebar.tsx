@@ -38,7 +38,7 @@ export const Sidebar: React.FC = () => {
   ]
 
   const supNavItems = [
-    { label: 'Tổng quan Giám sát', path: '/sup/dashboard', icon: LayoutDashboard },
+    { label: 'Dashboard Danh mục bảo hành', path: '/sup/dashboard', icon: LayoutDashboard },
     { label: 'Danh mục dự án', path: '/sup/projects', icon: FolderKanban },
     { label: 'Tuyến đường & Phân đoạn', path: '/sup/alignment', icon: Route },
     { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
