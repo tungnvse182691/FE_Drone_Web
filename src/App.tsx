@@ -71,6 +71,7 @@ export const App: React.FC = () => {
           <Route path="repair-batches/:id/submit" element={<SubmitApproval />} />
           <Route path="repair-batches/assign" element={<AssignCrew />} />
           <Route path="field-tasks" element={<FieldTasks />} />
+          <Route path="conflict-center" element={<FieldTasks />} />
           <Route path="fast-track" element={<FastTrackDispatch />} />
           <Route path="dispatch" element={<FastTrackDispatch />} />
           <Route path="proposals" element={<RepairProposals />} />
@@ -105,6 +106,8 @@ export const App: React.FC = () => {
           <Route path="ai-inbox" element={<AIReviewInbox />} />
           <Route path="fast-track" element={<FastTrackDispatch />} />
           <Route path="dispatch" element={<FastTrackDispatch />} />
+          <Route path="field-tasks" element={<FieldTasks />} />
+          <Route path="conflict-center" element={<FieldTasks />} />
           <Route path="proposals" element={<RepairProposals />} />
           <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
           <Route path="work-packages" element={<RepairProposals />} />

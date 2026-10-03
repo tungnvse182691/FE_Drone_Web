@@ -1,5 +1,5 @@
 export const colors = {
-  primary:      '#C9A227', // Vàng đồng Cát Tường
+  primary:      '#C9A227', // Vàng đồng Hoàng Hải
   primaryDark:  '#6B5219',
   brandGold:    '#8C6D1F',
   secondary:    '#2D3748', // Slate / Navy

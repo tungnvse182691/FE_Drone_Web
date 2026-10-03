@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import {
@@ -130,8 +131,8 @@ export const ProjectOverview: React.FC = () => {
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
       is_online: true,
       authority: 'Phê duyệt phương án sửa chữa, nghiệm thu & ký đóng hồ sơ pháp lý',
-      contact: 'an.nv@cattuong-infra.vn • 0912.888.666',
-      unit: 'Ban Giám sát Cát Tường / Chủ đầu tư'
+      contact: 'an.nv@hoanghai-infra.vn • 0912.888.666',
+      unit: 'Ban Giám sát Hoàng Hải / Chủ đầu tư'
     },
     {
       id: 'mem-02',
@@ -142,7 +143,7 @@ export const ProjectOverview: React.FC = () => {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
       is_online: true,
       authority: 'Điều phối hiện trường, lập gói sửa chữa BOQ, quản lý tiến độ SLA',
-      contact: 'hoang.ks@cattuong-infra.vn • Hoạt động 12p trước',
+      contact: 'hoang.ks@hoanghai-infra.vn • Hoạt động 12p trước',
       unit: 'Ban Chỉ huy Công trường'
     },
     {
@@ -154,7 +155,7 @@ export const ProjectOverview: React.FC = () => {
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
       is_online: false,
       authority: 'Tiếp nhận lệnh công tác, tổ chức thi công dặm vá, nạp ảnh hiện trường',
-      contact: 'hung.crew@cattuong-infra.vn',
+      contact: 'hung.crew@hoanghai-infra.vn',
       equipment: 'App Mobile Crew (Tablet bọc cao su chống va đập)',
       unit: 'Tổ thi công nguội & vá dặm mặt đường 01'
     },
@@ -167,7 +168,7 @@ export const ProjectOverview: React.FC = () => {
       avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
       is_online: false,
       authority: 'Thực hiện bay chụp ảnh RGB/Thermal, nạp thẻ SD, kiểm soát tọa độ bay',
-      contact: 'duc.pilot@cattuong-infra.vn',
+      contact: 'duc.pilot@hoanghai-infra.vn',
       equipment: 'RTK Matrice 300 • Giấy phép bay Cục Tác chiến',
       unit: 'Đội bay không ảnh trắc địa Miền Trung'
     }
@@ -234,32 +235,7 @@ export const ProjectOverview: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: previewMapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'google-satellite',
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle('SATELLITE'),
       center: [108.1651, 16.2052],
       zoom: 10.8,
       minZoom: 8,
@@ -978,7 +954,7 @@ export const ProjectOverview: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="trong.td@cattuong-infra.vn..."
+                  placeholder="trong.td@hoanghai-infra.vn..."
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227]"

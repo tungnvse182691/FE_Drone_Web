@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import {
   Home,
   ChevronRight,
@@ -382,32 +383,7 @@ export const DroneMissionAIReview: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: corridorMapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'google-satellite',
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle('SATELLITE'),
       center: [108.2025, 16.0560],
       zoom: 14.5,
       minZoom: 10,

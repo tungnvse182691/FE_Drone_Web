@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -51,48 +52,7 @@ export const DefectDetailVerify: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite'
-          },
-          'osm-vector': {
-            type: 'raster',
-            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            maxzoom: 19,
-            attribution: '&copy; OpenStreetMap'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'google-satellite',
-            layout: { visibility: mapType === 'SATELLITE' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          },
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm-vector',
-            layout: { visibility: mapType === 'VECTOR' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle(mapType === 'SATELLITE' ? 'SATELLITE' : 'STREETS'),
       center: [lng, lat],
       zoom: 18,
       minZoom: 12,

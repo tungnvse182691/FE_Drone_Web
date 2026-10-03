@@ -154,7 +154,7 @@ const INITIAL_CASE_ITEMS: CaseItem[] = [
     after_hash: '9a8d77a4e89b21f00938b81ca742510f299188cd',
     after_time: '11:30 24/08/2026 (K98)',
     after_gps: '16.054712 N, 108.202509 E',
-    after_crew: 'Tổ bảo dưỡng thường xuyên 01 - Cát Tường',
+    after_crew: 'Tổ bảo dưỡng thường xuyên 01 - Hoàng Hải',
     after_equipment: 'Máy cắt bê tông Husqvarna • Lu rung dắt tay Sakai',
     evidence_integrity_status: 'VERIFIED',
     citizen_published: true
@@ -189,7 +189,7 @@ const INITIAL_CASE_ITEMS: CaseItem[] = [
     after_hash: '5f2c77a4e89b21f00938b81ca742510f299111ab',
     after_time: '14:15 23/08/2026',
     after_gps: '16.055011 N, 108.202809 E',
-    after_crew: 'Đội sửa chữa cầu cống Cát Tường',
+    after_crew: 'Đội sửa chữa cầu cống Hoàng Hải',
     after_equipment: 'Nồi nấu mastic bitum • Máy thổi bụi áp lực cao',
     evidence_integrity_status: 'VERIFIED',
     citizen_published: true
@@ -1222,7 +1222,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
             </div>
             <div className="space-y-0.5 text-xs">
               <div className="font-bold text-sm text-slate-900 font-sansation">Kỹ sư Giám sát trưởng (ID: GS-2041)</div>
-              <div className="text-slate-600">Kỹ sư Giám sát trưởng hiện trường • Ban Quản lý Hạ tầng Cát Tường Miền Trung</div>
+              <div className="text-slate-600">Kỹ sư Giám sát trưởng hiện trường • Ban Quản lý Hạ tầng Hoàng Hải Miền Trung</div>
               <div className="font-mono text-[11px] text-emerald-800">
                 Mã xác thực toàn vẹn biên bản: SHA256: 540211ab89c9a227e2e5e9
               </div>
@@ -1470,7 +1470,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
                 <div className="space-y-1">
                   <h4 className="font-bold text-sm text-slate-900">{publishHeadline}</h4>
                   <p className="text-slate-600 text-xs leading-relaxed">
-                    Vị trí: {currentItem.chainage} • Nhà thầu Cát Tường đã hoàn thành thảm lại bê tông nhựa phẳng phiu, đảm bảo an toàn giao thông cho người dân. Cảm ơn phản ánh của cộng đồng!
+                    Vị trí: {currentItem.chainage} • Nhà thầu Hoàng Hải đã hoàn thành thảm lại bê tông nhựa phẳng phiu, đảm bảo an toàn giao thông cho người dân. Cảm ơn phản ánh của cộng đồng!
                   </p>
                 </div>
               </div>

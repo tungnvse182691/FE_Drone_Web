@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { InputField } from '../../components/ui/InputField'
@@ -75,32 +76,7 @@ export const CreateSurvey: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'google-satellite',
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle('SATELLITE'),
       center: midPoint,
       zoom: 13.8,
       minZoom: 10,

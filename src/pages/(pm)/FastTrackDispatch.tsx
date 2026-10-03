@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import {
@@ -846,48 +847,7 @@ export const FastTrackDispatch: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'satellite-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite Imagery'
-          },
-          'osm-tiles': {
-            type: 'raster',
-            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            maxzoom: 19,
-            attribution: '&copy; OpenStreetMap'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'satellite-tiles',
-            layout: { visibility: mapLayer === 'SATELLITE' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          },
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm-tiles',
-            layout: { visibility: mapLayer === 'VECTOR' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle(mapLayer === 'SATELLITE' ? 'SATELLITE' : 'STREETS'),
       center: currentRouteConfig.center,
       zoom: currentRouteConfig.zoom,
       pitch: 32,

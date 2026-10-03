@@ -132,3 +132,94 @@ export interface InspectionRecord {
   notes?: string
   inspected_at: string
 }
+
+export type ConflictType =
+  | 'ASSIGNMENT_REASSIGNED'
+  | 'POLICY_VERSION_MISMATCH'
+  | 'DUPLICATE_WORK_ATTEMPT'
+  | 'DEVICE_RESCUE_PENDING'
+  | 'AGGREGATE_VERSION_CONFLICT'
+
+export type ResolutionStatus =
+  | 'CONFLICT_INTAKE'
+  | 'RESOLVED_ACCEPT_INCOMING'
+  | 'RESOLVED_KEEP_SERVER'
+  | 'RESOLVED_FORK_ATTEMPT'
+  | 'RESCUE_SUBMITTED'
+  | 'RESCUE_AUTHORIZED'
+  | 'RESCUE_REJECTED'
+
+export interface SyncConflictItem {
+  id: string
+  conflict_code: string
+  task_code: string
+  defect_code: string
+  defect_type_label: string
+  route_name: string
+  chainage: string
+  conflict_type: ConflictType
+  conflict_type_label: string
+  severity: 'HIGH' | 'MEDIUM' | 'CRITICAL'
+  status: ResolutionStatus
+  status_label: string
+  offline_actor: {
+    name: string
+    role: string
+    team: string
+    device_id: string
+    device_model: string
+    offline_duration: string
+    captured_at: string
+  }
+  incoming_data: {
+    measurement_type: string
+    measured_value: string
+    depth_mm: number
+    area_m2: number
+    photo_evidence_url: string
+    photo_after_url?: string
+    sha256_hash: string
+    gps_coords: string
+    accuracy_m: number
+    notes: string
+  }
+  duplicate_device_a?: {
+    name: string
+    role: string
+    team: string
+    device_id: string
+    device_model: string
+    captured_at: string
+    measurement_type: string
+    measured_value: string
+    photo_url: string
+    sha256_hash: string
+    notes: string
+  }
+  server_state: {
+    initial_assignee?: string
+    current_assignee: string
+    current_status: string
+    policy_version: string
+    policy_summary: string
+    last_updated: string
+    server_photo_url: string
+    server_notes: string
+  }
+  timeline?: {
+    time: string
+    event: string
+    actor: string
+    badge?: string
+    type?: 'info' | 'warning' | 'success' | 'alert'
+  }[]
+  resolution?: {
+    decision: string
+    decided_by: string
+    decided_by_role: string
+    decided_at: string
+    reason: string
+    audit_hash: string
+  }
+}
+

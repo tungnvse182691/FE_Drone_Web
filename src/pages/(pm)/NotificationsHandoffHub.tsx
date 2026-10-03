@@ -158,12 +158,13 @@ export const NotificationsHandoffHub: React.FC = () => {
 
   // --- DỮ LIỆU THÔNG BÁO VÀ BÀN GIAO CHUẨN BACKEND V2.2 ---
   const [notifications, setNotifications] = useState<NotificationItem[]>([
+    // === DÀNH RIÊNG CHO SUPERVISOR (GIÁM SÁT / CĐT) ===
     {
-      id: 'notif-01',
+      id: 'notif-sup-01',
       category: 'ACTION_REQUIRED',
-      categoryLabel: 'Yêu cầu hành động',
+      categoryLabel: 'Yêu cầu thẩm duyệt',
       title: 'Bàn giao thẩm duyệt Gói đề xuất sửa chữa đợt 3 (PKG-2026-08)',
-      message: 'PM Đỗ Quốc Hoàng đã hoàn tất lập hồ sơ thiết kế BOQ 4 hạng mục trên QL1A Km 1032. Hồ sơ đang chờ Supervisor ký duyệt phương án kỹ thuật.',
+      message: 'PM Đỗ Quốc Hoàng đã hoàn tất lập hồ sơ thiết kế BOQ 4 hạng mục trên QL1A Km 1032. Hồ sơ đang chờ Supervisor thẩm định và phê duyệt theo FR-19.',
       resourceType: 'REPAIR_PROPOSAL',
       resourceId: 'PKG-2026-08',
       routeCode: 'QL1A • PK-04',
@@ -181,7 +182,117 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Thẩm duyệt hồ sơ ngay'
     },
     {
-      id: 'notif-02',
+      id: 'notif-sup-02',
+      category: 'HANDOVER',
+      categoryLabel: 'Bàn giao nghiệm thu',
+      title: 'Bàn giao Biên bản nghiệm thu thi công hiện trường (ACC-2026-04)',
+      message: 'Đội thi công sửa chữa Hoàng Hải 01 đã nộp đủ bộ ảnh Trước/Sau kèm mã hash SHA-256 đối chiếu 3 hạng mục thảm bê tông nhựa. Chờ Supervisor nghiệm thu hiện trường.',
+      resourceType: 'ACCEPTANCE_DOSSIER',
+      resourceId: 'ACC-2026-04',
+      routeCode: 'QL1A • PK-04',
+      stationing: 'Km 1025+000 - Km 1026+500',
+      sender: 'Kỹ sư Kiên (Chỉ huy đội 01)',
+      senderRole: 'Đội thi công Hoàng Hải',
+      recipientRole: RoleCode.SUPERVISOR,
+      priority: 'HIGH',
+      slaHoursRemaining: 18.0,
+      slaType: 'SLA-ACCEPT-72h',
+      read: false,
+      occurredAt: '1 giờ trước',
+      timeAgo: '1 giờ trước',
+      actionUrl: '/sup/acceptance',
+      actionLabel: 'Kiểm tra biên bản nghiệm thu'
+    },
+    {
+      id: 'notif-sup-03',
+      category: 'ACTION_REQUIRED',
+      categoryLabel: 'Xác nhận tuyến',
+      title: 'Yêu cầu thẩm định & Khóa phiên bản tim tuyến (RoadSectionVersion v2.1)',
+      message: 'PM Đỗ Quốc Hoàng đã hoàn tất cập nhật tim đường GPX và chia phân đoạn Km 1020 - Km 1045. Đang chờ Supervisor thẩm tra và bấm Khóa xác nhận (LOCK) theo FR-07.',
+      resourceType: 'FIELD_TASK',
+      resourceId: 'ALIGN-2026-02',
+      routeCode: 'QL1A • PK-04',
+      stationing: 'Km 1020+000 - Km 1045+000',
+      sender: 'PM Đỗ Quốc Hoàng',
+      senderRole: 'Project Manager',
+      recipientRole: RoleCode.SUPERVISOR,
+      priority: 'HIGH',
+      slaHoursRemaining: 6.0,
+      slaType: 'SLA-APPR-48h',
+      read: false,
+      occurredAt: '45 phút trước',
+      timeAgo: '45 phút trước',
+      actionUrl: '/sup/alignment',
+      actionLabel: 'Thẩm tra & Khóa tuyến'
+    },
+    {
+      id: 'notif-sup-04',
+      category: 'HANDOVER',
+      categoryLabel: 'Ký số đóng đợt',
+      title: 'Hồ sơ đủ điều kiện Ký số đóng đợt sửa chữa (Sign-off Ready)',
+      message: 'Đợt sửa chữa PKG-2026-05 đã hoàn thành 100% hạng mục đạt tiêu chuẩn nghiệm thu hiện trường (PASSED). Hồ sơ pháp lý đã sẵn sàng để Supervisor cắm chữ ký số đóng đợt theo FR-23.',
+      resourceType: 'ACCEPTANCE_DOSSIER',
+      resourceId: 'SIGNOFF-PKG-05',
+      routeCode: 'QL1A • PK-04',
+      stationing: 'Toàn tuyến PK-04',
+      sender: 'Ban Quản Lý Chất Lượng Hoàng Hải',
+      senderRole: 'Hệ thống kiểm soát nghiệm thu',
+      recipientRole: RoleCode.SUPERVISOR,
+      priority: 'HIGH',
+      slaHoursRemaining: 12.0,
+      slaType: 'SLA-ACCEPT-72h',
+      read: false,
+      occurredAt: '2 giờ trước',
+      timeAgo: '2 giờ trước',
+      actionUrl: '/sup/signoff',
+      actionLabel: 'Mở màn hình Ký số đóng đợt'
+    },
+    {
+      id: 'notif-sup-05',
+      category: 'ACTION_REQUIRED',
+      categoryLabel: 'Cảnh báo rủi ro',
+      title: 'CẢNH BÁO RỦI RO: Đoạn Km 1028 - Km 1030 suy thoái chỉ số PCI vượt ngưỡng',
+      message: 'Hệ thống phân tích rủi ro phát hiện chỉ số rủi ro bảo hành tăng 24% sau đợt mưa lũ. Đề nghị Supervisor kích hoạt chế độ giám sát trọng điểm và yêu cầu PM lập kế hoạch dự phòng.',
+      resourceType: 'DEFECT',
+      resourceId: 'RISK-ALERT-09',
+      routeCode: 'QL1A • PK-04',
+      stationing: 'Km 1028+000 - Km 1030+000',
+      sender: 'Hệ thống Phân tích Rủi ro & Suy thoái',
+      senderRole: 'AI Risk Engine',
+      recipientRole: RoleCode.SUPERVISOR,
+      priority: 'EMERGENCY',
+      slaHoursRemaining: 2.0,
+      slaType: 'SLA-EMERG-2h',
+      read: false,
+      occurredAt: '1 giờ trước',
+      timeAgo: '1 giờ trước',
+      actionUrl: '/sup/risk-analytics',
+      actionLabel: 'Xem bản đồ phân tích rủi ro'
+    },
+    {
+      id: 'notif-sup-06',
+      category: 'AI_SYSTEM',
+      categoryLabel: 'Chất lượng bay Drone',
+      title: 'Báo cáo tổng hợp chất lượng ảnh bay Drone chuyến QL1A-MS-04B',
+      message: 'Chuyến bay đã nộp dữ liệu video 4K kèm file phụ đề SRT telemetry đầy đủ. Tỷ lệ phủ ảnh đạt 98.2%, độ cao bay trung bình 25m, sai số vị trí < 1.2m.',
+      resourceType: 'SURVEY_MISSION',
+      resourceId: 'QL1A-MS-04B',
+      routeCode: 'QL1A • PK-04',
+      stationing: 'Km 1024 - Km 1030',
+      sender: 'Tổ bay Drone Hoàng Hải',
+      senderRole: 'Drone Flight Operator',
+      recipientRole: RoleCode.SUPERVISOR,
+      priority: 'NORMAL',
+      read: true,
+      occurredAt: '4 giờ trước',
+      timeAgo: '4 giờ trước',
+      actionUrl: '/sup/surveys',
+      actionLabel: 'Xem chi tiết chuyến bay'
+    },
+
+    // === DÀNH RIÊNG CHO PROJECT MANAGER (PM CHỈ HUY TRƯỞNG) ===
+    {
+      id: 'notif-pm-01',
       category: 'ACTION_REQUIRED',
       categoryLabel: 'Cảnh báo khẩn cấp',
       title: 'LỆNH ỨNG CỨU KHẨN CẤP: Ổ gà sụt sâu nguy cơ nổ lốp xe tải',
@@ -203,29 +314,7 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Điều phối xuất quân khẩn cấp'
     },
     {
-      id: 'notif-03',
-      category: 'HANDOVER',
-      categoryLabel: 'Bàn giao nghiệm thu',
-      title: 'Bàn giao Biên bản hoàn thành công tác thi công hiện trường (ACC-2026-04)',
-      message: 'Đội thi công sửa chữa Cát Tường 01 đã nộp đủ bộ ảnh Trước/Sau kèm mã hash SHA-256 đối chiếu 3 hạng mục thảm bê tông nhựa. Chờ Supervisor nghiệm thu hiện trường.',
-      resourceType: 'ACCEPTANCE_DOSSIER',
-      resourceId: 'ACC-2026-04',
-      routeCode: 'QL1A • PK-04',
-      stationing: 'Km 1025+000 - Km 1026+500',
-      sender: 'Kỹ sư Kiên (Chỉ huy đội 01)',
-      senderRole: 'Đội thi công Cát Tường',
-      recipientRole: RoleCode.SUPERVISOR,
-      priority: 'HIGH',
-      slaHoursRemaining: 18.0,
-      slaType: 'SLA-ACCEPT-72h',
-      read: false,
-      occurredAt: '1 giờ trước',
-      timeAgo: '1 giờ trước',
-      actionUrl: '/sup/acceptance',
-      actionLabel: 'Kiểm tra biên bản nghiệm thu'
-    },
-    {
-      id: 'notif-04',
+      id: 'notif-pm-02',
       category: 'AI_SYSTEM',
       categoryLabel: 'Xử lý dữ liệu AI',
       title: 'Hoàn tất phân tích Video AI chuyến bay quét QL1A-MS-04B',
@@ -245,7 +334,7 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Mở giao diện thẩm định AI'
     },
     {
-      id: 'notif-05',
+      id: 'notif-pm-03',
       category: 'HANDOVER',
       categoryLabel: 'Phản hồi phê duyệt',
       title: 'Supervisor đã chấp thuận Phương án kỹ thuật Gói PKG-2026-07',
@@ -265,7 +354,7 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Xem chi tiết gói đã duyệt'
     },
     {
-      id: 'notif-06',
+      id: 'notif-pm-04',
       category: 'FIELD_CREW',
       categoryLabel: 'Báo cáo hiện trường',
       title: 'Hoàn tất nhiệm vụ đo đạc trắc địa bổ sung (TSK-2026-018)',
@@ -285,7 +374,7 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Xem dữ liệu đo đạc'
     },
     {
-      id: 'notif-07',
+      id: 'notif-pm-05',
       category: 'ACTION_REQUIRED',
       categoryLabel: 'Nhắc việc SLA Fast Track',
       title: 'Cảnh báo sắp hết hạn SLA 24h: Vá dặm nguội ổ gà Km 1024+350',
@@ -307,7 +396,7 @@ export const NotificationsHandoffHub: React.FC = () => {
       actionLabel: 'Đôn đốc tổ hiện trường'
     },
     {
-      id: 'notif-08',
+      id: 'notif-pm-06',
       category: 'HANDOVER',
       categoryLabel: 'Yêu cầu sửa đổi hồ sơ',
       title: 'Yêu cầu điều chỉnh hồ sơ gói PKG-2026-06 (REVISION_REQUIRED)',
@@ -358,9 +447,19 @@ export const NotificationsHandoffHub: React.FC = () => {
     showToast('Đã đánh dấu tất cả thông báo là đã đọc!')
   }
 
-  // Bộ lọc danh sách
-  const filteredNotifications = useMemo(() => {
+  // 1. Phân lập thông báo theo vai trò tài khoản hiện tại (RBAC Notification Isolation)
+  // Chỉ tài khoản có đúng role mới nhìn thấy thông báo gửi đến role đó (hoặc thông báo 'ALL')
+  const currentRole = user?.role || RoleCode.PROJECT_MANAGER
+  const roleFilteredNotifications = useMemo(() => {
     return notifications.filter((n) => {
+      if (n.recipientRole === 'ALL') return true
+      return n.recipientRole === currentRole
+    })
+  }, [notifications, currentRole])
+
+  // 2. Bộ lọc danh sách dựa trên các thông báo đã phân lập theo quyền
+  const filteredNotifications = useMemo(() => {
+    return roleFilteredNotifications.filter((n) => {
       // Tab filter
       if (activeTab !== 'ALL' && n.category !== activeTab) return false
 
@@ -384,24 +483,33 @@ export const NotificationsHandoffHub: React.FC = () => {
 
       return true
     })
-  }, [notifications, activeTab, priorityFilter, unreadOnly, searchQuery])
+  }, [roleFilteredNotifications, activeTab, priorityFilter, unreadOnly, searchQuery])
 
-  // Thống kê đếm
-  const unreadCount = notifications.filter((n) => !n.read).length
-  const emergencyCount = notifications.filter((n) => n.priority === 'EMERGENCY' && !n.read).length
-  const actionRequiredCount = notifications.filter((n) => n.category === 'ACTION_REQUIRED' && !n.read).length
-  const handoverCount = notifications.filter((n) => n.category === 'HANDOVER').length
-  const aiSystemCount = notifications.filter((n) => n.category === 'AI_SYSTEM').length
+  // Thống kê đếm chuẩn xác theo vai trò hiện tại
+  const unreadCount = roleFilteredNotifications.filter((n) => !n.read).length
+  const emergencyCount = roleFilteredNotifications.filter((n) => n.priority === 'EMERGENCY' && !n.read).length
+  const actionRequiredCount = roleFilteredNotifications.filter((n) => n.category === 'ACTION_REQUIRED' && !n.read).length
+  const handoverCount = roleFilteredNotifications.filter((n) => n.category === 'HANDOVER').length
+  const aiSystemCount = roleFilteredNotifications.filter((n) => n.category === 'AI_SYSTEM').length
 
-  // Danh sách các mục có SLA cần theo dõi gấp
+  // Danh sách các mục có SLA cần theo dõi gấp của vai trò hiện tại
   const criticalSlaItems = useMemo(() => {
-    return notifications
+    return roleFilteredNotifications
       .filter((n) => n.slaHoursRemaining !== undefined && !n.read)
       .sort((a, b) => (a.slaHoursRemaining || 0) - (b.slaHoursRemaining || 0))
-  }, [notifications])
+  }, [roleFilteredNotifications])
 
   // Giải quyết đường dẫn điều hướng tương thích đúng vai trò hiện tại (Tránh bị redirect về Dashboard)
   const resolveActionUrl = (item: NotificationItem) => {
+    if (item.actionUrl) {
+      if (isSupervisor && item.actionUrl.startsWith('/pm/')) {
+        return item.actionUrl.replace('/pm/', '/sup/')
+      }
+      if (!isSupervisor && item.actionUrl.startsWith('/sup/')) {
+        return item.actionUrl.replace('/sup/', '/pm/')
+      }
+      return item.actionUrl
+    }
     switch (item.resourceType) {
       case 'REPAIR_PROPOSAL':
         return isSupervisor ? '/sup/proposals/PKG-2026-08' : '/pm/proposals'
@@ -620,6 +728,17 @@ export const NotificationsHandoffHub: React.FC = () => {
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
               Trung Tâm Thông Báo &amp; Điều Phối Bàn Giao
             </h1>
+            {isSupervisor ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227]" />
+                <span>Hộp thư: Ban Tư Vấn Giám Sát (SUPERVISOR)</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
+                <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
+                <span>Hộp thư: Ban Chỉ Huy PM Nhà Thầu (PROJECT_MANAGER)</span>
+              </span>
+            )}
             {emergencyCount > 0 && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold animate-pulse">
                 <Flame className="w-3.5 h-3.5 text-rose-600" />
@@ -631,7 +750,9 @@ export const NotificationsHandoffHub: React.FC = () => {
             </span>
           </div>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Giám sát thời gian thực luồng bàn giao công việc giữa Project Manager và Tư vấn Giám sát; cảnh báo đứt gãy tiến độ SLA và phát âm thanh thông báo.
+            {isSupervisor
+              ? 'Kênh thông báo & chỉ đạo của Giám sát: Thẩm duyệt gói đề xuất sửa chữa, nghiệm thu hồ sơ hiện trường, xác nhận tuyến đường và cảnh báo suy thoái rủi ro.'
+              : 'Kênh điều hành & tiếp nhận chỉ đạo của Chỉ huy trưởng (PM): Lệnh ứng cứu khẩn cấp, tiến độ đợt sửa Fast Track, kết quả thẩm định Drone AI và phản hồi duyệt hồ sơ.'}
           </p>
         </div>
 

@@ -6,7 +6,7 @@ import { mockRepairBatches } from '../../api/mock/data'
 import { Users2, Calendar, ShieldAlert } from 'lucide-react'
 
 export const AssignCrew: React.FC = () => {
-  const [crewName, setCrewName] = useState('Đội Thi Công Số 2 (Cát Tường)')
+  const [crewName, setCrewName] = useState('Đội Thi Công Số 2 (Hoàng Hải)')
   const [deadline, setDeadline] = useState('2026-10-25')
   const [safetyNotes, setSafetyNotes] = useState('Yêu cầu đặt biển báo cách vị trí thi công 150m, có người phân luồng')
 
@@ -46,9 +46,9 @@ export const AssignCrew: React.FC = () => {
               onChange={(e) => setCrewName(e.target.value)}
               className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
             >
-              <option value="Đội Thi Công Số 1 (Cát Tường)">Đội Thi Công Số 1 (Chuyên cào bóc thảm nhựa)</option>
-              <option value="Đội Thi Công Số 2 (Cát Tường)">Đội Thi Công Số 2 (Chuyên xử lý khe nứt)</option>
-              <option value="Đội Thi Công Số 3 (Cát Tường)">Đội Thi Công Số 3 (Khẩn cấp)</option>
+              <option value="Đội Thi Công Số 1 (Hoàng Hải)">Đội Thi Công Số 1 (Chuyên cào bóc thảm nhựa)</option>
+              <option value="Đội Thi Công Số 2 (Hoàng Hải)">Đội Thi Công Số 2 (Chuyên xử lý khe nứt)</option>
+              <option value="Đội Thi Công Số 3 (Hoàng Hải)">Đội Thi Công Số 3 (Khẩn cấp)</option>
             </select>
           </div>
 

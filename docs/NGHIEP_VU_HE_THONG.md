@@ -1,5 +1,5 @@
 # SỔ TAY NGHIỆP VỤ & QUY TRÌNH HỆ THỐNG ROADGUARD
-> **Hệ thống Quản lý Bảo hành & Sửa chữa Hạ tầng Đường bộ (Nhà thầu Cát Tường)**  
+> **Hệ thống Quản lý Bảo hành & Sửa chữa Hạ tầng Đường bộ (Nhà thầu Hoàng Hải)**  
 > *Ghi chép theo trình tự thực hiện từng màn hình. Cập nhật liên tục sau mỗi màn hình được chốt.*
 
 ---
@@ -27,7 +27,7 @@
      - **Project Manager (PM):** `pmhoang@gmail.com` / Mật khẩu: `123456` $\rightarrow$ Điều hướng về `/pm/dashboard`.
      - **Supervisor (Giám sát):** `suphoang@gmail.com` / Mật khẩu: `123456` $\rightarrow$ Điều hướng về `/sup/dashboard`.
   2. **Cơ chế Force Change Password (WF-01):** Nếu user có cờ `must_change_password: true`, hệ thống lập tức chặn mọi route và chuyển sang View đổi mật khẩu bắt buộc trước khi vào hệ thống.
-  3. **Màu sắc:** Sử dụng tông màu Vàng đồng `#C9A227` và Navy Slate `#2D3748` theo thương hiệu Cát Tường.
+  3. **Màu sắc:** Sử dụng tông màu Vàng đồng `#C9A227` và Navy Slate `#2D3748` theo thương hiệu Hoàng Hải.
 
 ---
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle, setMapLayerVisibility } from '../../utils/maplibre'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import {
@@ -253,61 +254,9 @@ export const AlignmentSegments: React.FC = () => {
   useEffect(() => {
     if (!mapContainerRef.current) return
 
-    // Cấu hình Style đa nguồn bản đồ chuẩn (cho phép overscale không bị mất map khi zoom sát)
-    const osmRasterStyle: maplibregl.StyleSpecification = {
-      version: 8,
-      sources: {
-        'satellite-tiles': {
-          type: 'raster',
-          tiles: [
-            'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-            'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-          ],
-          tileSize: 256,
-          maxzoom: 20, // Ảnh vệ tinh Google độ nét cao hỗ trợ đến zoom 20 không bị dính watermark 'Map data not yet available'
-          attribution: '&copy; Google Satellite Imagery'
-        },
-        'osm-tiles': {
-          type: 'raster',
-          tiles: [
-            'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          maxzoom: 19, // Báo cho MapLibre tự động overscale khi zoom > 19
-          attribution: '&copy; OpenStreetMap contributors'
-        }
-      },
-      layers: [
-        {
-          id: 'satellite-tiles-layer',
-          type: 'raster',
-          source: 'satellite-tiles',
-          layout: {
-            visibility: mapLayer === 'SATELLITE' || mapLayer === 'PLANNING' ? 'visible' : 'none'
-          },
-          minzoom: 0,
-          maxzoom: 24 // Giữ hiển thị liên tục kể cả khi người dùng zoom sát sạt mặt đường
-        },
-        {
-          id: 'osm-tiles-layer',
-          type: 'raster',
-          source: 'osm-tiles',
-          layout: {
-            visibility: mapLayer === 'VECTOR' ? 'visible' : 'none'
-          },
-          minzoom: 0,
-          maxzoom: 24 // Giữ hiển thị liên tục
-        }
-      ]
-    }
-
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: osmRasterStyle,
+      style: getMapLibreStyle(mapLayer === 'VECTOR' ? 'STREETS' : 'SATELLITE'),
       center: [108.1651, 16.2052], // Khu vực Huế - Đà Nẵng
       zoom: 11.2,
       minZoom: 4,
@@ -548,17 +497,17 @@ export const AlignmentSegments: React.FC = () => {
     if (!map.isStyleLoaded()) return
 
     // Bật/tắt giữa ảnh vệ tinh và bản đồ vector OSM
-    if (map.getLayer('satellite-tiles-layer')) {
+    if (map.getLayer('satellite-layer')) {
       map.setLayoutProperty(
-        'satellite-tiles-layer',
+        'satellite-layer',
         'visibility',
         mapLayer === 'SATELLITE' || mapLayer === 'PLANNING' ? 'visible' : 'none'
       )
     }
 
-    if (map.getLayer('osm-tiles-layer')) {
+    if (map.getLayer('osm-layer')) {
       map.setLayoutProperty(
-        'osm-tiles-layer',
+        'osm-layer',
         'visibility',
         mapLayer === 'VECTOR' ? 'visible' : 'none'
       )

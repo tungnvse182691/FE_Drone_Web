@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle as getUnifiedMapLibreStyle } from '../../utils/maplibre'
 import {
   Inbox,
   Search,
@@ -183,7 +184,7 @@ export const AIReviewInbox: React.FC = () => {
       code: '#CAS-2026-0840',
       source: 'PATROL',
       source_label: 'Tuần tra đường',
-      source_detail: 'Đội tuần đường lưu động Cát Tường - Xe tuần kiểm 02',
+      source_detail: 'Đội tuần đường lưu động Hoàng Hải - Xe tuần kiểm 02',
       project_id: 'prj-ql1a-02',
       project_name: 'QL1A - Tuyến mở rộng',
       stationing: 'Km 1028+100',
@@ -357,53 +358,9 @@ export const AIReviewInbox: React.FC = () => {
     return coords
   }
 
-  // Cấu hình Style Google Satellite & OSM Raster Style
-  const getMapLibreStyle = (isSatellite: boolean): maplibregl.StyleSpecification => ({
-    version: 8,
-    sources: {
-      'satellite-tiles': {
-        type: 'raster',
-        tiles: [
-          'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-        ],
-        tileSize: 256,
-        maxzoom: 20,
-        attribution: '&copy; Google Satellite'
-      },
-      'osm-tiles': {
-        type: 'raster',
-        tiles: [
-          'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-        ],
-        tileSize: 256,
-        maxzoom: 19,
-        attribution: '&copy; OpenStreetMap'
-      }
-    },
-    layers: [
-      {
-        id: 'satellite-layer',
-        type: 'raster',
-        source: 'satellite-tiles',
-        layout: { visibility: isSatellite ? 'visible' : 'none' },
-        minzoom: 0,
-        maxzoom: 24
-      },
-      {
-        id: 'osm-layer',
-        type: 'raster',
-        source: 'osm-tiles',
-        layout: { visibility: !isSatellite ? 'visible' : 'none' },
-        minzoom: 0,
-        maxzoom: 24
-      }
-    ]
-  })
+  // Cấu hình Style Google Satellite & OSM Raster Style chuẩn MapLibre
+  const getMapLibreStyle = (isSatellite: boolean): maplibregl.StyleSpecification =>
+    getUnifiedMapLibreStyle(isSatellite ? 'SATELLITE' : 'STREETS')
 
   // Effect: Khởi tạo MapLibre trong Modal GIS Preview
   useEffect(() => {

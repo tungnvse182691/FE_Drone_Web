@@ -1,4 +1,4 @@
-# AGENTS.md — RoadGuard FE_Web (Cát Tường Dashboard)
+# AGENTS.md — RoadGuard FE_Web (Hoàng Hải Dashboard)
 
 > **Nguồn-sự-thật cho mọi AI làm việc trong repo này.**  
 > Dự án do **Hoàng** phụ trách solo frontend web. Đọc hết file này TRƯỚC khi viết code.
@@ -27,7 +27,7 @@ Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commit
 
 ## 📌 PHẦN B: BỐI CẢNH DỰ ÁN & VAI TRÒ HỆ THỐNG
 
-**RoadGuard** là hệ thống quản lý bảo hành & sửa chữa hạ tầng đường bộ của nhà thầu **Cát Tường**.  
+**RoadGuard** là hệ thống quản lý bảo hành & sửa chữa hạ tầng đường bộ của nhà thầu **Hoàng Hải**.  
 Phiên bản Web Dashboard phục vụ **2 vai trò chính tại văn phòng**:
 
 | Vai trò | RoleCode | Thư mục màn hình | Mô tả nghiệp vụ |
@@ -75,7 +75,7 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 7. **Đổi mật khẩu lần đầu (`force-change-password`):** Nếu `user.must_change_password === true`, mọi route phải bị chặn và bắt buộc chuyển hướng đến trang đổi mật khẩu.
 8. **Trạng thái đợt sửa (`RepairBatchStatus`):** Tuân thủ đúng máy trạng thái: `DRAFT` $\rightarrow$ `PENDING_APPROVAL` $\rightarrow$ `APPROVED` hoặc `REVISION_REQUIRED` $\rightarrow$ `ASSIGNED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `PENDING_INSPECTION` $\rightarrow$ `COMPLETED`.
 9. **Ký số đóng đợt (`Sign-off`):** Chỉ thực hiện được khi 100% hạng mục trong đợt đã qua bước Nghiệm thu đạt yêu cầu (`PASSED`).
-10. **Design System:** Màu vàng đồng `#C9A227` là màu thương hiệu Cát Tường — chỉ dành cho 1 nút CTA chính/màn, tab đang chọn hoặc chỉ số KPI nổi bật. Không lạm dụng làm màu nền tràn lan.
+10. **Design System:** Màu vàng đồng `#C9A227` là màu thương hiệu Hoàng Hải — chỉ dành cho 1 nút CTA chính/màn, tab đang chọn hoặc chỉ số KPI nổi bật. Không lạm dụng làm màu nền tràn lan.
 
 ---
 

@@ -34,7 +34,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Gói đề xuất sửa chữa', path: '/pm/proposals', icon: Boxes },
     { label: 'Gom đợt sửa chữa', path: '/pm/repair-batches/create', icon: Boxes },
     { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
-    { label: 'Nhiệm vụ đo hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
+    { label: 'Xử lý xung đột & Đo đạc (Màn 15)', path: '/pm/field-tasks', icon: ClipboardList },
     { label: 'Rà soát & Nghiệm thu chất lượng', path: '/pm/acceptance', icon: ShieldCheck },
     { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
   ]
@@ -47,6 +47,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
     { label: 'Hộp thư tiếp nhận & Triage', path: '/sup/ai-inbox', icon: Inbox },
     { label: 'Giám sát chính sách Fast-Track', path: '/sup/fast-track', icon: Zap },
+    { label: 'Xử lý xung đột & Cứu dữ liệu (Màn 15)', path: '/sup/field-tasks', icon: ClipboardList },
     { label: 'Gói đề xuất kỹ thuật', path: '/sup/proposals', icon: Boxes },
     { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
     { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/sup/risk-analytics', icon: BarChart3 },
@@ -86,7 +87,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Footer Info */}
       <div className="p-4 border-t border-brand-border bg-slate-50/50 text-[11px] text-slate-500">
-        <div className="font-semibold text-slate-700">Dự án Nhà thầu Cát Tường</div>
+        <div className="font-semibold text-slate-700">Dự án Nhà thầu Hoàng Hải</div>
         <div>Hạ tầng đường bộ v2.2</div>
       </div>
     </aside>

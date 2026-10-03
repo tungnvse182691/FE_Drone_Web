@@ -1758,7 +1758,7 @@ export const RiskAnalytics: React.FC = () => {
               Tiêu chuẩn pháp lý & Toàn vẹn chứng từ số (RPT-07)
             </span>
             <p className="text-slate-500 leading-relaxed text-[11px] lg:text-xs">
-              Hồ sơ kỹ thuật xuất từ hệ thống RoadGuard (Nhà thầu Cát Tường) tự động đính kèm mã băm SHA-256 Checksum cho từng tệp ảnh và gói nén, đáp ứng đầy đủ tiêu chuẩn nghiệm thu và kiểm toán kỹ thuật công trình giao thông (TCVN 8819 &amp; TCVN 8864).
+              Hồ sơ kỹ thuật xuất từ hệ thống RoadGuard (Nhà thầu Hoàng Hải) tự động đính kèm mã băm SHA-256 Checksum cho từng tệp ảnh và gói nén, đáp ứng đầy đủ tiêu chuẩn nghiệm thu và kiểm toán kỹ thuật công trình giao thông (TCVN 8819 &amp; TCVN 8864).
             </p>
           </div>
         </div>

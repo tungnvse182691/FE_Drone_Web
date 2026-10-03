@@ -1,6 +1,6 @@
 ---
 name: roadguard-web
-description: "Skill chuyên sâu cho dự án RoadGuard Web Dashboard (Cát Tường). Chứa đặc tả chi tiết 18 màn hình Stitch, API mapping, mockup data, phân quyền PM vs Supervisor, và hướng dẫn dựng giao diện chuẩn xác."
+description: "Skill chuyên sâu cho dự án RoadGuard Web Dashboard (Hoàng Hải). Chứa đặc tả chi tiết 18 màn hình Stitch, API mapping, mockup data, phân quyền PM vs Supervisor, và hướng dẫn dựng giao diện chuẩn xác."
 ---
 
 # RoadGuard Web Dashboard — Technical & Screen Specifications
@@ -15,7 +15,7 @@ Skill này cung cấp toàn bộ đặc tả chức năng của 18 màn hình tr
 - **Màn 01: Đăng nhập & Đổi mật khẩu** (`/login`, `/force-change-password`)
   - *File:* `src/pages/(auth)/Login.tsx`, `ForceChangePassword.tsx`
   - *Mục đích:* Xác thực người dùng bằng username/password, kiểm tra cờ `must_change_password`.
-  - *Thành phần:* Form đăng nhập 2 trường, logo Cát Tường RoadGuard, thông báo lỗi nếu sai credential.
+  - *Thành phần:* Form đăng nhập 2 trường, logo Hoàng Hải RoadGuard, thông báo lỗi nếu sai credential.
 - **Màn 02: Dashboard PM** (`/pm/dashboard`)
   - *File:* `src/pages/(pm)/PMDashboard.tsx`
   - *Mục đích:* Bảng điều khiển trung tâm của Project Manager.

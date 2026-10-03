@@ -441,7 +441,7 @@ export const RepairProposals: React.FC = () => {
       status_label: 'Chờ duyệt',
       approved_items: 8,
       total_items: 12,
-      contractor_name: 'Đội thi công sửa chữa Cát Tường 01'
+      contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
     },
     {
       id: 'pkg-07',
@@ -519,7 +519,7 @@ export const RepairProposals: React.FC = () => {
       status_label: 'Đang thi công',
       approved_items: 4,
       total_items: 4,
-      contractor_name: 'Đội thi công cơ giới Cát Tường'
+      contractor_name: 'Đội thi công cơ giới Hoàng Hải'
     },
     {
       id: 'pkg-05',
@@ -545,7 +545,7 @@ export const RepairProposals: React.FC = () => {
       status_label: 'Đã phê duyệt',
       approved_items: 8,
       total_items: 8,
-      contractor_name: 'Đội thi công sửa chữa Cát Tường 01'
+      contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
     },
     {
       id: 'pkg-04',
@@ -686,7 +686,7 @@ export const RepairProposals: React.FC = () => {
   const [formRouteId, setFormRouteId] = useState('QL1A_PK04')
   const [formSegmentId, setFormSegmentId] = useState('seg-02')
   const [formPackageName, setFormPackageName] = useState('Khắc phục hằn lún bánh xe & trám nứt Km 1028 - Km 1033')
-  const [formContractor, setFormContractor] = useState('Đội thi công sửa chữa Cát Tường 01')
+  const [formContractor, setFormContractor] = useState('Đội thi công sửa chữa Hoàng Hải 01')
   const [formDurationDays, setFormDurationDays] = useState(3)
 
   // Tuyến đường và phân đoạn hiện tại đang chọn trong form
@@ -1579,8 +1579,8 @@ export const RepairProposals: React.FC = () => {
                     onChange={(e) => setFormContractor(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                   >
-                    <option value="Đội thi công sửa chữa Cát Tường 01">
-                      Đội thi công sửa chữa Cát Tường 01
+                    <option value="Đội thi công sửa chữa Hoàng Hải 01">
+                      Đội thi công sửa chữa Hoàng Hải 01
                     </option>
                     <option value="Tổ rải thảm nóng Polime 02 - Xí nghiệp Cầu Đường 4">
                       Tổ rải thảm nóng Polime 02 - Xí nghiệp Cầu Đường 4
@@ -1842,7 +1842,7 @@ export const RepairProposals: React.FC = () => {
             </div>
 
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
-              <div className="font-bold text-slate-800">CÔNG TY CỔ PHẦN ĐẦU TƯ XÂY DỰNG CÁT TƯỜNG</div>
+              <div className="font-bold text-slate-800">CÔNG TY CỔ PHẦN ĐẦU TƯ XÂY DỰNG HOÀNG HẢI</div>
               <div className="text-slate-600">Ban Điều Hành Dự Án Bảo Trì Quốc Lộ 1A (PK-04)</div>
               <div className="font-mono text-[11px] text-slate-500">Mã văn bản: KH-2026/QL1A-PK04-O&amp;M</div>
               <div className="pt-2 border-t border-slate-200 text-slate-700">
@@ -1853,7 +1853,7 @@ export const RepairProposals: React.FC = () => {
                 được lập phương án thi công trên toàn tuyến.
               </div>
               <div className="text-[11px] text-slate-500">
-                • Trạng thái hồ sơ: Đã đồng bộ với máy chủ O&amp;M Cát Tường
+                • Trạng thái hồ sơ: Đã đồng bộ với máy chủ O&amp;M Hoàng Hải
                 <br />
                 • Tiêu chuẩn nghiệm thu: TCVN 8819:2011 &amp; QCVN 41:2019/BGTVT
               </div>

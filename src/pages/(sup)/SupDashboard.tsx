@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { getMapLibreStyle } from '../../utils/maplibre'
 import {
   LayoutGrid,
   Calendar,
@@ -133,7 +134,7 @@ const MOCK_RISK_ITEMS: RiskPortfolioItem[] = [
     gps_lat: 18.7231,
     gps_lng: 105.6542,
     pm_name: 'Trần Minh Tâm',
-    pm_email: 'tam.tm@cattuong-infra.vn',
+    pm_email: 'tam.tm@hoanghai-infra.vn',
     proposal_id: 'PKG-2026-02'
   },
   {
@@ -153,7 +154,7 @@ const MOCK_RISK_ITEMS: RiskPortfolioItem[] = [
     gps_lat: 16.4637,
     gps_lng: 107.5908,
     pm_name: 'Lê Văn Cường',
-    pm_email: 'cuong.lv@cattuong-infra.vn',
+    pm_email: 'cuong.lv@hoanghai-infra.vn',
     proposal_id: 'PKG-2026-03'
   }
 ]
@@ -429,52 +430,7 @@ export const SupDashboard: React.FC = () => {
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: [
-              'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-              'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
-            ],
-            tileSize: 256,
-            maxzoom: 20,
-            attribution: '&copy; Google Satellite'
-          },
-          'osm-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
-            tileSize: 256,
-            maxzoom: 19,
-            attribution: '&copy; OpenStreetMap'
-          }
-        },
-        layers: [
-          {
-            id: 'satellite-layer',
-            type: 'raster',
-            source: 'google-satellite',
-            layout: { visibility: mapLayer === 'satellite' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          },
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm-tiles',
-            layout: { visibility: mapLayer === 'vector' ? 'visible' : 'none' },
-            minzoom: 0,
-            maxzoom: 24
-          }
-        ]
-      },
+      style: getMapLibreStyle(mapLayer === 'satellite' ? 'SATELLITE' : 'STREETS'),
       center: [107.6, 16.6],
       zoom: 7.2,
       minZoom: 5,

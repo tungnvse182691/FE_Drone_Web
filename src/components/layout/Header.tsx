@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
     <header className="h-16 bg-white border-b border-brand-border px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-headline font-black text-xl tracking-tight text-brand-gold">CÁT TƯỜNG</span>
+          <span className="font-headline font-black text-xl tracking-tight text-brand-gold">HOÀNG HẢI</span>
           <span className="text-xs bg-brand-navy text-white px-2 py-0.5 rounded font-mono font-bold tracking-wider">
             ROADGUARD
           </span>

@@ -117,7 +117,7 @@ export const ForceChangePassword: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold tracking-tight text-slate-900 font-headline">
-                  Cát Tường
+                  Hoàng Hải
                 </span>
                 <span className="text-xs px-2 py-0.5 font-mono font-semibold bg-[#C9A227]/10 text-[#C9A227] border border-[#C9A227]/30 rounded-full">
                   ROADGUARD
