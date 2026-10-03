@@ -7,7 +7,14 @@ import {
   RepairBatch,
   FieldTask,
   WorkOrder,
-  SyncConflictItem
+  SyncConflictItem,
+  AcademicMetrics,
+  ConfusionMatrixCell,
+  SizeErrorBin,
+  FPFNInspectorItem,
+  ValidationBenchmarkRun,
+  MeasurementValidationSample,
+  MeasurementValidationRun
 } from '../../types/domain'
 
 // =============================================================================
@@ -723,3 +730,648 @@ export const mockSyncConflicts: SyncConflictItem[] = [
     ]
   },
 ]
+
+// =============================================================================
+// 9. DỮ LIỆU KIỂM ĐỊNH MÔ HÌNH KHOA HỌC (RPT-09 / FR-31 / BR-44 / RS01-RS06)
+// =============================================================================
+
+export const mockAcademicMetrics: AcademicMetrics = {
+  mAP50_95: 89.4,
+  map50_95: 89.4,
+  mAP_delta: '+2.3% vs v2.3.0',
+  map50_95_delta: '+2.3% vs v2.3.0',
+  precision: 92.1,
+  precision_delta: '+1.5% vs v2.3.0',
+  false_positives: 67,
+  false_positives_ratio: 7.9,
+  total_samples: 850,
+  recall: 88.6,
+  recall_delta: '-0.8%',
+  false_negatives_ratio: 11.4,
+  f1_score: 0.903,
+  is_certified: true
+}
+
+export const mockConfusionMatrixHeaders = [
+  'Ổ gà / Lún (Pothole)',
+  'Nứt dọc (Longitudinal)',
+  'Nứt lưới (Alligator)',
+  'Lệch tấm (Slab Fault)',
+  'Mặt đường tốt (Normal)'
+]
+
+export const mockConfusionMatrixRows: {
+  gt_name: string
+  cells: ConfusionMatrixCell[]
+}[] = [
+  {
+    gt_name: 'Ổ gà / Lún sụt (Pothole / Depression)',
+    cells: [
+      { gt_class: 'Pothole', pred_class: 'Pothole', percentage: 91.2, count: 412, is_true_positive: true },
+      { gt_class: 'Pothole', pred_class: 'Longit', percentage: 2.4, count: 11 },
+      { gt_class: 'Pothole', pred_class: 'Alligator', percentage: 3.8, count: 17 },
+      { gt_class: 'Pothole', pred_class: 'SlabFault', percentage: 0.9, count: 4 },
+      { gt_class: 'Pothole', pred_class: 'Normal', percentage: 1.7, count: 8, is_false_negative: true }
+    ]
+  },
+  {
+    gt_name: 'Nứt dọc kết cấu (Longitudinal Crack)',
+    cells: [
+      { gt_class: 'Longit', pred_class: 'Pothole', percentage: 1.1, count: 9 },
+      { gt_class: 'Longit', pred_class: 'Longit', percentage: 89.8, count: 712, is_true_positive: true },
+      { gt_class: 'Longit', pred_class: 'Alligator', percentage: 5.4, count: 43 },
+      { gt_class: 'Longit', pred_class: 'SlabFault', percentage: 1.5, count: 12 },
+      { gt_class: 'Longit', pred_class: 'Normal', percentage: 2.2, count: 17, is_false_negative: true }
+    ]
+  },
+  {
+    gt_name: 'Nứt lưới mỏi mặt đường (Alligator Crack)',
+    cells: [
+      { gt_class: 'Alligator', pred_class: 'Pothole', percentage: 1.8, count: 11 },
+      { gt_class: 'Alligator', pred_class: 'Longit', percentage: 5.1, count: 31 },
+      { gt_class: 'Alligator', pred_class: 'Alligator', percentage: 86.5, count: 528, is_true_positive: true },
+      { gt_class: 'Alligator', pred_class: 'SlabFault', percentage: 2.9, count: 18 },
+      { gt_class: 'Alligator', pred_class: 'Normal', percentage: 3.7, count: 22, is_false_negative: true }
+    ]
+  },
+  {
+    gt_name: 'Lệch mức tấm bê tông (Slab Faulting)',
+    cells: [
+      { gt_class: 'SlabFault', pred_class: 'Pothole', percentage: 0.3, count: 1 },
+      { gt_class: 'SlabFault', pred_class: 'Longit', percentage: 2.1, count: 7 },
+      { gt_class: 'SlabFault', pred_class: 'Alligator', percentage: 3.4, count: 11 },
+      { gt_class: 'SlabFault', pred_class: 'SlabFault', percentage: 87.1, count: 284, is_true_positive: true },
+      { gt_class: 'SlabFault', pred_class: 'Normal', percentage: 7.1, count: 23, is_false_negative: true }
+    ]
+  },
+  {
+    gt_name: 'Mặt đường bình thường (Normal Surface)',
+    cells: [
+      { gt_class: 'Normal', pred_class: 'Pothole', percentage: 0.5, count: 4, is_false_positive: true },
+      { gt_class: 'Normal', pred_class: 'Longit', percentage: 2.8, count: 22, is_false_positive: true },
+      { gt_class: 'Normal', pred_class: 'Alligator', percentage: 1.1, count: 9, is_false_positive: true },
+      { gt_class: 'Normal', pred_class: 'SlabFault', percentage: 0.9, count: 7, is_false_positive: true },
+      { gt_class: 'Normal', pred_class: 'Normal', percentage: 94.7, count: 745, is_true_positive: true }
+    ]
+  }
+]
+
+export const mockSizeErrorBins: SizeErrorBin[] = [
+  { range_label: '< -10 mm', percentage: 1.4, bar_height_percent: 6 },
+  { range_label: '-8 mm', percentage: 4.2, bar_height_percent: 16 },
+  { range_label: '-4 mm', percentage: 14.8, bar_height_percent: 48 },
+  { range_label: '±0 mm', percentage: 48.2, bar_height_percent: 94, is_center: true },
+  { range_label: '+4 mm', percentage: 22.1, bar_height_percent: 64 },
+  { range_label: '+8 mm', percentage: 6.5, bar_height_percent: 22 },
+  { range_label: '> +10 mm', percentage: 2.8, bar_height_percent: 10 }
+]
+
+export const mockFPFNInspectorItems: FPFNInspectorItem[] = [
+  {
+    id: 'fpfn-01',
+    defect_code: 'DEF-QL1A-KM14-042',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1042,
+    type: 'FP',
+    gt_class: 'Normal',
+    pred_class: 'Longit',
+    chainage: 'Km 14+400',
+    lane: 'Làn xe cơ giới 1',
+    ai_confidence: 54.2,
+    ground_truth_label: 'Mặt đường bình thường (Có bóng râm cây xanh)',
+    predicted_label: 'Nứt dọc cấp 2 (CRACK_LONGITUDINAL)',
+    description: 'Bóng cành cây ven taluy vào lúc 14:15 bị mô hình trích xuất thành vết nứt dọc do độ tương phản quang học cục bộ cao. Cần loại trừ nhãn giả theo FR-36.',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'PM duyệt từ chối nhãn (REJECT) theo FR-36',
+    status: 'PENDING'
+  },
+  {
+    id: 'fpfn-02',
+    defect_code: 'DEF-QL1A-KM18-850',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1820,
+    type: 'FN',
+    gt_class: 'Alligator',
+    pred_class: 'Normal',
+    chainage: 'Km 18+850',
+    lane: 'Làn xe thô sơ',
+    ai_confidence: 0.0,
+    ground_truth_label: 'Nứt lưới chân chim 1.2m, bề rộng 2.5mm (CRACK_ALLIGATOR)',
+    predicted_label: 'Bỏ sót (Missed Detection / False Negative)',
+    description: 'Mặt đường còn ẩm ướt sau cơn mưa làm giảm gradient độ tương phản quang học, khiến mô hình bỏ sót vết nứt tế vi dưới 3mm.',
+    image_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Gán nhãn bổ sung cho tập huấn luyện (Retrain Dataset)',
+    status: 'PENDING'
+  },
+  {
+    id: 'fpfn-03',
+    defect_code: 'DEF-QL1A-KM16-910',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 915,
+    type: 'MISCLASSIFICATION',
+    gt_class: 'Normal',
+    pred_class: 'Longit',
+    chainage: 'Km 16+910',
+    lane: 'Mố cầu vượt dân sinh',
+    ai_confidence: 78.4,
+    ground_truth_label: 'Khe co giãn kết cấu mố cầu (Bridge Joint)',
+    predicted_label: 'Nứt ngang kết cấu (CRACK_TRANSVERSE)',
+    description: 'Mô hình nhầm lẫn khe co giãn kỹ thuật thành vết nứt ngang. Cần cập nhật mặt nạ cấu trúc công trình cầu (Bridge Structure Mask).',
+    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Thiết lập mặt nạ kết cấu loại trừ (Exclusion Mask)',
+    status: 'PENDING'
+  },
+  {
+    id: 'fpfn-04',
+    defect_code: 'DEF-QL1A-KM17-340',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1340,
+    type: 'FN',
+    gt_class: 'SlabFault',
+    pred_class: 'Normal',
+    chainage: 'Km 17+340',
+    lane: 'Làn xe cơ giới 2',
+    ai_confidence: 12.0,
+    ground_truth_label: 'Lệch mức tấm bê tông 15mm (SLAB_FAULTING)',
+    predicted_label: 'Bỏ sót (Nhầm thành mặt đường tốt Normal)',
+    description: 'Góc chụp vuông góc 90° từ trên cao không tạo bóng đổ rõ rệt ở mép chênh cao tấm bê tông, khiến mô hình 2D phân loại nhầm thành mặt đường bình thường.',
+    image_url: 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Yêu cầu trích xuất từ bề mặt DSM 3D thay vì ảnh 2D',
+    status: 'PENDING'
+  },
+  {
+    id: 'fpfn-05',
+    defect_code: 'DEF-QL1A-KM15-210',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 720,
+    type: 'TP',
+    gt_class: 'Pothole',
+    pred_class: 'Pothole',
+    chainage: 'Km 15+210',
+    lane: 'Làn xe cơ giới 1',
+    ai_confidence: 94.8,
+    ground_truth_label: 'Ổ gà sâu cấp 2, đk 65cm (POTHOLE)',
+    predicted_label: 'Ổ gà sâu (POTHOLE) (94.8%)',
+    description: 'Nhận diện hoàn toàn chính xác đường viền gãy vỡ và độ sâu hố sụt qua mô hình đối chiếu quang học đa kênh.',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Đã xác thực đạt chuẩn (True Positive - Ổ gà)',
+    status: 'ANNOTATED'
+  },
+  {
+    id: 'fpfn-06',
+    defect_code: 'DEF-QL1A-KM14-115',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 845,
+    type: 'TP',
+    gt_class: 'Longit',
+    pred_class: 'Longit',
+    chainage: 'Km 14+115',
+    lane: 'Làn xe cơ giới 2',
+    ai_confidence: 91.5,
+    ground_truth_label: 'Vết nứt dọc kết cấu dài 3.2m (CRACK_LONGITUDINAL)',
+    predicted_label: 'Nứt dọc kết cấu (CRACK_LONGITUDINAL) (91.5%)',
+    description: 'Đường nứt chạy dọc theo vệt bánh xe cơ giới được phân đoạn liên tục, không bị đứt đoạn, bám sát số đo thước thẳng hiện trường.',
+    image_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Đã xác thực đạt chuẩn (True Positive - Nứt dọc)',
+    status: 'ANNOTATED'
+  },
+  {
+    id: 'fpfn-07',
+    defect_code: 'DEF-QL1A-KM17-520',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1102,
+    type: 'TP',
+    gt_class: 'Alligator',
+    pred_class: 'Alligator',
+    chainage: 'Km 17+520',
+    lane: 'Làn xe cơ giới 1',
+    ai_confidence: 88.2,
+    ground_truth_label: 'Nứt lưới mỏi mặt đường diện tích 1.4m² (CRACK_ALLIGATOR)',
+    predicted_label: 'Nứt lưới mỏi (CRACK_ALLIGATOR) (88.2%)',
+    description: 'Trích xuất chính xác cấu trúc mạng nứt chân chim đan xen dạng da cá sấu trên bề mặt bê tông nhựa suy thoái mỏi.',
+    image_url: 'https://images.unsplash.com/photo-1578873375972-00b65f72cf97?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Đã xác thực đạt chuẩn (True Positive - Nứt lưới)',
+    status: 'ANNOTATED'
+  },
+  {
+    id: 'fpfn-08',
+    defect_code: 'DEF-QL1A-KM19-340',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1540,
+    type: 'TP',
+    gt_class: 'SlabFault',
+    pred_class: 'SlabFault',
+    chainage: 'Km 19+340',
+    lane: 'Làn xe cơ giới 2',
+    ai_confidence: 89.0,
+    ground_truth_label: 'Lệch mức tấm bê tông chênh cao 18mm (SLAB_FAULTING)',
+    predicted_label: 'Lệch mức tấm bê tông (SLAB_FAULTING) (89.0%)',
+    description: 'Mô hình bề mặt DSM tái tạo 3D phát hiện chính xác độ chênh cốt cao độ giữa 2 tấm bê tông liền kề vượt ngưỡng 15mm.',
+    image_url: 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Đã xác thực đạt chuẩn (True Positive - Lệch tấm)',
+    status: 'ANNOTATED'
+  },
+  {
+    id: 'fpfn-09',
+    defect_code: 'SAMPLE-QL1A-KM20-100',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 1980,
+    type: 'TP',
+    gt_class: 'Normal',
+    pred_class: 'Normal',
+    chainage: 'Km 20+100',
+    lane: 'Làn xe cơ giới 1',
+    ai_confidence: 96.5,
+    ground_truth_label: 'Mặt đường bình thường, phẳng, thoát nước tốt (NORMAL)',
+    predicted_label: 'Mặt đường bình thường (NORMAL) (96.5%)',
+    description: 'Khu vực mặt đường mới thảm bù lún, độ nhám đồng đều, AI đánh giá chuẩn xác là sạch sẽ và không ghi nhận hư hỏng.',
+    image_url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Đã xác thực đạt chuẩn (True Negative / Normal)',
+    status: 'ANNOTATED'
+  },
+  {
+    id: 'fpfn-10',
+    defect_code: 'DEF-QL1A-KM14-720',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 610,
+    type: 'FN',
+    gt_class: 'Pothole',
+    pred_class: 'Normal',
+    chainage: 'Km 14+720',
+    lane: 'Làn xe thô sơ',
+    ai_confidence: 8.5,
+    ground_truth_label: 'Hố lún nông độ sâu 12mm (POTHOLE)',
+    predicted_label: 'Bỏ sót (Nhầm thành mặt đường tốt Normal)',
+    description: 'Hố lún mép có chiều sâu nhỏ dưới 15mm bị lẫn vào độ dốc thoát nước ngang của mặt đường nên AI bỏ sót.',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Gán nhãn bổ sung cho tập huấn luyện (Retrain Dataset)',
+    status: 'PENDING'
+  },
+  {
+    id: 'fpfn-11',
+    defect_code: 'DEF-QL1A-KM16-250',
+    survey_code: 'KS-QL1A-2026-B3',
+    frame_number: 990,
+    type: 'MISCLASSIFICATION',
+    gt_class: 'Alligator',
+    pred_class: 'Longit',
+    chainage: 'Km 16+250',
+    lane: 'Làn xe cơ giới 1',
+    ai_confidence: 62.0,
+    ground_truth_label: 'Nứt lưới mỏi diện tích 0.8m² (CRACK_ALLIGATOR)',
+    predicted_label: 'Nứt dọc kết cấu (CRACK_LONGITUDINAL) (62.0%)',
+    description: 'Vết nứt lưới có một vệt nứt nhánh dọc phát triển dài hơn các nhánh ngang nên AI nhận định nhầm thành vết nứt dọc đơn lẻ.',
+    image_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?auto=format&fit=crop&w=800&q=80',
+    suggested_action: 'Cập nhật phân cụm ranh giới đa giác vùng nứt',
+    status: 'PENDING'
+  }
+]
+
+// v2.2 Ground Truth vs Derived Measurements paired samples (RS01-RS06 & MET-12)
+export const mockMeasurementValidationSamples: MeasurementValidationSample[] = [
+  {
+    id: 'sample-01',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM14-001',
+    defect_type_code: 'DEPRESSION',
+    defect_name_vi: 'Lún sụt mặt đường',
+    chainage_km: 14.25,
+    ground_truth_value: 28.5,
+    derived_value: 31.2,
+    unit: 'mm',
+    signed_error: 2.7,
+    absolute_error: 2.7,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Thước đo sâu điện tử',
+    measured_by: 'Kỹ sư Trần Đình Trọng (Đội kiểm định hiện trường)'
+  },
+  {
+    id: 'sample-02',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM14-002',
+    defect_type_code: 'POTHOLE',
+    defect_name_vi: 'Ổ gà sâu cấp 2',
+    chainage_km: 14.82,
+    ground_truth_value: 45.0,
+    derived_value: 43.8,
+    unit: 'mm',
+    signed_error: -1.2,
+    absolute_error: 1.2,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước nêm cơ học & Thước thép chuẩn',
+    measured_by: 'Kỹ sư Lê Hoàng Nam (Đội khảo sát Hoàng Hải)'
+  },
+  {
+    id: 'sample-03',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM15-003',
+    defect_type_code: 'SLAB_FAULTING',
+    defect_name_vi: 'Lệch mức tấm bê tông',
+    chainage_km: 15.11,
+    ground_truth_value: 18.0,
+    derived_value: 19.5,
+    unit: 'mm',
+    signed_error: 1.5,
+    absolute_error: 1.5,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Đồng hồ so kỹ thuật số',
+    measured_by: 'Kỹ sư Trần Đình Trọng (Đội kiểm định hiện trường)'
+  },
+  {
+    id: 'sample-04',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM15-004',
+    defect_type_code: 'DEPRESSION',
+    defect_name_vi: 'Vệt lún bánh xe',
+    chainage_km: 15.65,
+    ground_truth_value: 32.0,
+    derived_value: 28.1,
+    unit: 'mm',
+    signed_error: -3.9,
+    absolute_error: 3.9,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Thước đo sâu điện tử',
+    measured_by: 'Kỹ sư Lê Hoàng Nam (Đội khảo sát Hoàng Hải)'
+  },
+  {
+    id: 'sample-05',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM16-005',
+    defect_type_code: 'POTHOLE',
+    defect_name_vi: 'Ổ gà bờ mép vỡ',
+    chainage_km: 16.2,
+    ground_truth_value: 52.4,
+    derived_value: 54.0,
+    unit: 'mm',
+    signed_error: 1.6,
+    absolute_error: 1.6,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước nêm cơ học & Thước thép chuẩn',
+    measured_by: 'Kỹ sư Trần Đình Trọng (Đội kiểm định hiện trường)'
+  },
+  {
+    id: 'sample-06',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM16-006',
+    defect_type_code: 'DEPRESSION',
+    defect_name_vi: 'Hố lún đọng nước cục bộ',
+    chainage_km: 16.85,
+    ground_truth_value: 35.0,
+    derived_value: 12.0,
+    unit: 'mm',
+    signed_error: -23.0,
+    absolute_error: 23.0,
+    inclusion_status: 'EXCLUDED',
+    exclusion_reason: 'Nước đọng ngập hố lún che khuất bề mặt đáy trong mô hình DSM (Loại mẫu theo BR-44)',
+    instrument_name: 'Thước thẳng 3m & Thước đo sâu cơ học',
+    measured_by: 'Kỹ sư Lê Hoàng Nam (Đội khảo sát Hoàng Hải)'
+  },
+  {
+    id: 'sample-07',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM17-007',
+    defect_type_code: 'SLAB_FAULTING',
+    defect_name_vi: 'Chênh cao khe nối tấm',
+    chainage_km: 17.3,
+    ground_truth_value: 14.5,
+    derived_value: 14.8,
+    unit: 'mm',
+    signed_error: 0.3,
+    absolute_error: 0.3,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Đồng hồ so kỹ thuật số',
+    measured_by: 'Kỹ sư Trần Đình Trọng (Đội kiểm định hiện trường)'
+  },
+  {
+    id: 'sample-08',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM17-008',
+    defect_type_code: 'DEPRESSION',
+    defect_name_vi: 'Lún sụt mép rãnh thoát nước',
+    chainage_km: 17.95,
+    ground_truth_value: 41.2,
+    derived_value: 43.1,
+    unit: 'mm',
+    signed_error: 1.9,
+    absolute_error: 1.9,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Thước đo sâu điện tử',
+    measured_by: 'Kỹ sư Lê Hoàng Nam (Đội khảo sát Hoàng Hải)'
+  },
+  {
+    id: 'sample-09',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM18-009',
+    defect_type_code: 'POTHOLE',
+    defect_name_vi: 'Ổ gà nứt xung quanh',
+    chainage_km: 18.4,
+    ground_truth_value: 38.0,
+    derived_value: 65.5,
+    unit: 'mm',
+    signed_error: 27.5,
+    absolute_error: 27.5,
+    inclusion_status: 'OUTLIER',
+    exclusion_reason: 'Vị trí nằm ở góc mép bay bị khuất tầm nhìn góc nghiêng gimbal, độ không chắc chắn DSM vượt ngưỡng (Loại mẫu theo BR-44)',
+    instrument_name: 'Thước nêm cơ học & Thước thép chuẩn',
+    measured_by: 'Kỹ sư Trần Đình Trọng (Đội kiểm định hiện trường)'
+  },
+  {
+    id: 'sample-10',
+    validation_run_id: 'val-run-01',
+    sample_id: 'GT-QL1A-KM19-010',
+    defect_type_code: 'SLAB_FAULTING',
+    defect_name_vi: 'Lệch góc tấm bê tông',
+    chainage_km: 19.05,
+    ground_truth_value: 22.0,
+    derived_value: 21.1,
+    unit: 'mm',
+    signed_error: -0.9,
+    absolute_error: 0.9,
+    inclusion_status: 'INCLUDED',
+    instrument_name: 'Thước thẳng 3m & Đồng hồ so kỹ thuật số',
+    measured_by: 'Kỹ sư Lê Hoàng Nam (Đội khảo sát Hoàng Hải)'
+  }
+]
+
+// v2.2 Current Active Validation Run (RS05 & MET-12)
+export const mockActiveValidationRun: MeasurementValidationRun = {
+  id: 'val-run-01',
+  run_code: 'VAL-RUN-2026-03',
+  measurement_type: 'DEPRESSION_DEPTH',
+  method_name: 'Mô hình bề mặt DSM tái tạo từ Drone (GSD 0.8cm/px) vs Thước đo cơ học tiêu chuẩn',
+  algorithm_version: 'Road-Surface-Reconstruction v2.4.1',
+  dataset_name: 'Tập dữ liệu kiểm định hiện trường QL1A-GT-2026 (Km14 - Km22)',
+  sample_count: 120,
+  used_count: 112,
+  excluded_count: 8,
+  bias: 1.2,
+  mae: 3.8,
+  rmse: 5.2,
+  uncertainty_value: 2.4,
+  uncertainty_method: 'Bootstrap 95% Confidence Interval (1,000 resamples)',
+  status: 'COMPLETED',
+  is_mock_data: false, // BR-44: Ground truth thực nghiệm, không phải mock
+  executed_at: '26/08/2026 15:00',
+  triggered_by_name: 'Đỗ Quốc Hoàng',
+  triggered_by_role: 'Chỉ huy trưởng (PM)',
+  progress_percent: 100
+}
+
+export const mockMeasurementValidationRuns: MeasurementValidationRun[] = [
+  {
+    id: 'val-run-03',
+    run_code: 'VAL-RUN-2026-03',
+    measurement_type: 'DEPRESSION_DEPTH',
+    method_name: 'Mô hình bề mặt DSM tái tạo từ Drone (GSD 0.8cm/px) vs Thước nêm cơ học',
+    algorithm_version: 'Road-Surface-Reconstruction v2.4.1',
+    dataset_name: 'QL1A-GT-2026 (Km14 - Km22)',
+    sample_count: 120,
+    used_count: 112,
+    excluded_count: 8,
+    bias: 1.2,
+    mae: 3.8,
+    rmse: 5.2,
+    uncertainty_value: 2.4,
+    uncertainty_method: 'Bootstrap 95% CI (1,000 resamples)',
+    status: 'COMPLETED',
+    is_mock_data: false, // BR-44: Thực địa
+    executed_at: '26/08/2026 15:00',
+    triggered_by_name: 'Đỗ Quốc Hoàng',
+    triggered_by_role: 'Chỉ huy trưởng (PM)',
+    progress_percent: 100
+  },
+  {
+    id: 'val-run-02',
+    run_code: 'VAL-RUN-2026-02',
+    measurement_type: 'SLAB_FAULTING_HEIGHT',
+    method_name: 'Mô hình 3D đám mây điểm LiDAR vs Thước thẳng 3m cơ học',
+    algorithm_version: 'LiDAR-PointCloud-Surface v2.1.0',
+    dataset_name: 'QL1A-Pilot-Phase1 (Km08 - Km14)',
+    sample_count: 85,
+    used_count: 80,
+    excluded_count: 5,
+    bias: -0.6,
+    mae: 2.9,
+    rmse: 4.1,
+    uncertainty_value: 1.8,
+    uncertainty_method: 'Standard Gaussian 2-sigma',
+    status: 'COMPLETED',
+    is_mock_data: false,
+    executed_at: '15/08/2026 09:30',
+    triggered_by_name: 'Nguyễn Văn An',
+    triggered_by_role: 'Giám sát trưởng (Supervisor)',
+    progress_percent: 100
+  },
+  {
+    id: 'val-run-01',
+    run_code: 'VAL-RUN-2026-01',
+    measurement_type: 'DEPRESSION_DEPTH',
+    method_name: 'Trích xuất mặt phẳng 2D camera vs Thước đo cơ học',
+    algorithm_version: 'Surface-Depth-Estimate v1.4.0',
+    dataset_name: 'QL1A-Baseline-GroundTruth-2026',
+    sample_count: 60,
+    used_count: 48,
+    excluded_count: 12,
+    bias: 3.1,
+    mae: 6.2,
+    rmse: 8.5,
+    uncertainty_value: 4.2,
+    uncertainty_method: 'Interquartile Range IQR',
+    status: 'COMPLETED',
+    is_mock_data: false,
+    executed_at: '01/08/2026 14:15',
+    triggered_by_name: 'Nguyễn Văn An',
+    triggered_by_role: 'Giám sát trưởng (Supervisor)',
+    progress_percent: 100
+  },
+  {
+    id: 'val-run-00',
+    run_code: 'VAL-RUN-2026-MOCK',
+    measurement_type: 'SHOULDER_EROSION_EXTENT',
+    method_name: 'Mô phỏng ngẫu nhiên tập dữ liệu thử nghiệm giả định',
+    algorithm_version: 'Synthetic-Noise-Generator v0.9',
+    dataset_name: 'Synthetic-Mock-Dataset-B1',
+    sample_count: 50,
+    used_count: 50,
+    excluded_count: 0,
+    bias: 0.1,
+    mae: 1.5,
+    rmse: 2.0,
+    uncertainty_value: 0.5,
+    uncertainty_method: 'Uniform Noise Simulation',
+    status: 'COMPLETED',
+    is_mock_data: true, // BR-44: Dữ liệu giả lập
+    executed_at: '20/07/2026 10:00',
+    triggered_by_name: 'Hệ thống tự động',
+    triggered_by_role: 'System Worker',
+    progress_percent: 100
+  }
+]
+
+export const mockValidationBenchmarks: ValidationBenchmarkRun[] = [
+  {
+    id: 'val-09',
+    run_code: 'VAL-2026-09',
+    model_name: 'RoadGuard-AI-Core',
+    backbone: 'v2.4.1 (YOLO-RoadInfrastructure)',
+    dataset_name: 'QL1A-GT-Val-Split-B3',
+    dataset_frames: 1200,
+    executed_at: '25/08/2026 14:30',
+    triggered_by_name: 'Đỗ Quốc Hoàng (PM)',
+    triggered_by_role: 'Chỉ huy trưởng (PM)',
+    map50_95: 89.4,
+    status: 'RUNNING',
+    status_label: 'Đang chạy 42%',
+    progress_percent: 42,
+    log_output: 'Tiến trình Job #VAL-2026-09: Đang tính ma trận ghép cặp đối soát IoU... Đã xử lý 4,200/10,000 frames. Ước lượng mAP@0.5:0.95 = 0.894.'
+  },
+  {
+    id: 'val-08',
+    run_code: 'VAL-2026-08',
+    model_name: 'RoadGuard-AI-Core',
+    backbone: 'v2.3.0 (Mô hình tiền nhiệm)',
+    dataset_name: 'QL1A-Full-Pilot-2026',
+    dataset_frames: 4500,
+    executed_at: '18/08/2026 09:15',
+    triggered_by_name: 'Nguyễn Văn An (GS)',
+    triggered_by_role: 'Giám sát trưởng (Supervisor)',
+    map50_95: 87.1,
+    status: 'COMPLETED',
+    status_label: 'Hoàn thành',
+    progress_percent: 100,
+    log_output: 'Đợt kiểm định hoàn tất thành công. Đối chiếu xác thực 4,500 mẫu Ground Truth thực địa.'
+  },
+  {
+    id: 'val-07',
+    run_code: 'VAL-2026-07',
+    model_name: 'RoadGuard-AI-Baseline',
+    backbone: 'v1.9.0 (Mô hình cơ sở)',
+    dataset_name: 'QL1A-Baseline-GroundTruth',
+    dataset_frames: 2000,
+    executed_at: '02/08/2026 16:40',
+    triggered_by_name: 'Nguyễn Văn An (GS)',
+    triggered_by_role: 'Giám sát trưởng (Supervisor)',
+    map50_95: 81.5,
+    status: 'COMPLETED',
+    status_label: 'Hoàn thành',
+    progress_percent: 100,
+    log_output: 'Báo cáo kiểm định cơ sở được nghiệm thu lưu trữ hồ sơ kỹ thuật.'
+  },
+  {
+    id: 'val-06',
+    run_code: 'VAL-2026-06',
+    model_name: 'RoadGuard-AI-Experimental',
+    backbone: 'v0.8.2-Beta (Thử nghiệm ban đêm)',
+    dataset_name: 'QL1A-Night-Rain-Subset',
+    dataset_frames: 500,
+    executed_at: '21/07/2026 11:20',
+    triggered_by_name: 'Đỗ Quốc Hoàng (PM)',
+    triggered_by_role: 'Chỉ huy trưởng (PM)',
+    map50_95: null,
+    status: 'FAILED',
+    status_label: 'Thất bại (Tràn bộ nhớ GPU)',
+    log_output: 'Lỗi CUDA out of memory trong quá trình trích xuất đặc trưng ảnh độ phân giải 4K.'
+  }
+]
+
+

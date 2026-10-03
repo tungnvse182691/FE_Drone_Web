@@ -222,4 +222,176 @@ export interface SyncConflictItem {
     audit_hash: string
   }
 }
+// =============================================================================
+// 9. BÁO CÁO KIỂM ĐỊNH KHOA HỌC RPT-09 (RESEARCH VALIDATION & CONFUSION MATRIX)
+// =============================================================================
+export interface AcademicMetrics {
+  mAP50_95: number
+  map50_95?: number
+  mAP_delta: string
+  map50_95_delta?: string
+  precision: number
+  precision_delta: string
+  false_positives: number
+  false_positives_ratio: number
+  total_samples: number
+  recall: number
+  recall_delta: string
+  false_negatives_ratio: number
+  f1_score: number
+  is_certified: boolean
+}
 
+export interface ConfusionMatrixCell {
+  gt_class: string
+  pred_class: string
+  percentage: number
+  count: number
+  is_true_positive?: boolean
+  is_false_negative?: boolean
+  is_false_positive?: boolean
+}
+
+export interface SizeErrorBin {
+  range_label: string
+  percentage: number
+  bar_height_percent: number
+  is_center?: boolean
+}
+
+export interface FPFNInspectorItem {
+  id: string
+  defect_code?: string
+  survey_code?: string
+  frame_number: number
+  type: 'FP' | 'FN' | 'MISCLASSIFICATION' | 'TP'
+  gt_class: string
+  pred_class: string
+  chainage: string
+  lane: string
+  ai_confidence: number
+  ground_truth_label: string
+  predicted_label?: string
+  description: string
+  image_url: string
+  suggested_action: string
+  status: 'PENDING' | 'ADDED_TO_TRAIN' | 'ANNOTATED' | 'FILTER_UPDATED'
+}
+
+// v2.2 Contract & Entity Types for RPT-09 (Research Validation)
+export interface ValidationPair {
+  groundTruthId: string
+  derivedMeasurementId: string
+}
+
+export interface ValidationRunCreate {
+  pairs: Array<ValidationPair>
+  modelVersionId: string
+  datasetSplitId: string
+  measurementType: string
+  unit: string
+}
+
+export interface ValidationResult {
+  id: string
+  usedCount: number
+  excludedCount: number
+  bias: number | null
+  mae: number | null
+  rmse: number | null
+  unit: string
+  exclusionReasons: Array<string>
+}
+
+export interface GroundTruthMeasurement {
+  id: string
+  session_code: string
+  sample_id: string
+  road_section_version_id?: string
+  survey_id?: string
+  defect_id?: string
+  defect_type_code: string
+  chainage_km: number
+  measurement_type: 'DEPRESSION_DEPTH' | 'SLAB_FAULTING_HEIGHT' | 'SHOULDER_EROSION_EXTENT'
+  value: number
+  unit: string
+  instrument_name: string
+  instrument_reference?: string
+  measurement_method: string
+  measured_by: string
+  measured_at: string
+  weather_condition?: string
+  evidence_image_url?: string
+  notes?: string
+}
+
+export interface DerivedMeasurement {
+  id: string
+  survey_data_version_id?: string
+  sample_id: string
+  measurement_type: 'DEPRESSION_DEPTH' | 'SLAB_FAULTING_HEIGHT' | 'SHOULDER_EROSION_EXTENT'
+  value: number
+  unit: string
+  uncertainty_estimate?: number
+  source_type: 'SURFACE_MODEL' | 'DSM' | 'MANUAL_DERIVED'
+  algorithm_version: string
+  computed_at: string
+}
+
+export interface MeasurementValidationSample {
+  id: string
+  validation_run_id: string
+  sample_id: string
+  defect_type_code: string
+  defect_name_vi: string
+  chainage_km: number
+  ground_truth_value: number
+  derived_value: number
+  unit: string
+  signed_error: number
+  absolute_error: number
+  inclusion_status: 'INCLUDED' | 'EXCLUDED' | 'OUTLIER'
+  exclusion_reason?: string
+  instrument_name: string
+  measured_by: string
+}
+
+export interface MeasurementValidationRun {
+  id: string
+  run_code: string
+  measurement_type: 'DEPRESSION_DEPTH' | 'SLAB_FAULTING_HEIGHT' | 'SHOULDER_EROSION_EXTENT'
+  method_name: string
+  algorithm_version: string
+  dataset_name: string
+  sample_count: number
+  used_count: number
+  excluded_count: number
+  bias: number
+  mae: number
+  rmse: number
+  uncertainty_value: number
+  uncertainty_method: string
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+  is_mock_data: boolean
+  executed_at: string
+  triggered_by_name: string
+  triggered_by_role: string
+  progress_percent?: number
+}
+
+export interface ValidationBenchmarkRun {
+  id: string
+  run_code: string
+  model_name: string
+  backbone: string
+  dataset_name: string
+  dataset_frames: number
+  executed_at: string
+  triggered_by_name: string
+  triggered_by_role: string
+  map50_95: number | null
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+  status_label: string
+  progress_percent?: number
+  log_output?: string
+}

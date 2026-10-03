@@ -8,15 +8,12 @@ import {
   PlaneTakeoff,
   Inbox,
   Boxes,
-  Users2,
   ClipboardList,
-  CheckCircle2,
   BarChart3,
   ShieldCheck,
-  FileSignature,
   Zap,
   Route,
-  Bell
+  Sparkles
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -24,34 +21,30 @@ export const Sidebar: React.FC = () => {
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   const pmNavItems = [
-    { label: 'Tổng quan (Dashboard)', path: '/pm/dashboard', icon: LayoutDashboard },
-    { label: 'Thông báo & Bàn giao (WF-14)', path: '/pm/notifications', icon: Bell },
+    { label: 'Dashboard Điều hành dự án', path: '/pm/dashboard', icon: LayoutDashboard },
     { label: 'Danh mục dự án', path: '/pm/projects', icon: FolderKanban },
     { label: 'Tuyến đường & Phân đoạn', path: '/pm/alignment', icon: Route },
     { label: 'Khảo sát Drone & Không ảnh', path: '/pm/surveys', icon: PlaneTakeoff },
-    { label: 'Hộp thư phát hiện AI', path: '/pm/ai-inbox', icon: Inbox },
-    { label: 'Chính sách & Giao việc (WF-05)', path: '/pm/fast-track', icon: Zap },
+    { label: 'Điều phối & Quản lý hư hỏng', path: '/pm/ai-inbox', icon: Inbox },
+    { label: 'Chính sách Fast-Track & Giao việc', path: '/pm/fast-track', icon: Zap },
     { label: 'Gói đề xuất sửa chữa', path: '/pm/proposals', icon: Boxes },
-    { label: 'Gom đợt sửa chữa', path: '/pm/repair-batches/create', icon: Boxes },
-    { label: 'Phân công đội thi công', path: '/pm/repair-batches/assign', icon: Users2 },
-    { label: 'Xử lý xung đột & Đo đạc (Màn 15)', path: '/pm/field-tasks', icon: ClipboardList },
-    { label: 'Rà soát & Nghiệm thu chất lượng', path: '/pm/acceptance', icon: ShieldCheck },
-    { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
+    { label: 'Rà soát kết quả & Công bố', path: '/pm/acceptance', icon: ShieldCheck },
+    { label: 'Đồng bộ & Xử lý xung đột', path: '/pm/field-tasks', icon: ClipboardList },
+    { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/pm/research-validation', icon: Sparkles },
+    { label: 'Báo cáo KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
   ]
 
   const supNavItems = [
     { label: 'Dashboard Danh mục bảo hành', path: '/sup/dashboard', icon: LayoutDashboard },
-    { label: 'Thông báo & Bàn giao (WF-14)', path: '/sup/notifications', icon: Bell },
     { label: 'Danh mục dự án', path: '/sup/projects', icon: FolderKanban },
-    { label: 'Tuyến đường & Phân đoạn', path: '/sup/alignment', icon: Route },
-    { label: 'Khảo sát Drone & Không ảnh', path: '/sup/surveys', icon: PlaneTakeoff },
-    { label: 'Hộp thư tiếp nhận & Triage', path: '/sup/ai-inbox', icon: Inbox },
-    { label: 'Giám sát chính sách Fast-Track', path: '/sup/fast-track', icon: Zap },
-    { label: 'Xử lý xung đột & Cứu dữ liệu (Màn 15)', path: '/sup/field-tasks', icon: ClipboardList },
-    { label: 'Gói đề xuất kỹ thuật', path: '/sup/proposals', icon: Boxes },
-    { label: 'Nghiệm thu hiện trường', path: '/sup/acceptance', icon: ShieldCheck },
-    { label: 'Chỉ số KPI & Xuất hồ sơ', path: '/sup/risk-analytics', icon: BarChart3 },
-    { label: 'Ký số đóng đợt', path: '/sup/signoff', icon: FileSignature },
+    { label: 'Phê duyệt tuyến đường', path: '/sup/alignment', icon: Route },
+    { label: 'Giám sát khảo sát Drone', path: '/sup/surveys', icon: PlaneTakeoff },
+    { label: 'Điều phối phản ánh (Triage)', path: '/sup/ai-inbox', icon: Inbox },
+    { label: 'Phê duyệt gói sửa chữa', path: '/sup/proposals', icon: Boxes },
+    { label: 'Nghiệm thu chất lượng & Đóng vụ việc', path: '/sup/acceptance', icon: ShieldCheck },
+    { label: 'Đồng bộ & Xử lý xung đột', path: '/sup/field-tasks', icon: ClipboardList },
+    { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/sup/research-validation', icon: Sparkles },
+    { label: 'Báo cáo rủi ro & Hồ sơ xuất', path: '/sup/risk-analytics', icon: BarChart3 },
   ]
 
   const navItems = isPM ? pmNavItems : supNavItems

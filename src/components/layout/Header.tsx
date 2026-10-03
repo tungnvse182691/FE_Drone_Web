@@ -60,7 +60,7 @@ export const Header: React.FC = () => {
         {/* Notifications */}
         <button
           onClick={() => navigate(user?.role === RoleCode.SUPERVISOR ? '/sup/notifications' : '/pm/notifications')}
-          title="Trung tâm thông báo & Bàn giao (WF-14)"
+          title="Thông báo điều hành & Bàn giao"
           className="relative p-2 text-slate-500 hover:text-brand-dark hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
         >
           <Bell className="w-5 h-5" />

@@ -35,7 +35,7 @@ import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
-import { SignOffClosure } from './pages/(sup)/SignOffClosure'
+import { ResearchValidation } from './pages/(sup)/ResearchValidation'
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
@@ -85,6 +85,8 @@ export const App: React.FC = () => {
           <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+          <Route path="research-validation" element={<ResearchValidation />} />
+          <Route path="rpt-09" element={<ResearchValidation />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="notifications" element={<NotificationsHandoffHub />} />
@@ -118,11 +120,14 @@ export const App: React.FC = () => {
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
           <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
+          <Route path="field-acceptance" element={<FieldAcceptance />} />
+          <Route path="research-validation" element={<ResearchValidation />} />
+          <Route path="rpt-09" element={<ResearchValidation />} />
           <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
-          <Route path="signoff" element={<SignOffClosure />} />
+          <Route path="signoff" element={<Navigate to="/sup/acceptance" replace />} />
           <Route path="notifications" element={<NotificationsHandoffHub />} />
         </Route>
 
