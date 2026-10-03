@@ -11,17 +11,19 @@ Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commit
 
 ### 5 Nguyên Tắc Vàng
 1. **Evidence trước, edit sau:** Chỉ sửa file sau khi đã đọc file đó + các file liên quan (caller, type, mock, config).
-2. **Spec là source of truth, code chỉ là bản dịch:** Spec nằm ở `v2.2`, Google Docs 18 màn hình và ảnh Stitch trong `docs/stitch-designs/`.
+2. **Spec v2.2 là source of truth, Stitch chỉ để tham khảo bố trí & mã màu:**
+   - **Tài liệu `v2.2`** là căn cứ duy nhất về nghiệp vụ, logic, quy tắc (BR), chức năng (FR), trường dữ liệu và nội dung.
+   - **Ảnh/HTML Stitch** trong `docs/stitch-designs/` **CHỈ DÙNG ĐỂ THAM KHẢO CÁCH BỐ TRÍ (LAYOUT) VÀ MÃ MÀU/PHONG CÁCH GIAO DIỆN**. Tuyệt đối **KHÔNG copy nội dung, text hay dữ liệu giả** từ Stitch bỏ vào web.
 3. **Đừng tưởng tượng — hãy kiểm chứng:** Sau khi viết code, chạy build hoặc kiểm tra import/type, không phán đoán mơ hồ.
-4. **Mọi tên đều phải có căn cứ:** Tên hàm, field, endpoint, mã màn — mỗi cái phải trỏ được về một nơi đã đọc trong `src/types/domain.ts` hoặc spec. Không trỏ được = bịa = CẤM.
+4. **Mọi tên đều phải có căn cứ:** Tên hàm, field, endpoint, mã màn — mỗi cái phải trỏ được về một nơi đã đọc trong `src/types/domain.ts` hoặc spec `v2.2`. Không trỏ được = bịa = CẤM.
 5. **Không chắc → hỏi Hoàng, không tự chế:** Thiếu thông tin hoặc phát hiện mâu thuẫn thì dừng lại hỏi Hoàng ngay, không tự lấp chỗ trống.
 
 ### Checklist Chống Bịa (Kiểm tra trước mỗi lần sinh code)
 - [ ] **Đường dẫn file:** Đã kiểm tra file tồn tại trong cấu trúc phẳng `src/pages/(pm)/` hoặc `src/pages/(sup)/`.
-- [ ] **Ảnh thiết kế Stitch:** Đã xem ảnh tương ứng trong `docs/stitch-designs/` trước khi dựng component.
-- [ ] **Field dữ liệu:** Đã đối chiếu đúng interface trong `src/types/domain.ts` và `src/types/enums.ts`. Tuyệt đối không thêm field "cho đủ".
+- [ ] **Tham khảo Stitch:** Chỉ tham khảo bố cục khung hình, vị trí thành phần và mã màu từ `docs/stitch-designs/`. Không bê nguyên text/nội dung/dữ liệu giả của Stitch vào.
+- [ ] **Nội dung & Dữ liệu chuẩn v2.2:** Nghiệp vụ, field dữ liệu, nhãn hiển thị đối chiếu 100% theo tài liệu `v2.2`, `src/types/domain.ts` và `src/types/enums.ts`.
 - [ ] **Màu sắc & Phông chữ:** Dùng đúng tokens trong `src/design-tokens.ts` (Vàng đồng `#C9A227`, Navy `#2D3748`, Dark `#1A1D20`).
-- [ ] **Không scope creep:** Chỉ sửa/tạo đúng màn hình hoặc tính năng Hoàng yêu cầu.
+- [ ] **Không scope creep & không suy luận thêm:** Chỉ sửa/tạo đúng màn hình hoặc tính năng Hoàng yêu cầu, spec không có thì không tự vẽ ra.
 
 ---
 
