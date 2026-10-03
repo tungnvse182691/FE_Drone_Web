@@ -2,13 +2,12 @@ import React, { useState, useMemo } from 'react'
 import { Card } from '../../components/ui/Card'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { mockAuditEvents, mockAuditStats } from '../../api/mock/data'
+import { mockAuditEvents } from '../../api/mock/data'
 import { AuditEvent } from '../../types/domain'
 import {
   ShieldCheck,
   History,
   Lock,
-  Fingerprint,
   FileText,
   CheckCircle2,
   AlertTriangle,
@@ -17,116 +16,156 @@ import {
   Download,
   Copy,
   Check,
-  ExternalLink,
-  Database,
-  GitCompare,
   ChevronRight,
   ChevronLeft,
   X,
   ArrowRight,
-  Eye,
-  Gavel,
-  Zap,
   Code,
   Calendar,
   Layers,
-  ArrowLeft,
-  KeyRound,
-  FileCheck
+  FileCheck,
+  Camera,
+  MapPin,
+  Maximize2,
+  Building2,
+  RefreshCw,
+  Info
 } from 'lucide-react'
 
 export const AuditTrail: React.FC = () => {
   const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
-  // Dữ liệu sự kiện kiểm toán
-  const [events] = useState<AuditEvent[]>(mockAuditEvents)
+  // Dữ liệu dòng sự kiện hoạt động (Activity Timeline / Audit Log) theo v2.2 (RPT-10, US-29, FR-34)
+  const [events, setEvents] = useState<AuditEvent[]>(mockAuditEvents)
   const [selectedEventId, setSelectedEventId] = useState<string>(mockAuditEvents[0]?.id || '')
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
 
-  // Bộ lọc
-  const [selectedActor, setSelectedActor] = useState<string>('all')
-  const [selectedAction, setSelectedAction] = useState<string>('all')
-  const [selectedEntity, setSelectedEntity] = useState<string>('all')
+  // Phân định phạm vi dự án theo vai trò (Role Scope - US-29-AC-02 & UAT-08)
+  // PM: Khóa cứng ở dự án phụ trách 'proj-01' (QL1A - Giai đoạn 2)
+  // Supervisor: Xem toàn hệ thống ('all') hoặc từng dự án cụ thể
+  const [selectedProject, setSelectedProject] = useState<string>(isPM ? 'proj-01' : 'all')
+
+  // Bộ lọc chuẩn theo v2.2 Phần 11.4
+  const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
+  const [selectedActionType, setSelectedActionType] = useState<string>('all')
+  const [selectedEntityType, setSelectedEntityType] = useState<string>('all')
   const [searchKeyword, setSearchKeyword] = useState<string>('')
-  const [quickFilter, setQuickFilter] = useState<'24h' | '7d' | 'month' | 'critical' | 'all'>('month')
+  const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d' | 'all'>('30d')
 
-  // Trạng thái tương tác
-  const [copiedTrace, setCopiedTrace] = useState<boolean>(false)
-  const [isVerifyingHash, setIsVerifyingHash] = useState<boolean>(false)
-  const [showVerifyModal, setShowVerifyModal] = useState<boolean>(false)
-  const [verifyStep, setVerifyStep] = useState<number>(0)
+  // Trạng thái sao chép và Modal
+  const [copiedEventId, setCopiedEventId] = useState<boolean>(false)
   const [showExportModal, setShowExportModal] = useState<boolean>(false)
-  const [exportFormat, setExportFormat] = useState<'CSV' | 'PDF'>('PDF')
+  const [exportFormat, setExportFormat] = useState<'PDF' | 'CSV'>('PDF')
   const [exportSuccess, setExportSuccess] = useState<boolean>(false)
 
-  // Sự kiện đang được chọn để soi Diff
-  const selectedEvent = useMemo(() => {
-    return events.find((e) => e.id === selectedEventId) || events[0]
-  }, [events, selectedEventId])
+  // Xem ảnh phóng to (Lightbox)
+  const [activeImageModal, setActiveImageModal] = useState<{
+    url: string
+    caption: string
+    captured_at: string
+    gps_coordinates: string
+  } | null>(null)
 
-  // Lọc dữ liệu theo điều kiện
+  // Danh mục các dự án bảo hành trong hệ thống Hoàng Hải
+  const projectList = [
+    { id: 'all', name: 'Tất cả dự án (Toàn hệ thống)', code: 'ALL_SYSTEM' },
+    { id: 'proj-01', name: 'QL1A - Giai đoạn 2 (Km 1024 - 1045)', code: 'QL1A-02' },
+    { id: 'proj-02', name: 'QL1A - Giai đoạn 1 (Km 990 - 1024)', code: 'QL1A-01' },
+    { id: 'proj-03', name: 'Cao tốc Bắc - Nam (Km 45 - Km 80)', code: 'CT03-BN' }
+  ]
+
+  // Lọc dữ liệu theo vai trò và tiêu chí lọc nghiệp vụ (v2.2 US-29, Phần 11.4)
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
-      // Lọc theo người thao tác
-      if (selectedActor !== 'all') {
-        if (selectedActor === 'an' && ev.actor_name !== 'Nguyễn Văn An') return false
-        if (selectedActor === 'hoang' && ev.actor_name !== 'Đỗ Quốc Hoàng') return false
-        if (selectedActor === 'hung' && ev.actor_name !== 'Lê Văn Hùng') return false
-        if (selectedActor === 'sys' && ev.actor_name !== 'Admin Hệ Thống') return false
-      }
-
-      // Lọc theo nhóm hành động
-      if (selectedAction !== 'all' && ev.action_type !== selectedAction) {
+      // 1. Phân định quyền truy cập theo vai trò (Role Scope - BR-45 & US-29-AC-02 & UAT-08)
+      // PM chỉ được xem các sự kiện thuộc dự án được phân công (proj-01)
+      if (isPM && ev.project_id !== 'proj-01') {
         return false
       }
 
-      // Lọc theo thực thể
-      if (selectedEntity !== 'all' && ev.entity_type !== selectedEntity) {
+      // Supervisor có thể lọc theo dự án được chọn
+      if (isSupervisor && selectedProject !== 'all' && ev.project_id !== selectedProject) {
         return false
       }
 
-      // Lọc nhanh
-      if (quickFilter === 'critical' && !ev.is_critical) {
-        return false
+      // 2. Lọc theo vai trò tác nhân (Actor Role)
+      if (selectedActorRole !== 'all') {
+        if (ev.actor_role !== selectedActorRole) return false
       }
 
-      // Tìm kiếm từ khóa
+      // 3. Lọc theo loại hành động nghiệp vụ (Action Type)
+      if (selectedActionType !== 'all') {
+        if (ev.action_type !== selectedActionType) return false
+      }
+
+      // 4. Lọc theo loại thực thể tác động (Entity Type)
+      if (selectedEntityType !== 'all') {
+        if (ev.target_entity_type !== selectedEntityType) return false
+      }
+
+      // 5. Tìm kiếm từ khóa (Mã sự kiện event_id, Tên người, Tên thực thể, Lý trình, Lý do nghiệp vụ)
       if (searchKeyword.trim() !== '') {
         const q = searchKeyword.toLowerCase()
-        const matchTrace = ev.trace_id.toLowerCase().includes(q)
+        const matchId = ev.event_id.toLowerCase().includes(q)
         const matchActor = ev.actor_name.toLowerCase().includes(q)
-        const matchEntity = ev.entity_name.toLowerCase().includes(q)
+        const matchEntity = ev.target_entity_name.toLowerCase().includes(q)
         const matchAction = ev.action_label_vi.toLowerCase().includes(q)
-        if (!matchTrace && !matchActor && !matchEntity && !matchAction) {
+        const matchLocation = ev.target_location?.toLowerCase().includes(q) || false
+        const matchReason = ev.reason.toLowerCase().includes(q)
+        if (!matchId && !matchActor && !matchEntity && !matchAction && !matchLocation && !matchReason) {
           return false
         }
       }
 
       return true
     })
-  }, [events, selectedActor, selectedAction, selectedEntity, quickFilter, searchKeyword])
+  }, [events, isPM, isSupervisor, selectedProject, selectedActorRole, selectedActionType, selectedEntityType, searchKeyword])
 
-  // Hàm sao chép Trace ID
-  const handleCopyTrace = (traceId: string) => {
-    navigator.clipboard.writeText(traceId)
-    setCopiedTrace(true)
-    setTimeout(() => setCopiedTrace(false), 2000)
+  // Sự kiện đang được chọn để soi chi tiết trong Drawer bên phải
+  const selectedEvent = useMemo(() => {
+    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
+  }, [filteredEvents, selectedEventId, events])
+
+  // Thống kê số liệu thực tế trong phạm vi dự án hiện hành (Chuẩn v2.2 Phần 11.2 - RPT-10)
+  const calculatedStats = useMemo(() => {
+    const totalEventsInScope = filteredEvents.length
+    // Đếm các sự kiện có chuyển đổi trạng thái (from_status -> to_status)
+    const stateTransitions = filteredEvents.filter((e) => Boolean(e.from_status && e.to_status)).length
+    // Đếm số quyết định phê duyệt / từ chối / nghiệm thu của Supervisor
+    const approvalDecisions = filteredEvents.filter(
+      (e) =>
+        e.action_type === 'APPROVE_BATCH' ||
+        e.action_type === 'ACCEPT_WORK_ORDER' ||
+        e.action_type === 'REJECT_BATCH' ||
+        e.action_type === 'LOCK_LEGAL_HOLD'
+    ).length
+
+    return {
+      total_events: totalEventsInScope,
+      state_transitions: stateTransitions,
+      approval_decisions: approvalDecisions
+    }
+  }, [filteredEvents])
+
+  // Hàm sao chép Event ID
+  const handleCopyEventId = (eventId: string) => {
+    navigator.clipboard.writeText(eventId)
+    setCopiedEventId(true)
+    setTimeout(() => setCopiedEventId(false), 2000)
   }
 
-  // Chạy xác thực chuỗi Hash
-  const handleRunVerify = () => {
-    setShowVerifyModal(true)
-    setIsVerifyingHash(true)
-    setVerifyStep(1)
-    setTimeout(() => setVerifyStep(2), 700)
-    setTimeout(() => setVerifyStep(3), 1400)
+  // Thao tác làm mới dữ liệu (Refresh theo v2.2 Điều 11.1)
+  const handleRefresh = () => {
+    setIsRefreshing(true)
     setTimeout(() => {
-      setVerifyStep(4)
-      setIsVerifyingHash(false)
-    }, 2000)
+      setEvents([...mockAuditEvents])
+      setIsRefreshing(false)
+    }, 500)
   }
 
-  // Xử lý xuất file kiểm toán
+  // Xử lý xuất báo cáo lịch sử hoạt động (FR-35, US-16, Điều 11.5)
   const handleExport = () => {
     setExportSuccess(true)
     setTimeout(() => {
@@ -137,245 +176,333 @@ export const AuditTrail: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 max-w-[1720px] mx-auto w-full pb-16">
-      {/* 1. TOP BREADCRUMB & INTEGRITY STATUS RIBBON */}
+      {/* 1. TOP BREADCRUMB & ROLE SCOPE RIBBON */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <nav className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           <span className="flex items-center gap-1 hover:text-brand-dark transition-colors">
             Trang chủ
           </span>
           <span>/</span>
-          <span className="hover:text-brand-dark transition-colors">Báo cáo</span>
+          <span className="hover:text-brand-dark transition-colors">Báo cáo &amp; Giám sát</span>
           <span>/</span>
-          <span className="text-slate-900 font-semibold">Nhật ký kiểm toán (Audit Trail)</span>
+          <span className="text-slate-900 font-semibold">Lịch sử hoạt động (RPT-10)</span>
         </nav>
 
-        {/* System Integrity Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold shadow-xs">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-          </span>
-          <ShieldCheck className="w-4 h-4 text-emerald-700" />
-          <span className="font-mono text-[11px] tracking-wide uppercase">
-            HỆ THỐNG GHI NHẬN TOÀN VẸN (100% SHA-256 VERIFIED)
-          </span>
+        {/* Role Scope Badges (v2.2 US-29-AC-02 & BR-45) */}
+        <div className="flex items-center gap-2.5">
+          {/* Phân định vai trò hiển thị rõ ràng */}
+          {isSupervisor ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-semibold shadow-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
+              <span>GIÁM SÁT / CHỦ ĐẦU TƯ (THEO DÕI TOÀN HỆ THỐNG)</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-700 text-white text-xs font-semibold shadow-xs">
+              <Lock className="w-3.5 h-3.5" />
+              <span>PROJECT MANAGER (CHỈ XEM DỰ ÁN PHỤ TRÁCH - US-29-AC-02)</span>
+            </div>
+          )}
+
+          {/* Lưu trữ bảo hành BR-45 */}
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-medium shadow-xs">
+            <Lock className="w-3.5 h-3.5 text-slate-500" />
+            <span>LƯU TRỮ BR-45 (HẾT BẢO HÀNH +5 NĂM)</span>
+          </div>
         </div>
       </div>
 
-      {/* 2. HEADER SECTION */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* 2. HEADER SECTION & PROJECT SCOPE SELECTOR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex flex-col gap-1.5 max-w-4xl">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-brand-goldDark font-mono text-xs font-semibold border border-amber-200">
               Mã báo cáo: RPT-10
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono text-xs font-medium border border-slate-200">
-              Cấp độ truy cập: READ-ONLY AUDIT
+              Căn cứ: FR-34, US-29, BR-45
             </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 font-mono text-xs font-medium border border-emerald-200">
+              Chế độ: CHỈ ĐỌC (READ-ONLY)
+            </span>
+            {isPM && (
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-semibold border border-blue-200 flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Khóa phạm vi: QL1A - Giai đoạn 2
+              </span>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            Nhật ký kiểm toán &amp; Truy vết chuỗi khối hệ thống (RPT-10)
+            Lịch sử hoạt động &amp; Nhật ký kiểm toán dự án (RPT-10)
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Hộp đen ghi nhận mọi thao tác biên tập dữ liệu, bảo mật bằng chuỗi mã băm SHA-256 bất biến phục vụ thanh tra và đối soát pháp lý (BR-45).
+            Hộp đen ghi nhận mọi sự kiện nghiệp vụ thành công theo thời gian thực (Durable Events), lưu trữ lịch sử tác nghiệp bất biến phục vụ công tác đối chiếu, kiểm tra và bảo hành hạ tầng đường bộ (BR-45, US-29).
           </p>
+
+          {/* Cảnh báo phạm vi quyền hạn cho PM theo US-29-AC-02 & UAT-08 */}
+          {isPM && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-blue-800 bg-blue-50/80 px-3 py-1.5 rounded-lg border border-blue-200">
+              <Info className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>
+                <strong>Tuân thủ US-29-AC-02:</strong> Chỉ huy trưởng (PM) chỉ có thẩm quyền theo dõi dòng sự kiện trong phạm vi dự án được phân công (QL1A - Giai đoạn 2). Dữ liệu của các tuyến khác không thuộc quyền quản lý bị tự động ẩn.
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Action Group */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={handleRunVerify}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 font-semibold text-sm hover:bg-slate-50 transition-colors border border-slate-200 shadow-xs"
-          >
-            <Gavel className="w-4 h-4 text-brand-gold" />
-            <span>Xác thực chuỗi Hash</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowExportModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-gold text-white font-semibold text-sm hover:bg-brand-goldDark transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            <span>Xuất nhật ký kiểm toán (CSV/PDF)</span>
-          </button>
+        {/* Action Group & Project Selector */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          {/* Thanh chọn Dự án - Khóa cứng nếu là PM, mở chọn nếu là Supervisor */}
+          <div className="flex flex-col gap-1 min-w-[250px]">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span>Phạm vi Tuyến / Dự án</span>
+              {isPM ? (
+                <span className="text-blue-700 flex items-center gap-0.5 font-normal">
+                  <Lock className="w-3 h-3" /> Bị khóa cứng
+                </span>
+              ) : (
+                <span className="text-emerald-700 font-normal">Toàn quyền giám sát</span>
+              )}
+            </label>
+            <div className="relative">
+              <Building2 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                disabled={isPM}
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className={`w-full h-10 pl-9 pr-8 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold border transition-all ${
+                  isPM
+                    ? 'bg-slate-100 text-slate-700 border-slate-300 cursor-not-allowed opacity-90'
+                    : 'bg-white text-slate-900 border-slate-200 hover:border-slate-300 cursor-pointer shadow-xs'
+                }`}
+              >
+                {isSupervisor && (
+                  <option value="all">🌐 Tất cả dự án (Toàn hệ thống)</option>
+                )}
+                <option value="proj-01">📍 QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
+                {isSupervisor && (
+                  <>
+                    <option value="proj-02">📍 QL1A - Giai đoạn 1 (Km 990 - 1024)</option>
+                    <option value="proj-03">📍 Cao tốc Bắc - Nam (Km 45 - Km 80)</option>
+                  </>
+                )}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-4 sm:pt-0">
+            {/* Nút Làm mới dữ liệu (Refresh theo v2.2 Điều 11.1) */}
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 font-semibold text-xs transition-colors border border-slate-200 shadow-xs"
+              title="Tải mới dữ liệu (Cập nhật sau 60 giây theo v2.2)"
+            >
+              <RefreshCw className={`w-4 h-4 text-slate-600 ${isRefreshing ? 'animate-spin text-brand-gold' : ''}`} />
+              <span className="hidden sm:inline">Làm mới</span>
+            </button>
+
+            {/* Nút xuất báo cáo RPT-10 (CTA màu vàng đồng Hoàng Hải - Brand Color) */}
+            <button
+              type="button"
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-gold text-white font-semibold text-xs hover:bg-brand-goldDark transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span>Xuất nhật ký (PDF/CSV)</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 3. 3 SUMMARY METRICS CARDS */}
+      {/* 3. 3 SUMMARY METRICS CARDS (Chuẩn nghiệp vụ v2.2) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Metric 1 */}
+        {/* Metric 1: Tổng số sự kiện bền vững ghi nhận trong scope */}
         <Card className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Tổng số bản ghi (Log Volume)
+                Tổng sự kiện ghi nhận (Durable Events)
               </span>
-              <span className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-                {mockAuditStats.total_records.toLocaleString()}
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
+                  {calculatedStats.total_events}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">sự kiện trong scope</span>
+              </div>
             </div>
             <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700">
-              <Database className="w-6 h-6" />
+              <History className="w-6 h-6" />
             </div>
           </div>
           <div className="pt-4 mt-2 border-t border-slate-100 flex flex-col gap-1">
             <div className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
               <CheckCircle2 className="w-4 h-4" />
-              <span className="font-semibold">+{mockAuditStats.records_24h} thao tác</span>
-              <span className="text-slate-500 font-normal">trong 24h qua</span>
+              <span className="font-semibold">Mỗi sự kiện có Event ID độc nhất</span>
+              <span className="text-slate-500 font-normal">(Dedup theo US-29-AC-01)</span>
             </div>
             <span className="font-mono text-[11px] text-slate-500">
-              100% bản ghi bất biến (Immutable Ledger)
+              Không sửa / không xóa để che giấu lịch sử (US-29-AC-03)
             </span>
           </div>
         </Card>
 
-        {/* Metric 2 */}
+        {/* Metric 2: Số lần chuyển đổi trạng thái hồ sơ/đợt sửa */}
         <Card className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Thao tác nhạy cảm (Critical)
+                Chuyển đổi trạng thái (State Transitions)
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-                  {mockAuditStats.critical_actions_count}
+                  {calculatedStats.state_transitions}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-bold">
-                  Triage Cao
+                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-200">
+                  From → To Status
                 </span>
               </div>
             </div>
             <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700">
-              <AlertTriangle className="w-6 h-6" />
+              <Layers className="w-6 h-6" />
             </div>
           </div>
           <div className="pt-4 mt-2 border-t border-slate-100 flex flex-col gap-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-800 font-medium">
-              <KeyRound className="w-4 h-4 text-brand-gold" />
-              <span>Đã ký số điện tử Viettel-CA xác thực</span>
+              <ArrowRight className="w-4 h-4 text-brand-gold" />
+              <span>Ghi nhận chi tiết vào IncidentCaseHistory</span>
             </div>
             <span className="font-mono text-[11px] text-slate-500 truncate">
-              Khóa tuyến (WF-02), Từ chối gói (WF-07), Kích hoạt Legal Hold
+              {isSupervisor
+                ? 'Duyệt đợt sửa, từ chối gói, nghiệm thu hoàn công'
+                : 'Trình duyệt đợt sửa, phân công đội thi công'}
             </span>
           </div>
         </Card>
 
-        {/* Metric 3 */}
+        {/* Metric 3: Quyết định thẩm duyệt của Supervisor */}
         <Card className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Xung đột &amp; Lỗi 412 (Concurrency)
+                Quyết định thẩm duyệt (Supervisor Actions)
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-slate-900 tracking-tight font-mono">
-                  0{mockAuditStats.concurrency_conflicts_count}
+                  0{calculatedStats.approval_decisions}
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[11px] font-bold">
-                  Diff Merged
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                  Duyệt / Từ chối
                 </span>
               </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700">
-              <GitCompare className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700">
+              <ShieldCheck className="w-6 h-6" />
             </div>
           </div>
           <div className="pt-4 mt-2 border-t border-slate-100 flex flex-col gap-1">
-            <div className="flex items-center gap-1.5 text-xs text-blue-800 font-medium">
-              <History className="w-4 h-4 text-blue-600" />
-              <span className="font-semibold">Snapshot tự động phục hồi</span>
-              <span className="text-slate-500 font-normal">không mất mát</span>
+            <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-medium">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="font-semibold">Thẩm tra giải pháp kỹ thuật &amp; biên bản thi công</span>
             </div>
             <span className="font-mono text-[11px] text-slate-500">
-              Precondition Failed (HTTP 412) - Đã đối soát
+              Lưu trữ bảo hành tối thiểu +5 năm (BR-45 &amp; UAT-10)
             </span>
           </div>
         </Card>
       </div>
 
-      {/* 4. FILTER BAR CONTAINER */}
+      {/* 4. FILTER BAR CONTAINER (v2.2 Phần 11.4) */}
       <Card className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Filter 1: Actor */}
+          {/* Filter 1: Actor Role */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-600">Người thao tác (Actor)</label>
+            <label className="text-xs font-semibold text-slate-600">Vai trò tác nhân (Actor Role)</label>
             <select
-              value={selectedActor}
-              onChange={(e) => setSelectedActor(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+              value={selectedActorRole}
+              onChange={(e) => setSelectedActorRole(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
             >
-              <option value="all">Tất cả nhân sự &amp; Bot</option>
-              <option value="an">Nguyễn Văn An (Supervisor)</option>
-              <option value="hoang">Đỗ Quốc Hoàng (PM Dự án)</option>
-              <option value="hung">Lê Văn Hùng (Crew Lead)</option>
-              <option value="sys">Admin Hệ Thống (Legal Admin)</option>
+              <option value="all">Tất cả vai trò</option>
+              <option value={RoleCode.SUPERVISOR}>Giám sát viên (SUPERVISOR)</option>
+              <option value={RoleCode.PROJECT_MANAGER}>Chỉ huy trưởng (PROJECT_MANAGER)</option>
+              <option value={RoleCode.REPAIR_CREW}>Đội thi công hiện trường (REPAIR_CREW)</option>
+              {isSupervisor && (
+                <option value="SYSTEM">Hệ thống &amp; Thanh tra (SYSTEM)</option>
+              )}
             </select>
           </div>
 
           {/* Filter 2: Action Type */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-600">Nhóm hành động (Action Type)</label>
+            <label className="text-xs font-semibold text-slate-600">Loại hành động nghiệp vụ</label>
             <select
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+              value={selectedActionType}
+              onChange={(e) => setSelectedActionType(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
             >
               <option value="all">Tất cả hành động</option>
-              <option value="APPROVE_ITEM">Phê duyệt hạng mục (APPROVE_ITEM)</option>
-              <option value="CLOSE_FAST_TRACK">Đóng Fast-Track (CLOSE_FAST_TRACK)</option>
-              <option value="REJECT_PROPOSAL">Từ chối gói đề xuất (REJECT_PROPOSAL)</option>
-              <option value="CONFIRM_ALIGNMENT">Khóa tim tuyến (CONFIRM_ALIGNMENT)</option>
-              <option value="LOCK_LEGAL_HOLD">Khóa Legal Hold (LOCK_LEGAL_HOLD)</option>
-              <option value="UPLOAD_EVIDENCE">Tải lên bằng chứng (UPLOAD_EVIDENCE)</option>
+              {isSupervisor && (
+                <>
+                  <option value="APPROVE_BATCH">Phê duyệt đợt sửa chữa (APPROVE_BATCH)</option>
+                  <option value="REJECT_BATCH">Yêu cầu sửa lại đợt sửa (REJECT_BATCH)</option>
+                  <option value="ACCEPT_WORK_ORDER">Nghiệm thu hoàn công (ACCEPT_WORK_ORDER)</option>
+                  <option value="LOCK_LEGAL_HOLD">Kích hoạt giữ hồ sơ thanh tra (LOCK_LEGAL_HOLD)</option>
+                </>
+              )}
+              <option value="SUBMIT_BATCH">Trình duyệt đợt sửa chữa (SUBMIT_BATCH)</option>
+              <option value="ASSIGN_CREW">Phân công đội thi công (ASSIGN_CREW)</option>
+              <option value="CLOSE_FAST_TRACK">Đóng hồ sơ Fast-Track (CLOSE_FAST_TRACK)</option>
+              <option value="PUBLISH_SEGMENTS">Công bố bộ Segment tuyến (PUBLISH_SEGMENTS)</option>
+              <option value="SUBMIT_WORK_ORDER">Báo cáo hoàn thành thi công (SUBMIT_WORK_ORDER)</option>
             </select>
           </div>
 
           {/* Filter 3: Entity Type */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-600">Thực thể tác động (Entity)</label>
+            <label className="text-xs font-semibold text-slate-600">Thực thể tác động (Target Entity)</label>
             <select
-              value={selectedEntity}
-              onChange={(e) => setSelectedEntity(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+              value={selectedEntityType}
+              onChange={(e) => setSelectedEntityType(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
             >
               <option value="all">Tất cả thực thể</option>
-              <option value="WORK_PACKAGE_ITEM">Hạng mục gói (WorkPackageItem)</option>
-              <option value="DEFECT">Hư hỏng khiếm khuyết (Defect)</option>
-              <option value="PROPOSAL">Gói sửa chữa đề xuất (Proposal)</option>
-              <option value="ALIGNMENT">Tim tuyến &amp; Phân đoạn (Alignment)</option>
-              <option value="LEGAL_HOLD">Hồ sơ pháp lý (Legal Hold)</option>
-              <option value="EVIDENCE">Bằng chứng hiện trường (Evidence)</option>
+              <option value="REPAIR_BATCH">Đợt sửa chữa (RepairBatch)</option>
+              <option value="DEFECT">Hư hỏng / Khiếm khuyết (Defect)</option>
+              <option value="WORK_ORDER">Phiếu giao việc (WorkOrder)</option>
+              <option value="ROAD_SEGMENT">Phân đoạn tim tuyến (RoadSegment)</option>
+              {isSupervisor && (
+                <option value="LEGAL_HOLD">Hồ sơ thanh tra (Legal Hold)</option>
+              )}
             </select>
           </div>
 
           {/* Filter 4: Keyword Search */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-600">Tìm kiếm Trace ID / Từ khóa</label>
+            <label className="text-xs font-semibold text-slate-600">Tìm kiếm Mã sự kiện / Lý trình / Lý do</label>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="Nhập tr-..., tên người, tên gói..."
-                className="w-full h-10 pl-9 pr-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                placeholder="Nhập EV-..., Km 1032, nứt lún..."
+                className="w-full h-10 pl-9 pr-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
           </div>
         </div>
 
-        {/* Quick chips & Apply buttons */}
+        {/* Quick chips & Reset */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-500 mr-1">Lọc nhanh:</span>
+            <span className="text-xs font-medium text-slate-500 mr-1">Khoảng thời gian:</span>
             <button
               type="button"
-              onClick={() => setQuickFilter('24h')}
+              onClick={() => setTimeFilter('24h')}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                quickFilter === '24h'
-                  ? 'bg-brand-navy text-white'
+                timeFilter === '24h'
+                  ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
@@ -383,10 +510,10 @@ export const AuditTrail: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setQuickFilter('7d')}
+              onClick={() => setTimeFilter('7d')}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                quickFilter === '7d'
-                  ? 'bg-brand-navy text-white'
+                timeFilter === '7d'
+                  ? 'bg-slate-900 text-white'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
@@ -394,9 +521,9 @@ export const AuditTrail: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setQuickFilter('month')}
+              onClick={() => setTimeFilter('30d')}
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                quickFilter === 'month'
+                timeFilter === '30d'
                   ? 'bg-brand-gold text-white shadow-xs'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
@@ -405,15 +532,14 @@ export const AuditTrail: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setQuickFilter(quickFilter === 'critical' ? 'all' : 'critical')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 transition-colors ${
-                quickFilter === 'critical'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+              onClick={() => setTimeFilter('all')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                timeFilter === 'all'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
-              <Zap className="w-3.5 h-3.5" />
-              <span>Chỉ xem Thao tác nhạy cảm</span>
+              Toàn bộ lịch sử
             </button>
           </div>
 
@@ -421,24 +547,24 @@ export const AuditTrail: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setSelectedActor('all')
-                setSelectedAction('all')
-                setSelectedEntity('all')
+                setSelectedActorRole('all')
+                setSelectedActionType('all')
+                setSelectedEntityType('all')
                 setSearchKeyword('')
-                setQuickFilter('all')
+                setTimeFilter('30d')
               }}
               className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 font-medium transition-colors"
             >
               Đặt lại bộ lọc
             </button>
             <div className="text-xs text-slate-500 font-medium font-mono">
-              Đang hiển thị {filteredEvents.length} bản ghi
+              Hiển thị {filteredEvents.length} sự kiện hợp lệ
             </div>
           </div>
         </div>
       </Card>
 
-      {/* 5. MAIN GRID: EVENT TABLE (LEFT 8 COLS) + DIFF INSPECTOR DRAWER (RIGHT 4 COLS) */}
+      {/* 5. MAIN GRID: EVENT TABLE (LEFT 8 COLS) + DETAIL INSPECTOR DRAWER (RIGHT 4 COLS) */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Table Section (8 Columns) */}
         <div className="xl:col-span-8 bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex flex-col">
@@ -447,15 +573,15 @@ export const AuditTrail: React.FC = () => {
             <div className="flex items-center gap-2">
               <History className="w-5 h-5 text-brand-gold" />
               <span className="text-sm font-bold text-slate-900">
-                Dòng sự kiện kiểm toán hệ thống
+                Dòng sự kiện hoạt động dự án (Timeline - FR-34)
               </span>
               <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-mono text-[11px] font-semibold">
-                Hiển thị {filteredEvents.length} / {mockAuditStats.total_records.toLocaleString()}
+                {filteredEvents.length} bản ghi
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
               <Lock className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Chế độ kiểm toán pháp lý không thể đảo ngược (BR-45)</span>
+              <span>Chế độ kiểm toán pháp lý không thể sửa/xóa (US-29-AC-03, BR-45)</span>
             </div>
           </div>
 
@@ -464,25 +590,25 @@ export const AuditTrail: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200 font-semibold">
-                  <th className="py-3 px-4">Thời gian (GMT+7)</th>
-                  <th className="py-3 px-3">Người thực hiện</th>
-                  <th className="py-3 px-3">Hành động</th>
-                  <th className="py-3 px-3">Đối tượng tác động</th>
-                  <th className="py-3 px-3">Trace ID</th>
-                  <th className="py-3 px-3">IP &amp; Thiết bị</th>
-                  <th className="py-3 px-4 text-right">Biến động</th>
+                  <th className="py-3 px-4">Thời điểm (GMT+7)</th>
+                  <th className="py-3 px-3">Tác nhân thực hiện</th>
+                  <th className="py-3 px-3">Hành động nghiệp vụ</th>
+                  <th className="py-3 px-3">Đối tượng &amp; Lý trình</th>
+                  <th className="py-3 px-3">Chuyển trạng thái</th>
+                  <th className="py-3 px-3">Mã sự kiện (Event ID)</th>
+                  <th className="py-3 px-4 text-right">Chi tiết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
                 {filteredEvents.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500">
-                      Không tìm thấy bản ghi kiểm toán nào khớp với bộ lọc.
+                      Không tìm thấy sự kiện kiểm toán nào khớp với tiêu chí lọc.
                     </td>
                   </tr>
                 ) : (
                   filteredEvents.map((ev) => {
-                    const isSelected = ev.id === selectedEventId
+                    const isSelected = ev.id === selectedEvent.id
                     return (
                       <tr
                         key={ev.id}
@@ -493,22 +619,30 @@ export const AuditTrail: React.FC = () => {
                             : 'hover:bg-slate-50/80'
                         }`}
                       >
-                        {/* 1. Timestamp */}
+                        {/* 1. Timestamp (Theo giờ địa phương v2.2 Điều 11.3) */}
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="font-mono text-xs font-semibold text-slate-900">
-                            {ev.timestamp_local}
+                            {ev.occurred_at_local}
                           </div>
                           <div className="font-mono text-[10px] text-slate-400">
-                            UTC: {ev.timestamp_utc.replace('T', ' ').replace('Z', '')}
+                            UTC: {ev.occurred_at.replace('T', ' ').substring(0, 19)}
                           </div>
                         </td>
 
                         {/* 2. Actor */}
                         <td className="py-3.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px]">
-                              {ev.actor_initials}
-                            </div>
+                            {ev.actor_avatar ? (
+                              <img
+                                src={ev.actor_avatar}
+                                alt={ev.actor_name}
+                                className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-xs"
+                              />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[11px]">
+                                {ev.actor_name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
                             <div className="flex flex-col leading-tight">
                               <span className="font-semibold text-slate-900">
                                 {ev.actor_name}
@@ -520,36 +654,49 @@ export const AuditTrail: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* 3. Action */}
+                        {/* 3. Action Badge */}
                         <td className="py-3.5 px-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-mono font-semibold ${ev.action_badge_style}`}
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold ${ev.action_badge_style}`}
                           >
-                            {ev.action_type}
+                            {ev.action_label_vi}
                           </span>
                         </td>
 
-                        {/* 4. Entity */}
+                        {/* 4. Target Entity & Location */}
                         <td className="py-3.5 px-3">
-                          <div className="font-semibold text-slate-900 truncate max-w-[170px]" title={ev.entity_name}>
-                            {ev.entity_name}
+                          <div className="font-semibold text-slate-900 truncate max-w-[170px]" title={ev.target_entity_name}>
+                            {ev.target_entity_name}
                           </div>
-                          <div className="text-[11px] text-slate-500 font-mono">
-                            {ev.entity_location || ev.entity_id}
+                          <div className="text-[10px] text-slate-500 font-mono truncate max-w-[170px]" title={ev.target_location || ev.project_name}>
+                            {ev.target_location || ev.project_name}
                           </div>
                         </td>
 
-                        {/* 5. Trace ID */}
+                        {/* 5. State Transition (from_status -> to_status) */}
                         <td className="py-3.5 px-3 whitespace-nowrap">
-                          <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-medium">
-                            {ev.trace_id}
-                          </span>
+                          {ev.from_status ? (
+                            <div className="flex items-center gap-1 font-mono text-[10px]">
+                              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600">
+                                {ev.from_status}
+                              </span>
+                              <ArrowRight className="w-3 h-3 text-slate-400" />
+                              <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold">
+                                {ev.to_status}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-800 rounded font-mono text-[10px] font-semibold border border-emerald-200">
+                              {ev.to_status}
+                            </span>
+                          )}
                         </td>
 
-                        {/* 6. IP & Device */}
-                        <td className="py-3.5 px-3 whitespace-nowrap text-slate-600">
-                          <div className="font-mono text-xs">{ev.ip_address}</div>
-                          <div className="text-[10px] text-slate-400">{ev.device_info}</div>
+                        {/* 6. Event ID (Dedup ID theo US-29-AC-01) */}
+                        <td className="py-3.5 px-3 whitespace-nowrap">
+                          <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
+                            {ev.event_id}
+                          </span>
                         </td>
 
                         {/* 7. Action Button */}
@@ -567,7 +714,7 @@ export const AuditTrail: React.FC = () => {
                             }`}
                           >
                             <Code className="w-3.5 h-3.5" />
-                            <span>Diff JSON</span>
+                            <span>Soi chi tiết</span>
                           </button>
                         </td>
                       </tr>
@@ -578,21 +725,21 @@ export const AuditTrail: React.FC = () => {
             </table>
           </div>
 
-          {/* Cursor-based Pagination Footer (v2.2 convention) */}
+          {/* Table Footer */}
           <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex flex-col gap-0.5">
               <span className="text-slate-700 font-medium">
-                Hiển thị bản ghi từ{' '}
+                Phạm vi dòng sự kiện: từ{' '}
                 <code className="font-mono font-bold text-brand-goldDark">
-                  {filteredEvents[0]?.trace_id || 'tr-start'}
+                  {filteredEvents[0]?.event_id || 'EV-START'}
                 </code>{' '}
                 đến{' '}
                 <code className="font-mono font-bold text-brand-goldDark">
-                  {filteredEvents[filteredEvents.length - 1]?.trace_id || 'tr-end'}
+                  {filteredEvents[filteredEvents.length - 1]?.event_id || 'EV-END'}
                 </code>
               </span>
               <span className="font-mono text-[10px] text-slate-400">
-                Cursor token: eyJpZCI6MTQ4MjAsInRzIjoxNzI0NjA2NTM1LCJyZXYiOiJ2MyJ9...
+                Tuân thủ quy tắc lưu trữ BR-45 &amp; truy vết IncidentCaseHistory
               </span>
             </div>
 
@@ -615,34 +762,34 @@ export const AuditTrail: React.FC = () => {
           </div>
         </div>
 
-        {/* Diff Inspector Drawer Section (Right 4 Columns - Sticky) */}
+        {/* Detail Inspector Drawer Section (Right 4 Columns - Sticky) */}
         <div className="xl:col-span-4 bg-white border border-slate-200 rounded-xl shadow-sm p-4 flex flex-col gap-4 sticky top-20">
           {/* Drawer Header */}
           <div className="flex items-start justify-between pb-3 border-b border-slate-100">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <span className="px-2.5 py-0.5 rounded-full bg-brand-gold text-white font-mono text-[10px] font-bold uppercase tracking-wider">
-                  TRACE INSPECTION
+                  THÔNG TIN CHI TIẾT SỰ KIỆN
                 </span>
                 <span className="font-mono text-xs text-slate-500">
-                  {selectedEvent.timestamp_local.split(' ')[0]}
+                  {selectedEvent.occurred_at_local.split(' ')[1]}
                 </span>
               </div>
               <h2 className="text-base font-bold text-slate-900">
-                Chi tiết biến động bản ghi
+                Đối chiếu biến động &amp; Căn cứ
               </h2>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-xs text-slate-500 font-medium">Trace:</span>
+                <span className="text-xs text-slate-500 font-medium">Mã sự kiện:</span>
                 <span className="font-mono text-xs bg-slate-100 border border-slate-200 px-2 py-0.5 rounded text-slate-800 font-semibold">
-                  {selectedEvent.trace_id}
+                  {selectedEvent.event_id}
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleCopyTrace(selectedEvent.trace_id)}
+                  onClick={() => handleCopyEventId(selectedEvent.event_id)}
                   className="p-1 text-slate-400 hover:text-brand-gold transition-colors"
-                  title="Sao chép Trace ID"
+                  title="Sao chép Mã sự kiện"
                 >
-                  {copiedTrace ? (
+                  {copiedEventId ? (
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
                   ) : (
                     <Copy className="w-3.5 h-3.5" />
@@ -652,201 +799,206 @@ export const AuditTrail: React.FC = () => {
             </div>
           </div>
 
-          {/* Block 1: Entity & Actor Verification Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col gap-2 text-xs">
+          {/* Block 1: Entity, Project & Actor Card */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col gap-2.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 font-medium">Thực thể đích:</span>
-              <span className="font-mono font-bold text-slate-900">
-                {selectedEvent.entity_type} ({selectedEvent.entity_id})
+              <span className="text-slate-500 font-medium">Dự án / Tuyến đường:</span>
+              <span className="font-semibold text-slate-900 text-right truncate max-w-[210px]" title={selectedEvent.project_name}>
+                {selectedEvent.project_name}
               </span>
             </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 font-medium">Người thẩm tra / Tác nhân:</span>
-              <span className="font-semibold text-slate-900">
-                {selectedEvent.actor_name} {selectedEvent.actor_role_label}
+              <span className="text-slate-500 font-medium">Thực thể tác động:</span>
+              <span className="font-mono font-bold text-slate-900 truncate max-w-[210px]" title={selectedEvent.target_entity_name}>
+                {selectedEvent.target_entity_name}
               </span>
             </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-slate-500 font-medium">Chữ ký số CA:</span>
-              <span className="font-mono text-brand-goldDark font-semibold">
-                {selectedEvent.digital_signature
-                  ? `${selectedEvent.digital_signature.provider} ${selectedEvent.digital_signature.serial}`
-                  : 'Xác thực hệ thống nội bộ'}
+              <span className="text-slate-500 font-medium">Vị trí / Lý trình:</span>
+              <span className="font-mono text-slate-700 text-right truncate max-w-[210px]">
+                {selectedEvent.target_location || 'Hệ thống'}
               </span>
             </div>
-            {selectedEvent.change_reason && (
-              <div className="flex flex-col gap-1 pt-1 border-t border-slate-200">
-                <span className="text-slate-500 font-medium">Lý do thay đổi nghiệp vụ:</span>
-                <span className="text-slate-800 italic">
-                  "{selectedEvent.change_reason}"
+
+            <div className="flex items-center justify-between pt-1 border-t border-slate-200/80">
+              <span className="text-slate-500 font-medium">Tác nhân thực hiện:</span>
+              <div className="flex items-center gap-1.5">
+                {selectedEvent.actor_avatar && (
+                  <img
+                    src={selectedEvent.actor_avatar}
+                    alt={selectedEvent.actor_name}
+                    className="w-5 h-5 rounded-full object-cover border border-slate-200"
+                  />
+                )}
+                <span className="font-semibold text-slate-900">
+                  {selectedEvent.actor_name}
+                </span>
+                <span className="text-[10px] text-brand-goldDark font-bold font-mono">
+                  {selectedEvent.actor_role_label}
                 </span>
               </div>
-            )}
+            </div>
+
+            {/* Lý do nghiệp vụ và căn cứ quyết định (IncidentCaseHistory.reason) */}
+            <div className="flex flex-col gap-1 pt-1 border-t border-slate-200">
+              <span className="text-slate-500 font-medium">Lý do nghiệp vụ (Căn cứ quyết định):</span>
+              <span className="text-slate-800 italic leading-relaxed">
+                "{selectedEvent.reason}"
+              </span>
+            </div>
           </div>
 
-          {/* Block 2: Visual Side-by-side JSON Diff */}
+          {/* Block 2: Evidence Photos Gallery (Minh chứng hình ảnh thực tế hiện trường) */}
+          {selectedEvent.evidence_snapshot?.images && selectedEvent.evidence_snapshot.images.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-emerald-600" />
+                  Bằng chứng hiện trường ({selectedEvent.evidence_snapshot.images.length} ảnh)
+                </span>
+                <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                  EXIF GPS Validated
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {selectedEvent.evidence_snapshot.images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveImageModal(img)}
+                    className="group relative rounded-xl overflow-hidden border border-slate-200 cursor-pointer hover:shadow-md transition-all bg-slate-100"
+                  >
+                    <img
+                      src={img.url}
+                      alt={img.caption}
+                      className="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-200"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent flex flex-col justify-end p-1.5 text-white">
+                      <span className="text-[10px] font-medium truncate leading-tight">
+                        {img.caption}
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-300 flex items-center gap-0.5">
+                        <MapPin className="w-2.5 h-2.5 text-brand-gold shrink-0" />
+                        {img.gps_coordinates.split(',')[0]}
+                      </span>
+                    </div>
+                    <div className="absolute top-1.5 right-1.5 p-1 rounded-md bg-slate-900/60 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Maximize2 className="w-3 h-3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Block 3: Visual Side-by-side State Diff (Trước / Sau) */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                <GitCompare className="w-4 h-4 text-slate-500" />
-                So sánh trạng thái Diff (Before / After)
+                <Layers className="w-4 h-4 text-slate-500" />
+                Đối chiếu trạng thái dữ liệu (Before / After)
               </span>
-              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                RFC-6902 Patch
+              <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                v2.2 Diff
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {/* Left: Before (Red tone) */}
+              {/* Left: Before State (Red tone) */}
               <div className="rounded-xl bg-red-50/70 border border-red-200 p-2.5 flex flex-col gap-1">
                 <div className="flex items-center justify-between font-mono text-[10px] text-red-700 font-bold border-b border-red-100 pb-1">
-                  <span>DỮ LIỆU CŨ (BEFORE)</span>
-                  <span>{selectedEvent.before_version || 'v1.0'}</span>
+                  <span>DỮ LIỆU TRƯỚC (BEFORE)</span>
+                  <span>{selectedEvent.from_status || 'Khởi tạo'}</span>
                 </div>
-                <pre className="font-mono text-[10px] text-red-900 leading-relaxed overflow-x-auto p-1 font-medium max-h-44">
-                  {JSON.stringify(selectedEvent.before_state, null, 2)}
+                <pre className="font-mono text-[10px] text-red-900 leading-relaxed overflow-x-auto p-1 font-medium max-h-40">
+                  {JSON.stringify(selectedEvent.before_state || { status: selectedEvent.from_status || 'INITIAL' }, null, 2)}
                 </pre>
               </div>
 
-              {/* Right: After (Green tone) */}
+              {/* Right: After State (Green tone) */}
               <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 p-2.5 flex flex-col gap-1">
                 <div className="flex items-center justify-between font-mono text-[10px] text-emerald-700 font-bold border-b border-emerald-100 pb-1">
-                  <span>DỮ LIỆU MỚI (AFTER)</span>
-                  <span>{selectedEvent.after_version || 'v1.1'}</span>
+                  <span>DỮ LIỆU SAU (AFTER)</span>
+                  <span>{selectedEvent.to_status}</span>
                 </div>
-                <pre className="font-mono text-[10px] text-emerald-900 leading-relaxed overflow-x-auto p-1 font-medium max-h-44">
+                <pre className="font-mono text-[10px] text-emerald-900 leading-relaxed overflow-x-auto p-1 font-medium max-h-40">
                   {JSON.stringify(selectedEvent.after_state, null, 2)}
                 </pre>
               </div>
             </div>
           </div>
 
-          {/* Block 3: Merkle / Blockchain Checksum Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Fingerprint className="w-4 h-4 text-brand-gold" />
-                Mã băm bất biến (SHA-256)
-              </span>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">
-                MERKLE TREE
-              </span>
-            </div>
-            <div className="p-2 rounded bg-white border border-slate-200 font-mono text-[10px] text-slate-800 break-all select-all font-semibold leading-tight">
-              {selectedEvent.sha256_checksum}
-            </div>
-            <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-semibold">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Chuỗi liên kết Merkle Tree hợp lệ • Không bị can thiệp</span>
-            </div>
-          </div>
-
-          {/* Block 4: Legal Disclaimer Note (BR-45) */}
+          {/* Block 4: Legal Disclaimer Note (BR-45, UAT-10) */}
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] leading-relaxed flex items-start gap-2">
             <Lock className="w-4 h-4 text-brand-gold shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold text-slate-800">Quy chuẩn lưu trữ pháp lý:</span>{' '}
-              Bản ghi kiểm toán tuân thủ quy tắc lưu trữ <strong>BR-45</strong> (tối thiểu hết bảo hành + 5 năm) và Nghị định 130/2018/NĐ-CP về chữ ký số. Hồ sơ có đánh dấu tranh chấp (Legal Hold) bị nghiêm cấm xóa vĩnh viễn.
+              <span className="font-semibold text-slate-800">Quy chuẩn lưu trữ bảo hành BR-45:</span>{' '}
+              Hồ sơ dự án bảo hành phải được lưu trữ tối thiểu đến hết thời hạn bảo hành cộng <strong>5 năm</strong>. Hồ sơ có đánh dấu tranh chấp (<strong>Legal Hold</strong>) bị nghiêm cấm xóa vĩnh viễn theo Luật Thanh tra.
             </div>
           </div>
         </div>
       </div>
 
-      {/* 6. MODAL: XÁC THỰC CHUỖI HASH (HASH VERIFICATION MODAL) */}
-      {showVerifyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 flex flex-col gap-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      {/* 6. MODAL: XEM ẢNH PHÓNG TO & METADATA HIỆN TRƯỜNG (LIGHTBOX MODAL) */}
+      {activeImageModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Gavel className="w-5 h-5 text-brand-gold" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Xác thực tính toàn vẹn chuỗi băm (SHA-256)
+                <Camera className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  {activeImageModal.caption}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowVerifyModal(false)}
+                onClick={() => setActiveImageModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 text-xs">
-              <p className="text-slate-600">
-                Hệ thống đang rà soát đối chiếu toàn bộ các nhánh Merkle Tree từ block khởi tạo đến bản ghi mới nhất:
-              </p>
-
-              <div className="space-y-2 bg-slate-50 p-3.5 rounded-xl border border-slate-200 font-mono text-[11px]">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">1. Quét 14,820 bản ghi Ledger:</span>
-                  {verifyStep >= 1 ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Hoàn tất
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Đang quét...</span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">2. Tính toán lại Merkle Root Hash:</span>
-                  {verifyStep >= 2 ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Khớp 100%
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Chờ...</span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">3. Đối soát chữ ký số Viettel-CA:</span>
-                  {verifyStep >= 3 ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Hợp lệ
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Chờ...</span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">4. Rà soát Legal Hold &amp; BR-45:</span>
-                  {verifyStep >= 4 ? (
-                    <span className="text-emerald-700 font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Đạt chuẩn
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Chờ...</span>
-                  )}
-                </div>
-              </div>
-
-              {verifyStep >= 4 && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>
-                    XÁC THỰC THÀNH CÔNG: Không có bất kỳ bản ghi nào bị thay đổi hoặc giả mạo. Toàn vẹn chuỗi đạt 100%.
-                  </span>
-                </div>
-              )}
+            <div className="relative rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[420px]">
+              <img
+                src={activeImageModal.url}
+                alt={activeImageModal.caption}
+                className="w-full h-auto max-h-[420px] object-contain"
+              />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            {/* EXIF Metadata Card */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs text-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> Thời điểm ghi nhận:
+                </span>
+                <span className="font-mono font-semibold">{activeImageModal.captured_at}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" /> Tọa độ GPS EXIF:
+                </span>
+                <span className="font-mono font-semibold text-brand-goldDark">{activeImageModal.gps_coordinates}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowVerifyModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                onClick={() => setActiveImageModal(null)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
               >
-                Đóng cửa sổ
+                Đóng ảnh
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 7. MODAL: XUẤT NHẬT KÝ KIỂM TOÁN (EXPORT AUDIT LOG MODAL - FR-35, US-16) */}
+      {/* 7. MODAL: XUẤT NHẬT KÝ KIỂM TOÁN (EXPORT AUDIT LOG MODAL - FR-35, US-16, Điều 11.5) */}
       {showExportModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 flex flex-col gap-5">
@@ -854,7 +1006,7 @@ export const AuditTrail: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Download className="w-5 h-5 text-brand-gold" />
                 <h3 className="text-base font-bold text-slate-900">
-                  Xuất hồ sơ kiểm toán (RPT-10)
+                  Xuất hồ sơ lịch sử hoạt động (RPT-10)
                 </h3>
               </div>
               <button
@@ -868,7 +1020,7 @@ export const AuditTrail: React.FC = () => {
 
             <div className="flex flex-col gap-4 text-xs">
               <div className="flex flex-col gap-1.5">
-                <label className="text-slate-700 font-semibold">Chọn định dạng tệp xuất:</label>
+                <label className="text-slate-700 font-semibold">Chọn định dạng tệp xuất (FR-35, Điều 11.5):</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -892,24 +1044,30 @@ export const AuditTrail: React.FC = () => {
                     }`}
                   >
                     <FileCheck className="w-5 h-5 text-emerald-600" />
-                    <span>CSV Dữ liệu thô + Hash</span>
+                    <span>CSV Bảng kê sự kiện</span>
                   </button>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1 text-slate-600 text-[11px]">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-slate-600 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Số lượng bản ghi:</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {filteredEvents.length} bản ghi
+                  <span>Phạm vi xuất:</span>
+                  <span className="font-semibold text-slate-900">
+                    {isPM
+                      ? 'Dự án QL1A - Giai đoạn 2'
+                      : selectedProject === 'all'
+                      ? 'Toàn bộ các dự án hệ thống'
+                      : projectList.find((p) => p.id === selectedProject)?.name}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Mã băm SHA-256 Manifest:</span>
-                  <span className="font-mono text-[10px] text-slate-700">b7a8...c491</span>
+                  <span>Số lượng sự kiện:</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {filteredEvents.length} sự kiện
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Thời điểm xuất:</span>
+                  <span>Thời điểm kết xuất:</span>
                   <span className="font-mono text-slate-900">
                     {new Date().toLocaleString('vi-VN')}
                   </span>
@@ -946,4 +1104,5 @@ export const AuditTrail: React.FC = () => {
     </div>
   )
 }
+
 export default AuditTrail

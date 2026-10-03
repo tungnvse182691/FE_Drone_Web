@@ -1377,204 +1377,246 @@ export const mockValidationBenchmarks: ValidationBenchmarkRun[] = [
 ]
 
 // =============================================================================
-// 17. RPT-10: NHẬT KÝ KIỂM TOÁN VÀ TRUY VẾT BẤT BIẾN (FR-34, US-29, BR-45)
+// 17. RPT-10: NHẬT KÝ HOẠT ĐỘNG & KIỂM TOÁN DỰ ÁN (FR-34, US-29, BR-45)
 // =============================================================================
 export const mockAuditStats: AuditTrailStats = {
-  total_records: 14820,
-  records_24h: 142,
-  critical_actions_count: 18,
-  concurrency_conflicts_count: 4,
-  integrity_status: '100% SHA-256 Khớp',
-  merkle_tree_status: 'Chuỗi liên kết Merkle Tree hợp lệ • Không bị can thiệp',
-  retention_compliance: 'Lưu trữ tối thiểu hết bảo hành + 5 năm (BR-45)'
+  total_events: 148,
+  state_transitions_count: 52,
+  approval_decisions_count: 18,
+  retention_compliance_note: 'Lưu trữ tối thiểu hết thời hạn bảo hành + 5 năm (Quy tắc BR-45)'
 }
 
 export const mockAuditEvents: AuditEvent[] = [
   {
     id: 'audit-01',
-    trace_id: 'tr-9f8e21a4-c7',
-    timestamp_local: '21:42:15 25/08/2026',
-    timestamp_utc: '2026-08-25T14:42:15.892Z',
+    event_id: 'EV-2026-0825-01',
+    occurred_at: '2026-08-25T14:42:15.892Z',
+    occurred_at_local: '21:42:15 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
     actor_id: 'usr-sup-01',
     actor_name: 'Nguyễn Văn An',
-    actor_role: 'SUPERVISOR',
+    actor_role: RoleCode.SUPERVISOR,
     actor_role_label: '[SUPERVISOR]',
-    actor_initials: 'VA',
-    action_type: 'APPROVE_ITEM',
-    action_label_vi: 'Phê duyệt hạng mục',
-    action_badge_style: 'bg-[#EDF7ED] text-[#1B5E20] border-[#1B5E20]/20',
-    entity_type: 'WORK_PACKAGE_ITEM',
-    entity_id: 'item-def-089',
-    entity_name: 'DEF-089 (Gói PKG-08)',
-    entity_location: 'Km 1032+200 Phải',
-    ip_address: '14.232.18.91',
-    device_info: 'macOS / Chrome 127',
-    is_critical: false,
-    digital_signature: {
-      provider: 'Viettel-CA',
-      serial: 'Serial #5408-A91B',
-      timestamp: '2026-08-25T14:42:15.910Z',
-      is_valid: true
+    actor_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    action_type: 'APPROVE_BATCH',
+    action_label_vi: 'Phê duyệt đợt sửa chữa',
+    action_badge_style: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    target_entity_type: 'REPAIR_BATCH',
+    target_entity_id: 'batch-2026-08',
+    target_entity_name: 'Đợt sửa chữa số 08 (BATCH-2026-08)',
+    target_location: 'Km 1032+200 Phải (Làn 1)',
+    from_status: RepairBatchStatus.PENDING_APPROVAL,
+    to_status: RepairBatchStatus.APPROVED,
+    reason: 'Đã thẩm tra phương án kỹ thuật bù thảm bê tông nhựa hạt mịn C12.5 và danh mục 6 hư hỏng; chấp thuận giải pháp thi công (Khóa cứng hồ sơ theo BR-45 & Điều kiện bất biến số 3).',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh khảo sát trước thi công: Nứt lún dọc sâu 6.5cm',
+          captured_at: '20/08/2026 08:30:15',
+          gps_coordinates: '10.8231° N, 106.6297° E'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh nghiệm thu hoàn công: Đã bù thảm bê tông nhựa hạt mịn C12.5 đạt cao độ thiết kế',
+          captured_at: '25/08/2026 17:15:00',
+          gps_coordinates: '10.8232° N, 106.6298° E'
+        }
+      ]
     },
-    change_reason: 'Nghiệm thu khối lượng đào vét bù và chấp thuận định mức vật liệu',
-    before_version: 'v1.2',
-    after_version: 'v1.3',
     before_state: {
-      status: 'PENDING_APPROVAL',
-      depth_cm: 5.0,
-      approved_cost_vnd: 0,
-      supervisor_signed: false
+      batch_status: RepairBatchStatus.PENDING_APPROVAL,
+      defects_count: 6,
+      technical_method: 'Cào bóc 4cm & Bù thảm BTN C12.5',
+      repair_area_m2: 120.5,
+      is_locked: false,
+      supervisor_approved: false
     },
     after_state: {
-      status: 'APPROVED',
-      depth_cm: 6.5,
-      approved_cost_vnd: 45000000,
-      supervisor_signed: true
-    },
-    sha256_checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    merkle_verified: true
+      batch_status: RepairBatchStatus.APPROVED,
+      defects_count: 6,
+      technical_method: 'Cào bóc 4cm & Bù thảm BTN C12.5',
+      repair_area_m2: 120.5,
+      is_locked: true,
+      supervisor_approved: true,
+      approved_at: '2026-08-25T14:42:15Z'
+    }
   },
   {
     id: 'audit-02',
-    trace_id: 'tr-8a2b55f1-3d',
-    timestamp_local: '18:30:10 25/08/2026',
-    timestamp_utc: '2026-08-25T11:30:10.120Z',
+    event_id: 'EV-2026-0825-02',
+    occurred_at: '2026-08-25T11:30:10.120Z',
+    occurred_at_local: '18:30:10 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
     actor_id: 'usr-pm-01',
     actor_name: 'Đỗ Quốc Hoàng',
-    actor_role: 'PM',
+    actor_role: RoleCode.PROJECT_MANAGER,
     actor_role_label: '[PM DỰ ÁN]',
-    actor_initials: 'QH',
+    actor_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     action_type: 'CLOSE_FAST_TRACK',
-    action_label_vi: 'Đóng Fast-Track',
-    action_badge_style: 'bg-[#EAF4FB] text-[#2B78C5] border-[#2B78C5]/20',
-    entity_type: 'DEFECT',
-    entity_id: 'def-104',
-    entity_name: 'Defect DEF-104',
-    entity_location: 'Km 1025+400 Làn 1',
-    ip_address: '118.70.192.4',
-    device_info: 'Android / Field App',
-    is_critical: false,
-    change_reason: 'Đã hoàn tất khắc phục sự cố cấp tốc ngoài hiện trường và gửi thông báo Giám sát',
-    before_version: 'v2.0',
-    after_version: 'v2.1',
+    action_label_vi: 'Đóng lỗi Fast-Track',
+    action_badge_style: 'bg-blue-50 text-blue-800 border-blue-200',
+    target_entity_type: 'DEFECT',
+    target_entity_id: 'def-104',
+    target_entity_name: 'Khiếm khuyết DEF-104 (Ổ gà nguy hiểm)',
+    target_location: 'Km 1025+400 Làn 1',
+    from_status: DefectStatus.OPEN,
+    to_status: DefectStatus.RESOLVED,
+    reason: 'Chỉ huy trưởng đóng lỗi khẩn cấp theo nhánh Fast-Track (MET-11, BR-46), bảo đảm an toàn giao thông trước mùa mưa lũ, thông báo outbox gửi Supervisor.',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh BEFORE: Ổ gà đường kính 45cm, sâu 4.2cm đo bằng thước thẳng',
+          captured_at: '24/08/2026 14:10:00',
+          gps_coordinates: '10.8245° N, 106.6310° E'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh AFTER: Đã vá nóng cấp tốc và giải tỏa phân luồng giao thông an toàn',
+          captured_at: '25/08/2026 18:25:00',
+          gps_coordinates: '10.8245° N, 106.6310° E'
+        }
+      ]
+    },
     before_state: {
-      status: 'IN_PROGRESS',
+      defect_status: DefectStatus.OPEN,
       fast_track_eligible: true,
       pm_closed: false,
       repaired_at: null
     },
     after_state: {
-      status: 'CLOSED',
+      defect_status: DefectStatus.RESOLVED,
       fast_track_eligible: true,
       pm_closed: true,
-      repaired_at: '2026-08-25T11:28:00Z'
-    },
-    sha256_checksum: 'a87ff9e4210dcb881a7b8e519c3620f4f9d2c5e88849b2914ca8b10f54316d2e',
-    merkle_verified: true
+      repaired_at: '2026-08-25T11:28:00Z',
+      supervisor_notified: true
+    }
   },
   {
     id: 'audit-03',
-    trace_id: 'tr-7e3d12c8-99',
-    timestamp_local: '15:15:42 25/08/2026',
-    timestamp_utc: '2026-08-25T08:15:42.441Z',
+    event_id: 'EV-2026-0825-03',
+    occurred_at: '2026-08-25T08:15:42.441Z',
+    occurred_at_local: '15:15:42 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
     actor_id: 'usr-sup-01',
     actor_name: 'Nguyễn Văn An',
-    actor_role: 'SUPERVISOR',
+    actor_role: RoleCode.SUPERVISOR,
     actor_role_label: '[SUPERVISOR]',
-    actor_initials: 'VA',
-    action_type: 'REJECT_PROPOSAL',
-    action_label_vi: 'Từ chối gói đề xuất',
-    action_badge_style: 'bg-[#FEE2E2] text-[#DC2626] border-[#DC2626]/20',
-    entity_type: 'PROPOSAL',
-    entity_id: 'pkg-2026-09',
-    entity_name: 'Gói PKG-2026-09',
-    entity_location: 'Nứt rạn ta-luy âm',
-    ip_address: '14.232.18.91',
-    device_info: 'macOS / Chrome 127',
-    is_critical: true,
-    digital_signature: {
-      provider: 'Viettel-CA',
-      serial: 'Serial #5408-A91B',
-      timestamp: '2026-08-25T08:15:42.502Z',
-      is_valid: true
+    actor_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    action_type: 'REJECT_BATCH',
+    action_label_vi: 'Yêu cầu sửa đổi đợt sửa',
+    action_badge_style: 'bg-red-50 text-red-800 border-red-200',
+    target_entity_type: 'REPAIR_BATCH',
+    target_entity_id: 'batch-2026-09',
+    target_entity_name: 'Đợt sửa chữa số 09 (BATCH-2026-09)',
+    target_location: 'Km 1028+500 Mái ta-luy âm',
+    from_status: RepairBatchStatus.PENDING_APPROVAL,
+    to_status: RepairBatchStatus.REVISION_REQUIRED,
+    reason: 'Phương án xử lý sạt trượt mái ta-luy âm chưa phù hợp thực tế; yêu cầu PM khảo sát địa chất bổ sung và bổ sung biện pháp rọ đá gia cố chân ta-luy trước khi thảm mặt đường.',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?auto=format&fit=crop&w=800&q=80',
+          caption: 'Vết nứt trượt ta-luy âm dài 18m, nguy cơ sạt trượt',
+          captured_at: '22/08/2026 10:15:00',
+          gps_coordinates: '10.8260° N, 106.6340° E'
+        }
+      ]
     },
-    change_reason: 'Dự toán vượt định mức đơn giá vật liệu cấp phối đá dăm loại 1 theo quy chuẩn',
-    before_version: 'v1.0',
-    after_version: 'v1.1',
     before_state: {
-      status: 'SUBMITTED',
-      estimated_cost_vnd: 125000000,
-      rejection_count: 0
+      batch_status: RepairBatchStatus.PENDING_APPROVAL,
+      defects_count: 3,
+      proposed_solution: 'Trám vá cục bộ mặt đường',
+      revision_count: 0
     },
     after_state: {
-      status: 'REJECTED',
-      estimated_cost_vnd: 125000000,
-      rejection_count: 1,
-      rejection_reason: 'Đơn giá vật liệu không phù hợp'
-    },
-    sha256_checksum: '4c731e809b43928e0fd11c81ef44e69d2a096317bc84d84f8803e5cbb53e19a4',
-    merkle_verified: true
+      batch_status: RepairBatchStatus.REVISION_REQUIRED,
+      defects_count: 3,
+      proposed_solution: 'Trám vá cục bộ mặt đường',
+      revision_count: 1,
+      revision_reason: 'Chưa có biện pháp kè rọ đá chống trượt ta-luy âm'
+    }
   },
   {
     id: 'audit-04',
-    trace_id: 'tr-4d7e99f0-8a',
-    timestamp_local: '11:02:18 25/08/2026',
-    timestamp_utc: '2026-08-25T04:02:18.005Z',
+    event_id: 'EV-2026-0825-04',
+    occurred_at: '2026-08-25T04:02:18.005Z',
+    occurred_at_local: '11:02:18 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
     actor_id: 'usr-pm-01',
     actor_name: 'Đỗ Quốc Hoàng',
-    actor_role: 'PM',
+    actor_role: RoleCode.PROJECT_MANAGER,
     actor_role_label: '[PM DỰ ÁN]',
-    actor_initials: 'QH',
-    action_type: 'CONFIRM_ALIGNMENT',
-    action_label_vi: 'Khóa tim tuyến',
-    action_badge_style: 'bg-[#F3E8FF] text-[#7E22CE] border-[#7E22CE]/20',
-    entity_type: 'ALIGNMENT',
-    entity_id: 'align-ql1a-02',
-    entity_name: 'Tuyến QL1A-02',
-    entity_location: 'EPSG:4326 Datum VN',
-    ip_address: '14.232.18.91',
-    device_info: 'macOS / Chrome 127',
-    is_critical: true,
-    change_reason: 'Khóa tim tuyến và phân chia 480 tấm bê tông bảo hành sau khảo sát bay chụp kỳ 3',
-    before_version: 'v2.1',
-    after_version: 'v3.0',
+    actor_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    action_type: 'PUBLISH_SEGMENTS',
+    action_label_vi: 'Công bố phân đoạn tim tuyến',
+    action_badge_style: 'bg-purple-50 text-purple-800 border-purple-200',
+    target_entity_type: 'ROAD_SEGMENT',
+    target_entity_id: 'segset-ql1a-02',
+    target_entity_name: 'Bộ phân đoạn tấm Tuyến QL1A-02',
+    target_location: 'Km 1024+000 - Km 1045+000 (EPSG:32648)',
+    from_status: 'DRAFT',
+    to_status: 'PUBLISHED',
+    reason: 'PM xác nhận tim tuyến và công bố 480 tấm bê tông bảo hành sau khi đối soát dữ liệu bay chụp Drone kỳ 3, nội dung bộ đã công bố chuyển trạng thái bất biến.',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=800&q=80',
+          caption: 'Bản đồ trực giao tim tuyến và định vị 480 tấm bê tông bảo hành',
+          captured_at: '25/08/2026 10:50:00',
+          gps_coordinates: '10.8200° N, 106.6200° E'
+        }
+      ]
+    },
     before_state: {
-      is_locked: false,
+      segment_status: 'DRAFT',
       confirmed_slabs_count: 350,
       pm_confirmed: false
     },
     after_state: {
-      is_locked: true,
+      segment_status: 'PUBLISHED',
       confirmed_slabs_count: 480,
       pm_confirmed: true,
-      locked_at: '2026-08-25T04:02:18Z'
-    },
-    sha256_checksum: '7b91d29fae804f58c73516eb431945f3962638848f07ad0e227e4e8ec67389c1',
-    merkle_verified: true
+      published_at: '2026-08-25T04:02:18Z'
+    }
   },
   {
     id: 'audit-05',
-    trace_id: 'tr-3c1a8842-fa',
-    timestamp_local: '09:40:05 25/08/2026',
-    timestamp_utc: '2026-08-25T02:40:05.611Z',
+    event_id: 'EV-2026-0825-05',
+    occurred_at: '2026-08-25T02:40:05.611Z',
+    occurred_at_local: '09:40:05 25/08/2026',
+    project_id: 'proj-02',
+    project_name: 'Dự án QL1A - Giai đoạn 1 (Km 990 - 1024)',
     actor_id: 'usr-sys-01',
-    actor_name: 'Admin Hệ Thống',
-    actor_role: 'LEGAL_ADMIN',
-    actor_role_label: '[LEGAL ADMIN]',
-    actor_initials: 'SYS',
+    actor_name: 'Hệ thống Quản trị Pháp lý',
+    actor_role: 'SYSTEM',
+    actor_role_label: '[HỆ THỐNG]',
     action_type: 'LOCK_LEGAL_HOLD',
-    action_label_vi: 'Khóa Legal Hold',
-    action_badge_style: 'bg-[#FEF3C7] text-[#D97706] border-[#D97706]/20',
-    entity_type: 'LEGAL_HOLD',
-    entity_id: 'hold-ql1a-phase1',
-    entity_name: 'Hồ sơ đợt 1 QL1A',
-    entity_location: 'Thanh tra Bộ GTVT',
-    ip_address: '127.0.0.1',
-    device_info: 'VPN Dedicated Node',
-    is_critical: true,
-    change_reason: 'Kích hoạt Legal Hold theo yêu cầu đối chiếu thanh tra, cấm xóa vĩnh viễn theo BR-45',
-    before_version: 'v1.0',
-    after_version: 'v1.1',
+    action_label_vi: 'Khóa lưu trữ Legal Hold',
+    action_badge_style: 'bg-amber-50 text-amber-800 border-amber-200',
+    target_entity_type: 'LEGAL_HOLD',
+    target_entity_id: 'hold-ql1a-p1',
+    target_entity_name: 'Hồ sơ hoàn công đợt 1 QL1A',
+    target_location: 'Thanh tra Bộ GTVT (Vụ KH-ĐT)',
+    from_status: 'NORMAL_RETENTION',
+    to_status: 'LEGAL_HOLD_LOCKED',
+    reason: 'Kích hoạt Legal Hold theo Công văn số 8492/BGTVT-TTr phục vụ đối chiếu thanh tra, cấm xóa vĩnh viễn theo quy tắc BR-45.',
+    is_legal_hold: true,
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
+          caption: 'Công văn số 8492/BGTVT-TTr yêu cầu niêm phong hồ sơ kiểm toán phục vụ thanh tra',
+          captured_at: '25/08/2026 09:30:00',
+          gps_coordinates: 'Trụ sở Bộ GTVT, Hà Nội'
+        }
+      ]
+    },
     before_state: {
       is_legal_hold: false,
       deletion_allowed: true,
@@ -1585,49 +1627,136 @@ export const mockAuditEvents: AuditEvent[] = [
       deletion_allowed: false,
       case_dispute: true,
       hold_reference: 'CV-8492/BGTVT-TTr'
-    },
-    sha256_checksum: '9f83a21bc984210e54d89842512f4581297e682d3345892015faeb981640a331',
-    merkle_verified: true
+    }
   },
   {
     id: 'audit-06',
-    trace_id: 'tr-1a4c88b2-e1',
-    timestamp_local: '08:12:30 25/08/2026',
-    timestamp_utc: '2026-08-25T01:12:30.980Z',
+    event_id: 'EV-2026-0825-06',
+    occurred_at: '2026-08-25T01:12:30.980Z',
+    occurred_at_local: '08:12:30 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
     actor_id: 'usr-crew-01',
     actor_name: 'Lê Văn Hùng',
-    actor_role: 'CREW_LEAD',
+    actor_role: RoleCode.REPAIR_CREW,
     actor_role_label: '[CREW LEAD]',
-    actor_initials: 'LH',
-    action_type: 'UPLOAD_EVIDENCE',
-    action_label_vi: 'Tải lên bằng chứng',
-    action_badge_style: 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7]/20',
-    entity_type: 'EVIDENCE',
-    entity_id: 'ev-batch-089',
-    entity_name: '4 Ảnh DEF-089',
-    entity_location: 'EXIF GPS Validated',
-    ip_address: '42.115.88.23',
-    device_info: 'iOS Field Tablet',
-    is_critical: false,
-    is_concurrency_conflict: true, // Đã hòa giải lỗi 412
-    change_reason: 'Tải ảnh nghiệm thu hiện trường kèm chữ ký số và tọa độ EXIF đã xác thực',
-    before_version: 'v1.0',
-    after_version: 'v1.1',
+    actor_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
+    action_type: 'SUBMIT_WORK_ORDER',
+    action_label_vi: 'Báo cáo hoàn thành thi công',
+    action_badge_style: 'bg-sky-50 text-sky-800 border-sky-200',
+    target_entity_type: 'WORK_ORDER',
+    target_entity_id: 'wo-2026-089',
+    target_entity_name: 'Nhiệm vụ sửa chữa WO-089',
+    target_location: 'Km 1032+200 Làn phải',
+    from_status: RepairBatchStatus.IN_PROGRESS,
+    to_status: RepairBatchStatus.PENDING_INSPECTION,
+    reason: 'Đội thi công hoàn tất xử lý bù lún và nạp 2 ảnh hiện trường (BEFORE/AFTER) kèm tọa độ EXIF GPS, chuyển hồ sơ chờ Giám sát nghiệm thu.',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh BEFORE: Vết nứt lún trước thi công gắn cự ly đo 1.5m',
+          captured_at: '25/08/2026 08:05:10',
+          gps_coordinates: '10.8231° N, 106.6297° E'
+        },
+        {
+          url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh AFTER: Thảm nhựa bù lún hoàn tất, đo độ phẳng nivo đạt chuẩn',
+          captured_at: '25/08/2026 08:08:22',
+          gps_coordinates: '10.8231° N, 106.6297° E'
+        }
+      ]
+    },
     before_state: {
-      evidence_count: 0,
-      exif_validated: false,
-      conflict_reconciled: false
+      work_order_status: RepairBatchStatus.IN_PROGRESS,
+      evidence_uploaded: false
     },
     after_state: {
-      evidence_count: 4,
-      exif_validated: true,
-      conflict_reconciled: true,
-      sha256_manifest: '47d3c01828...'
+      work_order_status: RepairBatchStatus.PENDING_INSPECTION,
+      evidence_uploaded: true,
+      submitted_at: '2026-08-25T01:12:30Z'
+    }
+  },
+  {
+    id: 'audit-07',
+    event_id: 'EV-2026-0825-07',
+    occurred_at: '2026-08-25T00:45:12.100Z',
+    occurred_at_local: '07:45:12 25/08/2026',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
+    actor_id: 'usr-pm-01',
+    actor_name: 'Đỗ Quốc Hoàng',
+    actor_role: RoleCode.PROJECT_MANAGER,
+    actor_role_label: '[PM DỰ ÁN]',
+    actor_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    action_type: 'ASSIGN_CREW',
+    action_label_vi: 'Phân công đội thi công',
+    action_badge_style: 'bg-purple-50 text-purple-800 border-purple-200',
+    target_entity_type: 'REPAIR_BATCH',
+    target_entity_id: 'batch-2026-08',
+    target_entity_name: 'Đợt sửa chữa số 08 (BATCH-2026-08)',
+    target_location: 'Phân đoạn Km 1030 - Km 1035',
+    from_status: RepairBatchStatus.APPROVED,
+    to_status: RepairBatchStatus.ASSIGNED,
+    reason: 'Giao nhiệm vụ thi công đợt sửa chữa số 08 cho Đội thi công số 3 (Đội trưởng Lê Văn Hùng) sau khi đã được Supervisor duyệt.',
+    before_state: {
+      batch_status: RepairBatchStatus.APPROVED,
+      crew_id: null
     },
-    sha256_checksum: '319d8542cfa87019842f9b8c0451982740fa1896e38450125bb742910fa84261',
-    merkle_verified: true
+    after_state: {
+      batch_status: RepairBatchStatus.ASSIGNED,
+      crew_id: 'crew-03',
+      crew_leader: 'Lê Văn Hùng',
+      assigned_at: '2026-08-25T00:45:12Z'
+    }
+  },
+  {
+    id: 'audit-08',
+    event_id: 'EV-2026-0824-08',
+    occurred_at: '2026-08-24T09:05:40.400Z',
+    occurred_at_local: '16:05:40 24/08/2026',
+    project_id: 'proj-03',
+    project_name: 'Dự án Cao tốc Bắc - Nam (Km 45 - Km 80)',
+    actor_id: 'usr-sup-01',
+    actor_name: 'Nguyễn Văn An',
+    actor_role: RoleCode.SUPERVISOR,
+    actor_role_label: '[SUPERVISOR]',
+    actor_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+    action_type: 'ACCEPT_WORK_ORDER',
+    action_label_vi: 'Nghiệm thu hoàn thành',
+    action_badge_style: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    target_entity_type: 'WORK_ORDER',
+    target_entity_id: 'wo-ct03-01',
+    target_entity_name: 'Nghiệm thu gói khe co giãn cầu Sông Dinh',
+    target_location: 'Km 52+180 Cầu vượt Sông Dinh',
+    from_status: RepairBatchStatus.PENDING_INSPECTION,
+    to_status: RepairBatchStatus.COMPLETED,
+    reason: 'Giám sát kiểm tra hiện trường đánh giá chất lượng thi công chèn khe co giãn cao su và thảm phủ bản quá độ đạt yêu cầu nghiệm thu (PASSED).',
+    evidence_snapshot: {
+      images: [
+        {
+          url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+          caption: 'Ảnh nghiệm thu: Bơm keo khe co giãn và thảm bù lún bản quá độ đạt độ êm thuận',
+          captured_at: '24/08/2026 15:30:00',
+          gps_coordinates: '10.9120° N, 106.8450° E'
+        }
+      ]
+    },
+    before_state: {
+      work_order_status: RepairBatchStatus.PENDING_INSPECTION,
+      inspection_result: null,
+      supervisor_signed: false
+    },
+    after_state: {
+      work_order_status: RepairBatchStatus.COMPLETED,
+      inspection_result: InspectionResult.PASSED,
+      supervisor_signed: true,
+      completed_at: '2026-08-24T09:05:40Z'
+    }
   }
 ]
+
+
 
 
 
