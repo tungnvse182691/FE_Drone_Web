@@ -36,6 +36,7 @@ import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
+import { AuditTrail } from './pages/(sup)/AuditTrail'
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
@@ -87,6 +88,8 @@ export const App: React.FC = () => {
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
           <Route path="research-validation" element={<ResearchValidation />} />
           <Route path="rpt-09" element={<ResearchValidation />} />
+          <Route path="audit-trail" element={<AuditTrail />} />
+          <Route path="rpt-10" element={<AuditTrail />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
           <Route path="notifications" element={<NotificationsHandoffHub />} />
@@ -123,6 +126,8 @@ export const App: React.FC = () => {
           <Route path="field-acceptance" element={<FieldAcceptance />} />
           <Route path="research-validation" element={<ResearchValidation />} />
           <Route path="rpt-09" element={<ResearchValidation />} />
+          <Route path="audit-trail" element={<AuditTrail />} />
+          <Route path="rpt-10" element={<AuditTrail />} />
           <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="reports" element={<RiskAnalytics />} />

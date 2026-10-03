@@ -14,7 +14,9 @@ import {
   FPFNInspectorItem,
   ValidationBenchmarkRun,
   MeasurementValidationSample,
-  MeasurementValidationRun
+  MeasurementValidationRun,
+  AuditEvent,
+  AuditTrailStats
 } from '../../types/domain'
 
 // =============================================================================
@@ -1373,5 +1375,259 @@ export const mockValidationBenchmarks: ValidationBenchmarkRun[] = [
     log_output: 'Lỗi CUDA out of memory trong quá trình trích xuất đặc trưng ảnh độ phân giải 4K.'
   }
 ]
+
+// =============================================================================
+// 17. RPT-10: NHẬT KÝ KIỂM TOÁN VÀ TRUY VẾT BẤT BIẾN (FR-34, US-29, BR-45)
+// =============================================================================
+export const mockAuditStats: AuditTrailStats = {
+  total_records: 14820,
+  records_24h: 142,
+  critical_actions_count: 18,
+  concurrency_conflicts_count: 4,
+  integrity_status: '100% SHA-256 Khớp',
+  merkle_tree_status: 'Chuỗi liên kết Merkle Tree hợp lệ • Không bị can thiệp',
+  retention_compliance: 'Lưu trữ tối thiểu hết bảo hành + 5 năm (BR-45)'
+}
+
+export const mockAuditEvents: AuditEvent[] = [
+  {
+    id: 'audit-01',
+    trace_id: 'tr-9f8e21a4-c7',
+    timestamp_local: '21:42:15 25/08/2026',
+    timestamp_utc: '2026-08-25T14:42:15.892Z',
+    actor_id: 'usr-sup-01',
+    actor_name: 'Nguyễn Văn An',
+    actor_role: 'SUPERVISOR',
+    actor_role_label: '[SUPERVISOR]',
+    actor_initials: 'VA',
+    action_type: 'APPROVE_ITEM',
+    action_label_vi: 'Phê duyệt hạng mục',
+    action_badge_style: 'bg-[#EDF7ED] text-[#1B5E20] border-[#1B5E20]/20',
+    entity_type: 'WORK_PACKAGE_ITEM',
+    entity_id: 'item-def-089',
+    entity_name: 'DEF-089 (Gói PKG-08)',
+    entity_location: 'Km 1032+200 Phải',
+    ip_address: '14.232.18.91',
+    device_info: 'macOS / Chrome 127',
+    is_critical: false,
+    digital_signature: {
+      provider: 'Viettel-CA',
+      serial: 'Serial #5408-A91B',
+      timestamp: '2026-08-25T14:42:15.910Z',
+      is_valid: true
+    },
+    change_reason: 'Nghiệm thu khối lượng đào vét bù và chấp thuận định mức vật liệu',
+    before_version: 'v1.2',
+    after_version: 'v1.3',
+    before_state: {
+      status: 'PENDING_APPROVAL',
+      depth_cm: 5.0,
+      approved_cost_vnd: 0,
+      supervisor_signed: false
+    },
+    after_state: {
+      status: 'APPROVED',
+      depth_cm: 6.5,
+      approved_cost_vnd: 45000000,
+      supervisor_signed: true
+    },
+    sha256_checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    merkle_verified: true
+  },
+  {
+    id: 'audit-02',
+    trace_id: 'tr-8a2b55f1-3d',
+    timestamp_local: '18:30:10 25/08/2026',
+    timestamp_utc: '2026-08-25T11:30:10.120Z',
+    actor_id: 'usr-pm-01',
+    actor_name: 'Đỗ Quốc Hoàng',
+    actor_role: 'PM',
+    actor_role_label: '[PM DỰ ÁN]',
+    actor_initials: 'QH',
+    action_type: 'CLOSE_FAST_TRACK',
+    action_label_vi: 'Đóng Fast-Track',
+    action_badge_style: 'bg-[#EAF4FB] text-[#2B78C5] border-[#2B78C5]/20',
+    entity_type: 'DEFECT',
+    entity_id: 'def-104',
+    entity_name: 'Defect DEF-104',
+    entity_location: 'Km 1025+400 Làn 1',
+    ip_address: '118.70.192.4',
+    device_info: 'Android / Field App',
+    is_critical: false,
+    change_reason: 'Đã hoàn tất khắc phục sự cố cấp tốc ngoài hiện trường và gửi thông báo Giám sát',
+    before_version: 'v2.0',
+    after_version: 'v2.1',
+    before_state: {
+      status: 'IN_PROGRESS',
+      fast_track_eligible: true,
+      pm_closed: false,
+      repaired_at: null
+    },
+    after_state: {
+      status: 'CLOSED',
+      fast_track_eligible: true,
+      pm_closed: true,
+      repaired_at: '2026-08-25T11:28:00Z'
+    },
+    sha256_checksum: 'a87ff9e4210dcb881a7b8e519c3620f4f9d2c5e88849b2914ca8b10f54316d2e',
+    merkle_verified: true
+  },
+  {
+    id: 'audit-03',
+    trace_id: 'tr-7e3d12c8-99',
+    timestamp_local: '15:15:42 25/08/2026',
+    timestamp_utc: '2026-08-25T08:15:42.441Z',
+    actor_id: 'usr-sup-01',
+    actor_name: 'Nguyễn Văn An',
+    actor_role: 'SUPERVISOR',
+    actor_role_label: '[SUPERVISOR]',
+    actor_initials: 'VA',
+    action_type: 'REJECT_PROPOSAL',
+    action_label_vi: 'Từ chối gói đề xuất',
+    action_badge_style: 'bg-[#FEE2E2] text-[#DC2626] border-[#DC2626]/20',
+    entity_type: 'PROPOSAL',
+    entity_id: 'pkg-2026-09',
+    entity_name: 'Gói PKG-2026-09',
+    entity_location: 'Nứt rạn ta-luy âm',
+    ip_address: '14.232.18.91',
+    device_info: 'macOS / Chrome 127',
+    is_critical: true,
+    digital_signature: {
+      provider: 'Viettel-CA',
+      serial: 'Serial #5408-A91B',
+      timestamp: '2026-08-25T08:15:42.502Z',
+      is_valid: true
+    },
+    change_reason: 'Dự toán vượt định mức đơn giá vật liệu cấp phối đá dăm loại 1 theo quy chuẩn',
+    before_version: 'v1.0',
+    after_version: 'v1.1',
+    before_state: {
+      status: 'SUBMITTED',
+      estimated_cost_vnd: 125000000,
+      rejection_count: 0
+    },
+    after_state: {
+      status: 'REJECTED',
+      estimated_cost_vnd: 125000000,
+      rejection_count: 1,
+      rejection_reason: 'Đơn giá vật liệu không phù hợp'
+    },
+    sha256_checksum: '4c731e809b43928e0fd11c81ef44e69d2a096317bc84d84f8803e5cbb53e19a4',
+    merkle_verified: true
+  },
+  {
+    id: 'audit-04',
+    trace_id: 'tr-4d7e99f0-8a',
+    timestamp_local: '11:02:18 25/08/2026',
+    timestamp_utc: '2026-08-25T04:02:18.005Z',
+    actor_id: 'usr-pm-01',
+    actor_name: 'Đỗ Quốc Hoàng',
+    actor_role: 'PM',
+    actor_role_label: '[PM DỰ ÁN]',
+    actor_initials: 'QH',
+    action_type: 'CONFIRM_ALIGNMENT',
+    action_label_vi: 'Khóa tim tuyến',
+    action_badge_style: 'bg-[#F3E8FF] text-[#7E22CE] border-[#7E22CE]/20',
+    entity_type: 'ALIGNMENT',
+    entity_id: 'align-ql1a-02',
+    entity_name: 'Tuyến QL1A-02',
+    entity_location: 'EPSG:4326 Datum VN',
+    ip_address: '14.232.18.91',
+    device_info: 'macOS / Chrome 127',
+    is_critical: true,
+    change_reason: 'Khóa tim tuyến và phân chia 480 tấm bê tông bảo hành sau khảo sát bay chụp kỳ 3',
+    before_version: 'v2.1',
+    after_version: 'v3.0',
+    before_state: {
+      is_locked: false,
+      confirmed_slabs_count: 350,
+      pm_confirmed: false
+    },
+    after_state: {
+      is_locked: true,
+      confirmed_slabs_count: 480,
+      pm_confirmed: true,
+      locked_at: '2026-08-25T04:02:18Z'
+    },
+    sha256_checksum: '7b91d29fae804f58c73516eb431945f3962638848f07ad0e227e4e8ec67389c1',
+    merkle_verified: true
+  },
+  {
+    id: 'audit-05',
+    trace_id: 'tr-3c1a8842-fa',
+    timestamp_local: '09:40:05 25/08/2026',
+    timestamp_utc: '2026-08-25T02:40:05.611Z',
+    actor_id: 'usr-sys-01',
+    actor_name: 'Admin Hệ Thống',
+    actor_role: 'LEGAL_ADMIN',
+    actor_role_label: '[LEGAL ADMIN]',
+    actor_initials: 'SYS',
+    action_type: 'LOCK_LEGAL_HOLD',
+    action_label_vi: 'Khóa Legal Hold',
+    action_badge_style: 'bg-[#FEF3C7] text-[#D97706] border-[#D97706]/20',
+    entity_type: 'LEGAL_HOLD',
+    entity_id: 'hold-ql1a-phase1',
+    entity_name: 'Hồ sơ đợt 1 QL1A',
+    entity_location: 'Thanh tra Bộ GTVT',
+    ip_address: '127.0.0.1',
+    device_info: 'VPN Dedicated Node',
+    is_critical: true,
+    change_reason: 'Kích hoạt Legal Hold theo yêu cầu đối chiếu thanh tra, cấm xóa vĩnh viễn theo BR-45',
+    before_version: 'v1.0',
+    after_version: 'v1.1',
+    before_state: {
+      is_legal_hold: false,
+      deletion_allowed: true,
+      case_dispute: false
+    },
+    after_state: {
+      is_legal_hold: true,
+      deletion_allowed: false,
+      case_dispute: true,
+      hold_reference: 'CV-8492/BGTVT-TTr'
+    },
+    sha256_checksum: '9f83a21bc984210e54d89842512f4581297e682d3345892015faeb981640a331',
+    merkle_verified: true
+  },
+  {
+    id: 'audit-06',
+    trace_id: 'tr-1a4c88b2-e1',
+    timestamp_local: '08:12:30 25/08/2026',
+    timestamp_utc: '2026-08-25T01:12:30.980Z',
+    actor_id: 'usr-crew-01',
+    actor_name: 'Lê Văn Hùng',
+    actor_role: 'CREW_LEAD',
+    actor_role_label: '[CREW LEAD]',
+    actor_initials: 'LH',
+    action_type: 'UPLOAD_EVIDENCE',
+    action_label_vi: 'Tải lên bằng chứng',
+    action_badge_style: 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7]/20',
+    entity_type: 'EVIDENCE',
+    entity_id: 'ev-batch-089',
+    entity_name: '4 Ảnh DEF-089',
+    entity_location: 'EXIF GPS Validated',
+    ip_address: '42.115.88.23',
+    device_info: 'iOS Field Tablet',
+    is_critical: false,
+    is_concurrency_conflict: true, // Đã hòa giải lỗi 412
+    change_reason: 'Tải ảnh nghiệm thu hiện trường kèm chữ ký số và tọa độ EXIF đã xác thực',
+    before_version: 'v1.0',
+    after_version: 'v1.1',
+    before_state: {
+      evidence_count: 0,
+      exif_validated: false,
+      conflict_reconciled: false
+    },
+    after_state: {
+      evidence_count: 4,
+      exif_validated: true,
+      conflict_reconciled: true,
+      sha256_manifest: '47d3c01828...'
+    },
+    sha256_checksum: '319d8542cfa87019842f9b8c0451982740fa1896e38450125bb742910fa84261',
+    merkle_verified: true
+  }
+]
+
 
 

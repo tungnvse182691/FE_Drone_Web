@@ -395,3 +395,61 @@ export interface ValidationBenchmarkRun {
   progress_percent?: number
   log_output?: string
 }
+
+// ==========================================
+// RPT-10: NHẬT KÝ KIỂM TOÁN & BẢN GHI BẤT BIẾN (FR-34, US-29, BR-45)
+// ==========================================
+export interface AuditEvent {
+  id: string
+  trace_id: string // Event / Trace ID chống trùng lặp (Dedup ID)
+  timestamp_local: string // GMT+7
+  timestamp_utc: string // ISO 8601 UTC
+  actor_id: string
+  actor_name: string
+  actor_role: string // SUPERVISOR, PM, CREW_LEAD, LEGAL_ADMIN, SYSTEM_AI
+  actor_role_label: string
+  actor_initials: string
+  action_type: 
+    | 'APPROVE_ITEM'
+    | 'CLOSE_FAST_TRACK'
+    | 'REJECT_PROPOSAL'
+    | 'CONFIRM_ALIGNMENT'
+    | 'LOCK_LEGAL_HOLD'
+    | 'UPLOAD_EVIDENCE'
+    | 'ASSIGN_CREW'
+    | 'UPDATE_POLICY'
+  action_label_vi: string
+  action_badge_style: string // style màu tương ứng
+  entity_type: 'WORK_PACKAGE_ITEM' | 'DEFECT' | 'PROPOSAL' | 'ALIGNMENT' | 'LEGAL_HOLD' | 'EVIDENCE' | 'POLICY'
+  entity_id: string
+  entity_name: string
+  entity_location?: string
+  ip_address: string
+  device_info: string
+  is_critical: boolean // Thao tác nhạy cảm
+  is_concurrency_conflict?: boolean // HTTP 412 Concurrency resolved
+  digital_signature?: {
+    provider: string
+    serial: string
+    timestamp: string
+    is_valid: boolean
+  }
+  change_reason?: string
+  before_version?: string
+  after_version?: string
+  before_state: Record<string, any>
+  after_state: Record<string, any>
+  sha256_checksum: string // Chuỗi mã băm SHA-256 bảo vệ tính toàn vẹn
+  merkle_verified: boolean // Chuỗi cây Merkle hợp lệ
+}
+
+export interface AuditTrailStats {
+  total_records: number
+  records_24h: number
+  critical_actions_count: number
+  concurrency_conflicts_count: number
+  integrity_status: string
+  merkle_tree_status: string
+  retention_compliance: string
+}
+

@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   Zap,
   Route,
-  Sparkles
+  Sparkles,
+  History
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -31,6 +32,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Rà soát kết quả & Công bố', path: '/pm/acceptance', icon: ShieldCheck },
     { label: 'Đồng bộ & Xử lý xung đột', path: '/pm/field-tasks', icon: ClipboardList },
     { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/pm/research-validation', icon: Sparkles },
+    { label: 'Nhật ký kiểm toán (RPT-10)', path: '/pm/audit-trail', icon: History },
     { label: 'Báo cáo KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
   ]
 
@@ -44,6 +46,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Nghiệm thu chất lượng & Đóng vụ việc', path: '/sup/acceptance', icon: ShieldCheck },
     { label: 'Đồng bộ & Xử lý xung đột', path: '/sup/field-tasks', icon: ClipboardList },
     { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/sup/research-validation', icon: Sparkles },
+    { label: 'Nhật ký kiểm toán (RPT-10)', path: '/sup/audit-trail', icon: History },
     { label: 'Báo cáo rủi ro & Hồ sơ xuất', path: '/sup/risk-analytics', icon: BarChart3 },
   ]
 
