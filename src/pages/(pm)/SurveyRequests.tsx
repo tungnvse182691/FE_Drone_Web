@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { surveyService, type SurveyMissionItem as SurveyMission } from '../../api/services'
 import {
   PlaneTakeoff,
   PlusCircle,
@@ -21,28 +22,16 @@ import {
   SlidersHorizontal,
   FolderKanban,
   FileCheck2,
-  Info
+  Info,
+  Play,
+  Cpu,
+  Radio,
+  Loader2,
+  Activity,
+  X,
+  Check,
+  ShieldCheck
 } from 'lucide-react'
-
-interface SurveyMission {
-  id: string
-  code: string
-  title: string
-  project_id: string
-  project_name: string
-  start_km: string
-  end_km: string
-  flight_date: string
-  pilot_name: string
-  drone_model: string
-  total_photos: number
-  gsd_resolution: string
-  ai_defects_count: number
-  ai_pending_count: number
-  coverage_percent: number
-  status: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
-  status_label: string
-}
 
 export const SurveyRequests: React.FC = () => {
   const navigate = useNavigate()
@@ -52,85 +41,104 @@ export const SurveyRequests: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [missions, setMissions] = useState<SurveyMission[]>(() => surveyService.getSurveys())
 
-  const missions: SurveyMission[] = [
-    {
-      id: 'srv-01',
-      code: '#MS-2026-0924',
-      title: 'Bay quét Baseline định kỳ đợt 4 & Tầm soát nứt lún',
-      project_id: 'prj-ql1a-02',
-      project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-      start_km: 'Km 1024+000',
-      end_km: 'Km 1030+000',
-      flight_date: '24/09/2026',
-      pilot_name: 'Hoàng Quốc Bảo (Pilot RTK Level 3)',
-      drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-      total_photos: 1920,
-      gsd_resolution: '1.12 cm/pixel',
-      ai_defects_count: 8,
-      ai_pending_count: 8,
-      coverage_percent: 87,
-      status: 'PENDING_AI_REVIEW',
-      status_label: 'Chờ thẩm định AI Canvas (WF-09)'
-    },
-    {
-      id: 'srv-02',
-      code: '#MS-2026-0810',
-      title: 'Bay kiểm định mốc bàn giao lý trình Km 1030 – Km 1036',
-      project_id: 'prj-ql1a-02',
-      project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-      start_km: 'Km 1030+000',
-      end_km: 'Km 1036+500',
-      flight_date: '10/08/2026',
-      pilot_name: 'Lê Hoàng Long (Drone Operator)',
-      drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-      total_photos: 1450,
-      gsd_resolution: '1.20 cm/pixel',
-      ai_defects_count: 14,
-      ai_pending_count: 0,
-      coverage_percent: 98,
-      status: 'BASELINE_LOCKED',
-      status_label: 'Đã khóa Baseline'
-    },
-    {
-      id: 'srv-03',
-      code: '#MS-2026-0705',
-      title: 'Bay lập Baseline dữ liệu ban đầu toàn tuyến 21.5 km',
-      project_id: 'prj-ql1a-02',
-      project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-      start_km: 'Km 1024+000',
-      end_km: 'Km 1045+500',
-      flight_date: '05/07/2026',
-      pilot_name: 'Nguyễn Tiến Dũng',
-      drone_model: 'DJI Phantom 4 RTK',
-      total_photos: 2840,
-      gsd_resolution: '1.35 cm/pixel',
-      ai_defects_count: 22,
-      ai_pending_count: 0,
-      coverage_percent: 96,
-      status: 'BASELINE_LOCKED',
-      status_label: 'Đã khóa Baseline'
-    },
-    {
-      id: 'srv-04',
-      code: '#MS-2026-1012',
-      title: 'Kế hoạch bay kiểm tra hư hỏng sau đợt mưa bão số 4',
-      project_id: 'prj-ql1a-02',
-      project_name: 'Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)',
-      start_km: 'Km 1036+500',
-      end_km: 'Km 1042+000',
-      flight_date: '12/10/2026 (Dự kiến)',
-      pilot_name: 'Hoàng Quốc Bảo (Pilot RTK Level 3)',
-      drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
-      total_photos: 0,
-      gsd_resolution: '1.15 cm/pixel',
-      ai_defects_count: 0,
-      ai_pending_count: 0,
-      coverage_percent: 0,
-      status: 'SCHEDULED',
-      status_label: 'Đã lên lịch bay'
+  // Reactive listener for localStorage updates across components
+  useEffect(() => {
+    const handleStateChange = () => {
+      setMissions(surveyService.getSurveys())
     }
-  ]
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
+  }, [])
+
+  // --- Drone Flight Simulator State (Thiếu 3) ---
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false)
+  const [selectedMissionForSim, setSelectedMissionForSim] = useState<SurveyMission | null>(null)
+  const [simStep, setSimStep] = useState<'IDLE' | 'FLYING' | 'INGESTING' | 'AI_SCANNING' | 'COMPLETED'>('IDLE')
+  const [simFlightProgress, setSimFlightProgress] = useState(0)
+  const [simPhotosCount, setSimPhotosCount] = useState(0)
+  const [simDefectCount, setSimDefectCount] = useState(0)
+  const [simAltitude, setSimAltitude] = useState(65.0)
+  const [simSpeed, setSimSpeed] = useState(5.4)
+  const [simBattery, setSimBattery] = useState(96)
+  const [simTimerId, setSimTimerId] = useState<NodeJS.Timeout | null>(null)
+
+  // Mở modal mô phỏng chuyến bay Drone
+  const handleOpenSimulator = (mission: SurveyMission) => {
+    setSelectedMissionForSim(mission)
+    setSimStep('IDLE')
+    setSimFlightProgress(0)
+    setSimPhotosCount(0)
+    setSimDefectCount(0)
+    setSimAltitude(65.0)
+    setSimSpeed(5.4)
+    setSimBattery(96)
+    setIsSimulatorOpen(true)
+  }
+
+  // Khởi động chuỗi mô phỏng tự động
+  const handleRunSimulation = () => {
+    if (!selectedMissionForSim) return
+    setSimStep('FLYING')
+    setSimFlightProgress(5)
+
+    // Phase 1: Fly & Waypoints telemetry (0-100% trong 2s)
+    let p = 5
+    const flyInterval = setInterval(() => {
+      p += 15
+      if (p >= 100) {
+        clearInterval(flyInterval)
+        setSimFlightProgress(100)
+        setSimStep('INGESTING')
+
+        // Phase 2: Ingestion 1920 4K photos (trong 2s)
+        let ph = 0
+        const ingestInterval = setInterval(() => {
+          ph += 240
+          if (ph >= 1920) {
+            ph = 1920
+            clearInterval(ingestInterval)
+            setSimPhotosCount(1920)
+            setSimStep('AI_SCANNING')
+
+            // Phase 3: AI YOLOv8 + SAHI scan defects (trong 1.8s)
+            let def = 0
+            const aiInterval = setInterval(() => {
+              def += 2
+              if (def >= 8) {
+                def = 8
+                clearInterval(aiInterval)
+                setSimDefectCount(8)
+                setSimStep('COMPLETED')
+
+                // Update storage state via surveyService
+                const updated = surveyService.simulateDroneFlightCompletion(selectedMissionForSim.id)
+                setMissions(surveyService.getSurveys())
+                if (updated) {
+                  setSelectedMissionForSim(updated)
+                }
+              } else {
+                setSimDefectCount(def)
+              }
+            }, 350)
+          } else {
+            setSimPhotosCount(ph)
+          }
+        }, 150)
+      } else {
+        setSimFlightProgress(p)
+        setSimBattery((prev) => Math.max(82, prev - 1))
+      }
+    }, 200)
+
+    setSimTimerId(flyInterval)
+  }
+
+  const handleCloseSimulator = () => {
+    if (simTimerId) clearInterval(simTimerId)
+    setIsSimulatorOpen(false)
+  }
 
   const filteredMissions = missions.filter((m) => {
     if (activeTab === 'PENDING' && m.status !== 'PENDING_AI_REVIEW') return false
@@ -467,6 +475,20 @@ export const SurveyRequests: React.FC = () => {
                     {/* Action Button */}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
+                        {survey.status === 'SCHEDULED' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenSimulator(survey)
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                            title="Kích hoạt mô phỏng Drone bay hoàn tất và AI quét lỗi"
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            <span>Mô phỏng bay xong</span>
+                          </button>
+                        )}
                         {isNeedReview ? (
                           <button
                             type="button"
@@ -512,6 +534,270 @@ export const SurveyRequests: React.FC = () => {
           <span className="font-mono text-slate-400">Hiển thị {filteredMissions.length} / {missions.length} nhiệm vụ</span>
         </div>
       </div>
+
+      {/* --- DRONE FLIGHT SIMULATOR MODAL (Thiếu 3) --- */}
+      {isSimulatorOpen && selectedMissionForSim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-slate-900 text-white px-6 py-4.5 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
+                  <Radio className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-white tracking-tight">
+                      Mô Phỏng Chuyến Bay Drone (Flight Simulator)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
+                      RTK FIX • {selectedMissionForSim.code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Mô phỏng quá trình cất cánh, thu nạp 1,920 không ảnh 4K và kích hoạt pipeline AI Road-YOLOv9
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseSimulator}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Mission Summary Banner */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">{selectedMissionForSim.title}</div>
+                  <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                    {selectedMissionForSim.project_name} • {selectedMissionForSim.start_km} → {selectedMissionForSim.end_km}
+                  </div>
+                  <div className="text-[11px] text-slate-600 mt-1 flex items-center gap-2">
+                    <span>Phi công: <strong>{selectedMissionForSim.pilot_name}</strong></span>
+                    <span>•</span>
+                    <span>Thiết bị: <strong>{selectedMissionForSim.drone_model}</strong></span>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                    selectedMissionForSim.status === 'PENDING_AI_REVIEW'
+                      ? 'bg-amber-100 text-[#8F7212] border-amber-300'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  }`}>
+                    {selectedMissionForSim.status === 'PENDING_AI_REVIEW' ? 'Chờ Thẩm Định AI' : 'Đang Lên Lịch (SCHEDULED)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Telemetry Display */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-900 text-white rounded-xl p-4 font-mono text-xs border border-slate-800">
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Cao Độ (Altitude)</div>
+                  <div className="text-base font-bold text-indigo-400 mt-0.5">{simAltitude.toFixed(1)} m</div>
+                  <div className="text-[9px] text-slate-500">AGL chuẩn RTK</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Tốc Độ Bay</div>
+                  <div className="text-base font-bold text-emerald-400 mt-0.5">{simSpeed.toFixed(1)} m/s</div>
+                  <div className="text-[9px] text-slate-500">Cruise Speed</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ảnh Thu Nạp</div>
+                  <div className="text-base font-bold text-amber-400 mt-0.5">{simPhotosCount} / 1,920</div>
+                  <div className="text-[9px] text-slate-500">GSD: 1.15 cm/pixel</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider">Pin Thiết Bị</div>
+                  <div className="text-base font-bold text-cyan-400 mt-0.5">{simBattery}%</div>
+                  <div className="text-[9px] text-slate-500">TB30 Intelligent Bat</div>
+                </div>
+              </div>
+
+              {/* Progress Steps Timeline */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>Tiến Trình Chuyến Bay & Pipeline AI</span>
+                  <span className="text-indigo-600 font-mono">
+                    {simStep === 'IDLE' && 'Sẵn sàng khởi động'}
+                    {simStep === 'FLYING' && 'Giai đoạn 1/3: Bay quét hành lang'}
+                    {simStep === 'INGESTING' && 'Giai đoạn 2/3: Truyền ảnh trực giao 4K'}
+                    {simStep === 'AI_SCANNING' && 'Giai đoạn 3/3: Pipeline AI phát hiện lỗi'}
+                    {simStep === 'COMPLETED' && 'Hoàn thành 100%'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Step 1 */}
+                  <div className={`p-3 rounded-xl border text-xs transition-all ${
+                    simStep === 'FLYING'
+                      ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                      : simFlightProgress === 100
+                      ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-400'
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold mb-1">
+                      {simFlightProgress === 100 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : simStep === 'FLYING' ? (
+                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                      ) : (
+                        <PlaneTakeoff className="w-4 h-4 text-slate-400" />
+                      )}
+                      <span>1. Quét Waypoints RTK</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Tự động bay theo tọa độ trắc dọc Km 1036 → Km 1042.
+                    </p>
+                    {simStep === 'FLYING' && (
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="bg-indigo-600 h-full transition-all duration-200"
+                          style={{ width: `${simFlightProgress}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className={`p-3 rounded-xl border text-xs transition-all ${
+                    simStep === 'INGESTING'
+                      ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                      : simPhotosCount === 1920
+                      ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-400'
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold mb-1">
+                      {simPhotosCount === 1920 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : simStep === 'INGESTING' ? (
+                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                      ) : (
+                        <Camera className="w-4 h-4 text-slate-400" />
+                      )}
+                      <span>2. Nạp Ảnh Trực Giao</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Nạp 1,920 ảnh 4K và trích xuất EXIF GPS, độ cao, góc chụp.
+                    </p>
+                    {simStep === 'INGESTING' && (
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="bg-indigo-600 h-full transition-all duration-150"
+                          style={{ width: `${(simPhotosCount / 1920) * 100}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className={`p-3 rounded-xl border text-xs transition-all ${
+                    simStep === 'AI_SCANNING'
+                      ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                      : simStep === 'COMPLETED'
+                      ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-400'
+                  }`}>
+                    <div className="flex items-center gap-2 font-bold mb-1">
+                      {simStep === 'COMPLETED' ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : simStep === 'AI_SCANNING' ? (
+                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                      ) : (
+                        <Cpu className="w-4 h-4 text-slate-400" />
+                      )}
+                      <span>3. Road-YOLOv9 Quét Lỗi</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Phát hiện vết nứt, ổ gà, lún vệt bánh xe ({simDefectCount} khiếm khuyết).
+                    </p>
+                    {simStep === 'AI_SCANNING' && (
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="bg-amber-500 h-full transition-all duration-200"
+                          style={{ width: `${(simDefectCount / 8) * 100}%` }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Completion Success Callout */}
+              {simStep === 'COMPLETED' && (
+                <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 flex items-center justify-between gap-4 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-emerald-900">
+                        Chuyến bay mô phỏng đã hoàn tất thành công!
+                      </div>
+                      <div className="text-xs text-emerald-700 mt-0.5">
+                        Nhiệm vụ [{selectedMissionForSim.code}] đã chuyển sang <strong>PENDING_AI_REVIEW</strong>. Đã sẵn sàng mở Canvas để Project Manager thẩm định bounding box!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handleCloseSimulator}
+                className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-colors"
+              >
+                Đóng
+              </button>
+
+              <div className="flex items-center gap-2">
+                {simStep === 'IDLE' && (
+                  <button
+                    type="button"
+                    onClick={handleRunSimulation}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Bắt Đầu Mô Phỏng Bay Ngay</span>
+                  </button>
+                )}
+
+                {(simStep === 'FLYING' || simStep === 'INGESTING' || simStep === 'AI_SCANNING') && (
+                  <button
+                    disabled
+                    type="button"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-300 text-slate-600 text-xs font-bold cursor-not-allowed"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang Mô Phỏng & Xử Lý Pipeline...</span>
+                  </button>
+                )}
+
+                {simStep === 'COMPLETED' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCloseSimulator()
+                      navigate(`${basePath}/surveys/${selectedMissionForSim.id}/review`)
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Mở Canvas Thẩm Định AI (WF-09) ➔</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

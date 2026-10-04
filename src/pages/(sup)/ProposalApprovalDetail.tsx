@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { repairService } from '../../api/services'
 import { mockRepairBatches } from '../../data/mockData'
 import {
   ChevronRight,
@@ -384,7 +385,15 @@ export const ProposalApprovalDetail: React.FC = () => {
   // Package Data State
   const [packageCode] = useState(matchedBatch?.code || (id?.toUpperCase().startsWith('PKG-') ? id.toUpperCase() : `PKG-2026-${id?.toUpperCase() || '05'}`))
   const [packageName] = useState(matchedBatch?.name || 'Gói đề xuất sửa chữa mặt đường BTXM')
-  const [items, setItems] = useState<RepairItemDetail[]>(INITIAL_ITEMS)
+  const [items, setItems] = useState<RepairItemDetail[]>(() => repairService.getItems(packageCode))
+
+  useEffect(() => {
+    const handleStateChange = () => {
+      setItems(repairService.getItems(packageCode))
+    }
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
+  }, [packageCode])
 
   // Filter State
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REQUEST_EVIDENCE' | 'REJECTED'>(
@@ -490,21 +499,14 @@ export const ProposalApprovalDetail: React.FC = () => {
 
   // --- Supervisor Decision Handlers ---
   const handleQuickApproveItem = (itemId: string) => {
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.id === itemId) {
-          const autoCrew = it.assigned_crew || 'Tổ thi công Asphalt 01'
-          return {
-            ...it,
-            status: 'APPROVED',
-            status_label: 'APPROVED',
-            assigned_crew: autoCrew,
-            supervisor_notes: 'Đã phê duyệt thông qua phương án kỹ thuật và khối lượng bóc tách.'
-          }
-        }
-        return it
-      })
-    )
+    const autoCrew = 'Tổ thi công Asphalt 01'
+    repairService.updateItemDecision(packageCode, itemId, {
+      status: 'APPROVED',
+      status_label: 'APPROVED',
+      assigned_crew: autoCrew,
+      supervisor_notes: 'Đã phê duyệt thông qua phương án kỹ thuật và khối lượng bóc tách.'
+    })
+    setItems(repairService.getItems(packageCode))
     showToast(`Hạng mục ${itemId.toUpperCase()} đã được Supervisor phê duyệt (APPROVED)!`)
   }
 
@@ -550,22 +552,15 @@ export const ProposalApprovalDetail: React.FC = () => {
     if (modalFeedbackType === 'RECONSIDER') nextStatus = 'REQUEST_RECONSIDER'
     if (modalFeedbackType === 'REJECT') nextStatus = 'REJECTED'
 
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.id === activeModalItem.id) {
-          return {
-            ...it,
-            status: nextStatus,
-            status_label: nextStatus,
-            assigned_crew: nextStatus === 'REJECTED' ? '' : it.assigned_crew,
-            supervisor_notes: modalNotes,
-            evidence_directives: selectedDirectivesList,
-            feedback_type: modalFeedbackType
-          }
-        }
-        return it
-      })
-    )
+    repairService.updateItemDecision(packageCode, activeModalItem.id, {
+      status: nextStatus,
+      status_label: nextStatus,
+      assigned_crew: nextStatus === 'REJECTED' ? '' : activeModalItem.assigned_crew,
+      supervisor_notes: modalNotes,
+      evidence_directives: selectedDirectivesList,
+      feedback_type: modalFeedbackType
+    })
+    setItems(repairService.getItems(packageCode))
 
     const labelMap = {
       EVIDENCE: 'yêu cầu bổ sung bằng chứng (REQUEST_EVIDENCE)',
@@ -579,39 +574,31 @@ export const ProposalApprovalDetail: React.FC = () => {
 
   // Batch Approve All
   const handleBatchApproveAll = () => {
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.status !== 'APPROVED') {
-          return {
-            ...it,
-            status: 'APPROVED',
-            status_label: 'APPROVED',
-            assigned_crew: it.assigned_crew || 'Tổ thi công Asphalt 01',
-            supervisor_notes: 'Đã thẩm duyệt phê duyệt hàng loạt thông qua.'
-          }
-        }
-        return it
-      })
-    )
+    items.forEach((it) => {
+      if (it.status !== 'APPROVED') {
+        repairService.updateItemDecision(packageCode, it.id, {
+          status: 'APPROVED',
+          status_label: 'APPROVED',
+          assigned_crew: it.assigned_crew || 'Tổ thi công Asphalt 01',
+          supervisor_notes: 'Đã thẩm duyệt phê duyệt hàng loạt thông qua.'
+        })
+      }
+    })
+    setItems(repairService.getItems(packageCode))
     setIsBatchApproveConfirmOpen(false)
     showToast('Đã phê duyệt nhanh toàn bộ các hạng mục hợp lệ trong gói đề xuất!')
   }
 
   // PM Assign Crew handler
   const handleCrewChange = (itemId: string, newCrew: string) => {
-    setItems((prev) =>
-      prev.map((it) => {
-        if (it.id === itemId) {
-          return { ...it, assigned_crew: newCrew }
-        }
-        return it
-      })
-    )
+    repairService.updateItemDecision(packageCode, itemId, { assigned_crew: newCrew })
+    setItems(repairService.getItems(packageCode))
     showToast(`Đã cập nhật phân công đội thi công: [${newCrew}] cho hạng mục!`)
   }
 
   // Dispatch Work Order submit
   const handleConfirmDispatch = () => {
+    repairService.dispatchPackage(packageCode, dispatchDeadline, dispatchNotice)
     setIsDispatchModalOpen(false)
     showToast(
       `Đã phát Lệnh công tác thi công (Work Order) thành công cho ${stats.approved} hạng mục đã APPROVED! Hạn hoàn thành: ${dispatchDeadline}`

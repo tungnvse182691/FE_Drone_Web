@@ -18,8 +18,6 @@ import { SurveyRequests } from './pages/(pm)/SurveyRequests'
 import { CreateSurvey } from './pages/(pm)/CreateSurvey'
 import { AIReviewInbox } from './pages/(pm)/AIReviewInbox'
 import { DefectDetailVerify } from './pages/(pm)/DefectDetailVerify'
-import { RepairBatching } from './pages/(pm)/RepairBatching'
-import { SubmitApproval } from './pages/(pm)/SubmitApproval'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
@@ -33,7 +31,6 @@ import { SupDashboard } from './pages/(sup)/SupDashboard'
 import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
-import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
 import { AuditTrail } from './pages/(sup)/AuditTrail'
@@ -70,7 +67,7 @@ export const App: React.FC = () => {
           <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
           <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
           <Route path="repair-batches/create" element={<Navigate to="/pm/proposals" replace />} />
-          <Route path="repair-batches/:id/submit" element={<SubmitApproval />} />
+          <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
           <Route path="repair-batches/assign" element={<AssignCrew />} />
           <Route path="field-tasks" element={<FieldTasks />} />
           <Route path="conflict-center" element={<FieldTasks />} />
@@ -128,7 +125,7 @@ export const App: React.FC = () => {
           <Route path="approvals/:id/reject" element={<BatchRejection />} />
           <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
           <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
-          <Route path="field-acceptance" element={<FieldAcceptance />} />
+          <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
           <Route path="research-validation" element={<ResearchValidation />} />
           <Route path="rpt-09" element={<ResearchValidation />} />
           <Route path="audit-trail" element={<AuditTrail />} />

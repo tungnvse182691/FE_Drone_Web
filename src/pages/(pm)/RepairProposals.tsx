@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Boxes,
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { repairService } from '../../api/services'
 
 // Interface cho Gói đề xuất sửa chữa kỹ thuật (Work Package / Repair Proposal)
 export interface ProposalWorkPackage {
@@ -416,242 +417,17 @@ export const RepairProposals: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   // Danh sách các gói đề xuất sửa chữa kỹ thuật phong phú (14 gói theo Stitch)
-  const [packages, setPackages] = useState<ProposalWorkPackage[]>([
-    {
-      id: 'pkg-08',
-      code: 'PKG-2026-08',
-      title: 'Khắc phục ổ gà & lún nứt đợt 3',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1024+000',
-      chainage_end: 'Km 1030+000',
-      chainage_display: 'Km 1024+000 - Km 1030+000',
-      segments_count: 5,
-      defect_count: 12,
-      defect_summary: '4 ổ gà, 6 nứt dọc, 2 lún bánh',
-      technical_scope: 'Cào bóc & thảm: 180 m²',
-      material_scope: 'Bê tông nhựa C19: 14 m³',
-      duration_days: 3,
-      date_range: '18/08 - 21/08/2026',
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: '18/08/2026 - 09:30',
-      status: 'SUBMITTED',
-      status_label: 'Chờ duyệt',
-      approved_items: 8,
-      total_items: 12,
-      contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
-    },
-    {
-      id: 'pkg-07',
-      code: 'PKG-2026-07',
-      title: 'Vá cào bóc thảm nhựa polime',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1033+500',
-      chainage_end: 'Km 1038+000',
-      chainage_display: 'Km 1033+500 - Km 1038+000',
-      segments_count: 3,
-      defect_count: 10,
-      defect_summary: '10 điểm hư hỏng mặt lớp trên',
-      technical_scope: 'Cào bóc thảm: 320 m²',
-      material_scope: 'Bù vênh lu lèn: 22 tấn',
-      duration_days: 2,
-      date_range: '16/08 - 18/08/2026',
-      created_by_name: 'Lê Văn Tùng (PM)',
-      created_by_initials: 'LT',
-      created_by_role: 'Kỹ sư cầu đường',
-      created_at: '16/08/2026 - 15:45',
-      status: 'DECIDED',
-      status_label: 'Đã phê duyệt',
-      approved_items: 10,
-      total_items: 10,
-      contractor_name: 'Xí nghiệp Cầu Đường 4'
-    },
-    {
-      id: 'pkg-09',
-      code: 'PKG-2026-09',
-      title: 'Xử lý nứt rạn mai rùa phân đoạn đèo',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1042+000',
-      chainage_end: 'Km 1045+500',
-      chainage_display: 'Km 1042+000 - Km 1045+500',
-      segments_count: 2,
-      defect_count: 6,
-      defect_summary: 'Nứt chân chim, rạn khối',
-      technical_scope: 'Trám vết nứt: 65 m',
-      material_scope: 'Nhựa polymer chèn khe',
-      duration_days: 1,
-      date_range: 'Dự kiến 22/08',
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: 'Hôm nay - 11:15',
-      status: 'DRAFT',
-      status_label: 'Bản nháp',
-      approved_items: 0,
-      total_items: 6,
-      contractor_name: 'Tổ duy tu bảo dưỡng đường bộ 03'
-    },
-    {
-      id: 'pkg-06',
-      code: 'PKG-2026-06',
-      title: 'Bảo trì khe co giãn & rãnh thoát nước bê tông',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1028+000',
-      chainage_end: 'Km 1028+000',
-      chainage_display: 'Km 1028+000',
-      segments_count: 1,
-      defect_count: 4,
-      defect_summary: 'Khe lún, rãnh sạt vỡ',
-      technical_scope: 'Thay khe co giãn: 12 m',
-      material_scope: 'Chốt thép & vữa đệm',
-      duration_days: 4,
-      date_range: '12/08 - 16/08/2026',
-      created_by_name: 'Lê Văn Tùng (PM)',
-      created_by_initials: 'LT',
-      created_by_role: 'Kỹ sư cầu đường',
-      created_at: '12/08/2026 - 08:00',
-      status: 'DISPATCHED',
-      status_label: 'Đang thi công',
-      approved_items: 4,
-      total_items: 4,
-      contractor_name: 'Đội thi công cơ giới Hoàng Hải'
-    },
-    {
-      id: 'pkg-05',
-      code: 'PKG-2026-05',
-      title: 'Xử lý võng nứt mặt đường đoạn trạm thu phí',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1025+400',
-      chainage_end: 'Km 1026+200',
-      chainage_display: 'Km 1025+400 - Km 1026+200',
-      segments_count: 2,
-      defect_count: 8,
-      defect_summary: '3 ổ gà L2, 5 vệt nứt ngang',
-      technical_scope: 'Cào bóc thảm bù: 210 m²',
-      material_scope: 'Bê tông nhựa chặt C12.5: 18 m³',
-      duration_days: 3,
-      date_range: '05/08 - 08/08/2026',
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: '05/08/2026 - 14:20',
-      status: 'DECIDED',
-      status_label: 'Đã phê duyệt',
-      approved_items: 8,
-      total_items: 8,
-      contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
-    },
-    {
-      id: 'pkg-04',
-      code: 'PKG-2026-04',
-      title: 'Tái tạo lớp ma sát & chống trơn trượt',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1039+000',
-      chainage_end: 'Km 1042+000',
-      chainage_display: 'Km 1039+000 - Km 1042+000',
-      segments_count: 4,
-      defect_count: 15,
-      defect_summary: 'Bong bật cốt liệu, mòn mặt đường',
-      technical_scope: 'Láng nhựa 2 lớp: 650 m²',
-      material_scope: 'Nhũ tương cải tiến polyme: 3.5 tấn',
-      duration_days: 5,
-      date_range: '28/07 - 02/08/2026',
-      created_by_name: 'Trần Văn Kiên (PM)',
-      created_by_initials: 'TK',
-      created_by_role: 'Kỹ sư hiện trường',
-      created_at: '28/07/2026 - 10:00',
-      status: 'DISPATCHED',
-      status_label: 'Đang thi công',
-      approved_items: 15,
-      total_items: 15,
-      contractor_name: 'Xí nghiệp Cầu Đường 4'
-    },
-    {
-      id: 'pkg-03',
-      code: 'PKG-2026-03',
-      title: 'Gia cố lề đường & xử lý rãnh dọc thoát nước',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1031+200',
-      chainage_end: 'Km 1033+000',
-      chainage_display: 'Km 1031+200 - Km 1033+000',
-      segments_count: 2,
-      defect_count: 7,
-      defect_summary: 'Sạt lở mép nhựa, lún mép rãnh',
-      technical_scope: 'Bê tông lề đúc sẵn: 45 m',
-      material_scope: 'Cấp phối đá dăm loại 1: 30 m³',
-      duration_days: 3,
-      date_range: '20/07 - 23/07/2026',
-      created_by_name: 'Lê Văn Tùng (PM)',
-      created_by_initials: 'LT',
-      created_by_role: 'Kỹ sư cầu đường',
-      created_at: '20/07/2026 - 16:30',
-      status: 'SUBMITTED',
-      status_label: 'Chờ duyệt',
-      approved_items: 5,
-      total_items: 7,
-      contractor_name: 'Đội cơ động khắc phục sự cố'
-    },
-    {
-      id: 'pkg-02',
-      code: 'PKG-2026-02',
-      title: 'Trám khe nứt bê tông xi măng tiếp giáp cống chui',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1027+100',
-      chainage_end: 'Km 1027+300',
-      chainage_display: 'Km 1027+100 - Km 1027+300',
-      segments_count: 1,
-      defect_count: 5,
-      defect_summary: 'Khe nứt biến dạng nhiệt',
-      technical_scope: 'Rót mastic bitum nóng: 35 m',
-      material_scope: 'Vật liệu chèn đàn hồi cao',
-      duration_days: 1,
-      date_range: '15/07/2026',
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: '15/07/2026 - 08:30',
-      status: 'DECIDED',
-      status_label: 'Đã phê duyệt',
-      approved_items: 5,
-      total_items: 5,
-      contractor_name: 'Tổ duy tu bảo dưỡng đường bộ 03'
-    },
-    {
-      id: 'pkg-01',
-      code: 'PKG-2026-01',
-      title: 'Đợt sửa chữa cấp bách nút giao cầu vượt',
-      route_id: 'QL1A_PK04',
-      route_name: 'QL1A - Giai đoạn 2',
-      chainage_start: 'Km 1024+200',
-      chainage_end: 'Km 1025+100',
-      chainage_display: 'Km 1024+200 - Km 1025+100',
-      segments_count: 2,
-      defect_count: 9,
-      defect_summary: 'Ổ gà sâu và bong tróc góc ngoặt',
-      technical_scope: 'Cào bóc thảm nhựa polime: 280 m²',
-      material_scope: 'Bê tông nhựa C19: 24 m³',
-      duration_days: 2,
-      date_range: '02/07 - 04/07/2026',
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: '02/07/2026 - 11:00',
-      status: 'DECIDED',
-      status_label: 'Đã phê duyệt',
-      approved_items: 9,
-      total_items: 9,
-      contractor_name: 'Tổ vá dặm cơ giới 01'
+  const [packages, setPackages] = useState<ProposalWorkPackage[]>(() => repairService.getPackages())
+
+  // Đồng bộ real-time giữa PM và Supervisor qua CustomEvent
+  useEffect(() => {
+    const handleStateChange = () => {
+      setPackages(repairService.getPackages())
     }
-  ])
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
+  }, [])
+
 
   // Trạng thái tìm kiếm & Lọc
   const [searchTerm, setSearchTerm] = useState('')
@@ -782,7 +558,8 @@ export const RepairProposals: React.FC = () => {
       contractor_name: formContractor
     }
 
-    setPackages((prev) => [newPackage, ...prev])
+    repairService.createPackage(newPackage)
+    setPackages(repairService.getPackages())
     setIsCreateModalOpen(false)
     setCurrentPage(1)
     showToast(
@@ -794,11 +571,8 @@ export const RepairProposals: React.FC = () => {
 
   // Khóa & Trình duyệt gói nháp
   const handleSubmitDraftPackage = (id: string, code: string) => {
-    setPackages((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: 'SUBMITTED', status_label: 'Chờ duyệt' } : p
-      )
-    )
+    repairService.submitPackage(id)
+    setPackages(repairService.getPackages())
     showToast(`Đã khóa hồ sơ và gửi gói [${code}] lên Giám sát trưởng phê duyệt!`)
   }
 

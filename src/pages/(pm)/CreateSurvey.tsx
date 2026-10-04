@@ -22,6 +22,7 @@ import {
   Camera,
   Compass
 } from 'lucide-react'
+import { surveyService } from '../../api/services'
 
 // Cấu hình tọa độ hình học của các tuyến đường do PM phụ trách
 interface ProjectRouteConfig {
@@ -364,16 +365,27 @@ export const CreateSurvey: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const selectedPilot = AVAILABLE_PILOTS.find((p) => p.id === pilotId)
+
+    const newSurvey = surveyService.createSurvey({
+      project_id: currentProject.id,
+      project_name: currentProject.name,
+      start_km: `Km ${sKm.toFixed(1)}`,
+      end_km: `Km ${eKm.toFixed(1)}`,
+      pilot_name: selectedPilot?.name || 'Lê Hoàng Long',
+      drone_model: selectedPilot?.device || 'DJI Matrice 350 RTK',
+      notes
+    })
+
     alert(
-      `Đã ban hành thành công Lệnh Bay Khảo Sát!\n` +
+      `Đã ban hành thành công Lệnh Bay Khảo Sát [${newSurvey.code}]!\n` +
       `• Dự án: [${currentProject.code}] ${currentProject.name}\n` +
       `• Đoạn lý trình: Km ${sKm.toFixed(1)} → Km ${eKm.toFixed(1)} (Cự ly: ${flightDistanceKm.toFixed(1)} km)\n` +
       `• Độ cao bay thiết kế: ${actualAltitude}m (GSD: ~${gsdCmPx} cm/px)\n` +
       `• Độ phủ ảnh: ${overlap}% dọc / ${parseInt(overlap) - 10}% ngang\n` +
       `• Phi công được chỉ định: ${selectedPilot?.name} (${selectedPilot?.device})\n` +
-      `Hồ sơ đã được gửi đồng bộ tới ứng dụng Mobile của Drone Operator!`
+      `Hồ sơ đã được lưu trữ và đồng bộ tới danh sách nhiệm vụ bay!`
     )
-    navigate('/pm/surveys')
+    navigate(`/pm/surveys?highlightCode=${encodeURIComponent(newSurvey.code)}`)
   }
 
   return (

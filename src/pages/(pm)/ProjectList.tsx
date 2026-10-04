@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { projectService } from '../../api/services'
 import {
   FolderKanban,
   Search,
@@ -17,6 +18,7 @@ import {
   ArrowRight,
   Lock,
   Shield,
+  ShieldCheck,
   X,
   Calendar,
   MapPin,
@@ -61,6 +63,7 @@ export interface HubProject {
   is_assigned: boolean
   is_restricted_for_pm?: boolean
   kml_status?: string
+  retention_amount?: string
 }
 
 // Danh sách mock 5 dự án chuẩn theo thiết kế Stitch
@@ -201,7 +204,16 @@ export const ProjectList: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
   // Projects state
-  const [projects, setProjects] = useState<HubProject[]>(INITIAL_PROJECTS)
+  const [projects, setProjects] = useState<HubProject[]>(() => projectService.getProjects())
+
+  // Đồng bộ real-time giữa Supervisor khởi tạo và PM
+  useEffect(() => {
+    const handleStateChange = () => {
+      setProjects(projectService.getProjects())
+    }
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
+  }, [])
   const [filterTab, setFilterTab] = useState<'ALL' | 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
@@ -226,6 +238,7 @@ export const ProjectList: React.FC = () => {
   const [newStartKm, setNewStartKm] = useState('Km 0+000')
   const [newEndKm, setNewEndKm] = useState('Km 28+500')
   const [newLengthKm, setNewLengthKm] = useState('28.5')
+  const [newRetentionAmount, setNewRetentionAmount] = useState('15.500.000.000 ₫ (5% HĐ)')
 
   // Submit tạo dự án mới (Supervisor quản lý)
   const handleCreateProjectSubmit = (e: React.FormEvent) => {
@@ -262,10 +275,12 @@ export const ProjectList: React.FC = () => {
       image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
       is_assigned: !isUnassigned,
       is_restricted_for_pm: false,
-      kml_status: 'Chờ phê duyệt KML'
+      kml_status: 'Chờ phê duyệt KML',
+      retention_amount: newRetentionAmount || '15.5 tỷ ₫ (5% HĐ)'
     }
 
-    setProjects([newProject, ...projects])
+    projectService.createProject(newProject)
+    setProjects(projectService.getProjects())
     setIsModalOpen(false)
     showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
   }
@@ -729,6 +744,12 @@ export const ProjectList: React.FC = () => {
                         <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
                       </div>
                     </div>
+
+                    {/* Retention Value (v2.2 DA04) */}
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-purple-50/70 border border-purple-100 text-[11px]">
+                      <span className="text-slate-500 font-medium">Bảo lãnh giữ lại:</span>
+                      <span className="font-mono font-bold text-purple-700">{prj.retention_amount || '15.5 tỷ ₫ (5% HĐ)'}</span>
+                    </div>
                   </div>
 
                   {/* Card Footer Action */}
@@ -827,8 +848,9 @@ export const ProjectList: React.FC = () => {
                         <span className="text-amber-600 font-semibold italic">Chưa phân công</span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono font-semibold">
-                      {prj.warranty_passed_percent}%
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
+                      <div className="text-[10px] text-purple-700 font-mono font-bold">{prj.retention_amount || '15.5 tỷ ₫'}</div>
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
@@ -1041,6 +1063,32 @@ export const ProjectList: React.FC = () => {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Giá trị giữ lại bảo hành hợp đồng (v2.2 DA04 / retained_value) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+                    Khoản tiền bảo lãnh giữ lại bảo hành (VNĐ)
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-[#8C6D1F] bg-[#C9A227]/15 px-2 py-0.5 rounded">
+                    Quy chuẩn v2.2 (DA04 / retained_value)
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={newRetentionAmount}
+                    onChange={(e) => setNewRetentionAmount(e.target.value)}
+                    placeholder="VD: 15.500.000.000 ₫ (5% giá trị hợp đồng)"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Khoản tiền bảo lãnh hợp đồng chủ đầu tư giữ lại (thường 3% – 5% giá trị công trình) để bảo đảm nghĩa vụ sửa chữa O&amp;M của nhà thầu Hoàng Hải.
+                </p>
               </div>
 
               {/* Phạm vi lý trình tuyến đường (Km bắt đầu - Km kết thúc - Tổng chiều dài) */}

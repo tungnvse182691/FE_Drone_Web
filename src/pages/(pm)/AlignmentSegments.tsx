@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle, setMapLayerVisibility } from '../../utils/maplibre'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { alignmentService } from '../../api/services'
 import {
   ChevronRight,
   Upload,
@@ -393,8 +394,24 @@ export const AlignmentSegments: React.FC = () => {
     return PM_ASSIGNED_PROJECTS.find((p) => p.id === selectedProjectId) || PM_ASSIGNED_PROJECTS[0]
   }, [selectedProjectId])
 
-  // Trạng thái tim tuyến: 'DRAFT' | 'CONFIRMED'
-  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'CONFIRMED'>('DRAFT')
+  // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED' kết nối qua alignmentService
+  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'>(() => {
+    return alignmentService.getAlignmentState(selectedProjectId).status
+  })
+
+  useEffect(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    setAlignmentStatus(state.status)
+  }, [selectedProjectId])
+
+  useEffect(() => {
+    const handleStateChange = () => {
+      const state = alignmentService.getAlignmentState(selectedProjectId)
+      setAlignmentStatus(state.status)
+    }
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
+  }, [selectedProjectId])
 
   // Trạng thái Map View: 'SATELLITE' | 'VECTOR' | 'PLANNING'
   const [mapLayer, setMapLayer] = useState<'SATELLITE' | 'VECTOR' | 'PLANNING'>('SATELLITE')
@@ -2454,11 +2471,14 @@ export const AlignmentSegments: React.FC = () => {
       showToast('Cảnh báo v2.2 (WF-02.F04): Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
       return
     }
+    alignmentService.submitAlignment(selectedProjectId)
+    setAlignmentStatus('PENDING_APPROVAL')
     showToast('Đã gửi hồ sơ thiết lập tim tuyến (WF-02) sang Supervisor để thẩm duyệt & ký số!')
   }
 
   // Supervisor Xác nhận khóa tim tuyến
   const handleLockAlignment = () => {
+    alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor')
     setAlignmentStatus('CONFIRMED')
     showToast('Dự án đã chính thức KHÓA TIM TUYẾN (CONFIRMED)! Chữ ký số SHA-256 đã được gắn bất biến.')
   }

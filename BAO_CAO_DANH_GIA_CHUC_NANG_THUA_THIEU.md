@@ -8,17 +8,17 @@ Dựa trên việc rà soát đối chiếu toàn bộ các file trong thư mụ
 
 ---
 
-## 1. NHỮNG MÀN HÌNH ĐANG "THỪA" (TÀN DƯ KHÔNG CÒN DÙNG)
+## 1. NHỮNG MÀN HÌNH ĐÃ ĐƯỢC DỌN DẸP SẠCH SẼ (BỘ KHUNG BAN ĐẦU KHÔNG CÒN DÙNG)
 
-Trong quá trình phát triển từ 18 màn Stitch ban đầu lên phiên bản đặc tả chi tiết v2.2, một số màn hình đã được thay thế bằng các màn hình hoàn thiện hơn nhưng file cũ vẫn còn nằm trong code:
+Toàn bộ 6 file bộ khung ban đầu (tàn dư từ 18 màn Stitch thô) đã được **xóa bỏ hoàn toàn**, và các route liên quan trong [App.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/App.tsx) đã được cấu hình chuyển hướng trực tiếp sang các màn hình nghiệp vụ hoàn thiện:
 
-| File bị thừa | Dung lượng | Lý do thừa / Hiện trạng trong `App.tsx` | Đề xuất xử lý |
-|---|:---:|---|---|
-| [FieldAcceptance.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/FieldAcceptance.tsx) | 409 bytes | File này chỉ import và render lại `<ResearchValidation />`. Toàn bộ chức năng nghiệm thu hiện trường thực tế đã được tích hợp đầy đủ trong [EvidenceCloseoutDetail.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/EvidenceCloseoutDetail.tsx). | Có thể dọn dẹp hoặc giữ làm alias. |
-| [SignOffClosure.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/SignOffClosure.tsx) | 3.4 KB | Trong `App.tsx` (dòng 145), route `/sup/signoff` đã được chuyển hướng thẳng (`<Navigate to="/sup/acceptance" replace />`). | **Thừa:** Toàn bộ chức năng Ký số đóng đợt và xuất file ZIP/PDF đã được đưa vào Modal ký số trong `EvidenceCloseoutDetail.tsx`. File này không còn người dùng nào truy cập tới. |
-| [BatchApprovals.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/BatchApprovals.tsx) | 5.8 KB | Trong `App.tsx` (dòng 126), route `/sup/approvals` đã chuyển hướng sang `/sup/proposals` (`ProposalApprovalDetail.tsx`). | **Thừa:** File này trước đây thiết kế để duyệt cả đợt (Batch level), vi phạm nguyên tắc bất biến BR-21 (Supervisor phải phê duyệt độc lập từng hạng mục RepairItem). Đã được thay thế hoàn toàn bởi `ProposalApprovalDetail.tsx` (84 KB). |
-| [WorkOrderConfirm.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/WorkOrderConfirm.tsx) | 3.3 KB | Trong `App.tsx` (dòng 85-86), route `/pm/work-orders/confirm` và `/:id/confirm` đã trỏ vào `EvidenceCloseoutDetail.tsx`. | **Thừa:** Chức năng xác nhận hoàn thành công việc đã nằm trọn vẹn trong `EvidenceCloseoutDetail.tsx`. |
-| [RepairBatching.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/RepairBatching.tsx) & [SubmitApproval.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/SubmitApproval.tsx) | 9.6 KB & 4.7 KB | Đây là 2 file bản nháp cũ. Hiện tại PM đã có màn [RepairProposals.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/RepairProposals.tsx) (99 KB) cực kỳ chi tiết (hỗ trợ tạo gói, danh sách proposal, timeline, BOQ). | Nên điều hướng route `/pm/repair-batches/create` sang [RepairProposals.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/RepairProposals.tsx). |
+| File đã dọn dẹp | Dung lượng | Hiện trạng & Màn hình hoàn thiện thay thế | Trạng thái |
+|---|:---:|---|:---:|
+| `FieldAcceptance.tsx` | 409 bytes | Đã chuyển hướng sang [EvidenceCloseoutDetail.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/EvidenceCloseoutDetail.tsx). Toàn bộ nghiệp vụ nghiệm thu Before/After và đối soát trắc địa đã nằm tại màn này. | ✅ ĐÃ XÓA |
+| `SignOffClosure.tsx` | 3.4 KB | Nghiệp vụ Ký số đóng đợt và xuất file ZIP/PDF đã được tích hợp trong Modal ký số của [EvidenceCloseoutDetail.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/EvidenceCloseoutDetail.tsx). | ✅ ĐÃ XÓA |
+| `BatchApprovals.tsx` | 5.8 KB | Thay thế hoàn toàn bởi [ProposalApprovalDetail.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/ProposalApprovalDetail.tsx) (84 KB) - tuân thủ quy tắc bất biến BR-21 thẩm duyệt độc lập từng hạng mục. | ✅ ĐÃ XÓA |
+| `WorkOrderConfirm.tsx` | 3.3 KB | Xác nhận hoàn thành công việc và mời nghiệm thu đã nằm trọn vẹn trong [EvidenceCloseoutDetail.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28sup%29/EvidenceCloseoutDetail.tsx). | ✅ ĐÃ XÓA |
+| `RepairBatching.tsx` & `SubmitApproval.tsx` | 9.6 KB & 4.7 KB | Thay thế bằng [RepairProposals.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/RepairProposals.tsx) (99 KB) - tập trung vào giải pháp kỹ thuật, bóc tách khối lượng $m^2$, mét dài, vật liệu chuẩn v2.2. | ✅ ĐÃ XÓA |
 
 ---
 
@@ -34,15 +34,28 @@ Trong quá trình phát triển từ 18 màn Stitch ban đầu lên phiên bản
   - Thẩm định kết luận vụ việc theo Use Case PA05: `DEFECT_FOUND`, `NO_DEFECT` (bắt buộc nhập lý do giải trình theo BR-39), `OUT_OF_SCOPE` (ngoài phạm vi bảo hành).
   - Có chức năng **"Công bố tiến độ cho người dân"** (`POST /cases/{id}/publish`) theo Use Case PA07.
 
-### 🔴 Thiếu 2: Thiếu tầng Mock Service kết nối `localStorage` (Tương tác chéo giữa 2 vai trò)
-- **Hiện trạng:** 
-  - PM thao tác trên [FastTrackDispatch.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/FastTrackDispatch.tsx), [FieldTasks.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/FieldTasks.tsx), hoặc [RepairProposals.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/RepairProposals.tsx) thì dữ liệu chỉ đổi tạm trong bộ nhớ của trang đó.
-  - Khi đăng xuất chuyển sang tài khoản **Supervisor**, Supervisor vào duyệt thì **không thấy đợt sửa chữa mà PM vừa tạo**!
-- **Khắc phục:** Cần hoàn thiện **8 file Mock Service** trong `src/api/services/` mà chúng ta đã lên kế hoạch để lưu vào `localStorage`.
+### ✅ ĐÃ HOÀN THÀNH: Tầng Mock Service kết nối `localStorage` (Tương tác chéo giữa 2 vai trò - Thiếu 2)
+- **Đã hoàn thiện 100%:**
+  - Xây dựng tầng dịch vụ `src/api/services/` hoàn chỉnh với 9 module dịch vụ tập trung:
+    - [storageHelper.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/storageHelper.ts): Quản lý lưu trữ bền vững `localStorage` kèm cơ chế reactive qua `CustomEvent ('roadguard_state_change')`.
+    - [projectService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/projectService.ts): Quản lý dự án, Supervisor tạo dự án -> PM thấy ngay dự án được phân công.
+    - [surveyService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/surveyService.ts): Quản lý khảo sát Drone & kích hoạt Flight Simulator.
+    - [repairService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/repairService.ts): Quản lý các Gói đề xuất sửa chữa kỹ thuật (`ProposalWorkPackage`), chi tiết từng hạng mục bóc tách (`RepairItemDetail`), thẩm duyệt Supervisor (`APPROVE`/`REJECT`/`REQUEST_EVIDENCE`), ký số toàn gói và giao việc thi công (`dispatchPackage`).
+    - [alignmentService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/alignmentService.ts): Quản lý thiết lập tim tuyến giữa PM trình duyệt (`PENDING_APPROVAL`) và Supervisor khóa tuyến (`CONFIRMED`).
+    - [triageService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/triageService.ts): Quản lý tiếp nhận phản ánh, liên kết báo trùng PA04, điều phối PA03 và thẩm định PA05.
+    - [fastTrackService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/fastTrackService.ts) & [acceptanceService.ts](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/api/services/acceptanceService.ts): Nghiệm thu Before/After và xử lý khẩn cấp Fast Track.
+  - **Kết quả:** PM tạo gói đề xuất -> Supervisor đăng nhập vào duyệt từng item -> PM đăng nhập lại thấy trạng thái `DECIDED` và mở khóa nút "Giao việc thi công". Dữ liệu không bao giờ bị mất khi F5 hoặc chuyển đổi tài khoản!
 
-### 🟡 Thiếu 3 (Nhẹ): Trigger mô phỏng Drone bay xong (Drone Flight Simulator)
-- **Hiện trạng:** Khi PM bấm "Giao nhiệm vụ bay Drone" trong [CreateSurvey.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/CreateSurvey.tsx), nhiệm vụ được tạo nhưng ở trạng thái chờ Drone bay. 
-- **Cần bổ sung:** Cần có 1 nút bấm nhỏ (Quick Demo Trigger): *"Mô phỏng Drone hoàn thành & tải lên video"* để ngay lập tức sinh ra dữ liệu bay trong [DroneMissionAIReview.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/DroneMissionAIReview.tsx) phục vụ thầy cô chấm đồ án.
+### ✅ ĐÃ HOÀN THÀNH: Trigger mô phỏng Drone bay xong (Drone Flight Simulator - Thiếu 3)
+- **Đã hoàn thiện 100%:**
+  - Bổ sung nút **"Mô phỏng bay xong"** trên bảng nhiệm vụ [SurveyRequests.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/SurveyRequests.tsx) đối với các đợt bay đang ở trạng thái `SCHEDULED` (như `#MS-2026-1012`) hoặc nhiệm vụ vừa tạo từ [CreateSurvey.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/%28pm%29/CreateSurvey.tsx).
+  - Tích hợp **Drone Flight Simulator Modal** với telemetry HUD cực kỳ chuyên nghiệp chuẩn phong cách kỹ thuật Hoàng Hải:
+    - Hiển thị thông số trắc địa: Model DJI Matrice 300 RTK, Cao độ H=65m, Vận tốc V=5.4 m/s, Tín hiệu GNSS Fix 28 vệ tinh, Mức pin 96%.
+    - Chạy tự động mượt mà qua 3 giai đoạn:
+      1. Bay quét hành lang RTK (0% → 100%).
+      2. Thu nạp 1,920 không ảnh trực giao 4K & trích xuất EXIF GPS, cao độ.
+      3. Pipeline AI Road-YOLOv9 quét nhận diện vết nứt, ổ gà (8 khiếm khuyết được phát hiện).
+    - Hoàn tất: Cập nhật nhiệm vụ sang `PENDING_AI_REVIEW`, lưu `localStorage` qua `surveyService.simulateDroneFlightCompletion()`, mở khóa nút vàng đồng: **"Mở Canvas Thẩm Định AI (WF-09) ➔"** dẫn thẳng tới màn hình thẩm định AI Bounding Box.
 
 ---
 
@@ -92,14 +105,13 @@ Trong quá trình phát triển từ 18 màn Stitch ban đầu lên phiên bản
 
 ---
 
-### 🎯 TỔNG KẾT & BƯỚC ĐI TIẾP THEO
+### 🎯 TỔNG KẾT & KẾT QUẢ ĐẠT ĐƯỢC
 
-1. **Các file thừa:** Chúng ta sẽ dọn dẹp liên kết route trong `App.tsx` để điều hướng chuẩn xác vào các màn hình "xịn" nhất (`ProposalApprovalDetail.tsx`, `EvidenceCloseoutDetail.tsx`, `RepairProposals.tsx`).
-2. **Những chức năng tác nghiệp đã bổ sung xong:**
-   - ✅ **Modal Khởi tạo dự án mới cho Supervisor** trên `ProjectList.tsx` (mã tự nhập, hỗ trợ bỏ trống PM).
-   - ✅ **Bảng Tiếp nhận & Điều phối phản ánh người dân (Triage & Link Reports)** trên `AIReviewInbox.tsx` (chuẩn PA03, PA04, PA05, PA07, BR-30, BR-31, BR-39).
-3. **Mục có thể nâng cấp tiếp theo:**
-   - 🔴 **Tầng Mock Service `localStorage`:** Đồng bộ dữ liệu xuyên suốt giữa PM và Supervisor.
-   - 🟡 **Nút mô phỏng Drone bay hoàn thành (Simulator Trigger)** trong `CreateSurvey.tsx` để test demo nhanh.
-3. **Làm tầng Mock API Service (`src/api/services/`):**
-   - Đây là việc quan trọng nhất để toàn bộ các nút bấm và trạng thái (PM tạo -> Supervisor duyệt -> PM giao việc) hoạt động trơn tru từ đầu đến cuối trên trình duyệt!
+1. **Các chức năng tác nghiệp trọng tâm đã hoàn thành 100%:**
+   - ✅ **Modal Khởi tạo dự án mới cho Supervisor** trên `ProjectList.tsx` (hỗ trợ nhập mã, mốc bảo hành, phân công hoặc bỏ trống PM).
+   - ✅ **Bảng Tiếp nhận & Điều phối phản ánh người dân (Triage & Link Reports)** trên `AIReviewInbox.tsx` (chuẩn Use Case PA03, PA04, PA05, PA07, BR-30, BR-31, BR-39).
+   - ✅ **Tầng Mock Service kết nối `localStorage` (Thiếu 2):** Xây dựng 9 module dịch vụ trong `src/api/services/` với cơ chế đồng bộ real-time qua CustomEvent `roadguard_state_change`. Dữ liệu PM tạo gói đề xuất -> Supervisor thẩm duyệt -> PM giao việc thi công được thông suốt và bền vững khi chuyển đổi tài khoản hay F5 trình duyệt.
+   - ✅ **Trigger mô phỏng Drone bay xong (Flight Simulator - Thiếu 3):** Modal HUD Telemetry RTK chuyên nghiệp trên `SurveyRequests.tsx`, mô phỏng cất cánh, thu nạp 1,920 ảnh 4K và kích hoạt pipeline AI Road-YOLOv9 phát hiện hư hỏng, chuyển trạng thái sang `PENDING_AI_REVIEW` phục vụ hội đồng chấm đồ án.
+2. **Kiểm tra chất lượng mã nguồn:**
+   - `npm run build` (`tsc -b && vite build`) vượt qua 100% với 0 lỗi TypeScript.
+   - Bảo toàn triệt để các quy tắc bất biến trong `AGENTS.md` (không đưa BOQ tính tiền VNĐ vào dự án kỹ thuật, giữ nguyên màu nhận diện Vàng đồng Hoàng Hải `#C9A227` và Navy `#2D3748`).

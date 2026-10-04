@@ -423,6 +423,13 @@ export const ProjectOverview: React.FC = () => {
             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
               <div className="bg-purple-600 h-full rounded-full transition-all duration-500" style={{ width: '38%' }}></div>
             </div>
+            {/* Khoản tiền giữ lại bảo hành (v2.2 DA04 / retained_value) */}
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+              <span className="text-slate-500 font-medium">Bảo lãnh giữ lại (v2.2 DA04):</span>
+              <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                15.5 tỷ ₫ (5% HĐ)
+              </span>
+            </div>
           </div>
         </div>
 
