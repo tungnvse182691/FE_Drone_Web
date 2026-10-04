@@ -450,4 +450,82 @@ export interface AuditTrailStats {
   retention_compliance_note: string // Căn cứ thời hạn lưu trữ BR-45 (Hết bảo hành + 5 năm)
 }
 
+// ==========================================
+// WF-12: QUẢN TRỊ HỆ THỐNG, MÔ HÌNH AI & LƯU TRỮ PHÁP LÝ (FR-02, FR-35, FR-36, BR-02, BR-45)
+// ==========================================
+
+export interface SystemUserAccount {
+  id: string
+  full_name: string
+  email: string
+  phone?: string
+  role: RoleCode
+  role_label: string
+  project_scope: string
+  project_id?: string
+  device_info: string
+  ip_address: string
+  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED'
+  last_active: string
+  is_current_user?: boolean
+  certificate?: string
+  joined_date?: string
+}
+
+export interface AIModelVersion {
+  id: string
+  name: string
+  version: string
+  status: 'ACTIVE' | 'DEPRECATED'
+  map_50: number // Độ chính xác mAP@50 (0-100%)
+  recall: number // Độ nhạy Recall (0-100%)
+  f1_score: number // F1 Score
+  deployed_at: string
+  sha256_hash: string
+  fast_track_auto: boolean
+}
+
+export interface DefectCatalogItem {
+  code: string
+  name: string
+  description: string
+  standard_ref: string // Ví dụ: TCVN 8864:2011
+  default_severity: Severity
+  is_active: boolean
+}
+
+export interface LegalHoldProject {
+  project_id: string
+  project_code: string
+  project_name: string
+  warranty_end_date: string
+  is_warranty_expired: boolean
+  years_since_warranty_end: number
+  is_legal_hold: boolean
+  hold_reason?: string
+  hold_authority?: string // Cơ quan yêu cầu thanh tra (Bộ GTVT / Cục ĐBVN)
+  hold_reference?: string // Số công văn
+  hold_since?: string
+}
+
+export interface DataDeletionRequest {
+  id: string
+  request_code: string
+  project_id: string
+  project_name: string
+  requested_by_id: string
+  requested_by_name: string
+  requested_at: string
+  data_type: string
+  data_description: string
+  data_size_gb: number
+  warranty_end_date: string
+  years_since_warranty: number
+  is_eligible_5years: boolean // Đủ điều kiện 5 năm theo BR-45
+  status: 'PENDING_APPROVAL' | 'APPROVED_PURGED' | 'REJECTED'
+  blocked_by_legal_hold: boolean
+  justification_notes: string
+  rejection_reason?: string
+}
+
 

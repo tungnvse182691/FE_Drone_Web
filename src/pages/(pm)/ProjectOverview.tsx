@@ -20,7 +20,6 @@ import {
   Check,
   Lock,
   Eye,
-  UserPlus,
   Settings,
   Bell,
   ArrowRight,
@@ -33,7 +32,6 @@ import {
   Map,
   X,
   Plus,
-  Send,
   AlertCircle
 } from 'lucide-react'
 
@@ -174,43 +172,11 @@ export const ProjectOverview: React.FC = () => {
     }
   ])
 
-  // Modal Gán nhân sự
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
-  const [newMemberName, setNewMemberName] = useState('')
-  const [newMemberEmail, setNewMemberEmail] = useState('')
-  const [newMemberRole, setNewMemberRole] = useState<'CREW_LEAD' | 'DRONE_PILOT'>('CREW_LEAD')
-  const [newMemberUnit, setNewMemberUnit] = useState('')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3800)
-  }
-
-  const handleAddMember = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMemberName || !newMemberEmail) return
-
-    const newMem: ProjectMember = {
-      id: `mem-${Date.now()}`,
-      name: newMemberName,
-      role_code: newMemberRole,
-      role_title: newMemberRole === 'CREW_LEAD' ? 'Kỹ sư Đội thi công' : 'Phi công bay quét Drone',
-      role_badge: newMemberRole === 'CREW_LEAD' ? 'CREW' : 'DRONE PILOT',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&auto=format&fit=crop&q=80',
-      is_online: false,
-      authority: newMemberRole === 'CREW_LEAD' ? 'Khảo sát thực tế & thi công' : 'Thu thập không ảnh',
-      contact: `${newMemberEmail} • Vừa thêm vào dự án`,
-      equipment: newMemberRole === 'CREW_LEAD' ? 'App Mobile RoadGuard' : 'Drone RTK',
-      unit: newMemberUnit || 'Đơn vị nhà thầu liên danh'
-    }
-
-    setMembers((prev) => [...prev, newMem])
-    setIsInviteModalOpen(false)
-    setNewMemberName('')
-    setNewMemberEmail('')
-    setNewMemberUnit('')
-    showToast(`Đã gửi thư mời và gán thành công nhân sự: ${newMemberName}`)
   }
 
   // Ref và Effect khởi tạo bản đồ MapLibre vệ tinh cho Preview card
@@ -392,14 +358,7 @@ export const ProjectOverview: React.FC = () => {
               <Settings className="w-4 h-4 text-slate-500" />
               <span>Cập nhật thông tin</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setIsInviteModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white font-semibold text-xs transition-all shadow-sm cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Gán nhân sự vào dự án</span>
-            </button>
+
           </div>
         </div>
       </div>
@@ -860,14 +819,6 @@ export const ProjectOverview: React.FC = () => {
 
             {/* Footer Card Action */}
             <div className="pt-2 flex flex-col gap-2">
-              <button
-                onClick={() => setIsInviteModalOpen(true)}
-                className="w-full py-2.5 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-brand-dark text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                type="button"
-              >
-                <UserPlus className="w-4 h-4 text-[#C9A227]" />
-                <span>Thêm nhân sự phụ trách tuyến</span>
-              </button>
               <div className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-tight px-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                 <span>
@@ -910,112 +861,7 @@ export const ProjectOverview: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL: GÁN NHÂN SỰ VÀO DỰ ÁN */}
-      {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-[#C9A227]/10 text-[#C9A227]">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-brand-dark">Gán Nhân Sự Phụ Trách Tuyến Đường</h3>
-                  <p className="text-xs text-slate-500">Dự án: Quốc lộ 1A - Giai đoạn 2 (PRJ-QL1A-02)</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsInviteModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Họ và tên nhân sự <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="VD: Trần Đình Trọng..."
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Email công vụ / Tài khoản <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="trong.td@hoanghai-infra.vn..."
-                  value={newMemberEmail}
-                  onChange={(e) => setNewMemberEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Vai trò nhiệm vụ <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={newMemberRole}
-                    onChange={(e) => setNewMemberRole(e.target.value as any)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] bg-white"
-                  >
-                    <option value="CREW_LEAD">Trưởng đội thi công (Crew Lead)</option>
-                    <option value="DRONE_PILOT">Phi công bay quét Drone (Pilot)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Đơn vị công tác
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="VD: Đội duy tu số 3..."
-                    value={newMemberUnit}
-                    onChange={(e) => setNewMemberUnit(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-[11px] text-amber-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <span>
-                  Hệ thống sẽ tự động gửi thư mời kích hoạt tài khoản có thời hạn 48 giờ kèm mã token mã hóa SHA-256 đến email được chỉ định.
-                </span>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsInviteModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-semibold bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Xác nhận & Gửi thư mời</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

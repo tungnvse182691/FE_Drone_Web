@@ -32,9 +32,7 @@ import {
   FileSpreadsheet,
   Check,
   TrendingUp,
-  Tag,
-  UserPlus,
-  Mail
+  Tag
 } from 'lucide-react'
 
 // Interface mở rộng cho dự án trong Hub
@@ -223,25 +221,23 @@ export const ProjectList: React.FC = () => {
   const [newProjectCode, setNewProjectCode] = useState('PRJ-QL14-01')
   const [newProjectRegion, setNewProjectRegion] = useState('Bình Phước - Bình Dương')
   const [newProjectPM, setNewProjectPM] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
-  const [newPMNameCustom, setNewPMNameCustom] = useState('')
-  const [newPMEmailCustom, setNewPMEmailCustom] = useState('')
   const [newStartDate, setNewStartDate] = useState('2026-10-01')
   const [newEndDate, setNewEndDate] = useState('2029-10-01')
   const [newStartKm, setNewStartKm] = useState('Km 0+000')
   const [newEndKm, setNewEndKm] = useState('Km 28+500')
   const [newLengthKm, setNewLengthKm] = useState('28.5')
 
-  // Modal Gán PM nhanh cho dự án
-  const [assignModalProject, setAssignModalProject] = useState<HubProject | null>(null)
-  const [selectedPMAssign, setSelectedPMAssign] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
-
-  // Submit tạo dự án mới
+  // Submit tạo dự án mới (Supervisor quản lý)
   const handleCreateProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const parsedLength = parseFloat(newLengthKm) || 28.5
-    const isInvitingNew = newProjectPM === 'INVITE_NEW'
-    const pmName = isInvitingNew ? (newPMNameCustom || 'Kỹ sư mới được mời') : newProjectPM.split(' (')[0]
-    const pmEmail = isInvitingNew ? (newPMEmailCustom || 'pm.moi@cat-tuong.vn') : (newProjectPM.includes('(') ? newProjectPM.split('(')[1].replace(')', '') : 'pmhoang@gmail.com')
+    const isUnassigned = newProjectPM === '-- Để trống --'
+    const pmName = isUnassigned ? 'Chưa phân công' : newProjectPM.split(' (')[0]
+    const pmEmail = isUnassigned
+      ? ''
+      : newProjectPM.includes('(')
+      ? newProjectPM.split('(')[1].replace(')', '')
+      : 'pmhoang@gmail.com'
 
     const newProject: HubProject = {
       id: `prj-${Date.now()}`,
@@ -257,48 +253,23 @@ export const ProjectList: React.FC = () => {
       status_color: '#D97706',
       pm_name: pmName,
       pm_email: pmEmail,
-      pm_role_badge: isInvitingNew ? 'Chờ kích hoạt' : 'PM Tuyến',
+      pm_role_badge: isUnassigned ? 'Chưa gán' : 'PM Tuyến',
       warranty_passed_percent: 0,
       days_remaining: 1095,
       length_km: parsedLength,
       open_defects: 0,
       repair_packages: 0,
       image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
-      is_assigned: newProjectPM !== '-- Để trống --',
+      is_assigned: !isUnassigned,
       is_restricted_for_pm: false,
       kml_status: 'Chờ phê duyệt KML'
     }
 
     setProjects([newProject, ...projects])
     setIsModalOpen(false)
-    if (isInvitingNew) {
-      showToast(`Đã khởi tạo dự án [${newProject.code}] và gửi link mời kích hoạt tới ${pmEmail}! (Mã: #IVT-2026-08F)`)
-    } else {
-      showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
-    }
+    showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
   }
 
-  // Submit Gán PM nhanh
-  const handleAssignPMSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!assignModalProject) return
-
-    setProjects(
-      projects.map((p) =>
-        p.id === assignModalProject.id
-          ? {
-              ...p,
-              pm_name: selectedPMAssign.split(' (')[0],
-              pm_email: selectedPMAssign.includes('(') ? selectedPMAssign.split('(')[1].replace(')', '') : 'pmhoang@gmail.com',
-              pm_role_badge: 'PM Chính',
-              is_assigned: true
-            }
-          : p
-      )
-    )
-    showToast(`Đã phân công ${selectedPMAssign.split(' (')[0]} phụ trách dự án ${assignModalProject.code}`)
-    setAssignModalProject(null)
-  }
 
   // Filter projects logic
   const filteredProjects = useMemo(() => {
@@ -683,15 +654,6 @@ export const ProjectList: React.FC = () => {
                             <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
                           </div>
                         </div>
-                        {isSupervisor && (
-                          <button
-                            type="button"
-                            onClick={() => setAssignModalProject(prj)}
-                            className="px-2.5 py-1 bg-white hover:bg-[#C9A227] hover:text-white text-[#8C6D1F] rounded-full border border-amber-300 text-[11px] font-semibold transition shrink-0 shadow-2xs cursor-pointer"
-                          >
-                            Gán PM ngay
-                          </button>
-                        )}
                       </div>
                     )}
 
@@ -1029,57 +991,8 @@ export const ProjectList: React.FC = () => {
                     <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
                     <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
                     <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
-                    <option value="INVITE_NEW">+ Mời Kỹ sư PM mới (Gửi qua Email kích hoạt)...</option>
-                    <option value="-- Để trống --">-- Để trống (Chưa gán) --</option>
+                    <option value="-- Để trống --">-- Để trống (Phân công sau tại Quản trị hệ thống) --</option>
                   </select>
-
-                  {newProjectPM === 'INVITE_NEW' && (
-                    <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl space-y-2 mt-2 animate-in fade-in duration-150">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#8F7212]">
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>Mời PM mới vào hệ thống (Tình huống 2)</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                            Họ và tên PM mới <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="VD: Nguyễn Văn B..."
-                            value={newPMNameCustom}
-                            onChange={(e) => setNewPMNameCustom(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-slate-600 mb-0.5">
-                            Email công vụ nhận thư mời <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="email"
-                            required
-                            placeholder="pm.moi@cat-tuong.vn..."
-                            value={newPMEmailCustom}
-                            onChange={(e) => setNewPMEmailCustom(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
-                        <span>Hệ thống sẽ gửi link <strong>/invite/token-...</strong> để PM tự tạo mật khẩu lần đầu.</span>
-                        <a
-                          href="/accept-invitation"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[#8F7212] font-bold hover:underline inline-flex items-center gap-0.5"
-                        >
-                          Xem mẫu màn hình nhận lời mời ↗
-                        </a>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -1170,90 +1083,25 @@ export const ProjectList: React.FC = () => {
               <div className="p-3 rounded-xl bg-[#C9A227]/10 border border-[#C9A227]/20 flex items-start gap-2.5">
                 <Shield className="w-4 h-4 text-[#C9A227] shrink-0 mt-0.5" />
                 <p className="text-[11px] text-slate-700 leading-relaxed">
-                  <strong className="text-slate-900">Quy chuẩn hệ thống:</strong> Sau khi hoàn tất khởi tạo, dự án sẽ tự động chuyển sang trạng thái <em>"Chờ phê duyệt tim tuyến (WF-02)"</em> và cấp mã định danh bảo mật Token cho PM được chỉ định.
+                  <strong className="text-slate-900">Quy định thẩm quyền (Nghị định 06/2021/NĐ-CP):</strong> Sau khi khởi tạo, dự án sẽ được đưa vào danh mục bảo hành. Toàn bộ việc quản lý, phân công và bổ sung nhân sự dự án được quản trị tập trung tại <strong>Quản trị hệ thống</strong> (Supervisor).
                 </p>
               </div>
 
-              {/* Modal Footer */}
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+              {/* Action Buttons */}
+              <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer text-xs"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-xl font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-xl font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5 text-xs"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Lưu hồ sơ &amp; Bàn giao PM</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* MODAL GÁN PM NHANH                                       */}
-      {/* ======================================================== */}
-      {assignModalProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-            <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserIcon className="w-5 h-5 text-[#C9A227]" />
-                <h3 className="font-bold text-sm text-slate-900 font-headline">Phân công Kỹ sư Quản lý (PM)</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAssignModalProject(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAssignPMSubmit} className="p-5 space-y-4 text-xs">
-              <div>
-                <span className="text-slate-500 block mb-1">Dự án công trình:</span>
-                <p className="font-bold text-slate-900 text-sm">{assignModalProject.name}</p>
-                <span className="font-mono text-[11px] text-slate-500">Mã: {assignModalProject.code}</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block font-semibold text-slate-700">Chọn Kỹ sư PM đảm nhiệm:</label>
-                <select
-                  value={selectedPMAssign}
-                  onChange={(e) => setSelectedPMAssign(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
-                >
-                  <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
-                  <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
-                  <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
-                </select>
-              </div>
-
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200/70 text-[11px] text-amber-800 leading-relaxed">
-                Sau khi phân công, hệ thống sẽ tự động gửi thư mời kích hoạt tài khoản Onboarding (WF-01/02) tới email của kỹ sư phụ trách.
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAssignModalProject(null)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-lg font-semibold shadow-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Xác nhận phân công</span>
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Khởi tạo dự án</span>
                 </button>
               </div>
             </form>

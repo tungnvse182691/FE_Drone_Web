@@ -16,7 +16,12 @@ import {
   MeasurementValidationSample,
   MeasurementValidationRun,
   AuditEvent,
-  AuditTrailStats
+  AuditTrailStats,
+  SystemUserAccount,
+  AIModelVersion,
+  DefectCatalogItem,
+  LegalHoldProject,
+  DataDeletionRequest
 } from '../../types/domain'
 
 // =============================================================================
@@ -1755,6 +1760,292 @@ export const mockAuditEvents: AuditEvent[] = [
     }
   }
 ]
+
+// =============================================================================
+// 12. DỮ LIỆU MÀN HÌNH WF-12: QUẢN TRỊ HỆ THỐNG, MÔ HÌNH AI & LƯU TRỮ PHÁP LÝ (LEGAL HOLD)
+// =============================================================================
+
+export const mockSystemUserAccounts: SystemUserAccount[] = [
+  {
+    id: 'usr-01',
+    full_name: 'Kỹ sư Nguyễn Văn An',
+    email: 'suphoang@gmail.com',
+    phone: '0912.345.678',
+    role: RoleCode.SUPERVISOR,
+    role_label: 'SUPERVISOR (GIÁM SÁT TRƯỞNG)',
+    project_scope: 'Toàn hệ thống dự án & Ban QLDA 7',
+    device_info: 'Web Desktop (Chrome) • Hà Nội',
+    ip_address: '14.161.22.88',
+    status: 'ACTIVE',
+    last_active: 'Vừa xong',
+    certificate: 'CCHN Giám sát thi công Hạng I (Số: GS1-88234/BXD)',
+    joined_date: '15/01/2024'
+  },
+  {
+    id: 'usr-02',
+    full_name: 'Kỹ sư Lê Văn Hoàng',
+    email: 'hoang.ks@hoanghai-infra.vn',
+    phone: '0903.882.119',
+    role: RoleCode.SUPERVISOR,
+    role_label: 'SUPERVISOR (CHỦ ĐẦU TƯ)',
+    project_scope: 'Cục Đường bộ Việt Nam',
+    device_info: 'iPad Pro 12.9 (Safari) • TP.HCM',
+    ip_address: '118.69.182.45',
+    status: 'ACTIVE',
+    last_active: '15 phút trước',
+    certificate: 'CCHN Quản lý dự án Hạng I (Số: QLDA-99120/BXD)',
+    joined_date: '02/03/2024'
+  },
+  {
+    id: 'usr-03',
+    full_name: 'Đỗ Quốc Hoàng (PM)',
+    email: 'pmhoang@gmail.com',
+    phone: '0988.667.234',
+    role: RoleCode.PROJECT_MANAGER,
+    role_label: 'PROJECT MANAGER (CHỈ HUY TRƯỞNG)',
+    project_scope: 'QL1A - Giai đoạn 2 (Km 1024 - 1045)',
+    project_id: 'proj-01',
+    device_info: 'MacBook Pro M2 + iPhone 15',
+    ip_address: '27.72.105.12',
+    status: 'ACTIVE',
+    last_active: '5 phút trước',
+    certificate: 'CCHN Chỉ huy trưởng công trình Hạng I (Số: CHT-44512/BXD)',
+    joined_date: '10/05/2024'
+  },
+  {
+    id: 'usr-04',
+    full_name: 'Lê Tuấn',
+    email: 'tuan.le@hoanghai-infra.vn',
+    phone: '0934.567.890',
+    role: RoleCode.PROJECT_MANAGER,
+    role_label: 'PROJECT MANAGER (CHỈ HUY TRƯỞNG)',
+    project_scope: 'QL1A - Giai đoạn 1 (Km 990 - 1024)',
+    project_id: 'proj-02',
+    device_info: 'Dell XPS 15 • Quảng Ngãi',
+    ip_address: '42.118.23.90',
+    status: 'ACTIVE',
+    last_active: '42 phút trước',
+    certificate: 'CCHN Chỉ huy trưởng công trình Hạng II (Số: CHT-78129/SXD)',
+    joined_date: '20/08/2024'
+  },
+  {
+    id: 'usr-05',
+    full_name: 'Nguyễn Văn Tiến',
+    email: 'tien.nguyen@drone.hoanghai.vn',
+    phone: '0977.123.456',
+    role: RoleCode.DRONE_OPERATOR,
+    role_label: 'DRONE OPERATOR (PHI CÔNG KHẢO SÁT)',
+    project_scope: 'Đội Bay Trắc Địa Không Ảnh 01',
+    device_info: 'Matrice 300 RTK Controller (Android)',
+    ip_address: '171.244.18.60',
+    status: 'ACTIVE',
+    last_active: 'Km 1028+300 • Trực tuyến',
+    certificate: 'Bằng Phi công lái Thiết bị bay không người lái UAV/Drone (Cục Tác chiến - BQP)',
+    joined_date: '01/11/2024'
+  },
+  {
+    id: 'usr-06',
+    full_name: 'Lê Văn Hùng',
+    email: 'hung.le@crew.hoanghai.vn',
+    phone: '0965.987.321',
+    role: RoleCode.REPAIR_CREW,
+    role_label: 'CREW LEAD (ĐỘI TRƯỞNG THI CÔNG)',
+    project_scope: 'Tổ thi công Asphalt Hoàng Hải 01',
+    device_info: 'Samsung Galaxy Tab Active 4 Pro',
+    ip_address: '113.161.72.14',
+    status: 'ACTIVE',
+    last_active: '2 giờ trước',
+    certificate: 'Chứng nhận Kỹ thuật thi công rải thảm mặt đường BTN (Cục ĐBVN)',
+    joined_date: '15/02/2025'
+  },
+  {
+    id: 'usr-07',
+    full_name: 'Trần Văn B',
+    email: 'b.tran@crew.hoanghai.vn',
+    phone: '0918.223.344',
+    role: RoleCode.REPAIR_CREW,
+    role_label: 'CREW LEAD (ĐÃ NGHỈ VIỆC)',
+    project_scope: 'Tổ vá dặm Cơ giới 02',
+    device_info: 'Thu hồi toàn bộ token & quyền truy cập',
+    ip_address: 'Đình chỉ phiên',
+    status: 'SUSPENDED',
+    last_active: 'Đình chỉ lúc: 14/08/2026',
+    certificate: 'Chứng chỉ Thợ bậc 4/7 Cơ giới đường bộ',
+    joined_date: '01/06/2024'
+  }
+]
+
+export const mockAIModelRegistry: AIModelVersion[] = [
+  {
+    id: 'model-01',
+    name: 'Road-YOLOv9-Civil-Edge',
+    version: 'v2.4.1-prod',
+    status: 'ACTIVE',
+    map_50: 92.4,
+    recall: 89.6,
+    f1_score: 0.91,
+    deployed_at: '10/08/2026',
+    sha256_hash: '8f3a9e410b42f9e4210dcb881a7b8e519c3620f4f9d2c5e88849b2914cac701',
+    fast_track_auto: true
+  },
+  {
+    id: 'model-02',
+    name: 'Road-YOLOv8-Baseline',
+    version: 'v1.2.0-legacy',
+    status: 'DEPRECATED',
+    map_50: 84.1,
+    recall: 81.2,
+    f1_score: 0.82,
+    deployed_at: '15/01/2026',
+    sha256_hash: '2e90f87ee2a10dcb881a7b8e519c3620f4f9d2c5e88849b2914ca8b10f54316d',
+    fast_track_auto: false
+  }
+]
+
+export const mockDefectSafetyCatalog: DefectCatalogItem[] = [
+  {
+    code: 'POTHOLE',
+    name: 'Ổ gà / Sụt lở mặt đường',
+    description: 'Hõm sụt hình chén trên mặt đường bê tông nhựa hoặc bê tông xi măng, chiều sâu > 25mm gây nguy hiểm giao thông.',
+    standard_ref: 'TCVN 8864:2011',
+    default_severity: Severity.HIGH,
+    is_active: true
+  },
+  {
+    code: 'ALLIGATOR_CRACK',
+    name: 'Nứt mai rùa (Da cá sấu)',
+    description: 'Tập hợp các vết nứt đan xen hình đa giác nhiều cạnh do mỏi kết cấu móng áo đường hoặc nền đất yếu.',
+    standard_ref: '22 TCN 211-06',
+    default_severity: Severity.CRITICAL,
+    is_active: true
+  },
+  {
+    code: 'RUTTING',
+    name: 'Vệt hằn lún bánh xe',
+    description: 'Lún vệt dọc theo bánh xe lăn trên mặt đường nhựa có chiều sâu vệt lún > 15mm dưới thanh thước 3m.',
+    standard_ref: 'TCVN 8864:2011',
+    default_severity: Severity.HIGH,
+    is_active: true
+  },
+  {
+    code: 'LONGITUDINAL_CRACK',
+    name: 'Nứt dọc mép thảm mặt đường',
+    description: 'Vết nứt chạy song song với tim đường, thường xuất hiện tại vệt tiếp giáp giữa các dải rải thảm bê tông nhựa.',
+    standard_ref: 'TCVN 8864:2011',
+    default_severity: Severity.MEDIUM,
+    is_active: true
+  },
+  {
+    code: 'TRANSVERSE_CRACK',
+    name: 'Nứt ngang co ngót nhiệt',
+    description: 'Vết nứt vuông góc với tim đường do ứng suất nhiệt độ thay đổi hoặc nứt phản ảnh từ lớp móng gia cố xi măng.',
+    standard_ref: 'TCVN 8864:2011',
+    default_severity: Severity.MEDIUM,
+    is_active: true
+  }
+]
+
+export const mockLegalHoldProjects: LegalHoldProject[] = [
+  {
+    project_id: 'proj-02',
+    project_code: 'QL1A-01',
+    project_name: 'Dự án QL1A - Giai đoạn 1 (Km 990 - 1024)',
+    warranty_end_date: '01/01/2021',
+    is_warranty_expired: true,
+    years_since_warranty_end: 5.6,
+    is_legal_hold: true,
+    hold_reason: 'Thanh tra đột xuất chất lượng hồ sơ hoàn công đợt 1 và phân xử tranh chấp nứt lún ta-luy',
+    hold_authority: 'Ban QLDA Thăng Long & Cục Đường Bộ Việt Nam',
+    hold_reference: 'Công văn số 8492/BGTVT-TTr',
+    hold_since: '18/08/2026 - 09:30:14 GMT+7'
+  },
+  {
+    project_id: 'proj-01',
+    project_code: 'QL1A-02',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
+    warranty_end_date: '31/12/2026',
+    is_warranty_expired: false,
+    years_since_warranty_end: 0,
+    is_legal_hold: false
+  },
+  {
+    project_id: 'proj-03',
+    project_code: 'CT03-BN',
+    project_name: 'Dự án Cao tốc Bắc - Nam (Km 45 - Km 80)',
+    warranty_end_date: '30/06/2027',
+    is_warranty_expired: false,
+    years_since_warranty_end: 0,
+    is_legal_hold: false
+  },
+  {
+    project_id: 'proj-04',
+    project_code: 'BT2019',
+    project_name: 'Sửa chữa bảo trì Km 990 - Km 1000 (Năm 2019)',
+    warranty_end_date: '01/06/2020',
+    is_warranty_expired: true,
+    years_since_warranty_end: 6.2,
+    is_legal_hold: false
+  }
+]
+
+export const mockDataDeletionRequests: DataDeletionRequest[] = [
+  {
+    id: 'req-01',
+    request_code: '#REQ-DEL-2026-01',
+    project_id: 'proj-02',
+    project_name: 'Dự án QL1A - Giai đoạn 1 (Km 990 - 1024)',
+    requested_by_id: 'usr-04',
+    requested_by_name: 'PM Lê Tuấn',
+    requested_at: '24/08/2026 10:15:00',
+    data_type: 'RAW_DRONE_MEDIA',
+    data_description: 'Dữ liệu ảnh gốc không ảnh Drone độ phân giải cao đợt bay quét QL1A Km 990 - Km 1010',
+    data_size_gb: 420,
+    warranty_end_date: '01/01/2021',
+    years_since_warranty: 5.6,
+    is_eligible_5years: true,
+    status: 'PENDING_APPROVAL',
+    blocked_by_legal_hold: true,
+    justification_notes: 'Dự án đã kết thúc bảo hành từ 01/01/2021 (đủ trên 5 năm lưu trữ theo BR-45), đề xuất giải phóng dung lượng máy chủ lưu trữ.'
+  },
+  {
+    id: 'req-02',
+    request_code: '#REQ-DEL-2026-02',
+    project_id: 'proj-01',
+    project_name: 'Dự án QL1A - Giai đoạn 2 (Km 1024 - 1045)',
+    requested_by_id: 'usr-03',
+    requested_by_name: 'PM Đỗ Quốc Hoàng',
+    requested_at: '25/08/2026 08:30:00',
+    data_type: 'PATROL_VIDEO_CHUNK',
+    data_description: 'Video hành trình camera xe tuần đường đợt khảo sát sơ bộ tháng 03/2026',
+    data_size_gb: 120,
+    warranty_end_date: '31/12/2026',
+    years_since_warranty: 0,
+    is_eligible_5years: false,
+    status: 'REJECTED',
+    blocked_by_legal_hold: false,
+    justification_notes: 'Đề xuất xóa video tuần đường thô để giải phóng bộ nhớ cục bộ.',
+    rejection_reason: 'RETENTION_NOT_EXPIRED: Dự án vẫn đang trong thời hạn bảo hành (hết hạn 31/12/2026); chưa đủ 5 năm sau bảo hành theo quy định BR-45.'
+  },
+  {
+    id: 'req-03',
+    request_code: '#REQ-DEL-2021-09',
+    project_id: 'proj-04',
+    project_name: 'Sửa chữa bảo trì Km 990 - Km 1000 (Năm 2019)',
+    requested_by_id: 'usr-04',
+    requested_by_name: 'PM Lê Tuấn',
+    requested_at: '20/08/2026 14:00:00',
+    data_type: 'MAINTENANCE_LOG_ARCHIVE',
+    data_description: 'Nhật ký tuần tra và video camera hành trình xe cơ giới đợt bảo trì năm 2019',
+    data_size_gb: 85,
+    warranty_end_date: '01/06/2020',
+    years_since_warranty: 6.2,
+    is_eligible_5years: true,
+    status: 'PENDING_APPROVAL',
+    blocked_by_legal_hold: false,
+    justification_notes: 'Hồ sơ đã hết thời hạn bảo hành từ 01/06/2020 (+ 5 năm lưu trữ hoàn tất vào 01/06/2025). Đã sao lưu bản lưu trữ kho quốc gia.'
+  }
+]
+
 
 
 

@@ -118,6 +118,13 @@ function getSubLineCoordinates(
   coords: [number, number][],
   kmPoints: number[]
 ): [number, number][] {
+  if (!coords || coords.length < 2) return coords || []
+
+  // Nếu phân đoạn bao phủ toàn tuyến hoặc chỉ có 1 phân đoạn
+  if (startKm <= kmPoints[0] && endKm >= kmPoints[kmPoints.length - 1]) {
+    return coords
+  }
+
   const result: [number, number][] = []
   result.push(interpolateCoordAtKm(startKm, coords, kmPoints))
 
@@ -128,8 +135,23 @@ function getSubLineCoordinates(
   }
 
   result.push(interpolateCoordAtKm(endKm, coords, kmPoints))
+
+  // Đảm bảo LineString trong GeoJSON luôn có ít nhất 2 tọa độ hợp lệ
+  if (result.length < 2) {
+    return coords.slice(0, 2)
+  }
+  // Nếu 2 điểm đầu cuối trùng nhau, tạo độ lệch vi mô để LineString luôn render được trên MapLibre
+  if (
+    result.length === 2 &&
+    Math.abs(result[0][0] - result[1][0]) < 1e-7 &&
+    Math.abs(result[0][1] - result[1][1]) < 1e-7
+  ) {
+    return [result[0], [result[0][0] + 0.0001, result[0][1] + 0.0001]]
+  }
+
   return result
 }
+
 
 // Tạo danh sách tấm Slab mẫu
 function generateMockSlabs(segmentCount: number): SlabItem[] {
@@ -175,16 +197,37 @@ export const AlignmentSegments: React.FC = () => {
   const [splitDistance, setSplitDistance] = useState<number>(5.0)
   const [splitSortOrder, setSplitSortOrder] = useState<'asc' | 'desc'>('asc')
 
+  // Modal chỉnh sửa phân đoạn (Edit Segment)
+  const [editingSegment, setEditingSegment] = useState<SegmentItem | null>(null)
+
+  // Modal thêm mới phân đoạn (Add Segment)
+  const [isAddSegmentModalOpen, setIsAddSegmentModalOpen] = useState<boolean>(false)
+  const [newSegForm, setNewSegForm] = useState({
+    code: '',
+    startKm: 1020.0,
+    endKm: 1025.0,
+    laneCount: 4,
+    surfaceMaterial: 'Mặt BTN C12.5',
+    color: SEGMENT_COLORS[0]
+  })
+
+  // Modal tách phân đoạn (Split Segment)
+  const [splitModalSegment, setSplitModalSegment] = useState<SegmentItem | null>(null)
+  const [customSplitKm, setCustomSplitKm] = useState<number>(1022.5)
+
   // Chế độ đo khoảng cách (Ruler)
   const [rulerActive, setRulerActive] = useState<boolean>(false)
   const [rulerPoints, setRulerPoints] = useState<[number, number][]>([])
 
   // Modal nạp file GeoJSON / KML
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Danh sách tọa độ và mốc km chuẩn của dự án (Km 1020 - Km 1045)
-  const currentCoords = ROUTE_COORDINATES
-  const currentKmPoints = ROUTE_KM_POINTS
+  const [currentCoords, setCurrentCoords] = useState<[number, number][]>(ROUTE_COORDINATES)
+  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(ROUTE_KM_POINTS)
+  const [importedFileName, setImportedFileName] = useState<string | null>(null)
+  const [importedLengthKm, setImportedLengthKm] = useState<number>(25.0)
 
   // Live cursor position
   const [cursorPos, setCursorPos] = useState({
@@ -304,129 +347,138 @@ export const AlignmentSegments: React.FC = () => {
 
     map.on('load', () => {
       // 1. Thêm GeoJSON Source cho các phân đoạn
-      map.addSource('segments-source', {
-        type: 'geojson',
-        data: buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
-      })
+      if (!map.getSource('segments-source')) {
+        map.addSource('segments-source', {
+          type: 'geojson',
+          data: buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
+        })
+      }
 
       // 2. Thêm GeoJSON Source cho hành lang quy hoạch 30m (Planning corridor)
-      map.addSource('planning-corridor-source', {
-        type: 'geojson',
-        data: buildPlanningCorridorGeoJSON(currentCoords)
-      })
-
-      // 2. Thêm GeoJSON Source cho hành lang quy hoạch 30m (Planning corridor)
-      map.addSource('planning-corridor-source', {
-        type: 'geojson',
-        data: buildPlanningCorridorGeoJSON(currentCoords)
-      })
+      if (!map.getSource('planning-corridor-source')) {
+        map.addSource('planning-corridor-source', {
+          type: 'geojson',
+          data: buildPlanningCorridorGeoJSON(currentCoords)
+        })
+      }
 
       // 3. Layers: Hành lang quy hoạch (Ẩn mặc định, bật khi chọn tab Planning)
-      map.addLayer({
-        id: 'planning-corridor-layer',
-        type: 'fill',
-        source: 'planning-corridor-source',
-        layout: { visibility: 'none' },
-        paint: {
-          'fill-color': '#F59E0B',
-          'fill-opacity': 0.15,
-          'fill-outline-color': '#D97706'
-        }
-      })
+      if (!map.getLayer('planning-corridor-layer')) {
+        map.addLayer({
+          id: 'planning-corridor-layer',
+          type: 'fill',
+          source: 'planning-corridor-source',
+          layout: { visibility: 'none' },
+          paint: {
+            'fill-color': '#F59E0B',
+            'fill-opacity': 0.18,
+            'fill-outline-color': '#D97706'
+          }
+        })
+      }
 
-      // 4. Layers: Viền bóng tim tuyến phân đoạn (Tự động phóng to theo tỷ lệ zoom bản đồ)
-      map.addLayer({
-        id: 'segments-casing-layer',
-        type: 'line',
-        source: 'segments-source',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#0F172A',
-          'line-width': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            6, 4,
-            9, 7,
-            11, 11,
-            14, 20,
-            16, 36,
-            18, 64,
-            20, 100
-          ],
-          'line-opacity': 0.85
-        }
-      })
+      // 4. Layers: Đoạn đang chọn Highlight (Viền Halo phát sáng vàng nằm DƯỚI tim đường, ôm sát viền)
+      if (!map.getLayer('segments-highlight-layer')) {
+        map.addLayer({
+          id: 'segments-highlight-layer',
+          type: 'line',
+          source: 'segments-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#FBBF24',
+            'line-width': [
+              'interpolate',
+              ['exponential', 1.5],
+              ['zoom'],
+              6, 7,
+              9, 11,
+              11, 15,
+              14, 25,
+              16, 42,
+              18, 70,
+              20, 106
+            ],
+            'line-opacity': ['case', ['get', 'isSelected'], 0.8, 0]
+          }
+        })
+      }
 
-      // 5. Layers: Đường phân đoạn đa màu (Tự động phóng to theo zoom để quan sát rõ mặt đường)
-      map.addLayer({
-        id: 'segments-main-layer',
-        type: 'line',
-        source: 'segments-source',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': ['get', 'color'],
-          'line-width': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            6, 2.5,
-            9, 5,
-            11, 8,
-            14, 15,
-            16, 28,
-            18, 52,
-            20, 84
-          ]
-        }
-      })
+      // 5. Layers: Viền bóng tim tuyến phân đoạn (Tự động phóng to theo tỷ lệ zoom bản đồ)
+      if (!map.getLayer('segments-casing-layer')) {
+        map.addLayer({
+          id: 'segments-casing-layer',
+          type: 'line',
+          source: 'segments-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#0F172A',
+            'line-width': [
+              'interpolate',
+              ['exponential', 1.5],
+              ['zoom'],
+              6, 4,
+              9, 7,
+              11, 11,
+              14, 20,
+              16, 36,
+              18, 64,
+              20, 96
+            ],
+            'line-opacity': 0.95
+          }
+        })
+      }
 
-      // 6. Layers: Vạch đứt tim đường (Tự động nở to theo zoom)
-      map.addLayer({
-        id: 'segments-dash-layer',
-        type: 'line',
-        source: 'segments-source',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#FFFFFF',
-          'line-width': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            6, 1,
-            11, 1.8,
-            14, 3,
-            16, 5,
-            18, 8,
-            20, 12
-          ],
-          'line-dasharray': [3, 2],
-          'line-opacity': 0.95
-        }
-      })
+      // 6. Layers: Đường phân đoạn đa màu (Tự động phóng to theo zoom để quan sát rõ mặt đường)
+      if (!map.getLayer('segments-main-layer')) {
+        map.addLayer({
+          id: 'segments-main-layer',
+          type: 'line',
+          source: 'segments-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': [
+              'interpolate',
+              ['exponential', 1.5],
+              ['zoom'],
+              6, 2.5,
+              9, 5,
+              11, 8,
+              14, 15,
+              16, 28,
+              18, 52,
+              20, 80
+            ]
+          }
+        })
+      }
 
-      // 7. Layers: Đoạn đang chọn Highlight (Glow vàng nở to theo zoom)
-      map.addLayer({
-        id: 'segments-highlight-layer',
-        type: 'line',
-        source: 'segments-source',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#FDE047',
-          'line-width': [
-            'interpolate',
-            ['exponential', 1.5],
-            ['zoom'],
-            6, 6,
-            11, 14,
-            14, 26,
-            16, 44,
-            18, 76,
-            20, 116
-          ],
-          'line-opacity': ['case', ['get', 'isSelected'], 0.65, 0]
-        }
-      })
+      // 7. Layers: Vạch đứt tim đường (Luôn nằm trên cùng, nổi bật sắc nét)
+      if (!map.getLayer('segments-dash-layer')) {
+        map.addLayer({
+          id: 'segments-dash-layer',
+          type: 'line',
+          source: 'segments-source',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': [
+              'interpolate',
+              ['exponential', 1.5],
+              ['zoom'],
+              6, 1,
+              11, 1.8,
+              14, 3,
+              16, 5,
+              18, 7,
+              20, 10
+            ],
+            'line-dasharray': [3, 2],
+            'line-opacity': 0.98
+          }
+        })
+      }
 
       // 8. Click vào line phân đoạn trên map để chọn
       map.on('click', 'segments-main-layer', (e: maplibregl.MapLayerMouseEvent) => {
@@ -473,22 +525,35 @@ export const AlignmentSegments: React.FC = () => {
     }
   }, [])
 
-  // 2. Đồng bộ GeoJSON và Markers mỗi khi segments hoặc selection thay đổi
+  // 2. Đồng bộ GeoJSON và Markers mỗi khi segments, selection hoặc tọa độ thay đổi
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
 
-    if (map.isStyleLoaded()) {
+    const syncMapData = () => {
       // Cập nhật GeoJSON Phân đoạn
       const segSource = map.getSource('segments-source') as maplibregl.GeoJSONSource
       if (segSource) {
         segSource.setData(buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId))
       }
 
+      // Cập nhật GeoJSON Hành lang quy hoạch 30m
+      const planSource = map.getSource('planning-corridor-source') as maplibregl.GeoJSONSource
+      if (planSource) {
+        planSource.setData(buildPlanningCorridorGeoJSON(currentCoords))
+      }
+
       // Cập nhật Markers mốc lý trình trên bản đồ
       renderMarkers(map, segments, currentCoords, currentKmPoints)
     }
-  }, [segments, selectedSegmentId])
+
+    if (map.isStyleLoaded()) {
+      syncMapData()
+    } else {
+      map.once('load', syncMapData)
+      map.once('styledata', syncMapData)
+    }
+  }, [segments, selectedSegmentId, currentCoords, currentKmPoints])
 
   // 3. Chuyển đổi lớp bản đồ (Vệ tinh / Vector / Quy hoạch)
   useEffect(() => {
@@ -533,9 +598,13 @@ export const AlignmentSegments: React.FC = () => {
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    // 1. Marker các đầu phân đoạn
+    // 1. Marker các đầu phân đoạn với lý trình chuẩn Việt Nam (Km 1020+000)
     segList.forEach((seg) => {
       const coord = interpolateCoordAtKm(seg.startKm, coords, kmPts)
+      const floorKm = Math.floor(seg.startKm)
+      const remainderMeters = Math.round((seg.startKm - floorKm) * 1000)
+      const stationText = remainderMeters > 0 ? `Km ${floorKm}+${String(remainderMeters).padStart(3, '0')}` : `Km ${floorKm}`
+
       const el = document.createElement('div')
       el.className = 'flex flex-col items-center cursor-pointer group'
       el.innerHTML = `
@@ -543,27 +612,32 @@ export const AlignmentSegments: React.FC = () => {
              class="w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white font-bold transition-transform group-hover:scale-125">
         </div>
         <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-white text-[10px] font-mono font-bold shadow-md whitespace-nowrap">
-          Km ${seg.startKm.toFixed(0)}
+          ${stationText}
         </div>
       `
       el.addEventListener('click', () => {
         setSelectedSegmentId(seg.id)
-        showToast(`Đã chọn ${seg.code} (Km ${seg.startKm.toFixed(3)} - Km ${seg.endKm.toFixed(3)})`)
+        showToast(`Đã chọn ${seg.code} (${stationText})`)
       })
 
       const marker = new maplibregl.Marker({ element: el }).setLngLat(coord).addTo(map)
       markersRef.current.push(marker)
     })
 
-    // Marker điểm cuối tuyến (Km 1045)
+    // Marker điểm cuối tuyến (tự động tính theo cự ly thực tế)
     const endCoord = coords[coords.length - 1]
+    const endKm = kmPts[kmPts.length - 1] || 1045
+    const endKmFloor = Math.floor(endKm)
+    const endKmRemainder = Math.round((endKm - endKmFloor) * 1000)
+    const endStationText = endKmRemainder > 0 ? `Km ${endKmFloor}+${String(endKmRemainder).padStart(3, '0')}` : `Km ${endKmFloor}`
+
     const endEl = document.createElement('div')
     endEl.className = 'flex flex-col items-center'
     endEl.innerHTML = `
       <div style="background-color: #C9A227; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.35);" 
            class="w-4 h-4 rounded-full"></div>
-      <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-white text-[10px] font-mono font-bold shadow-md">
-        Km 1045
+      <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-white text-[10px] font-mono font-bold shadow-md whitespace-nowrap">
+        ${endStationText}
       </div>
     `
     const endMarker = new maplibregl.Marker({ element: endEl }).setLngLat(endCoord).addTo(map)
@@ -577,7 +651,7 @@ export const AlignmentSegments: React.FC = () => {
     kmPts: number[],
     activeSegId: string | null
   ): GeoJSON.FeatureCollection {
-    const features: GeoJSON.Feature[] = segList.map((seg) => {
+    const features: GeoJSON.Feature[] = segList.map((seg, idx) => {
       const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
 
       return {
@@ -588,7 +662,7 @@ export const AlignmentSegments: React.FC = () => {
           startKm: seg.startKm,
           endKm: seg.endKm,
           lengthKm: seg.lengthKm,
-          color: seg.color,
+          color: seg.color || SEGMENT_COLORS[idx % SEGMENT_COLORS.length] || '#0284C7',
           isSelected: seg.id === activeSegId
         },
         geometry: {
@@ -604,9 +678,9 @@ export const AlignmentSegments: React.FC = () => {
     }
   }
 
-  // Helper build GeoJSON cho Hành lang quy hoạch 30m
+  // Helper build GeoJSON cho Hành lang quy hoạch 30m (~15m mỗi bên)
   function buildPlanningCorridorGeoJSON(coords: [number, number][]): GeoJSON.FeatureCollection {
-    const offset = 0.003
+    const offset = 0.00015
     const topCoords = coords.map((c) => [c[0] + offset, c[1] + offset] as [number, number])
     const bottomCoords = [...coords].reverse().map((c) => [c[0] - offset, c[1] - offset] as [number, number])
     const polygon = [...topCoords, ...bottomCoords, topCoords[0]]
@@ -628,23 +702,23 @@ export const AlignmentSegments: React.FC = () => {
 
   // Tương tác: ÁP DỤNG CHIA ĐOẠN TỰ ĐỘNG (Phản ánh trực tiếp lên Map và List)
   const handleApplyAutoSplit = () => {
-    const totalKm = 25.0
-    const startBaseKm = 1020.0
-    const dist = Math.max(1, Math.min(splitDistance, 15))
+    const totalKm = importedLengthKm || (currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0]) || 25.0
+    const startBaseKm = currentKmPoints[0] || 1020.0
+    const dist = Math.max(0.01, Math.min(splitDistance, totalKm))
 
     const newSegments: SegmentItem[] = []
     let currentKm = startBaseKm
     let idx = 1
 
-    while (currentKm < startBaseKm + totalKm) {
+    while (currentKm < startBaseKm + totalKm - 0.001) {
       const nextKm = Math.min(currentKm + dist, startBaseKm + totalKm)
-      const len = parseFloat((nextKm - currentKm).toFixed(2))
+      const len = parseFloat((nextKm - currentKm).toFixed(3))
 
       newSegments.push({
         id: `seg-${idx}`,
         code: `Phân đoạn #${String(idx).padStart(2, '0')}`,
-        startKm: currentKm,
-        endKm: nextKm,
+        startKm: parseFloat(currentKm.toFixed(3)),
+        endKm: parseFloat(nextKm.toFixed(3)),
         lengthKm: len,
         status: 'VALID',
         statusText: 'HỢP LỆ (Valid)',
@@ -665,20 +739,382 @@ export const AlignmentSegments: React.FC = () => {
     setSlabs(generateMockSlabs(newSegments.length))
     setSelectedSegmentId(newSegments[0]?.id || null)
 
-    showToast(`Đã chia thành ${newSegments.length} phân đoạn (${dist} km/đoạn). Tuyến đường hiển thị liên tục chuẩn thiết kế!`)
+    // Cập nhật ngay lập tức lên MapLibre
+    if (mapRef.current) {
+      const map = mapRef.current
+      const segSrc = map.getSource('segments-source') as maplibregl.GeoJSONSource
+      if (segSrc) {
+        segSrc.setData(buildSegmentsGeoJSON(newSegments, currentCoords, currentKmPoints, newSegments[0]?.id || null))
+      }
+      renderMarkers(map, newSegments, currentCoords, currentKmPoints)
+    }
+
+    const distText = dist >= 1 ? `${dist.toFixed(2)} km` : `${(dist * 1000).toFixed(0)} m`
+    showToast(`Đã chia tuyến thành ${newSegments.length} phân đoạn (${distText}/đoạn). Tuyến đường hiển thị liên tục chuẩn thiết kế!`)
     handleFitBounds()
   }
 
-  // Reset góc nhìn vừa khung hình toàn tuyến 25km
+  // Chỉnh sửa phân đoạn (Lưu form Edit)
+  const handleSaveEditedSegment = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingSegment) return
+
+    const start = parseFloat(Number(editingSegment.startKm).toFixed(3))
+    const end = parseFloat(Number(editingSegment.endKm).toFixed(3))
+
+    if (isNaN(start) || isNaN(end) || start >= end) {
+      showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
+      return
+    }
+
+    const updatedLength = parseFloat((end - start).toFixed(3))
+    const updated: SegmentItem = {
+      ...editingSegment,
+      startKm: start,
+      endKm: end,
+      lengthKm: updatedLength
+    }
+
+    const updatedList = segments.map((s) => (s.id === updated.id ? updated : s)).sort((a, b) => a.startKm - b.startKm)
+    setSegments(updatedList)
+
+    if (mapRef.current) {
+      const segSrc = mapRef.current.getSource('segments-source') as maplibregl.GeoJSONSource
+      if (segSrc) {
+        segSrc.setData(buildSegmentsGeoJSON(updatedList, currentCoords, currentKmPoints, updated.id))
+      }
+      renderMarkers(mapRef.current, updatedList, currentCoords, currentKmPoints)
+    }
+
+    showToast(`Đã lưu cập nhật ${updated.code} (Km ${start.toFixed(3)} - Km ${end.toFixed(3)})`)
+    setEditingSegment(null)
+  }
+
+  // Thêm phân đoạn mới thủ công
+  const handleCreateNewSegment = (e: React.FormEvent) => {
+    e.preventDefault()
+    const start = parseFloat(Number(newSegForm.startKm).toFixed(3))
+    const end = parseFloat(Number(newSegForm.endKm).toFixed(3))
+
+    if (isNaN(start) || isNaN(end) || start >= end) {
+      showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
+      return
+    }
+
+    const newSeg: SegmentItem = {
+      id: `seg-${Date.now()}`,
+      code: newSegForm.code || `Phân đoạn #${String(segments.length + 1).padStart(2, '0')}`,
+      startKm: start,
+      endKm: end,
+      lengthKm: parseFloat((end - start).toFixed(3)),
+      status: 'VALID',
+      statusText: 'HỢP LỆ (Valid)',
+      laneCount: newSegForm.laneCount || 4,
+      surfaceMaterial: newSegForm.surfaceMaterial || 'Mặt BTN C12.5',
+      color: newSegForm.color || SEGMENT_COLORS[segments.length % SEGMENT_COLORS.length]
+    }
+
+    const updatedList = [...segments, newSeg].sort((a, b) => a.startKm - b.startKm)
+    setSegments(updatedList)
+    setSelectedSegmentId(newSeg.id)
+
+    if (mapRef.current) {
+      const segSrc = mapRef.current.getSource('segments-source') as maplibregl.GeoJSONSource
+      if (segSrc) {
+        segSrc.setData(buildSegmentsGeoJSON(updatedList, currentCoords, currentKmPoints, newSeg.id))
+      }
+      renderMarkers(mapRef.current, updatedList, currentCoords, currentKmPoints)
+    }
+
+    setIsAddSegmentModalOpen(false)
+    showToast(`Đã thêm mới ${newSeg.code} (${newSeg.lengthKm} km) vào tim tuyến!`)
+  }
+
+  // Tách 1 phân đoạn làm 2 đoạn tại mốc Km chỉ định
+  const handleSplitSegmentSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!splitModalSegment) return
+
+    const splitKm = parseFloat(Number(customSplitKm).toFixed(3))
+    if (splitKm <= splitModalSegment.startKm || splitKm >= splitModalSegment.endKm) {
+      showToast(`Điểm tách phải nằm giữa Km ${splitModalSegment.startKm.toFixed(3)} và Km ${splitModalSegment.endKm.toFixed(3)}!`)
+      return
+    }
+
+    const segIndex = segments.findIndex((s) => s.id === splitModalSegment.id)
+    if (segIndex === -1) return
+
+    const segA: SegmentItem = {
+      ...splitModalSegment,
+      id: `seg-${Date.now()}-A`,
+      code: `${splitModalSegment.code}A`,
+      startKm: splitModalSegment.startKm,
+      endKm: splitKm,
+      lengthKm: parseFloat((splitKm - splitModalSegment.startKm).toFixed(3)),
+      color: splitModalSegment.color
+    }
+
+    const segB: SegmentItem = {
+      ...splitModalSegment,
+      id: `seg-${Date.now()}-B`,
+      code: `${splitModalSegment.code}B`,
+      startKm: splitKm,
+      endKm: splitModalSegment.endKm,
+      lengthKm: parseFloat((splitModalSegment.endKm - splitKm).toFixed(3)),
+      color: SEGMENT_COLORS[(segIndex + 1) % SEGMENT_COLORS.length]
+    }
+
+    const updatedList = [
+      ...segments.slice(0, segIndex),
+      segA,
+      segB,
+      ...segments.slice(segIndex + 1)
+    ]
+
+    setSegments(updatedList)
+    setSelectedSegmentId(segA.id)
+
+    if (mapRef.current) {
+      const segSrc = mapRef.current.getSource('segments-source') as maplibregl.GeoJSONSource
+      if (segSrc) {
+        segSrc.setData(buildSegmentsGeoJSON(updatedList, currentCoords, currentKmPoints, segA.id))
+      }
+      renderMarkers(mapRef.current, updatedList, currentCoords, currentKmPoints)
+    }
+
+    setSplitModalSegment(null)
+    showToast(`Đã tách ${splitModalSegment.code} thành 2 đoạn tại Km ${splitKm.toFixed(3)}!`)
+  }
+
+  // Xóa phân đoạn
+  const handleDeleteSegment = (segId: string) => {
+    if (segments.length <= 1) {
+      showToast('Tuyến đường phải có ít nhất 1 phân đoạn!')
+      return
+    }
+
+    const updatedList = segments.filter((s) => s.id !== segId)
+    setSegments(updatedList)
+    if (selectedSegmentId === segId) {
+      setSelectedSegmentId(updatedList[0]?.id || null)
+    }
+
+    if (mapRef.current) {
+      const segSrc = mapRef.current.getSource('segments-source') as maplibregl.GeoJSONSource
+      if (segSrc) {
+        segSrc.setData(buildSegmentsGeoJSON(updatedList, currentCoords, currentKmPoints, updatedList[0]?.id || null))
+      }
+      renderMarkers(mapRef.current, updatedList, currentCoords, currentKmPoints)
+    }
+
+    showToast('Đã xóa phân đoạn khỏi danh sách tuyến!')
+  }
+
+  // Tính khoảng cách Haversine giữa 2 tọa độ GPS (km)
+  function calculateHaversineKm(c1: [number, number], c2: [number, number]): number {
+    const R = 6371
+    const dLat = ((c2[1] - c1[1]) * Math.PI) / 180
+    const dLon = ((c2[0] - c1[0]) * Math.PI) / 180
+    const lat1 = (c1[1] * Math.PI) / 180
+    const lat2 = (c2[1] * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2)
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }
+
+  // Xử lý nạp và trích xuất dữ liệu từ tệp GeoJSON (.geojson, .json)
+  const processGeoJSONFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string
+        const parsed = JSON.parse(text)
+        let rawCoords: [number, number][] = []
+
+        // Trích xuất thông minh từ GeoJSON (đặc biệt hỗ trợ xuất từ CAD Civil 3D / RoadGuard CAD Parser)
+        if (parsed.type === 'FeatureCollection' && Array.isArray(parsed.features)) {
+          // 1. Tìm Feature là TIM TUYẾN CHÍNH (Centerline / Alignment / Tim tuyến)
+          let targetFeature = parsed.features.find((f: any) => {
+            const type = (f.properties?.type || '').toLowerCase()
+            const layer = (f.properties?.layer || '').toLowerCase()
+            const name = (f.properties?.name || '').toLowerCase()
+            return (
+              type === 'centerline' ||
+              layer.includes('tim') ||
+              layer.includes('center') ||
+              layer.includes('alignment') ||
+              name.includes('tim') ||
+              name.includes('center') ||
+              name.includes('tuyến chính')
+            )
+          })
+
+          // 2. Nếu không có nhãn layer tim tuyến, chọn LineString dài nhất (tránh nối gộp mép đường trái/phải song song)
+          if (!targetFeature) {
+            const lineFeatures = parsed.features.filter(
+              (f: any) =>
+                (f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString') &&
+                Array.isArray(f.geometry?.coordinates) &&
+                f.geometry.coordinates.length >= 2
+            )
+            if (lineFeatures.length > 0) {
+              targetFeature = lineFeatures.reduce((prev: any, curr: any) => {
+                const prevLen = prev.geometry?.coordinates?.length || 0
+                const currLen = curr.geometry?.coordinates?.length || 0
+                return currLen > prevLen ? curr : prev
+              })
+            }
+          }
+
+          if (targetFeature && targetFeature.geometry) {
+            const geom = targetFeature.geometry
+            if (geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
+              rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
+            } else if (geom.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
+              rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
+            }
+          }
+        } else if (parsed.type === 'Feature') {
+          const geom = parsed.geometry
+          if (geom?.type === 'LineString' && Array.isArray(geom.coordinates)) {
+            rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
+          } else if (geom?.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
+            rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
+          }
+        } else if (parsed.type?.toLowerCase() === 'linestring' && Array.isArray(parsed.coordinates)) {
+          rawCoords = parsed.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
+        }
+
+        if (rawCoords.length < 2) {
+          showToast('Tệp tải lên không chứa hình học LineString hoặc tim tuyến hợp lệ!')
+          return
+        }
+
+        // Tự động nhận diện và đảo thứ tự nếu file chứa [lat, lng] thay vì [lng, lat] chuẩn WGS84
+        let extracted = rawCoords
+        const sample = extracted[0]
+        if (sample[0] >= 8 && sample[0] <= 24 && sample[1] >= 100 && sample[1] <= 112) {
+          extracted = extracted.map(([lat, lng]) => [lng, lat])
+        }
+
+        // Lọc bỏ các điểm tọa độ trùng lặp liên tiếp để tránh khoảng cách bằng 0
+        const cleanCoords: [number, number][] = []
+        for (let i = 0; i < extracted.length; i++) {
+          if (
+            i === 0 ||
+            Math.abs(extracted[i][0] - extracted[i - 1][0]) > 1e-7 ||
+            Math.abs(extracted[i][1] - extracted[i - 1][1]) > 1e-7
+          ) {
+            cleanCoords.push(extracted[i])
+          }
+        }
+
+        if (cleanCoords.length < 2) {
+          showToast('Tệp tải lên không đủ các điểm mốc tọa độ phân biệt!')
+          return
+        }
+
+        extracted = cleanCoords
+
+        // Tính khoảng cách tổng cộng (km) bằng công thức Haversine
+        let totalLen = 0
+        const kmPts: number[] = [1020.0]
+        for (let i = 0; i < extracted.length - 1; i++) {
+          const d = calculateHaversineKm(extracted[i], extracted[i + 1])
+          totalLen += d
+          kmPts.push(Number((1020.0 + totalLen).toFixed(3)))
+        }
+        totalLen = parseFloat(Math.max(totalLen, 0.05).toFixed(3))
+
+        setCurrentCoords(extracted)
+        setCurrentKmPoints(kmPts)
+        setImportedFileName(file.name)
+        setImportedLengthKm(totalLen)
+
+        // Tự động phân đoạn: nếu tuyến ngắn (< 2km) thì chia thành 2-3 phân đoạn trực quan
+        let dist = splitDistance || 5.0
+        if (totalLen <= 1.0) {
+          dist = parseFloat((totalLen / 3).toFixed(2)) || 0.25
+        } else if (totalLen <= 2.5) {
+          dist = parseFloat((totalLen / 3).toFixed(2)) || 0.5
+        }
+
+        const count = Math.max(1, Math.ceil(totalLen / dist))
+        const newSegs: SegmentItem[] = []
+        let cur = 1020.0
+        for (let i = 1; i <= count; i++) {
+          const next = i === count ? 1020.0 + totalLen : Math.min(cur + dist, 1020.0 + totalLen)
+          newSegs.push({
+            id: `seg-${i}`,
+            code: `Phân đoạn #${String(i).padStart(2, '0')}`,
+            startKm: parseFloat(cur.toFixed(3)),
+            endKm: parseFloat(next.toFixed(3)),
+            lengthKm: parseFloat((next - cur).toFixed(3)),
+            status: 'VALID',
+            statusText: 'HỢP LỆ (Valid)',
+            laneCount: 4,
+            surfaceMaterial: i % 2 === 0 ? 'Mặt BTN C19' : 'Mặt BTN C12.5',
+            color: SEGMENT_COLORS[(i - 1) % SEGMENT_COLORS.length]
+          })
+          cur = next
+        }
+
+        setSegments(newSegs)
+        setSlabs(generateMockSlabs(newSegs.length))
+        setSelectedSegmentId(newSegs[0]?.id || null)
+        setIsImportModalOpen(false)
+
+        // Cập nhật trực tiếp lên MapLibre ngay lập tức
+        if (mapRef.current) {
+          const map = mapRef.current
+          const bounds = new maplibregl.LngLatBounds()
+          extracted.forEach((c) => bounds.extend(c))
+          map.fitBounds(bounds, { padding: 80, speed: 1.2 })
+
+          const segSrc = map.getSource('segments-source') as maplibregl.GeoJSONSource
+          if (segSrc) {
+            segSrc.setData(buildSegmentsGeoJSON(newSegs, extracted, kmPts, newSegs[0]?.id || null))
+          }
+          const planSrc = map.getSource('planning-corridor-source') as maplibregl.GeoJSONSource
+          if (planSrc) {
+            planSrc.setData(buildPlanningCorridorGeoJSON(extracted))
+          }
+          renderMarkers(map, newSegs, extracted, kmPts)
+        }
+
+        const lenText = totalLen >= 1 ? `${totalLen.toFixed(2)} km` : `${(totalLen * 1000).toFixed(0)} m`
+        showToast(`Đã nạp tim tuyến [${file.name}]: ${extracted.length} đỉnh, chiều dài ${lenText}, chia ${newSegs.length} phân đoạn!`)
+      } catch (err) {
+        showToast('Lỗi: Định dạng file GeoJSON không đúng cấu trúc JSON chuẩn!')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      processGeoJSONFile(file)
+    }
+  }
+
+  // Reset góc nhìn vừa khung hình toàn tuyến
   const handleFitBounds = () => {
     if (mapRef.current) {
-      mapRef.current.flyTo({
-        center: [108.1651, 16.2052],
-        zoom: 11.2,
-        pitch: 30,
-        bearing: -18,
-        speed: 1.1
-      })
+      if (currentCoords.length > 0) {
+        const bounds = new maplibregl.LngLatBounds()
+        currentCoords.forEach((c) => bounds.extend(c))
+        mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
+      } else {
+        mapRef.current.flyTo({
+          center: [108.1651, 16.2052],
+          zoom: 11.2,
+          pitch: 30,
+          bearing: -18,
+          speed: 1.1
+        })
+      }
     }
   }
 
@@ -734,6 +1170,8 @@ export const AlignmentSegments: React.FC = () => {
     setSegments(newSegs)
     setSlabs(generateMockSlabs(newSegs.length))
     setSelectedSegmentId(newSegs[0]?.id || null)
+    setImportedFileName(name)
+    setImportedLengthKm(25.0)
     showToast(`Đã nạp thành công bộ dữ liệu "${name}"! Bản đồ đã tải lại hoàn toàn.`)
     handleFitBounds()
   }
@@ -798,10 +1236,37 @@ export const AlignmentSegments: React.FC = () => {
               </button>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100/80 transition-all cursor-pointer">
-              <Upload className="w-6 h-6 text-slate-400" />
-              <span className="text-xs font-semibold text-slate-700">Kéo thả tệp GeoJSON, KML hoặc Shapefile vào đây</span>
-              <span className="text-[10px] text-slate-400">Hỗ trợ EPSG:4326, VN-2000 (Tối đa 50MB)</span>
+            {/* Input file ẩn hỗ trợ .geojson, .json, .kml, .gpx */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".geojson,.json,.kml,.gpx"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                const file = e.dataTransfer.files?.[0]
+                if (file) processGeoJSONFile(file)
+              }}
+              className="border-2 border-dashed border-[#C9A227]/70 hover:border-[#C9A227] rounded-xl p-5 text-center flex flex-col items-center justify-center gap-1.5 bg-amber-50/20 hover:bg-amber-50/50 transition-all cursor-pointer group"
+            >
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Upload className="w-5 h-5 text-[#8F7212]" />
+              </div>
+              <span className="text-xs font-bold text-slate-800">
+                Nhấp để chọn tệp hoặc kéo thả tệp GeoJSON / KML vào đây
+              </span>
+              <span className="text-[11px] text-slate-500">
+                Hỗ trợ LineString GeoJSON (.geojson, .json) hệ WGS84 (EPSG:4326)
+              </span>
+              <span className="text-[10px] font-mono text-[#8F7212] bg-white px-2 py-0.5 rounded border border-amber-200 mt-1">
+                Tự động nhận diện chuỗi tọa độ, tính lý trình và vẽ tim tuyến tức thì
+              </span>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
@@ -812,6 +1277,378 @@ export const AlignmentSegments: React.FC = () => {
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal chỉnh sửa phân đoạn (Edit Segment Modal) */}
+      {editingSegment && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div
+                  style={{ backgroundColor: editingSegment.color }}
+                  className="w-4 h-4 rounded-full shadow-xs"
+                />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Chỉnh Sửa: {editingSegment.code}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingSegment(null)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditedSegment} className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                  Mã / Tên Phân Đoạn
+                </label>
+                <input
+                  type="text"
+                  value={editingSegment.code}
+                  onChange={(e) => setEditingSegment({ ...editingSegment, code: e.target.value })}
+                  className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Lý trình bắt đầu (Km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={editingSegment.startKm}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0
+                      setEditingSegment({
+                        ...editingSegment,
+                        startKm: val,
+                        lengthKm: parseFloat(Math.max(0, editingSegment.endKm - val).toFixed(3))
+                      })
+                    }}
+                    className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Lý trình kết thúc (Km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={editingSegment.endKm}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0
+                      setEditingSegment({
+                        ...editingSegment,
+                        endKm: val,
+                        lengthKm: parseFloat(Math.max(0, val - editingSegment.startKm).toFixed(3))
+                      })
+                    }}
+                    className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">Chiều dài tính toán:</span>
+                <span className="font-mono font-bold text-[#8F7212]">
+                  {(editingSegment.endKm - editingSegment.startKm >= 1)
+                    ? `${(editingSegment.endKm - editingSegment.startKm).toFixed(3)} km`
+                    : `${Math.round((editingSegment.endKm - editingSegment.startKm) * 1000)} mét`}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Số làn xe
+                  </label>
+                  <select
+                    value={editingSegment.laneCount}
+                    onChange={(e) => setEditingSegment({ ...editingSegment, laneCount: parseInt(e.target.value) || 4 })}
+                    className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  >
+                    <option value={2}>2 làn xe</option>
+                    <option value={4}>4 làn xe (Tiêu chuẩn)</option>
+                    <option value={6}>6 làn xe (Cao tốc)</option>
+                    <option value={8}>8 làn xe</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Vật liệu mặt đường
+                  </label>
+                  <select
+                    value={editingSegment.surfaceMaterial}
+                    onChange={(e) => setEditingSegment({ ...editingSegment, surfaceMaterial: e.target.value })}
+                    className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  >
+                    <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
+                    <option value="Mặt BTN C19">Mặt BTN C19</option>
+                    <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
+                    <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1.5">
+                  Màu sắc phân đoạn trên bản đồ
+                </label>
+                <div className="flex items-center gap-2">
+                  {SEGMENT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEditingSegment({ ...editingSegment, color: c })}
+                      style={{ backgroundColor: c }}
+                      className={`w-6 h-6 rounded-full transition-all cursor-pointer ${
+                        editingSegment.color === c
+                          ? 'ring-2 ring-offset-2 ring-slate-900 scale-110'
+                          : 'hover:scale-105 opacity-80 hover:opacity-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingSegment(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#C9A227] hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal thêm mới phân đoạn (Add Segment Modal) */}
+      {isAddSegmentModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-[#C9A227]" />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Thêm Mới Phân Đoạn Tuyến
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddSegmentModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewSegment} className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                  Mã / Tên Phân Đoạn
+                </label>
+                <input
+                  type="text"
+                  placeholder={`Phân đoạn #${String(segments.length + 1).padStart(2, '0')}`}
+                  value={newSegForm.code}
+                  onChange={(e) => setNewSegForm({ ...newSegForm, code: e.target.value })}
+                  className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Lý trình bắt đầu (Km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={newSegForm.startKm}
+                    onChange={(e) => setNewSegForm({ ...newSegForm, startKm: parseFloat(e.target.value) || 0 })}
+                    className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Lý trình kết thúc (Km)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={newSegForm.endKm}
+                    onChange={(e) => setNewSegForm({ ...newSegForm, endKm: parseFloat(e.target.value) || 0 })}
+                    className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Số làn xe
+                  </label>
+                  <select
+                    value={newSegForm.laneCount}
+                    onChange={(e) => setNewSegForm({ ...newSegForm, laneCount: parseInt(e.target.value) || 4 })}
+                    className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  >
+                    <option value={2}>2 làn xe</option>
+                    <option value={4}>4 làn xe (Tiêu chuẩn)</option>
+                    <option value={6}>6 làn xe (Cao tốc)</option>
+                    <option value={8}>8 làn xe</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                    Vật liệu mặt đường
+                  </label>
+                  <select
+                    value={newSegForm.surfaceMaterial}
+                    onChange={(e) => setNewSegForm({ ...newSegForm, surfaceMaterial: e.target.value })}
+                    className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  >
+                    <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
+                    <option value="Mặt BTN C19">Mặt BTN C19</option>
+                    <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
+                    <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1.5">
+                  Màu sắc phân đoạn trên bản đồ
+                </label>
+                <div className="flex items-center gap-2">
+                  {SEGMENT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setNewSegForm({ ...newSegForm, color: c })}
+                      style={{ backgroundColor: c }}
+                      className={`w-6 h-6 rounded-full transition-all cursor-pointer ${
+                        newSegForm.color === c
+                          ? 'ring-2 ring-offset-2 ring-slate-900 scale-110'
+                          : 'hover:scale-105 opacity-80 hover:opacity-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSegmentModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#C9A227] hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
+                >
+                  Thêm phân đoạn
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal tách phân đoạn (Split Segment Modal) */}
+      {splitModalSegment && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <SplitSquareVertical className="w-5 h-5 text-[#C9A227]" />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Tách: {splitModalSegment.code}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSplitModalSegment(null)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Phân đoạn hiện tại từ <strong className="text-slate-900 font-mono">Km {splitModalSegment.startKm.toFixed(3)}</strong> đến <strong className="text-slate-900 font-mono">Km {splitModalSegment.endKm.toFixed(3)}</strong> (dài {splitModalSegment.lengthKm.toFixed(3)} km).
+            </p>
+
+            <form onSubmit={handleSplitSegmentSubmit} className="flex flex-col gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                  Nhập mốc lý trình cần tách (Km)
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min={splitModalSegment.startKm + 0.001}
+                  max={splitModalSegment.endKm - 0.001}
+                  value={customSplitKm}
+                  onChange={(e) => setCustomSplitKm(parseFloat(e.target.value) || 0)}
+                  className="w-full h-9 px-3 rounded-lg border border-slate-300 text-sm font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  required
+                />
+              </div>
+
+              <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-200 flex flex-col gap-1.5 text-xs text-slate-700">
+                <div className="font-bold text-[#8F7212] text-[11px] uppercase tracking-wider">
+                  Kết quả sau khi tách:
+                </div>
+                <div className="flex justify-between">
+                  <span>• {splitModalSegment.code}A:</span>
+                  <span className="font-mono font-semibold">Km {splitModalSegment.startKm.toFixed(3)} - Km {customSplitKm.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• {splitModalSegment.code}B:</span>
+                  <span className="font-mono font-semibold">Km {customSplitKm.toFixed(3)} - Km {splitModalSegment.endKm.toFixed(3)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setSplitModalSegment(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#C9A227] hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
+                >
+                  Xác nhận tách đoạn
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -863,10 +1700,10 @@ export const AlignmentSegments: React.FC = () => {
             <span className="hidden lg:inline text-slate-300">|</span>
             <span className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
               <Building className="w-3.5 h-3.5 text-[#C9A227]" />
-              QL1A Thừa Thiên Huế - Đà Nẵng
+              {importedFileName ? `Tuyến: ${importedFileName}` : 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)'}
             </span>
             <span className="flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-              L = 25.0 km (Km 1020 - Km 1045)
+              L = {importedLengthKm.toFixed(1)} km (Km 1020 - Km {(1020 + importedLengthKm).toFixed(1)})
             </span>
             <span className="hidden xl:flex items-center gap-1 text-[11px] text-slate-500">
               <Compass className="w-3.5 h-3.5 text-[#C9A227]" />
@@ -1085,28 +1922,31 @@ export const AlignmentSegments: React.FC = () => {
             {/* TAB CONTENT: SEGMENTS */}
             {rightTab === 'SEGMENTS' && (
               <>
-                {/* Quick Split Module (Nhập cự ly -> bấm nút -> thay đổi trực tiếp trên Map) */}
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col gap-2">
+                {/* Quick Split Module (Nhập cự ly tùy ý theo Km -> áp dụng ngay lập tức) */}
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
                       <SplitSquareVertical className="w-3.5 h-3.5 text-[#C9A227]" />
-                      <span>Chia đoạn nhanh theo cự ly</span>
+                      <span>Chia đoạn theo cự ly Km</span>
                     </span>
-                    <span className="text-[11px] text-slate-400">Tùy biến cự ly</span>
+                    <span className="text-[11px] font-mono text-slate-500 font-semibold">
+                      Tuyến dài: {importedLengthKm >= 1 ? `${importedLengthKm.toFixed(2)} km` : `${(importedLengthKm * 1000).toFixed(0)} m`}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="relative flex items-center">
                       <input
                         type="number"
-                        step="0.5"
-                        min="1"
-                        max="15"
+                        step="0.05"
+                        min="0.01"
+                        max="50"
                         value={splitDistance}
-                        onChange={(e) => setSplitDistance(parseFloat(e.target.value) || 1)}
-                        className="w-full h-8 pl-3 pr-14 bg-white border border-slate-300 rounded-lg font-mono text-xs text-brand-dark focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                        onChange={(e) => setSplitDistance(parseFloat(e.target.value) || 0.1)}
+                        className="w-full h-8.5 pl-3 pr-14 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                        placeholder="Nhập km..."
                       />
-                      <span className="absolute right-2.5 text-[11px] text-slate-400 pointer-events-none">
+                      <span className="absolute right-2.5 text-[11px] text-slate-500 font-medium pointer-events-none">
                         km/đoạn
                       </span>
                     </div>
@@ -1114,25 +1954,71 @@ export const AlignmentSegments: React.FC = () => {
                     <select
                       value={splitSortOrder}
                       onChange={(e) => setSplitSortOrder(e.target.value as any)}
-                      className="h-8 px-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                      className="h-8.5 px-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                     >
                       <option value="asc">Km tăng dần</option>
                       <option value="desc">Km giảm dần</option>
                     </select>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleApplyAutoSplit}
-                    className="w-full h-8.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-semibold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Áp dụng chia đoạn tự động</span>
-                  </button>
+                  {/* Nút chọn nhanh cự ly mẫu (Presets) */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                    <span className="text-[10px] text-slate-400 font-semibold shrink-0">Mẫu:</span>
+                    {[0.2, 0.25, 0.5, 1.0, 2.5, 5.0].map((kmVal) => (
+                      <button
+                        key={kmVal}
+                        type="button"
+                        onClick={() => {
+                          setSplitDistance(kmVal)
+                          setTimeout(() => handleApplyAutoSplit(), 50)
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer shrink-0 ${
+                          splitDistance === kmVal
+                            ? 'bg-[#C9A227] text-white shadow-2xs'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:border-[#C9A227]'
+                        }`}
+                      >
+                        {kmVal >= 1 ? `${kmVal}km` : `${kmVal * 1000}m`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleApplyAutoSplit}
+                      className="h-8.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Áp dụng chia đoạn</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const lastSeg = segments[segments.length - 1]
+                        const nextStart = lastSeg ? lastSeg.endKm : 1020.0
+                        const segLen = splitDistance || 1.0
+                        setNewSegForm({
+                          code: `Phân đoạn #${String(segments.length + 1).padStart(2, '0')}`,
+                          startKm: parseFloat(nextStart.toFixed(3)),
+                          endKm: parseFloat((nextStart + segLen).toFixed(3)),
+                          laneCount: 4,
+                          surfaceMaterial: 'Mặt BTN C12.5',
+                          color: SEGMENT_COLORS[segments.length % SEGMENT_COLORS.length]
+                        })
+                        setIsAddSegmentModalOpen(true)
+                      }}
+                      className="h-8.5 rounded-lg border border-[#C9A227] text-[#8F7212] hover:bg-amber-50/60 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm đoạn mới</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Segment List Stack */}
-                <div className="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-0.5">
+                <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-0.5">
                   {segments.map((seg) => {
                     const isSelected = seg.id === selectedSegmentId
                     return (
@@ -1141,7 +2027,7 @@ export const AlignmentSegments: React.FC = () => {
                         onClick={() => handleSelectSegment(seg)}
                         className={`p-3 rounded-xl border transition-all flex flex-col gap-2 cursor-pointer ${
                           isSelected
-                            ? 'bg-amber-50/50 border-[#C9A227] ring-1 ring-[#C9A227] shadow-xs'
+                            ? 'bg-amber-50/50 border-[#C9A227] ring-2 ring-[#C9A227]/40 shadow-xs'
                             : seg.hasGap
                             ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400'
                             : 'bg-white border-slate-200 hover:border-slate-300'
@@ -1151,7 +2037,7 @@ export const AlignmentSegments: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <span
                               style={{ backgroundColor: seg.color }}
-                              className="w-3 h-3 rounded-full shrink-0 shadow-2xs"
+                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs border border-white"
                             ></span>
                             <div className="flex flex-col">
                               <span className="text-xs font-bold text-brand-dark">{seg.code}</span>
@@ -1167,7 +2053,9 @@ export const AlignmentSegments: React.FC = () => {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-1.5 text-slate-500 text-[11px]">
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full">Dài: {seg.lengthKm.toFixed(1)} km</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-full font-mono font-semibold text-slate-700">
+                            Dài: {seg.lengthKm >= 1 ? `${seg.lengthKm.toFixed(2)} km` : `${Math.round(seg.lengthKm * 1000)} mét`}
+                          </span>
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full">{seg.laneCount} làn xe</span>
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full">{seg.surfaceMaterial}</span>
                         </div>
@@ -1175,28 +2063,47 @@ export const AlignmentSegments: React.FC = () => {
                         <div className="flex items-center justify-between pt-1 text-slate-500 text-xs border-t border-slate-100 mt-0.5">
                           <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
                             <Check className="w-3 h-3 text-emerald-600" />
-                            Tiếp giáp khép kín liên tục
+                            Tiếp giáp khép kín
                           </span>
                           <div className="flex items-center gap-1">
+                            {/* Nút Chỉnh sửa thông số / lý trình */}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                showToast(`Chỉnh sửa hình học ${seg.code}`)
+                                setEditingSegment({ ...seg })
                               }}
-                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                              title="Chỉnh tọa độ"
+                              className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
+                              title="Chỉnh sửa lý trình & thông số"
                             >
-                              <Edit2 className="w-3 h-3" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
+
+                            {/* Nút Tách phân đoạn này */}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                showToast(`Xem biểu đồ trắc dọc ${seg.code}`)
+                                setSplitModalSegment(seg)
+                                setCustomSplitKm(parseFloat(((seg.startKm + seg.endKm) / 2).toFixed(3)))
                               }}
-                              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                              title="Xem trắc dọc"
+                              className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
+                              title="Tách phân đoạn này tại mốc Km"
                             >
-                              <BarChart2 className="w-3 h-3" />
+                              <SplitSquareVertical className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Nút Xóa phân đoạn */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteSegment(seg.id)
+                              }}
+                              className="p-1.5 hover:bg-red-100/60 rounded-md text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                              title="Xóa phân đoạn"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>

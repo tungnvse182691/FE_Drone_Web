@@ -37,6 +37,7 @@ import { FieldAcceptance } from './pages/(sup)/FieldAcceptance'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
 import { AuditTrail } from './pages/(sup)/AuditTrail'
+import { SystemControl } from './pages/(sup)/SystemControl'
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
@@ -92,6 +93,10 @@ export const App: React.FC = () => {
           <Route path="rpt-10" element={<AuditTrail />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
+          <Route path="retention" element={<SystemControl />} />
+          <Route path="system-control" element={<SystemControl />} />
+          <Route path="wf-12" element={<SystemControl />} />
+          <Route path="legal-hold" element={<SystemControl />} />
           <Route path="notifications" element={<NotificationsHandoffHub />} />
         </Route>
 
@@ -132,6 +137,11 @@ export const App: React.FC = () => {
           <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
           <Route path="reports" element={<RiskAnalytics />} />
           <Route path="risk-analytics" element={<RiskAnalytics />} />
+          <Route path="system-control" element={<SystemControl />} />
+          <Route path="admin" element={<SystemControl />} />
+          <Route path="retention" element={<SystemControl />} />
+          <Route path="wf-12" element={<SystemControl />} />
+          <Route path="legal-hold" element={<SystemControl />} />
           <Route path="signoff" element={<Navigate to="/sup/acceptance" replace />} />
           <Route path="notifications" element={<NotificationsHandoffHub />} />
         </Route>

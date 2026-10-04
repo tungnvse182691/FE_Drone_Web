@@ -14,7 +14,8 @@ import {
   Zap,
   Route,
   Sparkles,
-  History
+  History,
+  Sliders
 } from 'lucide-react'
 
 export const Sidebar: React.FC = () => {
@@ -34,6 +35,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/pm/research-validation', icon: Sparkles },
     { label: 'Nhật ký kiểm toán (RPT-10)', path: '/pm/audit-trail', icon: History },
     { label: 'Báo cáo KPI & Xuất hồ sơ', path: '/pm/reports', icon: BarChart3 },
+    { label: 'Lưu trữ bảo hành (WF-12)', path: '/pm/retention', icon: Sliders },
   ]
 
   const supNavItems = [
@@ -48,6 +50,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Báo cáo thực nghiệm (RPT-09)', path: '/sup/research-validation', icon: Sparkles },
     { label: 'Nhật ký kiểm toán (RPT-10)', path: '/sup/audit-trail', icon: History },
     { label: 'Báo cáo rủi ro & Hồ sơ xuất', path: '/sup/risk-analytics', icon: BarChart3 },
+    { label: 'Quản trị hệ thống & Legal Hold', path: '/sup/system-control', icon: Sliders },
   ]
 
   const navItems = isPM ? pmNavItems : supNavItems
