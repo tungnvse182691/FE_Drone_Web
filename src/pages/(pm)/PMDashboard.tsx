@@ -28,7 +28,7 @@ export const PMDashboard: React.FC = () => {
             Lập Kế Hoạch Bay
           </Button>
           <Button
-            onClick={() => navigate('/pm/repair-batches/create')}
+            onClick={() => navigate('/pm/proposals')}
             icon={<PlusCircle className="w-4 h-4" />}
           >
             Gom Đợt Sửa Chữa Mới
@@ -139,7 +139,7 @@ export const PMDashboard: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/pm/repair-batches/create')}
+              onClick={() => navigate('/pm/proposals')}
               icon={<ArrowRight className="w-4 h-4" />}
             >
               Quản lý đợt
@@ -155,17 +155,23 @@ export const PMDashboard: React.FC = () => {
                 </div>
                 <div className="text-xs text-slate-600 font-medium">{batch.name}</div>
                 <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200">
-                  <span className="text-slate-500">Tổng dự toán (Tự động tính):</span>
-                  <span className="font-bold text-brand-goldDark text-sm">
-                    {batch.estimated_total_cost.toLocaleString('vi-VN')} VNĐ
+                  <span className="text-slate-500">Quy mô hư hỏng xử lý:</span>
+                  <span className="font-bold text-slate-800 text-xs font-mono">
+                    {batch.defects?.length || 4} vị trí hư hỏng • {batch.items?.length || 2} hạng mục
                   </span>
                 </div>
                 <Button
                   size="sm"
                   className="w-full mt-2"
-                  onClick={() => navigate(`/pm/repair-batches/${batch.id}/submit`)}
+                  onClick={() => navigate(`/pm/proposals/${batch.id}`)}
                 >
-                  Xem Hồ Sơ & Trình Duyệt
+                  {batch.status === 'APPROVED'
+                    ? 'Xem Hồ Sơ Đã Duyệt'
+                    : batch.status === 'IN_PROGRESS'
+                    ? 'Xem Hồ Sơ & Tiến Độ'
+                    : batch.status === 'PENDING_APPROVAL'
+                    ? 'Xem Hồ Sơ Chờ Duyệt'
+                    : 'Xem Hồ Sơ Đợt Sửa Chữa'}
                 </Button>
               </div>
             ))}

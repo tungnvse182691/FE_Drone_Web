@@ -271,9 +271,25 @@ export const ProjectList: React.FC = () => {
   }
 
 
+  // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope):
+  // - Nếu là PM: CHỈ hiển thị các dự án mà PM này được phân công quản lý
+  // - Nếu là SUPERVISOR: Hiển thị toàn bộ dự án công ty để kiểm tra, phê duyệt & giám sát
+  const scopedProjects = useMemo(() => {
+    if (isSupervisor) return projects
+    return projects.filter((prj) => {
+      const isAssigned =
+        prj.pm_email === user?.email ||
+        prj.pm_name === user?.full_name ||
+        prj.pm_name === 'Đỗ Quốc Hoàng' ||
+        prj.id === 'prj-ql1a-02' ||
+        prj.id === 'prj-lstl-05'
+      return isAssigned && !prj.is_restricted_for_pm
+    })
+  }, [projects, isSupervisor, user])
+
   // Filter projects logic
   const filteredProjects = useMemo(() => {
-    return projects.filter((prj) => {
+    return scopedProjects.filter((prj) => {
       // Filter tab
       if (filterTab === 'ACTIVE' && prj.status !== 'ACTIVE') return false
       if (filterTab === 'NEAR_EXPIRY' && prj.status !== 'NEAR_EXPIRY') return false
@@ -291,13 +307,13 @@ export const ProjectList: React.FC = () => {
 
       return true
     })
-  }, [projects, filterTab, searchQuery])
+  }, [scopedProjects, filterTab, searchQuery])
 
-  // KPI Metrics Calculation
-  const totalLength = useMemo(() => projects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [projects])
-  const activeCount = useMemo(() => projects.filter((p) => p.status === 'ACTIVE' || p.status === 'RESTRICTED').length, [projects])
-  const nearExpiryCount = useMemo(() => projects.filter((p) => p.status === 'NEAR_EXPIRY').length, [projects])
-  const pendingAlignmentCount = useMemo(() => projects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [projects])
+  // KPI Metrics Calculation dựa trên phạm vi dự án được phân công
+  const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [scopedProjects])
+  const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
+  const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
+  const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
 
   return (
     <div className="space-y-6">
@@ -438,7 +454,7 @@ export const ProjectList: React.FC = () => {
             }`}
           >
             <span>Tất cả</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">{projects.length}</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">{scopedProjects.length}</span>
           </button>
 
           <button
@@ -947,14 +963,17 @@ export const ProjectList: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="block font-semibold text-slate-700">
-                    Mã dự án (PRJ)
+                    Mã dự án (PRJ) <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
-                    readOnly
+                    required
                     value={newProjectCode}
-                    className="w-full px-3 py-2 bg-slate-100 border border-slate-200 text-slate-700 font-mono font-bold text-xs rounded-lg cursor-not-allowed"
+                    onChange={(e) => setNewProjectCode(e.target.value.toUpperCase())}
+                    placeholder="VD: PRJ-QL14-01"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                   />
+                  <span className="text-[10px] text-slate-400">Định dạng mã chuẩn: PRJ-[MÃ_TUYẾN]-[STT]</span>
                 </div>
               </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import * as maplibregl from 'maplibre-gl'
@@ -38,6 +38,7 @@ import {
   Flame,
   Check,
   Scale,
+  Zap,
   History as HistoryIcon,
   Ruler
 } from 'lucide-react'
@@ -165,9 +166,19 @@ interface CrewTeam {
 
 export const FastTrackDispatch: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
+
+  // Trạng thái hồ sơ được tự động điều phối từ Hộp thư tiếp nhận (Triage Inbox)
+  const [autoDispatchedSourceCase, setAutoDispatchedSourceCase] = useState<{
+    code: string
+    title: string
+    stationing: string
+    isEligible: boolean
+  } | null>(null)
 
   // 1. DỮ LIỆU CHÍNH SÁCH FAST TRACK HIỆN HÀNH
   const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig>({
@@ -761,6 +772,79 @@ export const FastTrackDispatch: React.FC = () => {
     setSelectedDefectIds(newRouteDefects.slice(0, 2).map((d) => d.id))
   }
 
+  // Tự động nhận diện và tick chọn khiếm khuyết được chuyển từ Hộp thư tiếp nhận (Triage Inbox)
+  useEffect(() => {
+    const paramDefectCode = searchParams.get('defectCode')
+    const incomingTargetDefect = location.state?.targetDefect
+
+    if (paramDefectCode || incomingTargetDefect) {
+      const codeToMatch = paramDefectCode || incomingTargetDefect?.code
+      const existingDefect = defects.find((d) => d.code === codeToMatch || (incomingTargetDefect && d.id === incomingTargetDefect.id))
+
+      if (existingDefect) {
+        setSelectedDefectIds([existingDefect.id])
+        setRouteFilter(existingDefect.routeId)
+        if (existingDefect.isFastTrackEligible) {
+          setWorkMode('INSPECT_AND_REPAIR')
+        } else {
+          setWorkMode('MEASURE_ONLY')
+        }
+        setAutoDispatchedSourceCase({
+          code: existingDefect.code,
+          title: existingDefect.type,
+          stationing: existingDefect.stationing,
+          isEligible: existingDefect.isFastTrackEligible
+        })
+        showToast(`⚡ Đã tự động chọn hồ sơ [${existingDefect.code}] từ Hộp thư tiếp nhận!`)
+      } else if (incomingTargetDefect) {
+        const area = incomingTargetDefect.area_sqm || 0.45
+        const depth = incomingTargetDefect.max_depth_cm || 4.2
+        const isEligible =
+          area <= currentPolicy.maxAreaM2 &&
+          depth <= currentPolicy.maxDepthCm &&
+          currentPolicy.allowedSeverities.includes(incomingTargetDefect.severity)
+
+        const newDefect: DispatchDefectItem = {
+          id: incomingTargetDefect.id,
+          code: incomingTargetDefect.code,
+          routeId: incomingTargetDefect.project_id === 'prj-ql1a-01' ? 'QL1A_PK01' : 'QL1A_PK04',
+          routeName: incomingTargetDefect.project_name || 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+          stationing: incomingTargetDefect.stationing || 'Km 1024+300',
+          kmValue: 1024.3,
+          lane: incomingTargetDefect.lane || 'Làn xe máy',
+          type: incomingTargetDefect.defect_title || 'Ổ gà sụt lún mặt đường',
+          areaM2: area,
+          depthCm: depth,
+          isFastTrackEligible: isEligible,
+          violationReason: isEligible ? undefined : 'Diện tích hoặc độ sâu vượt ngưỡng chính sách Fast Track hiện hành',
+          assignedCrew: 'Chưa chỉ định',
+          gps: {
+            lat: incomingTargetDefect.gps?.lat || 16.0560,
+            lng: incomingTargetDefect.gps?.lng || 108.2025
+          },
+          image: incomingTargetDefect.image_url || 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80',
+          aiConfidence: incomingTargetDefect.ai_confidence || 94
+        }
+
+        setDefects((prev) => [newDefect, ...prev.filter((d) => d.code !== newDefect.code)])
+        setSelectedDefectIds([newDefect.id])
+        setRouteFilter(newDefect.routeId)
+        if (isEligible) {
+          setWorkMode('INSPECT_AND_REPAIR')
+        } else {
+          setWorkMode('MEASURE_ONLY')
+        }
+        setAutoDispatchedSourceCase({
+          code: newDefect.code,
+          title: newDefect.type,
+          stationing: newDefect.stationing,
+          isEligible
+        })
+        showToast(`⚡ Đã tự động nạp & chọn hồ sơ [${newDefect.code}] từ Hộp thư tiếp nhận!`)
+      }
+    }
+  }, [searchParams, location.state])
+
   // MapLibre Container & Instance
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<maplibregl.Map | null>(null)
@@ -1277,6 +1361,44 @@ export const FastTrackDispatch: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Banner thông báo tự động điều phối khiếm khuyết từ Triage Inbox */}
+      {autoDispatchedSourceCase && (
+        <div className="p-4 bg-amber-50/90 border-2 border-[#C9A227] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-800 shadow-md animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-[#C9A227] text-white shrink-0 mt-0.5">
+              <Zap className="w-5 h-5 fill-white" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-xs text-brand-dark">ĐÃ TỰ ĐỘNG CHỌN HỒ SƠ TỪ HỘP THƯ TIẾP NHẬN:</span>
+                <span className="font-mono font-bold text-xs bg-white px-2.5 py-0.5 rounded-lg border border-amber-300 text-amber-900 shadow-2xs">
+                  {autoDispatchedSourceCase.code}
+                </span>
+                {autoDispatchedSourceCase.isEligible ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    ✓ Đủ tiêu chuẩn Fast Track Direct
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
+                    ⚠ Vượt ngưỡng Fast Track (Chuyển sang Chế độ Đo đạc)
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600">
+                <strong className="text-slate-800">{autoDispatchedSourceCase.title}</strong> • Lý trình: <span className="font-semibold text-slate-700">{autoDispatchedSourceCase.stationing}</span>. Hệ thống đã tự động tick chọn khiếm khuyết này và thiết lập chế độ phù hợp.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAutoDispatchedSourceCase(null)}
+            className="self-start sm:self-center px-2.5 py-1 text-xs text-slate-500 hover:text-slate-800 bg-white border border-amber-200 rounded-lg cursor-pointer transition-colors shadow-2xs shrink-0"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* 3. SECTION B: ĐIỀU PHỐI & GIAO VIỆC ĐO ĐẠC HIỆN TRƯỜNG */}
       <div id="dispatch-table-section" className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">

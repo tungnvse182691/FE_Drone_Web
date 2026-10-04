@@ -106,21 +106,30 @@
 
 ## 🟡 GIAI ĐOẠN 2: THIẾT LẬP TUYẾN ĐƯỜNG, HÌNH HỌC & PHÂN ĐOẠN SEGMENT
 
-### Bước 2.1 — PM Nhập file GeoJSON, Bề rộng mặt đường & Trình duyệt tuyến
+### Bước 2.1 — PM Thiết lập tim tuyến, Dán tọa độ, Xử lý khoảng hở (No Auto-snap) & Trình duyệt
 - **Tài khoản:** `pmhoang@gmail.com`
 - **Vị trí thao tác:** Menu **`"Tuyến đường & Phân đoạn"`** (`/pm/alignment`)
 - **Thực hiện:**
   1. Trên menu bên trái, bấm vào mục **`"Tuyến đường & Phân đoạn"`**.
-  2. Bấm nút **`"Nhập GeoJSON/KML"`** ở thanh công cụ phía trên để mở hộp thoại.
-  3. **Thao tác nạp GeoJSON mới nâng cấp:**
-     - **Cách 1:** Nhấp vào vùng kéo thả nét đứt và chọn tệp `.geojson` hoặc `.json` từ máy tính.
-     - **Cách 2:** Chọn mẫu có sẵn: *"QL1A Mở rộng (25.0 km • Tuyến chuẩn)"*.
-     - Hệ thống tự động trích xuất chuỗi tọa độ LineString WGS84, tính lý trình phẳng và cập nhật toàn bộ tim tuyến lên bản đồ MapLibre.
-  4. Quan sát 3 lớp hình học trực quan theo quy chuẩn BR-34:
-     - Tim đường màu đỏ nét đứt.
-     - Dải thảm mặt đường màu xanh lam (Đoạn 1 rộng 8m, Đoạn 2 rộng 10m).
-     - Hành lang an toàn quy hoạch màu vàng nhạt (mở rộng 2m mỗi bên thành 12m-14m).
-  5. Bấm nút màu vàng **`"Trình duyệt tim tuyến"`** $\rightarrow$ Hồ sơ hình học chuyển trạng thái sang `PENDING_CONFIRMATION` gửi tới Supervisor.
+  2. Bấm nút **`"Nhập Tuyến / Tọa độ (WF-02)"`** ở thanh công cụ phía trên để mở hộp thoại.
+  3. **Lựa chọn 1 trong 2 phương thức nhập tuyến theo chuẩn v2.2 (Data Dictionary §9.1):**
+     - **Phương thức A — Tải tệp tin (`source_kind = GPX_IMPORT` / GeoJSON):** Chọn tab *"Tải tệp tin (GeoJSON / KML / GPX)"*, nhấp chọn tệp từ máy tính hoặc bấm chọn mẫu *"Tuyến QL1A Mở rộng (25.0 km • 5 Phân đoạn)"*. Hệ thống tự lọc layer Centerline của CAD Civil 3D.
+     - **Phương thức B — Dán chuỗi tọa độ đỉnh thủ công (`source_kind = MANUAL`):** Chọn tab *"Dán chuỗi tọa độ (Manual Polyline)"*, dán trực tiếp danh sách các điểm đỉnh `[lng, lat]` WGS84 hoặc bấm *"Dán mẫu QL1A (8 đỉnh)"* rồi bấm **"Dựng tim tuyến & phân đoạn từ chuỗi tọa độ"**.
+  4. **Khai báo & Quản lý thông số kỹ thuật (RoadWidthProfile & SurveyCorridor):**
+     - **Bề rộng mặt đường theo từng đoạn (`RoadWidthProfile` chuẩn v2.2 WF-02.F03 & Data Dictionary §9.1):** 
+        - Mở Tab **`"Bề rộng (m)"`** ở bảng bên phải để xem bảng hồ sơ bề rộng toàn tuyến.
+        - Hệ thống cho phép PM nhập trực tiếp bề rộng mét cho từng đoạn (Ví dụ: **Đoạn A→B rộng 3m, Đoạn B→C rộng 4m**...). Có thể bấm các nút chọn nhanh `[3m]`, `[4m]`, `[6m]`, `[8m]`, `[10m]`.
+        - Hệ thống tự động tính bán rộng mỗi bên tim: $\pm W/2$ (Trái $1.5m$, Phải $1.5m$ cho đoạn 3m; Trái $2m$, Phải $2m$ cho đoạn 4m) và tính tổng diện tích mặt đường bảo hành ($m^2$).
+        - **Hiển thị trực quan trên MapLibre (Phản hồi tức thì & Bo chuyển tiếp mượt mà):** Khi bấm nút chọn nhanh `[3m]`, `[4m]`, `[8m]`, `[10m]`, dải mặt đường trên bản đồ **lập tức co giãn ngay trong tích tắc** (không cần đổi tab hay tải lại trang). Tại vị trí tiếp giáp giữa 2 đoạn khác bề rộng, hệ thống tự động tính góc phân giác và tạo dải vuốt nối mềm mại (S-curve taper) 25-30m theo tiêu chuẩn TCVN 4054, ôm khít hoàn hảo và loại bỏ hoàn toàn các góc vuông 90° thô ráp. Bấm vào phân đoạn trên bản đồ để xem popup chi tiết.
+     - **Hành lang an toàn quy hoạch (`SurveyCorridorVersion`):** Chọn `Margin ±2m (30m)`.
+     - Quan sát 3 lớp hình học trực quan: Tim đường nét đứt, Dải thảm mặt đường co giãn theo bề rộng thực tế, Hành lang an toàn quy hoạch màu vàng nhạt.
+  5. **Demo cơ chế "Không tự động nối (No Auto-snap)" & Xử lý khoảng hở (WF-02.F04, US-38-AC-02):**
+     - *Giải thích nguyên tắc v2.2:* Với các tuyến giao khác cao độ (như cầu vượt, hầm chui), hình chiếu 2D có thể chạm hoặc cắt nhau nhưng cao độ khác nhau $\rightarrow$ Hệ thống **tuyệt đối không được tự động nối ngầm (No Auto-snap)** để tránh sai lệch dữ liệu hạ tầng.
+     - *Thao tác giả lập khoảng hở:* Bấm biểu tượng ✏️ (Chỉnh sửa) tại `Phân đoạn #01`, sửa lý trình kết thúc thành `1024.8` (thay vì `1025.0`) $\rightarrow$ Tuyến bị đứt gãy 200m giữa Seg 1 và Seg 2.
+     - *Hiển thị cảnh báo:* Hệ thống lập tức bắn cờ vàng nhấp nháy **`[CẢNH BÁO HỞ (+200m)]`** và footer cảnh báo *"Cần khép kín"*.
+     - *Chặn lưu không hợp lệ:* Nếu PM cố bấm *"Trình duyệt tim tuyến"*, hệ thống sẽ chặn lại theo quy tắc `WF-02.F04`.
+     - *Xử lý khép kín:* PM bấm nút **`"Nối tiếp giáp (Snap)"`** trên thẻ `Phân đoạn #02` $\rightarrow$ Hệ thống lập tức khép kín khoảng hở tại `Km 1024.8`, phục hồi trạng thái xanh **`Đạt chuẩn • Sẵn sàng duyệt`**.
+  6. Bấm nút màu vàng **`"Trình duyệt tim tuyến"`** $\rightarrow$ Hồ sơ hình học chuyển trạng thái sang `PENDING_CONFIRMATION` gửi tới Supervisor.
 
 ### Bước 2.2 — Supervisor Thẩm duyệt & Khóa phiên bản tuyến bất biến (DA13)
 - **Tài khoản:** `suphoang@gmail.com`
@@ -260,6 +269,7 @@
      - **Item A (`Km 1025+250`):** Phương án kỹ thuật đạt chuẩn $\rightarrow$ Bấm nút **`APPROVE`** (Chấp thuận). Item A lập tức đủ điều kiện giao thi công ngay!
      - **Item B (`Km 1028+100`):** Thiếu ảnh cắm thước đo chiều sâu $\rightarrow$ Bấm nút **`REQUEST_EVIDENCE`**, nhập lý do: *"Yêu cầu chụp bổ sung ảnh cắm thước đo sâu khe nứt"*.
      - **Item C (`Km 1032+100`):** Vá chắp vá không đảm bảo móng đường $\rightarrow$ Bấm nút **`REJECT`** (Từ chối), nhập lý do: *"Khu vực móng yếu, yêu cầu đào xử lý lại lớp móng đá dăm"*. Defect C vẫn mở ở trạng thái `VERIFIED` để PM lập phương án khác sau này (`BR-22`).
+   3. **Cơ chế kiểm soát phiên bản v2.2 (Stale Version / 412 Precondition Failed):** Nếu Supervisor đang mở gói mà PM thu hồi hoặc chỉnh sửa nội dung, hệ thống sẽ phát hiện lệch mã `row_version` và chặn quyết định phê duyệt, yêu cầu Supervisor tải lại dữ liệu mới nhất trước khi ký số.
 
 ### Bước 6.3 — PM Phân công thi công ngay cho Item đã được phê duyệt
 - **Tài khoản:** `pmhoang@gmail.com`
@@ -339,7 +349,9 @@
 # 📊 TỔNG HỢP RÀ SOÁT ĐỐI CHIẾU SOURCE CODE WEB FRONTEND
 
 ### 1. Tính năng ĐÃ NÂNG CẤP HOÀN THÀNH:
-- **Nhập file GeoJSON trên màn hình "Tuyến đường & Phân đoạn":** Đã bổ sung bộ đọc FileReader, hỗ trợ tệp `.geojson`, `.json`, `.kml`, `.gpx`, tự động phân tích LineString, tính toán tổng chiều dài km, vẽ tim tuyến lên MapLibre và tự động phân đoạn tức thì.
+- **Thiết lập tim tuyến & Nhập chuỗi tọa độ đỉnh (WF-02):** Đã bổ sung 2 phương thức nhập chuẩn: Tải file `.geojson, .json, .kml, .gpx` và Dán chuỗi tọa độ đỉnh thủ công (`source_kind = MANUAL`), tự động lọc layer Centerline CAD Civil 3D, tính toán lý trình mét phẳng theo CRS `EPSG:32648`.
+- **Cơ chế "Không tự động nối (No Auto-snap)" & Xử lý khoảng hở (WF-02.F04, US-38-AC-02):** Hệ thống tự động kiểm tra tính liên tục topo; nếu phân đoạn bị hở sẽ bắn cảnh báo vàng `[CẢNH BÁO HỞ]` và chặn trình duyệt; bổ sung nút **"Nối tiếp giáp (Snap)"** để PM chủ động xác nhận khép kín.
+- **Hồ sơ bề rộng mặt đường (RoadWidthProfile) & Hành lang an toàn (SurveyCorridorVersion):** Cho phép chọn nhanh bề rộng 8m/10m/12m và margin hành lang ±2m/±3m/±5m ngay trên thanh công cụ.
 - **Phân quyền chuẩn v2.2 tại màn hình "Quản trị hệ thống & Legal Hold":** Supervisor nhìn thấy đầy đủ 4 tab; PM chỉ thấy tab Lưu trữ và Nhân sự dự án (đã ẩn hoàn toàn tab Mô hình AI và Danh mục lỗi TCVN để đảm bảo chuẩn thẩm quyền).
 
 ### 2. Các điểm cần LƯU Ý KHI THAO TÁC DEMO:

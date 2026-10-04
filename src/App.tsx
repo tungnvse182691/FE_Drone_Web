@@ -69,7 +69,7 @@ export const App: React.FC = () => {
           <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
           <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
           <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
-          <Route path="repair-batches/create" element={<RepairBatching />} />
+          <Route path="repair-batches/create" element={<Navigate to="/pm/proposals" replace />} />
           <Route path="repair-batches/:id/submit" element={<SubmitApproval />} />
           <Route path="repair-batches/assign" element={<AssignCrew />} />
           <Route path="field-tasks" element={<FieldTasks />} />

@@ -24,6 +24,7 @@ export function getMapLibreStyle(
   return {
     version: 8,
     name: `RoadGuard-${type}`,
+    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       'google-satellite': {
         type: 'raster',

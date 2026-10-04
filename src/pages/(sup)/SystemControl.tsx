@@ -116,7 +116,7 @@ export const SystemControl: React.FC = () => {
   const [newPersonnelEmail, setNewPersonnelEmail] = useState<string>('')
   const [newPersonnelPhone, setNewPersonnelPhone] = useState<string>('')
   const [newPersonnelRole, setNewPersonnelRole] = useState<RoleCode>(RoleCode.PROJECT_MANAGER)
-  const [newPersonnelProject, setNewPersonnelProject] = useState<string>('QL1A - Giai đoạn 2 (Km 1024 - 1045)')
+  const [newPersonnelProject, setNewPersonnelProject] = useState<string>('')
   const [newPersonnelCert, setNewPersonnelCert] = useState<string>('')
   const [assignExistingUserId, setAssignExistingUserId] = useState<string>('usr-04')
   const [assignExistingProject, setAssignExistingProject] = useState<string>('QL1A - Giai đoạn 2 (Km 1024 - 1045)')
@@ -296,7 +296,7 @@ export const SystemControl: React.FC = () => {
       phone: editPhone,
       role: editRole,
       role_label: updatedRoleLabel,
-      project_scope: editProjectScope,
+      project_scope: editProjectScope.trim() === '' ? 'Chưa phân công dự án' : editProjectScope,
       certificate: editCertificate,
       status: editStatus,
       device_info: editStatus === 'SUSPENDED' ? 'Thu hồi quyền truy cập' : userToEdit.device_info,
@@ -326,6 +326,8 @@ export const SystemControl: React.FC = () => {
           ? 'DRONE OPERATOR (PHI CÔNG KHẢO SÁT)'
           : 'CREW LEAD (ĐỘI TRƯỞNG THI CÔNG)'
 
+      const finalScope = newPersonnelProject.trim() === '' ? 'Chưa phân công dự án' : newPersonnelProject
+
       const newUser: SystemUserAccount = {
         id: `usr-${Date.now()}`,
         full_name: newPersonnelName,
@@ -333,7 +335,7 @@ export const SystemControl: React.FC = () => {
         phone: newPersonnelPhone || '0988.xxx.xxx',
         role: newPersonnelRole,
         role_label: roleLabel,
-        project_scope: newPersonnelProject,
+        project_scope: finalScope,
         device_info: 'Thiết bị mới • Chờ đăng nhập lần đầu',
         ip_address: 'Chưa có phiên',
         status: 'ACTIVE',
@@ -348,7 +350,12 @@ export const SystemControl: React.FC = () => {
       setNewPersonnelEmail('')
       setNewPersonnelPhone('')
       setNewPersonnelCert('')
-      triggerNotice(`Đã thêm nhân sự [${newPersonnelName}] vào dự án [${newPersonnelProject}]!`)
+      setNewPersonnelProject('')
+      triggerNotice(
+        newPersonnelProject.trim() === ''
+          ? `Đã thêm nhân sự [${newPersonnelName}] (Để trống tuyến - Có thể phân công sau)!`
+          : `Đã thêm nhân sự [${newPersonnelName}] vào dự án [${newPersonnelProject}]!`
+      )
     } else {
       if (!assignExistingUserId) return
       const targetUser = usersList.find((u) => u.id === assignExistingUserId)
@@ -1799,12 +1806,14 @@ export const SystemControl: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700">Tuyến / Dự án phân công phụ trách: <span className="text-rose-600">*</span></label>
+                <label className="font-semibold text-slate-700">Tuyến / Dự án phân công phụ trách: <span className="text-slate-400 font-normal">(Tùy chọn)</span></label>
                 <select
                   value={editProjectScope}
                   onChange={(e) => setEditProjectScope(e.target.value)}
                   className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                 >
+                  <option value="">-- Để trống (Chưa phân công dự án) --</option>
+                  <option value="Chưa phân công dự án">-- Chưa phân công dự án --</option>
                   <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
                   <option value="QL1A - Giai đoạn 1 (Km 990 - 1024)">QL1A - Giai đoạn 1 (Km 990 - 1024)</option>
                   <option value="Cao tốc Bắc - Nam (Km 45 - 80)">Cao tốc Bắc - Nam (Km 45 - 80)</option>
@@ -2001,13 +2010,14 @@ export const SystemControl: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="font-semibold text-slate-700">
-                      Chỉ định tuyến / Dự án phụ trách: <span className="text-rose-600">*</span>
+                      Chỉ định tuyến / Dự án phụ trách: <span className="text-slate-400 font-normal">(Tùy chọn)</span>
                     </label>
                     <select
                       value={newPersonnelProject}
                       onChange={(e) => setNewPersonnelProject(e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                     >
+                      <option value="">-- Để trống (Chưa phân công dự án - Có thể sửa sau) --</option>
                       <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
                       <option value="QL1A - Giai đoạn 1 (Km 990 - 1024)">QL1A - Giai đoạn 1 (Km 990 - 1024)</option>
                       <option value="Cao tốc Bắc - Nam (Km 45 - 80)">Cao tốc Bắc - Nam (Km 45 - 80)</option>
@@ -2015,6 +2025,9 @@ export const SystemControl: React.FC = () => {
                       <option value="Cao tốc La Sơn - Túy Loan">Cao tốc La Sơn - Túy Loan</option>
                       <option value="Quốc lộ 14 - Đoạn Chơn Thành">Quốc lộ 14 - Đoạn Chơn Thành</option>
                     </select>
+                    <p className="text-[10px] text-slate-500 italic">
+                      * Có thể để trống nếu nhân sự mới chưa nhận dự án, Supervisor có thể bấm nút "Sửa" trong danh bạ để phân công dự án bất cứ lúc nào.
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -2060,6 +2073,7 @@ export const SystemControl: React.FC = () => {
                       onChange={(e) => setAssignExistingProject(e.target.value)}
                       className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                     >
+                      <option value="Chưa phân công dự án">-- Thu hồi dự án (Chờ phân công sau) --</option>
                       <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
                       <option value="QL1A - Giai đoạn 1 (Km 990 - 1024)">QL1A - Giai đoạn 1 (Km 990 - 1024)</option>
                       <option value="Cao tốc Bắc - Nam (Km 45 - 80)">Cao tốc Bắc - Nam (Km 45 - 80)</option>

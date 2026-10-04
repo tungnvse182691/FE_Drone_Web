@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { mockRepairBatches } from '../../data/mockData'
 import {
   ChevronRight,
   ShieldCheck,
@@ -373,9 +374,16 @@ export const ProposalApprovalDetail: React.FC = () => {
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
   const basePath = isSupervisor ? '/sup' : '/pm'
 
+  const matchedBatch = useMemo(() => {
+    if (!id) return null
+    return mockRepairBatches.find(
+      (b) => b.id.toLowerCase() === id.toLowerCase() || b.code.toLowerCase() === id.toLowerCase()
+    )
+  }, [id])
+
   // Package Data State
-  const [packageCode] = useState(id?.toUpperCase() || 'PKG-2026-08')
-  const [packageName] = useState('Gói đề xuất sửa chữa mặt đường đợt 3')
+  const [packageCode] = useState(matchedBatch?.code || (id?.toUpperCase().startsWith('PKG-') ? id.toUpperCase() : `PKG-2026-${id?.toUpperCase() || '05'}`))
+  const [packageName] = useState(matchedBatch?.name || 'Gói đề xuất sửa chữa mặt đường BTXM')
   const [items, setItems] = useState<RepairItemDetail[]>(INITIAL_ITEMS)
 
   // Filter State
