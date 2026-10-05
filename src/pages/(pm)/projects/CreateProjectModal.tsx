@@ -1,12 +1,5 @@
 import React from 'react'
-import {
-  Route,
-  X,
-  Calendar,
-  ShieldCheck,
-  Shield,
-  PlusCircle
-} from 'lucide-react'
+import { Route, X, Calendar, ShieldCheck, Shield, PlusCircle } from 'lucide-react'
 
 interface CreateProjectModalProps {
   isOpen: boolean
