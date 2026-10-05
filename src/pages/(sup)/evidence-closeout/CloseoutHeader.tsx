@@ -119,7 +119,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                 }`}
               >
                 <UserCheck className="w-3.5 h-3.5 text-[#C9A227]" />
-                <span>[Chế độ: Supervisor]</span>
+                <span>Kỹ sư Giám sát</span>
               </button>
               <button
                 onClick={() => setActiveRoleView('PROJECT_MANAGER')}
@@ -131,13 +131,13 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                 }`}
               >
                 <Share2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>[Chế độ: PM]</span>
+                <span>Chỉ huy trưởng (PM)</span>
               </button>
             </div>
 
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/80">
               <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
-              <span>Quy trình WF-08</span>
+              <span>Quy trình nghiệm thu</span>
             </div>
           </div>
         </div>
@@ -156,7 +156,12 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              NHÁNH: {currentItem.track_type}
+              Nhánh:{' '}
+              {currentItem.track_type === 'APPROVAL_TRACK'
+                ? 'Phê duyệt tiêu chuẩn'
+                : currentItem.track_type === 'FAST_TRACK'
+                ? 'Xử lý cấp bách'
+                : 'Điều phối trực tiếp'}
             </span>
 
             {/* Status badge */}

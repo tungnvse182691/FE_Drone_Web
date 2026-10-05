@@ -304,6 +304,7 @@ export const ProposalApprovalDetail: React.FC = () => {
         onQuickApprove={handleQuickApproveItem}
         onOpenDecisionModal={handleOpenDecisionModal}
         onCrewChange={handleCrewChange}
+        isSupervisor={isSupervisor}
       />
 
       {/* Decision, Dispatch, Batch Approve, and Lightbox Modals */}

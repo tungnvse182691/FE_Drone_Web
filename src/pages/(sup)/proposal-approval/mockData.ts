@@ -21,7 +21,11 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
       'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1024_R1_ORTHO.JPG',
     gps_coords: '15.8245, 108.2140',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    survey_code: '#MS-2026-08',
+    drone_model: 'DJI Matrice 350 RTK',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    flight_date: '22/08/2026'
   },
   {
     id: 'item-02',
@@ -50,7 +54,11 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
       'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1028_M1_ORTHO.JPG',
     gps_coords: '15.8291, 108.2198',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    survey_code: '#MS-2026-08',
+    drone_model: 'DJI Matrice 350 RTK',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    flight_date: '22/08/2026'
   },
   {
     id: 'item-03',

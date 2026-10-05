@@ -598,10 +598,46 @@ export const mockTriageCases: TriageCase[] = [
         code: '#CAS-2026-0839',
         source: 'Citizen App',
         distance_m: 1.8,
-        reporter: 'Nguyễn Văn A báo lúc 19:40',
+        reporter: 'Nguyễn Văn A (0905.123.456)',
         selected: true
       }
     ]
+  },
+  {
+    id: 'cas-0839',
+    code: '#CAS-2026-0839',
+    source: 'CITIZEN',
+    source_label: 'Citizen App',
+    source_detail: 'Phản ánh người dân qua App Dịch Vụ Công Đường Bộ',
+    reporter_name: 'Nguyễn Văn A',
+    reporter_phone: '0905.123.456',
+    reporter_channel: 'Ứng dụng Di động Citizen',
+    description: 'Vỡ cạnh mép tấm BTXM lân cận, xe máy va quẹt gồ ghề nguy hiểm.',
+    project_id: 'prj-ql1a-02',
+    project_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    stationing: 'Km 1025+402',
+    lane: 'Làn xe cơ giới',
+    defect_title: 'Vỡ mép tấm bê tông lân cận',
+    defect_type: 'POTHOLE',
+    severity: 'HIGH',
+    urgency: 'URGENT',
+    time_ago: '19:40, 25/08/2026',
+    created_at: '19:40, 25/08/2026',
+    status: 'PENDING',
+    status_label: 'Chờ xử lý',
+    image_url: 'https://images.unsplash.com/photo-1578955259839-8f8f5f21b335?w=800&auto=format&fit=crop&q=80',
+    gps: {
+      lat: 16.24052,
+      lng: 108.13102,
+      altitude_m: 25.0,
+      resolution_cm_px: 0.4
+    },
+    ai_confidence: 85.0,
+    area_sqm: 0.45,
+    ai_area_sqm: 0.40,
+    max_depth_cm: 5.5,
+    ai_depth_cm: 5.0,
+    pm_notes: 'Phản ánh độc lập từ người dân tại Km 1025+402'
   },
   {
     id: 'cas-02',

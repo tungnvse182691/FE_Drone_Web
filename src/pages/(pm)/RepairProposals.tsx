@@ -52,6 +52,7 @@ export interface ProposalWorkPackage {
   defect_summary: string
   technical_scope: string // Cào bóc & thảm: 180 m²
   material_scope: string // Bê tông nhựa C19: 14 m³
+  technical_method?: string // methodDescription theo Spec v2.2
   duration_days: number
   date_range: string
   created_by_name: string
@@ -436,7 +437,6 @@ export const RepairProposals: React.FC = () => {
   // Trạng thái tìm kiếm & Lọc
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilterTab, setActiveFilterTab] = useState<'ALL' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'DRAFT'>('ALL')
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [isPDFPreviewModalOpen, setIsPDFPreviewModalOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -444,17 +444,13 @@ export const RepairProposals: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 4
 
-  // Bộ lọc nâng cao thực tế
+  // Bộ lọc trực tiếp inline (Tuyến đường, Quy mô, Đơn vị thi công)
   const [advRoute, setAdvRoute] = useState<string>('ALL')
   const [advScale, setAdvScale] = useState<string>('ALL')
   const [advContractor, setAdvContractor] = useState<string>('ALL')
-  const [tempAdvRoute, setTempAdvRoute] = useState<string>('ALL')
-  const [tempAdvScale, setTempAdvScale] = useState<string>('ALL')
-  const [tempAdvContractor, setTempAdvContractor] = useState<string>('ALL')
 
   // Xem chi tiết hồ sơ gói đề xuất (Modal / Drawer)
   const [selectedPackageForDetail, setSelectedPackageForDetail] = useState<ProposalWorkPackage | null>(null)
-  const [activeRowMenuId, setActiveRowMenuId] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -468,6 +464,9 @@ export const RepairProposals: React.FC = () => {
   const [formPackageName, setFormPackageName] = useState('Khắc phục hằn lún bánh xe & trám nứt Km 1028 - Km 1033')
   const [formContractor, setFormContractor] = useState('Đội thi công sửa chữa Hoàng Hải 01')
   const [formDurationDays, setFormDurationDays] = useState(3)
+
+  // Phương án kỹ thuật sửa chữa tổng quát do PM nhập (methodDescription theo Spec v2.2)
+  const [formTechnicalMethod, setFormTechnicalMethod] = useState('')
 
   // Tuyến đường và phân đoạn hiện tại đang chọn trong form
   const currentRoute = useMemo(() => {
@@ -548,7 +547,8 @@ export const RepairProposals: React.FC = () => {
       defect_count: modalCalculations.count,
       defect_summary: `${modalCalculations.count} điểm hư hỏng gom mới (${currentSegment.code})`,
       technical_scope: `Cào bóc thảm: ${modalCalculations.totalArea} m²`,
-      material_scope: 'Bê tông nhựa chặt C19 tiêu chuẩn',
+      material_scope: 'Vật tư theo phương án kỹ thuật',
+      technical_method: formTechnicalMethod.trim() || 'Cào bóc vá dặm xử lý theo quy trình bảo trì mặt đường',
       duration_days: formDurationDays,
       date_range: `Dự kiến ${formDurationDays} ngày`,
       created_by_name: 'Đỗ Quốc Hoàng (PM)',
@@ -671,7 +671,6 @@ export const RepairProposals: React.FC = () => {
         basePath={basePath}
         totalPackagesCount={packages.length}
         isPM={isPM}
-        onOpenFilterModal={() => setIsFilterModalOpen(true)}
         onOpenPDFPreviewModal={() => setIsPDFPreviewModalOpen(true)}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
       />
@@ -713,6 +712,19 @@ export const RepairProposals: React.FC = () => {
         onDeleteDraft={handleDeleteDraft}
         onQuickApprove={handleQuickApprove}
         showToast={showToast}
+        advRoute={advRoute}
+        onRouteFilterChange={setAdvRoute}
+        advScale={advScale}
+        onScaleFilterChange={setAdvScale}
+        advContractor={advContractor}
+        onContractorFilterChange={setAdvContractor}
+        onResetFilters={() => {
+          setAdvRoute('ALL')
+          setAdvScale('ALL')
+          setAdvContractor('ALL')
+          setCurrentPage(1)
+          showToast('Đã đặt lại tất cả bộ lọc.')
+        }}
       />
 
       {/* 4. MODALS HUB */}
@@ -733,26 +745,16 @@ export const RepairProposals: React.FC = () => {
         setFormContractor={setFormContractor}
         formDurationDays={formDurationDays}
         setFormDurationDays={setFormDurationDays}
+        formTechnicalMethod={formTechnicalMethod}
+        setFormTechnicalMethod={setFormTechnicalMethod}
         unassignedDefects={unassignedDefects}
         handleToggleDefect={handleToggleDefect}
         modalCalculations={modalCalculations}
         handleSaveDraft={handleSaveDraft}
-        isFilterModalOpen={isFilterModalOpen}
-        setIsFilterModalOpen={setIsFilterModalOpen}
-        tempAdvRoute={tempAdvRoute}
-        setTempAdvRoute={setTempAdvRoute}
-        tempAdvScale={tempAdvScale}
-        setTempAdvScale={setTempAdvScale}
-        tempAdvContractor={tempAdvContractor}
-        setTempAdvContractor={setTempAdvContractor}
-        setAdvRoute={setAdvRoute}
-        setAdvScale={setAdvScale}
-        setAdvContractor={setAdvContractor}
-        setCurrentPage={setCurrentPage}
-        showToast={showToast}
         isPDFPreviewModalOpen={isPDFPreviewModalOpen}
         setIsPDFPreviewModalOpen={setIsPDFPreviewModalOpen}
         packages={packages}
+        showToast={showToast}
         selectedPackageForDetail={selectedPackageForDetail}
         setSelectedPackageForDetail={setSelectedPackageForDetail}
         isSupervisor={isSupervisor}

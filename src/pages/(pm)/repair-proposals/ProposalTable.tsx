@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -15,9 +15,13 @@ import {
   MoreVertical,
   Info,
   FileText,
-  FileCheck2
+  FileCheck2,
+  SlidersHorizontal,
+  RotateCcw
 } from 'lucide-react'
 import { ProposalWorkPackage } from './types'
+import { Tooltip } from '../../../components/ui/Tooltip'
+import { TruncatedText } from '../../../components/ui/TruncatedText'
 
 export interface ProposalTableProps {
   searchTerm: string
@@ -45,6 +49,15 @@ export interface ProposalTableProps {
   onDeleteDraft: (id: string, code: string) => void
   onQuickApprove: (id: string, code: string) => void
   showToast: (msg: string) => void
+
+  // Inline Filter Props
+  advRoute: string
+  onRouteFilterChange: (route: string) => void
+  advScale: string
+  onScaleFilterChange: (scale: string) => void
+  advContractor: string
+  onContractorFilterChange: (contractor: string) => void
+  onResetFilters: () => void
 }
 
 export const ProposalTable: React.FC<ProposalTableProps> = ({
@@ -67,9 +80,33 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
   onDeleteDraft,
   onQuickApprove,
   showToast,
+  advRoute,
+  onRouteFilterChange,
+  advScale,
+  onScaleFilterChange,
+  advContractor,
+  onContractorFilterChange,
+  onResetFilters,
 }) => {
   const navigate = useNavigate()
-  const [activeRowMenuId, setActiveRowMenuId] = useState<string | null>(null)
+  const [activeMenu, setActiveMenu] = useState<{
+    pkg: ProposalWorkPackage
+    openUpwards: boolean
+    top?: number
+    bottom?: number
+    right: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (!activeMenu) return
+    const handleClose = () => setActiveMenu(null)
+    window.addEventListener('scroll', handleClose, true)
+    window.addEventListener('resize', handleClose)
+    return () => {
+      window.removeEventListener('scroll', handleClose, true)
+      window.removeEventListener('resize', handleClose)
+    }
+  }, [activeMenu])
 
   return (
     <div className="bg-white rounded-2xl p-5 shadow-2xs border border-brand-border space-y-4">
@@ -150,20 +187,104 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
         </div>
       </div>
 
-      {/* Responsive Table */}
-      <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs">
+      {/* INLINE BỘ LỌC TRỰC TIẾP (Thay thế hoàn toàn Modal Bộ lọc nâng cao theo yêu cầu người dùng) */}
+      <div className="flex items-center gap-2.5 flex-wrap pt-1 text-xs">
+        <span className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-[#C9A227]" />
+          <span>Bộ lọc:</span>
+        </span>
+
+        {/* Tuyến đường */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+          <span className="text-slate-400 text-[11px] font-medium">Tuyến:</span>
+          <select
+            value={advRoute}
+            onChange={(e) => {
+              onRouteFilterChange(e.target.value)
+              onSetPage(1)
+            }}
+            className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">Tất cả tuyến đường</option>
+            <option value="QL1A_PK04">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
+            <option value="QL1A_PK01">QL1A - Giai đoạn 1 (Km 1000 - 1024)</option>
+            <option value="EXPR_NORTH_SOUTH">Đường nối Cao tốc Bắc - Nam</option>
+          </select>
+        </div>
+
+        {/* Quy mô khiếm khuyết */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+          <span className="text-slate-400 text-[11px] font-medium">Quy mô:</span>
+          <select
+            value={advScale}
+            onChange={(e) => {
+              onScaleFilterChange(e.target.value)
+              onSetPage(1)
+            }}
+            className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">Tất cả quy mô</option>
+            <option value="LARGE">Gói lớn (&gt; 10 khiếm khuyết)</option>
+            <option value="MEDIUM">Gói vừa (5 - 10 khiếm khuyết)</option>
+            <option value="SMALL">Gói nhỏ (&lt; 5 khiếm khuyết)</option>
+          </select>
+        </div>
+
+        {/* Tổ đội thi công */}
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+          <span className="text-slate-400 text-[11px] font-medium">Đơn vị thi công:</span>
+          <select
+            value={advContractor}
+            onChange={(e) => {
+              onContractorFilterChange(e.target.value)
+              onSetPage(1)
+            }}
+            className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
+          >
+            <option value="ALL">Tất cả đơn vị thi công</option>
+            <option value="Tổ vá dặm cơ giới 01">Tổ vá dặm cơ giới 01</option>
+            <option value="Xí nghiệp Cầu Đường 4">Xí nghiệp Cầu Đường 4</option>
+            <option value="Tổ duy tu bảo dưỡng đường bộ 03">Tổ duy tu bảo dưỡng 03</option>
+            <option value="Đội cơ động">Đội cơ động khắc phục sự cố</option>
+          </select>
+        </div>
+
+        {/* Reset filter button if any active */}
+        {(advRoute !== 'ALL' || advScale !== 'ALL' || advContractor !== 'ALL') && (
+          <button
+            onClick={() => {
+              onResetFilters()
+              onSetPage(1)
+            }}
+            type="button"
+            className="px-2.5 py-1.5 text-[#C9A227] hover:text-[#9E7B15] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ml-auto"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Đặt lại bộ lọc</span>
+          </button>
+        )}
+      </div>
+
+      {/* Responsive Table với Sticky Cột Đầu & Cột Cuối */}
+      <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs custom-scrollbar">
         <table className="w-full text-left border-collapse text-xs min-w-[1240px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-              <th className="py-3.5 px-4 whitespace-nowrap">Mã gói</th>
-              <th className="py-3.5 px-4 min-w-[320px] whitespace-nowrap">Tên gói công việc &amp; Phạm vi lý trình</th>
+              {/* Sticky Column: Cột Mã gói */}
+              <th className="py-3.5 px-4 whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+                Mã gói
+              </th>
+              <th className="py-3.5 px-4 min-w-[280px] max-w-[340px]">Tên gói công việc &amp; Phạm vi lý trình</th>
               <th className="py-3.5 px-4 whitespace-nowrap">Hạng mục lỗi</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Khối lượng kỹ thuật dự kiến</th>
+              <th className="py-3.5 px-4 whitespace-nowrap">Khối lượng dự kiến</th>
               <th className="py-3.5 px-4 whitespace-nowrap">Thời gian thi công</th>
               <th className="py-3.5 px-4 whitespace-nowrap">Người lập / Ngày trình</th>
               <th className="py-3.5 px-4 whitespace-nowrap">Trạng thái</th>
-              <th className="py-3.5 px-4 min-w-[160px] whitespace-nowrap">Tiến độ phê duyệt</th>
-              <th className="py-3.5 px-4 text-right whitespace-nowrap">Hành động</th>
+              <th className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">Tiến độ phê duyệt</th>
+              {/* Sticky Column: Cột Thao tác */}
+              <th className="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -179,19 +300,21 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
 
                 return (
                   <tr key={pkg.id} className="hover:bg-amber-50/20 transition-colors group">
-                    {/* Mã gói */}
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
+                    {/* Sticky Column: Mã gói */}
+                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap sticky left-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center gap-1.5">
                         <span className="text-slate-800">{pkg.code}</span>
                       </div>
                     </td>
 
-                    {/* Tên gói công việc & Lý trình */}
-                    <td className="py-3.5 px-4">
+                    {/* Tên gói công việc & Lý trình (Xử lý tràn chữ với Tooltip) */}
+                    <td className="py-3.5 px-4 max-w-[340px]">
                       <div className="flex flex-col gap-0.5">
-                        <span className="font-bold text-brand-dark hover:text-brand-gold cursor-pointer transition-colors text-xs">
-                          {pkg.title}
-                        </span>
+                        <TruncatedText
+                          text={pkg.title}
+                          lines={1}
+                          className="font-bold text-brand-dark hover:text-brand-gold cursor-pointer transition-colors text-xs"
+                        />
                         <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
                           <span className="font-medium text-slate-700">{pkg.route_name}</span>
                           <span>•</span>
@@ -239,30 +362,30 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Trạng thái */}
+                    {/* Trạng thái 100% Tiếng Việt Chuẩn */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       {pkg.status === 'SUBMITTED' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                           <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
-                          <span>Chờ duyệt (Submitted)</span>
+                          <span>Chờ phê duyệt</span>
                         </span>
                       )}
                       {pkg.status === 'DECIDED' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>Đã duyệt (Approved)</span>
+                          <span>Đã phê duyệt</span>
                         </span>
                       )}
                       {pkg.status === 'DISPATCHED' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
                           <Construction className="w-3 h-3 text-blue-600" />
-                          <span>Đang thi công (Dispatched)</span>
+                          <span>Đang thi công</span>
                         </span>
                       )}
                       {pkg.status === 'DRAFT' && (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          <span>Bản nháp (Draft)</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                          <span>Bản nháp</span>
                         </span>
                       )}
                     </td>
@@ -291,115 +414,109 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Hành động */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    {/* Sticky Column: Thao tác */}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
                       <div className="flex items-center justify-end gap-1.5 relative">
                         {/* Vai trò Supervisor */}
                         {isSupervisor && pkg.status === 'SUBMITTED' && (
-                          <button
-                            onClick={() => onQuickApprove(pkg.id, pkg.code)}
-                            type="button"
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
-                            title="Supervisor phê duyệt nhanh gói đề xuất này"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Phê duyệt</span>
-                          </button>
+                          <Tooltip content="Kỹ sư Giám sát phê duyệt nhanh gói đề xuất này">
+                            <button
+                              onClick={() => onQuickApprove(pkg.id, pkg.code)}
+                              type="button"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Phê duyệt</span>
+                            </button>
+                          </Tooltip>
                         )}
 
                         {isSupervisor && pkg.status === 'DECIDED' && (
-                          <button
-                            onClick={() => {
-                              showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ. Đang chuyển hướng kiểm tra hiện trường.`)
-                              navigate(`${basePath}/proposals/${pkg.id}`)
-                            }}
-                            type="button"
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Theo dõi thi công</span>
-                          </button>
+                          <Tooltip content="Theo dõi tiến độ tổ thi công ngoài hiện trường">
+                            <button
+                              onClick={() => {
+                                showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ. Đang chuyển hướng kiểm tra hiện trường.`)
+                                navigate(`${basePath}/proposals/${pkg.id}`)
+                              }}
+                              type="button"
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>Theo dõi thi công</span>
+                            </button>
+                          </Tooltip>
                         )}
 
                         {/* Vai trò PM */}
                         {isPM && pkg.status === 'DRAFT' && (
                           <>
-                            <button
-                              onClick={() => onSubmitDraft(pkg.id, pkg.code)}
-                              type="button"
-                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
-                              title="Khóa và Trình nộp gói đề xuất lên Supervisor"
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                              <span>Trình duyệt</span>
-                            </button>
-                            <button
-                              onClick={() => onDeleteDraft(pkg.id, pkg.code)}
-                              type="button"
-                              className="p-1.5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                              title="Xóa bản nháp"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <Tooltip content="Khóa và trình nộp hồ sơ lên Giám sát">
+                              <button
+                                onClick={() => onSubmitDraft(pkg.id, pkg.code)}
+                                type="button"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>Trình duyệt</span>
+                              </button>
+                            </Tooltip>
+                            <Tooltip content="Xóa bản nháp này">
+                              <button
+                                onClick={() => onDeleteDraft(pkg.id, pkg.code)}
+                                type="button"
+                                className="p-1.5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </Tooltip>
                           </>
                         )}
 
                         {/* Nút xem chi tiết / thẩm định */}
-                        <button
-                          onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
-                          type="button"
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-600" />
-                          <span>{isSupervisor ? 'Thẩm định (WF-07)' : 'Xem hồ sơ'}</span>
-                        </button>
+                        <Tooltip content={isSupervisor ? 'Thẩm định kỹ thuật chi tiết' : 'Xem chi tiết hồ sơ gói'}>
+                          <button
+                            onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
+                            type="button"
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-slate-600" />
+                            <span>{isSupervisor ? 'Thẩm định' : 'Xem hồ sơ'}</span>
+                          </button>
+                        </Tooltip>
 
-                        {/* Nút Menu thêm */}
-                        <button
-                          onClick={() => setActiveRowMenuId(activeRowMenuId === pkg.id ? null : pkg.id)}
-                          type="button"
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Tùy chọn khác"
-                        >
-                          <MoreVertical className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Nút Menu tùy chọn */}
+                        <Tooltip content="Tùy chọn khác">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (activeMenu?.pkg.id === pkg.id) {
+                                setActiveMenu(null)
+                                return
+                              }
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              const spaceBelow = window.innerHeight - rect.bottom
+                              const spaceAbove = rect.top
+                              // Nếu khoảng trống phía dưới < 210px (menu cao ~180px) thì mở vươn lên trên
+                              const openUpwards = spaceBelow < 210 && spaceAbove > 140
 
-                        {/* Dropdown Menu Tùy Chọn */}
-                        {activeRowMenuId === pkg.id && (
-                          <div className="absolute right-0 top-8 z-30 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 text-left text-xs animate-in fade-in">
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(pkg.code)
-                                showToast(`Đã sao chép mã gói [${pkg.code}] vào bộ nhớ tạm!`)
-                                setActiveRowMenuId(null)
-                              }}
-                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                            >
-                              <Info className="w-3.5 h-3.5 text-[#C9A227]" />
-                              <span>Sao chép mã gói</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                navigate(`${basePath}/proposals/${pkg.id}`)
-                                setActiveRowMenuId(null)
-                              }}
-                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5 text-slate-500" />
-                              <span>Thẩm định chi tiết (WF-07)</span>
-                            </button>
-                            <button
-                              onClick={() => {
-                                showToast(`Đang kết xuất bảng kỹ thuật chi tiết gói ${pkg.code}...`)
-                                setActiveRowMenuId(null)
-                              }}
-                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
-                            >
-                              <FileCheck2 className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Tải bảng danh mục kỹ thuật</span>
-                            </button>
-                          </div>
-                        )}
+                              setActiveMenu({
+                                pkg,
+                                openUpwards,
+                                right: Math.max(16, window.innerWidth - rect.right),
+                                top: openUpwards ? undefined : rect.bottom + 6,
+                                bottom: openUpwards ? window.innerHeight - rect.top + 6 : undefined
+                              })
+                            }}
+                            type="button"
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                              activeMenu?.pkg.id === pkg.id
+                                ? 'bg-slate-200 text-slate-800'
+                                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>
@@ -459,6 +576,69 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Floating Menu Tùy Chọn - Fixed position hoàn toàn không bao giờ bị cắt bởi overflow container */}
+      {activeMenu && (
+        <>
+          {/* Backdrop trong suốt bắt click outside */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setActiveMenu(null)}
+          />
+          {/* Dropdown Menu nổi lên trên toàn bộ trang - Tự động định vị trên/dưới an toàn */}
+          <div
+            style={{
+              ...(activeMenu.openUpwards
+                ? { bottom: `${activeMenu.bottom}px` }
+                : { top: `${activeMenu.top}px` }),
+              right: `${activeMenu.right}px`
+            }}
+            className={`fixed z-50 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 text-left text-xs animate-in fade-in zoom-in-95 duration-150 max-h-[calc(100vh-32px)] overflow-y-auto ${
+              activeMenu.openUpwards ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'
+            }`}
+          >
+            <div className="px-3.5 py-1 mb-1 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+                {activeMenu.pkg.code}
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[100px]">
+                {activeMenu.pkg.route_name.split('•')[0]}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(activeMenu.pkg.code)
+                showToast(`Đã sao chép mã gói [${activeMenu.pkg.code}] vào bộ nhớ tạm!`)
+                setActiveMenu(null)
+              }}
+              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
+            >
+              <Info className="w-4 h-4 text-[#C9A227]" />
+              <span>Sao chép mã gói</span>
+            </button>
+            <button
+              onClick={() => {
+                navigate(`${basePath}/proposals/${activeMenu.pkg.id}`)
+                setActiveMenu(null)
+              }}
+              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
+            >
+              <FileText className="w-4 h-4 text-slate-500" />
+              <span>Thẩm định chi tiết</span>
+            </button>
+            <button
+              onClick={() => {
+                showToast(`Đang kết xuất bảng kỹ thuật chi tiết gói ${activeMenu.pkg.code}...`)
+                setActiveMenu(null)
+              }}
+              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
+            >
+              <FileCheck2 className="w-4 h-4 text-emerald-600" />
+              <span>Tải bảng danh mục kỹ thuật</span>
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

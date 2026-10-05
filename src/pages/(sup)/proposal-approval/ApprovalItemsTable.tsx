@@ -8,9 +8,13 @@ import {
   Check,
   AlertCircle,
   Clock,
-  Camera
+  Camera,
+  Construction,
+  Lock
 } from 'lucide-react'
 import { RepairItemDetail, CREW_OPTIONS } from './types'
+import { Tooltip } from '../../../components/ui/Tooltip'
+import { TruncatedText } from '../../../components/ui/TruncatedText'
 
 export interface ApprovalItemsTableProps {
   items: RepairItemDetail[]
@@ -38,6 +42,7 @@ export interface ApprovalItemsTableProps {
   onQuickApprove: (itemId: string) => void
   onOpenDecisionModal: (item: RepairItemDetail, type: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => void
   onCrewChange: (itemId: string, newCrew: string) => void
+  isSupervisor?: boolean
 }
 
 export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
@@ -54,7 +59,8 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
   onViewPhoto,
   onQuickApprove,
   onOpenDecisionModal,
-  onCrewChange
+  onCrewChange,
+  isSupervisor = true
 }) => {
   return (
     <section className="bg-white border border-[#E2E5E9] rounded-2xl shadow-sm p-6 space-y-4">
@@ -65,7 +71,9 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
             Danh sách hạng mục kỹ thuật trong gói đề xuất
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Kiểm tra cao độ, khối lượng bóc tách và phân công tổ thi công cơ giới
+            {isSupervisor
+              ? 'Thẩm định cao độ, hồ sơ hư hỏng, định mức và phương án kỹ thuật do PM đề xuất'
+              : 'Kiểm tra cao độ, khối lượng bóc tách và phân công tổ thi công cơ giới sau khi được phê duyệt'}
           </p>
         </div>
 
@@ -95,7 +103,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Chờ duyệt ({stats.pending})
+            Chờ thẩm định ({stats.pending})
           </button>
           <button
             onClick={() => {
@@ -123,7 +131,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                 : 'text-[#0284C7] hover:bg-white/50'
             }`}
           >
-            Cần bằng chứng ({stats.evidence + stats.reconsider})
+            Cần minh chứng ({stats.evidence + stats.reconsider})
           </button>
           <button
             onClick={() => {
@@ -153,7 +161,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
               setSearchTerm(e.target.value)
               setCurrentPage(1)
             }}
-            placeholder="Tìm theo mã item, defect, lý trình, giải pháp..."
+            placeholder="Tìm theo mã hạng mục, hư hỏng, lý trình, giải pháp..."
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#C9A227] transition-all font-medium"
           />
         </div>
@@ -163,18 +171,24 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       </div>
 
       {/* Responsive Table Container */}
-      <div className="overflow-x-auto -mx-6 px-6">
-        <table className="w-full text-left text-xs border-collapse">
+      <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs custom-scrollbar">
+        <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
           <thead className="bg-[#F8F9FA] border-y border-[#E2E5E9] text-slate-500 font-bold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-3 px-3 rounded-l-lg">Mã &amp; Khuyết tật</th>
-              <th className="py-3 px-3">Vị trí &amp; Lý trình</th>
-              <th className="py-3 px-3">Hư hại &amp; Đo đạc</th>
-              <th className="py-3 px-3">Phương án kỹ thuật</th>
-              <th className="py-3 px-3 text-right">Khối lượng kỹ thuật</th>
-              <th className="py-3 px-3 text-center">Trạng thái duyệt</th>
-              <th className="py-3 px-3 text-center">Thao tác Thẩm định</th>
-              <th className="py-3 px-3 rounded-r-lg">Phân công Crew (PM)</th>
+              <th className="py-3 px-3.5 rounded-l-lg min-w-[150px]">
+                Mã &amp; Hư hỏng
+              </th>
+              <th className="py-3 px-3.5 whitespace-nowrap min-w-[130px]">Vị trí &amp; Lý trình</th>
+              <th className="py-3 px-3.5 min-w-[180px]">Hư hại &amp; Đo đạc</th>
+              <th className="py-3 px-3.5 min-w-[200px]">Phương án kỹ thuật</th>
+              <th className="py-3 px-3.5 text-right whitespace-nowrap min-w-[110px]">Khối lượng</th>
+              <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[120px]">Trạng thái duyệt</th>
+              <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[140px]">
+                {isSupervisor ? 'Thao tác Thẩm định' : 'Thẩm định'}
+              </th>
+              <th className="py-3 px-3.5 rounded-r-lg whitespace-nowrap min-w-[180px]">
+                {isSupervisor ? 'Đội thi công (Dự kiến / Đã giao)' : 'Phân công tổ thi công'}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E5E9]">
@@ -187,30 +201,42 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
               return (
                 <tr
                   key={item.id}
-                  className={`transition-colors hover:bg-slate-50/70 ${
+                  className={`transition-colors hover:bg-slate-50/70 group ${
                     isItemEvidence || isItemReconsider ? 'bg-sky-50/20' : ''
                   }`}
                 >
                   {/* Cột 1: Mã & Khuyết tật */}
-                  <td className="py-3.5 px-3 align-top whitespace-nowrap">
-                    <div className="flex items-start gap-2">
-                      <div
-                        onClick={() => onViewPhoto(item)}
-                        className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative group"
-                        title="Bấm để xem ảnh chi tiết"
-                      >
-                        <img
-                          src={item.image_url}
-                          alt={item.defect_title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                        />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                          <ZoomIn className="w-3.5 h-3.5" />
+                  <td className="py-3.5 px-3.5 align-top min-w-[150px]">
+                    <div className="flex items-start gap-2.5">
+                      <Tooltip content="Bấm để xem ảnh phóng to & thông số bay">
+                        <div
+                          onClick={() => onViewPhoto(item)}
+                          className="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative group/img bg-slate-100"
+                        >
+                          <img
+                            src={item.image_url}
+                            alt=""
+                            onError={(e) => {
+                              e.currentTarget.src =
+                                'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80'
+                            }}
+                            className="w-full h-full object-cover group-hover/img:scale-110 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
+                            <ZoomIn className="w-3.5 h-3.5" />
+                          </div>
                         </div>
-                      </div>
+                      </Tooltip>
                       <div>
                         <span className="font-mono font-bold text-slate-900 block">{item.item_code}</span>
-                        <span className="text-[11px] text-slate-500 font-medium">{item.defect_code}</span>
+                        <span className="text-[11px] text-slate-500 font-medium font-mono block">
+                          {item.defect_code}
+                        </span>
+                        {item.pilot_name && (
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {item.pilot_name.replace('Kỹ sư UAV ', '')} • {item.drone_model?.replace('DJI ', '') || 'M350'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -229,14 +255,18 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                     <span className="text-slate-500 text-[11px] block mt-0.5">{item.defect_measurements}</span>
                   </td>
 
-                  {/* Cột 4: Phương án kỹ thuật */}
+                  {/* Cột 4: Phương án kỹ thuật (Truncation + Tooltip) */}
                   <td className="py-3.5 px-3 align-top min-w-[220px]">
-                    <span className="text-slate-900 font-medium block">{item.solution_title}</span>
+                    <TruncatedText
+                      text={item.solution_title}
+                      lines={2}
+                      className="text-slate-900 font-medium block"
+                    />
                     <span className="text-slate-500 text-[11px] block mt-0.5">{item.solution_standard}</span>
                     {isItemEvidence && (
                       <div className="text-[#0284C7] text-[11px] font-semibold flex items-center gap-1 mt-1 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
                         <Info className="w-3.5 h-3.5 shrink-0" />
-                        <span>Đang mở phiên giải trình bổ sung bằng chứng</span>
+                        <span>Đang yêu cầu bổ sung minh chứng</span>
                       </div>
                     )}
                     {isItemReconsider && (
@@ -253,131 +283,166 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                     )}
                   </td>
 
-                  {/* Cột 5: Khối lượng kỹ thuật (Zero Money) */}
+                  {/* Cột 5: Khối lượng kỹ thuật */}
                   <td className="py-3.5 px-3 align-top text-right whitespace-nowrap">
                     <span className="font-mono font-bold text-slate-900 text-sm">{item.volume_display}</span>
                     <span className="text-[11px] text-slate-500 block">{item.volume_sub}</span>
                   </td>
 
-                  {/* Cột 6: Trạng thái duyệt */}
+                  {/* Cột 6: Trạng thái duyệt (100% Tiếng Việt) */}
                   <td className="py-3.5 px-3 align-top text-center whitespace-nowrap">
                     {isItemApproved && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-bold text-[11px] border border-emerald-200">
                         <Check className="w-3.5 h-3.5" />
-                        APPROVED
+                        Đã phê duyệt
                       </span>
                     )}
                     {isItemEvidence && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E0F2FE] text-[#0284C7] font-bold text-[11px] border border-sky-200">
                         <AlertCircle className="w-3.5 h-3.5" />
-                        REQUEST_EVIDENCE
+                        Cần minh chứng
                       </span>
                     )}
                     {isItemReconsider && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 font-bold text-[11px] border border-amber-200">
                         <RotateCcw className="w-3.5 h-3.5" />
-                        RECONSIDER
+                        Xem xét lại
                       </span>
                     )}
                     {isItemRejected && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FEE2E2] text-[#DC2626] font-bold text-[11px] border border-rose-200">
                         <X className="w-3.5 h-3.5" />
-                        REJECTED
+                        Từ chối
                       </span>
                     )}
                     {item.status === 'PENDING' && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-bold text-[11px] border border-slate-200">
                         <Clock className="w-3.5 h-3.5" />
-                        PENDING
+                        Chờ thẩm định
                       </span>
                     )}
                   </td>
 
-                  {/* Cột 7: Thao tác Thẩm định (4 Nút tròn) */}
-                  <td className="py-3.5 px-3 align-top text-center whitespace-nowrap">
-                    <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-[#E2E5E9]">
-                      <button
-                        onClick={() => onQuickApprove(item.id)}
-                        type="button"
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
-                          isItemApproved
-                            ? 'bg-[#EDF7ED] text-[#1B5E20] shadow-xs ring-1 ring-emerald-300'
-                            : 'bg-white text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'
-                        }`}
-                        title="Phê duyệt mục này (APPROVED)"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
+                  {/* Cột 7: Thao tác Thẩm định */}
+                  <td className="py-3.5 px-3.5 align-top text-center whitespace-nowrap min-w-[140px]">
+                    {isSupervisor ? (
+                      <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-[#E2E5E9]">
+                        <Tooltip content="Phê duyệt hạng mục này">
+                          <button
+                            onClick={() => onQuickApprove(item.id)}
+                            type="button"
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
+                              isItemApproved
+                                ? 'bg-[#EDF7ED] text-[#1B5E20] shadow-xs ring-1 ring-emerald-300'
+                                : 'bg-white text-slate-500 hover:text-emerald-700 hover:bg-emerald-50'
+                            }`}
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </Tooltip>
 
-                      <button
-                        onClick={() => onOpenDecisionModal(item, 'EVIDENCE')}
-                        type="button"
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
-                          isItemEvidence
-                            ? 'bg-[#0284C7] text-white shadow-xs'
-                            : 'bg-white text-slate-500 hover:text-[#0284C7] hover:bg-sky-50'
-                        }`}
-                        title="Yêu cầu bổ sung ảnh/thước đo thực địa (REQUEST_EVIDENCE)"
-                      >
-                        <Camera className="w-4 h-4" />
-                      </button>
+                        <Tooltip content="Yêu cầu bổ sung ảnh/thước đo thực địa">
+                          <button
+                            onClick={() => onOpenDecisionModal(item, 'EVIDENCE')}
+                            type="button"
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
+                              isItemEvidence
+                                ? 'bg-[#0284C7] text-white shadow-xs'
+                                : 'bg-white text-slate-500 hover:text-[#0284C7] hover:bg-sky-50'
+                            }`}
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        </Tooltip>
 
-                      <button
-                        onClick={() => onOpenDecisionModal(item, 'RECONSIDER')}
-                        type="button"
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
-                          isItemReconsider
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'bg-white text-slate-500 hover:text-amber-700 hover:bg-amber-50'
-                        }`}
-                        title="Yêu cầu PM xem xét lại giải pháp (REQUEST_RECONSIDER)"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
+                        <Tooltip content="Yêu cầu PM xem xét lại giải pháp">
+                          <button
+                            onClick={() => onOpenDecisionModal(item, 'RECONSIDER')}
+                            type="button"
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
+                              isItemReconsider
+                                ? 'bg-amber-600 text-white shadow-xs'
+                                : 'bg-white text-slate-500 hover:text-amber-700 hover:bg-amber-50'
+                            }`}
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </Tooltip>
 
-                      <button
-                        onClick={() => onOpenDecisionModal(item, 'REJECT')}
-                        type="button"
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
-                          isItemRejected
-                            ? 'bg-[#DC2626] text-white shadow-xs'
-                            : 'bg-white text-slate-500 hover:text-[#DC2626] hover:bg-rose-50'
-                        }`}
-                        title="Từ chối giải pháp kỹ thuật (REJECTED)"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
+                        <Tooltip content="Từ chối giải pháp kỹ thuật này">
+                          <button
+                            onClick={() => onOpenDecisionModal(item, 'REJECT')}
+                            type="button"
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition cursor-pointer ${
+                              isItemRejected
+                                ? 'bg-[#DC2626] text-white shadow-xs'
+                                : 'bg-white text-slate-500 hover:text-[#DC2626] hover:bg-rose-50'
+                            }`}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </Tooltip>
+                      </div>
+                    ) : (
+                      <Tooltip content="Quyền thẩm định và phê duyệt thuộc về Giám sát / Chủ đầu tư">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Giám sát thẩm duyệt</span>
+                        </div>
+                      </Tooltip>
+                    )}
                   </td>
 
-                  {/* Cột 8: Phân công Crew (PM) */}
+                  {/* Cột 8: Phân công Tổ thi công (Theo v2.2: Supervisor xem Read-only; Chỉ PM được phân công khi đã APPROVED) */}
                   <td className="py-3.5 px-3 align-top whitespace-nowrap">
-                    {isItemApproved ? (
-                      <select
-                        value={item.assigned_crew}
-                        onChange={(e) => onCrewChange(item.id, e.target.value)}
-                        className="w-48 bg-white border border-[#E2E5E9] text-slate-800 text-xs py-1.5 px-2.5 rounded-lg shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium cursor-pointer"
-                      >
-                        {CREW_OPTIONS.map((crew) => (
-                          <option key={crew} value={crew}>
-                            {crew}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="relative group/sel">
-                        <select
-                          disabled
-                          className="w-48 bg-slate-100 text-slate-400 text-xs py-1.5 px-2.5 rounded-lg border border-[#E2E5E9] cursor-not-allowed font-medium"
-                        >
-                          <option>
-                            {isItemRejected ? '-- Bị từ chối phương án --' : '-- Chưa thể phân công --'}
-                          </option>
-                        </select>
-                        <div className="absolute bottom-full left-0 mb-1 w-52 bg-slate-900 text-white text-[11px] p-2 rounded-lg shadow-lg hidden group-hover/sel:block z-10 font-medium">
-                          Chỉ phân công khi Supervisor đã APPROVED.
+                    {isSupervisor ? (
+                      // Dành cho SUPERVISOR: Read-only, không thể chỉnh sửa tổ thi công của nhà thầu
+                      item.assigned_crew ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                            <Construction className="w-3.5 h-3.5 text-[#C9A227]" />
+                            <span>{item.assigned_crew}</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 pl-1 font-medium">PM đã phân công</span>
                         </div>
-                      </div>
+                      ) : isItemApproved ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
+                          <Clock className="w-3 h-3 text-amber-600" />
+                          <span>Chờ PM giao việc</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 text-slate-400 border border-slate-200">
+                          <span>{isItemRejected ? 'Bị từ chối' : 'Chưa thẩm duyệt'}</span>
+                        </span>
+                      )
+                    ) : (
+                      // Dành cho PROJECT MANAGER (PM): Có thể chọn tổ thi công khi item đã APPROVED
+                      isItemApproved ? (
+                        <select
+                          value={item.assigned_crew}
+                          onChange={(e) => onCrewChange(item.id, e.target.value)}
+                          className="w-48 bg-white border border-[#E2E5E9] text-slate-800 text-xs py-1.5 px-2.5 rounded-lg shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium cursor-pointer"
+                        >
+                          {CREW_OPTIONS.map((crew) => (
+                            <option key={crew} value={crew}>
+                              {crew}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Tooltip content="Chỉ phân công đội thi công sau khi Giám sát đã phê duyệt phương án">
+                          <div className="relative">
+                            <select
+                              disabled
+                              className="w-48 bg-slate-100 text-slate-400 text-xs py-1.5 px-2.5 rounded-lg border border-[#E2E5E9] cursor-not-allowed font-medium"
+                            >
+                              <option>
+                                {isItemRejected ? '-- Bị từ chối phương án --' : '-- Chưa thể phân công --'}
+                              </option>
+                            </select>
+                          </div>
+                        </Tooltip>
+                      )
                     )}
                   </td>
                 </tr>

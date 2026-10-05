@@ -28,6 +28,11 @@ export interface RepairItemDetail {
   ortho_code: string
   gps_coords: string
   resolution: string
+  // Thông tin truy vết nguồn gốc bay chụp Drone theo Spec v2.2
+  survey_code?: string
+  drone_model?: string
+  pilot_name?: string
+  flight_date?: string
 }
 
 export const CREW_OPTIONS = [

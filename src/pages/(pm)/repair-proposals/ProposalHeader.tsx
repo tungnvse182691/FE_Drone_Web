@@ -11,7 +11,6 @@ export interface ProposalHeaderProps {
   basePath: string
   totalPackagesCount: number
   isPM: boolean
-  onOpenFilterModal: () => void
   onOpenPDFPreviewModal: () => void
   onOpenCreateModal: () => void
 }
@@ -20,7 +19,6 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
   basePath,
   totalPackagesCount,
   isPM,
-  onOpenFilterModal,
   onOpenPDFPreviewModal,
   onOpenCreateModal,
 }) => {
@@ -56,14 +54,6 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
 
       {/* Action Buttons Top Bar */}
       <div className="flex items-center gap-2.5 flex-wrap shrink-0">
-        <button
-          onClick={onOpenFilterModal}
-          type="button"
-          className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-xs font-semibold shadow-2xs hover:bg-slate-50 border border-slate-200 cursor-pointer transition-colors"
-        >
-          <SlidersHorizontal className="w-4 h-4 text-slate-500" />
-          <span>Bộ lọc nâng cao</span>
-        </button>
 
         <button
           onClick={onOpenPDFPreviewModal}

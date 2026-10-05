@@ -162,15 +162,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           </div>
         </div>
 
-        <div className="flex items-end gap-2">
-          <button
-            onClick={() => showToast('Đang áp dụng bộ lọc nâng cao')}
-            type="button"
-            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-slate-200 cursor-pointer"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            <span>Bộ lọc</span>
-          </button>
+        <div className="flex items-end">
           <button
             onClick={() => {
               setSourceFilter('ALL')
@@ -180,11 +172,12 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
               setActiveTab('ALL')
               showToast('Đã đặt lại toàn bộ bộ lọc')
             }}
-            className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-lg transition-colors border border-slate-200 cursor-pointer"
+            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 border border-slate-200 cursor-pointer"
             title="Đặt lại bộ lọc"
             type="button"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+            <span>Đặt lại bộ lọc</span>
           </button>
         </div>
       </div>

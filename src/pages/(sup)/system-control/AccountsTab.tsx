@@ -169,7 +169,13 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           : 'bg-[#F0F2F5] text-[#555F6F]'
                       }`}
                     >
-                      {u.role === RoleCode.SUPERVISOR ? 'SUPERVISOR' : u.role === RoleCode.PROJECT_MANAGER ? 'PM' : u.role}
+                      {u.role === RoleCode.SUPERVISOR
+                        ? 'Giám sát (CĐT)'
+                        : u.role === RoleCode.PROJECT_MANAGER
+                        ? 'Chỉ huy trưởng (PM)'
+                        : u.role === RoleCode.DRONE_OPERATOR
+                        ? 'Phi công UAV'
+                        : 'Tổ thi công'}
                     </span>
                   </td>
 
@@ -193,22 +199,22 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     </div>
                   </td>
 
-                  {/* Trạng thái */}
+                  {/* Trạng thái 100% Tiếng Việt */}
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     {isSuspended ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1F3F5] text-[#555F6F] font-semibold text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#555F6F]"></span>
-                        SUSPENDED
+                        ĐÃ TẠM KHÓA
                       </span>
                     ) : isInvited ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FBF6E9] border border-[#F3E6C4] text-[#8C6D15] font-semibold text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227]"></span>
-                        INVITED
+                        CHỜ KÍCH HOẠT
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] font-semibold text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#059669]"></span>
-                        ACTIVE
+                        ĐANG HOẠT ĐỘNG
                       </span>
                     )}
                   </td>

@@ -595,7 +595,7 @@ export const AuditTrail: React.FC = () => {
                   <th className="py-3 px-3">Hành động nghiệp vụ</th>
                   <th className="py-3 px-3">Đối tượng &amp; Lý trình</th>
                   <th className="py-3 px-3">Chuyển trạng thái</th>
-                  <th className="py-3 px-3">Mã sự kiện (Event ID)</th>
+                  <th className="py-3 px-3">Mã sự kiện</th>
                   <th className="py-3 px-4 text-right">Chi tiết</th>
                 </tr>
               </thead>

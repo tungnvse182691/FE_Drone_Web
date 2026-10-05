@@ -12,6 +12,7 @@ export interface ProposalWorkPackage {
   defect_summary: string
   technical_scope: string // Cào bóc & thảm: 180 m²
   material_scope: string // Bê tông nhựa C19: 14 m³
+  technical_method?: string // Phương án kỹ thuật sửa chữa tổng quát (methodDescription theo Spec v2.2)
   duration_days: number
   date_range: string
   created_by_name: string

@@ -243,7 +243,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
                                 <span className="font-mono font-bold text-xs text-brand-dark">{item.code}</span>
                                 {isMaster && (
                                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-900 border border-purple-200">
-                                    Master
+                                    Nhóm gộp
                                   </span>
                                 )}
                               </div>

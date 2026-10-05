@@ -1,13 +1,16 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { mockDefects, mockSurveys, mockRepairBatches } from '../../api/mock/data'
-import { PlaneTakeoff, Inbox, Boxes, AlertTriangle, ArrowRight, PlusCircle } from 'lucide-react'
+import { mockTriageCases } from '../../data/mockData'
+import { PlaneTakeoff, Inbox, Boxes, AlertTriangle, ArrowRight, PlusCircle, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export const PMDashboard: React.FC = () => {
   const navigate = useNavigate()
+  const [inboxTab, setInboxTab] = useState<'DRONE' | 'CITIZEN'>('DRONE')
+  const citizenCases = mockTriageCases.filter((c) => c.source === 'CITIZEN')
 
   return (
     <div className="space-y-6">
@@ -38,7 +41,10 @@ export const PMDashboard: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4">
+        <div
+          onClick={() => navigate('/pm/surveys')}
+          className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4 cursor-pointer hover:border-blue-300 transition-all"
+        >
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
             <PlaneTakeoff className="w-6 h-6" />
           </div>
@@ -48,7 +54,10 @@ export const PMDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4">
+        <div
+          onClick={() => navigate('/pm/ai-inbox?source=drone')}
+          className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4 cursor-pointer hover:border-amber-300 transition-all"
+        >
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Inbox className="w-6 h-6" />
           </div>
@@ -56,23 +65,27 @@ export const PMDashboard: React.FC = () => {
             <div className="text-2xl font-black text-brand-dark">
               {mockDefects.filter((d) => d.status === 'OPEN').length}
             </div>
-            <div className="text-xs font-medium text-slate-500">Lỗi AI Cần Thẩm Định</div>
+            <div className="text-xs font-medium text-slate-500">Lỗi Drone AI Cần Thẩm Định</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4">
-          <div className="p-3 bg-rose-50 text-brand-error rounded-xl">
-            <AlertTriangle className="w-6 h-6" />
+        <div
+          onClick={() => navigate('/pm/ai-inbox?source=citizen')}
+          className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4 cursor-pointer hover:border-purple-300 transition-all"
+        >
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
+            <Users className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-black text-brand-dark">
-              {mockDefects.filter((d) => d.severity === 'CRITICAL').length}
-            </div>
-            <div className="text-xs font-medium text-slate-500">Hư Hỏng Khẩn Cấp</div>
+            <div className="text-2xl font-black text-brand-dark">{citizenCases.length}</div>
+            <div className="text-xs font-medium text-slate-500">Phản Ánh Dân Cần Triage</div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4">
+        <div
+          onClick={() => navigate('/pm/proposals')}
+          className="bg-white p-5 rounded-xl border border-brand-border shadow-xs flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition-all"
+        >
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
             <Boxes className="w-6 h-6" />
           </div>
@@ -83,52 +96,124 @@ export const PMDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Grid: Inbox AI cần xử lý + Đợt sửa chữa gần đây */}
+      {/* Main Grid: Inbox AI & Dân cần xử lý + Đợt sửa chữa gần đây */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Box 1: Lỗi AI mới phát hiện */}
+        {/* Box 1: Hộp Thư Tiếp Nhận (Drone AI & Phản Ánh Dân) */}
         <Card
-          title="Hộp Thư Hư Hỏng AI Cần Thẩm Định"
-          subtitle="Các vị trí nứt lún được mô hình AI phát hiện cần xác minh bounding box"
+          title={
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-base text-brand-dark">Hộp Thư Tiếp Nhận &amp; Thẩm Định</span>
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setInboxTab('DRONE')
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                    inboxTab === 'DRONE'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Drone AI ({mockDefects.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setInboxTab('CITIZEN')
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                    inboxTab === 'CITIZEN'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Người dân ({citizenCases.length})
+                </button>
+              </div>
+            </div>
+          }
+          subtitle={
+            inboxTab === 'DRONE'
+              ? 'Các vị trí nứt lún được mô hình AI phát hiện cần xác minh bounding box'
+              : 'Tiếp nhận phản ánh từ công dân qua ứng dụng Citizen để triage và liên kết báo trùng'
+          }
           action={
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/pm/ai-inbox')}
+              onClick={() =>
+                navigate(inboxTab === 'DRONE' ? '/pm/ai-inbox?source=drone' : '/pm/ai-inbox?source=citizen')
+              }
               icon={<ArrowRight className="w-4 h-4" />}
             >
               Xem tất cả
             </Button>
           }
         >
-          <div className="divide-y divide-slate-100">
-            {mockDefects.map((defect) => (
-              <div key={defect.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={defect.image_url}
-                    alt={defect.code}
-                    className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-                  />
-                  <div>
-                    <div className="text-sm font-semibold text-brand-dark flex items-center gap-2">
-                      {defect.code}
-                      <StatusBadge status={defect.severity} />
-                    </div>
-                    <div className="text-xs text-slate-500 mt-0.5">
-                      Lý trình: Km{defect.chainage_km} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
+          {inboxTab === 'DRONE' ? (
+            <div className="divide-y divide-slate-100">
+              {mockDefects.map((defect) => (
+                <div key={defect.id} className="py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={defect.image_url}
+                      alt={defect.code}
+                      className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                    />
+                    <div>
+                      <div className="text-sm font-semibold text-brand-dark flex items-center gap-2">
+                        {defect.code}
+                        <StatusBadge status={defect.severity} />
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Lý trình: Km{defect.chainage_km} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
+                      </div>
                     </div>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/pm/defects/${defect.id}/verify`)}
+                  >
+                    Thẩm Định
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate(`/pm/defects/${defect.id}/verify`)}
-                >
-                  Thẩm Định
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {citizenCases.map((item) => (
+                <div key={item.id} className="py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={item.image_url}
+                      alt={item.code}
+                      className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-brand-dark flex items-center gap-2">
+                        <span className="font-mono">{item.code}</span>
+                        <StatusBadge status={item.severity} />
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5 truncate max-w-[280px]">
+                        {item.reporter_name} • {item.stationing} • {item.defect_title}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate('/pm/ai-inbox?source=citizen')}
+                  >
+                    Xử Lý
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Box 2: Hồ sơ đợt sửa chữa đang xử lý */}

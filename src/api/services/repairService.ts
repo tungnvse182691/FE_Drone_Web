@@ -14,6 +14,7 @@ export interface ProposalWorkPackage {
   defect_summary: string
   technical_scope: string
   material_scope: string
+  technical_method?: string
   duration_days: number
   date_range: string
   created_by_name: string
@@ -205,7 +206,7 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     supervisor_notes:
       'Hình ảnh Drone chưa rõ độ sâu đáy lún. Đề nghị Tổ đo đạc bổ sung ảnh chụp thước đo cốt đáy.',
     image_url:
-      'https://images.unsplash.com/photo-1584463699042-302392476595?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1025_M1_RUT.JPG',
     gps_coords: '15.8290, 108.2180',
     resolution: '4K • 3840x2160'
@@ -261,6 +262,7 @@ export const repairService = {
       defect_summary: data.defect_summary || 'Các khiếm khuyết được gom vào gói',
       technical_scope: data.technical_scope || 'Xử lý kỹ thuật mặt đường',
       material_scope: data.material_scope || 'Vật liệu quy chuẩn TCVN',
+      technical_method: data.technical_method,
       duration_days: data.duration_days || 3,
       date_range: data.date_range || 'Trong tuần này',
       created_by_name: data.created_by_name || 'Đỗ Quốc Hoàng (PM)',

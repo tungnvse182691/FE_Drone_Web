@@ -538,10 +538,21 @@ export const ApprovalModals: React.FC<ApprovalModalsProps> = ({
             </div>
 
             <div className="p-4 bg-slate-800 border-t border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-4 text-slate-300 font-mono text-[11px]">
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-[#C9A227]" /> GPS: {viewingPhotoItem.gps_coords}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-slate-300 font-mono text-[11px]">
+                <span className="flex items-center gap-1 text-[#C9A227] font-semibold">
+                  <MapPin className="w-3.5 h-3.5" /> GPS: {viewingPhotoItem.gps_coords}
                 </span>
+                <span className="text-slate-400">|</span>
+                <span>
+                  Đợt bay: <strong className="text-white">{viewingPhotoItem.survey_code || '#MS-2026-08'}</strong>
+                </span>
+                <span>
+                  Thiết bị: <strong className="text-white">{viewingPhotoItem.drone_model || 'DJI Matrice 350 RTK'}</strong>
+                </span>
+                <span>
+                  Phi công UAV: <strong className="text-white">{viewingPhotoItem.pilot_name || 'Kỹ sư UAV Trần Hùng'}</strong>
+                </span>
+                <span className="text-slate-400">|</span>
                 <span>File: {viewingPhotoItem.ortho_code}</span>
                 <span>Độ phân giải: {viewingPhotoItem.resolution}</span>
               </div>

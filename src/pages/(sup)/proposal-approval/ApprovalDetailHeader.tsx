@@ -148,20 +148,22 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               <span>Xuất hồ sơ gói (PDF)</span>
             </button>
 
-            <div className="relative group">
-              <button
-                onClick={onOpenDispatch}
-                type="button"
-                className="inline-flex items-center gap-1.5 px-4 h-10 bg-[#C9A227] text-white hover:bg-[#B38E1F] transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer"
-              >
-                <Truck className="w-4 h-4" />
-                <span>Giao việc cho đội thi công (Dispatch)</span>
-              </button>
-              <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 text-white text-[11px] p-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20 font-medium">
-                Đã sẵn sàng giao {stats.approved}/{stats.total} hạng mục kỹ thuật đã có phê duyệt chính thức từ
-                Supervisor.
+            {!isSupervisor && (
+              <div className="relative group">
+                <button
+                  onClick={onOpenDispatch}
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-4 h-10 bg-[#C9A227] text-white hover:bg-[#B38E1F] transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer"
+                >
+                  <Truck className="w-4 h-4" />
+                  <span>Giao việc cho đội thi công (Dispatch)</span>
+                </button>
+                <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 text-white text-[11px] p-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20 font-medium">
+                  Đã sẵn sàng giao {stats.approved}/{stats.total} hạng mục kỹ thuật đã có phê duyệt chính thức từ
+                  Supervisor.
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

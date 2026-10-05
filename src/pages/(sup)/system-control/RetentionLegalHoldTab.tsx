@@ -200,25 +200,25 @@ export const RetentionLegalHoldTab: React.FC<RetentionLegalHoldTabProps> = ({
                     {isBlockedByHold ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FFDAD6] text-[#BA1A1A] border border-[#FFCDD2] flex items-center gap-1">
                         <Lock className="w-3 h-3" />
-                        CHẶN BỞI LEGAL_HOLD_ACTIVE
+                        BỊ KHÓA BỞI ĐÓNG BĂNG PHÁP LÝ
                       </span>
                     ) : isRetentionNotExpired ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FFDAD6] text-[#BA1A1A] border border-[#FFCDD2] flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        CHƯA ĐỦ 5 NĂM (RETENTION_NOT_EXPIRED)
+                        CHƯA ĐỦ THỜI HẠN (DƯỚI 5 NĂM)
                       </span>
                     ) : isPurged ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#F0F2F5] text-[#555F6F]">
-                        ĐÃ PHÊ DUYỆT XÓA VẬT LÝ
+                        ĐÃ DUYỆT XÓA DỮ LIỆU
                       </span>
                     ) : isRejected ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FFDAD6] text-[#BA1A1A]">
-                        ĐÃ BÁC BỎ YÊU CẦU
+                        ĐÃ TỪ CHỐI YÊU CẦU
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3" />
-                        ĐỦ ĐIỀU KIỆN 5 NĂM (ELIGIBLE)
+                        ĐỦ ĐIỀU KIỆN XÓA (TRÊN 5 NĂM)
                       </span>
                     )}
                   </div>

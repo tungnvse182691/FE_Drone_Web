@@ -18,6 +18,9 @@ import {
   ShieldCheck,
   Eye,
   Merge,
+  ChevronLeft,
+  FileText,
+  Unlink,
 } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -51,6 +54,8 @@ export interface ReviewDetailDrawerProps {
   onOpenPhotoZoomModal: () => void
   onOpenMergeModal: (c: TriageCase) => void
   onToggleClusterItem: (code: string) => void
+  onClose?: () => void
+  onCloseTab?: () => void
 }
 
 export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
@@ -83,45 +88,70 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onOpenPhotoZoomModal,
   onOpenMergeModal,
   onToggleClusterItem,
+  onClose,
+  onCloseTab,
 }) => {
   const navigate = useNavigate()
+  const handleClose = onClose || onCloseTab
 
   return (
-    <div className="w-full xl:w-[480px] bg-white rounded-xl border border-brand-border shadow-2xs p-5 flex flex-col gap-4 shrink-0">
-      {/* Header */}
-      <div className="flex items-start justify-between pb-2 border-b border-slate-100">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-base text-brand-dark">Hồ Sơ Thẩm Định</span>
-            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#C9A227]/15 text-[#8F7212] border border-[#C9A227]/30">
-              {selectedCase.code}
-            </span>
-            {selectedCase.master_case_id && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-                Đã gộp trùng
-              </span>
-            )}
-            {selectedCase.linked_report_ids && selectedCase.linked_report_ids.length > 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-                Master Case ({selectedCase.linked_report_ids.length})
-              </span>
-            )}
+    <div className="w-full bg-white flex flex-col h-full max-h-[90vh] overflow-hidden rounded-2xl">
+      {/* Modal Header */}
+      <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white sticky top-0 z-10 shrink-0">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200/90 flex items-center justify-center text-[#C9A227] shadow-2xs shrink-0">
+            <FileText className="w-5 h-5 text-[#C9A227]" />
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Gửi lúc {selectedCase.created_at} bởi {selectedCase.source_detail}
-          </p>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-base text-brand-dark">Hồ Sơ Thẩm Định</span>
+              <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#C9A227]/15 text-[#8F7212] border border-[#C9A227]/30">
+                {selectedCase.code}
+              </span>
+              {selectedCase.master_case_id && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                  Đã gộp trùng
+                </span>
+              )}
+              {selectedCase.linked_report_ids && selectedCase.linked_report_ids.length > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                  Master Case ({selectedCase.linked_report_ids.length})
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Gửi lúc {selectedCase.created_at} bởi {selectedCase.source_detail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-slate-400">
+        <div className="flex items-center gap-2 text-slate-400">
           <button
             onClick={onOpenPhotoZoomModal}
-            className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold transition-colors cursor-pointer"
             title="Mở rộng chi tiết"
             type="button"
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>Phóng to ảnh</span>
           </button>
+          {handleClose && (
+            <button
+              onClick={handleClose}
+              className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              title="Đóng hồ sơ thẩm định"
+              type="button"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Modal Body - Scrollable */}
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: Ảnh, Bản đồ, Người phản ánh, Nhóm gộp trùng */}
+        <div className="lg:col-span-7 space-y-4">
 
       {/* DYNAMIC DECISION STATUS BANNER */}
       {selectedCase.master_case_id && (
@@ -559,54 +589,67 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
 
           <div className="space-y-2">
             {selectedCase.linked_report_ids.map((code) => {
-              const secondary = cases.find((c) => c.code === code)
+              const secondary = cases.find((c) => c.code === code || c.id === code)
+              const dupInfo = selectedCase.cluster_duplicates?.find((d) => d.code === code)
+              const displayChannel = secondary?.reporter_channel || secondary?.source_label || dupInfo?.source || 'Ứng dụng Citizen'
+              const displayReporter = secondary?.reporter_name || dupInfo?.reporter || 'Người dân phản ánh'
+              const displayDesc = secondary?.description || 'Phản ánh hư hỏng tại vị trí lân cận đã được gộp bằng chứng'
+
               return (
                 <div
                   key={code}
-                  className="p-2.5 bg-white border border-purple-200 rounded-lg flex items-start gap-2.5 text-xs shadow-2xs"
+                  className="p-3 bg-white border border-purple-200 rounded-xl flex items-center justify-between gap-3 text-xs shadow-2xs hover:border-purple-300 transition-colors"
                 >
-                  {secondary?.image_url && (
-                    <img
-                      src={secondary.image_url}
-                      alt={code}
-                      className="w-12 h-10 object-cover rounded-md border border-slate-200 shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-purple-950">{code}</span>
-                      <span className="text-[10px] text-slate-500">
-                        {secondary?.reporter_channel || secondary?.source_label}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
-                      {secondary?.reporter_name} • {secondary?.reporter_phone}
-                    </p>
-                    {secondary?.description && (
-                      <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
-                        "{secondary.description}"
-                      </p>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {secondary?.image_url ? (
+                      <img
+                        src={secondary.image_url}
+                        alt={code}
+                        className="w-12 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0 text-purple-600">
+                        <Link2 className="w-5 h-5" />
+                      </div>
                     )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-purple-950 text-xs">{code}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-800 font-semibold border border-purple-200">
+                          {displayChannel}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-700 font-medium truncate mt-0.5">
+                        {displayReporter}
+                      </p>
+                      <p className="text-[10px] text-slate-500 italic truncate mt-0.5">
+                        "{displayDesc}"
+                      </p>
+                    </div>
                   </div>
-                  {secondary && (
-                    <button
-                      type="button"
-                      onClick={() => onUnlinkReport(secondary.id)}
-                      className="text-[10px] text-purple-700 hover:text-red-600 hover:underline p-1 cursor-pointer shrink-0 font-semibold"
-                      title="Tách khỏi hồ sơ gốc này"
-                    >
-                      Tách
-                    </button>
-                  )}
+
+                  {/* Nút Tách hồ sơ nổi bật, rõ ràng */}
+                  <button
+                    type="button"
+                    onClick={() => onUnlinkReport(secondary?.id || code)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 hover:border-red-300 text-xs font-bold transition-all cursor-pointer shrink-0 shadow-2xs"
+                    title="Tách phản ánh này khỏi hồ sơ gốc để xử lý độc lập"
+                  >
+                    <Unlink className="w-3.5 h-3.5" />
+                    <span>Tách hồ sơ</span>
+                  </button>
                 </div>
               )
             })}
           </div>
         </div>
       )}
+        </div>
 
-      {/* Technical Decision Form */}
-      <div className="space-y-3.5 pt-1">
+        {/* RIGHT COLUMN: Biểu mẫu quyết định kỹ thuật & hành động thẩm định */}
+        <div className="lg:col-span-5 space-y-4 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
+          {/* Technical Decision Form */}
+          <div className="space-y-3.5">
         {/* Severity & Urgency */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col">
@@ -800,6 +843,24 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+      {/* Modal Footer */}
+      <div className="p-4 px-6 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
+        <div className="text-xs text-slate-500 flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+          <span>Hồ sơ thẩm định theo chuẩn PA05 / BR-39 tiêu chuẩn Hoàng Hải.</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="px-5 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition cursor-pointer shadow-2xs"
+        >
+          Đóng lại
+        </button>
       </div>
     </div>
   )

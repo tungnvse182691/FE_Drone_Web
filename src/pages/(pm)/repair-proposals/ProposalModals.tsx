@@ -7,6 +7,8 @@ import {
   SlidersHorizontal,
   FileText,
   Check,
+  Wrench,
+  Sparkles,
 } from 'lucide-react'
 import type { ProposalWorkPackage, UnassignedDefectItem, RouteSegmentOption } from './types'
 
@@ -28,30 +30,18 @@ interface ProposalModalsProps {
   setFormContractor: (c: string) => void
   formDurationDays: number
   setFormDurationDays: (d: number) => void
+  formTechnicalMethod: string
+  setFormTechnicalMethod: (method: string) => void
   unassignedDefects: UnassignedDefectItem[]
   handleToggleDefect: (id: string) => void
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
 
-  // Filter Modal
-  isFilterModalOpen: boolean
-  setIsFilterModalOpen: (open: boolean) => void
-  tempAdvRoute: string
-  setTempAdvRoute: (r: string) => void
-  tempAdvScale: string
-  setTempAdvScale: (s: string) => void
-  tempAdvContractor: string
-  setTempAdvContractor: (c: string) => void
-  setAdvRoute: (r: string) => void
-  setAdvScale: (s: string) => void
-  setAdvContractor: (c: string) => void
-  setCurrentPage: (p: number | ((prev: number) => number)) => void
-  showToast: (msg: string) => void
-
   // PDF Preview Modal
   isPDFPreviewModalOpen: boolean
   setIsPDFPreviewModalOpen: (open: boolean) => void
   packages: ProposalWorkPackage[]
+  showToast: (msg: string) => void
 
   // Detail Modal
   selectedPackageForDetail: ProposalWorkPackage | null
@@ -79,26 +69,16 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
   setFormContractor,
   formDurationDays,
   setFormDurationDays,
+  formTechnicalMethod,
+  setFormTechnicalMethod,
   unassignedDefects,
   handleToggleDefect,
   modalCalculations,
   handleSaveDraft,
-  isFilterModalOpen,
-  setIsFilterModalOpen,
-  tempAdvRoute,
-  setTempAdvRoute,
-  tempAdvScale,
-  setTempAdvScale,
-  tempAdvContractor,
-  setTempAdvContractor,
-  setAdvRoute,
-  setAdvScale,
-  setAdvContractor,
-  setCurrentPage,
-  showToast,
   isPDFPreviewModalOpen,
   setIsPDFPreviewModalOpen,
   packages,
+  showToast,
   selectedPackageForDetail,
   setSelectedPackageForDetail,
   isSupervisor,
@@ -279,6 +259,87 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
                 )}
               </div>
 
+              {/* KHỐI NHẬP PHƯƠNG ÁN KỸ THUẬT SỬA CHỮA (SPEC V2.2 - methodDescription DO PM SOẠN THẢO) */}
+              <div className="space-y-3 pt-3 border-t border-slate-200">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1.5">
+                    <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
+                    <span>Phương án kỹ thuật sửa chữa tổng quát <span className="text-rose-500">*</span></span>
+                  </label>
+                  <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
+                    Chỉ huy trưởng (PM) soạn thảo • Trình Giám sát duyệt (WF-07)
+                  </span>
+                </div>
+
+                {/* Các nút gợi ý phương án nhanh */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] text-slate-500 font-medium mr-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#C9A227]" /> Gợi ý nhanh:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormTechnicalMethod(
+                        'Cào bóc sâu 5cm theo hình chữ nhật vát cạnh, làm sạch bề mặt, tưới nhựa dính bám và thảm hoàn trả bằng bê tông nhựa nóng C12.5 lu lèn tiêu chuẩn.'
+                      )
+                    }
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ⚡ Cào bóc &amp; thảm BTN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormTechnicalMethod(
+                        'Xẻ rãnh chữ U kích thước 1.5x1.5cm dọc theo tim nứt, làm khô sạch bụi bẩn và bơm chèn kín bằng keo mastic polymer đàn hồi chịu nhiệt.'
+                      )
+                    }
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ⚡ Xẻ rãnh rót Mastic
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormTechnicalMethod(
+                        'Đục tẩy vuông thành sắc cạnh, dọn sạch đáy ổ gà, rải đều vật liệu rải nguội Carboncor Asphalt lớp dày 3-4cm đầm nén chặt K95.'
+                      )
+                    }
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ⚡ Vá dặm Carboncor
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormTechnicalMethod(
+                        'Cào bóc san phẳng vệt hằn lún bánh xe, bù lún bằng lớp bê tông nhựa chặt kết hợp thảm phủ mặt đầm lèn đạt độ chặt K98.'
+                      )
+                    }
+                    className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
+                  >
+                    ⚡ Bù lún vệt bánh xe
+                  </button>
+                  {formTechnicalMethod && (
+                    <button
+                      type="button"
+                      onClick={() => setFormTechnicalMethod('')}
+                      className="px-2 py-1 text-slate-400 hover:text-rose-600 text-[11px] font-medium transition-colors ml-auto cursor-pointer"
+                    >
+                      Xóa nội dung
+                    </button>
+                  )}
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={formTechnicalMethod}
+                  onChange={(e) => setFormTechnicalMethod(e.target.value)}
+                  placeholder="Nhập phương án sửa chữa kỹ thuật tổng quát cho các khiếm khuyết được chọn (Ví dụ: Cào bóc 5cm & thảm lại BTN C12.5, hoặc Xẻ rãnh thổi bụi và rót mastic chèn khe...)..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] leading-relaxed"
+                />
+              </div>
+
               {/* Summary Technical Scope Calculation Box */}
               <div className="rounded-xl bg-amber-50/70 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -298,7 +359,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
                   <span className="font-mono text-base font-black text-[#8F7212]">
                     {modalCalculations.description}
                   </span>
-                  <span className="text-[11px] text-slate-600 font-medium">Bê tông nhựa C19 &amp; Mastic</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Bóc tách theo phương án kỹ thuật</span>
                 </div>
               </div>
             </div>
@@ -332,116 +393,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
         </div>
       )}
 
-      {/* 2. MODAL: BỘ LỌC NÂNG CAO */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="w-5 h-5 text-[#C9A227]" />
-                <h3 className="font-bold text-base text-brand-dark">Bộ Lọc Gói Đề Xuất Nâng Cao</h3>
-              </div>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Tuyến đường</label>
-                <select
-                  value={tempAdvRoute}
-                  onChange={(e) => setTempAdvRoute(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800 focus:bg-white focus:outline-none focus:border-[#C9A227]"
-                >
-                  <option value="ALL">Tất cả các tuyến đường</option>
-                  <option value="QL1A_PK04">QL1A - Giai đoạn 2 (Km 1024 - Km 1045)</option>
-                  <option value="QL1A_PK01">QL1A - Giai đoạn 1 (Km 1000 - Km 1024)</option>
-                  <option value="EXPR_NORTH_SOUTH">Đường nối Cao tốc Bắc - Nam</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Quy mô số lượng khiếm khuyết</label>
-                <select
-                  value={tempAdvScale}
-                  onChange={(e) => setTempAdvScale(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800 focus:bg-white focus:outline-none focus:border-[#C9A227]"
-                >
-                  <option value="ALL">Tất cả quy mô</option>
-                  <option value="LARGE">Gói lớn (&gt; 10 khiếm khuyết)</option>
-                  <option value="MEDIUM">Gói vừa (5 - 10 khiếm khuyết)</option>
-                  <option value="SMALL">Gói nhỏ (&lt; 5 khiếm khuyết)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Tổ đội thi công</label>
-                <select
-                  value={tempAdvContractor}
-                  onChange={(e) => setTempAdvContractor(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-800 focus:bg-white focus:outline-none focus:border-[#C9A227]"
-                >
-                  <option value="ALL">Tất cả các tổ đội</option>
-                  <option value="Tổ vá dặm cơ giới 01">Tổ vá dặm cơ giới 01</option>
-                  <option value="Xí nghiệp Cầu Đường 4">Xí nghiệp Cầu Đường 4</option>
-                  <option value="Tổ duy tu bảo dưỡng đường bộ 03">Tổ duy tu bảo dưỡng 03</option>
-                  <option value="Đội cơ động">Đội cơ động khắc phục sự cố</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  setTempAdvRoute('ALL')
-                  setTempAdvScale('ALL')
-                  setTempAdvContractor('ALL')
-                  setAdvRoute('ALL')
-                  setAdvScale('ALL')
-                  setAdvContractor('ALL')
-                  setCurrentPage(1)
-                  setIsFilterModalOpen(false)
-                  showToast('Đã đặt lại tất cả bộ lọc nâng cao.')
-                }}
-                type="button"
-                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer"
-              >
-                Đặt lại bộ lọc
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsFilterModalOpen(false)}
-                  type="button"
-                  className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={() => {
-                    setAdvRoute(tempAdvRoute)
-                    setAdvScale(tempAdvScale)
-                    setAdvContractor(tempAdvContractor)
-                    setCurrentPage(1)
-                    setIsFilterModalOpen(false)
-                    showToast('Đã áp dụng các tiêu chí lọc nâng cao thành công!')
-                  }}
-                  type="button"
-                  className="px-4 py-1.5 bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
-                >
-                  Áp dụng bộ lọc
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. MODAL: XUẤT KẾ HOẠCH KỸ THUẬT PDF PREVIEW */}
+      {/* 2. MODAL: XUẤT KẾ HOẠCH KỸ THUẬT PDF PREVIEW */}
       {isPDFPreviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95">
@@ -588,6 +540,26 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
                   <span className="text-[11px] text-amber-800">
                     Kế hoạch: {selectedPackageForDetail.date_range}
                   </span>
+                </div>
+              </div>
+
+              {/* Phương án kỹ thuật sửa chữa tổng quát của gói (Do PM nhập) */}
+              <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200/80 space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                    <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
+                    <span>Phương án kỹ thuật sửa chữa tổng quát (PM đề xuất):</span>
+                  </span>
+                  <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded font-mono border border-slate-200">
+                    methodDescription
+                  </span>
+                </div>
+                <p className="text-slate-800 text-xs leading-relaxed font-medium">
+                  {selectedPackageForDetail.technical_method ||
+                    'Cào bóc xử lý hư hỏng theo quy trình bảo trì mặt đường'}
+                </p>
+                <div className="text-[11px] text-slate-600 pt-1.5 border-t border-amber-200/60 flex items-center gap-3 flex-wrap">
+                  <span>Quy mô: <strong className="text-slate-800">{selectedPackageForDetail.technical_scope}</strong></span>
                 </div>
               </div>
 

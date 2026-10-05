@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { mockTriageCases, mockProjects } from '../../data/mockData'
@@ -171,8 +171,28 @@ export const AIReviewInbox: React.FC = () => {
     showToast('Đã đặt lại dữ liệu phản ánh & triage về mặc định ban đầu!')
   }
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sourceParam = searchParams.get('source')
+
   // Chế độ xem: Bảng tiếp nhận & điều phối phản ánh dân (PA03, PA04) vs Hộp thư Drone AI
-  const [viewSourceMode, setViewSourceMode] = useState<'CITIZEN_TRIAGE' | 'DRONE_AI' | 'ALL'>('CITIZEN_TRIAGE')
+  const [viewSourceMode, setViewSourceMode] = useState<'CITIZEN_TRIAGE' | 'DRONE_AI' | 'ALL'>(() => {
+    if (sourceParam === 'drone') return 'DRONE_AI'
+    if (sourceParam === 'all') return 'ALL'
+    return 'CITIZEN_TRIAGE'
+  })
+
+  useEffect(() => {
+    if (sourceParam === 'drone') setViewSourceMode('DRONE_AI')
+    else if (sourceParam === 'citizen') setViewSourceMode('CITIZEN_TRIAGE')
+    else if (sourceParam === 'all') setViewSourceMode('ALL')
+  }, [sourceParam])
+
+  const handleSetViewSourceMode = (mode: 'CITIZEN_TRIAGE' | 'DRONE_AI' | 'ALL') => {
+    setViewSourceMode(mode)
+    if (mode === 'DRONE_AI') setSearchParams({ source: 'drone' })
+    else if (mode === 'CITIZEN_TRIAGE') setSearchParams({ source: 'citizen' })
+    else setSearchParams({ source: 'all' })
+  }
 
   // Thu gọn / Mở rộng nhóm báo cáo trùng (Accordion)
   const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>(['cas-05'])
@@ -215,6 +235,7 @@ export const AIReviewInbox: React.FC = () => {
 
   // Selected Case for Right Detail Panel
   const [selectedCaseId, setSelectedCaseId] = useState<string>('cas-05')
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
   const selectedCase = useMemo(() => {
     return cases.find((c) => c.id === selectedCaseId) || cases[0]
   }, [cases, selectedCaseId])
@@ -444,6 +465,7 @@ export const AIReviewInbox: React.FC = () => {
     setCurrentArea(c.area_sqm)
     setCurrentDepth(c.max_depth_cm)
     setCurrentNotes(c.pm_notes)
+    setIsDetailModalOpen(true)
   }
 
   // Checkbox toggle for duplicate cluster items
@@ -684,16 +706,17 @@ export const AIReviewInbox: React.FC = () => {
     showToast(`Đã liên kết thành công ${secondaryIds.length} phản ánh vào hồ sơ chính [${master.code}] (Tuân thủ PA04, BR-30, BR-31)!`)
   }
 
-  // Tách hồ sơ con khỏi hồ sơ Master (Unlink)
-  const handleUnlinkReport = (secondaryCaseId: string, e?: React.MouseEvent) => {
+  // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31)
+  const handleUnlinkReport = (secondaryIdentifier: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    const target = cases.find((c) => c.id === secondaryCaseId)
-    if (!target) return
+    const target = cases.find((c) => c.id === secondaryIdentifier || c.code === secondaryIdentifier)
+    const targetCode = target ? target.code : secondaryIdentifier
+    const targetId = target ? target.id : secondaryIdentifier
 
-    const masterId = target.master_case_id
     setCases((prev) =>
       prev.map((c) => {
-        if (c.id === secondaryCaseId) {
+        // Nếu là hồ sơ con được tách ra -> chuyển về độc lập Chờ xử lý (PENDING)
+        if (c.id === targetId || c.code === targetCode) {
           return {
             ...c,
             status: 'PENDING',
@@ -702,17 +725,30 @@ export const AIReviewInbox: React.FC = () => {
             pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[TÁCH HỒ SƠ] Đã tách khỏi hồ sơ gốc, chuyển về hàng đợi độc lập.`
           }
         }
-        if (masterId && c.id === masterId) {
+        // Nếu là hồ sơ Master (hồ sơ đang chọn hoặc có chứa mã này trong linked_report_ids)
+        const isThisMaster =
+          c.id === selectedCaseId ||
+          (c.linked_report_ids && (c.linked_report_ids.includes(targetCode) || c.linked_report_ids.includes(targetId))) ||
+          (target?.master_case_id && c.id === target.master_case_id)
+
+        if (isThisMaster) {
+          const updatedDups = (c.cluster_duplicates || []).map((dup) =>
+            dup.code === targetCode ? { ...dup, is_merged: false, selected: false } : dup
+          )
+          const updatedLinked = (c.linked_report_ids || []).filter(
+            (code) => code !== targetCode && code !== targetId
+          )
           return {
             ...c,
-            linked_report_ids: (c.linked_report_ids || []).filter((code) => code !== target.code),
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[TÁCH HỒ SƠ] Đã gỡ bỏ phản ánh ${target.code}.`
+            linked_report_ids: updatedLinked,
+            cluster_duplicates: updatedDups,
+            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[TÁCH HỒ SƠ] Đã gỡ bỏ phản ánh ${targetCode} khỏi cụm liên kết.`
           }
         }
         return c
       })
     )
-    showToast(`Đã tách phản ánh [${target.code}] thành hồ sơ độc lập!`)
+    showToast(`Đã tách phản ánh [${targetCode}] thành hồ sơ độc lập thành công!`)
   }
 
   // Triage Project Assignment Modal (PA03)
@@ -911,7 +947,7 @@ export const AIReviewInbox: React.FC = () => {
         basePath={basePath}
         isSupervisor={isSupervisor}
         viewSourceMode={viewSourceMode}
-        setViewSourceMode={setViewSourceMode}
+        setViewSourceMode={handleSetViewSourceMode}
         cases={cases}
         unassignedCitizenCount={unassignedCitizenCount}
         pendingCount={pendingCount}
@@ -944,9 +980,8 @@ export const AIReviewInbox: React.FC = () => {
         showToast={showToast}
       />
 
-      {/* 3. 2-COLUMN MAIN WORKFLOW (Flexible Master-Detail Layout) */}
-      <div className="flex flex-col xl:flex-row gap-6 items-start w-full">
-        {/* LEFT COLUMN: Master Triage Queue Table */}
+      {/* 3. BẢNG DANH SÁCH HỒ SƠ (Toàn màn hình 100%, không bị ép cột hay co dúm) */}
+      <div className="w-full">
         <ReviewCasesTable
           viewSourceMode={viewSourceMode}
           cases={cases}
@@ -972,43 +1007,56 @@ export const AIReviewInbox: React.FC = () => {
           onResetTriageData={handleResetTriageData}
           onClearSelectedReports={() => setSelectedReportIds([])}
         />
-
-        {/* RIGHT COLUMN: PM Decision & Technical Triage Panel */}
-        <ReviewDetailDrawer
-          selectedCase={selectedCase}
-          setSelectedCaseId={setSelectedCaseId}
-          cases={cases}
-          detailViewMode={detailViewMode}
-          setDetailViewMode={setDetailViewMode}
-          drawerMapContainerRef={drawerMapContainerRef}
-          currentSeverity={currentSeverity}
-          setCurrentSeverity={setCurrentSeverity}
-          currentUrgency={currentUrgency}
-          setCurrentUrgency={setCurrentUrgency}
-          currentArea={currentArea}
-          setCurrentArea={setCurrentArea}
-          currentDepth={currentDepth}
-          setCurrentDepth={setCurrentDepth}
-          currentNotes={currentNotes}
-          setCurrentNotes={setCurrentNotes}
-          onVerifyDefect={handleVerifyDefect}
-          onOpenNoDefectModal={handleOpenNoDefectModal}
-          onConclusionOutOfScope={handleConclusionOutOfScope}
-          onResetConclusion={handleResetConclusion}
-          onOpenRequestSurveyModal={handleOpenRequestSurveyModal}
-          onOpenPublishModal={handleOpenPublishModal}
-          onNavigateFastTrack={handleNavigateFastTrack}
-          onUnlinkReport={handleUnlinkReport}
-          onOpenTriageProject={handleOpenTriageProject}
-          onOpenGISModal={() => setIsGISModalOpen(true)}
-          onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}
-          onOpenMergeModal={(c) => {
-            handleSelectCase(c)
-            setIsMergeModalOpen(true)
-          }}
-          onToggleClusterItem={handleToggleClusterItem}
-        />
       </div>
+
+      {/* 4. MODAL HỒ SƠ THẨM ĐỊNH (Mở hộp thoại form nổi giữa màn hình khi bấm chọn) */}
+      {isDetailModalOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+          onClick={() => setIsDetailModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ReviewDetailDrawer
+              selectedCase={selectedCase}
+              setSelectedCaseId={setSelectedCaseId}
+              cases={cases}
+              detailViewMode={detailViewMode}
+              setDetailViewMode={setDetailViewMode}
+              drawerMapContainerRef={drawerMapContainerRef}
+              currentSeverity={currentSeverity}
+              setCurrentSeverity={setCurrentSeverity}
+              currentUrgency={currentUrgency}
+              setCurrentUrgency={setCurrentUrgency}
+              currentArea={currentArea}
+              setCurrentArea={setCurrentArea}
+              currentDepth={currentDepth}
+              setCurrentDepth={setCurrentDepth}
+              currentNotes={currentNotes}
+              setCurrentNotes={setCurrentNotes}
+              onVerifyDefect={handleVerifyDefect}
+              onOpenNoDefectModal={handleOpenNoDefectModal}
+              onConclusionOutOfScope={handleConclusionOutOfScope}
+              onResetConclusion={handleResetConclusion}
+              onOpenRequestSurveyModal={handleOpenRequestSurveyModal}
+              onOpenPublishModal={handleOpenPublishModal}
+              onNavigateFastTrack={handleNavigateFastTrack}
+              onUnlinkReport={handleUnlinkReport}
+              onOpenTriageProject={handleOpenTriageProject}
+              onOpenGISModal={() => setIsGISModalOpen(true)}
+              onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}
+              onOpenMergeModal={(c) => {
+                handleSelectCase(c)
+                setIsMergeModalOpen(true)
+              }}
+              onToggleClusterItem={handleToggleClusterItem}
+              onClose={() => setIsDetailModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 4. MODALS HUB */}
       <ReviewModals
