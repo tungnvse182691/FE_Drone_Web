@@ -30,3 +30,6 @@ dist-ssr
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Vite cache
+.vite
