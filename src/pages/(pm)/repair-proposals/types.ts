@@ -49,3 +49,12 @@ export interface RouteSegmentOption {
   startKm?: number
   endKm?: number
 }
+
+export interface RouteOption {
+  id: string
+  name: string
+  code: string
+  segments: RouteSegmentOption[]
+}
+
+
