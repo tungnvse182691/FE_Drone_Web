@@ -27,3 +27,9 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Vite cache
+.vite

@@ -1,0 +1,813 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"><link href="https://fonts.cdnfonts.com/css/sansation" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style id="theme-overrides">
+  :root {
+    --primary-gold: #C9A227;
+    --primary-gold-hover: #B38E1F;
+    --bg-main: #F8F9FA;
+    --card-border: #E2E5E9;
+  }
+  body, main.bg-surface {
+    background-color: #F8F9FA !important;
+  }
+  h1, h2, h3, h4, .font-headline-lg, .font-headline-sm, .font-headline-md, .font-headline-xl {
+    font-family: 'Sansation', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  }
+  .bg-primary-container {
+    background-color: #C9A227 !important;
+    color: #FFFFFF !important;
+  }
+  .hover\:bg-primary-container\/90:hover, button.bg-primary-container:hover, a.bg-primary-container:hover {
+    background-color: #B38E1F !important;
+  }
+  .text-primary, .text-primary-container {
+    color: #C9A227 !important;
+  }
+  .bg-primary-container\/15, .bg-primary-container\/10 {
+    background-color: rgba(201, 162, 39, 0.12) !important;
+  }
+  .bg-surface-container-lowest {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E2E5E9;
+    border-radius: 12px !important;
+  }
+  .rounded-2xl {
+    border-radius: 12px !important;
+  }
+  #cardQuickAdd {
+    background-color: #FFFFFF !important;
+    border: 1px dashed #C9A227 !important;
+    border-radius: 12px !important;
+  }
+  .focus\:ring-primary:focus {
+    --tw-ring-color: #C9A227 !important;
+  }
+</style><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-primary-fixed-variant": "#4c4807", "inverse-on-surface": "#ebf1ff", "on-tertiary-container": "#ffffff", "on-secondary-fixed": "#121c2a", "outline-variant": "#cac7b5", "on-background": "#151c27", "on-primary-fixed": "#1e1c00", "outline": "#7a7768", "tertiary": "#695587", "on-secondary-container": "#596373", "surface-bright": "#f9f9ff", "error": "#ba1a1a", "surface-variant": "#dce2f3", "surface": "#f9f9ff", "secondary": "#555f6f", "secondary-fixed-dim": "#bdc7d9", "error-container": "#ffdad6", "on-error": "#ffffff", "on-primary": "#ffffff", "inverse-primary": "#cfc97c", "on-secondary": "#ffffff", "surface-container-lowest": "#ffffff", "on-tertiary-fixed-variant": "#513d6e", "surface-tint": "#64601f", "surface-container-highest": "#dce2f3", "on-surface-variant": "#49473a", "secondary-fixed": "#d9e3f6", "primary-fixed-dim": "#cfc97c", "surface-dim": "#d3daea", "secondary-container": "#d6e0f3", "on-error-container": "#93000a", "primary-fixed": "#ebe695", "tertiary-container": "#826da1", "tertiary-fixed-dim": "#d4bcf6", "background": "#f9f9ff", "on-surface": "#151c27", "tertiary-fixed": "#ecdcff", "on-secondary-fixed-variant": "#3d4756", "surface-container-low": "#f0f3ff", "surface-container": "#e7eefe", "surface-container-high": "#e2e8f8", "on-tertiary": "#ffffff", "inverse-surface": "#2a313d", "primary": "#64601f", "on-tertiary-fixed": "#24113f", "primary-container": "#7d7935", "on-primary-container": "#ffffff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "margin-md": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-lg": "1.5rem", "space-xl": "2rem", "space-2xl": "3rem", "margin": "1rem", "gutter-lg": "1.5rem", "margin-lg": "2rem", "space-md": "1rem", "space-xs": "0.25rem" }, "fontFamily": { "headline-xl-mobile": [ "Inter" ], "body-md": [ "Inter" ], "body-sm": [ "Inter" ], "label-lg": [ "Inter" ], "label-sm": [ "Inter" ], "headline-xl": [ "Inter" ], "headline-sm": [ "Inter" ], "label-md": [ "Inter" ], "headline-lg": [ "Inter" ], "body-lg": [ "Inter" ], "headline-lg-mobile": [ "Inter" ], "stationing-mono": [ "Inter" ], "headline-md": [ "Inter" ] }, "fontSize": { "headline-xl-mobile": [ "28px", { "lineHeight": "34px", "fontWeight": "700" } ], "body-md": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "body-sm": [ "12px", { "lineHeight": "16px", "fontWeight": "400" } ], "label-lg": [ "14px", { "lineHeight": "20px", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "fontWeight": "500" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "fontWeight": "700" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "fontWeight": "600" } ], "label-md": [ "12px", { "lineHeight": "16px", "fontWeight": "600" } ], "headline-lg": [ "28px", { "lineHeight": "36px", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "headline-lg-mobile": [ "22px", { "lineHeight": "28px", "fontWeight": "700" } ], "stationing-mono": [ "13px", { "lineHeight": "18px", "fontWeight": "600" } ], "headline-md": [ "20px", { "lineHeight": "28px", "fontWeight": "600" } ] } } } };</script></head><body class="bg-background font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 bottom-0 w-[250px] bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-50 flex flex-col justify-between overflow-y-auto"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container-low"><div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-xl">shield_with_heart</span></div><div class="flex flex-col min-w-0"><span class="font-label-lg text-label-lg tracking-tight text-on-surface truncate uppercase leading-none">Hoàng Hải INFRA</span><span class="font-label-sm text-[10px] tracking-wider text-secondary uppercase font-semibold mt-0.5 truncate">Civil Road Operations</span></div></div><nav class="flex flex-col gap-1 p-space-sm" data-active-classes="bg-primary-container text-on-primary-container font-label-md rounded-lg shadow-sm border-l-4 border-primary-fixed"><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="dashboard" href="#"><span class="material-symbols-outlined text-lg">grid_view</span><span class="">Dashboard</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="du-an" href="#"><span class="material-symbols-outlined text-lg">engineering</span><span class="">Dự án</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="doan-duong" href="#"><span class="material-symbols-outlined text-lg">alt_route</span><span class="">Đoạn đường</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="khao-sat" href="#"><span class="material-symbols-outlined text-lg">radar</span><span class="">Khảo sát</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="khiem-khuyet" href="#"><span class="material-symbols-outlined text-lg">report_problem</span><span class="">Khiếm khuyết</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="sua-chua" href="#"><span class="material-symbols-outlined text-lg">construction</span><span class="">Sửa chữa</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="bao-cao" href="#"><span class="material-symbols-outlined text-lg">analytics</span><span class="">Báo cáo</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="cau-hinh" href="#"><span class="material-symbols-outlined text-lg">tune</span><span class="">Cấu hình</span></a><a class="flex items-center gap-space-sm px-3 py-2.5 rounded-lg text-on-surface-variant font-label-md hover:bg-surface-container hover:text-on-surface transition-all" data-path="nguoi-dung" href="#"><span class="material-symbols-outlined text-lg">group</span><span class="">Người dùng</span></a></nav></div><div class="p-space-sm m-space-sm bg-surface-container rounded-xl flex flex-col gap-space-xs"><div class="flex items-center justify-between font-label-sm text-label-sm"><span class="text-on-surface font-semibold">Dự án hoạt động</span><span class="font-stationing-mono text-primary font-bold">6/20</span></div><div class="w-full bg-surface-variant h-1.5 rounded-full overflow-hidden"><div class="bg-primary-container h-full rounded-full" style="width: 30%"></div></div><p class="font-body-sm text-[11px] text-secondary">Đã sử dụng 30% tổng năng lực vận hành công trình.</p><button class="mt-1 w-full py-1.5 px-space-sm bg-surface-container-lowest hover:bg-primary-container hover:text-on-primary-container text-primary font-label-sm text-label-sm rounded-full border border-outline-variant/60 transition-colors flex items-center justify-center gap-1 shadow-sm" type="button"><span class="material-symbols-outlined text-sm">upgrade</span><span class="">Nâng cấp hạn ngạch</span></button></div></aside><div class="pl-[250px] min-h-screen flex flex-col"><header class="fixed top-0 left-[250px] right-0 h-16 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 px-space-lg flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md flex-1 max-w-xl"><div class="relative w-full"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg pointer-events-none">search</span><input class="w-full pl-9 pr-space-md py-2 bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-md text-body-md rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" placeholder="Tìm kiếm theo tên dự án, mã công trình (VD: CT-01)..." type="text"></div></div><div class="flex items-center gap-space-md shrink-0"><div class="flex items-center bg-surface-container p-0.5 rounded-lg"><button class="px-2.5 py-1 rounded-md text-xs font-label-md transition-colors bg-surface-container-lowest text-on-surface shadow-sm" type="button">Chế độ: Supervisor</button><button class="px-2.5 py-1 rounded-md text-xs font-label-md transition-colors text-secondary hover:text-on-surface" type="button">Chế độ: PM</button></div><div class="flex items-center gap-space-xs"><button class="relative p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full"></span></button><button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-xl">settings</span></button></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="flex flex-col text-right hidden sm:flex"><span class="font-label-md text-label-md text-on-surface leading-tight">Kỹ sư Hoàng</span><span class="font-label-sm text-label-sm text-secondary">PM Giám sát / Ban QLDA</span></div><img alt="Profile" class="w-8 h-8 rounded-full object-cover shadow-sm ring-1 ring-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIeklgLamxkRnZpI2hbp8x1LlHajXRjuP1W8cSTw46SYbUduqWFdvEZgjoSQDF9OXFaaBBZs2jXBCuADnljU11Dffr35MsDiBMIwSzS57XCAfLPujg0EJt5QlpMWeoQ3n-nBlSmeFvb2qXoIol1yFfx2VJ9srX8QTIsxq0gVespz78EXwxPHKYRjMsBnm7fy4CH-NshWuoftCAG_Tjqa11zdjjdYQaOCmUnGthEYvbpFjQ13YXINvugQ"></div></div></header><main class="w-full pt-16 px-space-lg py-space-lg flex-1 bg-surface"><div class="flex flex-col w-full gap-space-lg">
+<!-- TOP CONTEXT BAR: BREADCRUMB & METRIC STRIP -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm pb-space-xs">
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-secondary">
+<span class="hover:text-primary transition-colors cursor-pointer flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">home</span>
+        Trang chủ
+      </span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface font-medium">Danh mục dự án hạ tầng</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-stationing-mono text-primary bg-primary-fixed/40 px-2.5 py-0.5 rounded-full text-[10px]">INFRA-HUB-V2.4</span>
+</div>
+<!-- Live Scope & Security Status Tag -->
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 border-0 shadow-sm transition-all duration-300" id="roleIndicator">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-primary font-semibold tracking-wide" id="roleLabelText">Chế độ hiện tại: SUPERVISOR (Toàn quyền quản trị &amp; phân quyền)</span>
+</div>
+<button class="px-2.5 py-1 rounded-lg text-xs font-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-all flex items-center gap-1.5 shadow-sm" id="toggleRoleSimulation" type="button">
+<span class="material-symbols-outlined text-sm">swap_horiz</span>
+<span class="">Mô phỏng đổi vai trò (PM/Super)</span>
+</button>
+</div>
+</div>
+<!-- PAGE HEADER & PRIMARY ACTIONS -->
+<div class="bg-surface-container-lowest p-space-lg rounded-2xl shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-1 max-w-3xl">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container/15 flex items-center justify-center text-primary-container shrink-0">
+<span class="material-symbols-outlined text-2xl">folder_shared</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight leading-tight">
+            Quản lý danh mục dự án bảo hành đường bộ
+          </h1>
+<p class="font-body-md text-body-md text-secondary mt-0.5">
+            Theo dõi tiến độ bảo hành, mức độ rủi ro hư hỏng mặt đường và phân bổ nguồn lực kỹ sư quản lý dự án (PM) trên toàn mạng lưới cao tốc &amp; quốc lộ.
+          </p>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-space-sm shrink-0 flex-wrap">
+<button class="px-3.5 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg font-label-md text-label-md transition-colors flex items-center gap-2 shadow-sm" type="button">
+<span class="material-symbols-outlined text-lg">tune</span>
+<span class="">Bộ lọc nâng cao</span>
+</button>
+<button class="px-3.5 py-2.5 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg font-label-md text-label-md transition-colors flex items-center gap-2 shadow-sm" type="button">
+<span class="material-symbols-outlined text-lg">file_download</span>
+<span class="">Xuất dữ liệu GIS</span>
+</button>
+<!-- Supervisor Only Button -->
+<button class="px-4 py-2.5 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-lg font-label-md text-label-md transition-all shadow-sm flex items-center gap-2" id="btnCreateProject" type="button">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+<span class="">Khởi tạo dự án mới</span>
+</button>
+</div>
+</div>
+<!-- KPI SUMMARY ROW (CIVIL INFRASTRUCTURE OVERVIEW) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-space-md">
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center gap-3">
+<div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined">route</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-secondary truncate">Tổng chiều dài quản lý</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-stationing-mono">428.6 <span class="text-xs font-normal text-secondary">km</span></span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center gap-3">
+<div class="w-11 h-11 rounded-lg bg-[#EDF7ED] flex items-center justify-center text-[#1B5E20] shrink-0">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-secondary truncate">Đang bảo hành ổn định</span>
+<span class="font-headline-sm text-headline-sm text-on-surface font-stationing-mono">5 <span class="text-xs font-normal text-secondary">dự án</span></span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center gap-3">
+<div class="w-11 h-11 rounded-lg bg-[#FEE2E2] flex items-center justify-center text-error shrink-0">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-secondary truncate">Sắp hết hạn (&lt;30 ngày)</span>
+<span class="font-headline-sm text-headline-sm text-error font-stationing-mono">2 <span class="text-xs font-normal text-secondary">dự án</span></span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center gap-3">
+<div class="w-11 h-11 rounded-lg bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-secondary truncate">Chờ định vị tim tuyến</span>
+<span class="font-headline-sm text-headline-sm text-[#D97706] font-stationing-mono">1 <span class="text-xs font-normal text-secondary">dự án</span></span>
+</div>
+</div>
+</div>
+<!-- FILTER & SEARCH BAR -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<!-- State Pills / Filter Tabs -->
+<div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+<button class="px-3.5 py-1.5 rounded-full text-xs font-label-md bg-primary-container text-on-primary-container shadow-sm flex items-center gap-1.5 shrink-0" type="button">
+<span class="">Tất cả</span>
+<span class="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]">8</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-label-md bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors flex items-center gap-1.5 shrink-0" type="button">
+<span class="w-2 h-2 rounded-full bg-[#1B5E20]"></span>
+<span class="">Đang bảo hành</span>
+<span class="text-secondary text-[11px] font-stationing-mono">5</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-label-md bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors flex items-center gap-1.5 shrink-0" type="button">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="">Sắp hết hạn</span>
+<span class="text-secondary text-[11px] font-stationing-mono">2</span>
+</button>
+<button class="px-3.5 py-1.5 rounded-full text-xs font-label-md bg-surface-container-low hover:bg-surface-container text-on-surface transition-colors flex items-center gap-1.5 shrink-0" type="button">
+<span class="w-2 h-2 rounded-full bg-[#D97706]"></span>
+<span class="">Chờ duyệt tuyến</span>
+<span class="text-secondary text-[11px] font-stationing-mono">1</span>
+</button>
+</div>
+<!-- Quick Search & Selectors -->
+<div class="flex items-center gap-space-sm flex-1 md:max-w-md justify-end">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg pointer-events-none">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-surface-container-low text-on-surface placeholder:text-outline font-body-sm text-body-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition-all" placeholder="Tìm theo tên dự án, mã PRJ, hoặc PM phụ trách..." type="text">
+</div>
+<div class="shrink-0 flex items-center bg-surface-container p-0.5 rounded-lg">
+<button class="p-1.5 rounded-md bg-surface-container-lowest text-primary shadow-sm" title="Dạng lưới" type="button">
+<span class="material-symbols-outlined text-lg leading-none">grid_view</span>
+</button>
+<button class="p-1.5 rounded-md text-secondary hover:text-on-surface transition-colors" title="Dạng bảng" type="button">
+<span class="material-symbols-outlined text-lg leading-none">table_rows</span>
+</button>
+</div>
+</div>
+</div>
+<!-- PROJECT GRID (RESPONSIVE 3 COLUMNS) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-lg">
+<!-- CARD 1: QL1A (Đang bảo hành) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group">
+<!-- Card Banner / Spatial Reference -->
+<div class="h-28 relative bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="Aerial view of National Highway 1A asphalt roadway winding through central Vietnam rolling topography under clear afternoon sky, showcasing pristine pavement lines, guardrails, and roadside drainage channels." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBVlAj9eTSf1U6qj-ce1q-5iDGjlznGC_nzATQyaLHtZl1tqrBzM52e_dQ9Ul68cinlOchn1YZXSIYrszBm3R4ZofSwuVuNo6uCJptePfjA1CKn_JhuL4rASrm4-Z-2pWcd5T3ljWPWxZa41erJy4WPoI4DFfWWvSBruCkntJrX6iugd1OrO2DLWQpWAsvaDIRw48taB4rnNwwHB5xdILSQI9afICskP4NwLko0ElE7K1vpIvxOX4OWmw')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+<div class="absolute top-3 left-3 flex items-center gap-1.5"><span class="font-stationing-mono px-2.5 py-0.5 bg-white/90 backdrop-blur-md rounded-full text-[11px] text-on-surface font-bold shadow-sm">PRJ-QL1A-02</span><span class="font-label-sm text-[11px] px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white">Miền Trung</span></div>
+<div class="absolute top-3 right-3">
+<span class="px-2.5 py-0.5 rounded-full text-xs font-label-md bg-[#EDF7ED] text-[#1B5E20] shadow-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1B5E20]"></span>
+            Đang bảo hành
+          </span>
+</div>
+<div class="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/90">
+<span class="font-stationing-mono text-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">straighten</span>
+            Km 1020+000 → Km 1045+000
+          </span>
+<span class="text-[11px] opacity-80">Huế - Đà Nẵng</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="p-space-md flex flex-col flex-1 justify-between gap-space-md">
+<div class="flex flex-col gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors">
+            QL1A - Đoạn Km 1020 đến Km 1045
+          </h3>
+<!-- PM Info Block -->
+<div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-2.5 min-w-0">
+<img alt="PM Đỗ Quốc Hoàng" class="w-8 h-8 rounded-full object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxG8mOnH6aoep0MWRkPKI9j6_uQY4eMnGpkz1R2oBkuVGPaZ-CyO7qlFWhCKqUPfK5X8jxFQoXE7HZAo1uJboyZ5nREFPY2nNw-n7kwdYt8RFeCTdpG7QZ0FtS30l3ce6NMQ94zwGbbOdHgr5usbL3Wyy6FbKCBjXmO5AesGBC4YVQZde5K10D8tE8qzD6sfgKIOoSFhYox8IWbmxLzAaHMrCRnaXZP55PBr5Y_sibjyFCHWpsQWYueA">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-xs text-on-surface truncate font-semibold">Đỗ Quốc Hoàng</span>
+<span class="font-body-sm text-[11px] text-secondary truncate">hoang.ks@hoanghai-infra.vn</span>
+</div>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-primary-fixed/60 text-on-primary-fixed font-label-sm text-[10px] uppercase font-bold shrink-0">PM Chính</span>
+</div>
+<!-- Warranty Progress Metric -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between text-xs">
+<span class="text-secondary font-label-sm">Thời hạn bảo hành đã qua</span>
+<span class="font-stationing-mono font-semibold text-on-surface">65% (Còn 180 ngày)</span>
+</div>
+<div class="w-full bg-surface-variant h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 65%"></div>
+</div>
+</div>
+<!-- 3-Col Mini Technical Spec Grid -->
+<div class="grid grid-cols-3 gap-2 pt-1 text-center">
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Chiều dài</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">156 km</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Lỗi mở</span>
+<span class="font-stationing-mono text-sm font-bold text-[#ba1a1a]">12 điểm</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Gói sửa</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">3 gói</span>
+</div>
+</div>
+</div>
+<!-- Card Footer Action -->
+<div class="pt-2">
+<a class="w-full py-2.5 px-3 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 shadow-sm" href="#">
+<span class="">Vào quản lý dự án</span>
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- CARD 2: CAO TỐC BẮC NAM (Sắp hết hạn bảo hành) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group">
+<!-- Card Banner -->
+<div class="h-28 relative bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="High-angle shot of a multi-lane concrete and asphalt expressway section in Diễn Châu Nghệ An Vietnam, highway overpass bridge, road marking inspection vehicle parked safely on hard shoulder." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC4-A167lb1O6vkI7HTXd6kdKeMidl7RIEHUsgEDYntnIFQZbeo9nnb3tvEMJgYrc7omqC6-hhCm75ZL75XQ06_5t7BQVstmBSjziAOuXhu5oqRNmh5A_1FIyMgWsPF9JL_0x9JR_T5GuNPDsxdGIIImCOJwC1AW987luz0iQlCZgXVqKux1FI6mIfCfQGAUsNpWpmiVjVUW-1bxFMOz964kf_DvxbXTM2jczTy6a5xS9MsJwgAHYYYAQ')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+<div class="absolute top-3 left-3 flex items-center gap-1.5"><span class="font-stationing-mono px-2.5 py-0.5 bg-white/90 backdrop-blur-md rounded-full text-[11px] text-on-surface font-bold shadow-sm">PRJ-CTBN-01</span><span class="font-label-sm text-[11px] px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white">Miền Bắc</span></div>
+<div class="absolute top-3 right-3">
+<span class="px-2.5 py-0.5 rounded-full text-xs font-label-md bg-[#FEE2E2] text-error shadow-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+            Sắp hết hạn
+          </span>
+</div>
+<div class="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/90">
+<span class="font-stationing-mono text-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">straighten</span>
+            Km 430+000 → Km 479+300
+          </span>
+<span class="text-[11px] opacity-80">Nghệ An</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="p-space-md flex flex-col flex-1 justify-between gap-space-md">
+<div class="flex flex-col gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors">
+            Cao tốc Bắc Nam - Đoạn Diễn Châu
+          </h3>
+<!-- PM Info Block -->
+<div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-secondary text-white font-label-md flex items-center justify-center shrink-0">
+                TM
+              </div>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-xs text-on-surface truncate font-semibold">Trần Minh Tâm</span>
+<span class="font-body-sm text-[11px] text-secondary truncate">tam.tm@hoanghai-infra.vn</span>
+</div>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container text-secondary font-label-sm text-[10px] uppercase font-bold shrink-0">PM Tuyến</span>
+</div>
+<!-- Warranty Progress Metric (Near Expiry Alert) -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between text-xs">
+<span class="text-error font-label-sm flex items-center gap-1 font-semibold">
+<span class="material-symbols-outlined text-xs">error</span>
+                Cần lập hồ sơ quyết toán
+              </span>
+<span class="font-stationing-mono font-bold text-error">92% (Còn 25 ngày)</span>
+</div>
+<div class="w-full bg-surface-variant h-2 rounded-full overflow-hidden">
+<div class="bg-error h-full rounded-full transition-all duration-500" style="width: 92%"></div>
+</div>
+</div>
+<!-- Technical Specs -->
+<div class="grid grid-cols-3 gap-2 pt-1 text-center">
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Chiều dài</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">49.3 km</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Lỗi mở</span>
+<span class="font-stationing-mono text-sm font-bold text-[#ba1a1a]">5 điểm</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Gói sửa</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">1 gói</span>
+</div>
+</div>
+</div>
+<!-- Card Footer Action -->
+<div class="pt-2">
+<a class="w-full py-2.5 px-3 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 shadow-sm" href="#">
+<span class="">Vào quản lý dự án</span>
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- CARD 3: ĐT-741 (Chưa gán PM, Chờ duyệt tuyến) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group">
+<!-- Card Banner -->
+<div class="h-28 relative bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="Provincial highway construction site in southern Vietnam Binh Duong province, road centerline surveying stakes, civil engineers checking stationing layout plans on mobile tablet." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA_9CVM9D0x3fHPsDq2Vv0ULYz5V0tMYG89OQ1eubxeePY2Jr3fEMfANQhOOii3H3ku6SBZKIakqGw8EB8_HeccJ-o8aEL3sTgH_PxhCX8cCPU0CSVSEQzeM62sjHZkL6Vy7md902cJ8lfRUSvS0Xi9pjunR9Tx-cc6pkaLuXkoQOoHqO8Q4tTmXVq9kR8nEl3pSYL8tNeDuu5n9-OAZOq5ubp-Iwh_MCVcNv6BSxJSErsNepionI4O9w')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+<div class="absolute top-3 left-3 flex items-center gap-1.5"><span class="font-stationing-mono px-2.5 py-0.5 bg-white/90 backdrop-blur-md rounded-full text-[11px] text-on-surface font-bold shadow-sm">PRJ-DT741-04</span><span class="font-label-sm text-[11px] px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white">Miền Nam</span></div>
+<div class="absolute top-3 right-3">
+<span class="px-2.5 py-0.5 rounded-full text-xs font-label-md bg-[#FEF3C7] text-[#D97706] shadow-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+            Chờ duyệt tuyến
+          </span>
+</div>
+<div class="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/90">
+<span class="font-stationing-mono text-xs flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">straighten</span>
+            Km 0+000 → Km 32+800
+          </span>
+<span class="text-[11px] opacity-80">Bình Dương</span>
+</div>
+</div>
+<!-- Card Body -->
+<div class="p-space-md flex flex-col flex-1 justify-between gap-space-md">
+<div class="flex flex-col gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors">
+            Đường tỉnh ĐT-741 (Bình Dương)
+          </h3>
+<!-- Unassigned PM Alert Block -->
+<div class="flex items-center justify-between p-2 rounded-xl bg-[#FFFBEB]">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-[#D97706] text-xl shrink-0">person_alert</span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
+<span class="font-body-sm text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tim tuyến</span>
+</div>
+</div>
+<button class="px-3 py-1 bg-surface-container-lowest hover:bg-primary-container hover:text-on-primary-container text-primary rounded-full border border-outline-variant/60 font-label-sm text-[11px] font-semibold transition-all shrink-0 shadow-sm" onclick="openAssignModal('PRJ-DT741-04')" type="button">Gán PM ngay</button>
+</div>
+<!-- Warranty Progress (Inactive 0%) -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between text-xs">
+<span class="text-secondary font-label-sm">Thời hạn bảo hành</span>
+<span class="font-stationing-mono font-medium text-secondary">Chưa kích hoạt (0%)</span>
+</div>
+<div class="w-full bg-surface-variant h-2 rounded-full overflow-hidden">
+<div class="bg-outline-variant h-full rounded-full" style="width: 0%"></div>
+</div>
+</div>
+<!-- Specs -->
+<div class="grid grid-cols-3 gap-2 pt-1 text-center">
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Chiều dài</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">32.8 km</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Lỗi mở</span>
+<span class="font-stationing-mono text-sm font-bold text-secondary">0</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Hồ sơ KML</span>
+<span class="font-label-sm text-[11px] font-semibold text-[#D97706]">Thẩm định</span>
+</div>
+</div>
+</div>
+<!-- Action -->
+<div class="pt-2">
+<a class="w-full py-2.5 px-3 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 shadow-sm" href="#">
+<span class="material-symbols-outlined text-lg">timeline</span>
+<span class="">Xem thiết lập tuyến (WF-02)</span>
+</a>
+</div>
+</div>
+</div>
+<!-- CARD 4: PHAN THIẾT - DẦU GIÂY (MÔ PHỎNG IDOR & PM RESTRICTION) -->
+<div class="relative bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden flex flex-col transition-all duration-300" id="cardRestricted">
+<!-- IDOR Access Restricted Overlay (Toggled dynamically or statically highlighted) -->
+<div class="absolute inset-0 z-30 bg-surface/85 backdrop-blur-[2px] p-space-md flex flex-col items-center justify-center text-center gap-3 transition-opacity opacity-0 pointer-events-none" id="restrictedOverlay">
+<div class="w-12 h-12 rounded-2xl bg-error/10 text-error flex items-center justify-center shadow-inner">
+<span class="material-symbols-outlined text-2xl">lock</span>
+</div>
+<div class="flex flex-col gap-1 max-w-xs">
+<div class="flex items-center justify-center gap-1.5">
+<span class="font-stationing-mono px-2.5 py-0.5 rounded-full bg-error text-white font-bold text-[10px]">403 RESTRICTED</span>
+<span class="font-label-sm text-xs text-error font-semibold">Chính sách Scope &amp; IDOR</span>
+</div>
+<span class="font-headline-sm text-sm text-on-surface font-semibold mt-1">Dự án ngoài phạm vi phụ trách</span>
+<p class="font-body-sm text-[12px] text-secondary">
+            Bạn hiện được gán tại <span class="font-semibold text-on-surface">QL1A - Huế</span>. Truy cập trái thẩm quyền hoặc thay đổi URL ID sẽ bị ghi nhận audit log bảo mật.
+          </p>
+</div>
+<button class="px-3 py-1.5 bg-surface-container text-secondary rounded-lg font-label-sm text-xs cursor-not-allowed opacity-80 flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-sm">shield</span>
+<span class="">Yêu cầu quyền truy cập từ Supervisor</span>
+</button>
+</div>
+<!-- Underlying Content of Restricted Card (visible through subtle blur) -->
+<div class="h-28 relative bg-surface-container overflow-hidden opacity-40">
+<div class="w-full h-full bg-cover bg-center" data-alt="Expressway interchange connecting Phan Thiet to Dau Giay in Vietnam with high quality bitumen surface and modern steel crash barriers under sunny daytime sky." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCmfOdI4yLOVtbOEKRSC8Tch8SS3dVMGly8clwtejimzLPw7NYD4FBsfVdFAOCvwDLwT7y8AokXbzzcildbVtbuKzWSd_G35sXzEc4h9Y_G1yQh7125v2km8uvEPRJrSOWXYDvScvsUXzvWu94Uo86c2_m0dqfoMHQJj-lsViJjGdq31FwSlVTO1kgFmAJMSSrujUXoUhUGOz1oJppIvwvQym9m5YpFWprNhLJ9wpP2-93RDJUHXz33uQ')"></div>
+<div class="absolute inset-0 bg-black/40"></div>
+<div class="absolute top-3 left-3">
+<span class="font-stationing-mono px-2 py-0.5 bg-white rounded text-[11px] text-on-surface font-bold">
+            PRJ-PTDG-03
+          </span>
+</div>
+</div>
+<div class="p-space-md flex flex-col flex-1 justify-between gap-space-md select-none">
+<div class="flex flex-col gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+            Cao tốc Phan Thiết - Dầu Giây (GĐ 1)
+          </h3>
+<div class="p-2 rounded-xl bg-surface-container flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary text-white text-xs flex items-center justify-center">LC</div>
+<span class="font-label-md text-xs text-on-surface">PM: Lê Văn Cường</span>
+</div>
+<div class="grid grid-cols-3 gap-2 text-center text-xs">
+<div class="p-1.5 rounded bg-surface-container">99 km</div>
+<div class="p-1.5 rounded bg-surface-container">8 lỗi</div>
+<div class="p-1.5 rounded bg-surface-container">2 gói</div>
+</div>
+</div>
+<button class="w-full py-2 bg-surface-container text-secondary rounded-lg font-label-md text-xs" disabled="">
+          Hạn chế truy cập
+        </button>
+</div>
+</div>
+<!-- CARD 5: CAO TỐC LA SƠN - TÚY LOAN -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden group">
+<div class="h-28 relative bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="Mountain pass highway civil road construction with steep retaining rock slopes, engineered drainage trenches and newly laid asphalt road in Central Vietnam mist." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDRpworIJ8QVAyJAHHRdTM1H6kCI-HDJBkmfA-GdAFBBwMy2XbH-lDvcM0Rdb1paY-KDvpG3wqp2rBDQJ4jm__eUWVMhLx-VytVFITNvgDMV6wqebDrVNLdf_Q8T3-s_nB7ne3r8QMGAlXI3raps0pi-MkUkPoyv5n6k41_tDVFjofYp9aMPCimedoM57tdMCNUZ-Pa3efLbRqRCYShPKECBRriwWYFcLJSSc4FFa4GzvBbNbame9dV0g')"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+<div class="absolute top-3 left-3 flex items-center gap-1.5"><span class="font-stationing-mono px-2.5 py-0.5 bg-white/90 backdrop-blur-md rounded-full text-[11px] text-on-surface font-bold shadow-sm">PRJ-LSTL-05</span><span class="font-label-sm text-[11px] px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-white">Miền Trung</span></div>
+<div class="absolute top-3 right-3">
+<span class="px-2.5 py-0.5 rounded-full text-xs font-label-md bg-[#EDF7ED] text-[#1B5E20] shadow-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#1B5E20]"></span>
+            Đang bảo hành
+          </span>
+</div>
+<div class="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/90">
+<span class="font-stationing-mono text-xs">Km 0+000 → Km 66+000</span>
+<span class="text-[11px] opacity-80">Huế - Đà Nẵng</span>
+</div>
+</div>
+<div class="p-space-md flex flex-col flex-1 justify-between gap-space-md">
+<div class="flex flex-col gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors">
+            Cao tốc La Sơn - Túy Loan
+          </h3>
+<div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-low">
+<div class="flex items-center gap-2.5 min-w-0">
+<img alt="PM Đỗ Quốc Hoàng" class="w-8 h-8 rounded-full object-cover shrink-0" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf4f6J47Wu-TfxMNSWja8x9amsrPEJTxhwdPyljSwP9-fWll7j9a43XR-UbpZ7Fo_KexBmudNsuIHNB54E_-FX1lO3WtGc3ONPSkSyB4pAj5VVtGjPdGPYy3afmWYb6JI4RKUkdF7FLz-dp1x4FIa5QWnBvz799fVZr4FDF5H_khmXZ4N_u1_BGOLKIMf0TeflfCuHvPryFzmqGXk6-NyvOFYvt9xxi4HX680kZaWgMf3t7hZS-YL9OQ">
+<div class="flex flex-col min-w-0">
+<span class="font-label-md text-xs text-on-surface truncate font-semibold">Đỗ Quốc Hoàng</span>
+<span class="font-body-sm text-[11px] text-secondary truncate">Kiêm nhiệm giám sát</span>
+</div>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[10px] uppercase font-bold shrink-0">PM Phụ Trách</span>
+</div>
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between text-xs">
+<span class="text-secondary font-label-sm">Thời hạn bảo hành</span>
+<span class="font-stationing-mono font-semibold text-on-surface">42% (Còn 310 ngày)</span>
+</div>
+<div class="w-full bg-surface-variant h-2 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 42%"></div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 pt-1 text-center">
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Chiều dài</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">66.0 km</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Lỗi mở</span>
+<span class="font-stationing-mono text-sm font-bold text-[#ba1a1a]">7 điểm</span>
+</div>
+<div class="p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-[11px] text-secondary block">Gói sửa</span>
+<span class="font-stationing-mono text-sm font-bold text-on-surface">2 gói</span>
+</div>
+</div>
+</div>
+<div class="pt-2">
+<a class="w-full py-2.5 px-3 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-lg font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 shadow-sm" href="#">
+<span class="">Vào quản lý dự án</span>
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- CARD 6: DỰ ÁN MỚI / THÊM NHANH (CALLOUT CARD) -->
+<div class="bg-surface-container-low border-2 border-dashed border-outline-variant/60 rounded-2xl p-space-lg flex flex-col items-center justify-center text-center gap-space-md hover:bg-surface-container hover:border-primary transition-all cursor-pointer min-h-[360px]" id="cardQuickAdd">
+<div class="w-14 h-14 rounded-2xl bg-surface-container-lowest text-primary shadow-sm flex items-center justify-center transition-transform group-hover:scale-110">
+<span class="material-symbols-outlined text-3xl">add_business</span>
+</div>
+<div class="flex flex-col gap-1 max-w-xs">
+<h4 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Tạo hồ sơ dự án mới</h4>
+<p class="font-body-sm text-body-sm text-secondary">
+          Bắt đầu chu trình bàn giao từ ban quản lý dự án BOT/VEC sang bộ phận bảo hành hạ tầng.
+        </p>
+</div>
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded-lg font-label-md text-label-md shadow-sm flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-base">post_add</span>
+<span class="">Mở form khởi tạo</span>
+</button>
+</div>
+</div>
+<!-- PAGINATION & NETWORK HEALTH FOOTER -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md pt-space-sm pb-space-lg text-secondary font-body-sm text-body-sm">
+<div class="flex items-center gap-2">
+<span class="">Hiển thị <strong class="text-on-surface font-stationing-mono">1 - 5</strong> trong tổng số <strong class="text-on-surface font-stationing-mono">8</strong> dự án đường bộ</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+<span class="text-xs">Đồng bộ vệ tinh GIS: 4 phút trước</span>
+</div>
+<div class="flex items-center gap-1 shadow-sm rounded-lg p-0.5 bg-surface-container-lowest">
+<button class="w-8 h-8 rounded flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container disabled:opacity-30" disabled="" type="button">
+<span class="material-symbols-outlined text-base">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary-container text-on-primary-container font-label-md text-xs font-semibold" type="button">1</button>
+<button class="w-8 h-8 rounded text-secondary hover:text-on-surface hover:bg-surface-container font-label-md text-xs" type="button">2</button>
+<button class="w-8 h-8 rounded flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container" type="button">
+<span class="material-symbols-outlined text-base">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- ======================================================== -->
+<!-- MODAL KHỞI TẠO DỰ ÁN MỚI (DÀNH CHO SUPERVISOR)           -->
+<!-- ======================================================== -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200" id="modalCreateProject">
+<div class="bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[921px] transform scale-95 transition-transform duration-200">
+<!-- Modal Header -->
+<div class="px-space-lg py-space-md bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-xl">add_road</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold leading-tight">
+              Khởi tạo dự án bảo hành đường bộ mới
+            </h2>
+<p class="font-body-sm text-[12px] text-secondary">
+              Hệ thống tự động thiết lập phạm vi lý trình và cấp quyền quản lý cho PM phụ trách.
+            </p>
+</div>
+</div>
+<button class="p-1.5 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container transition-colors" id="btnCloseModal" type="button">
+<span class="material-symbols-outlined text-xl leading-none">close</span>
+</button>
+</div>
+<!-- Modal Body (Form Input) -->
+<form class="p-space-lg overflow-y-auto flex flex-col gap-space-md" id="formNewProject">
+<!-- Project Title & Auto Generated Code -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<div class="md:col-span-2 flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold flex items-center justify-between">
+<span class="">Tên dự án đường bộ <span class="text-error">*</span></span>
+<span class="text-[11px] text-secondary font-normal">Tên công trình theo hợp đồng BOT/ODA</span>
+</label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-body-md rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" required="" type="text" value="Quốc lộ 14 - Đoạn Chơn Thành">
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold flex items-center gap-1">
+<span class="">Mã dự án (PRJ)</span>
+<span class="material-symbols-outlined text-xs text-primary" title="Tự động sinh theo cấu trúc [PRJ-MÃ ĐƯỜNG-SỐ HIỆU]">info</span>
+</label>
+<input class="w-full px-3 py-2 bg-surface-container text-on-surface font-stationing-mono text-sm font-bold rounded-lg cursor-not-allowed shadow-inner" readonly="" type="text" value="PRJ-QL14-01">
+</div>
+</div>
+<!-- Region & PM Assignment -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold">
+              Khu vực địa lý quản lý <span class="text-error">*</span>
+</label>
+<div class="relative">
+<select class="w-full appearance-none px-3 py-2 bg-surface-container-low text-on-surface font-body-md rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm pr-9">
+<option selected="" value="mn-bp">Miền Nam (Bình Phước - Bình Dương)</option>
+<option value="mt-hue">Miền Trung (Thừa Thiên Huế - Đà Nẵng)</option>
+<option value="mb-na">Miền Bắc (Hà Nội - Nghệ An)</option>
+<option value="tn-dl">Tây Nguyên (Đắk Lắk - Gia Lai)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold flex items-center justify-between">
+<span class="">Chỉ định Kỹ sư PM <span class="text-error">*</span></span>
+<span class="text-[10px] text-primary font-bold bg-primary-fixed/50 px-1.5 py-0.2 rounded">CCHN Hạng I</span>
+</label>
+<div class="relative">
+<select class="w-full appearance-none px-3 py-2 bg-surface-container-low text-on-surface font-body-md rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm pr-9">
+<option selected="" value="hoang">Kỹ sư Đỗ Quốc Hoàng (hoang.ks@hoanghai-infra.vn)</option>
+<option value="tam">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
+<option value="cuong">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+<option value="unassigned">-- Để trống (Chưa gán) --</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Warranty Period (Start - End) -->
+<div class="p-space-sm rounded-xl bg-surface-container-low flex flex-col gap-2">
+<span class="font-label-sm text-xs font-semibold text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-primary">calendar_month</span>
+            Khung thời gian hiệu lực bảo hành (Theo biên bản nghiệm thu đưa vào sử dụng)
+          </span>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<span class="font-body-sm text-[11px] text-secondary">Ngày bắt đầu hiệu lực</span>
+<input class="px-3 py-1.5 bg-surface-container-lowest text-on-surface font-body-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="date" value="2026-09-01">
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-body-sm text-[11px] text-secondary">Ngày kết thúc bảo hành (36 tháng)</span>
+<input class="px-3 py-1.5 bg-surface-container-lowest text-on-surface font-body-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="date" value="2029-09-01">
+</div>
+</div>
+</div>
+<!-- Warranty Escrow Budget & Stationing Range -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold flex items-center justify-between">
+<span class="">Hạn mức dự phòng bảo hành</span>
+<span class="text-[11px] text-secondary">Bảo lãnh ngân hàng</span>
+</label>
+<div class="relative">
+<input class="w-full pl-3 pr-12 py-2 bg-surface-container-low text-on-surface font-stationing-mono text-sm font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="4,500,000,000">
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">VNĐ</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-semibold">
+              Phạm vi lý trình (Km bắt đầu - Km kết thúc)
+            </label>
+<input class="w-full px-3 py-2 bg-surface-container-low text-on-surface font-stationing-mono text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" type="text" value="Km 0+000 đến Km 28+500, chiều dài 28.5 km">
+</div>
+</div>
+<!-- Workflow Regulatory Note -->
+<div class="p-space-sm rounded-xl bg-primary-fixed/30 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-xl shrink-0 mt-0.5">verified_user</span>
+<p class="font-body-sm text-[12px] text-on-primary-fixed leading-relaxed">
+<strong>Quy chuẩn hệ thống:</strong> Sau khi hoàn tất khởi tạo, dự án sẽ tự động chuyển sang trạng thái <em>"Chờ phê duyệt tim tuyến (WF-02)"</em> và cấp mã định danh bảo mật Token cho PM được chỉ định.
+          </p>
+</div>
+</form>
+<!-- Modal Footer -->
+<div class="px-space-lg py-space-sm bg-surface-container-low flex items-center justify-between">
+<button class="px-4 py-2 bg-surface-container-lowest hover:bg-surface-container text-on-surface rounded-lg font-label-md text-label-md transition-colors shadow-sm" id="btnCancelModal" type="button">
+          Hủy bỏ
+        </button>
+<button class="px-5 py-2 bg-primary-container hover:bg-primary-container/90 text-on-primary-container rounded-lg font-label-md text-label-md transition-all shadow-sm flex items-center gap-2" id="btnSubmitModal" type="button">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+<span class="">Lưu hồ sơ &amp; Bàn giao PM</span>
+</button>
+</div>
+</div>
+</div>
+<!-- TOAST NOTIFICATION CONTAINER (FOR MICRO-INTERACTION FEEDBACK) -->
+<div class="fixed bottom-6 right-6 z-50 transform transition-all duration-300 translate-y-12 opacity-0 pointer-events-none" id="toastNotification">
+<div class="px-4 py-3 bg-inverse-surface text-inverse-on-surface rounded-xl shadow-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-fixed text-xl">format_image_left</span>
+<span class="font-body-sm text-sm" id="toastMessage">Đã chuyển sang vai trò SUPERVISOR: Hiển thị nút tạo dự án &amp; mở khóa toàn quyền.</span>
+</div>
+</div>
+</div>
+<!-- INTERACTIVE SCRIPTS: ROLE SWITCHING (SUPERVISOR VS PM) & MODAL TOGGLE -->
+<script>
+  (function() {
+    let currentRole = 'SUPERVISOR'; // 'SUPERVISOR' or 'PM'
+
+    const btnCreateProject = document.getElementById('btnCreateProject');
+    const cardQuickAdd = document.getElementById('cardQuickAdd');
+    const cardRestricted = document.getElementById('cardRestricted');
+    const restrictedOverlay = document.getElementById('restrictedOverlay');
+    const roleIndicator = document.getElementById('roleIndicator');
+    const roleLabelText = document.getElementById('roleLabelText');
+    const toggleRoleBtn = document.getElementById('toggleRoleSimulation');
+
+    const modal = document.getElementById('modalCreateProject');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const btnCancelModal = document.getElementById('btnCancelModal');
+    const btnSubmitModal = document.getElementById('btnSubmitModal');
+
+    const toast = document.getElementById('toastNotification');
+    const toastMessage = document.getElementById('toastMessage');
+
+    function showToast(msg) {
+      toastMessage.textContent = msg;
+      toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    function updateRoleView() {
+      if (currentRole === 'SUPERVISOR') {
+        // Supervisor State
+        roleIndicator.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 border-0 shadow-sm transition-all duration-300";
+        roleLabelText.textContent = "Chế độ hiện tại: SUPERVISOR (Toàn quyền quản trị & phân quyền)";
+        roleLabelText.className = "font-label-sm text-label-sm text-primary font-semibold tracking-wide";
+        
+        btnCreateProject.classList.remove('hidden');
+        cardQuickAdd.classList.remove('hidden');
+        
+        // Remove restricted block for Supervisor
+        restrictedOverlay.classList.add('opacity-0', 'pointer-events-none');
+        cardRestricted.querySelector('.select-none')?.classList.remove('opacity-40');
+        showToast("Đã chuyển sang vai trò SUPERVISOR: Hiển thị nút tạo dự án & mở khóa toàn quyền.");
+      } else {
+        // PM State
+        roleIndicator.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 border-0 shadow-sm transition-all duration-300";
+        roleLabelText.textContent = "Chế độ hiện tại: PROJECT MANAGER (Chỉ xem dự án được phân công)";
+        roleLabelText.className = "font-label-sm text-label-sm text-secondary font-semibold tracking-wide";
+        
+        btnCreateProject.classList.add('hidden');
+        cardQuickAdd.classList.add('hidden');
+
+        // Apply strict 403 restricted look to Card 4
+        restrictedOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        cardRestricted.querySelector('.select-none')?.classList.add('opacity-40');
+        showToast("Đã chuyển sang vai trò PM: Nút tạo dự án bị ẩn, dự án ngoài phạm vi bị hạn chế (403 IDOR).");
+      }
+    }
+
+    // Role toggle micro-interaction
+    toggleRoleBtn?.addEventListener('click', () => {
+      currentRole = (currentRole === 'SUPERVISOR') ? 'PM' : 'SUPERVISOR';
+      updateRoleView();
+    });
+
+    // Modal Opening & Closing
+    function openModal() {
+      if (currentRole !== 'SUPERVISOR') {
+        alert("Chỉ tài khoản quyền SUPERVISOR mới có quyền khởi tạo dự án.");
+        return;
+      }
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        modal.querySelector('.transform').classList.remove('scale-95');
+      });
+    }
+
+    function closeModal() {
+      modal.classList.add('opacity-0');
+      modal.querySelector('.transform').classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    btnCreateProject?.addEventListener('click', openModal);
+    cardQuickAdd?.addEventListener('click', openModal);
+    btnCloseModal?.addEventListener('click', closeModal);
+    btnCancelModal?.addEventListener('click', closeModal);
+
+    // Close on clicking backdrop
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Modal submit handler
+    btnSubmitModal?.addEventListener('click', () => {
+      closeModal();
+      showToast("Khởi tạo dự án 'PRJ-QL14-01' thành công! Đã chuyển tiếp quy trình WF-02.");
+    });
+
+    // Quick assign PM simulation
+    window.openAssignModal = function(prjId) {
+      if (currentRole !== 'SUPERVISOR') {
+        alert("Bạn không có quyền phân công lại kỹ sư phụ trách dự án này.");
+        return;
+      }
+      showToast("Mở ngăn gán phân quyền PM nhanh cho mã: " + prjId);
+    };
+
+    // Initial role update
+    updateRoleView();
+  })();
+</script></main></div>
+
+</body></html>

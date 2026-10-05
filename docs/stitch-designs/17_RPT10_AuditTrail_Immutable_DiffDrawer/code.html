@@ -1,0 +1,611 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><link href="https://fonts.cdnfonts.com/css/sansation" rel="stylesheet"><style>@import url('https://fonts.cdnfonts.com/css/sansation'); .font-sansation, h1, h2, h3, .brand-font, .kpi-num, .btn-primary-accent { font-family: 'Sansation', 'Inter', sans-serif !important; } .bg-page-custom { background-color: #F8F9FA !important; } .card-standard { background-color: #FFFFFF !important; border: 1px solid #E2E5E9 !important; border-radius: 12px !important; } .accent-gold-bg { background-color: #C9A227 !important; border-color: #C9A227 !important; color: #FFFFFF !important; } .accent-gold-bg:hover { background-color: #B38E1F !important; } .accent-gold-text { color: #C9A227 !important; }</style><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "background": "#f9f9ff", "on-surface-variant": "#49473a", "on-tertiary-fixed": "#24113f", "secondary-container": "#d6e0f3", "primary-fixed": "#ebe695", "surface-container-low": "#f0f3ff", "primary-fixed-dim": "#cfc97c", "on-primary-fixed-variant": "#4c4807", "surface-container-high": "#e2e8f8", "tertiary-fixed-dim": "#d4bcf6", "tertiary-container": "#826da1", "on-secondary-fixed-variant": "#3d4756", "on-tertiary": "#ffffff", "on-primary": "#ffffff", "surface": "#f9f9ff", "surface-dim": "#d3daea", "outline": "#7a7768", "secondary-fixed": "#d9e3f6", "inverse-primary": "#cfc97c", "surface-container-highest": "#dce2f3", "primary": "#64601f", "on-secondary-container": "#596373", "surface-container-lowest": "#ffffff", "surface-container": "#e7eefe", "on-secondary": "#ffffff", "tertiary-fixed": "#ecdcff", "outline-variant": "#cac7b5", "surface-variant": "#dce2f3", "inverse-on-surface": "#ebf1ff", "error": "#ba1a1a", "secondary": "#555f6f", "primary-container": "#7d7935", "surface-tint": "#64601f", "inverse-surface": "#2a313d", "on-primary-container": "#ffffff", "on-secondary-fixed": "#121c2a", "secondary-fixed-dim": "#bdc7d9", "error-container": "#ffdad6", "tertiary": "#695587", "on-background": "#151c27", "surface-bright": "#f9f9ff", "on-surface": "#151c27", "on-error-container": "#93000a", "on-error": "#ffffff", "on-tertiary-fixed-variant": "#513d6e", "on-primary-fixed": "#1e1c00", "on-tertiary-container": "#ffffff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-2xl": "3rem", "space-xl": "2rem", "space-lg": "1.5rem", "gutter": "1rem", "space-md": "1rem", "gutter-lg": "1.5rem", "margin-md": "1.5rem", "margin": "1rem", "margin-lg": "2rem", "space-xs": "0.25rem", "space-sm": "0.5rem" }, "fontFamily": { "stationing-mono": [ "Inter" ], "label-sm": [ "Inter" ], "label-md": [ "Inter" ], "body-lg": [ "Inter" ], "headline-xl": [ "Inter" ], "headline-xl-mobile": [ "Inter" ], "body-md": [ "Inter" ], "headline-sm": [ "Inter" ], "label-lg": [ "Inter" ], "body-sm": [ "Inter" ], "headline-lg-mobile": [ "Inter" ], "headline-md": [ "Inter" ], "headline-lg": [ "Inter" ] }, "fontSize": { "stationing-mono": [ "13px", { "lineHeight": "18px", "fontWeight": "600" } ], "label-sm": [ "11px", { "lineHeight": "14px", "fontWeight": "500" } ], "label-md": [ "12px", { "lineHeight": "16px", "fontWeight": "600" } ], "body-lg": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "fontWeight": "700" } ], "headline-xl-mobile": [ "28px", { "lineHeight": "34px", "fontWeight": "700" } ], "body-md": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "fontWeight": "600" } ], "label-lg": [ "14px", { "lineHeight": "20px", "fontWeight": "600" } ], "body-sm": [ "12px", { "lineHeight": "16px", "fontWeight": "400" } ], "headline-lg-mobile": [ "22px", { "lineHeight": "28px", "fontWeight": "700" } ], "headline-md": [ "20px", { "lineHeight": "28px", "fontWeight": "600" } ], "headline-lg": [ "28px", { "lineHeight": "36px", "fontWeight": "700" } ] } } } }</script></head><body class="bg-surface font-body-md text-on-surface antialiased" style="background-color: rgb(248, 249, 250) !important;"><aside class="fixed left-0 top-0 h-full w-[250px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container"><div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shrink-0" style="background-color: rgb(201, 162, 39) !important;"><span class="material-symbols-outlined text-[20px]">add_moderator</span></div><div class="flex flex-col min-w-0 leading-none"><span class="font-headline-sm text-headline-sm font-bold text-on-surface tracking-tight truncate font-sansation">HOANG HAI INFRA</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate uppercase">Civil Road Ops</span></div></div><nav class="flex flex-col gap-space-xs p-space-sm mt-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-label-lg font-bold rounded-lg shadow-sm"><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[18px]">dashboard</span><span class="">Dashboard</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="du-an" href="#"><span class="material-symbols-outlined text-[18px]">folder_shared</span><span class="">Dự án</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="doan-duong" href="#"><span class="material-symbols-outlined text-[18px]">alt_route</span><span class="">Đoạn đường</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="khao-sat" href="#"><span class="material-symbols-outlined text-[18px]">polyline</span><span class="">Khảo sát</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="khiem-khuyet" href="#"><span class="material-symbols-outlined text-[18px]">warning</span><span class="">Khiếm khuyết</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="sua-chua" href="#"><span class="material-symbols-outlined text-[18px]">handyman</span><span class="">Sửa chữa</span></a><a aria-current="page" class="flex items-center gap-space-sm px-space-sm py-2 transition-colors bg-primary-container text-on-primary-container font-label-lg font-bold rounded-lg shadow-sm" data-path="bao-cao" href="#" style="background-color: rgb(251, 246, 233) !important; border-left: 4px solid rgb(201, 162, 39) !important; color: rgb(201, 162, 39) !important; border-radius: 0px 8px 8px 0px !important;"><span class="material-symbols-outlined text-[18px]" style="color: rgb(201, 162, 39) !important;">description</span><span class="">Báo cáo</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="cau-hinh" href="#"><span class="material-symbols-outlined text-[18px]">tune</span><span class="">Cấu hình</span></a><a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="nguoi-dung" href="#"><span class="material-symbols-outlined text-[18px]">group</span><span class="">Người dùng</span></a></nav></div><div class="p-3 m-space-sm rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col gap-2" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-ping"></span><span class="font-label-sm text-[10px] uppercase font-semibold text-on-surface-variant tracking-wider">AN TOÀN DỮ LIỆU &amp; BẢO MẬT</span></div><span class="material-symbols-outlined text-[16px] text-primary">verified_user</span></div><div class="flex flex-col gap-1"><div class="font-stationing-mono text-[11px] font-semibold text-on-surface leading-tight">Tính toàn vẹn: SHA-256 Khớp 100%</div><div class="font-label-sm text-[11px] text-on-surface-variant">Trạng thái: Bất biến (Read-only)</div></div><div class="flex items-center gap-1 px-2 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] border border-[#1B5E20]/20 w-fit"><span class="material-symbols-outlined text-[14px]">lock</span><span class="font-stationing-mono text-[10px] font-bold uppercase tracking-tight">Bất biến • SHA-256 Khớp 100%</span></div><div class="pt-1 border-t border-[#E2E5E9] font-stationing-mono text-[10px] text-on-surface-variant flex items-center justify-between"><span class="">Merkle Tree: Verified</span><span class="font-semibold">ISO/IEC 27001</span></div></div></aside><div class="pl-[250px]"><header class="fixed top-0 left-[250px] right-0 h-16 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter-lg"><div class="flex items-center gap-space-md flex-1"><div class="flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1.5 rounded-lg"><span class="material-symbols-outlined text-[18px] text-primary">near_me</span><span class="font-stationing-mono text-stationing-mono text-on-surface">QL1A - Gđ 2 (Km 1024 - 1045)</span><span class="material-symbols-outlined text-[18px] text-on-surface-variant">arrow_drop_down</span></div><div class="relative flex-1 max-w-md"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span><input class="w-full pl-9 pr-4 py-1.5 rounded-lg bg-surface-container-lowest font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]" placeholder="Search Trace ID / User / Action..." type="search"></div></div><div class="flex items-center gap-space-md"><div class="px-2.5 py-1 rounded-full bg-secondary-container flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="font-label-sm text-label-sm font-semibold text-on-secondary-fixed-variant uppercase tracking-wider">HỆ THỐNG KIỂM TOÁN PHÁP LÝ (READ-ONLY)</span></div><div class="flex items-center gap-space-xs"><button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span></button><button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">settings</span></button></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="flex flex-col text-right"><span class="font-label-md text-label-md text-on-surface font-semibold leading-tight">Kỹ sư Hoàng</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight">PM Giám sát / Ban GLDA</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="relative pt-16 bg-surface min-h-screen" style="background-color: rgb(248, 249, 250) !important;"><div class="flex flex-col w-full">
+<!-- Content Area Wrapper -->
+<div class="p-margin-lg flex flex-col gap-space-lg max-w-[1720px] mx-auto w-full">
+<!-- Top Breadcrumb & Status Ribbon -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<nav class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[16px]">home</span>
+          Trang chủ
+        </a>
+<span class="">/</span>
+<a class="hover:text-primary transition-colors" href="#">Báo cáo</a>
+<span class="">/</span>
+<span class="text-on-surface font-semibold">Nhật ký kiểm toán (Audit Trail)</span>
+</nav>
+<!-- System Integrity Indicator -->
+<div class="flex items-center gap-space-xs px-3 py-1.5 rounded-full bg-[#EDF7ED] text-[#1B5E20] shadow-sm">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1B5E20] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#1B5E20]"></span>
+</span>
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span class="font-stationing-mono text-[12px] uppercase tracking-wide">HỆ THỐNG GHI NHẬN TOÀN VẸN (100% SHA-256 Verified)</span>
+</div>
+</div>
+<!-- Header Section -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<div class="flex flex-col gap-1 max-w-4xl">
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 rounded-full bg-primary/10 text-primary font-stationing-mono text-[11px] tracking-wider uppercase font-semibold border border-primary/20">Mã báo cáo: RPT-10</span>
+<span class="px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm uppercase border border-[#E2E5E9]">Cấp độ truy cập: READ-ONLY AUDIT</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-on-surface tracking-tight font-sansation">Nhật ký kiểm toán &amp; Truy vết chuỗi khối hệ thống (RPT-10)</h1>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">Hộp đen ghi nhận mọi thao tác biên tập dữ liệu, bảo mật bằng chuỗi mã băm SHA-256 bất biến phục vụ thanh tra.</p>
+</div>
+<!-- Action Group -->
+<div class="flex items-center gap-space-sm shrink-0">
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-lg text-label-lg hover:bg-surface-container-high transition-colors shadow-sm" type="button" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; font-family: Sansation, sans-serif !important; border-radius: 10px !important;">
+<span class="material-symbols-outlined text-[20px] text-primary">gavel</span>
+<span class="">Xác thực chuỗi Hash</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary-container text-on-primary-container font-label-lg text-label-lg hover:opacity-95 transition-opacity shadow-sm" type="button" style="background-color: #C9A227 !important; border: 1px solid #C9A227 !important; color: #FFFFFF !important; font-family: 'Sansation', sans-serif !important; border-radius: 10px !important;">
+<span class="material-symbols-outlined text-[20px]">file_download</span>
+<span class="">Xuất nhật ký kiểm toán (CSV/PDF)</span>
+</button>
+</div>
+</div>
+<!-- 3 Summary Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Metric 1 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Tổng số bản ghi (Log Volume)</span>
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface tracking-tight font-sansation">14,820</span>
+</div>
+<div class="w-12 h-12 rounded-xl bg-secondary-container/60 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[26px]">database</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-sm flex flex-col gap-1.5">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-[#1B5E20]">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+<span class="font-semibold">+142 thao tác</span>
+<span class="text-on-surface-variant font-normal">trong 24h qua</span>
+</div>
+<span class="font-stationing-mono text-stationing-mono text-on-surface-variant text-[12px]">
+            100% bản ghi bất biến (Immutable Ledger)
+          </span>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Thao tác nhạy cảm (Critical)</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface tracking-tight font-sansation">18</span>
+<span class="px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#D97706] font-label-sm text-label-sm font-semibold">Triage Cao</span>
+</div>
+</div>
+<div class="w-12 h-12 rounded-xl bg-[#FEF3C7] flex items-center justify-center text-[#D97706]">
+<span class="material-symbols-outlined text-[26px]">warning</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-sm flex flex-col gap-1.5">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">verified</span>
+<span class="font-medium">Đã ký số điện tử Viettel-CA xác thực</span>
+</div>
+<span class="font-stationing-mono text-stationing-mono text-on-surface-variant text-[12px] truncate">
+            Khóa tuyến (WF-02), Từ chối gói (WF-07), Đình chỉ TK
+          </span>
+</div>
+</div>
+<!-- Metric 3 -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col justify-between" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Xung đột &amp; Lỗi 412 (Concurrency)</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface tracking-tight font-sansation">04</span>
+<span class="px-2 py-0.5 rounded-full bg-[#EAF4FB] text-[#2B78C5] font-label-sm text-label-sm font-semibold">Diff Merged</span>
+</div>
+</div>
+<div class="w-12 h-12 rounded-xl bg-[#EAF4FB] flex items-center justify-center text-[#2B78C5]">
+<span class="material-symbols-outlined text-[26px]">call_merge</span>
+</div>
+</div>
+<div class="pt-space-md mt-space-sm flex flex-col gap-1.5">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-[#2B78C5]">
+<span class="material-symbols-outlined text-[16px]">history_toggle_off</span>
+<span class="font-semibold">Snapshot tự động phục hồi</span>
+<span class="text-on-surface-variant font-normal">không mất mát</span>
+</div>
+<span class="font-stationing-mono text-stationing-mono text-on-surface-variant text-[12px]">
+            Precondition Failed (HTTP 412) - Đã đối soát
+          </span>
+</div>
+</div>
+</div>
+<!-- Filter Bar Container -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col gap-space-md" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-sm">
+<!-- Filter 1: Actor -->
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Người thao tác (Actor)</label>
+<div class="relative">
+<select class="w-full h-10 px-3 pr-8 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer">
+<option value="all">Tất cả nhân sự &amp; Bot</option>
+<option value="hoang">Đỗ Quốc Hoàng (PM Chính)</option>
+<option selected="" value="an">Nguyễn Văn An (Supervisor)</option>
+<option value="hung">Lê Văn Hùng (Crew Lead)</option>
+<option value="duc">Phạm Văn Đức (Drone Pilot)</option>
+<option value="ai">Hệ thống AI (RoadDefect-Engine v3.2)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
+<!-- Filter 2: Action Group -->
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Nhóm hành động (Action Type)</label>
+<div class="relative">
+<select class="w-full h-10 px-3 pr-8 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer">
+<option value="all">Tất cả hành động</option>
+<option value="lock_align">Khóa tim tuyến (ALIGNMENT_LOCK)</option>
+<option value="approve_pkg">Phê duyệt gói (APPROVE_PACKAGE)</option>
+<option value="defect_accept">Nghiệm thu đóng lỗi (DEFECT_ACCEPT)</option>
+<option value="reject_prop">Từ chối gói đề xuất (REJECT_PROPOSAL)</option>
+<option value="legal_hold">Kích hoạt Legal Hold (LEGAL_HOLD_ON)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
+<!-- Filter 3: Entity Type -->
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Thực thể tác động (Entity)</label>
+<div class="relative">
+<select class="w-full h-10 px-3 pr-8 rounded-lg bg-surface-container-low text-on-surface font-body-sm text-body-sm focus:outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer">
+<option value="all">Tất cả thực thể</option>
+<option value="defect">Defect (Khiếm khuyết hư hại)</option>
+<option value="proposal">Proposal (Gói sửa chữa)</option>
+<option value="alignment">Alignment (Tim tuyến WGS84)</option>
+<option value="policy">Policy (Chính sách Fast-Track)</option>
+<option value="account">Account (Tài khoản người dùng)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">expand_more</span>
+</div>
+</div>
+<!-- Filter 4: Date Range -->
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-semibold">Khoảng thời gian kiểm toán</label>
+<div class="relative">
+<input class="w-full h-10 pl-9 pr-3 rounded-lg bg-surface-container-low text-on-surface font-stationing-mono text-[12px] focus:outline-none cursor-pointer" readonly="" type="text" value="20/08/2026 00:00 - 25/08/2026 23:59">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">calendar_today</span>
+</div>
+</div>
+</div>
+<!-- Quick chips & Apply buttons -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-on-surface-variant pr-1">Lọc nhanh:</span>
+<button class="px-3 py-1 rounded-full bg-surface-container-high hover:bg-secondary-container text-on-surface font-label-sm text-label-sm transition-colors" type="button">24 giờ qua</button>
+<button class="px-3 py-1 rounded-full bg-surface-container-high hover:bg-secondary-container text-on-surface font-label-sm text-label-sm transition-colors" type="button">7 ngày qua</button>
+<button class="px-3 py-1 rounded-full bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold" type="button" style="background-color: rgb(201, 162, 39) !important; border: 1px solid rgb(201, 162, 39) !important; color: rgb(255, 255, 255) !important;">Tháng này (T8/2026)</button>
+<button class="px-3 py-1 rounded-full bg-[#FEF3C7] text-[#D97706] font-label-sm text-label-sm font-semibold flex items-center gap-1 hover:brightness-95" type="button">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+            Chỉ xem Thao tác nhạy cảm
+          </button>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors" type="button">
+            Đặt lại bộ lọc
+          </button>
+<button class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-label-md text-label-md font-semibold hover:opacity-95 shadow-sm" type="button" style="background-color: rgb(201, 162, 39) !important; border: 1px solid rgb(201, 162, 39) !important; color: rgb(255, 255, 255) !important; font-family: Sansation, sans-serif !important; border-radius: 10px !important;">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span class="">Áp dụng lọc dữ liệu</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Grid: Event Table (Left 8 Cols) + Diff Inspector Drawer (Right 4 Cols) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md items-start">
+<!-- Table Section (8 Columns in Desktop) -->
+<div class="xl:col-span-8 bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden flex flex-col" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<!-- Table Control / Subheader -->
+<div class="p-space-md bg-surface-container-low flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">view_list</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface font-sansation">Dòng sự kiện kiểm toán hệ thống</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-stationing-mono text-[11px]">Hiển thị 6 / 14,820</span>
+</div>
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">lock</span>
+<span class="">Chế độ kiểm toán pháp lý không thể đảo ngược</span>
+</div>
+</div>
+<!-- Dense Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/60 text-on-surface-variant font-label-md text-label-md uppercase tracking-wider">
+<th class="py-3 px-space-md font-semibold">Thời gian (GMT+7)</th>
+<th class="py-3 px-space-sm font-semibold">Người thực hiện</th>
+<th class="py-3 px-space-sm font-semibold">Hành động</th>
+<th class="py-3 px-space-sm font-semibold">Đối tượng tác động</th>
+<th class="py-3 px-space-sm font-semibold">Trace ID</th>
+<th class="py-3 px-space-sm font-semibold">IP &amp; Thiết bị</th>
+<th class="py-3 px-space-md font-semibold text-right">Biến động</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container font-body-sm text-body-sm text-on-surface">
+<!-- Row 1: Selected Row showing in Drawer -->
+<tr class="bg-surface-container-low/70 hover:bg-surface-container transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">21:42:15 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 14:42:15.892</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center text-xs">VA</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Nguyễn Văn An</span>
+<span class="font-stationing-mono text-[10px] text-primary font-medium tracking-tight">[SUPERVISOR]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-stationing-mono text-[11px] font-semibold">
+                    APPROVE_ITEM
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="Item DEF-089 (Gói PKG-2026-08)">DEF-089 (Gói PKG-08)</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">Km 1032+200 Phải</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-9f8e21a4-c7
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">14.232.18.91</div>
+<div class="text-[10px] text-on-surface-variant/80">macOS / Chrome 127</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary-container text-on-primary-container font-label-sm text-label-sm font-semibold shadow-xs" type="button">
+<span class="material-symbols-outlined text-[15px]">visibility</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">18:30:10 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 11:30:10.120</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-container text-secondary font-bold flex items-center justify-center text-xs">QH</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Đỗ Quốc Hoàng</span>
+<span class="font-stationing-mono text-[10px] text-secondary font-medium tracking-tight">[PM DỰ ÁN]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#EAF4FB] text-[#2B78C5] font-stationing-mono text-[11px] font-semibold">
+                    CLOSE_FAST_TRACK
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="Defect DEF-104 (Km 1025+400)">Defect DEF-104</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">Km 1025+400 Làn 1</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-8a2b55f1-3d
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">118.70.192.4</div>
+<div class="text-[10px] text-on-surface-variant/80">Android / Field App</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">15:15:42 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 08:15:42.441</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center text-xs">VA</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Nguyễn Văn An</span>
+<span class="font-stationing-mono text-[10px] text-primary font-medium tracking-tight">[SUPERVISOR]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#DC2626] font-stationing-mono text-[11px] font-semibold">
+                    REJECT_PROPOSAL
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="Gói PKG-2026-09 (Nứt rạn dốc)">Gói PKG-2026-09</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">Nứt rạn ta-luy âm</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-7e3d12c8-99
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">14.232.18.91</div>
+<div class="text-[10px] text-on-surface-variant/80">macOS / Chrome 127</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">11:02:18 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 04:02:18.005</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-secondary-container text-secondary font-bold flex items-center justify-center text-xs">QH</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Đỗ Quốc Hoàng</span>
+<span class="font-stationing-mono text-[10px] text-secondary font-medium tracking-tight">[PM DỰ ÁN]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#F3E8FF] text-[#7E22CE] font-stationing-mono text-[11px] font-semibold">
+                    CONFIRM_ALIGNMENT
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="Tuyến QL1A-02 (WGS84 EPSG:4326)">Tuyến QL1A-02</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">EPSG:4326 Datum VN</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-4d7e99f0-8a
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">14.232.18.91</div>
+<div class="text-[10px] text-on-surface-variant/80">macOS / Chrome 127</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">09:40:05 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 02:40:05.611</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-error-container text-error font-bold flex items-center justify-center text-xs">SYS</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Admin Hệ Thống</span>
+<span class="font-stationing-mono text-[10px] text-error font-medium tracking-tight">[LEGAL ADMIN]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#D97706] font-stationing-mono text-[11px] font-semibold">
+                    LOCK_LEGAL_HOLD
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="Hồ sơ hoàn công đợt 1 (QL1A)">Hồ sơ đợt 1 QL1A</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">Thanh tra Bộ GTVT</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-3c1a8842-fa
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">127.0.0.1</div>
+<div class="text-[10px] text-on-surface-variant/80">VPN Dedicated Node</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-space-md whitespace-nowrap">
+<div class="font-stationing-mono text-[13px] font-semibold text-on-surface">08:12:30 25/08/2026</div>
+<div class="font-stationing-mono text-[11px] text-on-surface-variant">UTC: 01:12:30.980</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest text-on-surface font-bold flex items-center justify-center text-xs">LH</div>
+<div class="flex flex-col leading-tight">
+<span class="font-label-md text-label-md font-semibold text-on-surface">Lê Văn Hùng</span>
+<span class="font-stationing-mono text-[10px] text-on-surface-variant font-medium tracking-tight">[CREW LEAD]</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-[#E0F2FE] text-[#0284C7] font-stationing-mono text-[11px] font-semibold">
+                    UPLOAD_EVIDENCE
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm">
+<div class="font-medium text-on-surface truncate max-w-[170px]" title="4 Ảnh Hiện Trường DEF-089">4 Ảnh DEF-089</div>
+<div class="text-[11px] text-on-surface-variant font-stationing-mono">EXIF GPS Validated</div>
+</td>
+<td class="py-3.5 px-space-sm whitespace-nowrap">
+<span class="font-stationing-mono text-[11px] px-2 py-1 rounded bg-surface-container text-on-surface-variant font-semibold">
+                    tr-1a4c88b2-e1
+                  </span>
+</td>
+<td class="py-3.5 px-space-sm text-[12px] text-on-surface-variant whitespace-nowrap">
+<div class="">42.115.88.23</div>
+<div class="text-[10px] text-on-surface-variant/80">iOS Field Tablet</div>
+</td>
+<td class="py-3.5 px-space-md text-right whitespace-nowrap">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">code</span>
+<span class="">Diff JSON</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Cursor-based Pagination Footer -->
+<div class="p-space-md bg-surface-container-low flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface">Hiển thị bản ghi từ <code class="font-stationing-mono font-bold text-primary">tr-9f8e21a4</code> đến <code class="font-stationing-mono font-bold text-primary">tr-1a4c88b2</code></span>
+<span class="font-stationing-mono text-[11px] text-on-surface-variant">Cursor: eyJpZCI6MTQ4MjAsInRzIjoxNzI0NjA2NTM1LCJyZXYiOiJ2MyJ9...</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors shadow-xs" type="button">
+<span class="material-symbols-outlined text-[16px]">arrow_back</span>
+<span class="">Trang trước (Prev)</span>
+</button>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container-high transition-colors shadow-xs" type="button">
+<span class="">Trang kế tiếp (Next)</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Diff Inspector Drawer Section (4 Columns in Desktop) -->
+<div class="xl:col-span-4 bg-surface-container-lowest rounded-2xl shadow-md p-space-md flex flex-col gap-space-md sticky top-20" style="background-color: rgb(255, 255, 255) !important; border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<!-- Drawer Header -->
+<div class="flex items-start justify-between pb-space-sm bg-surface-container-low/50 -m-space-md p-space-md rounded-t-2xl mb-0">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary-container font-stationing-mono text-[11px] font-bold" style="background-color: rgb(201, 162, 39) !important; color: rgb(255, 255, 255) !important; border-radius: 9999px !important; padding: 2px 10px !important;">
+                TRACE INSPECTION
+              </span>
+<span class="font-stationing-mono text-[11px] text-on-surface-variant">21:42:15 GMT+7</span>
+</div>
+<h2 class="font-headline-sm text-headline-sm font-bold text-on-surface font-sansation">Chi tiết biến động bản ghi</h2>
+<div class="flex items-center gap-1 mt-0.5">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Trace:</span>
+<span class="font-stationing-mono text-[12px] bg-surface-container px-2 py-0.5 rounded text-on-surface font-semibold">tr-9f8e21a4-c7</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors" title="Sao chép Trace ID" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+</div>
+</div>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Entity & Actor Verification Card -->
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2" style="border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Thực thể đích:</span>
+<span class="font-stationing-mono font-bold text-on-surface">WorkPackageItem (DEF-089)</span>
+</div>
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Người thẩm tra:</span>
+<span class="font-semibold text-on-surface">Nguyễn Văn An (Supervisor)</span>
+</div>
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Chữ ký số CA:</span>
+<span class="font-stationing-mono text-primary font-semibold">Viettel-CA Serial #5408-A91B</span>
+</div>
+<div class="flex items-center justify-between text-[12px]">
+<span class="text-on-surface-variant font-medium">Lý do thay đổi:</span>
+<span class="text-on-surface font-medium italic">"Nghiệm thu khối lượng đào vét bù"</span>
+</div>
+</div>
+<!-- Visual Side-by-side JSON Diff -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary">difference</span>
+              So sánh trạng thái Diff (Before / After)
+            </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">RFC-6902 Patch</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+<!-- Left: Before (Red tone) -->
+<div class="rounded-xl bg-[#FEF2F2] p-3 flex flex-col gap-1.5" style="border: 1px solid rgb(252, 165, 165) !important; border-radius: 12px !important;">
+<div class="flex items-center justify-between font-stationing-mono text-[11px] text-[#DC2626] font-bold">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">remove_circle</span>
+                  DỮ LIỆU CŨ (BEFORE)
+                </span>
+<span class="">v1.2</span>
+</div>
+<pre class="font-stationing-mono text-[11px] text-[#991B1B] leading-tight overflow-x-auto p-1 font-semibold">{
+  "status": "PENDING_APPROVAL",
+  "depth_cm": 5.0,
+  "approved_cost_vnd": 0,
+  "supervisor_signed": false
+}</pre>
+</div>
+<!-- Right: After (Green tone) -->
+<div class="rounded-xl bg-[#F0FDF4] p-3 flex flex-col gap-1.5" style="border: 1px solid rgb(134, 239, 172) !important; border-radius: 12px !important;">
+<div class="flex items-center justify-between font-stationing-mono text-[11px] text-[#16A34A] font-bold">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">add_circle</span>
+                  DỮ LIỆU MỚI (AFTER)
+                </span>
+<span class="">v1.3</span>
+</div>
+<pre class="font-stationing-mono text-[11px] text-[#166534] leading-tight overflow-x-auto p-1 font-semibold">{
+  "status": "APPROVED",
+  "depth_cm": 6.5,
+  "approved_cost_vnd": 45000000,
+  "supervisor_signed": true
+}</pre>
+</div>
+</div>
+</div>
+<!-- Merkle / Blockchain Checksum Card -->
+<div class="bg-surface-container rounded-xl p-3.5 flex flex-col gap-2" style="border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<div class="flex items-center justify-between">
+<span class="font-stationing-mono text-[11px] font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">fingerprint</span>
+              Mã băm bất biến (SHA-256 Checksum)
+            </span>
+<span class="font-stationing-mono text-[10px] px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-bold" style="border-radius: 9999px !important; padding: 2px 8px !important;">MERKLE TREE</span>
+</div>
+<div class="p-2 rounded bg-surface-container-lowest font-stationing-mono text-[11px] text-on-surface break-all select-all font-semibold">
+            e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+          </div>
+<div class="flex items-center gap-1.5 text-[#1B5E20] font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="font-semibold">Chuỗi liên kết Merkle Tree hợp lệ • Không bị can thiệp</span>
+</div>
+</div>
+<!-- Legal Disclaimer Note -->
+<div class="p-3 rounded-lg bg-surface-container-low text-on-surface-variant font-body-sm text-[12px] flex items-start gap-2 leading-relaxed" style="border: 1px solid rgb(226, 229, 233) !important; border-radius: 12px !important;">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0 mt-0.5">policy</span>
+<span class="">Bản ghi kiểm toán tuân thủ quy chuẩn lưu trữ hồ sơ công trình GTVT và Nghị định 130/2018/NĐ-CP về chữ ký số và dịch vụ chứng thực chữ ký số.</span>
+</div>
+</div>
+</div>
+</div>
+</div></main></div>
+
+
+
+</body></html>

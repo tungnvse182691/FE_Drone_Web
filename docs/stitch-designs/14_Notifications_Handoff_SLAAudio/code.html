@@ -1,0 +1,554 @@
+<!DOCTYPE html><html lang="vi"><head><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sansation:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&amp;display=swap"><style>h1, h2, h3, h4, .brand-font, button, a.btn-accent, .font-sansation { font-family: 'Sansation', sans-serif !important; } body, main { background-color: #F8F9FA !important; }</style><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "tertiary": "#695587", "on-surface": "#151c27", "on-secondary-container": "#596373", "secondary-container": "#d6e0f3", "inverse-primary": "#cfc97c", "surface-bright": "#f9f9ff", "primary-fixed-dim": "#cfc97c", "surface-dim": "#d3daea", "tertiary-container": "#826da1", "on-tertiary-fixed-variant": "#513d6e", "secondary-fixed": "#d9e3f6", "on-tertiary": "#ffffff", "primary-container": "#7d7935", "outline": "#7a7768", "inverse-on-surface": "#ebf1ff", "on-error-container": "#93000a", "on-secondary-fixed-variant": "#3d4756", "on-background": "#151c27", "inverse-surface": "#2a313d", "surface-container": "#e7eefe", "surface-tint": "#64601f", "tertiary-fixed": "#ecdcff", "primary": "#64601f", "background": "#f9f9ff", "on-secondary": "#ffffff", "on-surface-variant": "#49473a", "on-secondary-fixed": "#121c2a", "on-primary": "#ffffff", "primary-fixed": "#ebe695", "surface-container-high": "#e2e8f8", "secondary": "#555f6f", "on-error": "#ffffff", "error-container": "#ffdad6", "surface-variant": "#dce2f3", "outline-variant": "#cac7b5", "on-primary-fixed": "#1e1c00", "surface-container-lowest": "#ffffff", "surface": "#f9f9ff", "surface-container-low": "#f0f3ff", "on-primary-fixed-variant": "#4c4807", "tertiary-fixed-dim": "#d4bcf6", "on-tertiary-container": "#ffffff", "secondary-fixed-dim": "#bdc7d9", "error": "#ba1a1a", "on-primary-container": "#ffffff", "on-tertiary-fixed": "#24113f", "surface-container-highest": "#dce2f3" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "gutter-lg": "1.5rem", "margin-md": "1.5rem", "space-sm": "0.5rem", "gutter": "1rem", "space-xs": "0.25rem", "space-lg": "1.5rem", "space-xl": "2rem", "space-md": "1rem", "margin-lg": "2rem", "space-2xl": "3rem", "margin": "1rem" }, "fontFamily": { "body-sm": [ "Inter" ], "headline-xl-mobile": [ "Inter" ], "label-lg": [ "Inter" ], "headline-lg-mobile": [ "Inter" ], "stationing-mono": [ "Inter" ], "headline-xl": [ "Inter" ], "label-md": [ "Inter" ], "body-lg": [ "Inter" ], "label-sm": [ "Inter" ], "body-md": [ "Inter" ], "headline-lg": [ "Inter" ], "headline-md": [ "Inter" ], "headline-sm": [ "Inter" ] }, "fontSize": { "body-sm": [ "12px", { "lineHeight": "16px", "fontWeight": "400" } ], "headline-xl-mobile": [ "28px", { "lineHeight": "34px", "fontWeight": "700" } ], "label-lg": [ "14px", { "lineHeight": "20px", "fontWeight": "600" } ], "headline-lg-mobile": [ "22px", { "lineHeight": "28px", "fontWeight": "700" } ], "stationing-mono": [ "13px", { "lineHeight": "18px", "fontWeight": "600" } ], "headline-xl": [ "36px", { "lineHeight": "44px", "fontWeight": "700" } ], "label-md": [ "12px", { "lineHeight": "16px", "fontWeight": "600" } ], "body-lg": [ "16px", { "lineHeight": "24px", "fontWeight": "400" } ], "label-sm": [ "11px", { "lineHeight": "14px", "fontWeight": "500" } ], "body-md": [ "14px", { "lineHeight": "20px", "fontWeight": "400" } ], "headline-lg": [ "28px", { "lineHeight": "36px", "fontWeight": "700" } ], "headline-md": [ "20px", { "lineHeight": "28px", "fontWeight": "600" } ], "headline-sm": [ "16px", { "lineHeight": "24px", "fontWeight": "600" } ] } } } }</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[250px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container"><div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shrink-0" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255);"><span class="material-symbols-outlined text-[20px]">add_moderator</span></div><div class="flex flex-col min-w-0 leading-none"><span class="font-headline-sm text-headline-sm font-bold text-on-surface tracking-tight truncate brand-font">HOANG HAI INFRA</span><span class="font-label-sm text-label-sm text-on-surface-variant truncate uppercase">Civil Road Ops</span></div></div><nav class="flex flex-col gap-space-xs p-space-sm mt-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-label-lg font-bold rounded-lg shadow-sm"><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="dashboard" href="#"><span class="">Dashboard</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="du-an" href="#"><span class="">Dự án</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="doan-duong" href="#"><span class="">Đoạn đường</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="khao-sat" href="#"><span class="">Khảo sát</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="khiem-khuyet" href="#"><span class="">Khiếm khuyết</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="sua-chua" href="#"><span class="">Sửa chữa</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="bao-cao" href="#"><span class="">Báo cáo</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="notifications" href="#" style="background-color: rgb(251, 246, 233); border-left: 4px solid rgb(201, 162, 39); color: rgb(140, 111, 18); font-weight: 700; border-radius: 0px 8px 8px 0px;"><span class="flex items-center gap-space-xs"><span class="">Thông báo</span></span><span class="px-1.5 py-0.5 rounded-full bg-error text-on-error font-label-sm text-[10px] leading-tight font-bold" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255);">5</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="cau-hinh" href="#"><span class="">Cấu hình</span></a><a class="flex items-center justify-between px-space-sm py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="research-validation" href="#"><span class="">Kiểm định AI (RPT-09)</span></a></nav></div><div class="p-3 m-space-sm rounded-xl bg-surface-container-lowest shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] flex flex-col gap-2" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1B5E20] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#1B5E20]"></span></span><span class="font-label-sm text-[11px] font-bold text-on-surface-variant tracking-wider uppercase">TRẠNG THÁI HỆ THỐNG</span></div><span class="px-2 py-0.5 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-[10px] font-bold">Live WS</span></div><div class="flex flex-col gap-1 text-[12px] font-body-sm"><div class="flex items-center justify-between text-on-surface"><span class="text-on-surface-variant">Kênh thông báo:</span><span class="font-semibold text-[#1B5E20]">Hoạt động</span></div><div class="flex items-center justify-between text-on-surface"><span class="text-on-surface-variant">Đồng bộ:</span><span class="font-stationing-mono font-medium text-on-surface">Tức thì (&lt;50ms)</span></div></div></div></aside><div class="pl-[250px]"><header class="fixed top-0 left-[250px] right-0 h-16 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-gutter-lg"><div class="flex items-center gap-space-md flex-1"><div class="flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1.5 rounded-lg"><span class="material-symbols-outlined text-[18px] text-primary">near_me</span><span class="font-stationing-mono text-stationing-mono text-on-surface">QL1A - Gđ 2 (Km 1024 - 1045)</span><span class="material-symbols-outlined text-[18px] text-on-surface-variant">arrow_drop_down</span></div><div class="relative flex-1 max-w-md"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span><input class="w-full pl-9 pr-4 py-1.5 rounded-lg bg-surface-container-lowest font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]" placeholder="Tìm kiếm thông báo, phiếu việc, mã đoạn, nhân sự..." type="search"></div></div><div class="flex items-center gap-space-md"><div class="flex items-center bg-surface-container-low p-0.5 rounded-lg"><button class="px-2.5 py-1 rounded-md bg-surface-container-lowest font-label-sm text-label-sm font-semibold text-on-surface shadow-sm" type="button">[Chế độ xem: Supervisor]</button><button class="px-2.5 py-1 rounded-md text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm font-medium transition-colors" type="button">[Chế độ xem: PM]</button></div><div class="flex items-center gap-space-xs"><a class="relative w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" href="#" title="Thông báo điều phối"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1 right-1 w-4 h-4 rounded-full bg-error text-on-error font-label-sm text-[10px] leading-none font-bold flex items-center justify-center">5</span></a><button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">settings</span></button></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="flex flex-col text-right"><span class="font-label-md text-label-md text-on-surface font-semibold leading-tight">Kỹ sư Hoàng</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight">PM Giám sát / Ban QLDA</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="relative pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Content Container with strict Civil Highway Theme -->
+<div class="px-margin-lg py-space-lg flex flex-col gap-space-lg max-w-[1600px] mx-auto w-full">
+<!-- Top Breadcrumb & Quick Route Meta -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[16px]">home</span>
+<span class="">Trang chủ</span>
+</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Trung tâm thông báo &amp; Điều phối bàn giao</span>
+</div>
+<!-- Stationing & Active Project Pill -->
+<div class="flex items-center gap-space-xs bg-surface-container px-space-sm py-1 rounded-full text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-stationing-mono text-stationing-mono text-on-surface">QL1A-GĐ2 (Km 1024+000 - Km 1045+000)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant opacity-75">| Hệ thống giám sát luồng O&amp;M</span>
+</div>
+</div>
+<!-- Header Block: Visual Punch & High Contrast Priority Counters -->
+<div class="bg-surface-container-lowest rounded-2xl p-space-lg shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="flex flex-wrap items-center gap-space-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">Trung tâm thông báo &amp; Bàn giao công việc</h1>
+<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold shadow-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+            5 yêu cầu cần xử lý ngay
+          </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">Theo dõi luồng công việc đang xử lý, cảnh báo vi phạm thời hạn SLA và chuyển tiếp hồ sơ.</p>
+</div>
+<!-- Action Button Group -->
+<div class="flex items-center gap-space-sm shrink-0">
+<button class="h-10 px-4 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface font-label-md text-label-md font-semibold transition-all shadow-sm flex items-center gap-2" id="mark-all-read-btn" type="button" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); color: rgb(55, 65, 81); font-family: Sansation, sans-serif;">
+<span class="material-symbols-outlined text-[18px] text-secondary">done_all</span>
+<span class="">Đánh dấu tất cả đã đọc</span>
+</button>
+<button class="h-10 px-4 rounded-lg bg-primary-container hover:bg-primary text-on-primary-container font-label-md text-label-md font-semibold transition-colors shadow-sm flex items-center gap-2" type="button" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255); font-family: Sansation, sans-serif;">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+<span class="">Cấu hình nhận thông báo</span>
+</button>
+</div>
+</div>
+<!-- Filter Category Tabs & Quick Search Bar -->
+<div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-space-md">
+<!-- Tabs (pill-styled civil inspection look) -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-1 md:pb-0" id="notification-tabs">
+<button class="px-4 py-2 rounded-xl bg-surface-container-lowest text-on-surface font-label-md text-label-md font-semibold shadow-sm flex items-center gap-2 whitespace-nowrap" data-filter="all" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;">
+<span class="">Tất cả</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">18</span>
+</button>
+<button class="px-4 py-2 rounded-xl bg-[#FEF3C7] text-[#D97706] font-label-md text-label-md font-bold shadow-sm flex items-center gap-2 whitespace-nowrap active-tab-urgent" data-filter="action-required" style="background-color: rgb(254, 243, 199); border: 1px solid rgb(253, 230, 138); border-radius: 9999px; color: rgb(217, 119, 6);">
+<span class="material-symbols-outlined text-[18px] animate-pulse">warning</span>
+<span class="">Cần tôi xử lý (Action Required)</span>
+<span class="px-2 py-0.5 rounded-full bg-[#D97706] text-surface-container-lowest font-label-sm text-label-sm">5</span>
+</button>
+<button class="px-4 py-2 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md font-semibold shadow-sm flex items-center gap-2 whitespace-nowrap transition-colors" data-filter="handover" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;">
+<span class="material-symbols-outlined text-[18px] text-primary">sync_alt</span>
+<span class="">Bàn giao PM ↔ Supervisor</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">8</span>
+</button>
+<button class="px-4 py-2 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:text-on-surface font-label-md text-label-md font-semibold shadow-sm flex items-center gap-2 whitespace-nowrap transition-colors" data-filter="ai-system" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;">
+<span class="material-symbols-outlined text-[18px] text-tertiary">memory</span>
+<span class="">Tiến trình AI &amp; Hệ thống</span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">5</span>
+</button>
+</div>
+<!-- Search & Priority Dropdown Filter -->
+<div class="flex items-center gap-space-xs shrink-0">
+<div class="relative min-w-[240px]">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">filter_list</span>
+<input class="w-full pl-9 pr-3 py-2 bg-surface-container-lowest rounded-xl font-body-sm text-body-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary shadow-sm" id="quick-filter-input" placeholder="Tìm kiếm nhanh mã phiếu, lý trình..." type="text" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+</div>
+<select class="h-10 px-3 py-1.5 bg-surface-container-lowest rounded-xl font-label-sm text-label-sm font-semibold text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<option value="all">Mức độ: Tất cả</option>
+<option value="emergency">Khẩn cấp (EMERGENCY)</option>
+<option value="high">Ưu tiên cao (High SLA)</option>
+<option value="normal">Thông thường</option>
+</select>
+</div>
+</div>
+<!-- Main Two-Column Highway Grid Layout (70% Feed / 30% Delivery & SLA Widgets) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter-lg items-start">
+<!-- Left Column (70% - lg:col-span-8): Dynamic Handover Feed -->
+<div class="lg:col-span-8 flex flex-col gap-space-md" id="feed-container">
+<!-- NOTIFICATION 1: SUPERVISOR HANDOVER (Olive Accent) -->
+<article class="relative rounded-2xl bg-surface-container-low p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col gap-space-md" data-category="action-required handover" data-status="unread" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-2.5 h-2.5 rounded-full bg-primary-container shrink-0" title="Chưa đọc"></span>
+<span class="px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-bold tracking-wide uppercase flex items-center gap-1" style="background-color: rgb(251, 246, 233); color: rgb(140, 111, 18); border-radius: 9999px; border: 1px solid rgb(243, 232, 200);">
+<span class="material-symbols-outlined text-[14px]">published_with_changes</span>
+                BÀN GIAO TRÁCH NHIỆM
+              </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-surface-container-lowest text-on-surface font-semibold shadow-xs" style="border-radius: 9999px; border: 1px solid rgb(226, 229, 233); background-color: rgb(248, 249, 250);">
+                PKG-2026-08
+              </span>
+<span class="font-stationing-mono text-stationing-mono text-primary font-bold">
+                PRJ-QL1A-02 (Km 1024 - 1045)
+              </span>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="">15 phút trước</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+              Yêu cầu phê duyệt gói đề xuất sửa chữa đợt 3 (PKG-2026-08)
+            </h2>
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1 font-semibold text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">engineering</span>
+                PM Đỗ Quốc Hoàng
+              </span>
+<span class="">•</span>
+<span class="text-tertiary font-medium">Ban Quản lý Dự án QL1A</span>
+<span class="">•</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-stationing-mono text-stationing-mono">
+                Dự toán: 485.000.000 đ
+              </span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            PM đã hoàn thiện 12 hạng mục kỹ thuật (4 ổ gà cấp độ II, 6 nứt dọc kết cấu, 2 vị trí lún bánh xe) và khóa gói trình duyệt. Quả bóng hiện đang ở phía <span class="font-semibold text-on-surface">Supervisor</span> để thẩm định hiện trường và ký số ban hành lệnh thi công.
+          </p>
+<!-- SLA Commitment Strip -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm p-space-sm rounded-xl bg-surface-container-lowest">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary-container">timer</span>
+<span class="font-label-sm text-label-sm text-on-surface">SLA cam kết phản hồi: <strong class="text-primary">còn 13h 45m</strong></span>
+<div class="w-24 h-1.5 rounded-full bg-surface-container-high overflow-hidden ml-2">
+<div class="h-full bg-primary-container w-[65%] rounded-full" style="background-color: rgb(201, 162, 39);"></div>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface transition-colors" type="button">Để sau</button>
+<a class="px-3 py-1.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary-container font-label-sm text-label-sm font-bold flex items-center gap-1 shadow-sm transition-colors" href="#" title="Deep link tới /p/PRJ-QL1A-02/proposals/PKG-2026-08" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255); font-family: Sansation, sans-serif;">
+<span class="">Mở màn hình duyệt WF-07</span>
+<span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+</div>
+</div>
+</article>
+<!-- NOTIFICATION 2: CRITICAL EMERGENCY / SLA ALERT (Red Accent) -->
+<article class="relative rounded-2xl bg-surface-container-low p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col gap-space-md" data-category="action-required emergency" data-status="unread" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-2.5 h-2.5 rounded-full bg-error shrink-0 animate-ping" title="Khẩn cấp"></span>
+<span class="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-bold tracking-wide uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">emergency</span>
+                EMERGENCY - CẢNH BÁO KHẨN CẤP
+              </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-error-container text-error font-bold shadow-xs" style="border-radius: 9999px;">
+                Km 1025+800 Làn 1 (Vmax: 80km/h)
+              </span>
+<span class="font-stationing-mono text-stationing-mono text-on-surface-variant font-medium" style="border-radius: 9999px; padding: 2px 8px; background-color: rgb(243, 244, 246);">DEF-104</span>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-error font-bold shrink-0">
+<span class="material-symbols-outlined text-[16px]">hourglass_top</span>
+<span class="">25 phút trước</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-sm text-headline-sm text-error font-bold flex items-center gap-2">
+<span class="">Cảnh báo khẩn: Phản ánh ổ gà nghiêm trọng nguy cơ tai nạn (DEF-104)</span>
+</h2>
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-error">phone_iphone</span>
+                Tin báo công dân (Citizen Mobile App)
+              </span>
+<span class="">•</span>
+<span class="text-error font-semibold">Triage Khẩn Cấp O&amp;M</span>
+</div>
+</div>
+<!-- Technical Context Block with Visual Defect Preview Box -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-space-md bg-surface-container-lowest p-space-md rounded-xl" style="background-color: rgb(248, 249, 250); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="md:col-span-1 rounded-lg overflow-hidden relative aspect-video md:aspect-auto">
+<img class="w-full h-full object-cover rounded-lg" data-alt="High-contrast road defect photograph showing a severe asphalt pothole of depth 7.5cm in the middle of a national highway driving lane under daytime overcast civil engineering conditions with a survey scale ruler placed nearby" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQju4Jck14GKcmLAOINeIhDMPqQg1w_Jb7DBZ_TfEYE8HHnFJreUF6VwAlIVwotjHI4vG9l4Gmn3FkDYRZVN4zI8MhY7dElGCm__e6b8iPyj9tLpelooM4b7QwUE178uLS9WMsz_YZaiRt-4dEytPPNjPbLFu87H4CyUuGGi0Z7m8G8IAF_G7jhLnvbOUndnvITdd8V550Z8zpDqlmXJ2_VkwcVWd_z_oFlP8fWwhli21vng4v0kY04A">
+<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-surface/80 text-on-surface font-stationing-mono text-[10px] font-bold" style="border-radius: 9999px;">7.5cm Depth</span>
+</div>
+<div class="md:col-span-3 flex flex-col justify-between gap-space-xs">
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                Khiếm khuyết được xếp cấp độ <strong class="text-error">EMERGENCY</strong> do độ sâu vượt ngưỡng 7.5cm trên làn xe cơ giới tốc độ 80km/h. Cần phân công ngay đội tuần tra phản ứng nhanh và ban hành lệnh cảnh báo giao thông trong vòng 2 giờ.
+              </p>
+<div class="flex items-center gap-space-sm text-error font-label-sm text-label-sm font-bold bg-error-container/40 p-2 rounded-lg">
+<span class="material-symbols-outlined text-[18px]">timer_off</span>
+<span class="">Cảnh báo SLA: Vi phạm cam kết sau 1h 35m</span>
+</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-end gap-space-xs">
+<button class="px-3 py-2 rounded-lg bg-surface-container-lowest hover:bg-error-container text-error font-label-sm text-label-sm font-semibold transition-colors" type="button">
+              Giao nhanh đội tuần tra
+            </button>
+<a class="px-4 py-2 rounded-lg bg-error hover:bg-error/90 text-on-error font-label-sm text-label-sm font-bold flex items-center gap-1.5 shadow-sm transition-colors" href="#" title="Deep link tới WF-04 Defect DEF-104">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+<span class="">Mở Triage tiếp nhận (WF-04)</span>
+</a>
+</div>
+</article>
+<!-- NOTIFICATION 3: PM HANDOVER (Blue Accent) -->
+<article class="relative rounded-2xl bg-surface-container-low p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col gap-space-md" data-category="action-required handover" data-status="unread" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary shrink-0" title="Chưa đọc"></span>
+<span class="px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm font-bold tracking-wide uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timeline</span>
+                TIM TUYẾN ĐÃ DUYỆT (CONFIRMED)
+              </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-surface-container-lowest text-on-surface font-semibold shadow-xs" style="border-radius: 9999px; border: 1px solid rgb(226, 229, 233); background-color: rgb(248, 249, 250);">
+                CT-GEO-884
+              </span>
+<span class="font-stationing-mono text-stationing-mono text-secondary font-bold" style="border-radius: 9999px; padding: 2px 8px; background-color: rgb(241, 245, 249);">
+                WGS84 EPSG:4326
+              </span>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="">1 giờ trước</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-bold">
+              Supervisor đã xác nhận khóa tim tuyến QL1A (CONFIRMED)
+            </h2>
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1 font-semibold text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-secondary">verified_user</span>
+                Supervisor Nguyễn Văn An
+              </span>
+<span class="">•</span>
+<span class="">Tổ Kỹ thuật &amp; Trắc địa Vùng 2</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            Hình học tim tuyến v1.2 đã được kiểm định trắc địa và khóa bất biến kèm chữ ký số SHA-256 (Mã tim <code class="font-stationing-mono text-stationing-mono bg-surface-container px-1 py-0.5 rounded font-bold">CT-GEO-884</code>). Quản lý dự án (PM) hiện có toàn quyền phân bổ 5 Segment lý trình và điều phối nhiệm vụ bay Drone Baseline.
+          </p>
+<div class="flex flex-wrap items-center justify-between gap-space-sm p-space-sm rounded-xl bg-surface-container-lowest">
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px] text-secondary">fingerprint</span>
+<span class="">Chữ ký số hợp chuẩn: 0x89A...EF42 (Thời hạn 2026-2028)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface transition-colors" type="button">
+                Xem chứng thư WGS84
+              </button>
+<a class="px-3 py-1.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary-container font-label-sm text-label-sm font-bold flex items-center gap-1 shadow-sm transition-colors" href="#" title="Deep link tới /segments" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255); font-family: Sansation, sans-serif;">
+<span class="">Chuyển tới chia Segment (WF-02)</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</article>
+<!-- NOTIFICATION 4: AI INFERENCE PROGRESS (Green / Eco Engineering Accent) -->
+<article class="relative rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col gap-space-md opacity-90" data-category="ai-system" data-status="read" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-label-sm font-bold tracking-wide uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">psychology</span>
+                AI INFERENCE SUCCESS
+              </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-surface-container-low text-on-surface font-semibold" style="border-radius: 9999px; border: 1px solid rgb(226, 229, 233);">
+                #JOB-VAL-8821
+              </span>
+<span class="font-stationing-mono text-stationing-mono text-[#1B5E20] font-semibold" style="border-radius: 9999px; padding: 2px 8px; background-color: rgb(237, 247, 237);">
+                YOLOv9-RoadCore
+              </span>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[16px]">done</span>
+<span class="">2 giờ trước</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+              Hoàn tất quét AI nhiệm vụ bay Drone QL1A-MS-04
+            </h2>
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="">Hệ thống suy luận phân tích hình ảnh độ phân giải cao</span>
+<span class="">•</span>
+<span class="font-stationing-mono text-stationing-mono">1,920 Frames 4K Processed</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            Mô hình Road-YOLOv9-Core phân tích hoàn tất chuỗi video từ Drone Matrice 300 RTK. Phát hiện 8 khiếm khuyết tiềm năng gồm 4 nứt dọc, 3 nứt mỏi, 1 ổ gà mới phát sinh. Kết quả đã tổng hợp sẵn sàng cho phiên rà soát xác thực.
+          </p>
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<!-- Inline Mini Stat Chips -->
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 rounded-md bg-surface-container font-label-sm text-label-sm text-on-surface font-medium">Độ chính xác: 98.4%</span>
+<span class="px-2 py-1 rounded-md bg-surface-container font-label-sm text-label-sm text-on-surface font-medium">Bán kính quét: 2.1 Km</span>
+</div>
+<a class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-[#EDF7ED] text-[#1B5E20] font-label-sm text-label-sm font-bold flex items-center gap-1 transition-colors" href="#" title="Deep link tới WF-09 AI Review" style="background-color: rgb(251, 246, 233); border: 1px solid rgb(201, 162, 39); color: rgb(140, 111, 18); font-family: Sansation, sans-serif;">
+<span class="">Vào rà soát AI Review (WF-09)</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</article>
+<!-- NOTIFICATION 5: SITE INSPECTION HANDOVER (Purple Accent) -->
+<article class="relative rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm hover:shadow-md transition-all flex flex-col gap-space-md opacity-90" data-category="handover" data-status="read" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-center gap-space-xs flex-wrap">
+<span class="px-2.5 py-1 rounded-full bg-[#F3E8FF] text-[#7E22CE] font-label-sm text-label-sm font-bold tracking-wide uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">photo_camera</span>
+                NGHIỆM THU BEFORE / AFTER
+              </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-surface-container-low text-on-surface font-semibold" style="border-radius: 9999px; border: 1px solid rgb(226, 229, 233);">
+                PKG-2026-07
+              </span>
+<span class="font-stationing-mono text-stationing-mono text-tertiary font-bold" style="border-radius: 9999px; padding: 2px 8px; background-color: rgb(243, 232, 255);">
+                Km 1033+500
+              </span>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant shrink-0">
+<span class="material-symbols-outlined text-[16px]">done</span>
+<span class="">4 giờ trước</span>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">
+              Đội thi công đã nộp ảnh nghiệm thu vá dặm gói PKG-2026-07
+            </h2>
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-tertiary">badge</span>
+                Crew Lead: Lê Văn Hùng
+              </span>
+<span class="">•</span>
+<span class="">Thiết bị: Mobile Crew Tablet (GPS EXIF Validated)</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            Đã hoàn thành thi công cào bóc thảm bê tông nhựa polime tại Km 1033+500. Đã tải lên 8 ảnh đối chứng Before/After tích hợp siêu dữ liệu trắc địa, đủ điều kiện để Supervisor tiến hành đối chiếu và ký biên bản nghiệm thu đợt.
+          </p>
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Trạng thái dữ liệu ảnh:</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-[#1B5E20] font-label-sm text-label-sm font-bold" style="border-radius: 9999px; padding: 3px 10px; background-color: rgb(237, 247, 237);">Đã kiểm tra EXIF tọa độ</span>
+</div>
+<a class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold flex items-center gap-1 transition-colors" href="#" title="Deep link tới WF-08 Nghiệm thu" style="border: 1px solid rgb(226, 229, 233); background-color: rgb(255, 255, 255); font-family: Sansation, sans-serif;">
+<span class="">Mở nghiệm thu WF-08</span>
+<span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+</a>
+</div>
+</article>
+</div>
+<!-- Right Column (30% - lg:col-span-4): Sticky Dispatch Controls & Responsibility Radar -->
+<aside class="lg:col-span-4 flex flex-col gap-space-lg sticky top-20">
+<!-- CARD 1: DELIVERY CHANNELS TOGGLE SWITCHES -->
+<div class="rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm flex flex-col gap-space-md" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-center gap-space-xs">
+<div class="w-8 h-8 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center shrink-0" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255);">
+<span class="material-symbols-outlined text-[18px]">cell_tower</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold leading-tight">Kênh nhận thông báo</h3>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tùy biến cảnh báo theo cấp độ rủi ro</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-md pt-space-xs">
+<!-- Toggle 1: Web Push -->
+<div class="flex items-start justify-between gap-space-sm p-3 rounded-xl bg-surface-container-low">
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">notifications_active</span>
+                  Web Push Dashboard
+                </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ưu tiên cảnh báo bàn giao tức thì</span>
+</div>
+<!-- Simulated Interactive Toggle (ON) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container" style="background-color: rgb(201, 162, 39);"></div>
+</label>
+</div>
+<!-- Toggle 2: Email công vụ -->
+<div class="flex items-start justify-between gap-space-sm p-3 rounded-xl bg-surface-container-low">
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">mail</span>
+                  Email công vụ
+                </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">hoang.ks@hoanghai-infra.vn</span>
+<span class="font-label-sm text-[11px] text-on-surface-variant italic">Bản tin tóm tắt &amp; Biên bản duyệt</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container" style="background-color: rgb(201, 162, 39);"></div>
+</label>
+</div>
+<!-- Toggle 3: Telegram Bot -->
+<div class="flex items-start justify-between gap-space-sm p-3 rounded-xl bg-surface-container-low">
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md font-semibold text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">send</span>
+                  Telegram Bot Kỹ thuật
+                </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">@HoangHai_OpsBot</span>
+<span class="font-stationing-mono text-stationing-mono text-primary font-bold">Đã gắn ID: #TG-8921</span>
+<span class="font-label-sm text-[11px] text-error font-medium">Bật cảnh báo SLA &lt; 2h &amp; Sự cố Drone</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container" style="background-color: rgb(201, 162, 39);"></div>
+</label>
+</div>
+</div>
+<button class="w-full py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md font-semibold transition-colors mt-space-xs" type="button" style="background-color: rgb(201, 162, 39); color: rgb(255, 255, 255); font-family: Sansation, sans-serif;">
+            Lưu tùy chỉnh nhận tin
+          </button>
+</div>
+<!-- CARD 2: HANDOVER RESPONSIBILITY RADAR ("AI ĐANG GIỮ QUẢ BÓNG") -->
+<div class="rounded-2xl bg-surface-container-lowest p-space-lg shadow-sm flex flex-col gap-space-md" style="background-color: rgb(255, 255, 255); border: 1px solid rgb(226, 229, 233); border-radius: 12px;">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[20px] text-primary">sports_handball</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-bold">Luồng trách nhiệm</h3>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm font-semibold text-on-surface-variant" style="background-color: rgb(243, 244, 246); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;">Realtime</span>
+</div>
+<div class="text-body-sm text-on-surface-variant">
+            Xác định vị trí tồn đọng hồ sơ theo đầu mối ra quyết định để tránh điểm nghẽn dự án.
+          </div>
+<!-- Who Has The Ball Breakdown -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<!-- Supervisor Side -->
+<div class="p-space-sm rounded-xl bg-surface-container-low flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-primary-container" style="background-color: rgb(243, 244, 246); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;"></span>
+                  Chờ Supervisor duyệt
+                </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-bold" style="background-color: rgb(251, 246, 233); color: rgb(140, 111, 18); border: 1px solid rgb(243, 232, 200); border-radius: 9999px;">
+                  2 việc
+                </span>
+</div>
+<ul class="font-body-sm text-body-sm text-on-surface-variant flex flex-col gap-1 pl-3.5 list-disc">
+<li class="">Gói đề xuất sửa chữa <span class="font-semibold text-on-surface">PKG-2026-08</span></li>
+<li class="">Nghiệm thu ảnh hiện trường <span class="font-semibold text-on-surface">WF-08 (Km 1033)</span></li>
+</ul>
+</div>
+<!-- PM Side -->
+<div class="p-space-sm rounded-xl bg-surface-container-low flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary" style="background-color: rgb(243, 244, 246); border: 1px solid rgb(226, 229, 233); border-radius: 9999px;"></span>
+                  Chờ PM xử lý
+                </span>
+<span class="font-stationing-mono text-stationing-mono px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-bold" style="border-radius: 9999px;">
+                  3 việc
+                </span>
+</div>
+<ul class="font-body-sm text-body-sm text-on-surface-variant flex flex-col gap-1 pl-3.5 list-disc">
+<li class="">Chia 5 Segment lý trình tim tuyến <span class="font-semibold text-on-surface">WF-02</span></li>
+<li class="">Gán việc đo đạc địa kỹ thuật đợt 2</li>
+<li class="">Triage phản ánh ổ gà <span class="font-semibold text-error">DEF-104</span></li>
+</ul>
+</div>
+</div>
+<!-- SLA Compliance Rate Mini Gauge Component -->
+<div class="pt-space-sm flex flex-col gap-2">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant font-medium">Tỷ lệ phản hồi trong SLA tháng này</span>
+<span class="font-stationing-mono text-stationing-mono font-bold text-[#1B5E20]">94.2%</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden flex">
+<div class="h-full bg-primary-container" style="width: 82%; background-color: rgb(201, 162, 39);"></div>
+<div class="h-full bg-secondary" style="width: 12.2%;"></div>
+<div class="h-full bg-error" style="width: 5.8%;"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-on-surface-variant font-label-sm pt-0.5">
+<span class="">Đạt chuẩn bảo trì đường bộ (Mục tiêu &gt; 92%)</span>
+<span class="text-primary font-semibold">Chuẩn O&amp;M Quốc gia</span>
+</div>
+</div>
+<!-- Quick Action to Detailed Report -->
+<button class="w-full py-2 rounded-lg bg-surface-container hover:bg-surface-container-high font-label-sm text-label-sm text-on-surface font-semibold flex items-center justify-center gap-1 transition-colors" type="button" style="background-color: #FBF6E9; border: 1px solid #C9A227; color: #8C6F12; font-family: 'Sansation', sans-serif;">
+<span class="">Xem phân tích điểm nghẽn SLA</span>
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+</button>
+</div>
+</aside>
+</div>
+</div>
+</div>
+<script>
+  (function () {
+    // Client-side interactions for tabs & live filter responsiveness
+    const tabs = document.querySelectorAll('#notification-tabs button');
+    const articles = document.querySelectorAll('#feed-container article');
+    const markAllBtn = document.getElementById('mark-all-read-btn');
+    const filterInput = document.getElementById('quick-filter-input');
+
+    // Tab Filtering
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => {
+          t.classList.remove('bg-primary-container', 'text-on-primary-container', 'font-bold');
+        });
+
+        const filter = tab.getAttribute('data-filter');
+        
+        articles.forEach(article => {
+          const category = article.getAttribute('data-category') || '';
+          if (filter === 'all' || category.includes(filter)) {
+            article.style.display = 'flex';
+          } else {
+            article.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Mark All As Read
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', () => {
+        articles.forEach(article => {
+          article.setAttribute('data-status', 'read');
+          article.classList.remove('bg-surface-container-low');
+          article.classList.add('bg-surface-container-lowest', 'opacity-90');
+          const unreadDot = article.querySelector('.w-2\\.5.h-2\\.5');
+          if (unreadDot) {
+            unreadDot.remove();
+          }
+        });
+        markAllBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] text-[#1B5E20]">check_circle</span><span>Đã xử lý tất cả</span>';
+        markAllBtn.disabled = true;
+      });
+    }
+
+    // Quick text filter search
+    if (filterInput) {
+      filterInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        articles.forEach(article => {
+          const text = article.innerText.toLowerCase();
+          if (text.includes(query)) {
+            article.style.display = 'flex';
+          } else {
+            article.style.display = 'none';
+          }
+        });
+      });
+    }
+  })();
+</script></main></div>
+
+
+
+</body></html>
