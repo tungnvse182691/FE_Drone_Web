@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   SplitSquareVertical,
   Sliders,
@@ -97,9 +97,9 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
                 : 'text-slate-500 hover:text-brand-dark'
             }`}
           >
-            <SplitSquareVertical className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span className="truncate">Phân đoạn</span>
-            <span className="text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-[#C9A227]">
+            <SplitSquareVertical className="w-3.5 h-3.5 text-brand-gold" />
+            <span className="truncate">PhÃ¢n Ä‘oáº¡n</span>
+            <span className="text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-brand-gold">
               {segments.length}
             </span>
           </button>
@@ -112,8 +112,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
                 : 'text-slate-500 hover:text-brand-dark'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span className="truncate">Bề rộng (m)</span>
+            <Sliders className="w-3.5 h-3.5 text-brand-gold" />
+            <span className="truncate">Bá» rá»™ng (m)</span>
             <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
               v2.2
             </span>
@@ -127,8 +127,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
                 : 'text-slate-500 hover:text-brand-dark'
             }`}
           >
-            <Grid className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span className="truncate">Tấm & Khe</span>
+            <Grid className="w-3.5 h-3.5 text-brand-gold" />
+            <span className="truncate">Táº¥m & Khe</span>
             <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
               TCVN
             </span>

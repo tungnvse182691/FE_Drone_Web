@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { SegmentItem } from './types'
 
@@ -21,28 +21,28 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
           <span className="text-sm font-bold text-brand-dark font-mono">
             {displayLen >= 1
               ? `${displayLen.toFixed(displayLen >= 10 ? 1 : 2)} km`
-              : `${Math.round(displayLen * 1000)} mét`}
+              : `${Math.round(displayLen * 1000)} mÃ©t`}
           </span>
-          <span className="text-[10px] text-slate-500">Tổng chiều dài</span>
+          <span className="text-[10px] text-slate-500">Tá»•ng chiá»u dÃ i</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-brand-dark font-mono">{segments.length} đoạn</span>
-          <span className="text-[10px] text-slate-500">Phân đoạn</span>
+          <span className="text-sm font-bold text-brand-dark font-mono">{segments.length} Ä‘oáº¡n</span>
+          <span className="text-[10px] text-slate-500">PhÃ¢n Ä‘oáº¡n</span>
         </div>
         <div className="flex flex-col">
           <span className={`text-sm font-bold font-mono ${segments.some((s) => s.hasGap) ? 'text-amber-600 animate-pulse' : 'text-emerald-600'}`}>
-            {segments.some((s) => s.hasGap) ? 'Cảnh báo hở' : 'Đạt chuẩn'}
+            {segments.some((s) => s.hasGap) ? 'Cáº£nh bÃ¡o há»Ÿ' : 'Äáº¡t chuáº©n'}
           </span>
           <span className="text-[10px] text-slate-500">
-            {segments.some((s) => s.hasGap) ? 'Cần khép kín' : 'Sẵn sàng duyệt'}
+            {segments.some((s) => s.hasGap) ? 'Cáº§n khÃ©p kÃ­n' : 'Sáºµn sÃ ng duyá»‡t'}
           </span>
         </div>
       </div>
 
       <div className="flex items-start gap-1.5 text-slate-500 text-[11px] leading-relaxed">
-        <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227] shrink-0 mt-0.5" />
+        <ShieldCheck className="w-3.5 h-3.5 text-brand-gold shrink-0 mt-0.5" />
         <span>
-          Trạng thái <strong>CONFIRMED</strong> sẽ gắn hàm băm SHA-256 bất biến phục vụ nghiệm thu bảo hành.
+          Tráº¡ng thÃ¡i <strong>CONFIRMED</strong> sáº½ gáº¯n hÃ m bÄƒm SHA-256 báº¥t biáº¿n phá»¥c vá»¥ nghiá»‡m thu báº£o hÃ nh.
         </span>
       </div>
     </div>

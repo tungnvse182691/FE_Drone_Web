@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Grid } from 'lucide-react'
 import { SlabItem } from './types'
 
@@ -39,32 +39,32 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
       <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-            <Grid className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>Cấu Hình Tấm & Khe Nối BTXM</span>
+            <Grid className="w-3.5 h-3.5 text-brand-gold" />
+            <span>Cáº¥u HÃ¬nh Táº¥m & Khe Ná»‘i BTXM</span>
           </span>
           <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
-            PM Tự chỉnh sửa
+            PM Tá»± chá»‰nh sá»­a
           </span>
         </div>
         <p className="text-[11px] text-slate-600 leading-relaxed">
-          Chỉ huy trưởng (PM) có thể tùy chỉnh kích thước từng tấm bê tông, cự ly cưa cắt khe co giãn và khe giãn nở nhiệt theo hồ sơ thiết kế thi công. Bản đồ và bảng thông số sẽ tự động cập nhật ngay lập tức.
+          Chá»‰ huy trÆ°á»Ÿng (PM) cÃ³ thá»ƒ tÃ¹y chá»‰nh kÃ­ch thÆ°á»›c tá»«ng táº¥m bÃª tÃ´ng, cá»± ly cÆ°a cáº¯t khe co giÃ£n vÃ  khe giÃ£n ná»Ÿ nhiá»‡t theo há»“ sÆ¡ thiáº¿t káº¿ thi cÃ´ng. Báº£n Ä‘á»“ vÃ  báº£ng thÃ´ng sá»‘ sáº½ tá»± Ä‘á»™ng cáº­p nháº­t ngay láº­p tá»©c.
         </p>
 
-        {/* THIẾT LẬP KÍCH THƯỚC TẤM BÊ TÔNG */}
+        {/* THIáº¾T Láº¬P KÃCH THÆ¯á»šC Táº¤M BÃŠ TÃ”NG */}
         <div className="bg-white p-2.5 rounded-lg border border-amber-200/80 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-              <span>🧱 Kích thước tấm BTXM (Dài × Dày):</span>
+              <span>ðŸ§± KÃ­ch thÆ°á»›c táº¥m BTXM (DÃ i Ã— DÃ y):</span>
             </span>
             <span className="text-[11px] font-mono font-bold text-[#8F7212] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              {slabLengthM.toFixed(1)}m × {slabThicknessCm}cm
+              {slabLengthM.toFixed(1)}m Ã— {slabThicknessCm}cm
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] font-semibold text-slate-600 block mb-1">
-                Chiều dài tấm L (m):
+                Chiá»u dÃ i táº¥m L (m):
               </label>
               <div className="relative flex items-center">
                 <input
@@ -78,15 +78,15 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                     onSetSlabLengthM(val)
                     if (syncJointWithSlab) onSetContractionSpacingM(val)
                   }}
-                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
-                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
+                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mÃ©t</span>
               </div>
             </div>
 
             <div>
               <label className="text-[10px] font-semibold text-slate-600 block mb-1">
-                Chiều dày tấm H (cm):
+                Chiá»u dÃ y táº¥m H (cm):
               </label>
               <div className="relative flex items-center">
                 <input
@@ -96,16 +96,16 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   max="45"
                   value={slabThicknessCm}
                   onChange={(e) => onSetSlabThicknessCm(parseInt(e.target.value) || 26)}
-                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
                 <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">cm</span>
               </div>
             </div>
           </div>
 
-          {/* Presets chiều dài tấm */}
+          {/* Presets chiá»u dÃ i táº¥m */}
           <div className="flex items-center gap-1 pt-0.5">
-            <span className="text-[10px] text-slate-400 font-semibold shrink-0">Mẫu L:</span>
+            <span className="text-[10px] text-slate-400 font-semibold shrink-0">Máº«u L:</span>
             {[4.0, 4.5, 5.0, 6.0].map((lVal) => (
               <button
                 key={lVal}
@@ -113,12 +113,12 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                 onClick={() => {
                   onSetSlabLengthM(lVal)
                   if (syncJointWithSlab) onSetContractionSpacingM(lVal)
-                  showToast(`Đã đổi chiều dài tấm: ${lVal}m`)
+                  showToast(`ÄÃ£ Ä‘á»•i chiá»u dÃ i táº¥m: ${lVal}m`)
                 }}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
                   slabLengthM === lVal
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
-                    : 'bg-slate-50 border border-slate-200 text-slate-700 hover:border-[#C9A227]'
+                    ? 'bg-brand-gold text-white shadow-2xs'
+                    : 'bg-slate-50 border border-slate-200 text-slate-700 hover:border-brand-gold'
                 }`}
               >
                 {lVal.toFixed(1)}m
@@ -127,16 +127,16 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
           </div>
         </div>
 
-        {/* THIẾT LẬP KHE CO GIÃN & KHE GIÃN NỞ */}
+        {/* THIáº¾T Láº¬P KHE CO GIÃƒN & KHE GIÃƒN Ná»ž */}
         <div className="bg-white p-2.5 rounded-lg border border-amber-200/80 flex flex-col gap-2">
           <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-            <span>⚡ Cự ly Khe co giãn & Khe giãn nở:</span>
+            <span>âš¡ Cá»± ly Khe co giÃ£n & Khe giÃ£n ná»Ÿ:</span>
           </span>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] font-semibold text-slate-600 block mb-1">
-                Khoảng cách Khe co (m):
+                Khoáº£ng cÃ¡ch Khe co (m):
               </label>
               <div className="relative flex items-center">
                 <input
@@ -146,15 +146,15 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   max="12.0"
                   value={contractionSpacingM}
                   onChange={(e) => onSetContractionSpacingM(parseFloat(e.target.value) || 5.0)}
-                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
-                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
+                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mÃ©t</span>
               </div>
             </div>
 
             <div>
               <label className="text-[10px] font-semibold text-slate-600 block mb-1">
-                Khoảng cách Khe giãn (m):
+                Khoáº£ng cÃ¡ch Khe giÃ£n (m):
               </label>
               <div className="relative flex items-center">
                 <input
@@ -164,28 +164,28 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   max="300"
                   value={expansionSpacingM}
                   onChange={(e) => onSetExpansionSpacingM(parseFloat(e.target.value) || 50.0)}
-                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
-                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
+                <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mÃ©t</span>
               </div>
             </div>
           </div>
 
-          {/* Presets Khe giãn nở */}
+          {/* Presets Khe giÃ£n ná»Ÿ */}
           <div className="flex items-center gap-1 pt-0.5">
-            <span className="text-[10px] text-slate-400 font-semibold shrink-0">Khe giãn:</span>
+            <span className="text-[10px] text-slate-400 font-semibold shrink-0">Khe giÃ£n:</span>
             {[30, 50, 60, 100, 150].map((expVal) => (
               <button
                 key={expVal}
                 type="button"
                 onClick={() => {
                   onSetExpansionSpacingM(expVal)
-                  showToast(`Đã đổi khoảng cách khe giãn: ${expVal}m`)
+                  showToast(`ÄÃ£ Ä‘á»•i khoáº£ng cÃ¡ch khe giÃ£n: ${expVal}m`)
                 }}
                 className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
                   expansionSpacingM === expVal
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
-                    : 'bg-slate-50 border border-slate-200 text-slate-700 hover:border-[#C9A227]'
+                    ? 'bg-brand-gold text-white shadow-2xs'
+                    : 'bg-slate-50 border border-slate-200 text-slate-700 hover:border-brand-gold'
                 }`}
               >
                 {expVal}m
@@ -193,9 +193,9 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
             ))}
           </div>
 
-          {/* Bề rộng khe giãn nhiệt mm */}
+          {/* Bá» rá»™ng khe giÃ£n nhiá»‡t mm */}
           <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-            <span className="text-[10px] text-slate-600 font-semibold">Độ hở khe giãn (mm):</span>
+            <span className="text-[10px] text-slate-600 font-semibold">Äá»™ há»Ÿ khe giÃ£n (mm):</span>
             <div className="flex items-center gap-1">
               {[15, 20, 25, 30].map((mm) => (
                 <button
@@ -203,7 +203,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   type="button"
                   onClick={() => {
                     onSetExpansionGapMm(mm)
-                    showToast(`Độ hở khe giãn: ${mm} mm`)
+                    showToast(`Äá»™ há»Ÿ khe giÃ£n: ${mm} mm`)
                   }}
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
                     expansionGapMm === mm
@@ -219,11 +219,11 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
         </div>
       </div>
 
-      {/* Bảng danh sách mã tấm Slab */}
+      {/* Báº£ng danh sÃ¡ch mÃ£ táº¥m Slab */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-bold text-brand-dark flex items-center gap-1">
-            <span>Danh Sách Tấm BTXM ({slabs.length})</span>
+            <span>Danh SÃ¡ch Táº¥m BTXM ({slabs.length})</span>
           </span>
           <span className="text-[10px] text-slate-500 font-mono">
             L = {slabLengthM}m
@@ -237,10 +237,10 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
               className="p-2 rounded-lg border border-slate-200 bg-white hover:border-amber-300 flex items-center justify-between text-xs transition-all"
             >
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227]/80 shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-gold/80 shrink-0" />
                 <div className="flex flex-col">
                   <span className="font-mono font-bold text-brand-dark text-xs">{slab.id}</span>
-                  <span className="text-[10px] text-slate-500">{slab.segmentCode} • {slab.stationing}</span>
+                  <span className="text-[10px] text-slate-500">{slab.segmentCode} â€¢ {slab.stationing}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                       : 'bg-red-50 text-red-700 border border-red-200'
                   }`}
                 >
-                  {slab.status === 'GOOD' ? 'Tốt' : slab.status === 'CRACKED' ? 'Nứt' : 'Lún'}
+                  {slab.status === 'GOOD' ? 'Tá»‘t' : slab.status === 'CRACKED' ? 'Ná»©t' : 'LÃºn'}
                 </span>
               </div>
             </div>

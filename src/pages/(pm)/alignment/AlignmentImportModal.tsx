@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { X, FileUp } from 'lucide-react'
 import { AssignedProjectOption } from './types'
 import { ImportPanel } from './ImportPanel'
@@ -35,8 +35,8 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
       <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <FileUp className="w-5 h-5 text-[#C9A227]" />
-            <h3 className="font-bold text-slate-900 text-base">Thiết Lập Tim Tuyến (WF-02 • Spec v2.2)</h3>
+            <FileUp className="w-5 h-5 text-brand-gold" />
+            <h3 className="font-bold text-slate-900 text-base">Thiáº¿t Láº­p Tim Tuyáº¿n (WF-02 â€¢ Spec v2.2)</h3>
           </div>
           <button
             onClick={onClose}

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Layers,
   Map as MapIcon,
@@ -64,19 +64,19 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               onClick={() => onSetMapLayer('SATELLITE')}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 mapLayer === 'SATELLITE'
-                  ? 'bg-[#C9A227] text-white shadow-xs'
+                  ? 'bg-brand-gold text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Ảnh vệ tinh HD</span>
+              <span>áº¢nh vá»‡ tinh HD</span>
             </button>
             <button
               type="button"
               onClick={() => onSetMapLayer('VECTOR')}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 mapLayer === 'VECTOR'
-                  ? 'bg-[#C9A227] text-white shadow-xs'
+                  ? 'bg-brand-gold text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -88,12 +88,12 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               onClick={() => onSetMapLayer('PLANNING')}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 mapLayer === 'PLANNING'
-                  ? 'bg-[#C9A227] text-white shadow-xs'
+                  ? 'bg-brand-gold text-white shadow-xs'
                   : 'text-slate-300 hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Toàn Tuyến</span>
+              <span>ToÃ n Tuyáº¿n</span>
             </button>
             <button
               type="button"
@@ -103,10 +103,10 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                   ? 'bg-amber-500 text-white shadow-xs ring-1 ring-amber-300/50'
                   : 'text-slate-400 hover:text-white'
               }`}
-              title="Bật/Tắt hiển thị lưới tấm bê tông, khe co giãn, khe giãn nở và thông số 2 mép đường"
+              title="Báº­t/Táº¯t hiá»ƒn thá»‹ lÆ°á»›i táº¥m bÃª tÃ´ng, khe co giÃ£n, khe giÃ£n ná»Ÿ vÃ  thÃ´ng sá»‘ 2 mÃ©p Ä‘Æ°á»ng"
             >
               <Grid className="w-3.5 h-3.5" />
-              <span>Tấm & Khe BTXM</span>
+              <span>Táº¥m & Khe BTXM</span>
               <span className={`w-1.5 h-1.5 rounded-full ${showSlabsAndJoints ? 'bg-white' : 'bg-slate-500'}`} />
             </button>
           </div>
@@ -114,9 +114,9 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           {/* Live Cursor Readout */}
           <div className="pointer-events-auto hidden lg:flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs text-white shadow-lg border border-slate-700/60">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>{cursorPos.lat}° N, {cursorPos.lng}° E</span>
+            <span>{cursorPos.lat}Â° N, {cursorPos.lng}Â° E</span>
             <span className="text-slate-500">|</span>
-            <span className="text-[#C9A227] font-semibold">H: {cursorPos.elevation}</span>
+            <span className="text-brand-gold font-semibold">H: {cursorPos.elevation}</span>
             <span className="text-slate-500">|</span>
             <span className="text-amber-300 font-bold">{cursorPos.station}</span>
           </div>
@@ -126,30 +126,30 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
             <button
               onClick={() => mapRef.current?.zoomIn()}
               className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="Phóng to"
+              title="PhÃ³ng to"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => mapRef.current?.zoomOut()}
               className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="Thu nhỏ"
+              title="Thu nhá»"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onToggleRuler}
               className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                rulerActive ? 'bg-[#C9A227] text-white' : 'hover:bg-slate-700'
+                rulerActive ? 'bg-brand-gold text-white' : 'hover:bg-slate-700'
               }`}
-              title="Đo khoảng cách (Ruler)"
+              title="Äo khoáº£ng cÃ¡ch (Ruler)"
             >
               <Ruler className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onSelectAllRoute}
               className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="Xem toàn tuyến / Vừa khung hình"
+              title="Xem toÃ n tuyáº¿n / Vá»«a khung hÃ¬nh"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
@@ -189,85 +189,85 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                       <span className="font-bold text-slate-100 text-xs tracking-wide uppercase flex items-center gap-1.5">
-                        <span>Mặt Cắt Ngang & Thông Số Kỹ Thuật</span>
+                        <span>Máº·t Cáº¯t Ngang & ThÃ´ng Sá»‘ Ká»¹ Thuáº­t</span>
                         <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-800/60">
                           v2.2
                         </span>
                       </span>
                     </div>
                     <span className="font-mono text-[11px] font-bold text-amber-300">
-                      {isAll ? 'Toàn tuyến' : currSeg ? currSeg.code : 'Toàn tuyến'}
+                      {isAll ? 'ToÃ n tuyáº¿n' : currSeg ? currSeg.code : 'ToÃ n tuyáº¿n'}
                     </span>
                   </div>
 
-                  {/* 1. THÔNG SỐ 2 MÉP ĐƯỜNG & BỀ RỘNG W */}
+                  {/* 1. THÃ”NG Sá» 2 MÃ‰P ÄÆ¯á»œNG & Bá»€ Rá»˜NG W */}
                   <div className="bg-slate-900/90 p-2 rounded-lg border border-slate-800 flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-slate-400 font-medium">
-                        {isAll ? 'Bề rộng mặt đường TB (W):' : 'Bề rộng mặt đường (W):'}
+                        {isAll ? 'Bá» rá»™ng máº·t Ä‘Æ°á»ng TB (W):' : 'Bá» rá»™ng máº·t Ä‘Æ°á»ng (W):'}
                       </span>
-                      <span className="font-mono font-bold text-amber-400 text-xs">{currW.toFixed(1)} mét</span>
+                      <span className="font-mono font-bold text-amber-400 text-xs">{currW.toFixed(1)} mÃ©t</span>
                     </div>
 
-                    {/* Sơ đồ mặt cắt đồ họa trực quan */}
+                    {/* SÆ¡ Ä‘á»“ máº·t cáº¯t Ä‘á»“ há»a trá»±c quan */}
                     <div className="relative mt-1 pt-4 pb-2 px-2 bg-slate-950 rounded border border-slate-800/80 flex flex-col items-center">
                       <div className="absolute top-1 inset-x-2 flex items-center justify-between text-[9px] font-mono text-emerald-400">
-                        <span>|←</span>
+                        <span>|â†</span>
                         <span className="font-bold">W = {currW.toFixed(1)}m</span>
-                        <span>→|</span>
+                        <span>â†’|</span>
                       </div>
 
                       <div className="w-full h-5 rounded flex items-center overflow-hidden border border-slate-600 bg-slate-800 text-[10px] font-mono font-bold">
                         <div className="flex-1 h-full bg-sky-950/80 border-r border-dashed border-white flex items-center justify-center text-sky-300">
-                          Làn Trái ({halfW}m)
+                          LÃ n TrÃ¡i ({halfW}m)
                         </div>
                         <div className="flex-1 h-full bg-amber-950/80 flex items-center justify-center text-amber-300">
-                          Làn Phải ({halfW}m)
+                          LÃ n Pháº£i ({halfW}m)
                         </div>
                       </div>
 
                       <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold mt-1.5 pt-1 border-t border-slate-800/80">
                         <span className="text-sky-400 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
-                          Mép Trái: -{halfW}m
+                          MÃ©p TrÃ¡i: -{halfW}m
                         </span>
                         <span className="text-slate-400 text-[9px]">CL (0.0m)</span>
                         <span className="text-amber-400 flex items-center gap-1">
-                          Mép Phải: +{halfW}m
+                          MÃ©p Pháº£i: +{halfW}m
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* 2. THÔNG SỐ TẤM BÊ TÔNG & KHE CO / KHE GIÃN NỞ */}
+                  {/* 2. THÃ”NG Sá» Táº¤M BÃŠ TÃ”NG & KHE CO / KHE GIÃƒN Ná»ž */}
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                       <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                        <span>🧱 Mã & Kích thước tấm BTXM</span>
+                        <span>ðŸ§± MÃ£ & KÃ­ch thÆ°á»›c táº¥m BTXM</span>
                       </span>
                       <span className="font-mono font-bold text-white text-xs">
-                        {slabLengthM.toFixed(1)}m × {halfW}m × {slabThicknessCm}cm
+                        {slabLengthM.toFixed(1)}m Ã— {halfW}m Ã— {slabThicknessCm}cm
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}~<strong className="text-slate-200">{estSlabs.toLocaleString()} tấm</strong> ({isAll ? 'Toàn bộ 2 làn' : 'SLAB-001L/R'})
+                        {isAll ? 'ToÃ n tuyáº¿n: ' : 'Äoáº¡n nÃ y: '}~<strong className="text-slate-200">{estSlabs.toLocaleString()} táº¥m</strong> ({isAll ? 'ToÃ n bá»™ 2 lÃ n' : 'SLAB-001L/R'})
                       </span>
                     </div>
 
                     <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                       <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                        <span>⚡ Khe co & Khe giãn nở</span>
+                        <span>âš¡ Khe co & Khe giÃ£n ná»Ÿ</span>
                       </span>
                       <span className="font-mono font-bold text-amber-400 text-[11px] flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-                        Khe giãn: {expansionGapMm}mm (mỗi {expansionSpacingM}m)
+                        Khe giÃ£n: {expansionGapMm}mm (má»—i {expansionSpacingM}m)
                       </span>
                       <span className="font-mono text-sky-400 text-[10px] flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
                         Khe co: {contractionSpacingM}m (Dowel phi 25)
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}~<strong className="text-slate-200">{estContraction.toLocaleString()} khe co</strong> • ~<strong className="text-amber-300">{estExpansion.toLocaleString()} khe giãn</strong>
+                        {isAll ? 'ToÃ n tuyáº¿n: ' : 'Äoáº¡n nÃ y: '}~<strong className="text-slate-200">{estContraction.toLocaleString()} khe co</strong> â€¢ ~<strong className="text-amber-300">{estExpansion.toLocaleString()} khe giÃ£n</strong>
                       </span>
                     </div>
                   </div>
