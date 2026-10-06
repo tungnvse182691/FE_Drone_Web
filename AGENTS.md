@@ -54,15 +54,15 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 | **07** | Hộp thư tiếp nhận lỗi do AI phát hiện | PM | `/pm/ai-inbox` | `src/pages/(pm)/AIReviewInbox.tsx` |
 | **08** | Thẩm định chi tiết lỗi AI (Bounding box) | PM | `/pm/defects/:id/verify-a` | `src/pages/(pm)/DefectDetailVerify.tsx` |
 | **09** | So sánh ảnh hư hỏng đa kỳ (Temporal) | PM | `/pm/defects/:id/verify-b` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **10** | Gom đợt sửa chữa & Lập dự toán BOQ | PM | `/pm/repair-batches/create` | `src/pages/(pm)/RepairBatching.tsx` |
-| **11** | Trình duyệt hồ sơ đợt sửa chữa | PM | `/pm/repair-batches/:id/submit` | `src/pages/(pm)/SubmitApproval.tsx` |
-| **12** | Danh sách & Thẩm duyệt đợt sửa chữa | SUP | `/sup/approvals` | `src/pages/(sup)/BatchApprovals.tsx` |
+| **10** | Gom đợt sửa chữa & Lập dự toán BOQ | PM | `/pm/proposals` (alias: `/pm/repair-batches/create`) | `src/pages/(pm)/RepairProposals.tsx` |
+| **11** | Trình duyệt hồ sơ đợt sửa chữa | PM | `/pm/proposals/:id` (alias: `/pm/repair-batches/:id/submit`) | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
+| **12** | Danh sách & Thẩm duyệt đợt sửa chữa | SUP | `/sup/proposals`, `/sup/approvals/:id` | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
 | **13** | Yêu cầu sửa đổi / Từ chối đợt sửa | SUP | `/sup/approvals/:id/reject` | `src/pages/(sup)/BatchRejection.tsx` |
-| **14** | Phân công đội thi công (Repair Crew) | PM | `/pm/repair-batches/:id/assign` | `src/pages/(pm)/AssignCrew.tsx` |
+| **14** | Phân công đội thi công (Repair Crew) | PM | `/pm/repair-batches/assign` | `src/pages/(pm)/AssignCrew.tsx` |
 | **15** | Theo dõi nhiệm vụ đo đạc bổ sung | PM | `/pm/field-tasks` | `src/pages/(pm)/FieldTasks.tsx` |
-| **16** | Nghiệm thu chất lượng ngoài hiện trường | SUP | `/sup/acceptance/:batchId` | `src/pages/(sup)/FieldAcceptance.tsx` |
-| **17** | Xác nhận hoàn thành công việc | PM | `/pm/work-orders/:id/confirm` | `src/pages/(pm)/WorkOrderConfirm.tsx` |
-| **18** | Báo cáo phân tích rủi ro & Ký đóng đợt | SUP | `/sup/risk-analytics`, `/sup/signoff` | `src/pages/(sup)/RiskAnalytics.tsx`, `SignOffClosure.tsx` |
+| **16** | Nghiệm thu chất lượng ngoài hiện trường | SUP | `/sup/acceptance`, `/sup/acceptance/:batchId` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
+| **17** | Xác nhận hoàn thành công việc | PM | `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
+| **18** | Báo cáo phân tích rủi ro & Ký đóng đợt | SUP | `/sup/risk-analytics`, `/sup/signoff` | `src/pages/(sup)/RiskAnalytics.tsx` |
 
 ---
 
