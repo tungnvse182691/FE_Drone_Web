@@ -45,7 +45,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
             {/* Header */}
             <div className="p-4 bg-slate-50 border-b border-slate-200 text-slate-900 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileDown className="w-5 h-5 text-[#C9A227]" />
+                <FileDown className="w-5 h-5 text-brand-gold" />
                 <h3 className="font-bold text-base font-sansation">
                   Xuất hồ sơ điều hành &amp; rủi ro bảo hành (RPT-01)
                 </h3>
@@ -72,7 +72,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                   onClick={() => setExportFormat('PDF_A')}
                   className={`p-3.5 rounded-xl border transition cursor-pointer flex items-start gap-3 ${
                     exportFormat === 'PDF_A'
-                      ? 'bg-[#FEF9E7] border-[#C9A227] shadow-xs'
+                      ? 'bg-[#FEF9E7] border-brand-gold shadow-xs'
                       : 'bg-white border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -81,7 +81,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                     name="exportFormat"
                     checked={exportFormat === 'PDF_A'}
                     onChange={() => setExportFormat('PDF_A')}
-                    className="mt-0.5 accent-[#C9A227]"
+                    className="mt-0.5 accent-brand-gold"
                   />
                   <div className="space-y-0.5">
                     <span className="font-bold text-slate-900 block">Báo cáo điều hành tổng hợp (PDF/A)</span>
@@ -96,7 +96,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                   onClick={() => setExportFormat('ZIP_PACKAGE')}
                   className={`p-3.5 rounded-xl border transition cursor-pointer flex items-start gap-3 ${
                     exportFormat === 'ZIP_PACKAGE'
-                      ? 'bg-[#FEF9E7] border-[#C9A227] shadow-xs'
+                      ? 'bg-[#FEF9E7] border-brand-gold shadow-xs'
                       : 'bg-white border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -105,7 +105,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                     name="exportFormat"
                     checked={exportFormat === 'ZIP_PACKAGE'}
                     onChange={() => setExportFormat('ZIP_PACKAGE')}
-                    className="mt-0.5 accent-[#C9A227]"
+                    className="mt-0.5 accent-brand-gold"
                   />
                   <div className="space-y-0.5">
                     <span className="font-bold text-slate-900 block">Gói hồ sơ bằng chứng số nén (ZIP Dossier)</span>
@@ -147,7 +147,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                 onClick={onTriggerExport}
                 disabled={isExporting}
                 type="button"
-                className="px-5 h-9 bg-[#C9A227] hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-5 h-9 bg-brand-gold hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 {isExporting ? (
                   <>

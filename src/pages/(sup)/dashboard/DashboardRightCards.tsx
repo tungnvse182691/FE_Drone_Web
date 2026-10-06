@@ -35,17 +35,17 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
                 </div>
 
                 <span className="text-xs text-slate-500 font-medium">Chỉ số hoàn thành đúng hạn (SLA)</span>
-                <div className="font-sansation text-3xl font-bold tracking-tight mt-1 mb-5 text-[#C9A227]">
+                <div className="font-sansation text-3xl font-bold tracking-tight mt-1 mb-5 text-brand-gold">
                   88.5%
                 </div>
 
                 <div className="space-y-1.5 mb-4">
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-slate-700">Đã nghiệm thu đóng hồ sơ</span>
-                    <span className="font-bold text-[#C9A227]">156 điểm</span>
+                    <span className="font-bold text-brand-gold">156 điểm</span>
                   </div>
                   <div className="w-full rounded-full h-2 overflow-hidden bg-slate-100">
-                    <div className="h-2 rounded-full bg-[#C9A227]" style={{ width: '86.6%' }}></div>
+                    <div className="h-2 rounded-full bg-brand-gold" style={{ width: '86.6%' }}></div>
                   </div>
                 </div>
 
@@ -141,7 +141,7 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
                   className="w-full py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs mt-2"
                 >
                   <span>Xem bản đồ nhiệt &amp; rủi ro chuyên sâu</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#C9A227]" />
+                  <ArrowRight className="w-3.5 h-3.5 text-brand-gold" />
                 </button>
               </div>
             </div>

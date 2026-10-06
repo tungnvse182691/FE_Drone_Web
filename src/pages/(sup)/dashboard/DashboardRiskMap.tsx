@@ -35,7 +35,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
     <div className="bg-white rounded-2xl overflow-hidden shadow-2xs border border-slate-200">
       <div className="p-4 flex items-center justify-between border-b border-slate-200 bg-slate-50/50">
         <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-[#C9A227]" />
+          <MapPin className="w-4 h-4 text-brand-gold" />
           <h3 className="font-sansation font-bold text-slate-900 text-sm">
             Bản đồ danh mục rủi ro hư hỏng (GIS Risk Portfolio)
           </h3>
@@ -60,7 +60,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
         {activePinItem && (
           <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-md p-3.5 rounded-xl border border-slate-700/80 text-white text-xs space-y-1.5 max-w-xs shadow-xl pointer-events-auto">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-bold text-[#C9A227]">{activePinItem.project_name}</span>
+              <span className="font-bold text-brand-gold">{activePinItem.project_name}</span>
               <span
                 className={`px-2 py-0.2 rounded text-[10px] font-bold ${
                   activePinItem.risk_level === 'Critical' ? 'bg-rose-500 text-white' : 'bg-sky-500 text-white'
@@ -78,7 +78,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
               <span>Độ gồ ghề PCI: <strong className="text-white font-mono">{activePinItem.pci_score}</strong></span>
               <button
                 onClick={() => navigate('/sup/proposals')}
-                className="text-[#C9A227] hover:underline font-semibold cursor-pointer"
+                className="text-brand-gold hover:underline font-semibold cursor-pointer"
               >
                 Xem gói đề xuất &gt;
               </button>
@@ -109,7 +109,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
             type="button"
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition shadow-xs cursor-pointer border ${
               mapLayer === 'satellite'
-                ? 'bg-[#C9A227] text-white border-[#C9A227]'
+                ? 'bg-brand-gold text-white border-brand-gold'
                 : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200'
             }`}
             title={mapLayer === 'satellite' ? 'Đang bật vệ tinh (Bấm đổi Street)' : 'Đang bật Street (Bấm đổi Vệ tinh)'}

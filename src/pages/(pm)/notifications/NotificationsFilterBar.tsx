@@ -45,7 +45,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
           onClick={() => onChangeTab('ALL')}
           className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ALL'
-              ? 'bg-[#C9A227] text-white shadow-xs'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
           }`}
         >
@@ -80,7 +80,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
           onClick={() => onChangeTab('HANDOVER')}
           className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'HANDOVER'
-              ? 'bg-[#C9A227] text-white shadow-xs'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
           }`}
         >
@@ -98,7 +98,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
           onClick={() => onChangeTab('AI_SYSTEM')}
           className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'AI_SYSTEM'
-              ? 'bg-[#C9A227] text-white shadow-xs'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
           }`}
         >
@@ -121,14 +121,14 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
             value={searchQuery}
             onChange={(e) => onChangeSearchQuery(e.target.value)}
             placeholder="Tìm mã phiếu, lý trình..."
-            className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+            className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-gold"
           />
         </div>
 
         <select
           value={priorityFilter}
           onChange={(e) => onChangePriorityFilter(e.target.value as NotificationPriorityFilter)}
-          className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+          className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
         >
           <option value="ALL">Mức độ: Tất cả</option>
           <option value="EMERGENCY">Khẩn cấp (EMERGENCY)</option>
@@ -145,7 +145,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           }`}
         >
-          <span className={`w-2 h-2 rounded-full ${unreadOnly ? 'bg-[#C9A227]' : 'bg-slate-300'}`}></span>
+          <span className={`w-2 h-2 rounded-full ${unreadOnly ? 'bg-brand-gold' : 'bg-slate-300'}`}></span>
           <span>Chưa đọc</span>
         </button>
       </div>

@@ -54,7 +54,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-1.5">
               <span>Trang chủ</span>
               <span className="text-slate-400">&gt;</span>
-              <span className="text-[#C9A227]">Dashboard</span>
+              <span className="text-brand-gold">Dashboard</span>
             </div>
             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 font-sansation">
               Dashboard danh mục bảo hành
@@ -78,7 +78,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 className="p-2 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs cursor-pointer"
                 title="Tải lại dữ liệu"
               >
-                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#C9A227]' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-brand-gold' : ''}`} />
               </button>
 
               <button
@@ -86,7 +86,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 type="button"
                 className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
-                <FileDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                <FileDown className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Xuất báo cáo (RPT-01)</span>
               </button>
 
@@ -102,7 +102,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <button
                 onClick={() => navigate('/sup/proposals/PKG-2026-08')}
                 type="button"
-                className="px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5 bg-[#C9A227] hover:bg-[#B38E1F] cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5 bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
                 style={{ boxShadow: 'rgba(201, 162, 39, 0.28) 0px 2px 8px' }}
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -120,7 +120,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="appearance-none pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer"
+                className="appearance-none pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
               >
                 <option value="2026-08">Tháng 8, 2026</option>
                 <option value="2026-07">Tháng 7, 2026</option>
@@ -135,7 +135,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <select
                 value={selectedRegion}
                 onChange={(e) => handleRegionChange(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
               >
                 <option value="ALL">Khu vực: Tất cả</option>
                 <option value="CENTRAL">Miền Trung (Huế - Đà Nẵng)</option>
@@ -149,7 +149,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer"
+                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
               >
                 <option value="ALL">
                   {selectedRegion === 'ALL'
@@ -189,7 +189,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 showToast(`Đã áp dụng bộ lọc: ${regText} • ${prjText} (${selectedMonth})`)
               }}
               type="button"
-              className="px-4 py-1.5 font-bold text-white rounded-xl transition shadow-2xs bg-[#C9A227] hover:bg-[#B38E1F] cursor-pointer"
+              className="px-4 py-1.5 font-bold text-white rounded-xl transition shadow-2xs bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
             >
               Áp dụng
             </button>

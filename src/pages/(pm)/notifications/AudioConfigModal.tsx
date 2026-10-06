@@ -34,7 +34,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-5 h-5 text-[#C9A227]" />
+            <Volume2 className="w-5 h-5 text-brand-gold" />
             <h3 className="font-bold text-slate-900 text-base">Cấu Hình Cảnh Báo Âm Thanh (SLAAudio)</h3>
           </div>
           <button
@@ -56,7 +56,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
               type="button"
               onClick={onToggleAudioEnabled}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                isAudioEnabled ? 'bg-[#C9A227]' : 'bg-slate-300'
+                isAudioEnabled ? 'bg-brand-gold' : 'bg-slate-300'
               }`}
             >
               <span
@@ -81,7 +81,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
               value={audioVolume}
               onChange={(e) => onChangeAudioVolume(parseFloat(e.target.value))}
               disabled={!isAudioEnabled}
-              className="w-full accent-[#C9A227] cursor-pointer"
+              className="w-full accent-brand-gold cursor-pointer"
             />
           </div>
 
@@ -110,7 +110,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
                   type="checkbox"
                   checked={audioMode.emergencySiren}
                   onChange={(e) => onChangeAudioMode({ ...audioMode, emergencySiren: e.target.checked })}
-                  className="w-4 h-4 accent-[#C9A227] cursor-pointer"
+                  className="w-4 h-4 accent-brand-gold cursor-pointer"
                 />
               </div>
             </div>
@@ -136,7 +136,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
                   type="checkbox"
                   checked={audioMode.slaChime}
                   onChange={(e) => onChangeAudioMode({ ...audioMode, slaChime: e.target.checked })}
-                  className="w-4 h-4 accent-[#C9A227] cursor-pointer"
+                  className="w-4 h-4 accent-brand-gold cursor-pointer"
                 />
               </div>
             </div>
@@ -144,7 +144,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
             {/* 3. Handover Ping */}
             <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white">
               <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-[#C9A227] shrink-0" />
+                <Bell className="w-4 h-4 text-brand-gold shrink-0" />
                 <div>
                   <div className="font-bold text-slate-800">Chuông Ping bàn giao công việc</div>
                   <div className="text-[10px] text-slate-500">Âm dịu nhẹ khi PM hoặc Supervisor gửi hồ sơ</div>
@@ -162,7 +162,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
                   type="checkbox"
                   checked={audioMode.handoverPing}
                   onChange={(e) => onChangeAudioMode({ ...audioMode, handoverPing: e.target.checked })}
-                  className="w-4 h-4 accent-[#C9A227] cursor-pointer"
+                  className="w-4 h-4 accent-brand-gold cursor-pointer"
                 />
               </div>
             </div>
@@ -173,7 +173,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
           <button
             type="button"
             onClick={onSave}
-            className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs rounded-xl cursor-pointer"
+            className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs rounded-xl cursor-pointer"
           >
             Lưu cấu hình
           </button>

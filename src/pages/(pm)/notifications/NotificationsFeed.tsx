@@ -35,13 +35,13 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
             onClick={() => onMarkAsRead(item.id)}
             className={`relative rounded-2xl p-5 border transition-all cursor-pointer ${
               !item.read
-                ? 'bg-white border-[#C9A227]/40 shadow-xs hover:border-[#C9A227] hover:shadow-md'
+                ? 'bg-white border-brand-gold/40 shadow-xs hover:border-brand-gold hover:shadow-md'
                 : 'bg-slate-50/70 border-slate-200 opacity-90 hover:opacity-100 hover:bg-white'
             }`}
           >
             {/* Unread Indicator Bar */}
             {!item.read && (
-              <div className="absolute left-0 top-4 bottom-4 w-1 bg-[#C9A227] rounded-r-full"></div>
+              <div className="absolute left-0 top-4 bottom-4 w-1 bg-brand-gold rounded-r-full"></div>
             )}
 
             <div className="flex flex-col gap-3">
@@ -92,7 +92,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                 <h2 className="text-sm font-bold text-brand-dark flex items-center gap-2">
                   <span>{item.title}</span>
                   {!item.read && (
-                    <span className="w-2 h-2 rounded-full bg-[#C9A227] shrink-0" title="Chưa đọc"></span>
+                    <span className="w-2 h-2 rounded-full bg-brand-gold shrink-0" title="Chưa đọc"></span>
                   )}
                 </h2>
                 <p className="text-xs text-slate-600 leading-relaxed">
@@ -127,7 +127,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                       e.stopPropagation()
                       onNavigateAction(item)
                     }}
-                    className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>{item.actionLabel}</span>
                     <ArrowRight className="w-3.5 h-3.5" />

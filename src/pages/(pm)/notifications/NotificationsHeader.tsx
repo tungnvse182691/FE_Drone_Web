@@ -66,12 +66,12 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
             </h1>
             {isSupervisor ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Hộp thư: Ban Tư Vấn Giám Sát (SUPERVISOR)</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
-                <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
+                <Wrench className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Hộp thư: Ban Chỉ Huy PM Nhà Thầu (PROJECT_MANAGER)</span>
               </span>
             )}
@@ -81,7 +81,7 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
                 <span>{emergencyCount} Lệnh khẩn cấp</span>
               </span>
             )}
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-[#8F7212] border border-[#C9A227]/30 text-xs font-bold">
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 text-[#8F7212] border border-brand-gold/30 text-xs font-bold">
               {unreadCount} chưa đọc
             </span>
           </div>
@@ -107,7 +107,7 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenAudioModal}
-            className="h-10 px-4 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+            className="h-10 px-4 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
           >
             {isAudioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
             <span>Cấu hình chuông SLA</span>

@@ -38,7 +38,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
         <button
           onClick={() => navigate('/sup/projects')}
           type="button"
-          className="text-xs font-semibold hover:underline text-[#C9A227] cursor-pointer"
+          className="text-xs font-semibold hover:underline text-brand-gold cursor-pointer"
         >
           Xem tất cả dự án &gt;
         </button>
@@ -56,7 +56,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                 <div className="flex items-center gap-1">
                   <span>Mức rủi ro</span>
                   {sortField === 'risk_level' ? (
-                    sortAsc ? <ArrowUp className="w-3 h-3 text-[#C9A227]" /> : <ArrowDown className="w-3 h-3 text-[#C9A227]" />
+                    sortAsc ? <ArrowUp className="w-3 h-3 text-brand-gold" /> : <ArrowDown className="w-3 h-3 text-brand-gold" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-slate-300" />
                   )}
@@ -70,7 +70,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                 <div className="flex items-center gap-1">
                   <span>Dự án</span>
                   {sortField === 'project_name' ? (
-                    sortAsc ? <ArrowUp className="w-3 h-3 text-[#C9A227]" /> : <ArrowDown className="w-3 h-3 text-[#C9A227]" />
+                    sortAsc ? <ArrowUp className="w-3 h-3 text-brand-gold" /> : <ArrowDown className="w-3 h-3 text-brand-gold" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-slate-300" />
                   )}
@@ -85,7 +85,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                 <div className="flex items-center gap-1">
                   <span>Đoạn đường</span>
                   {sortField === 'chainage' ? (
-                    sortAsc ? <ArrowUp className="w-3 h-3 text-[#C9A227]" /> : <ArrowDown className="w-3 h-3 text-[#C9A227]" />
+                    sortAsc ? <ArrowUp className="w-3 h-3 text-brand-gold" /> : <ArrowDown className="w-3 h-3 text-brand-gold" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-slate-300" />
                   )}
@@ -99,7 +99,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                 <div className="flex items-center justify-center gap-1">
                   <span>Lỗi mở</span>
                   {sortField === 'open_defects_count' ? (
-                    sortAsc ? <ArrowUp className="w-3 h-3 text-[#C9A227]" /> : <ArrowDown className="w-3 h-3 text-[#C9A227]" />
+                    sortAsc ? <ArrowUp className="w-3 h-3 text-brand-gold" /> : <ArrowDown className="w-3 h-3 text-brand-gold" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-slate-300" />
                   )}
@@ -114,7 +114,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                 <div className="flex items-center justify-end gap-1">
                   <span>Thời hạn SLA</span>
                   {sortField === 'sla_status' ? (
-                    sortAsc ? <ArrowUp className="w-3 h-3 text-[#C9A227]" /> : <ArrowDown className="w-3 h-3 text-[#C9A227]" />
+                    sortAsc ? <ArrowUp className="w-3 h-3 text-brand-gold" /> : <ArrowDown className="w-3 h-3 text-brand-gold" />
                   ) : (
                     <ArrowUpDown className="w-3 h-3 text-slate-300" />
                   )}
@@ -148,7 +148,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                       </span>
                     )}
                   </td>
-                  <td className="py-3.5 font-bold text-slate-900 group-hover:text-[#C9A227] transition-colors">
+                  <td className="py-3.5 font-bold text-slate-900 group-hover:text-brand-gold transition-colors">
                     {item.project_name}
                     <span className="block text-[10px] text-slate-400 font-mono font-normal">{item.proposal_id}</span>
                   </td>

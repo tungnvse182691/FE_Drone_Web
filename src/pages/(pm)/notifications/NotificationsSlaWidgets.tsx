@@ -64,7 +64,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
       <div className="bg-white rounded-2xl p-5 border border-brand-border shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <RefreshCw className="w-4 h-4 text-[#C9A227]" />
+            <RefreshCw className="w-4 h-4 text-brand-gold" />
             <h3 className="font-bold text-sm text-brand-dark">Dòng Chảy Bàn Giao (Handoff)</h3>
           </div>
           <span className="text-[10px] text-slate-400 font-semibold">Quy chuẩn v2.2</span>
@@ -84,7 +84,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
 
           {/* Bước 2 */}
           <div className="flex items-start gap-3 p-2.5 rounded-xl bg-amber-50/60 border border-amber-200">
-            <div className="w-6 h-6 rounded-full bg-[#C9A227] text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-brand-gold text-white font-bold flex items-center justify-center text-[10px] shrink-0 mt-0.5">
               2
             </div>
             <div>
@@ -121,7 +121,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
       <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-[#C9A227]" />
+            <Volume2 className="w-4 h-4 text-brand-gold" />
             <span className="font-bold text-sm">Hệ Thống Âm Thanh SLAAudio</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -141,7 +141,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             onClick={() => onPlaySound('PING')}
             className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <Play className="w-3 h-3 text-[#C9A227]" />
+            <Play className="w-3 h-3 text-brand-gold" />
             <span>Thử tiếng Ping</span>
           </button>
           <button
