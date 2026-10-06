@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { ShieldCheck, X, CheckCircle2, Lock, AlertTriangle } from 'lucide-react'
 import { PolicyThresholdConfig } from './types'
 
@@ -46,12 +46,12 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A227]">
-              <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
+              <ShieldCheck className="w-4 h-4 text-brand-gold" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Tạo Phiên Bản Chính Sách Fast Track Mới</h3>
-              <span className="text-[10px] text-slate-500">Kế thừa và điều chỉnh từ {currentPolicy.version}</span>
+              <h3 className="text-base font-bold text-brand-dark">Táº¡o PhiÃªn Báº£n ChÃ­nh SÃ¡ch Fast Track Má»›i</h3>
+              <span className="text-[10px] text-slate-500">Káº¿ thá»«a vÃ  Ä‘iá»u chá»‰nh tá»« {currentPolicy.version}</span>
             </div>
           </div>
           <button
@@ -64,108 +64,108 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
         <div className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 uppercase mb-1">Tên phiên bản chính sách</label>
+            <label className="block font-bold text-slate-700 uppercase mb-1">TÃªn phiÃªn báº£n chÃ­nh sÃ¡ch</label>
             <input
               type="text"
               value={formVersionName}
               onChange={(e) => setFormVersionName(e.target.value)}
-              placeholder="Ví dụ: Policy v2.2"
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-[#C9A227] focus:outline-none"
+              placeholder="VÃ­ dá»¥: Policy v2.2"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng diện tích tối đa (m²)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">NgÆ°á»¡ng diá»‡n tÃ­ch tá»‘i Ä‘a (mÂ²)</label>
               <input
                 type="number"
                 step="0.05"
                 value={formMaxArea}
                 onChange={(e) => setFormMaxArea(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-[#C9A227] focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxAreaM2} m²</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiá»‡n hÃ nh: â‰¤ {currentPolicy.maxAreaM2} mÂ²</span>
             </div>
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng độ sâu tối đa (cm)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">NgÆ°á»¡ng Ä‘á»™ sÃ¢u tá»‘i Ä‘a (cm)</label>
               <input
                 type="number"
                 step="0.5"
                 value={formMaxDepth}
                 onChange={(e) => setFormMaxDepth(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-[#C9A227] focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxDepthCm} cm</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiá»‡n hÃ nh: â‰¤ {currentPolicy.maxDepthCm} cm</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Thời hạn SLA hoàn thành (giờ)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">Thá»i háº¡n SLA hoÃ n thÃ nh (giá»)</label>
               <input
                 type="number"
                 value={formSlaHours}
                 onChange={(e) => setFormSlaHours(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-[#C9A227] focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.slaHours} giờ</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiá»‡n hÃ nh: â‰¤ {currentPolicy.slaHours} giá»</span>
             </div>
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Chu vi tối đa (m)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">Chu vi tá»‘i Ä‘a (m)</label>
               <input
                 type="number"
                 step="0.1"
                 value={formMaxPerimeter}
                 onChange={(e) => setFormMaxPerimeter(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-[#C9A227] focus:outline-none"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxPerimeterM} m</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiá»‡n hÃ nh: â‰¤ {currentPolicy.maxPerimeterM} m</span>
             </div>
           </div>
 
-          {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
+          {/* Cáº¥u hÃ¬nh Má»©c Ä‘á»™ nghiÃªm trá»ng Ã¡p dá»¥ng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
-              Mức độ nghiêm trọng cho phép áp dụng Fast Track
+              Má»©c Ä‘á»™ nghiÃªm trá»ng cho phÃ©p Ã¡p dá»¥ng Fast Track
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>LOW (Nhẹ)</span>
+                <span>LOW (Nháº¹)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800">
                 <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span>MEDIUM (Vừa)</span>
+                <span>MEDIUM (Vá»«a)</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi nặng">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuáº©n an toÃ n cáº¥m tá»± duyá»‡t Fast Track vá»›i lá»—i náº·ng">
                 <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>HIGH (Khóa)</span>
+                <span>HIGH (KhÃ³a)</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi khẩn cấp/nguy hiểm">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuáº©n an toÃ n cáº¥m tá»± duyá»‡t Fast Track vá»›i lá»—i kháº©n cáº¥p/nguy hiá»ƒm">
                 <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>CRITICAL (Khóa)</span>
+                <span>CRITICAL (KhÃ³a)</span>
               </div>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              🔒 <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, Fast Track chỉ áp dụng cho hư hỏng nhỏ/vừa (LOW &amp; MEDIUM). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Supervisor hoặc Đội cứu hộ khẩn cấp.
+              ðŸ”’ <strong>RÃ ng buá»™c báº¥t biáº¿n:</strong> Theo quy Ä‘á»‹nh BR-04 &amp; BR-08, Fast Track chá»‰ Ã¡p dá»¥ng cho hÆ° há»ng nhá»/vá»«a (LOW &amp; MEDIUM). HÆ° há»ng káº¿t cáº¥u náº·ng (HIGH/CRITICAL) báº¯t buá»™c pháº£i qua tháº©m duyá»‡t Supervisor hoáº·c Äá»™i cá»©u há»™ kháº©n cáº¥p.
             </span>
           </div>
 
           <div>
-            <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chú căn cứ & lý do ban hành</label>
+            <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chÃº cÄƒn cá»© & lÃ½ do ban hÃ nh</label>
             <textarea
               rows={2}
               value={formPolicyNote}
               onChange={(e) => setFormPolicyNote(e.target.value)}
-              placeholder="Ghi rõ cơ sở điều chỉnh..."
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-[#C9A227] focus:outline-none"
+              placeholder="Ghi rÃµ cÆ¡ sá»Ÿ Ä‘iá»u chá»‰nh..."
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:border-brand-gold focus:outline-none"
             />
           </div>
 
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
-              <strong>Quy tắc hệ thống:</strong> Khi chọn <em>Kích hoạt chính sách ngay</em>, hệ thống sẽ tự động cập nhật bảng khiếm khuyết theo ngưỡng mới và lưu bản hiện tại ({currentPolicy.version}) vào kho lưu trữ (ARCHIVED).
+              <strong>Quy táº¯c há»‡ thá»‘ng:</strong> Khi chá»n <em>KÃ­ch hoáº¡t chÃ­nh sÃ¡ch ngay</em>, há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng cáº­p nháº­t báº£ng khiáº¿m khuyáº¿t theo ngÆ°á»¡ng má»›i vÃ  lÆ°u báº£n hiá»‡n táº¡i ({currentPolicy.version}) vÃ o kho lÆ°u trá»¯ (ARCHIVED).
             </span>
           </div>
         </div>
@@ -176,7 +176,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
             type="button"
             className="px-3.5 py-2 bg-white text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
           >
-            Hủy bỏ
+            Há»§y bá»
           </button>
 
           <div className="flex items-center gap-2">
@@ -185,15 +185,15 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="button"
               className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-xl border border-amber-200 shadow-2xs cursor-pointer transition-colors"
             >
-              Lưu dự thảo (DRAFT)
+              LÆ°u dá»± tháº£o (DRAFT)
             </button>
             <button
               onClick={() => handleApplyPolicy('ACTIVATE')}
               type="button"
-              className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Kích hoạt chính sách ngay</span>
+              <span>KÃ­ch hoáº¡t chÃ­nh sÃ¡ch ngay</span>
             </button>
           </div>
         </div>

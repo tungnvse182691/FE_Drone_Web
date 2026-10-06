@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Layers, Wrench, Flame } from 'lucide-react'
 import { WorkMode } from './types'
 
@@ -16,10 +16,10 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
   return (
     <div>
       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-        Chế độ giao việc (Work Dispatch Mode)
+        Cháº¿ Ä‘á»™ giao viá»‡c (Work Dispatch Mode)
       </label>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Tab 1: Gom lô đo đạc (MEASURE_ONLY) */}
+        {/* Tab 1: Gom lÃ´ Ä‘o Ä‘áº¡c (MEASURE_ONLY) */}
         <label
           onClick={() => handleChangeWorkMode('MEASURE_ONLY')}
           className={`relative cursor-pointer flex flex-col justify-between p-4 rounded-xl transition-all ${
@@ -30,17 +30,17 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
         >
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[#C9A227]">
-                <Layers className="w-5 h-5 text-[#C9A227]" />
+              <span className="text-brand-gold">
+                <Layers className="w-5 h-5 text-brand-gold" />
               </span>
-              <span className="font-bold text-sm text-brand-dark">Gom lô đo đạc</span>
+              <span className="font-bold text-sm text-brand-dark">Gom lÃ´ Ä‘o Ä‘áº¡c</span>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#C9A227] text-white">
-              Đã chọn {selectedDefectIds.length} lỗi
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-gold text-white">
+              ÄÃ£ chá»n {selectedDefectIds.length} lá»—i
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-            Gom nhiều khiếm khuyết cùng tuyến để đội Crew đo 1 lượt, nghiêm cấm tự ý sửa khi chưa lập phương án.
+            Gom nhiá»u khiáº¿m khuyáº¿t cÃ¹ng tuyáº¿n Ä‘á»ƒ Ä‘á»™i Crew Ä‘o 1 lÆ°á»£t, nghiÃªm cáº¥m tá»± Ã½ sá»­a khi chÆ°a láº­p phÆ°Æ¡ng Ã¡n.
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-[#8F7212]">
             <span className="px-2 py-0.5 rounded-full bg-amber-100/80 border border-amber-200 text-[10px]">
@@ -52,7 +52,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           </div>
         </label>
 
-        {/* Tab 2: Đo và Sửa ngay (INSPECT_AND_REPAIR) */}
+        {/* Tab 2: Äo vÃ  Sá»­a ngay (INSPECT_AND_REPAIR) */}
         <label
           onClick={() => handleChangeWorkMode('INSPECT_AND_REPAIR')}
           className={`relative cursor-pointer flex flex-col justify-between p-4 rounded-xl transition-all ${
@@ -64,14 +64,14 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-emerald-600" />
-              <span className="font-bold text-sm text-brand-dark">Đo và Sửa ngay</span>
+              <span className="font-bold text-sm text-brand-dark">Äo vÃ  Sá»­a ngay</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
               Fast Track Direct
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-            Chỉ áp dụng cho 1 lỗi mức LOW đơn lẻ thỏa mãn policy Fast Track. Cho phép mang vật liệu vá nguội trực tiếp.
+            Chá»‰ Ã¡p dá»¥ng cho 1 lá»—i má»©c LOW Ä‘Æ¡n láº» thá»a mÃ£n policy Fast Track. Cho phÃ©p mang váº­t liá»‡u vÃ¡ nguá»™i trá»±c tiáº¿p.
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-emerald-700">
             <span className="px-2 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-[10px]">
@@ -83,7 +83,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           </div>
         </label>
 
-        {/* Tab 3: Xử lý khẩn cấp (EMERGENCY) */}
+        {/* Tab 3: Xá»­ lÃ½ kháº©n cáº¥p (EMERGENCY) */}
         <label
           onClick={() => handleChangeWorkMode('EMERGENCY')}
           className={`relative cursor-pointer flex flex-col justify-between p-4 rounded-xl transition-all ${
@@ -95,14 +95,14 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-rose-600" />
-              <span className="font-bold text-sm text-brand-dark">Xử lý khẩn cấp</span>
+              <span className="font-bold text-sm text-brand-dark">Xá»­ lÃ½ kháº©n cáº¥p</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
               24/7 Priority
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-            Khắc phục tạm thời để thông xe nhanh, phân luồng an toàn khẩn cấp, không đóng lỗi gốc trên hệ thống.
+            Kháº¯c phá»¥c táº¡m thá»i Ä‘á»ƒ thÃ´ng xe nhanh, phÃ¢n luá»“ng an toÃ n kháº©n cáº¥p, khÃ´ng Ä‘Ã³ng lá»—i gá»‘c trÃªn há»‡ thá»‘ng.
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-rose-700">
             <span className="px-2 py-0.5 rounded-full bg-rose-100/80 border border-rose-200 text-[10px]">

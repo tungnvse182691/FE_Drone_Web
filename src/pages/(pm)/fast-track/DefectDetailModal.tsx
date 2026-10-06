@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { X } from 'lucide-react'
 import { DefectItem } from './types'
 
@@ -27,10 +27,10 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
                     : 'bg-rose-100 text-rose-800'
                 }`}
               >
-                {detailDefect.isFastTrackEligible ? 'Đạt chuẩn' : 'Vi phạm ngưỡng'}
+                {detailDefect.isFastTrackEligible ? 'Äáº¡t chuáº©n' : 'Vi pháº¡m ngÆ°á»¡ng'}
               </span>
             </div>
-            <p className="text-xs text-slate-500">{detailDefect.stationing} • {detailDefect.lane}</p>
+            <p className="text-xs text-slate-500">{detailDefect.stationing} â€¢ {detailDefect.lane}</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 cursor-pointer">
             <X className="w-5 h-5" />
@@ -44,28 +44,28 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-slate-500">Diện tích sơ bộ:</span>
-              <div className="font-bold text-sm text-brand-dark">{detailDefect.areaM2} m²</div>
+              <span className="text-slate-500">Diá»‡n tÃ­ch sÆ¡ bá»™:</span>
+              <div className="font-bold text-sm text-brand-dark">{detailDefect.areaM2} mÂ²</div>
             </div>
             <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-              <span className="text-slate-500">Độ sâu laser:</span>
+              <span className="text-slate-500">Äá»™ sÃ¢u laser:</span>
               <div className="font-bold text-sm text-brand-dark">{detailDefect.depthCm} cm</div>
             </div>
           </div>
 
           <div className="text-xs space-y-1 text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <div>Tọa độ GPS: <strong>{detailDefect.gps.lat}° N, {detailDefect.gps.lng}° E</strong></div>
-            <div>Đội phụ trách: <strong>{detailDefect.assignedCrew}</strong></div>
-            <div>Độ tin cậy AI: <strong>{detailDefect.aiConfidence}%</strong></div>
+            <div>Tá»a Ä‘á»™ GPS: <strong>{detailDefect.gps.lat}Â° N, {detailDefect.gps.lng}Â° E</strong></div>
+            <div>Äá»™i phá»¥ trÃ¡ch: <strong>{detailDefect.assignedCrew}</strong></div>
+            <div>Äá»™ tin cáº­y AI: <strong>{detailDefect.aiConfidence}%</strong></div>
           </div>
         </div>
 
         <div className="flex justify-end pt-3 border-t border-slate-100">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[#C9A227] text-white text-xs font-bold rounded-xl cursor-pointer"
+            className="px-4 py-2 bg-brand-gold text-white text-xs font-bold rounded-xl cursor-pointer"
           >
-            Đóng cửa sổ
+            ÄÃ³ng cá»­a sá»•
           </button>
         </div>
       </div>

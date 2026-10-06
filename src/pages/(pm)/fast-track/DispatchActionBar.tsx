@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Users2, Send, Wrench, AlertOctagon, AlertTriangle, Flame } from 'lucide-react'
 import { DefectItem, WorkMode } from './types'
 
@@ -33,18 +33,18 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
       <div className="space-y-1 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-brand-dark text-sm">
-            Đã chọn: {selectedDefectIds.length} khiếm khuyết
+            ÄÃ£ chá»n: {selectedDefectIds.length} khiáº¿m khuyáº¿t
           </span>
-          <span className="text-slate-400">•</span>
+          <span className="text-slate-400">â€¢</span>
           <span className="text-slate-600">
-            Tổng chiều dài khảo sát:{' '}
+            Tá»•ng chiá»u dÃ i kháº£o sÃ¡t:{' '}
             <strong className="text-brand-dark font-mono font-bold">{surveyDistanceM} m</strong>
           </span>
         </div>
         <div className="text-slate-500 flex items-center gap-1.5 flex-wrap text-[11px]">
-          <Users2 className="w-3.5 h-3.5 text-[#C9A227]" />
+          <Users2 className="w-3.5 h-3.5 text-brand-gold" />
           <span>
-            Phân bổ sơ bộ: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'Chưa chỉ định'}</strong> (Bấm nút bên phải để phát lệnh chính thức)
+            PhÃ¢n bá»• sÆ¡ bá»™: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'ChÆ°a chá»‰ Ä‘á»‹nh'}</strong> (Báº¥m nÃºt bÃªn pháº£i Ä‘á»ƒ phÃ¡t lá»‡nh chÃ­nh thá»©c)
           </span>
         </div>
       </div>
@@ -56,14 +56,14 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
           type="button"
           className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
         >
-          Hủy chọn
+          Há»§y chá»n
         </button>
         <button
-          onClick={() => showToast('Đã lưu nháp cấu hình phân bổ nhiệm vụ vào hồ sơ dự án.')}
+          onClick={() => showToast('ÄÃ£ lÆ°u nhÃ¡p cáº¥u hÃ¬nh phÃ¢n bá»• nhiá»‡m vá»¥ vÃ o há»“ sÆ¡ dá»± Ã¡n.')}
           type="button"
           className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
         >
-          Lưu nháp phân công
+          LÆ°u nhÃ¡p phÃ¢n cÃ´ng
         </button>
 
         {/* Dynamic Buttons based on workMode */}
@@ -75,11 +75,11 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
             className={`px-5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 ${
               selectedDefectIds.length === 0
                 ? 'bg-slate-300 cursor-not-allowed'
-                : 'bg-[#C9A227] hover:bg-[#B38E1F] cursor-pointer'
+                : 'bg-brand-gold hover:bg-[#B38E1F] cursor-pointer'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Giao việc gom lô đo đạc ({selectedDefectIds.length} khiếm khuyết)</span>
+            <span>Giao viá»‡c gom lÃ´ Ä‘o Ä‘áº¡c ({selectedDefectIds.length} khiáº¿m khuyáº¿t)</span>
           </button>
         )}
 
@@ -96,14 +96,14 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
               }`}
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>Phát lệnh Đo & Sửa ngay (1 khiếm khuyết)</span>
+              <span>PhÃ¡t lá»‡nh Äo & Sá»­a ngay (1 khiáº¿m khuyáº¿t)</span>
             </button>
             {(hasViolationItem || selectedDefectIds.length !== 1) && (
               <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                 <AlertOctagon className="w-3.5 h-3.5 text-rose-400 mr-1" />
                 {hasViolationItem
-                  ? 'Khóa: Khiếm khuyết được chọn vượt ngưỡng chính sách Fast Track'
-                  : 'Quy tắc BR-08: Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
+                  ? 'KhÃ³a: Khiáº¿m khuyáº¿t Ä‘Æ°á»£c chá»n vÆ°á»£t ngÆ°á»¡ng chÃ­nh sÃ¡ch Fast Track'
+                  : 'Quy táº¯c BR-08: Cháº¿ Ä‘á»™ Äo & Sá»­a ngay chá»‰ Ã¡p dá»¥ng cho Ä‘Ãºng 1 lá»—i Ä‘áº¡t chuáº©n'}
               </div>
             )}
           </div>
@@ -114,7 +114,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
             {selectedItems[0]?.isFastTrackEligible && (
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-semibold animate-pulse">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} chưa vượt ngưỡng an toàn!</span>
+                <span>LÆ°u Ã½: HÆ° há»ng #{selectedItems[0]?.code} chÆ°a vÆ°á»£t ngÆ°á»¡ng an toÃ n!</span>
               </div>
             )}
             <div className="relative group">
@@ -129,12 +129,12 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                 }`}
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>Phát lệnh Xử lý khẩn cấp (24/7 Priority)</span>
+                <span>PhÃ¡t lá»‡nh Xá»­ lÃ½ kháº©n cáº¥p (24/7 Priority)</span>
               </button>
               {selectedDefectIds.length !== 1 && (
                 <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                   <AlertOctagon className="w-3.5 h-3.5 text-rose-400 mr-1" />
-                  Chỉ chọn đúng 1 vị trí nguy hiểm để điều động xe khẩn cấp
+                  Chá»‰ chá»n Ä‘Ãºng 1 vá»‹ trÃ­ nguy hiá»ƒm Ä‘á»ƒ Ä‘iá»u Ä‘á»™ng xe kháº©n cáº¥p
                 </div>
               )}
             </div>

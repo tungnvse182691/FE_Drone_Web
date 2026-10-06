@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   ShieldCheck,
   CheckCircle2,
@@ -31,89 +31,89 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
     <div className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A227]">
-            <ShieldCheck className="w-5 h-5 text-[#C9A227]" />
+          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
+            <ShieldCheck className="w-5 h-5 text-brand-gold" />
           </div>
-          <h2 className="text-lg font-bold text-brand-dark">Phiên bản chính sách Fast Track hiện hành</h2>
+          <h2 className="text-lg font-bold text-brand-dark">PhiÃªn báº£n chÃ­nh sÃ¡ch Fast Track hiá»‡n hÃ nh</h2>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-            {currentPolicy.version} (ACTIVE) — Bất biến sau kích hoạt
+            {currentPolicy.version} (ACTIVE) â€” Báº¥t biáº¿n sau kÃ­ch hoáº¡t
           </span>
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            Quy chuẩn kích hoạt: <strong className="text-brand-dark font-semibold">3/3 Tiêu chí</strong> bắt buộc phải
-            thỏa mãn để tự động mở luồng Fast Track
+            Quy chuáº©n kÃ­ch hoáº¡t: <strong className="text-brand-dark font-semibold">3/3 TiÃªu chÃ­</strong> báº¯t buá»™c pháº£i
+            thá»a mÃ£n Ä‘á»ƒ tá»± Ä‘á»™ng má»Ÿ luá»“ng Fast Track
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Cột trái: 3 Thẻ ngưỡng kỹ thuật & SLA Card (8 cols) */}
+        {/* Cá»™t trÃ¡i: 3 Tháº» ngÆ°á»¡ng ká»¹ thuáº­t & SLA Card (8 cols) */}
         <div className="xl:col-span-8 flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Threshold 1: Diện tích */}
+            {/* Threshold 1: Diá»‡n tÃ­ch */}
             <div className="bg-slate-50/70 rounded-xl p-4 flex flex-col justify-between space-y-3 border border-slate-200 shadow-2xs">
               <div className="flex items-start justify-between">
                 <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                  Ngưỡng diện tích tối đa
+                  NgÆ°á»¡ng diá»‡n tÃ­ch tá»‘i Ä‘a
                 </span>
-                <Sliders className="w-4 h-4 text-[#C9A227]" />
+                <Sliders className="w-4 h-4 text-brand-gold" />
               </div>
               <div>
                 <div className="text-2xl font-black text-brand-dark tracking-tight">
-                  ≤ {currentPolicy.maxAreaM2} m²
+                  â‰¤ {currentPolicy.maxAreaM2} mÂ²
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Chu vi biên dạng khép kín &lt; {currentPolicy.maxPerimeterM} m
+                  Chu vi biÃªn dáº¡ng khÃ©p kÃ­n &lt; {currentPolicy.maxPerimeterM} m
                 </p>
               </div>
               <div className="pt-1">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                   <Sparkles className="w-3 h-3" />
-                  AI &amp; Tuần tra xác thực
+                  AI &amp; Tuáº§n tra xÃ¡c thá»±c
                 </span>
               </div>
             </div>
 
-            {/* Threshold 2: Độ sâu */}
+            {/* Threshold 2: Äá»™ sÃ¢u */}
             <div className="bg-slate-50/70 rounded-xl p-4 flex flex-col justify-between space-y-3 border border-slate-200 shadow-2xs">
               <div className="flex items-start justify-between">
                 <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">
-                  Ngưỡng độ sâu tối đa
+                  NgÆ°á»¡ng Ä‘á»™ sÃ¢u tá»‘i Ä‘a
                 </span>
-                <Scale className="w-4 h-4 text-[#C9A227]" />
+                <Scale className="w-4 h-4 text-brand-gold" />
               </div>
               <div>
                 <div className="text-2xl font-black text-brand-dark tracking-tight">
-                  ≤ {currentPolicy.maxDepthCm} cm
+                  â‰¤ {currentPolicy.maxDepthCm} cm
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">Độ lệch mặt đường cơ sở đo laser</p>
+                <p className="text-[11px] text-slate-500 mt-1">Äá»™ lá»‡ch máº·t Ä‘Æ°á»ng cÆ¡ sá»Ÿ Ä‘o laser</p>
               </div>
               <div className="pt-1">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
                   <Check className="w-3 h-3" />
-                  Kiểm tra đo đạc thước
+                  Kiá»ƒm tra Ä‘o Ä‘áº¡c thÆ°á»›c
                 </span>
               </div>
             </div>
 
-            {/* Threshold 3: Mức nghiêm trọng */}
+            {/* Threshold 3: Má»©c nghiÃªm trá»ng */}
             <div className="bg-slate-50/70 rounded-xl p-4 flex flex-col justify-between space-y-3 border border-slate-200 shadow-2xs">
               <div className="flex items-start justify-between">
-                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Mức nghiêm trọng</span>
-                <AlertTriangle className="w-4 h-4 text-[#C9A227]" />
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Má»©c nghiÃªm trá»ng</span>
+                <AlertTriangle className="w-4 h-4 text-brand-gold" />
               </div>
               <div>
                 <div className="text-2xl font-black text-brand-dark tracking-tight">LOW / MEDIUM</div>
-                <p className="text-[11px] text-slate-500 mt-1">Không gây mất an toàn giao thông tức thì</p>
+                <p className="text-[11px] text-slate-500 mt-1">KhÃ´ng gÃ¢y máº¥t an toÃ n giao thÃ´ng tá»©c thÃ¬</p>
               </div>
               <div className="pt-1">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                   <Lock className="w-3 h-3" />
-                  Cấm tự duyệt HIGH / CRITICAL
+                  Cáº¥m tá»± duyá»‡t HIGH / CRITICAL
                 </span>
               </div>
             </div>
@@ -122,16 +122,16 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           {/* SLA Card */}
           <div className="bg-white p-4 rounded-xl flex flex-col md:flex-row items-center justify-between gap-4 border border-slate-200 shadow-2xs">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-50 text-[#C9A227] border border-amber-200 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-amber-50 text-brand-gold border border-amber-200 flex items-center justify-center shrink-0">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-xs font-bold text-brand-dark block">
-                  Thời gian cam kết chu trình Fast Track
+                  Thá»i gian cam káº¿t chu trÃ¬nh Fast Track
                 </span>
                 <span className="text-xs text-slate-500">
-                  Thời hạn tối đa từ lúc xác thực đến hoàn tất thi công sửa nguội:{' '}
-                  <strong className="text-brand-dark font-semibold">≤ {currentPolicy.slaHours} giờ</strong>
+                  Thá»i háº¡n tá»‘i Ä‘a tá»« lÃºc xÃ¡c thá»±c Ä‘áº¿n hoÃ n táº¥t thi cÃ´ng sá»­a nguá»™i:{' '}
+                  <strong className="text-brand-dark font-semibold">â‰¤ {currentPolicy.slaHours} giá»</strong>
                 </span>
               </div>
             </div>
@@ -143,16 +143,16 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           </div>
         </div>
 
-        {/* Cột phải: Lịch sử phiên bản & Audit Log (4 cols) */}
+        {/* Cá»™t pháº£i: Lá»‹ch sá»­ phiÃªn báº£n & Audit Log (4 cols) */}
         <div className="xl:col-span-4 bg-slate-50/60 rounded-xl p-4 flex flex-col justify-between border border-slate-200 shadow-2xs">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-                <HistoryIcon className="w-4 h-4 text-[#C9A227]" />
-                <span>Lịch sử phiên bản chính sách</span>
+                <HistoryIcon className="w-4 h-4 text-brand-gold" />
+                <span>Lá»‹ch sá»­ phiÃªn báº£n chÃ­nh sÃ¡ch</span>
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
-                {policyHistory.length} bản ghi
+                {policyHistory.length} báº£n ghi
               </span>
             </div>
 
@@ -173,17 +173,17 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                       <span className="font-bold text-brand-dark">{item.version}</span>
                       {item.status === 'ACTIVE' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          Hiện hành
+                          Hiá»‡n hÃ nh
                         </span>
                       )}
                       {item.status === 'DRAFT' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          Dự thảo
+                          Dá»± tháº£o
                         </span>
                       )}
                       {item.status === 'ARCHIVED' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
-                          Đã đóng
+                          ÄÃ£ Ä‘Ã³ng
                         </span>
                       )}
                     </div>
@@ -191,18 +191,18 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                       <button
                         type="button"
                         onClick={() => onActivateDraft(item)}
-                        className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-[#C9A227] hover:bg-[#B38E1F] rounded-md transition-colors cursor-pointer shadow-xs"
+                        className="px-2.5 py-0.5 text-[11px] font-bold text-white bg-brand-gold hover:bg-[#B38E1F] rounded-md transition-colors cursor-pointer shadow-xs"
                       >
-                        Kích hoạt ngay
+                        KÃ­ch hoáº¡t ngay
                       </button>
                     )}
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    {item.status === 'DRAFT' ? 'Soạn bởi' : 'Kích hoạt bởi'} {item.activatedBy} • {item.activatedAt}
+                    {item.status === 'DRAFT' ? 'Soáº¡n bá»Ÿi' : 'KÃ­ch hoáº¡t bá»Ÿi'} {item.activatedBy} â€¢ {item.activatedAt}
                   </p>
                   <div className="text-[11px] text-[#8F7212] font-semibold">{item.route}</div>
                   <div className="text-[10px] text-slate-400 font-mono">
-                    Ngưỡng: Diện tích ≤ {item.maxArea}m² • Sâu ≤ {item.maxDepth}cm • SLA {item.slaHours}h
+                    NgÆ°á»¡ng: Diá»‡n tÃ­ch â‰¤ {item.maxArea}mÂ² â€¢ SÃ¢u â‰¤ {item.maxDepth}cm â€¢ SLA {item.slaHours}h
                   </div>
                 </div>
               ))}
@@ -214,8 +214,8 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
             type="button"
             className="mt-3 w-full py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs"
           >
-            <FileText className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>Xem nhật ký chi tiết thay đổi (Audit Log)</span>
+            <FileText className="w-3.5 h-3.5 text-brand-gold" />
+            <span>Xem nháº­t kÃ½ chi tiáº¿t thay Ä‘á»•i (Audit Log)</span>
           </button>
         </div>
       </div>
