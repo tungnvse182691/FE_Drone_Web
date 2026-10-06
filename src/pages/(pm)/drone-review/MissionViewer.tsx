@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Maximize2,
   Minimize2,
@@ -64,13 +64,13 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
       {/* Canvas Header */}
       <div className="p-3 bg-slate-50 flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <Video className="w-4 h-4 text-[#C9A227]" />
+          <Video className="w-4 h-4 text-brand-gold" />
           <div>
             <h3 className="font-bold text-xs text-brand-dark leading-tight">
-              Khung hình trích xuất #FR-{currentFrame}
+              Khung hÃ¬nh trÃ­ch xuáº¥t #FR-{currentFrame}
             </h3>
             <span className="font-mono text-[11px] text-slate-500">
-              Đoạn trắc lượng: {selectedItem.stationing} • Cảm biến RGB Sony Alpha 7R V
+              Äoáº¡n tráº¯c lÆ°á»£ng: {selectedItem.stationing} â€¢ Cáº£m biáº¿n RGB Sony Alpha 7R V
             </span>
           </div>
         </div>
@@ -87,19 +87,19 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Không ảnh Drone
+              KhÃ´ng áº£nh Drone
             </button>
             <button
               type="button"
               onClick={() => setViewerMode('GIS_MAP')}
               className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
                 viewerMode === 'GIS_MAP'
-                  ? 'bg-[#C9A227] text-white shadow-2xs font-bold'
+                  ? 'bg-brand-gold text-white shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <MapIcon className="w-3.5 h-3.5" />
-              <span>Bản đồ bay GIS (MapLibre)</span>
+              <span>Báº£n Ä‘á»“ bay GIS (MapLibre)</span>
             </button>
           </div>
 
@@ -110,7 +110,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                 type="button"
                 onClick={() => {
                   setIsAiOverlayVisible(!isAiOverlayVisible)
-                  showToast(isAiOverlayVisible ? 'Đã tắt lớp AI Bounding Box.' : 'Đã bật lớp AI Bounding Box.')
+                  showToast(isAiOverlayVisible ? 'ÄÃ£ táº¯t lá»›p AI Bounding Box.' : 'ÄÃ£ báº­t lá»›p AI Bounding Box.')
                 }}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer ${
                   isAiOverlayVisible
@@ -119,14 +119,14 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                 }`}
               >
                 {isAiOverlayVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                <span>Lớp AI ({isAiOverlayVisible ? 'Bật' : 'Tắt'})</span>
+                <span>Lá»›p AI ({isAiOverlayVisible ? 'Báº­t' : 'Táº¯t'})</span>
               </button>
 
               {/* Snapshot Button */}
               <button
-                onClick={() => showToast(`Đã xuất ảnh chụp trắc địa khung hình #FR-${currentFrame}.png`)}
+                onClick={() => showToast(`ÄÃ£ xuáº¥t áº£nh chá»¥p tráº¯c Ä‘á»‹a khung hÃ¬nh #FR-${currentFrame}.png`)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="Chụp ảnh khung hình"
+                title="Chá»¥p áº£nh khung hÃ¬nh"
                 type="button"
               >
                 <Camera className="w-4 h-4" />
@@ -136,7 +136,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
               <button
                 onClick={() => setIsCanvasFullscreen(!isCanvasFullscreen)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="Toàn màn hình Canvas"
+                title="ToÃ n mÃ n hÃ¬nh Canvas"
                 type="button"
               >
                 {isCanvasFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

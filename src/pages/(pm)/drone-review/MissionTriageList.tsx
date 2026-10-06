@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Wand2,
   CheckCircle2,
@@ -57,11 +57,11 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-[#C9A227]" />
-                <h3 className="font-bold text-sm text-brand-dark">Danh sách phát hiện AI</h3>
+                <Wand2 className="w-4 h-4 text-brand-gold" />
+                <h3 className="font-bold text-sm text-brand-dark">Danh sÃ¡ch phÃ¡t hiá»‡n AI</h3>
               </div>
               <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-                {totalCount} mục / Km 1024 - 1030
+                {totalCount} má»¥c / Km 1024 - 1030
               </span>
             </div>
 
@@ -72,18 +72,18 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                 onClick={() => setKmFilter('ALL')}
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   kmFilter === 'ALL'
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white shadow-2xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                Tất cả ({totalCount})
+                Táº¥t cáº£ ({totalCount})
               </button>
               <button
                 type="button"
                 onClick={() => setKmFilter('KM_1024_1026')}
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   kmFilter === 'KM_1024_1026'
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white shadow-2xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -94,7 +94,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                 onClick={() => setKmFilter('KM_1026_1028')}
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   kmFilter === 'KM_1026_1028'
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white shadow-2xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -105,7 +105,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                 onClick={() => setKmFilter('KM_1028_1030')}
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   kmFilter === 'KM_1028_1030'
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white shadow-2xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -127,7 +127,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                   onClick={() => onSelectDetection(item)}
                   className={`p-3 rounded-xl border transition-all flex flex-col gap-2 relative overflow-hidden cursor-pointer ${
                     isSelected
-                      ? 'bg-amber-50/40 border-[#C9A227] ring-1 ring-[#C9A227] shadow-xs'
+                      ? 'bg-amber-50/40 border-brand-gold ring-1 ring-brand-gold shadow-xs'
                       : isApproved
                       ? 'bg-emerald-50/30 border-emerald-200 opacity-90'
                       : isRejected
@@ -170,10 +170,10 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                       }`}
                     >
                       {isApproved
-                        ? `ĐÃ DUYỆT → ${item.defectCode}`
+                        ? `ÄÃƒ DUYá»†T â†’ ${item.defectCode}`
                         : isRejected
-                        ? 'BỎ QUA - FALSE POSITIVE'
-                        : `${item.type} • ${item.confidence}%`}
+                        ? 'Bá»Ž QUA - FALSE POSITIVE'
+                        : `${item.type} â€¢ ${item.confidence}%`}
                     </span>
                   </div>
 
@@ -189,37 +189,37 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                   <div className="grid grid-cols-2 gap-2 text-xs pl-1 text-slate-500">
                     {item.metrics.area && (
                       <div>
-                        Diện tích: <strong className="font-mono text-slate-800">{item.metrics.area}</strong>
+                        Diá»‡n tÃ­ch: <strong className="font-mono text-slate-800">{item.metrics.area}</strong>
                       </div>
                     )}
                     {item.metrics.depth && (
                       <div>
-                        Độ sâu: <strong className="font-mono text-red-600">{item.metrics.depth}</strong>
+                        Äá»™ sÃ¢u: <strong className="font-mono text-red-600">{item.metrics.depth}</strong>
                       </div>
                     )}
                     {item.metrics.length && (
                       <div>
-                        Chiều dài: <strong className="font-mono text-slate-800">{item.metrics.length}</strong>
+                        Chiá»u dÃ i: <strong className="font-mono text-slate-800">{item.metrics.length}</strong>
                       </div>
                     )}
                     {item.metrics.crackWidth && (
                       <div>
-                        Độ hở: <strong className="font-mono text-amber-600">{item.metrics.crackWidth}</strong>
+                        Äá»™ há»Ÿ: <strong className="font-mono text-amber-600">{item.metrics.crackWidth}</strong>
                       </div>
                     )}
                     {item.metrics.reviewer && (
                       <div className="col-span-2 text-[11px] text-emerald-700">
-                        Người duyệt: <strong>{item.metrics.reviewer}</strong>
+                        NgÆ°á»i duyá»‡t: <strong>{item.metrics.reviewer}</strong>
                       </div>
                     )}
                     {item.metrics.dismissReason && (
                       <div className="col-span-2 text-[11px] text-slate-500 italic">
-                        Lý do: {item.metrics.dismissReason}
+                        LÃ½ do: {item.metrics.dismissReason}
                       </div>
                     )}
                   </div>
 
-                  {/* Actions buttons (Chỉ hiện khi chưa duyệt hoặc rejected) */}
+                  {/* Actions buttons (Chá»‰ hiá»‡n khi chÆ°a duyá»‡t hoáº·c rejected) */}
                   {item.status === 'PENDING' && (
                     <div className="flex items-center gap-2 pt-1 pl-1 border-t border-slate-100 mt-0.5">
                       <button
@@ -231,7 +231,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                         className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Phê duyệt tạo Defect OPEN</span>
+                        <span>PhÃª duyá»‡t táº¡o Defect OPEN</span>
                       </button>
                       <button
                         type="button"
@@ -242,7 +242,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                         className="py-1.5 px-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                       >
                         <XCircle className="w-3.5 h-3.5" />
-                        <span>Báo sai</span>
+                        <span>BÃ¡o sai</span>
                       </button>
                     </div>
                   )}
@@ -255,27 +255,27 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
               <span>
-                Đã rà soát: <strong className="text-[#8F7212] font-mono">{reviewedCount}/{totalCount} mục</strong>
+                ÄÃ£ rÃ  soÃ¡t: <strong className="text-[#8F7212] font-mono">{reviewedCount}/{totalCount} má»¥c</strong>
               </span>
               <div className="flex items-center gap-2 text-[11px]">
-                <span className="text-emerald-700">Hợp lệ: {approvedCount}</span>
-                <span className="text-slate-300">•</span>
-                <span className="text-red-600">Báo sai: {rejectedCount}</span>
-                <span className="text-slate-300">•</span>
-                <span className="text-sky-700">Chờ duyệt: {pendingCount}</span>
+                <span className="text-emerald-700">Há»£p lá»‡: {approvedCount}</span>
+                <span className="text-slate-300">â€¢</span>
+                <span className="text-red-600">BÃ¡o sai: {rejectedCount}</span>
+                <span className="text-slate-300">â€¢</span>
+                <span className="text-sky-700">Chá» duyá»‡t: {pendingCount}</span>
               </div>
             </div>
 
             {/* Progress bar */}
             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
               <div
-                className="bg-[#C9A227] h-full rounded-full transition-all duration-300"
+                className="bg-brand-gold h-full rounded-full transition-all duration-300"
                 style={{ width: `${reviewProgressPercent}%` }}
               ></div>
             </div>
 
             <p className="text-[11px] text-slate-500 italic leading-snug">
-              * Chỉ sau khi giải quyết 100% mục chờ duyệt và bay bù độ phủ ≥ 95%, hệ thống mới kích hoạt nút Khóa Baseline.
+              * Chá»‰ sau khi giáº£i quyáº¿t 100% má»¥c chá» duyá»‡t vÃ  bay bÃ¹ Ä‘á»™ phá»§ â‰¥ 95%, há»‡ thá»‘ng má»›i kÃ­ch hoáº¡t nÃºt KhÃ³a Baseline.
             </p>
           </div>
         </section>

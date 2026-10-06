@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { InputField } from '../../../components/ui/InputField'
@@ -73,10 +73,10 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
     <Card>
       <form onSubmit={onSubmit} className="space-y-5">
         <div className="space-y-4">
-          {/* 1. DỰ ÁN KHẢO SÁT */}
+          {/* 1. Dá»° ÃN KHáº¢O SÃT */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Dự Án / Tuyến Đường Khảo Sát
+              Dá»± Ãn / Tuyáº¿n ÄÆ°á»ng Kháº£o SÃ¡t
             </label>
             <select
               value={projectId}
@@ -91,11 +91,11 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             </select>
           </div>
 
-          {/* 2. LÝ TRÌNH BẮT ĐẦU & KẾT THÚC */}
+          {/* 2. LÃ TRÃŒNH Báº®T Äáº¦U & Káº¾T THÃšC */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Lý Trình Bắt Đầu (Km)
+                LÃ½ TrÃ¬nh Báº¯t Äáº§u (Km)
               </label>
               <input
                 type="number"
@@ -108,13 +108,13 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 className="w-full px-3.5 py-2 text-sm font-mono font-bold text-slate-800 bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Giới hạn tuyến: Km {currentProject.startKm}
+                Giá»›i háº¡n tuyáº¿n: Km {currentProject.startKm}
               </span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Lý Trình Kết Thúc (Km)
+                LÃ½ TrÃ¬nh Káº¿t ThÃºc (Km)
               </label>
               <input
                 type="number"
@@ -127,35 +127,35 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 className="w-full px-3.5 py-2 text-sm font-mono font-bold text-slate-800 bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Đến tối đa: Km {currentProject.endKm}
+                Äáº¿n tá»‘i Ä‘a: Km {currentProject.endKm}
               </span>
             </div>
           </div>
 
-          {/* 3. ĐỘ CAO BAY THIẾT KẾ */}
+          {/* 3. Äá»˜ CAO BAY THIáº¾T Káº¾ */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Độ Cao Bay Thiết Kế (m)
+                Äá»™ Cao Bay Thiáº¿t Káº¿ (m)
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setAltitudeMode('preset')}
                   className={`text-[11px] font-semibold px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                    altitudeMode === 'preset' ? 'bg-[#C9A227] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    altitudeMode === 'preset' ? 'bg-brand-gold text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Tiêu chuẩn
+                  TiÃªu chuáº©n
                 </button>
                 <button
                   type="button"
                   onClick={() => setAltitudeMode('custom')}
                   className={`text-[11px] font-semibold px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                    altitudeMode === 'custom' ? 'bg-[#C9A227] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    altitudeMode === 'custom' ? 'bg-brand-gold text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Tùy chỉnh (Tự nhập)
+                  TÃ¹y chá»‰nh (Tá»± nháº­p)
                 </button>
               </div>
             </div>
@@ -166,10 +166,10 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 onChange={(e) => setPresetAltitude(e.target.value)}
                 className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium cursor-pointer"
               >
-                <option value="50">50m (GSD: 1.1 cm/px — Siêu nét, phát hiện nứt tóc vi mô)</option>
-                <option value="65">65m (GSD: 1.4 cm/px — Tiêu chuẩn trắc địa TCVN)</option>
-                <option value="80">80m (GSD: 1.8 cm/px — Tốc độ cao, tối ưu pin)</option>
-                <option value="100">100m (GSD: 2.2 cm/px — Khảo sát tổng quan nền đường)</option>
+                <option value="50">50m (GSD: 1.1 cm/px â€” SiÃªu nÃ©t, phÃ¡t hiá»‡n ná»©t tÃ³c vi mÃ´)</option>
+                <option value="65">65m (GSD: 1.4 cm/px â€” TiÃªu chuáº©n tráº¯c Ä‘á»‹a TCVN)</option>
+                <option value="80">80m (GSD: 1.8 cm/px â€” Tá»‘c Ä‘á»™ cao, tá»‘i Æ°u pin)</option>
+                <option value="100">100m (GSD: 2.2 cm/px â€” Kháº£o sÃ¡t tá»•ng quan ná»n Ä‘Æ°á»ng)</option>
               </select>
             ) : (
               <div className="flex items-center gap-3">
@@ -181,26 +181,26 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                     step="1"
                     value={customAltitude}
                     onChange={(e) => setCustomAltitude(e.target.value)}
-                    placeholder="Nhập độ cao (30 - 120m)..."
+                    placeholder="Nháº­p Ä‘á»™ cao (30 - 120m)..."
                     className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold pr-10"
                   />
-                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">mét</span>
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">mÃ©t</span>
                 </div>
                 <div className="bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg text-xs font-mono text-[#8F7212] whitespace-nowrap">
-                  Độ phân giải GSD: <strong>~{gsdCmPx} cm/px</strong>
+                  Äá»™ phÃ¢n giáº£i GSD: <strong>~{gsdCmPx} cm/px</strong>
                 </div>
               </div>
             )}
             <p className="text-[10px] text-slate-500">
-              Trần bay quy định Cục Hàng Không / Cục Tác Chiến: Tối đa 120m AGL. Độ cao càng thấp thì ảnh càng nét nhưng thời gian bay tăng.
+              Tráº§n bay quy Ä‘á»‹nh Cá»¥c HÃ ng KhÃ´ng / Cá»¥c TÃ¡c Chiáº¿n: Tá»‘i Ä‘a 120m AGL. Äá»™ cao cÃ ng tháº¥p thÃ¬ áº£nh cÃ ng nÃ©t nhÆ°ng thá»i gian bay tÄƒng.
             </p>
           </div>
 
-          {/* 4. ĐỘ PHỦ CHỒNG ẢNH */}
+          {/* 4. Äá»˜ PHá»¦ CHá»’NG áº¢NH */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                Độ Phủ Chồng Ảnh Trắc Địa (Image Overlap)
+                Äá»™ Phá»§ Chá»“ng áº¢nh Tráº¯c Äá»‹a (Image Overlap)
               </label>
               <button
                 type="button"
@@ -208,7 +208,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 className="text-[11px] text-[#8F7212] hover:underline flex items-center gap-1 cursor-pointer font-medium"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>{showOverlapHelp ? 'Thu gọn' : 'Độ phủ chồng ảnh là gì?'}</span>
+                <span>{showOverlapHelp ? 'Thu gá»n' : 'Äá»™ phá»§ chá»“ng áº£nh lÃ  gÃ¬?'}</span>
               </button>
             </div>
 
@@ -217,18 +217,18 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               onChange={(e) => setOverlap(e.target.value)}
               className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium cursor-pointer"
             >
-              <option value="80">80% Dọc / 70% Ngang (Khuyên dùng cho AI phát hiện vết nứt)</option>
-              <option value="85">85% Dọc / 75% Ngang (Dựng mô hình 3D đám mây điểm tấm Slab)</option>
-              <option value="75">75% Dọc / 65% Ngang (Bay nhanh tiết kiệm pin cho đường thẳng)</option>
+              <option value="80">80% Dá»c / 70% Ngang (KhuyÃªn dÃ¹ng cho AI phÃ¡t hiá»‡n váº¿t ná»©t)</option>
+              <option value="85">85% Dá»c / 75% Ngang (Dá»±ng mÃ´ hÃ¬nh 3D Ä‘Ã¡m mÃ¢y Ä‘iá»ƒm táº¥m Slab)</option>
+              <option value="75">75% Dá»c / 65% Ngang (Bay nhanh tiáº¿t kiá»‡m pin cho Ä‘Æ°á»ng tháº³ng)</option>
             </select>
 
             {showOverlapHelp && <OverlapHelpBox />}
           </div>
 
-          {/* 5. NGÀY BAY DỰ KIẾN & PHI CÔNG */}
+          {/* 5. NGÃ€Y BAY Dá»° KIáº¾N & PHI CÃ”NG */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <InputField
-              label="Ngày Bay Dự Kiến"
+              label="NgÃ y Bay Dá»± Kiáº¿n"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
@@ -237,7 +237,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Chỉ Định Phi Công (Drone Operator)
+                Chá»‰ Äá»‹nh Phi CÃ´ng (Drone Operator)
               </label>
               <select
                 value={pilotId}
@@ -252,23 +252,23 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               </select>
               {selectedPilot && (
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Thiết bị: <strong className="text-slate-700">{selectedPilot.device}</strong> • {selectedPilot.license}
+                  Thiáº¿t bá»‹: <strong className="text-slate-700">{selectedPilot.device}</strong> â€¢ {selectedPilot.license}
                 </span>
               )}
             </div>
           </div>
 
-          {/* 6. GHI CHÚ KỸ THUẬT */}
+          {/* 6. GHI CHÃš Ká»¸ THUáº¬T */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Ghi Chú Kỹ Thuật &amp; Yêu Cầu An Toàn
+              Ghi ChÃº Ká»¹ Thuáº­t &amp; YÃªu Cáº§u An ToÃ n
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
               className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              placeholder="Nhập ghi chú yêu cầu bay cao, tránh đường dây điện cao thế..."
+              placeholder="Nháº­p ghi chÃº yÃªu cáº§u bay cao, trÃ¡nh Ä‘Æ°á»ng dÃ¢y Ä‘iá»‡n cao tháº¿..."
             />
           </div>
         </div>
@@ -276,10 +276,10 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
         {/* ACTION BUTTONS */}
         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
           <Button type="button" variant="outline" onClick={onCancel}>
-            Hủy Bỏ
+            Há»§y Bá»
           </Button>
           <Button type="submit" icon={<PlaneTakeoff className="w-4 h-4" />}>
-            Ban Hành Lệnh Bay Khảo Sát
+            Ban HÃ nh Lá»‡nh Bay Kháº£o SÃ¡t
           </Button>
         </div>
       </form>

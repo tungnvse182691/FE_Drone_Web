@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+﻿import React, { useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle } from '../../../utils/maplibre'
@@ -68,7 +68,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         }
       })
 
-      // Layer 1A: Nét mờ phát sáng nhẹ cho toàn tuyến
+      // Layer 1A: NÃ©t má» phÃ¡t sÃ¡ng nháº¹ cho toÃ n tuyáº¿n
       map.addLayer({
         id: 'full-route-glow',
         type: 'line',
@@ -81,7 +81,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         }
       })
 
-      // Layer 1B: Nét đứt thể hiện toàn bộ tim tuyến của dự án
+      // Layer 1B: NÃ©t Ä‘á»©t thá»ƒ hiá»‡n toÃ n bá»™ tim tuyáº¿n cá»§a dá»± Ã¡n
       map.addLayer({
         id: 'full-route-core',
         type: 'line',
@@ -104,7 +104,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         }
       })
 
-      // Layer 2A: Hành lang bay phủ màu nổi bật
+      // Layer 2A: HÃ nh lang bay phá»§ mÃ u ná»•i báº­t
       map.addLayer({
         id: 'survey-segment-glow',
         type: 'line',
@@ -117,7 +117,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         }
       })
 
-      // Layer 2B: Lõi tim đường khảo sát
+      // Layer 2B: LÃµi tim Ä‘Æ°á»ng kháº£o sÃ¡t
       map.addLayer({
         id: 'survey-segment-core',
         type: 'line',
@@ -136,12 +136,12 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
       const startPoint = surveySegmentCoords[0]
       const endPoint = surveySegmentCoords[surveySegmentCoords.length - 1]
 
-      // Marker Cất cánh
+      // Marker Cáº¥t cÃ¡nh
       const startEl = document.createElement('div')
       startEl.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
           <div style="background:#10B981; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-            🛫 Cất cánh: Km ${sKm.toFixed(1)}
+            ðŸ›« Cáº¥t cÃ¡nh: Km ${sKm.toFixed(1)}
           </div>
           <div style="width:14px; height:14px; background:#10B981; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #10B981;"></div>
         </div>
@@ -151,12 +151,12 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         .addTo(map)
       markersRef.current.push(startMarker)
 
-      // Marker Hạ cánh
+      // Marker Háº¡ cÃ¡nh
       const endEl = document.createElement('div')
       endEl.innerHTML = `
         <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
           <div style="background:#EF4444; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-            🛬 Hạ cánh: Km ${eKm.toFixed(1)}
+            ðŸ›¬ Háº¡ cÃ¡nh: Km ${eKm.toFixed(1)}
           </div>
           <div style="width:14px; height:14px; background:#EF4444; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #EF4444;"></div>
         </div>
@@ -189,12 +189,12 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-            <PlaneTakeoff className="w-4 h-4 text-[#C9A227]" />
-            <span>Hành Lang Bay Trắc Địa (MapLibre GIS)</span>
+            <PlaneTakeoff className="w-4 h-4 text-brand-gold" />
+            <span>HÃ nh Lang Bay Tráº¯c Äá»‹a (MapLibre GIS)</span>
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold flex items-center gap-1">
-            <Compass className="w-3 h-3 text-[#C9A227]" />
-            <span>Vệ Tinh MapLibre</span>
+            <Compass className="w-3 h-3 text-brand-gold" />
+            <span>Vá»‡ Tinh MapLibre</span>
           </span>
         </div>
 
@@ -204,12 +204,12 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
 
           {/* Overlay Badge */}
           <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[10px] font-mono pointer-events-none z-10 border border-white/10 shadow-lg flex flex-col gap-0.5">
-            <div className="text-[#C9A227] font-bold uppercase tracking-wider flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
-              Đoạn bay khảo sát:
+            <div className="text-brand-gold font-bold uppercase tracking-wider flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
+              Äoáº¡n bay kháº£o sÃ¡t:
             </div>
             <div className="text-white font-bold text-xs">
-              Km {sKm.toFixed(1)} ➔ Km {eKm.toFixed(1)} ({flightDistanceKm.toFixed(1)} km)
+              Km {sKm.toFixed(1)} âž” Km {eKm.toFixed(1)} ({flightDistanceKm.toFixed(1)} km)
             </div>
           </div>
 
@@ -217,11 +217,11 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
           <div className="absolute bottom-2.5 left-2.5 bg-black/75 backdrop-blur-sm text-white px-2 py-1.5 rounded-md text-[9px] pointer-events-none z-10 border border-white/10 flex items-center gap-3">
             <div className="flex items-center gap-1">
               <span className="w-3 h-1 bg-slate-400 border border-white/40"></span>
-              <span>Toàn tuyến dự án</span>
+              <span>ToÃ n tuyáº¿n dá»± Ã¡n</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="w-3 h-1.5 bg-[#C9A227] rounded-xs shadow-xs"></span>
-              <span className="text-[#C9A227] font-bold">Đoạn chọn bay</span>
+              <span className="w-3 h-1.5 bg-brand-gold rounded-xs shadow-xs"></span>
+              <span className="text-brand-gold font-bold">Äoáº¡n chá»n bay</span>
             </div>
           </div>
         </div>
@@ -230,8 +230,8 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         <div className="grid grid-cols-3 gap-2 text-center text-xs pt-1">
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
-              <MapPin className="w-3 h-3 text-[#C9A227]" />
-              <span>Cự ly bay</span>
+              <MapPin className="w-3 h-3 text-brand-gold" />
+              <span>Cá»± ly bay</span>
             </div>
             <div className="font-bold text-brand-dark text-sm mt-0.5">
               {flightDistanceKm.toFixed(1)} km
@@ -241,17 +241,17 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
               <Clock className="w-3 h-3 text-sky-600" />
-              <span>Thời gian bay</span>
+              <span>Thá»i gian bay</span>
             </div>
             <div className="font-bold text-brand-dark text-sm mt-0.5">
-              ~{estimatedDurationMinutes} phút
+              ~{estimatedDurationMinutes} phÃºt
             </div>
           </div>
 
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
               <BatteryCharging className="w-3 h-3 text-emerald-600" />
-              <span>Chu kỳ pin</span>
+              <span>Chu ká»³ pin</span>
             </div>
             <div className="font-bold text-brand-dark text-sm mt-0.5">
               {estimatedBatteries} pack pin
@@ -262,7 +262,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-xs text-amber-900 leading-relaxed flex items-start gap-2">
           <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p>
-            <strong>Lưu ý vùng bay:</strong> Tuyến bay đã được đăng ký giấy phép số 284/GP-TC. Giới hạn độ cao tối đa 120m AGL, duy trì đường truyền RTK liên tục để gán tọa độ centimet cho từng ảnh.
+            <strong>LÆ°u Ã½ vÃ¹ng bay:</strong> Tuyáº¿n bay Ä‘Ã£ Ä‘Æ°á»£c Ä‘Äƒng kÃ½ giáº¥y phÃ©p sá»‘ 284/GP-TC. Giá»›i háº¡n Ä‘á»™ cao tá»‘i Ä‘a 120m AGL, duy trÃ¬ Ä‘Æ°á»ng truyá»n RTK liÃªn tá»¥c Ä‘á»ƒ gÃ¡n tá»a Ä‘á»™ centimet cho tá»«ng áº£nh.
           </p>
         </div>
       </div>

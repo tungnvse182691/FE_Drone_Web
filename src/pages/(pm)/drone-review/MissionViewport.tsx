@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { PlaneTakeoff, AlertTriangle, Sliders, MapPin } from 'lucide-react'
 import { AIDetectionItem } from './types'
 
@@ -25,18 +25,18 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
         <div className="w-full h-full relative">
           <div ref={corridorMapContainerRef} className="w-full h-full" />
           <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 z-10 pointer-events-none shadow-lg">
-            <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
+            <div className="flex items-center gap-1.5 font-bold text-brand-gold">
               <PlaneTakeoff className="w-3.5 h-3.5" />
-              <span>Hành lang bay Drone 6.0 km (Km 1024+000 → Km 1030+000)</span>
+              <span>HÃ nh lang bay Drone 6.0 km (Km 1024+000 â†’ Km 1030+000)</span>
             </div>
             <div className="text-slate-300 text-[10px] mt-0.5">
-              8 điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
+              8 Ä‘iá»ƒm phÃ¡t hiá»‡n AI Ä‘Æ°á»£c ghim trá»±c tiáº¿p theo tá»a Ä‘á»™ WGS84 â€¢ Báº¥m marker Ä‘á»ƒ xem chi tiáº¿t
             </div>
           </div>
         </div>
       ) : (
         <>
-          {/* Ảnh chụp trắc địa mặt đường thực tế từ trên cao */}
+          {/* áº¢nh chá»¥p tráº¯c Ä‘á»‹a máº·t Ä‘Æ°á»ng thá»±c táº¿ tá»« trÃªn cao */}
           <img
             alt="Surface Road Drone Frame"
             className="w-full h-full object-cover"
@@ -46,10 +46,10 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           {/* Vignette Gradient Shadow */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none"></div>
 
-          {/* AI Bounding Boxes (Chỉ hiển thị khi isAiOverlayVisible === true) */}
+          {/* AI Bounding Boxes (Chá»‰ hiá»ƒn thá»‹ khi isAiOverlayVisible === true) */}
           {isAiOverlayVisible && (
             <>
-              {/* Bounding Box 1: Ổ gà DET-01 */}
+              {/* Bounding Box 1: á»” gÃ  DET-01 */}
               <div
                 onClick={() => onSelectDetection(detections[0])}
                 style={{
@@ -83,7 +83,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
                 </div>
               </div>
 
-              {/* Bounding Box 2: Nứt dọc DET-02 */}
+              {/* Bounding Box 2: Ná»©t dá»c DET-02 */}
               <div
                 onClick={() => onSelectDetection(detections[1])}
                 style={{
@@ -110,7 +110,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
             </>
           )}
 
-          {/* Drone Nadir Reticle (Tâm ngắm trắc địa) */}
+          {/* Drone Nadir Reticle (TÃ¢m ngáº¯m tráº¯c Ä‘á»‹a) */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30">
             <div className="w-12 h-12 border border-white rounded-full flex items-center justify-center">
               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -121,7 +121,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           <div className="absolute bottom-3 left-3 bg-slate-900/85 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2.5 text-[11px] font-mono pointer-events-none shadow-md border border-slate-700/60">
             <span className="flex items-center gap-1 text-sky-300">
               <MapPin className="w-3.5 h-3.5" />
-              16.0544° N, 108.2022° E
+              16.0544Â° N, 108.2022Â° E
             </span>
             <span className="text-slate-500">|</span>
             <span>AGL: 45.0m</span>

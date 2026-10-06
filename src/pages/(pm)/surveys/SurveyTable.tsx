@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Search,
   Calendar,
@@ -48,7 +48,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                 : 'text-slate-600 hover:text-brand-dark'
             }`}
           >
-            Tất cả đợt bay ({missions.length})
+            Táº¥t cáº£ Ä‘á»£t bay ({missions.length})
           </button>
           <button
             onClick={() => setActiveTab('PENDING')}
@@ -58,7 +58,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                 : 'text-slate-600 hover:text-brand-dark'
             }`}
           >
-            <span>Chờ Thẩm Định AI</span>
+            <span>Chá» Tháº©m Äá»‹nh AI</span>
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
           </button>
           <button
@@ -69,7 +69,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                 : 'text-slate-600 hover:text-brand-dark'
             }`}
           >
-            Kế hoạch lên lịch (1)
+            Káº¿ hoáº¡ch lÃªn lá»‹ch (1)
           </button>
           <button
             onClick={() => setActiveTab('COMPLETED')}
@@ -79,7 +79,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                 : 'text-slate-600 hover:text-brand-dark'
             }`}
           >
-            Đã khóa Baseline (2)
+            ÄÃ£ khÃ³a Baseline (2)
           </button>
         </div>
 
@@ -88,10 +88,10 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Tìm theo mã đợt #MS-, lý trình, phi công..."
+            placeholder="TÃ¬m theo mÃ£ Ä‘á»£t #MS-, lÃ½ trÃ¬nh, phi cÃ´ng..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold transition-all"
           />
         </div>
       </div>
@@ -101,14 +101,14 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-brand-border text-slate-500 bg-slate-50">
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Mã Đợt Bay</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Tên Tuyến &amp; Lý Trình</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Ngày Bay</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Phi Công &amp; Thiết Bị</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Khối Lượng Ảnh</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Phát Hiện AI</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Trạng Thái</th>
-              <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Thao Tác</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">MÃ£ Äá»£t Bay</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">TÃªn Tuyáº¿n &amp; LÃ½ TrÃ¬nh</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">NgÃ y Bay</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Phi CÃ´ng &amp; Thiáº¿t Bá»‹</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Khá»‘i LÆ°á»£ng áº¢nh</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">PhÃ¡t Hiá»‡n AI</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider">Tráº¡ng ThÃ¡i</th>
+              <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Thao TÃ¡c</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -127,11 +127,11 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   {/* Code */}
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-bold text-brand-dark group-hover:text-[#C9A227] group-hover:underline">
+                      <span className="font-mono font-bold text-brand-dark group-hover:text-brand-gold group-hover:underline">
                         {survey.code}
                       </span>
                       {isNeedReview && (
-                        <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" title="Cần thẩm định ngay"></span>
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" title="Cáº§n tháº©m Ä‘á»‹nh ngay"></span>
                       )}
                     </div>
                     <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[160px]">
@@ -143,7 +143,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-brand-dark">{survey.project_name}</div>
                     <div className="font-mono text-slate-500 text-[11px] mt-0.5">
-                      {survey.start_km} → {survey.end_km}
+                      {survey.start_km} â†’ {survey.end_km}
                     </div>
                   </td>
 
@@ -168,7 +168,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
 
                   {/* Photos & GSD */}
                   <td className="py-3.5 px-4 font-medium text-slate-700 whitespace-nowrap">
-                    <div>{survey.total_photos > 0 ? `${survey.total_photos.toLocaleString()} ảnh SD` : '—'}</div>
+                    <div>{survey.total_photos > 0 ? `${survey.total_photos.toLocaleString()} áº£nh SD` : 'â€”'}</div>
                     {survey.total_photos > 0 && (
                       <div className="text-[10px] text-slate-400 font-mono">GSD: {survey.gsd_resolution}</div>
                     )}
@@ -184,16 +184,16 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                             : 'bg-slate-100 text-slate-700 border-slate-200'
                         }`}>
                           <Sparkles className="w-3 h-3" />
-                          {survey.ai_defects_count} khiếm khuyết
+                          {survey.ai_defects_count} khiáº¿m khuyáº¿t
                         </span>
                         {isNeedReview && (
                           <div className="text-[10px] text-red-600 font-semibold mt-0.5">
-                            8 chưa thẩm định
+                            8 chÆ°a tháº©m Ä‘á»‹nh
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400">â€”</span>
                     )}
                   </td>
 
@@ -202,19 +202,19 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                     {survey.status === 'PENDING_AI_REVIEW' && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-[#8F7212] border border-amber-300">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
-                        Chờ Thẩm Định AI
+                        Chá» Tháº©m Äá»‹nh AI
                       </span>
                     )}
                     {survey.status === 'BASELINE_LOCKED' && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Đã Khóa Baseline
+                        ÄÃ£ KhÃ³a Baseline
                       </span>
                     )}
                     {survey.status === 'SCHEDULED' && (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                         <Clock className="w-3 h-3 text-slate-400" />
-                        Lên Lịch Bay
+                        LÃªn Lá»‹ch Bay
                       </span>
                     )}
                   </td>
@@ -230,10 +230,10 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                             onOpenSimulator(survey)
                           }}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                          title="Kích hoạt mô phỏng Drone bay hoàn tất và AI quét lỗi"
+                          title="KÃ­ch hoáº¡t mÃ´ phá»ng Drone bay hoÃ n táº¥t vÃ  AI quÃ©t lá»—i"
                         >
                           <Play className="w-3 h-3 fill-current" />
-                          <span>Mô phỏng bay xong</span>
+                          <span>MÃ´ phá»ng bay xong</span>
                         </button>
                       )}
                       {isNeedReview ? (
@@ -243,10 +243,10 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                             e.stopPropagation()
                             onNavigate(`${basePath}/surveys/${survey.id}/review`)
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold shadow-2xs transition-all cursor-pointer"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>Mở Canvas AI (WF-09)</span>
+                          <span>Má»Ÿ Canvas AI (WF-09)</span>
                         </button>
                       ) : (
                         <button
@@ -257,7 +257,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                           }}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                         >
-                          <span>Xem hồ sơ</span>
+                          <span>Xem há»“ sÆ¡</span>
                           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                       )}
@@ -275,10 +275,10 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
         <div className="flex items-center gap-1.5">
           <Info className="w-3.5 h-3.5 text-slate-400" />
           <span>
-            Mỗi đợt bay sau khi nạp ảnh sẽ tự động chạy pipeline Road-YOLOv9. Sau khi thẩm định xong 100% hộp bao và độ phủ &ge; 95%, PM có thể ký số khóa Baseline đoạn đường.
+            Má»—i Ä‘á»£t bay sau khi náº¡p áº£nh sáº½ tá»± Ä‘á»™ng cháº¡y pipeline Road-YOLOv9. Sau khi tháº©m Ä‘á»‹nh xong 100% há»™p bao vÃ  Ä‘á»™ phá»§ &ge; 95%, PM cÃ³ thá»ƒ kÃ½ sá»‘ khÃ³a Baseline Ä‘oáº¡n Ä‘Æ°á»ng.
           </span>
         </div>
-        <span className="font-mono text-slate-400">Hiển thị {filteredMissions.length} / {missions.length} nhiệm vụ</span>
+        <span className="font-mono text-slate-400">Hiá»ƒn thá»‹ {filteredMissions.length} / {missions.length} nhiá»‡m vá»¥</span>
       </div>
     </div>
   )

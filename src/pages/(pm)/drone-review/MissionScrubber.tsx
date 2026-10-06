@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link } from 'react-router-dom'
 import {
   Play,
@@ -39,7 +39,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
       <div className="flex items-center justify-between font-mono text-xs text-slate-500">
         <span className="text-slate-800 font-bold">02:14</span>
         <span className="text-xs">
-          Đang xem: <strong>{selectedItem.stationing}</strong> (Frame {currentFrame} / {totalFrames})
+          Äang xem: <strong>{selectedItem.stationing}</strong> (Frame {currentFrame} / {totalFrames})
         </span>
         <span>03:45</span>
       </div>
@@ -54,7 +54,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
         className="w-full bg-slate-100 h-2 rounded-full relative cursor-pointer group"
       >
         <div
-          className="bg-[#C9A227] h-full rounded-full transition-all"
+          className="bg-brand-gold h-full rounded-full transition-all"
           style={{ width: `${(currentFrame / totalFrames) * 100}%` }}
         ></div>
 
@@ -78,7 +78,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
               }}
               style={{ left: `${percent}%` }}
               className={`absolute top-0 bottom-0 w-2 ${dotColor} rounded-full transition-transform hover:scale-150`}
-              title={`${d.code}: ${d.type} tại ${d.stationing}`}
+              title={`${d.code}: ${d.type} táº¡i ${d.stationing}`}
             ></div>
           )
         })}
@@ -86,7 +86,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
         {/* Scrubber thumb */}
         <div
           style={{ left: `${(currentFrame / totalFrames) * 100}%` }}
-          className="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 bg-[#C9A227] rounded-full shadow border-2 border-white pointer-events-none"
+          className="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 bg-brand-gold rounded-full shadow border-2 border-white pointer-events-none"
         ></div>
       </div>
 
@@ -96,7 +96,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
           <button
             onClick={() => setCurrentFrame((prev) => Math.max(1, prev - 50))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="Lùi 50 frames"
+            title="LÃ¹i 50 frames"
             type="button"
           >
             <SkipBack className="w-4 h-4" />
@@ -104,8 +104,8 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="p-1.5 rounded-full bg-[#C9A227] hover:bg-[#B38E1F] text-white shadow-xs flex items-center justify-center cursor-pointer transition-all"
-            title={isPlaying ? 'Tạm dừng' : 'Phát'}
+            className="p-1.5 rounded-full bg-brand-gold hover:bg-[#B38E1F] text-white shadow-xs flex items-center justify-center cursor-pointer transition-all"
+            title={isPlaying ? 'Táº¡m dá»«ng' : 'PhÃ¡t'}
             type="button"
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -114,7 +114,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
           <button
             onClick={() => setCurrentFrame((prev) => Math.min(totalFrames, prev + 50))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="Tiến 50 frames"
+            title="Tiáº¿n 50 frames"
             type="button"
           >
             <SkipForward className="w-4 h-4" />
@@ -134,8 +134,8 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
             to="/pm/projects/prj-ql1a-02/alignment"
             className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1 transition-colors"
           >
-            <MapIcon className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>Xem trên GIS (MapLibre)</span>
+            <MapIcon className="w-3.5 h-3.5 text-brand-gold" />
+            <span>Xem trÃªn GIS (MapLibre)</span>
           </Link>
         </div>
       </div>
