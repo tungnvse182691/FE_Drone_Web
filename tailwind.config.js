@@ -35,6 +35,10 @@ export default {
       fontFamily: {
         sans: ['Roboto', 'sans-serif'],
         headline: ['Sansation', 'Roboto', 'sans-serif'],
+        sansation: ['Sansation', 'Roboto', 'sans-serif'],
+      },
+      backdropBlur: {
+        xs: '2px',
       },
       boxShadow: {
         '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
