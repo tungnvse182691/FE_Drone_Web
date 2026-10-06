@@ -1,8 +1,18 @@
+import tailwindcssAnimate from 'tailwindcss-animate'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  safelist: [
+    'line-clamp-1',
+    'line-clamp-2',
+    'line-clamp-3',
+    'line-clamp-4',
+    'line-clamp-5',
+    'line-clamp-6',
   ],
   theme: {
     extend: {
@@ -25,8 +35,15 @@ export default {
       fontFamily: {
         sans: ['Roboto', 'sans-serif'],
         headline: ['Sansation', 'Roboto', 'sans-serif'],
+      },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      },
+      borderWidth: {
+        '3': '3px',
       }
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 }

@@ -23,9 +23,17 @@ export const TruncatedText: React.FC<TruncatedTextProps> = ({
     style.maxWidth = typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth
   }
 
+  const lineClampClasses: Record<number, string> = {
+    1: 'line-clamp-1',
+    2: 'line-clamp-2',
+    3: 'line-clamp-3',
+    4: 'line-clamp-4',
+    5: 'line-clamp-5',
+    6: 'line-clamp-6',
+  }
   const isMultiLine = lines > 1
   const truncationClasses = isMultiLine
-    ? `line-clamp-${lines} overflow-hidden text-ellipsis break-words`
+    ? `${lineClampClasses[lines] || 'line-clamp-2'} overflow-hidden text-ellipsis break-words`
     : 'truncate inline-block align-bottom max-w-full'
 
   return (
