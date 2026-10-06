@@ -72,7 +72,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
         <span className="text-slate-600">Báo cáo & Giám sát</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-[#C9A227] font-semibold">Chỉ số vận hành & Hồ sơ giải trình</span>
+        <span className="text-brand-gold font-semibold">Chỉ số vận hành & Hồ sơ giải trình</span>
       </nav>
 
       {/* 2. PAGE HEADER & ACTION CONTROLS */}
@@ -91,16 +91,16 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
             {/* As-Of Metadata Bar */}
             <div className="flex items-center gap-2.5 text-xs text-slate-500 flex-wrap">
               <div className="inline-flex items-center gap-1.5 bg-slate-50 px-3 py-1 rounded-full border border-slate-200/80">
-                <RefreshCw className={`w-3.5 h-3.5 text-[#C9A227] ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-brand-gold ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span>
                   Dữ liệu chốt lúc (As-Of): <strong className="text-slate-800 font-semibold font-mono">21:45, 25/08/2026</strong>
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="text-[#C9A227] font-medium">Tự động cập nhật mỗi 60s</span>
+                <span className="text-brand-gold font-medium">Tự động cập nhật mỗi 60s</span>
               </div>
 
               <div className="inline-flex items-center gap-1.5 bg-slate-100/70 px-3 py-1 rounded-full text-[11px] text-slate-600 border border-slate-200/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227]"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-gold"></span>
                 <span>{currentProject.serverNode}</span>
               </div>
             </div>
@@ -120,7 +120,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
             <button
               onClick={() => setIsExportModalOpen(true)}
               type="button"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs lg:text-sm shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs lg:text-sm shadow-sm transition-all cursor-pointer"
             >
               <Archive className="w-4 h-4" />
               <span>Tạo yêu cầu xuất hồ sơ (Export ZIP/PDF)</span>
@@ -132,7 +132,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
               title="Làm mới dữ liệu"
               className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-50 transition shadow-2xs cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-[#C9A227]' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-brand-gold' : ''}`} />
             </button>
           </div>
         </div>
@@ -220,7 +220,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
           {/* Right Live Indicators */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
               <span>Thời gian thực (Live Sync)</span>
             </span>
 
@@ -236,7 +236,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200">
               <span className="font-semibold text-slate-500 flex items-center gap-1">
-                <ArrowUpDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                <ArrowUpDown className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Sắp xếp:</span>
               </span>
               <select

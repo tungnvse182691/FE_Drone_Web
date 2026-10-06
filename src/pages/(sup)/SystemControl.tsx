@@ -23,11 +23,11 @@ export const SystemControl: React.FC = () => {
   const s = useSystemControlState(user, isSupervisor)
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1720px] mx-auto w-full pb-16 bg-[#F8F9FA]">
+    <div className="flex flex-col gap-5 max-w-[1720px] mx-auto w-full pb-16 bg-brand-surfaceAlt">
       {/* Thông báo thành công nổi lên */}
       {s.actionSuccessNotice && (
-        <div className="fixed top-20 right-6 z-50 bg-[#151C27] text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-2 border border-[#E2E5E9]">
-          <CheckCircle2 className="w-4 h-4 text-[#C9A227]" />
+        <div className="fixed top-20 right-6 z-50 bg-[#151C27] text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-2 border border-brand-border">
+          <CheckCircle2 className="w-4 h-4 text-brand-gold" />
           <span>{s.actionSuccessNotice}</span>
         </div>
       )}
@@ -45,17 +45,17 @@ export const SystemControl: React.FC = () => {
       />
 
       {/* 2. Tabs Navigation */}
-      <div className="bg-white border border-[#E2E5E9] px-4 pt-2 rounded-xl shadow-sm flex items-center gap-2 overflow-x-auto select-none">
+      <div className="bg-white border border-brand-border px-4 pt-2 rounded-xl shadow-sm flex items-center gap-2 overflow-x-auto select-none">
         <button
           type="button"
           onClick={() => s.setActiveTab('accounts')}
           className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
             s.activeTab === 'accounts'
-              ? 'text-[#151C27] font-bold border-b-2 border-[#C9A227]'
+              ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
               : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
           }`}
         >
-          <Users className={`w-4 h-4 ${s.activeTab === 'accounts' ? 'text-[#C9A227]' : ''}`} />
+          <Users className={`w-4 h-4 ${s.activeTab === 'accounts' ? 'text-brand-gold' : ''}`} />
           <span>{isSupervisor ? 'Tài khoản & Phân quyền (FR-02)' : 'Nhân sự dự án (BR-02)'}</span>
           <span
             className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
@@ -75,11 +75,11 @@ export const SystemControl: React.FC = () => {
               onClick={() => s.setActiveTab('ai-models')}
               className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
                 s.activeTab === 'ai-models'
-                  ? 'text-[#151C27] font-bold border-b-2 border-[#C9A227]'
+                  ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
                   : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
               }`}
             >
-              <Cpu className={`w-4 h-4 ${s.activeTab === 'ai-models' ? 'text-[#C9A227]' : ''}`} />
+              <Cpu className={`w-4 h-4 ${s.activeTab === 'ai-models' ? 'text-brand-gold' : ''}`} />
               <span>Mô hình AI &amp; Đánh giá (FR-36)</span>
               <span
                 className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
@@ -97,11 +97,11 @@ export const SystemControl: React.FC = () => {
               onClick={() => s.setActiveTab('defect-catalog')}
               className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
                 s.activeTab === 'defect-catalog'
-                  ? 'text-[#151C27] font-bold border-b-2 border-[#C9A227]'
+                  ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
                   : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
               }`}
             >
-              <BookmarkCheck className={`w-4 h-4 ${s.activeTab === 'defect-catalog' ? 'text-[#C9A227]' : ''}`} />
+              <BookmarkCheck className={`w-4 h-4 ${s.activeTab === 'defect-catalog' ? 'text-brand-gold' : ''}`} />
               <span>Danh mục khiếm khuyết TCVN (FR-36)</span>
               <span
                 className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
@@ -121,13 +121,13 @@ export const SystemControl: React.FC = () => {
           onClick={() => s.setActiveTab('retention-legal-hold')}
           className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
             s.activeTab === 'retention-legal-hold'
-              ? 'text-[#151C27] font-bold border-b-2 border-[#C9A227]'
+              ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
               : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
           }`}
         >
           <Archive
             className={`w-4 h-4 ${
-              s.activeLegalHoldProject ? 'text-[#BA1A1A]' : s.activeTab === 'retention-legal-hold' ? 'text-[#C9A227]' : ''
+              s.activeLegalHoldProject ? 'text-[#BA1A1A]' : s.activeTab === 'retention-legal-hold' ? 'text-brand-gold' : ''
             }`}
           />
           <span>{isSupervisor ? 'Lưu trữ & Phong tỏa pháp lý (Legal Hold)' : 'Lưu trữ bảo hành & Hết hạn (QT11)'}</span>

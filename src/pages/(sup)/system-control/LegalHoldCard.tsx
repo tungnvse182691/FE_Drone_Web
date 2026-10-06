@@ -14,8 +14,8 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
   handleToggleLegalHold,
 }) => {
   return (
-    <div className="lg:col-span-5 bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+    <div className="lg:col-span-5 bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between pb-3 border-b border-brand-border">
         <div className="flex items-center gap-2">
           <Gavel className="w-5 h-5 text-[#BA1A1A]" />
           <h2 className="text-sm font-bold text-[#151C27]">
@@ -39,14 +39,14 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
             className={`p-3.5 rounded-xl border transition-all ${
               proj.is_legal_hold
                 ? 'bg-[#FFDAD6]/30 border-[#FFCDD2]'
-                : 'bg-[#F8F9FA] border-[#E2E5E9]'
+                : 'bg-brand-surfaceAlt border-brand-border'
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-xs text-[#151C27]">{proj.project_name}</span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.5 bg-white rounded border border-[#E2E5E9] text-[#555F6F]">
+                  <span className="font-mono text-[10px] px-1.5 py-0.5 bg-white rounded border border-brand-border text-[#555F6F]">
                     {proj.project_code}
                   </span>
                 </div>
@@ -75,7 +75,7 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
                   <div
                     className={`w-10 h-5 bg-[#DCE2F3] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all ${
                       !isSupervisor ? 'opacity-50' : ''
-                    } peer-checked:bg-[#C9A227]`}
+                    } peer-checked:bg-brand-gold`}
                   ></div>
                 </label>
                 <span
@@ -105,8 +105,8 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
       </div>
 
       {/* Chú thích pháp lý Retention BR-45 */}
-      <div className="p-3 bg-[#F8F9FA] rounded-xl border border-[#E2E5E9] text-[11px] text-[#555F6F] flex items-start gap-2">
-        <Info className="w-4 h-4 text-[#C9A227] shrink-0 mt-0.5" />
+      <div className="p-3 bg-brand-surfaceAlt rounded-xl border border-brand-border text-[11px] text-[#555F6F] flex items-start gap-2">
+        <Info className="w-4 h-4 text-brand-gold shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           Hồ sơ dự án phải được lưu trữ tối thiểu đến hết thời hạn bảo hành cộng thêm <strong>5 năm</strong>. Lệnh xóa dữ liệu chỉ có hiệu lực khi do <strong>Supervisor phê duyệt</strong>; mọi hồ sơ có tranh chấp (Legal Hold) bị nghiêm cấm xóa vĩnh viễn.
         </p>

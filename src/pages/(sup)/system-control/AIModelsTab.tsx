@@ -9,10 +9,10 @@ export const AIModelsTab: React.FC = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
       {/* Cột trái: Mô hình đang chạy chính thức */}
-      <div className="lg:col-span-6 bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+      <div className="lg:col-span-6 bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-brand-border">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#C9A227] text-white flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-brand-gold text-white flex items-center justify-center shadow-sm">
               <Cpu className="w-4 h-4" />
             </div>
             <div>
@@ -22,12 +22,12 @@ export const AIModelsTab: React.FC = () => {
               <p className="text-xs text-[#555F6F]">Phân loại &amp; đo lường vết nứt mặt đường theo thời gian thực</p>
             </div>
           </div>
-          <span className="px-3 py-0.5 rounded-full text-white font-mono text-[11px] font-bold bg-[#C9A227]">
+          <span className="px-3 py-0.5 rounded-full text-white font-mono text-[11px] font-bold bg-brand-gold">
             LIVE
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#F8F9FA] border border-[#E2E5E9] space-y-3">
+        <div className="p-4 rounded-xl bg-brand-surfaceAlt border border-brand-border space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <span className="font-bold text-sm text-[#151C27]">Road-YOLOv9-Civil-Edge</span>
@@ -40,22 +40,22 @@ export const AIModelsTab: React.FC = () => {
 
           {/* 3 Chỉ số kiểm định chất lượng AI */}
           <div className="grid grid-cols-3 gap-2.5 text-center pt-1">
-            <div className="p-3 rounded-lg bg-white border border-[#E2E5E9] shadow-sm">
+            <div className="p-3 rounded-lg bg-white border border-brand-border shadow-sm">
               <span className="text-[11px] text-[#555F6F] block">Độ chính xác mAP@50</span>
-              <span className="text-xl font-bold text-[#C9A227] font-mono">92.4%</span>
+              <span className="text-xl font-bold text-brand-gold font-mono">92.4%</span>
             </div>
-            <div className="p-3 rounded-lg bg-white border border-[#E2E5E9] shadow-sm">
+            <div className="p-3 rounded-lg bg-white border border-brand-border shadow-sm">
               <span className="text-[11px] text-[#555F6F] block">Độ nhạy Recall</span>
               <span className="text-xl font-bold text-[#695587] font-mono">89.6%</span>
             </div>
-            <div className="p-3 rounded-lg bg-white border border-[#E2E5E9] shadow-sm">
+            <div className="p-3 rounded-lg bg-white border border-brand-border shadow-sm">
               <span className="text-[11px] text-[#555F6F] block">F1-Score</span>
               <span className="text-xl font-bold text-[#151C27] font-mono">0.91</span>
             </div>
           </div>
 
           {/* Công tắc Fast Track tự động */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#E2E5E9]">
+          <div className="flex items-center justify-between pt-2 border-t border-brand-border">
             <div className="space-y-0.5">
               <span className="font-semibold text-xs text-[#151C27] block">
                 Tự động phân loại nhanh Fast-Track (&lt; 5cm)
@@ -66,7 +66,7 @@ export const AIModelsTab: React.FC = () => {
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" defaultChecked className="sr-only peer" />
-              <div className="w-10 h-5 bg-[#DCE2F3] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A227]"></div>
+              <div className="w-10 h-5 bg-[#DCE2F3] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-gold"></div>
             </label>
           </div>
         </div>
@@ -80,8 +80,8 @@ export const AIModelsTab: React.FC = () => {
       </div>
 
       {/* Cột phải: Lịch sử các phiên bản tiền nhiệm */}
-      <div className="lg:col-span-6 bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+      <div className="lg:col-span-6 bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+        <div className="flex items-center justify-between pb-3 border-b border-brand-border">
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-[#555F6F]" />
             <h3 className="text-sm font-bold text-[#151C27]">
@@ -96,7 +96,7 @@ export const AIModelsTab: React.FC = () => {
         </p>
 
         <div className="space-y-3">
-          <div className="p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E2E5E9] flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-brand-surfaceAlt border border-brand-border flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-xs text-[#151C27]">Road-YOLOv8-Baseline</span>

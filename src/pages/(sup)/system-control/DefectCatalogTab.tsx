@@ -12,8 +12,8 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
   isSupervisor
 }) => {
   return (
-    <div className="bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+    <div className="bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between pb-3 border-b border-brand-border">
         <div>
           <h2 className="text-sm font-bold text-[#151C27]">
             Danh mục khiếm khuyết chuẩn TCVN (Safety Defect Catalog)
@@ -31,7 +31,7 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
         {defectCatalog.map((item) => (
           <div
             key={item.code}
-            className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8F9FA] border border-[#E2E5E9] hover:bg-white transition-colors"
+            className="flex items-center justify-between p-3.5 rounded-xl bg-brand-surfaceAlt border border-brand-border hover:bg-white transition-colors"
           >
             <div className="flex items-center gap-3">
               <div
@@ -39,7 +39,7 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
                   item.code === 'POTHOLE'
                     ? 'bg-[#BA1A1A]'
                     : item.code === 'ALLIGATOR_CRACK'
-                    ? 'bg-[#C9A227]'
+                    ? 'bg-brand-gold'
                     : item.code === 'RUTTING'
                     ? 'bg-[#695587]'
                     : 'bg-[#7A7768]'
@@ -49,7 +49,7 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-xs text-[#151C27]">{item.code}</span>
                   <span className="text-xs font-semibold text-[#151C27]">{item.name}</span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-white border border-[#E2E5E9] rounded text-[#555F6F] font-medium">
+                  <span className="text-[10px] font-mono px-2 py-0.5 bg-white border border-brand-border rounded text-[#555F6F] font-medium">
                     {item.standard_ref}
                   </span>
                 </div>
@@ -58,7 +58,7 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              <span className="text-xs font-semibold text-[#C9A227]">Áp dụng</span>
+              <span className="text-xs font-semibold text-brand-gold">Áp dụng</span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -66,15 +66,15 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
                   defaultChecked={item.is_active}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-[#DCE2F3] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C9A227]"></div>
+                <div className="w-10 h-5 bg-[#DCE2F3] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-gold"></div>
               </label>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="p-3 rounded-xl bg-[#F8F9FA] border border-[#E2E5E9] text-[11px] text-[#555F6F] flex items-center gap-2">
-        <Info className="w-4 h-4 text-[#C9A227] shrink-0" />
+      <div className="p-3 rounded-xl bg-brand-surfaceAlt border border-brand-border text-[11px] text-[#555F6F] flex items-center gap-2">
+        <Info className="w-4 h-4 text-brand-gold shrink-0" />
         <span>Hệ thống áp dụng cơ chế Soft-Disable; mã lỗi cũ vẫn được giữ nguyên vẹn trong hồ sơ hoàn công.</span>
       </div>
     </div>

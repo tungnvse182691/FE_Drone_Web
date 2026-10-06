@@ -55,7 +55,7 @@ export const RiskAnalytics: React.FC = () => {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <Check className="w-5 h-5 text-[#C9A227] shrink-0" />
+          <Check className="w-5 h-5 text-brand-gold shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
       )}

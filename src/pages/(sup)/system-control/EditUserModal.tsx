@@ -46,10 +46,10 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#E2E5E9] max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/15 text-[#8C6D15] flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-brand-gold/15 text-[#8C6D15] flex items-center justify-center font-bold">
               <Edit3 className="w-5 h-5" />
             </div>
             <div>
@@ -79,7 +79,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                 required
                 value={editFullName}
                 onChange={(e) => setEditFullName(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
             <div className="space-y-1">
@@ -89,7 +89,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                 required
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
           </div>
@@ -102,7 +102,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                 value={editPhone}
                 onChange={(e) => setEditPhone(e.target.value)}
                 placeholder="0912.xxx.xxx"
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
             <div className="space-y-1">
@@ -110,7 +110,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               <select
                 value={editRole}
                 onChange={(e) => setEditRole(e.target.value as RoleCode)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
                 <option value={RoleCode.PROJECT_MANAGER}>PROJECT_MANAGER (Chỉ huy trưởng PM)</option>
                 <option value={RoleCode.SUPERVISOR}>SUPERVISOR (Giám sát / Chủ đầu tư)</option>
@@ -125,7 +125,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             <select
               value={editProjectScope}
               onChange={(e) => setEditProjectScope(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
             >
               <option value="">-- Để trống (Chưa phân công dự án) --</option>
               <option value="Chưa phân công dự án">-- Chưa phân công dự án --</option>
@@ -149,7 +149,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               value={editCertificate}
               onChange={(e) => setEditCertificate(e.target.value)}
               placeholder="VD: CCHN Giám sát thi công Hạng I, Bằng phi công UAV..."
-              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
             />
           </div>
 
@@ -193,7 +193,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
               <span>Lưu cập nhật nhân sự</span>

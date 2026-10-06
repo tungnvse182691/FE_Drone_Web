@@ -39,7 +39,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <Archive className="w-5 h-5 text-[#C9A227]" />
+            <Archive className="w-5 h-5 text-brand-gold" />
             <h3 className="font-sansation text-lg font-bold text-slate-900">
               Khởi tạo yêu cầu xuất hồ sơ (Export Job)
             </h3>
@@ -106,7 +106,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
                 type="checkbox"
                 checked={exportForm.includeSha256Checksum}
                 onChange={(e) => setExportForm({ ...exportForm, includeSha256Checksum: e.target.checked })}
-                className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
+                className="rounded text-brand-gold focus:ring-brand-gold w-4 h-4 cursor-pointer"
               />
               <span className="text-slate-700">Sinh mã băm SHA-256 Checksum cho từng ảnh gốc (BR-20)</span>
             </label>
@@ -116,7 +116,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
                 type="checkbox"
                 checked={exportForm.includeOriginalFiles}
                 onChange={(e) => setExportForm({ ...exportForm, includeOriginalFiles: e.target.checked })}
-                className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
+                className="rounded text-brand-gold focus:ring-brand-gold w-4 h-4 cursor-pointer"
               />
               <span className="text-slate-700 font-medium">Đính kèm ảnh/video gốc độ phân giải cao (includeOriginalFiles)</span>
             </label>
@@ -133,7 +133,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-sansation font-bold cursor-pointer transition shadow-2xs"
+              className="px-4 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-sansation font-bold cursor-pointer transition shadow-2xs"
             >
               Bắt đầu xuất hồ sơ
             </button>

@@ -107,7 +107,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span>Mã gói xuất</span>
                     {sortField === 'code' ? (
-                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-brand-gold" /> : <ArrowDown className="w-3.5 h-3.5 text-brand-gold" />
                     ) : (
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
@@ -124,7 +124,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span>Phạm vi / Tuyến</span>
                     {sortField === 'scope_display' ? (
-                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-brand-gold" /> : <ArrowDown className="w-3.5 h-3.5 text-brand-gold" />
                     ) : (
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
@@ -139,7 +139,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span>Mốc As-Of</span>
                     {sortField === 'as_of_timestamp' ? (
-                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-brand-gold" /> : <ArrowDown className="w-3.5 h-3.5 text-brand-gold" />
                     ) : (
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
@@ -154,7 +154,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span>Kích thước & Định dạng</span>
                     {sortField === 'file_size_mb' ? (
-                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-brand-gold" /> : <ArrowDown className="w-3.5 h-3.5 text-brand-gold" />
                     ) : (
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
@@ -169,7 +169,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span>Trạng thái</span>
                     {sortField === 'status' ? (
-                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
+                      sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-brand-gold" /> : <ArrowDown className="w-3.5 h-3.5 text-brand-gold" />
                     ) : (
                       <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}

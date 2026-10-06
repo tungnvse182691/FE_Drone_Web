@@ -33,8 +33,8 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
     <div className="bg-white rounded-2xl border border-slate-200/90 p-5 lg:p-6 shadow-2xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FBF6E9] text-[#C9A227] border border-amber-200/70 flex items-center justify-center shrink-0">
-            <FolderArchive className="w-5 h-5 text-[#C9A227]" />
+          <div className="w-10 h-10 rounded-xl bg-[#FBF6E9] text-brand-gold border border-amber-200/70 flex items-center justify-center shrink-0">
+            <FolderArchive className="w-5 h-5 text-brand-gold" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -54,7 +54,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
         <div className="flex items-center gap-2 self-start sm:self-auto">
           {activeJob && activeJob.status === 'PROCESSING' ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
               <span>Đang thực thi nền (202 Accepted)</span>
             </span>
           ) : (
@@ -70,11 +70,11 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
         <div className="bg-slate-50 rounded-xl border border-slate-200/90 p-4 space-y-3">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <RefreshCw className="w-4 h-4 text-[#C9A227] animate-spin" />
+              <RefreshCw className="w-4 h-4 text-brand-gold animate-spin" />
               <span className="font-semibold text-slate-800 text-sm">
                 Đang đóng gói hồ sơ nghiệm thu {activeJob.name}...
               </span>
-              <span className="font-sansation text-[#C9A227] font-bold text-base">
+              <span className="font-sansation text-brand-gold font-bold text-base">
                 {activeJob.progress}%
               </span>
             </div>
@@ -96,7 +96,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
 
           <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5 border border-slate-300/60">
             <div
-              className="h-full bg-[#C9A227] rounded-full transition-all duration-500 relative"
+              className="h-full bg-brand-gold rounded-full transition-all duration-500 relative"
               style={{
                 width: `${activeJob.progress}%`,
                 backgroundImage:
@@ -130,7 +130,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
           <button
             onClick={() => handleDownloadFile(`${currentProject.code}_Final.zip`)}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs shadow-2xs transition-colors cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Tải gói ZIP (142 MB)</span>

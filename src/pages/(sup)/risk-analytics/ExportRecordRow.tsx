@@ -25,7 +25,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
 }) => {
   return (
     <tr className="hover:bg-slate-50/80 transition-colors">
-      <td className="py-3.5 px-4 font-mono font-bold text-[#C9A227]">
+      <td className="py-3.5 px-4 font-mono font-bold text-brand-gold">
         {record.code}
       </td>
 
@@ -82,7 +82,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
             <button
               onClick={() => onDownloadFile(`${record.code}.zip`)}
               type="button"
-              className="p-1.5 rounded-lg text-slate-500 hover:text-[#C9A227] hover:bg-slate-100 transition cursor-pointer"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-brand-gold hover:bg-slate-100 transition cursor-pointer"
               title="Tải xuống gói hồ sơ"
             >
               <Download className="w-4 h-4" />

@@ -32,8 +32,8 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
 
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#E2E5E9] max-w-md w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E2E5E9]">
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-md w-full p-6 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between pb-3 border-b border-brand-border">
           <div className="flex items-center gap-2">
             <Trash2 className="w-5 h-5 text-[#BA1A1A]" />
             <h3 className="text-base font-bold text-[#151C27]">
@@ -43,7 +43,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
           <button
             type="button"
             onClick={() => setShowCreateDeletionRequestModal(false)}
-            className="p-1 rounded-lg text-[#555F6F] hover:text-[#151C27] hover:bg-[#F8F9FA]"
+            className="p-1 rounded-lg text-[#555F6F] hover:text-[#151C27] hover:bg-brand-surfaceAlt"
           >
             <X className="w-4 h-4" />
           </button>
@@ -55,7 +55,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
             <select
               value={newDelProject}
               onChange={(e) => setNewDelProject(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs font-medium text-[#151C27] focus:outline-none focus:border-[#C9A227] cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs font-medium text-[#151C27] focus:outline-none focus:border-brand-gold cursor-pointer"
             >
               <option value="proj-04">Sửa chữa bảo trì Km 990 - 1000 (Hết BH năm 2020 - Đủ 5 năm)</option>
               <option value="proj-02">QL1A - Giai đoạn 1 (Hết BH năm 2021 - Đang Legal Hold)</option>
@@ -68,7 +68,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
             <select
               value={newDelDataType}
               onChange={(e) => setNewDelDataType(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs font-medium text-[#151C27] focus:outline-none focus:border-[#C9A227] cursor-pointer"
+              className="w-full h-9 px-3 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs font-medium text-[#151C27] focus:outline-none focus:border-brand-gold cursor-pointer"
             >
               <option value="Ảnh thô Drone (RAW Media)">Ảnh thô Drone phân giải cao (RAW)</option>
               <option value="Video hành trình tuần đường">Video hành trình tuần đường xe cơ giới</option>
@@ -84,7 +84,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
               min={1}
               value={newDelSize}
               onChange={(e) => setNewDelSize(Number(e.target.value))}
-              className="w-full h-9 px-3 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs text-[#151C27] focus:outline-none focus:border-[#C9A227]"
+              className="w-full h-9 px-3 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs text-[#151C27] focus:outline-none focus:border-brand-gold"
             />
           </div>
 
@@ -96,25 +96,25 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
               value={newDelJustification}
               onChange={(e) => setNewDelJustification(e.target.value)}
               placeholder="Ghi rõ thời điểm hết hạn bảo hành của công trình và tình trạng sao lưu..."
-              className="w-full p-2.5 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs text-[#151C27] focus:outline-none focus:border-[#C9A227] resize-none"
+              className="w-full p-2.5 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs text-[#151C27] focus:outline-none focus:border-brand-gold resize-none"
             />
           </div>
 
-          <div className="p-2.5 rounded-lg bg-[#F8F9FA] border border-[#E2E5E9] text-[11px] text-[#555F6F]">
+          <div className="p-2.5 rounded-lg bg-brand-surfaceAlt border border-brand-border text-[11px] text-[#555F6F]">
             Lưu ý: Yêu cầu sẽ được chuyển đến Supervisor xem xét. Hệ thống sẽ tự động chặn nếu dự án đang có lệnh <strong>Legal Hold</strong> hoặc chưa đủ thời hạn <strong>5 năm sau bảo hành</strong>.
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[#E2E5E9]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-brand-border">
             <button
               type="button"
               onClick={() => setShowCreateDeletionRequestModal(false)}
-              className="px-4 py-2 rounded-lg bg-[#F8F9FA] hover:bg-[#E2E5E9] text-[#374151] text-xs font-semibold transition-colors"
+              className="px-4 py-2 rounded-lg bg-brand-surfaceAlt hover:bg-brand-border text-[#374151] text-xs font-semibold transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm"
+              className="px-4 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm"
             >
               Gửi yêu cầu xóa
             </button>

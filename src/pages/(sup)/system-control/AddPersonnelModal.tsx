@@ -56,10 +56,10 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#E2E5E9] max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/15 text-[#8C6D15] flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-brand-gold/15 text-[#8C6D15] flex items-center justify-center font-bold">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
@@ -123,7 +123,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="VD: Kỹ sư Hoàng Nam"
                     value={newPersonnelName}
                     onChange={(e) => setNewPersonnelName(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   />
                 </div>
                 <div className="space-y-1">
@@ -136,7 +136,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="nam.hoang@hoanghai-infra.vn"
                     value={newPersonnelEmail}
                     onChange={(e) => setNewPersonnelEmail(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   />
                 </div>
               </div>
@@ -149,7 +149,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="0912.xxx.xxx"
                     value={newPersonnelPhone}
                     onChange={(e) => setNewPersonnelPhone(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   />
                 </div>
                 <div className="space-y-1">
@@ -159,7 +159,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   <select
                     value={newPersonnelRole}
                     onChange={(e) => setNewPersonnelRole(e.target.value as RoleCode)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
                   >
                     <option value={RoleCode.PROJECT_MANAGER}>PROJECT_MANAGER (Chỉ huy trưởng PM)</option>
                     <option value={RoleCode.SUPERVISOR}>SUPERVISOR (Giám sát / Chủ đầu tư)</option>
@@ -176,7 +176,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                 <select
                   value={newPersonnelProject}
                   onChange={(e) => setNewPersonnelProject(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
                 >
                   <option value="">-- Để trống (Chưa phân công dự án - Có thể sửa sau) --</option>
                   <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
@@ -198,7 +198,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   placeholder="VD: CCHN Chỉ huy trưởng Hạng I (Số: CHT-1234/BXD)"
                   value={newPersonnelCert}
                   onChange={(e) => setNewPersonnelCert(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
 
@@ -215,7 +215,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                 <select
                   value={assignExistingUserId}
                   onChange={(e) => setAssignExistingUserId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
                 >
                   {usersList.map((u) => (
                     <option key={u.id} value={u.id}>
@@ -232,7 +232,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                 <select
                   value={assignExistingProject}
                   onChange={(e) => setAssignExistingProject(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
                 >
                   <option value="Chưa phân công dự án">-- Thu hồi dự án (Chờ phân công sau) --</option>
                   <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
@@ -260,7 +260,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
               <span>

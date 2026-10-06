@@ -43,8 +43,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   setShowSuspendModal
 }) => {
   return (
-    <div className="bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4 w-full">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#E2E5E9]">
+    <div className="bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4 w-full">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-brand-border">
         <div>
           <h2 className="text-sm font-bold text-[#151C27]">
             Danh sách nhân sự &amp; Thiết bị hiện trường
@@ -64,14 +64,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               value={userSearchTerm}
               onChange={(e) => setUserSearchTerm(e.target.value)}
               placeholder="Tìm tên, email, dự án..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs text-[#151C27] focus:outline-none focus:border-[#C9A227] transition-all"
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs text-[#151C27] focus:outline-none focus:border-brand-gold transition-all"
             />
           </div>
 
           <select
             value={userRoleFilter}
             onChange={(e) => setUserRoleFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-[#E2E5E9] bg-[#F8F9FA] text-xs font-semibold text-[#151C27] focus:outline-none focus:border-[#C9A227] cursor-pointer"
+            className="px-3 py-1.5 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs font-semibold text-[#151C27] focus:outline-none focus:border-brand-gold cursor-pointer"
           >
             <option value="all">Tất cả vai trò</option>
             <option value={RoleCode.SUPERVISOR}>SUPERVISOR</option>
@@ -87,7 +87,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 setAddPersonnelTab('NEW')
                 setShowAddPersonnelModal(true)
               }}
-              className="px-3 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>+ Thêm nhân sự</span>
@@ -99,7 +99,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-[#F8F9FA] text-[#555F6F] font-semibold uppercase tracking-wider border-b border-[#E2E5E9] text-[11px]">
+            <tr className="bg-brand-surfaceAlt text-[#555F6F] font-semibold uppercase tracking-wider border-b border-brand-border text-[11px]">
               <th className="py-3 px-4">Thành viên &amp; Liên hệ</th>
               <th className="py-3 px-3">Vai trò phân quyền</th>
               <th className="py-3 px-3">Phạm vi phụ trách</th>
@@ -108,7 +108,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               <th className="py-3 px-4 text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E5E9] text-[#151C27]">
+          <tbody className="divide-y divide-brand-border text-[#151C27]">
             {filteredUsers.map((u) => {
               const isCurrent = Boolean(
                 currentUser?.email && u.email.toLowerCase() === currentUser.email.toLowerCase()
@@ -120,8 +120,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               return (
                 <tr
                   key={u.id}
-                  className={`hover:bg-[#F8F9FA] transition-colors ${
-                    isSuspended ? 'bg-[#F8F9FA]/40 opacity-70' : ''
+                  className={`hover:bg-brand-surfaceAlt transition-colors ${
+                    isSuspended ? 'bg-brand-surfaceAlt/40 opacity-70' : ''
                   }`}
                 >
                   {/* Thành viên */}
@@ -132,7 +132,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           isSuspended
                             ? 'bg-[#CAC7B5] text-[#555F6F]'
                             : u.role === RoleCode.SUPERVISOR
-                            ? 'bg-[#C9A227]'
+                            ? 'bg-brand-gold'
                             : u.role === RoleCode.PROJECT_MANAGER
                             ? 'bg-[#555F6F]'
                             : 'bg-[#7A7768]'
@@ -146,7 +146,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             {u.full_name}
                           </span>
                           {isCurrent && (
-                            <span className="text-[10px] text-[#C9A227] font-bold font-mono">
+                            <span className="text-[10px] text-brand-gold font-bold font-mono">
                               (Chính bạn)
                             </span>
                           )}
@@ -189,7 +189,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     <div className="text-[#151C27] font-medium flex items-center gap-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
-                          isSuspended ? 'bg-[#7A7768]' : 'bg-[#C9A227]'
+                          isSuspended ? 'bg-[#7A7768]' : 'bg-brand-gold'
                         }`}
                       ></span>
                       <span>{u.device_info}</span>
@@ -208,7 +208,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                       </span>
                     ) : isInvited ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FBF6E9] border border-[#F3E6C4] text-[#8C6D15] font-semibold text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#C9A227]"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-gold"></span>
                         CHỜ KÍCH HOẠT
                       </span>
                     ) : (
@@ -225,7 +225,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedUserDetail(u)}
-                        className="px-2.5 py-1.5 rounded-lg border border-[#E2E5E9] bg-white hover:border-[#C9A227] hover:text-[#C9A227] text-[#151C27] font-semibold text-xs shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white hover:border-brand-gold hover:text-brand-gold text-[#151C27] font-semibold text-xs shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                         title="Xem chi tiết hồ sơ nhân sự, dự án và thiết bị"
                       >
                         <Eye className="w-3.5 h-3.5 text-slate-500" />
@@ -240,7 +240,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-[#8C6D15] font-semibold text-xs shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
                             title="Chỉnh sửa thông tin nhân sự và dự án phụ trách"
                           >
-                            <Edit3 className="w-3.5 h-3.5 text-[#C9A227]" />
+                            <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
                             <span>Sửa</span>
                           </button>
 

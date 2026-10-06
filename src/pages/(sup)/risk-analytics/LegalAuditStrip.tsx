@@ -5,7 +5,7 @@ export const LegalAuditStrip: React.FC = () => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 p-4 lg:p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
       <div className="flex items-start gap-3 flex-1">
-        <ShieldCheck className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
+        <ShieldCheck className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" />
         <div className="space-y-0.5">
           <span className="font-sansation text-sm text-slate-900 block font-bold">
             Tiêu chuẩn pháp lý & Toàn vẹn chứng từ số (RPT-07)

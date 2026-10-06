@@ -28,7 +28,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-[#E2E5E9] max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div
@@ -36,7 +36,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 selectedUserDetail.status === 'SUSPENDED'
                   ? 'bg-slate-600'
                   : selectedUserDetail.role === RoleCode.SUPERVISOR
-                  ? 'bg-[#C9A227]'
+                  ? 'bg-brand-gold'
                   : selectedUserDetail.role === RoleCode.PROJECT_MANAGER
                   ? 'bg-blue-600'
                   : 'bg-emerald-600'
@@ -78,7 +78,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         <div className="p-6 overflow-y-auto space-y-4 text-xs">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
             <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-[#C9A227]" />
+              <Briefcase className="w-4 h-4 text-brand-gold" />
               <span>Nhiệm vụ &amp; Phạm vi dự án</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -91,14 +91,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <div>
                 <span className="text-slate-500 text-[11px] block">Tuyến / Dự án phân công:</span>
                 <span className="font-semibold text-slate-900 flex items-center gap-1.5 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-[#C9A227] shrink-0" />
+                  <MapPin className="w-3.5 h-3.5 text-brand-gold shrink-0" />
                   {selectedUserDetail.project_scope}
                 </span>
               </div>
               <div className="sm:col-span-2">
                 <span className="text-slate-500 text-[11px] block">Chứng chỉ hành nghề &amp; Chuyên môn:</span>
                 <span className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
-                  <Award className="w-3.5 h-3.5 text-[#C9A227] shrink-0" />
+                  <Award className="w-3.5 h-3.5 text-brand-gold shrink-0" />
                   {selectedUserDetail.certificate || 'Hồ sơ lưu trữ nội bộ Hoàng Hải'}
                 </span>
               </div>
@@ -119,7 +119,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
             <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#C9A227]" />
+              <Phone className="w-4 h-4 text-brand-gold" />
               <span>Thông tin liên hệ &amp; Thiết bị hiện trường</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -152,7 +152,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
           <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/70 space-y-2">
             <h4 className="font-bold text-amber-900 text-xs flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+              <ShieldCheck className="w-4 h-4 text-brand-gold" />
               <span>Ma trận quyền hạn nghiệp vụ (RBAC Spec v2.2)</span>
             </h4>
             <ul className="space-y-1.5 text-[11px] text-amber-900/90 list-disc list-inside">
@@ -200,7 +200,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                   setSelectedUserDetail(null)
                   handleOpenEdit(u)
                 }}
-                className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Chỉnh sửa nhân sự này</span>

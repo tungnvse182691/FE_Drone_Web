@@ -22,8 +22,8 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
   handleApprovePurge,
 }) => {
   return (
-    <div className="lg:col-span-7 bg-white border border-[#E2E5E9] rounded-xl shadow-sm p-5 flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E5E9]">
+    <div className="lg:col-span-7 bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-brand-border">
         <div>
           <h2 className="text-sm font-bold text-[#151C27] flex items-center gap-1.5">
             <Trash2 className="w-4 h-4 text-[#BA1A1A]" />
@@ -56,12 +56,12 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
               key={req.id}
               className={`p-4 rounded-xl border space-y-2.5 transition-all ${
                 isPurged
-                  ? 'bg-[#F8F9FA]/60 border-[#E2E5E9] opacity-75'
+                  ? 'bg-brand-surfaceAlt/60 border-brand-border opacity-75'
                   : isBlockedByHold
                   ? 'bg-[#FFDAD6]/30 border-[#FFCDD2]'
                   : isRetentionNotExpired
                   ? 'bg-[#FBF6E9]/30 border-[#F3E6C4]'
-                  : 'bg-white border-[#E2E5E9] shadow-sm'
+                  : 'bg-white border-brand-border shadow-sm'
               }`}
             >
               {/* Header yêu cầu */}
@@ -102,7 +102,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
               </div>
 
               {/* Nội dung dữ liệu đề xuất xóa */}
-              <div className="text-xs text-[#151C27] leading-relaxed bg-[#F8F9FA] p-2.5 rounded-lg border border-[#E2E5E9]">
+              <div className="text-xs text-[#151C27] leading-relaxed bg-brand-surfaceAlt p-2.5 rounded-lg border border-brand-border">
                 <div>
                   <strong>Dự án:</strong> {req.project_name} (Hạn BH: {req.warranty_end_date})
                 </div>
@@ -135,7 +135,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
 
               {/* Nút hành động */}
               {isPending && (
-                <div className="flex items-center justify-between pt-1 border-t border-[#E2E5E9] text-xs">
+                <div className="flex items-center justify-between pt-1 border-t border-brand-border text-xs">
                   <div className="text-[11px] text-[#555F6F]">
                     {isBlockedByHold ? (
                       <span className="text-[#BA1A1A] font-semibold flex items-center gap-1">
@@ -161,7 +161,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRejectDeletion(req.id)}
-                        className="px-3 py-1.5 rounded-lg border border-[#E2E5E9] hover:bg-[#F8F9FA] text-[#374151] text-xs font-semibold transition-colors"
+                        className="px-3 py-1.5 rounded-lg border border-brand-border hover:bg-brand-surfaceAlt text-[#374151] text-xs font-semibold transition-colors"
                       >
                         Bác bỏ
                       </button>
@@ -172,7 +172,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                         onClick={() => handleApprovePurge(req.id)}
                         className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                           isBlockedByHold || isRetentionNotExpired
-                            ? 'bg-[#E2E5E9] text-[#7A7768] cursor-not-allowed border border-[#CAC7B5]'
+                            ? 'bg-brand-border text-[#7A7768] cursor-not-allowed border border-[#CAC7B5]'
                             : 'bg-[#BA1A1A] hover:bg-[#93000A] text-white cursor-pointer'
                         }`}
                       >

@@ -19,7 +19,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-[#C9A227]" />
+            <Calendar className="w-5 h-5 text-brand-gold" />
             <h3 className="font-sansation text-lg font-bold text-slate-900">
               Tùy chỉnh khung thời gian báo cáo
             </h3>
@@ -73,7 +73,7 @@ export const TimeRangeModal: React.FC<TimeRangeModalProps> = ({
           <button
             onClick={onApply}
             type="button"
-            className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs cursor-pointer"
           >
             Áp dụng
           </button>

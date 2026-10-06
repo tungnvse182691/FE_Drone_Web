@@ -20,7 +20,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
   return (
     <>
       {/* 1. TOP BREADCRUMB & HEADER SECTION */}
-      <div className="flex flex-col gap-3 bg-white border border-[#E2E5E9] p-5 rounded-xl shadow-sm">
+      <div className="flex flex-col gap-3 bg-white border border-brand-border p-5 rounded-xl shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <nav className="flex items-center gap-2 text-xs text-[#555F6F] font-medium">
             <span className="hover:text-[#151C27] transition-colors cursor-pointer">
@@ -35,7 +35,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
           <div className="flex items-center gap-2">
             {isSupervisor ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#151C27] text-white font-mono text-xs font-semibold shadow-sm">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
                 SUPERVISOR: TOÀN QUYỀN QUẢN TRỊ ADMIN (BR-02)
               </span>
             ) : (
@@ -45,7 +45,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
               </span>
             )}
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FBF6E9] border border-[#F3E6C4] text-[#8C6D15] text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227]"></span>
+              <span className="w-2 h-2 rounded-full bg-brand-gold"></span>
               QUY CHUẨN BR-45 &amp; ISO 27001
             </span>
           </div>
@@ -57,7 +57,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
               <span className="px-2.5 py-0.5 rounded-full bg-[#FBF6E9] text-[#8C6D15] font-mono text-xs font-bold border border-[#F3E6C4]">
                 Mã màn hình: WF-12
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-[#F0F2F5] text-[#555F6F] font-mono text-xs font-medium border border-[#E2E5E9]">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#F0F2F5] text-[#555F6F] font-mono text-xs font-medium border border-brand-border">
                 Căn cứ: FR-02, FR-35, FR-36, BR-45, UAT-09, UAT-10
               </span>
             </div>
@@ -77,7 +77,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
             <button
               type="button"
               onClick={onOpenCreateDeletion}
-              className="px-4 py-2.5 rounded-lg border border-[#E2E5E9] bg-white hover:bg-[#F8F9FA] hover:border-[#C9A227] hover:text-[#C9A227] text-[#374151] font-semibold text-xs flex items-center gap-2 shadow-sm transition-all"
+              className="px-4 py-2.5 rounded-lg border border-brand-border bg-white hover:bg-brand-surfaceAlt hover:border-brand-gold hover:text-brand-gold text-[#374151] font-semibold text-xs flex items-center gap-2 shadow-sm transition-all"
             >
               <Trash2 className="w-4 h-4 text-[#BA1A1A]" />
               <span>Lập yêu cầu xóa dữ liệu</span>
@@ -87,7 +87,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
               <button
                 type="button"
                 onClick={onOpenAddPersonnel}
-                className="px-4 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="px-4 py-2.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>+ Thêm nhân sự vào dự án</span>

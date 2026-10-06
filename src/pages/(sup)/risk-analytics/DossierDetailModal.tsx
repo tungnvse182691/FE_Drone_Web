@@ -101,7 +101,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
               onClose()
             }}
             type="button"
-            className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white font-sansation font-bold text-xs cursor-pointer flex items-center gap-1.5"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Tải tệp nén</span>
