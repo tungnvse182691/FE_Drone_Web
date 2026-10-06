@@ -5,14 +5,11 @@ import {
   Info,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown,
-  AlertCircle,
-  Download,
-  ExternalLink,
-  Trash2,
-  ShieldCheck
+  ArrowUpDown
 } from 'lucide-react'
 import { ExportRecord } from './types'
+import { ExportRecordRow } from './ExportRecordRow'
+import { LegalAuditStrip } from './LegalAuditStrip'
 
 interface RiskExportsTableProps {
   processedRecords: ExportRecord[]
@@ -112,7 +109,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                     {sortField === 'code' ? (
                       sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
                     ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
                   </div>
                 </th>
@@ -129,7 +126,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                     {sortField === 'scope_display' ? (
                       sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
                     ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
                   </div>
                 </th>
@@ -144,7 +141,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                     {sortField === 'as_of_timestamp' ? (
                       sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
                     ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
                   </div>
                 </th>
@@ -159,7 +156,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                     {sortField === 'file_size_mb' ? (
                       sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
                     ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
                   </div>
                 </th>
@@ -174,7 +171,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                     {sortField === 'status' ? (
                       sortAsc ? <ArrowUp className="w-3.5 h-3.5 text-[#C9A227]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#C9A227]" />
                     ) : (
-                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-60" />
                     )}
                   </div>
                 </th>
@@ -193,103 +190,14 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
                 </tr>
               ) : (
                 processedRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#C9A227]">
-                      {record.code}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col">
-                        <span className={`inline-flex items-center self-start px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${record.type_badge_color}`}>
-                          {record.type}
-                        </span>
-                        <span className="font-mono text-[11px] text-slate-500 mt-1">
-                          Mã DA: {record.project_code} • {record.dossier_no}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-4 font-mono text-xs text-slate-800">
-                      {record.scope_display}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">
-                      {record.as_of_time}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-slate-800">{record.file_size}</span>
-                        <span className="text-slate-500 text-[11px]">({record.format_display})</span>
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      {record.status === 'COMPLETED' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                          COMPLETED
-                        </span>
-                      ) : record.status === 'PROCESSING' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
-                          PROCESSING
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                          <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
-                          FAILED
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {record.status === 'COMPLETED' && (
-                          <button
-                            onClick={() => handleDownloadFile(`${record.code}.zip`)}
-                            type="button"
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-[#C9A227] hover:bg-slate-100 transition cursor-pointer"
-                            title="Tải xuống gói hồ sơ"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => {
-                            setSelectedRecordForDetail(record)
-                            setIsPreviewModalOpen(true)
-                          }}
-                          type="button"
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-                          title="Xem chi tiết hồ sơ & mã băm SHA-256"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-
-                        {record.status === 'FAILED' && (
-                          <button
-                            onClick={() => handleRetryRecord(record.id)}
-                            type="button"
-                            className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition cursor-pointer"
-                            title="Thử lại (Retry)"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => handleDeleteRecord(record.id, record.code)}
-                          type="button"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                          title="Xóa hồ sơ khỏi kho"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <ExportRecordRow
+                    key={record.id}
+                    record={record}
+                    onDownloadFile={handleDownloadFile}
+                    onSelectDetail={setSelectedRecordForDetail}
+                    onRetry={handleRetryRecord}
+                    onDelete={handleDeleteRecord}
+                  />
                 ))
               )}
             </tbody>
@@ -321,27 +229,7 @@ export const RiskExportsTable: React.FC<RiskExportsTableProps> = ({
       </div>
 
       {/* 7. LEGAL & SECURITY AUDIT STRIP */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 lg:p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
-        <div className="flex items-start gap-3 flex-1">
-          <ShieldCheck className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <span className="font-sansation text-sm text-slate-900 block font-bold">
-              Tiêu chuẩn pháp lý & Toàn vẹn chứng từ số (RPT-07)
-            </span>
-            <p className="text-slate-500 leading-relaxed text-[11px] lg:text-xs">
-              Hồ sơ kỹ thuật xuất từ hệ thống RoadGuard (Nhà thầu Hoàng Hải) tự động đính kèm mã băm SHA-256 Checksum cho từng tệp ảnh và gói nén, đáp ứng đầy đủ tiêu chuẩn nghiệm thu và kiểm toán kỹ thuật công trình giao thông (TCVN 8819 &amp; TCVN 8864).
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl self-start md:self-auto">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <div className="flex flex-col">
-            <span className="font-sansation font-bold text-slate-900 text-xs">Mã băm SHA-256: Toàn vẹn</span>
-            <span className="font-mono text-[10px] text-slate-500 font-semibold">Chuẩn đối soát bảo hành: v2.2</span>
-          </div>
-        </div>
-      </div>
+      <LegalAuditStrip />
     </>
   )
 }
