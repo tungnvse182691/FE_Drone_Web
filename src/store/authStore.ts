@@ -9,7 +9,6 @@ interface AuthState {
   isAuthenticated: boolean
   login: (role: RoleCode) => void
   logout: () => void
-  switchRole: (role: RoleCode) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -33,16 +32,5 @@ export const useAuthStore = create<AuthState>((set) => ({
       token: null,
       isAuthenticated: false,
     })
-  },
-
-  switchRole: (role: RoleCode) => {
-    const user = mockUsers.find((u) => u.role === role)
-    if (user) {
-      set({
-        user: { ...user },
-        token: `mock-jwt-token-${user.id}`,
-        isAuthenticated: true,
-      })
-    }
   },
 }))

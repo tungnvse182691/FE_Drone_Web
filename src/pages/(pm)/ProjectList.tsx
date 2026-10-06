@@ -23,6 +23,7 @@ export const ProjectList: React.FC = () => {
   const { user } = useAuthStore()
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   // Projects state
   const [projects, setProjects] = useState<HubProject[]>(() => projectService.getProjects())
@@ -157,17 +158,15 @@ export const ProjectList: React.FC = () => {
   }
 
   const handleNavigateHome = () => {
-    navigate(isSupervisor ? '/sup/dashboard' : '/pm/dashboard')
+    navigate(`${basePath}/dashboard`)
   }
 
   const handleNavigateAlignment = (projectId: string) => {
-    const base = isSupervisor ? '/sup' : '/pm'
-    navigate(`${base}/projects/${projectId}/alignment`)
+    navigate(`${basePath}/projects/${projectId}/alignment`)
   }
 
   const handleNavigateDetail = (projectId: string) => {
-    const base = isSupervisor ? '/sup' : '/pm'
-    navigate(`${base}/projects/${projectId}`)
+    navigate(`${basePath}/projects/${projectId}`)
   }
 
   return (

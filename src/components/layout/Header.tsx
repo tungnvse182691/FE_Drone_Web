@@ -1,22 +1,13 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { Bell, LogOut, ShieldCheck, HardHat } from 'lucide-react'
+import { Bell, LogOut } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Tooltip } from '../ui/Tooltip'
 
 export const Header: React.FC = () => {
-  const { user, switchRole, logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const navigate = useNavigate()
-
-  const handleRoleToggle = (newRole: RoleCode) => {
-    switchRole(newRole)
-    if (newRole === RoleCode.PROJECT_MANAGER) {
-      navigate('/pm/dashboard')
-    } else {
-      navigate('/sup/dashboard')
-    }
-  }
 
   const roleTitle = user?.role === RoleCode.PROJECT_MANAGER
     ? 'Chỉ huy trưởng dự án (PM)'
@@ -42,37 +33,6 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Bộ chuyển đổi vai trò nhanh phục vụ kiểm thử & điều hành */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <Tooltip content="Chuyển sang góc nhìn Chỉ huy trưởng công trình">
-            <button
-              onClick={() => handleRoleToggle(RoleCode.PROJECT_MANAGER)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                user?.role === RoleCode.PROJECT_MANAGER
-                  ? 'bg-brand-gold text-white shadow-xs'
-                  : 'text-slate-600 hover:text-brand-dark'
-              }`}
-            >
-              <HardHat className="w-3.5 h-3.5" />
-              <span>Chỉ huy trưởng</span>
-            </button>
-          </Tooltip>
-
-          <Tooltip content="Chuyển sang góc nhìn Giám sát / Chủ đầu tư">
-            <button
-              onClick={() => handleRoleToggle(RoleCode.SUPERVISOR)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                user?.role === RoleCode.SUPERVISOR
-                  ? 'bg-brand-navy text-white shadow-xs'
-                  : 'text-slate-600 hover:text-brand-dark'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Giám sát</span>
-            </button>
-          </Tooltip>
-        </div>
-
         {/* Thông báo */}
         <Tooltip content="Thông báo điều hành & Bàn giao hồ sơ">
           <button

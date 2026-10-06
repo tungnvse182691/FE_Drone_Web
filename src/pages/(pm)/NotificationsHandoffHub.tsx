@@ -191,17 +191,11 @@ export const NotificationsHandoffHub: React.FC = () => {
   // Giải quyết đường dẫn điều hướng tương thích đúng vai trò hiện tại
   const resolveActionUrl = (item: NotificationItem) => {
     if (item.actionUrl) {
-      if (isSupervisor && item.actionUrl.startsWith('/pm/')) {
-        return item.actionUrl.replace('/pm/', '/sup/')
-      }
-      if (!isSupervisor && item.actionUrl.startsWith('/sup/')) {
-        return item.actionUrl.replace('/sup/', '/pm/')
-      }
       return item.actionUrl
     }
     switch (item.resourceType) {
       case 'REPAIR_PROPOSAL':
-        return isSupervisor ? '/sup/proposals/PKG-2026-08' : '/pm/proposals'
+        return `${basePath}/proposals`
       case 'DEFECT':
         return `${basePath}/fast-track`
       case 'ACCEPTANCE_DOSSIER':
