@@ -4,21 +4,15 @@ import {
   ChevronRight,
   ShieldCheck,
   ShieldAlert,
-  Shield,
   CheckCircle2,
   AlertTriangle,
-  Clock,
-  FileDown,
-  RotateCcw,
   UserCheck,
   Share2,
-  Lock,
-  Send,
-  AlertCircle,
-  History,
   Layers
 } from 'lucide-react'
 import { CaseItem } from './types'
+import { StatusBar } from './StatusBar'
+import { ActionButtons } from './ActionButtons'
 
 export interface CloseoutHeaderProps {
   currentItem: CaseItem
@@ -106,7 +100,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
             </p>
           </div>
 
-          {/* Role Switcher Widget (Theo thiết kế chuẩn Stitch 11) */}
+          {/* Role Switcher Widget */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
             <div className="flex items-center bg-slate-100 p-1 rounded-xl shadow-2xs border border-slate-200" role="tablist">
               <button
@@ -144,164 +138,18 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
 
         {/* Status & Policy Indicator Bar */}
         <div className="pt-2 flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Track badge */}
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold shadow-2xs border ${
-                currentItem.track_type === 'APPROVAL_TRACK'
-                  ? 'bg-purple-100 text-purple-900 border-purple-200'
-                  : currentItem.track_type === 'FAST_TRACK'
-                  ? 'bg-sky-100 text-sky-900 border-sky-200'
-                  : 'bg-rose-100 text-rose-900 border-rose-200'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Nhánh:{' '}
-              {currentItem.track_type === 'APPROVAL_TRACK'
-                ? 'Phê duyệt tiêu chuẩn'
-                : currentItem.track_type === 'FAST_TRACK'
-                ? 'Xử lý cấp bách'
-                : 'Điều phối trực tiếp'}
-            </span>
-
-            {/* Status badge */}
-            {currentItem.status === 'ACCEPTED' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-emerald-100 text-emerald-900 border border-emerald-200 shadow-2xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                TRẠNG THÁI: {currentItem.status_label}
-              </span>
-            )}
-            {currentItem.status === 'PENDING_INSPECTION' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                TRẠNG THÁI: {currentItem.status_label}
-              </span>
-            )}
-            {currentItem.status === 'REWORK_REQUIRED' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-rose-100 text-rose-900 border border-rose-200 shadow-2xs">
-                <AlertCircle className="w-3.5 h-3.5 text-rose-700" />
-                TRẠNG THÁI: YÊU CẦU SỬA LẠI (REWORK)
-              </span>
-            )}
-
-            {/* Attempt badge */}
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs">
-              <History className="w-3 h-3" />
-              Lần thi công: #{currentItem.attempt_number}
-            </span>
-
-            {/* SLA badge */}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
-              <Clock className="w-3.5 h-3.5 text-emerald-700" />
-              SLA Nghiệm thu: Còn 18h
-            </span>
-
-            <span className="font-mono text-slate-500 text-[11px] px-3 py-1 bg-white rounded-full border border-slate-200 shadow-2xs">
-              Mã băm SHA-256: 7B8F..A49
-            </span>
-          </div>
-
-          {/* Dynamic Role Actions Container */}
-          <div className="flex items-center flex-wrap gap-2">
-            {/* Nút Xuất Hồ Sơ Bằng Chứng RPT-07 */}
-            <button
-              onClick={onOpenExportModal}
-              type="button"
-              className="px-3.5 h-9 bg-white border border-[#E2E5E9] hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <FileDown className="w-4 h-4 text-[#C9A227]" />
-              <span>Xuất hồ sơ (RPT-07)</span>
-            </button>
-
-            {/* SUPERVISOR ACTIONS */}
-            {isSupervisorView && (
-              <>
-                <button
-                  onClick={onOpenReworkModal}
-                  type="button"
-                  className="px-3.5 h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RotateCcw className="w-4 h-4 text-rose-600" />
-                  <span>Yêu cầu sửa lại (Rework)</span>
-                </button>
-
-                <button
-                  onClick={onAcceptItem}
-                  disabled={currentItem.status === 'ACCEPTED'}
-                  type="button"
-                  className={`px-4 h-9 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 ${
-                    currentItem.status === 'ACCEPTED'
-                      ? 'bg-emerald-700 text-white cursor-default'
-                      : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white hover:opacity-95 cursor-pointer'
-                  }`}
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    {currentItem.status === 'ACCEPTED' ? 'Đã nghiệm thu (Ký số)' : 'Chấp thuận nghiệm thu (Ký số)'}
-                  </span>
-                </button>
-              </>
-            )}
-
-            {/* PROJECT MANAGER ACTIONS */}
-            {isPMView && (
-              <>
-                {currentItem.track_type === 'FAST_TRACK' ? (
-                  <button
-                    onClick={onPMCloseFastTrack}
-                    disabled={currentItem.status === 'ACCEPTED'}
-                    type="button"
-                    className={`px-4 h-9 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer ${
-                      currentItem.status === 'ACCEPTED'
-                        ? 'bg-emerald-700 text-white cursor-default'
-                        : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>
-                      {currentItem.status === 'ACCEPTED' ? 'Fast Track đã đóng' : 'Chấp thuận & Đóng lỗi Fast Track'}
-                    </span>
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={onPMSubmitToSupervisor}
-                      type="button"
-                      className="px-3.5 h-9 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Send className="w-4 h-4 text-purple-700" />
-                      <span>Trình Supervisor nghiệm thu</span>
-                    </button>
-
-                    {currentItem.status !== 'ACCEPTED' ? (
-                      <div className="relative group">
-                        <button
-                          disabled
-                          type="button"
-                          className="px-3.5 h-9 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl border border-slate-200 flex items-center gap-1.5 cursor-not-allowed"
-                        >
-                          <Lock className="w-4 h-4" />
-                          <span>Đợi Giám sát nghiệm thu</span>
-                        </button>
-                        <div className="absolute right-0 top-full mt-1 w-64 bg-slate-900 text-white text-[11px] p-2 rounded-xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20 font-medium">
-                          Hạng mục APPROVAL_TRACK yêu cầu Supervisor duyệt đạt mới được phép công bố cho người dân.
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={onOpenPublishModal}
-                        type="button"
-                        className="px-4 h-9 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
-                      >
-                        <Share2 className="w-4 h-4" />
-                        <span>{currentItem.citizen_published ? 'Đã công bố (Cập nhật)' : 'Công bố kết quả (Citizen App)'}</span>
-                      </button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
+          <StatusBar currentItem={currentItem} />
+          <ActionButtons
+            currentItem={currentItem}
+            isSupervisorView={isSupervisorView}
+            isPMView={isPMView}
+            onOpenExportModal={onOpenExportModal}
+            onOpenReworkModal={onOpenReworkModal}
+            onAcceptItem={onAcceptItem}
+            onPMCloseFastTrack={onPMCloseFastTrack}
+            onPMSubmitToSupervisor={onPMSubmitToSupervisor}
+            onOpenPublishModal={onOpenPublishModal}
+          />
         </div>
 
         {/* Active Authority Micro-Banner */}
@@ -414,7 +262,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
           ).
         </p>
       </section>
-
     </>
   )
 }
+export default CloseoutHeader
