@@ -2,6 +2,11 @@ import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { RoleCode } from './types/enums'
+import {
+  ProtectedRoute,
+  PublicAuthRoute,
+  ForcePasswordRoute,
+} from './components/layout/ProtectedRoute'
 
 // Auth Pages
 import { Login } from './pages/(auth)/Login'
@@ -42,105 +47,115 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/force-change-password" element={<ForceChangePassword />} />
-        <Route path="/accept-invitation" element={<AcceptInvitation />} />
-        <Route path="/invite/:token" element={<AcceptInvitation />} />
+        {/* Auth routes guarded against already logged in users */}
+        <Route element={<PublicAuthRoute />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/accept-invitation" element={<AcceptInvitation />} />
+          <Route path="/invite/:token" element={<AcceptInvitation />} />
+        </Route>
+
+        {/* Force password change route */}
+        <Route element={<ForcePasswordRoute />}>
+          <Route path="/force-change-password" element={<ForceChangePassword />} />
+        </Route>
 
         {/* Project Manager routes */}
-        <Route path="/pm" element={<PMLayout />}>
-          <Route index element={<Navigate to="/pm/dashboard" replace />} />
-          <Route path="dashboard" element={<PMDashboard />} />
-          <Route path="projects" element={<ProjectList />} />
-          <Route path="projects/:id" element={<ProjectOverview />} />
-          <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
-          <Route path="alignment" element={<AlignmentSegments />} />
-          <Route path="surveys" element={<SurveyRequests />} />
-          <Route path="surveys/create" element={<CreateSurvey />} />
-          <Route path="surveys/:id" element={<DroneMissionAIReview />} />
-          <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
-          <Route path="drone-mission" element={<DroneMissionAIReview />} />
-          <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
-          <Route path="ai-inbox" element={<AIReviewInbox />} />
-          <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
-          <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
-          <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
-          <Route path="repair-batches/create" element={<Navigate to="/pm/proposals" replace />} />
-          <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
-          <Route path="repair-batches/assign" element={<AssignCrew />} />
-          <Route path="field-tasks" element={<FieldTasks />} />
-          <Route path="conflict-center" element={<FieldTasks />} />
-          <Route path="fast-track" element={<FastTrackDispatch />} />
-          <Route path="dispatch" element={<FastTrackDispatch />} />
-          <Route path="proposals" element={<RepairProposals />} />
-          <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
-          <Route path="work-packages" element={<RepairProposals />} />
-          <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
-          <Route path="repair-batches" element={<RepairProposals />} />
-          <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
-          <Route path="work-orders/confirm" element={<EvidenceCloseoutDetail />} />
-          <Route path="work-orders/:id/confirm" element={<EvidenceCloseoutDetail />} />
-          <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
-          <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
-          <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
-          <Route path="research-validation" element={<ResearchValidation />} />
-          <Route path="rpt-09" element={<ResearchValidation />} />
-          <Route path="audit-trail" element={<AuditTrail />} />
-          <Route path="rpt-10" element={<AuditTrail />} />
-          <Route path="reports" element={<RiskAnalytics />} />
-          <Route path="risk-analytics" element={<RiskAnalytics />} />
-          <Route path="retention" element={<SystemControl />} />
-          <Route path="system-control" element={<SystemControl />} />
-          <Route path="wf-12" element={<SystemControl />} />
-          <Route path="legal-hold" element={<SystemControl />} />
-          <Route path="notifications" element={<NotificationsHandoffHub />} />
+        <Route element={<ProtectedRoute allowedRole={RoleCode.PROJECT_MANAGER} />}>
+          <Route path="/pm" element={<PMLayout />}>
+            <Route index element={<Navigate to="/pm/dashboard" replace />} />
+            <Route path="dashboard" element={<PMDashboard />} />
+            <Route path="projects" element={<ProjectList />} />
+            <Route path="projects/:id" element={<ProjectOverview />} />
+            <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
+            <Route path="alignment" element={<AlignmentSegments />} />
+            <Route path="surveys" element={<SurveyRequests />} />
+            <Route path="surveys/create" element={<CreateSurvey />} />
+            <Route path="surveys/:id" element={<DroneMissionAIReview />} />
+            <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
+            <Route path="drone-mission" element={<DroneMissionAIReview />} />
+            <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
+            <Route path="ai-inbox" element={<AIReviewInbox />} />
+            <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
+            <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
+            <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
+            <Route path="repair-batches/create" element={<Navigate to="/pm/proposals" replace />} />
+            <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
+            <Route path="repair-batches/assign" element={<AssignCrew />} />
+            <Route path="field-tasks" element={<FieldTasks />} />
+            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="fast-track" element={<FastTrackDispatch />} />
+            <Route path="dispatch" element={<FastTrackDispatch />} />
+            <Route path="proposals" element={<RepairProposals />} />
+            <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
+            <Route path="work-packages" element={<RepairProposals />} />
+            <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
+            <Route path="repair-batches" element={<RepairProposals />} />
+            <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
+            <Route path="work-orders/confirm" element={<EvidenceCloseoutDetail />} />
+            <Route path="work-orders/:id/confirm" element={<EvidenceCloseoutDetail />} />
+            <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
+            <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
+            <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+            <Route path="research-validation" element={<ResearchValidation />} />
+            <Route path="rpt-09" element={<ResearchValidation />} />
+            <Route path="audit-trail" element={<AuditTrail />} />
+            <Route path="rpt-10" element={<AuditTrail />} />
+            <Route path="reports" element={<RiskAnalytics />} />
+            <Route path="risk-analytics" element={<RiskAnalytics />} />
+            <Route path="retention" element={<SystemControl />} />
+            <Route path="system-control" element={<SystemControl />} />
+            <Route path="wf-12" element={<SystemControl />} />
+            <Route path="legal-hold" element={<SystemControl />} />
+            <Route path="notifications" element={<NotificationsHandoffHub />} />
+          </Route>
         </Route>
 
         {/* Supervisor routes */}
-        <Route path="/sup" element={<SupLayout />}>
-          <Route index element={<Navigate to="/sup/dashboard" replace />} />
-          <Route path="dashboard" element={<SupDashboard />} />
-          <Route path="projects" element={<ProjectList />} />
-          <Route path="projects/:id" element={<ProjectOverview />} />
-          <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
-          <Route path="alignment" element={<AlignmentSegments />} />
-          <Route path="surveys" element={<SurveyRequests />} />
-          <Route path="surveys/:id" element={<DroneMissionAIReview />} />
-          <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
-          <Route path="drone-mission" element={<DroneMissionAIReview />} />
-          <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
-          <Route path="ai-inbox" element={<AIReviewInbox />} />
-          <Route path="fast-track" element={<FastTrackDispatch />} />
-          <Route path="dispatch" element={<FastTrackDispatch />} />
-          <Route path="field-tasks" element={<FieldTasks />} />
-          <Route path="conflict-center" element={<FieldTasks />} />
-          <Route path="proposals" element={<RepairProposals />} />
-          <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
-          <Route path="work-packages" element={<RepairProposals />} />
-          <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
-          <Route path="repair-batches" element={<RepairProposals />} />
-          <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
-          <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
-          <Route path="approvals/:id/reject" element={<BatchRejection />} />
-          <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
-          <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
-          <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
-          <Route path="research-validation" element={<ResearchValidation />} />
-          <Route path="rpt-09" element={<ResearchValidation />} />
-          <Route path="audit-trail" element={<AuditTrail />} />
-          <Route path="rpt-10" element={<AuditTrail />} />
-          <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
-          <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
-          <Route path="reports" element={<RiskAnalytics />} />
-          <Route path="risk-analytics" element={<RiskAnalytics />} />
-          <Route path="system-control" element={<SystemControl />} />
-          <Route path="admin" element={<SystemControl />} />
-          <Route path="retention" element={<SystemControl />} />
-          <Route path="wf-12" element={<SystemControl />} />
-          <Route path="legal-hold" element={<SystemControl />} />
-          <Route path="signoff" element={<Navigate to="/sup/acceptance" replace />} />
-          <Route path="notifications" element={<NotificationsHandoffHub />} />
+        <Route element={<ProtectedRoute allowedRole={RoleCode.SUPERVISOR} />}>
+          <Route path="/sup" element={<SupLayout />}>
+            <Route index element={<Navigate to="/sup/dashboard" replace />} />
+            <Route path="dashboard" element={<SupDashboard />} />
+            <Route path="projects" element={<ProjectList />} />
+            <Route path="projects/:id" element={<ProjectOverview />} />
+            <Route path="projects/:id/alignment" element={<AlignmentSegments />} />
+            <Route path="alignment" element={<AlignmentSegments />} />
+            <Route path="surveys" element={<SurveyRequests />} />
+            <Route path="surveys/:id" element={<DroneMissionAIReview />} />
+            <Route path="surveys/:id/review" element={<DroneMissionAIReview />} />
+            <Route path="drone-mission" element={<DroneMissionAIReview />} />
+            <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
+            <Route path="ai-inbox" element={<AIReviewInbox />} />
+            <Route path="fast-track" element={<FastTrackDispatch />} />
+            <Route path="dispatch" element={<FastTrackDispatch />} />
+            <Route path="field-tasks" element={<FieldTasks />} />
+            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="proposals" element={<RepairProposals />} />
+            <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
+            <Route path="work-packages" element={<RepairProposals />} />
+            <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
+            <Route path="repair-batches" element={<RepairProposals />} />
+            <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
+            <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
+            <Route path="approvals/:id/reject" element={<BatchRejection />} />
+            <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+            <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
+            <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
+            <Route path="research-validation" element={<ResearchValidation />} />
+            <Route path="rpt-09" element={<ResearchValidation />} />
+            <Route path="audit-trail" element={<AuditTrail />} />
+            <Route path="rpt-10" element={<AuditTrail />} />
+            <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
+            <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
+            <Route path="reports" element={<RiskAnalytics />} />
+            <Route path="risk-analytics" element={<RiskAnalytics />} />
+            <Route path="system-control" element={<SystemControl />} />
+            <Route path="admin" element={<SystemControl />} />
+            <Route path="retention" element={<SystemControl />} />
+            <Route path="wf-12" element={<SystemControl />} />
+            <Route path="legal-hold" element={<SystemControl />} />
+            <Route path="signoff" element={<Navigate to="/sup/acceptance" replace />} />
+            <Route path="notifications" element={<NotificationsHandoffHub />} />
+          </Route>
         </Route>
 
         {/* Default route */}
