@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronRight,
@@ -29,26 +29,26 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
       <div className="space-y-1">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <button onClick={() => navigate(`${basePath}/projects`)} className="hover:text-brand-gold cursor-pointer transition-colors">
-            Dự án
+            Dá»± Ã¡n
           </button>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hover:text-brand-gold cursor-pointer transition-colors">QL1A - Giai đoạn 2</span>
+          <span className="hover:text-brand-gold cursor-pointer transition-colors">QL1A - Giai Ä‘oáº¡n 2</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hover:text-brand-gold cursor-pointer transition-colors">Sửa chữa</span>
+          <span className="hover:text-brand-gold cursor-pointer transition-colors">Sá»­a chá»¯a</span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[#C9A227] font-semibold">Gói đề xuất kỹ thuật</span>
+          <span className="text-brand-gold font-semibold">GÃ³i Ä‘á» xuáº¥t ká»¹ thuáº­t</span>
         </nav>
 
         <div className="flex items-center gap-3 pt-1 flex-wrap">
           <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-            Danh mục gói đề xuất sửa chữa kỹ thuật
+            Danh má»¥c gÃ³i Ä‘á» xuáº¥t sá»­a chá»¯a ká»¹ thuáº­t
           </h1>
           <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-brand-dark font-mono text-xs font-bold shadow-2xs">
-            PRJ-QL1A-02 • {totalPackagesCount} Gói công việc
+            PRJ-QL1A-02 â€¢ {totalPackagesCount} GÃ³i cÃ´ng viá»‡c
           </span>
         </div>
         <p className="text-xs text-slate-500">
-          Tập hợp các điểm khiếm khuyết mặt đường thành gói thi công, xác định biện pháp kỹ thuật và trình nộp Giám sát trưởng phê duyệt.
+          Táº­p há»£p cÃ¡c Ä‘iá»ƒm khiáº¿m khuyáº¿t máº·t Ä‘Æ°á»ng thÃ nh gÃ³i thi cÃ´ng, xÃ¡c Ä‘á»‹nh biá»‡n phÃ¡p ká»¹ thuáº­t vÃ  trÃ¬nh ná»™p GiÃ¡m sÃ¡t trÆ°á»Ÿng phÃª duyá»‡t.
         </p>
       </div>
 
@@ -61,17 +61,17 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
           className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white text-slate-700 text-xs font-semibold shadow-2xs hover:bg-slate-50 border border-slate-200 cursor-pointer transition-colors"
         >
           <FileText className="w-4 h-4 text-slate-500" />
-          <span>Xuất kế hoạch kỹ thuật (PDF)</span>
+          <span>Xuáº¥t káº¿ hoáº¡ch ká»¹ thuáº­t (PDF)</span>
         </button>
 
         {isPM && (
           <button
             onClick={onOpenCreateModal}
             type="button"
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Tạo gói đề xuất mới</span>
+            <span>Táº¡o gÃ³i Ä‘á» xuáº¥t má»›i</span>
           </button>
         )}
       </div>

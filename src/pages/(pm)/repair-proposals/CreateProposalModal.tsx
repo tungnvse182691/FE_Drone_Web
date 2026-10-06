@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Plus, X, Send, SlidersHorizontal, Wrench, Sparkles } from 'lucide-react'
 import type { RouteSegmentOption, UnassignedDefectItem } from './types'
 import { ProposalBOQCard } from './ProposalBOQCard'
@@ -60,13 +60,13 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
         {/* Modal Header */}
         <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A227] shrink-0">
-              <Plus className="w-5 h-5 text-[#C9A227]" />
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold shrink-0">
+              <Plus className="w-5 h-5 text-brand-gold" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Khởi tạo gói đề xuất sửa chữa kỹ thuật mới</h3>
+              <h3 className="text-base font-bold text-brand-dark">Khá»Ÿi táº¡o gÃ³i Ä‘á» xuáº¥t sá»­a chá»¯a ká»¹ thuáº­t má»›i</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Gom các khiếm khuyết độc lập thành gói thi công tập trung để tối ưu hóa máy móc và nhân lực.
+                Gom cÃ¡c khiáº¿m khuyáº¿t Ä‘á»™c láº­p thÃ nh gÃ³i thi cÃ´ng táº­p trung Ä‘á»ƒ tá»‘i Æ°u hÃ³a mÃ¡y mÃ³c vÃ  nhÃ¢n lá»±c.
               </p>
             </div>
           </div>
@@ -80,30 +80,30 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
-          {/* Tên gói */}
+          {/* TÃªn gÃ³i */}
           <div className="space-y-1.5">
             <label className="block font-bold text-slate-700 uppercase text-[11px]">
-              Tên gói đề xuất công việc <span className="text-rose-500">*</span>
+              TÃªn gÃ³i Ä‘á» xuáº¥t cÃ´ng viá»‡c <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
               value={formPackageName}
               onChange={(e) => setFormPackageName(e.target.value)}
-              placeholder="Ví dụ: Xử lý ổ gà và trám nứt mặt đường đoạn Km 1028 - Km 1033..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+              placeholder="VÃ­ dá»¥: Xá»­ lÃ½ á»• gÃ  vÃ  trÃ¡m ná»©t máº·t Ä‘Æ°á»ng Ä‘oáº¡n Km 1028 - Km 1033..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
             />
           </div>
 
-          {/* Chọn Tuyến đường & Phân đoạn */}
+          {/* Chá»n Tuyáº¿n Ä‘Æ°á»ng & PhÃ¢n Ä‘oáº¡n */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Tuyến đường phụ trách <span className="text-rose-500">*</span>
+                Tuyáº¿n Ä‘Æ°á»ng phá»¥ trÃ¡ch <span className="text-rose-500">*</span>
               </label>
               <select
                 value={formRouteId}
                 onChange={(e) => handleRouteChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
                 {availableRoutes.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -115,12 +115,12 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
 
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Phân đoạn lý trình <span className="text-rose-500">*</span>
+                PhÃ¢n Ä‘oáº¡n lÃ½ trÃ¬nh <span className="text-rose-500">*</span>
               </label>
               <select
                 value={formSegmentId}
                 onChange={(e) => handleSegmentChange(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
                 {currentRouteSegments.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -131,27 +131,27 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             </div>
           </div>
 
-          {/* Tổ đội thi công & Thời gian dự kiến */}
+          {/* Tá»• Ä‘á»™i thi cÃ´ng & Thá»i gian dá»± kiáº¿n */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Đơn vị thi công dự kiến <span className="text-rose-500">*</span>
+                ÄÆ¡n vá»‹ thi cÃ´ng dá»± kiáº¿n <span className="text-rose-500">*</span>
               </label>
               <select
                 value={formContractor}
                 onChange={(e) => setFormContractor(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
-                <option value="Tổ vá dặm cơ giới 01">Tổ vá dặm cơ giới 01 (Hoàng Hải)</option>
-                <option value="Xí nghiệp Cầu Đường 4">Xí nghiệp Cầu Đường 4</option>
-                <option value="Tổ duy tu bảo dưỡng đường bộ 03">Tổ duy tu bảo dưỡng đường bộ 03</option>
-                <option value="Đội cơ động">Đội cơ động khắc phục sự cố khẩn cấp</option>
+                <option value="Tá»• vÃ¡ dáº·m cÆ¡ giá»›i 01">Tá»• vÃ¡ dáº·m cÆ¡ giá»›i 01 (HoÃ ng Háº£i)</option>
+                <option value="XÃ­ nghiá»‡p Cáº§u ÄÆ°á»ng 4">XÃ­ nghiá»‡p Cáº§u ÄÆ°á»ng 4</option>
+                <option value="Tá»• duy tu báº£o dÆ°á»¡ng Ä‘Æ°á»ng bá»™ 03">Tá»• duy tu báº£o dÆ°á»¡ng Ä‘Æ°á»ng bá»™ 03</option>
+                <option value="Äá»™i cÆ¡ Ä‘á»™ng">Äá»™i cÆ¡ Ä‘á»™ng kháº¯c phá»¥c sá»± cá»‘ kháº©n cáº¥p</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Thời gian thi công dự kiến (ngày) <span className="text-rose-500">*</span>
+                Thá»i gian thi cÃ´ng dá»± kiáº¿n (ngÃ y) <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
@@ -159,78 +159,78 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                 max={30}
                 value={formDurationDays}
                 onChange={(e) => setFormDurationDays(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
           </div>
 
-          {/* Danh sách khiếm khuyết & Khối lượng BOQ */}
+          {/* Danh sÃ¡ch khiáº¿m khuyáº¿t & Khá»‘i lÆ°á»£ng BOQ */}
           <ProposalBOQCard
             unassignedDefects={unassignedDefects}
             handleToggleDefect={handleToggleDefect}
             modalCalculations={modalCalculations}
           />
 
-          {/* Phương án kỹ thuật sửa chữa tổng quát */}
+          {/* PhÆ°Æ¡ng Ã¡n ká»¹ thuáº­t sá»­a chá»¯a tá»•ng quÃ¡t */}
           <div className="space-y-3 pt-3 border-t border-slate-200">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1.5">
-                <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
-                <span>Phương án kỹ thuật sửa chữa tổng quát <span className="text-rose-500">*</span></span>
+                <Wrench className="w-3.5 h-3.5 text-brand-gold" />
+                <span>PhÆ°Æ¡ng Ã¡n ká»¹ thuáº­t sá»­a chá»¯a tá»•ng quÃ¡t <span className="text-rose-500">*</span></span>
               </label>
               <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
-                Chỉ huy trưởng (PM) soạn thảo • Trình Giám sát duyệt (WF-07)
+                Chá»‰ huy trÆ°á»Ÿng (PM) soáº¡n tháº£o â€¢ TrÃ¬nh GiÃ¡m sÃ¡t duyá»‡t (WF-07)
               </span>
             </div>
 
-            {/* Các nút gợi ý phương án nhanh */}
+            {/* CÃ¡c nÃºt gá»£i Ã½ phÆ°Æ¡ng Ã¡n nhanh */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] text-slate-500 font-medium mr-1 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-[#C9A227]" /> Gợi ý nhanh:
+                <Sparkles className="w-3 h-3 text-brand-gold" /> Gá»£i Ã½ nhanh:
               </span>
               <button
                 type="button"
                 onClick={() =>
                   setFormTechnicalMethod(
-                    'Cào bóc sâu 5cm theo hình chữ nhật vát cạnh, làm sạch bề mặt, tưới nhựa dính bám và thảm hoàn trả bằng bê tông nhựa nóng C12.5 lu lèn tiêu chuẩn.'
+                    'CÃ o bÃ³c sÃ¢u 5cm theo hÃ¬nh chá»¯ nháº­t vÃ¡t cáº¡nh, lÃ m sáº¡ch bá» máº·t, tÆ°á»›i nhá»±a dÃ­nh bÃ¡m vÃ  tháº£m hoÃ n tráº£ báº±ng bÃª tÃ´ng nhá»±a nÃ³ng C12.5 lu lÃ¨n tiÃªu chuáº©n.'
                   )
                 }
                 className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
               >
-                ⚡ Cào bóc &amp; thảm BTN
+                âš¡ CÃ o bÃ³c &amp; tháº£m BTN
               </button>
               <button
                 type="button"
                 onClick={() =>
                   setFormTechnicalMethod(
-                    'Xẻ rãnh chữ U kích thước 1.5x1.5cm dọc theo tim nứt, làm khô sạch bụi bẩn và bơm chèn kín bằng keo mastic polymer đàn hồi chịu nhiệt.'
+                    'Xáº» rÃ£nh chá»¯ U kÃ­ch thÆ°á»›c 1.5x1.5cm dá»c theo tim ná»©t, lÃ m khÃ´ sáº¡ch bá»¥i báº©n vÃ  bÆ¡m chÃ¨n kÃ­n báº±ng keo mastic polymer Ä‘Ã n há»“i chá»‹u nhiá»‡t.'
                   )
                 }
                 className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
               >
-                ⚡ Xẻ rãnh rót Mastic
+                âš¡ Xáº» rÃ£nh rÃ³t Mastic
               </button>
               <button
                 type="button"
                 onClick={() =>
                   setFormTechnicalMethod(
-                    'Đục tẩy vuông thành sắc cạnh, dọn sạch đáy ổ gà, rải đều vật liệu rải nguội Carboncor Asphalt lớp dày 3-4cm đầm nén chặt K95.'
+                    'Äá»¥c táº©y vuÃ´ng thÃ nh sáº¯c cáº¡nh, dá»n sáº¡ch Ä‘Ã¡y á»• gÃ , ráº£i Ä‘á»u váº­t liá»‡u ráº£i nguá»™i Carboncor Asphalt lá»›p dÃ y 3-4cm Ä‘áº§m nÃ©n cháº·t K95.'
                   )
                 }
                 className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
               >
-                ⚡ Vá dặm Carboncor
+                âš¡ VÃ¡ dáº·m Carboncor
               </button>
               <button
                 type="button"
                 onClick={() =>
                   setFormTechnicalMethod(
-                    'Cào bóc san phẳng vệt hằn lún bánh xe, bù lún bằng lớp bê tông nhựa chặt kết hợp thảm phủ mặt đầm lèn đạt độ chặt K98.'
+                    'CÃ o bÃ³c san pháº³ng vá»‡t háº±n lÃºn bÃ¡nh xe, bÃ¹ lÃºn báº±ng lá»›p bÃª tÃ´ng nhá»±a cháº·t káº¿t há»£p tháº£m phá»§ máº·t Ä‘áº§m lÃ¨n Ä‘áº¡t Ä‘á»™ cháº·t K98.'
                   )
                 }
                 className="px-2.5 py-1 bg-slate-100 hover:bg-amber-100/70 hover:text-amber-900 text-slate-700 rounded-lg text-[11px] font-medium transition-colors border border-slate-200 cursor-pointer"
               >
-                ⚡ Bù lún vệt bánh xe
+                âš¡ BÃ¹ lÃºn vá»‡t bÃ¡nh xe
               </button>
               {formTechnicalMethod && (
                 <button
@@ -238,7 +238,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                   onClick={() => setFormTechnicalMethod('')}
                   className="px-2 py-1 text-slate-400 hover:text-rose-600 text-[11px] font-medium transition-colors ml-auto cursor-pointer"
                 >
-                  Xóa nội dung
+                  XÃ³a ná»™i dung
                 </button>
               )}
             </div>
@@ -247,8 +247,8 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
               rows={3}
               value={formTechnicalMethod}
               onChange={(e) => setFormTechnicalMethod(e.target.value)}
-              placeholder="Nhập phương án sửa chữa kỹ thuật tổng quát cho các khiếm khuyết được chọn..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227] leading-relaxed"
+              placeholder="Nháº­p phÆ°Æ¡ng Ã¡n sá»­a chá»¯a ká»¹ thuáº­t tá»•ng quÃ¡t cho cÃ¡c khiáº¿m khuyáº¿t Ä‘Æ°á»£c chá»n..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold leading-relaxed"
             />
           </div>
         </div>
@@ -260,22 +260,22 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             type="button"
             className="px-4 py-2 rounded-xl bg-white text-slate-700 text-xs font-semibold border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            Hủy bỏ
+            Há»§y bá»
           </button>
           <button
             onClick={() => handleSaveDraft(false)}
             type="button"
             className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <span>Lưu bản nháp</span>
+            <span>LÆ°u báº£n nhÃ¡p</span>
           </button>
           <button
             onClick={() => handleSaveDraft(true)}
             type="button"
-            className="px-5 py-2 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Khóa &amp; Trình duyệt ngay</span>
+            <span>KhÃ³a &amp; TrÃ¬nh duyá»‡t ngay</span>
           </button>
         </div>
       </div>

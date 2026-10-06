@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Edit3,
   Clock,
@@ -27,12 +27,12 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
       {/* Stat 1: Draft */}
       <div
         onClick={() => onTabChange(activeFilterTab === 'DRAFT' ? 'ALL' : 'DRAFT')}
-        className={`bg-white rounded-2xl p-5 shadow-2xs border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group hover:shadow-md ${activeFilterTab === 'DRAFT' ? 'border-[#C9A227] ring-2 ring-[#C9A227]/20' : 'border-slate-200'
+        className={`bg-white rounded-2xl p-5 shadow-2xs border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group hover:shadow-md ${activeFilterTab === 'DRAFT' ? 'border-brand-gold ring-2 ring-brand-gold/20' : 'border-slate-200'
           }`}
       >
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-slate-500">Gói đang soạn thảo</span>
+            <span className="font-bold text-[11px] uppercase tracking-wider text-slate-500">GÃ³i Ä‘ang soáº¡n tháº£o</span>
             <span className="text-3xl font-bold text-brand-dark">{stats.draft.toString().padStart(2, '0')}</span>
           </div>
           <div className="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
@@ -40,7 +40,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
           </div>
         </div>
         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Chưa khóa trình duyệt, đang gom lỗi</span>
+          <span className="text-slate-500">ChÆ°a khÃ³a trÃ¬nh duyá»‡t, Ä‘ang gom lá»—i</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-slate-100 text-slate-600">
             DRAFT
           </span>
@@ -56,7 +56,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-amber-700">Gói chờ duyệt</span>
+            <span className="font-bold text-[11px] uppercase tracking-wider text-amber-700">GÃ³i chá» duyá»‡t</span>
             <span className="text-3xl font-bold text-amber-600">{stats.submitted.toString().padStart(2, '0')}</span>
           </div>
           <div className="w-11 h-11 rounded-full bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
@@ -64,7 +64,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
           </div>
         </div>
         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Supervisor thẩm định (SLA &le; 14h)</span>
+          <span className="text-slate-500">Supervisor tháº©m Ä‘á»‹nh (SLA &le; 14h)</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-amber-100 text-amber-800">
             SUBMITTED
           </span>
@@ -80,7 +80,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-emerald-800">Gói đã phê duyệt</span>
+            <span className="font-bold text-[11px] uppercase tracking-wider text-emerald-800">GÃ³i Ä‘Ã£ phÃª duyá»‡t</span>
             <span className="text-3xl font-bold text-emerald-700">{stats.decided.toString().padStart(2, '0')}</span>
           </div>
           <div className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
@@ -88,7 +88,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
           </div>
         </div>
         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Đã ký số, chuẩn bị phát lệnh</span>
+          <span className="text-slate-500">ÄÃ£ kÃ½ sá»‘, chuáº©n bá»‹ phÃ¡t lá»‡nh</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800">
             DECIDED
           </span>
@@ -104,7 +104,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-blue-800">Gói đang thi công</span>
+            <span className="font-bold text-[11px] uppercase tracking-wider text-blue-800">GÃ³i Ä‘ang thi cÃ´ng</span>
             <span className="text-3xl font-bold text-blue-700">{stats.dispatched.toString().padStart(2, '0')}</span>
           </div>
           <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center shrink-0">
@@ -112,7 +112,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
           </div>
         </div>
         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Tổ thi công rải thảm và vá dặm</span>
+          <span className="text-slate-500">Tá»• thi cÃ´ng ráº£i tháº£m vÃ  vÃ¡ dáº·m</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-blue-100 text-blue-800">
             DISPATCHED
           </span>
