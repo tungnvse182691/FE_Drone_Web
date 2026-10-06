@@ -10,7 +10,7 @@ import {
 import { PolicyModal } from './PolicyModal'
 import { AuditModal } from './AuditModal'
 import { DefectDetailModal } from './DefectDetailModal'
-import { DispatchModal } from './DispatchModal'
+import { FastTrackDispatchModal } from './FastTrackDispatchModal'
 
 interface FastTrackModalsProps {
   isPolicyModalOpen: boolean
@@ -117,7 +117,7 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
         onClose={() => setDetailDefect(null)}
       />
 
-      <DispatchModal
+      <FastTrackDispatchModal
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
         workMode={workMode}

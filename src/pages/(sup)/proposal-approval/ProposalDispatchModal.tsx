@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { RepairItemDetail } from './types'
 
-export interface DispatchModalProps {
+export interface ProposalDispatchModalProps {
   isOpen: boolean
   onClose: () => void
   packageCode: string
@@ -23,7 +23,7 @@ export interface DispatchModalProps {
   onConfirmDispatch: () => void
 }
 
-export const DispatchModal: React.FC<DispatchModalProps> = ({
+export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
   isOpen,
   onClose,
   packageCode,
@@ -155,4 +155,4 @@ export const DispatchModal: React.FC<DispatchModalProps> = ({
     </div>
   )
 }
-export default DispatchModal
+export default ProposalDispatchModal

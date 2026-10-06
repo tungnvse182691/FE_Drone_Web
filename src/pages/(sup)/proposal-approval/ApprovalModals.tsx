@@ -1,7 +1,7 @@
 import React from 'react'
 import { RepairItemDetail } from './types'
 import { DecisionModal } from './DecisionModal'
-import { DispatchModal } from './DispatchModal'
+import { ProposalDispatchModal } from './ProposalDispatchModal'
 import { BatchApproveModal } from './BatchApproveModal'
 import { DefectPhotoModal } from './DefectPhotoModal'
 
@@ -93,7 +93,7 @@ export const ApprovalModals: React.FC<ApprovalModalsProps> = ({
       />
 
       {/* MODAL 2: DISPATCH WORK ORDER MODAL */}
-      <DispatchModal
+      <ProposalDispatchModal
         isOpen={isDispatchModalOpen}
         onClose={onCloseDispatchModal}
         packageCode={packageCode}

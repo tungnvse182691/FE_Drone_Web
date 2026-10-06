@@ -2,7 +2,7 @@ import React from 'react'
 import { Send, X, AlertTriangle, Info } from 'lucide-react'
 import { RouteConfig, DefectItem, WorkMode, CrewTeam, PolicyThresholdConfig } from './types'
 
-export interface DispatchModalProps {
+export interface FastTrackDispatchModalProps {
   isOpen: boolean
   onClose: () => void
   workMode: WorkMode
@@ -19,7 +19,7 @@ export interface DispatchModalProps {
   currentPolicy: PolicyThresholdConfig
 }
 
-export const DispatchModal: React.FC<DispatchModalProps> = ({
+export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   isOpen,
   onClose,
   workMode,
