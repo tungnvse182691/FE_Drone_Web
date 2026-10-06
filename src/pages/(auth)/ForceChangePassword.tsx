@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -9,7 +9,7 @@ export const ForceChangePassword: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // State cho Form Đổi mật khẩu bắt buộc
+  // State cho Form Äá»•i máº­t kháº©u báº¯t buá»™c
   const [tempPassword, setTempPassword] = useState('TempPass#2026')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -18,7 +18,7 @@ export const ForceChangePassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isForceSuccess, setIsForceSuccess] = useState(false)
 
-  // Validation quy tắc mật khẩu TCVN 11944
+  // Validation quy táº¯c máº­t kháº©u TCVN 11944
   const rules = {
     length: newPassword.length >= 8,
     case: /[a-z]/.test(newPassword) && /[A-Z]/.test(newPassword),
@@ -62,10 +62,10 @@ export const ForceChangePassword: React.FC = () => {
       <header className="w-full px-6 py-4 flex items-center justify-between z-20">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-200 text-stone-700 font-mono">
-            AUTH-GUARD • TCVN 11944:2018
+            AUTH-GUARD â€¢ TCVN 11944:2018
           </span>
           <span className="text-xs text-slate-500 hidden sm:inline">
-            An ninh truy cập hạ tầng giao thông đường bộ
+            An ninh truy cáº­p háº¡ táº§ng giao thÃ´ng Ä‘Æ°á»ng bá»™
           </span>
         </div>
       </header>
@@ -100,20 +100,20 @@ export const ForceChangePassword: React.FC = () => {
         >
           {/* Brand Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-2xl bg-[#C9A227]/10 border border-[#C9A227]/20 flex items-center justify-center text-[#C9A227] shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center text-brand-gold shadow-xs">
               <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold tracking-tight text-slate-900 font-headline">
-                  Hoàng Hải
+                  HoÃ ng Háº£i
                 </span>
-                <span className="text-xs px-2 py-0.5 font-mono font-semibold bg-[#C9A227]/10 text-[#C9A227] border border-[#C9A227]/30 rounded-full">
+                <span className="text-xs px-2 py-0.5 font-mono font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded-full">
                   ROADGUARD
                 </span>
               </div>
               <p className="text-xs font-medium text-slate-500 tracking-wide uppercase">
-                Quản lý Bảo hành &amp; Sửa chữa Hạ tầng
+                Quáº£n lÃ½ Báº£o hÃ nh &amp; Sá»­a chá»¯a Háº¡ táº§ng
               </p>
             </div>
           </div>
@@ -147,15 +147,15 @@ export const ForceChangePassword: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span>
-            Hệ thống máy chủ giám sát vận hành:{' '}
-            <strong className="text-slate-700 font-semibold font-mono">ONLINE (Hà Nội - ĐN Node)</strong>
+            Há»‡ thá»‘ng mÃ¡y chá»§ giÃ¡m sÃ¡t váº­n hÃ nh:{' '}
+            <strong className="text-slate-700 font-semibold font-mono">ONLINE (HÃ  Ná»™i - ÄN Node)</strong>
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <span>Chính sách bảo mật dữ liệu</span>
-          <span>•</span>
-          <span>Quy chuẩn TCVN 8819:2011</span>
-          <span>•</span>
+          <span>ChÃ­nh sÃ¡ch báº£o máº­t dá»¯ liá»‡u</span>
+          <span>â€¢</span>
+          <span>Quy chuáº©n TCVN 8819:2011</span>
+          <span>â€¢</span>
           <span className="font-mono text-slate-400">v2.4.1-prod</span>
         </div>
       </footer>
