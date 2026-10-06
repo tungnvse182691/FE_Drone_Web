@@ -16,3 +16,9 @@
 3. **Giới hạn số lượng file & Phân tách cấp 2 (Split Threshold):**
    - Bất kỳ thư mục nào chứa **trên 15 files** bắt buộc phải tách tiếp cấp 2 theo miền con (sub-domain/sub-feature).
    - Tuyệt đối không để xảy ra tình trạng "thư mục rác" chứa lẫn lộn hàng chục file không phân loại.
+
+4. **Luật SSOT cho Type & Entity:**
+   - Entity dùng chung (Project, Defect, Survey, Batch, Task...) CHỈ sống ở src/types/domain.ts.
+   - types.ts feature CHỈ chứa props component + UI state local, entity phải import từ domain, cấm interface trùng tên.
+   - services/mockData cấm định nghĩa interface đã có ở domain (chỉ import).
+

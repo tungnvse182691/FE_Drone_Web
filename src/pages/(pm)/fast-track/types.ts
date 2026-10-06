@@ -1,16 +1,6 @@
-export interface PolicyThresholdConfig {
-  version: string
-  status: 'ACTIVE' | 'ARCHIVED'
-  maxAreaM2: number
-  maxDepthCm: number
-  maxPerimeterM: number
-  allowedSeverities: string[]
-  slaHours: number
-  activatedBy: string
-  activatedAt: string
-  appliedRoute: string
-  description: string
-}
+import { PolicyThresholdConfig } from '../../../types/domain'
+
+export type { PolicyThresholdConfig }
 
 export interface RouteConfig {
   id: string

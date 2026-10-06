@@ -528,4 +528,185 @@ export interface DataDeletionRequest {
   rejection_reason?: string
 }
 
+// ==========================================
+// UNIFIED DOMAIN ENTITIES & WORKFLOW TYPES (SSOT)
+// ==========================================
+
+export interface PasswordRules {
+  length: boolean
+  case: boolean
+  number?: boolean
+  special: boolean
+}
+
+export interface HubProject {
+  id: string
+  code: string
+  name: string
+  region: string
+  location_detail: string
+  start_km: number
+  end_km: number
+  stationing_text: string
+  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED'
+  status_label: string
+  status_color: string
+  pm_name: string
+  pm_email: string
+  pm_role_badge: string
+  pm_avatar?: string
+  warranty_passed_percent: number
+  days_remaining: number
+  length_km: number
+  open_defects: number
+  repair_packages: number
+  image_url: string
+  is_assigned: boolean
+  is_restricted_for_pm?: boolean
+  kml_status?: string
+  retention_amount?: string
+}
+
+export interface PolicyThresholdConfig {
+  version: string
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
+  maxAreaM2: number
+  maxDepthCm: number
+  maxPerimeterM: number
+  allowedSeverities: ('LOW' | 'MEDIUM' | 'HIGH' | string)[]
+  slaHours: number
+  activatedBy: string
+  activatedAt: string
+  appliedRoute: string
+  description: string
+}
+
+export interface TriageCase {
+  id: string
+  code: string
+  source: 'DRONE_AI' | 'CITIZEN' | 'PATROL'
+  source_label: string
+  source_detail: string
+  project_id: string
+  project_name: string
+  stationing: string
+  lane: string
+  defect_title: string
+  defect_type: string
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  time_ago: string
+  created_at: string
+  status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED'
+  status_label: string
+  image_url: string
+  gps: {
+    lat: number
+    lng: number
+    altitude_m: number
+    resolution_cm_px: number
+  }
+  ai_confidence: number
+  area_sqm: number
+  ai_area_sqm: number
+  max_depth_cm: number
+  ai_depth_cm: number
+  pm_notes: string
+  reporter_name?: string
+  reporter_phone?: string
+  reporter_channel?: string
+  description?: string
+  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | null
+  conclusion_reason?: string
+  linked_report_ids?: string[]
+  master_case_id?: string
+  is_assigned?: boolean
+  is_published?: boolean
+  published_at?: string
+  public_notice?: string
+  survey_assignment?: {
+    mode: 'MEASURE_ONLY' | 'DRONE_RESURVEY'
+    reason: string
+    assigned_crew: string
+    sla_hours: number
+    created_at: string
+  }
+  cluster_duplicates?: {
+    code: string
+    source: string
+    distance_m: number
+    reporter: string
+    time?: string
+    image_url?: string
+    selected: boolean
+    is_merged?: boolean
+  }[]
+}
+
+export interface ProposalWorkPackage {
+  id: string
+  code: string
+  title: string
+  route_id: string
+  route_name: string
+  chainage_start: string
+  chainage_end: string
+  chainage_display: string
+  segments_count: number
+  defect_count: number
+  defect_summary: string
+  technical_scope: string
+  material_scope: string
+  technical_method?: string
+  duration_days: number
+  date_range: string
+  created_by_name: string
+  created_by_initials: string
+  created_by_role: string
+  created_at: string
+  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED'
+  status_label: string
+  approved_items: number
+  total_items: number
+  contractor_name: string
+  description?: string
+}
+
+export type ItemApprovalStatus =
+  | 'APPROVED'
+  | 'REQUEST_EVIDENCE'
+  | 'REQUEST_RECONSIDER'
+  | 'REJECTED'
+  | 'PENDING'
+
+export interface RepairItemDetail {
+  id: string
+  item_code: string
+  defect_code: string
+  chainage: string
+  lane_info: string
+  defect_title: string
+  defect_measurements: string
+  solution_title: string
+  solution_standard: string
+  volume_display: string
+  volume_sub: string
+  area_m2: number
+  status: ItemApprovalStatus
+  status_label: string
+  assigned_crew: string
+  supervisor_notes?: string
+  evidence_directives?: string[]
+  feedback_type?: 'EVIDENCE' | 'RECONSIDER' | 'REJECT'
+  image_url: string
+  ortho_code: string
+  gps_coords: string
+  resolution: string
+  survey_code?: string
+  drone_model?: string
+  pilot_name?: string
+  flight_date?: string
+}
+
+
 

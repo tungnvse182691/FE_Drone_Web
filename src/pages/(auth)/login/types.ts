@@ -1,8 +1,5 @@
-export type LoginViewMode = 'login' | 'force'
+import { PasswordRules } from '../../../types/domain'
 
-export interface PasswordRules {
-  length: boolean
-  case: boolean
-  number: boolean
-  special: boolean
-}
+export type { PasswordRules }
+
+export type LoginViewMode = 'login' | 'force'

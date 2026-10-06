@@ -1,6 +1,3 @@
-export interface PasswordRules {
-  length: boolean
-  case: boolean
-  number: boolean
-  special: boolean
-}
+import { PasswordRules } from '../../../types/domain'
+
+export type { PasswordRules }

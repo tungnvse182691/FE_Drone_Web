@@ -1,65 +1,11 @@
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
+import {
+  ProposalWorkPackage,
+  ItemApprovalStatus,
+  RepairItemDetail,
+} from '../../types/domain'
 
-export interface ProposalWorkPackage {
-  id: string
-  code: string
-  title: string
-  route_id: string
-  route_name: string
-  chainage_start: string
-  chainage_end: string
-  chainage_display: string
-  segments_count: number
-  defect_count: number
-  defect_summary: string
-  technical_scope: string
-  material_scope: string
-  technical_method?: string
-  duration_days: number
-  date_range: string
-  created_by_name: string
-  created_by_initials: string
-  created_by_role: string
-  created_at: string
-  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED'
-  status_label: string
-  approved_items: number
-  total_items: number
-  contractor_name: string
-  description?: string
-}
-
-export type ItemApprovalStatus =
-  | 'APPROVED'
-  | 'REQUEST_EVIDENCE'
-  | 'REQUEST_RECONSIDER'
-  | 'REJECTED'
-  | 'PENDING'
-
-export interface RepairItemDetail {
-  id: string
-  item_code: string
-  defect_code: string
-  chainage: string
-  lane_info: string
-  defect_title: string
-  defect_measurements: string
-  solution_title: string
-  solution_standard: string
-  volume_display: string
-  volume_sub: string
-  area_m2: number
-  status: ItemApprovalStatus
-  status_label: string
-  assigned_crew: string
-  supervisor_notes?: string
-  evidence_directives?: string[]
-  feedback_type?: 'EVIDENCE' | 'RECONSIDER' | 'REJECT'
-  image_url: string
-  ortho_code: string
-  gps_coords: string
-  resolution: string
-}
+export type { ProposalWorkPackage, ItemApprovalStatus, RepairItemDetail }
 
 export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
   {

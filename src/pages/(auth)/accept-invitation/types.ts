@@ -1,10 +1,8 @@
-export type InvitationDemoState = 'valid' | 'expired'
+import { PasswordRules } from '../../../types/domain'
 
-export interface PasswordRules {
-  length: boolean
-  case: boolean
-  special: boolean
-}
+export type { PasswordRules }
+
+export type InvitationDemoState = 'valid' | 'expired'
 
 export interface PasswordStrength {
   score: number

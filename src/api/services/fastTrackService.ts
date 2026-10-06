@@ -1,18 +1,7 @@
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
+import { PolicyThresholdConfig } from '../../types/domain'
 
-export interface PolicyThresholdConfig {
-  version: string
-  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
-  maxAreaM2: number
-  maxDepthCm: number
-  maxPerimeterM: number
-  allowedSeverities: ('LOW' | 'MEDIUM' | 'HIGH')[]
-  slaHours: number
-  activatedBy: string
-  activatedAt: string
-  appliedRoute: string
-  description: string
-}
+export type { PolicyThresholdConfig }
 
 export const DEFAULT_POLICY: PolicyThresholdConfig = {
   version: 'Policy v2.1',
