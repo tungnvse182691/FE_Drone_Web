@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+﻿import React, { useRef, useEffect, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle } from '../../../utils/maplibre'
@@ -82,8 +82,8 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
             <div style="font-family:sans-serif; font-size:12px; padding:6px; color:#1E293B;">
               <strong style="color:#DC2626; font-size:13px;">${defect.code}</strong><br/>
               <span style="font-weight:600;">${defect.defect_type}</span><br/>
-              <span>Lý trình: Km${defect.chainage_km}</span><br/>
-              <span style="color:#B45309; font-weight:600;">Mức độ: ${severity}</span>
+              <span>LÃ½ trÃ¬nh: Km${defect.chainage_km}</span><br/>
+              <span style="color:#B45309; font-weight:600;">Má»©c Ä‘á»™: ${severity}</span>
             </div>
           `)
         )
@@ -106,8 +106,8 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
     <div className="space-y-3">
       <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <MapIcon className="w-4 h-4 text-[#C9A227]" />
-          <span>Vị Trí Không Gian Trắc Địa (MapLibre WGS84 EPSG:4326)</span>
+          <MapIcon className="w-4 h-4 text-brand-gold" />
+          <span>Vá»‹ TrÃ­ KhÃ´ng Gian Tráº¯c Äá»‹a (MapLibre WGS84 EPSG:4326)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-[11px]">
@@ -118,7 +118,7 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
                 mapType === 'SATELLITE' ? 'bg-white text-brand-dark shadow-2xs font-bold' : 'text-slate-600'
               }`}
             >
-              Vệ tinh
+              Vá»‡ tinh
             </button>
             <button
               type="button"
@@ -136,12 +136,12 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
       <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-950 aspect-video">
         <div ref={mapContainerRef} className="w-full h-full" />
         <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-white font-mono text-[11px] border border-white/10 pointer-events-none z-10 shadow-md">
-          <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
+          <div className="flex items-center gap-1.5 font-bold text-brand-gold">
             <MapPin className="w-3.5 h-3.5" />
-            <span>{defect.gps_lat || 16.0582}° N, {defect.gps_lng || 108.2045}° E</span>
+            <span>{defect.gps_lat || 16.0582}Â° N, {defect.gps_lng || 108.2045}Â° E</span>
           </div>
           <div className="text-[10px] text-slate-300 mt-0.5">
-            Lý trình: Km {defect.chainage_km} • Độ chính xác định vị RTK: ±2.5cm
+            LÃ½ trÃ¬nh: Km {defect.chainage_km} â€¢ Äá»™ chÃ­nh xÃ¡c Ä‘á»‹nh vá»‹ RTK: Â±2.5cm
           </div>
         </div>
       </div>

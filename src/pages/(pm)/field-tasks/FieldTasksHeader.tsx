@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   ChevronRight,
   ShieldCheck,
@@ -43,14 +43,14 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
   return (
     <>
       {/* 1. BREADCRUMB & METADATA OVERLINE */}
-      <nav aria-label="Đường dẫn trang" className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
+      <nav aria-label="ÄÆ°á»ng dáº«n trang" className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
         <a href="#/pm/dashboard" className="hover:text-slate-800 transition-colors">
-          Trang chủ
+          Trang chá»§
         </a>
         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-slate-600">Ngoại tuyến &amp; Đo đạc</span>
+        <span className="text-slate-600">Ngoáº¡i tuyáº¿n &amp; Äo Ä‘áº¡c</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-        <span className="font-semibold text-slate-900">Xung đột đồng bộ &amp; Nhiệm vụ hiện trường</span>
+        <span className="font-semibold text-slate-900">Xung Ä‘á»™t Ä‘á»“ng bá»™ &amp; Nhiá»‡m vá»¥ hiá»‡n trÆ°á»ng</span>
       </nav>
 
       {/* HEADER SECTION */}
@@ -58,16 +58,16 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold font-sansation text-brand-dark tracking-tight">
-              Trung Tâm Xử Lý Xung Đột &amp; Đo Đạc Bổ Sung
+              Trung TÃ¢m Xá»­ LÃ½ Xung Äá»™t &amp; Äo Äáº¡c Bá»• Sung
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-purple-100 text-purple-800 border border-purple-300">
               WF-15 / FR-22 COMPLIANT
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Dự án: <strong className="text-slate-800">QL1A - Giai đoạn 2 (PRJ-QL1A-02 • Km 1024 - Km 1045)</strong>. Tiếp
-            nhận, đối soát dữ liệu đo đạc &amp; thi công gửi muộn từ hiện trường theo quy tắc{' '}
-            <strong className="text-slate-700">D05/Q04</strong> và cứu dữ liệu thiết bị hỏng{' '}
+            Dá»± Ã¡n: <strong className="text-slate-800">QL1A - Giai Ä‘oáº¡n 2 (PRJ-QL1A-02 â€¢ Km 1024 - Km 1045)</strong>. Tiáº¿p
+            nháº­n, Ä‘á»‘i soÃ¡t dá»¯ liá»‡u Ä‘o Ä‘áº¡c &amp; thi cÃ´ng gá»­i muá»™n tá»« hiá»‡n trÆ°á»ng theo quy táº¯c{' '}
+            <strong className="text-slate-700">D05/Q04</strong> vÃ  cá»©u dá»¯ liá»‡u thiáº¿t bá»‹ há»ng{' '}
             <strong className="text-slate-700">Q17/D06/42A</strong>.
           </p>
         </div>
@@ -84,17 +84,17 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
             <ShieldCheck className="w-4 h-4" />
             <span>
               {isSupervisor
-                ? 'Chế độ Giám Sát (Kiểm tra & Phê duyệt cứu hộ thiết bị)'
-                : 'Chế độ Chỉ Huy Trưởng PM (Thẩm quyền phân giải nghiệp vụ)'}
+                ? 'Cháº¿ Ä‘á»™ GiÃ¡m SÃ¡t (Kiá»ƒm tra & PhÃª duyá»‡t cá»©u há»™ thiáº¿t bá»‹)'
+                : 'Cháº¿ Ä‘á»™ Chá»‰ Huy TrÆ°á»Ÿng PM (Tháº©m quyá»n phÃ¢n giáº£i nghiá»‡p vá»¥)'}
             </span>
           </div>
           <button
             type="button"
             onClick={handleResetData}
             className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-            title="Khôi phục dữ liệu ban đầu để test lại"
+            title="KhÃ´i phá»¥c dá»¯ liá»‡u ban Ä‘áº§u Ä‘á»ƒ test láº¡i"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#C9A227]" />
+            <RefreshCw className="w-3.5 h-3.5 text-brand-gold" />
             <span>Reset Data Test</span>
           </button>
         </div>
@@ -107,35 +107,35 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
           onClick={() => setActiveTab('CONFLICTS')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-b-2 cursor-pointer font-sansation ${
             activeTab === 'CONFLICTS'
-              ? 'border-[#C9A227] text-[#C9A227] bg-[#FBF6E9]/40'
+              ? 'border-brand-gold text-brand-gold bg-[#FBF6E9]/40'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>Hàng Đợi Xử Lý Xung Đột Ngoại Tuyến ({stats.pending} ca chờ)</span>
+          <span>HÃ ng Äá»£i Xá»­ LÃ½ Xung Äá»™t Ngoáº¡i Tuyáº¿n ({stats.pending} ca chá»)</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('MEASUREMENTS')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all border-b-2 cursor-pointer font-sansation ${
             activeTab === 'MEASUREMENTS'
-              ? 'border-[#C9A227] text-[#C9A227] bg-[#FBF6E9]/40'
+              ? 'border-brand-gold text-brand-gold bg-[#FBF6E9]/40'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
           <Ruler className="w-4 h-4" />
-          <span>Nhật Ký Nhiệm Vụ Đo Đạc Hiện Trường ({fieldTasks.length} nhiệm vụ)</span>
+          <span>Nháº­t KÃ½ Nhiá»‡m Vá»¥ Äo Äáº¡c Hiá»‡n TrÆ°á»ng ({fieldTasks.length} nhiá»‡m vá»¥)</span>
         </button>
       </div>
 
       {/* KPI & BANNER SECTION (ONLY IN CONFLICTS TAB) */}
       {activeTab === 'CONFLICTS' && (
         <div className="space-y-4">
-          {/* BANNER GIÁM SÁT TIẾN TRÌNH OFFLINE BATCH SYNC */}
-          <div className="p-4 rounded-2xl bg-white border border-[#E2E5E9] shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#C9A227]"></div>
+          {/* BANNER GIÃM SÃT TIáº¾N TRÃŒNH OFFLINE BATCH SYNC */}
+          <div className="p-4 rounded-2xl bg-white border border-brand-border shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-brand-gold"></div>
             <div className="flex items-start md:items-center gap-3 pl-2">
-              <div className="w-10 h-10 rounded-xl bg-[#FBF6E9] text-[#C9A227] flex items-center justify-center shrink-0 shadow-2xs">
+              <div className="w-10 h-10 rounded-xl bg-[#FBF6E9] text-brand-gold flex items-center justify-center shrink-0 shadow-2xs">
                 <HardDriveDownload className="w-5 h-5" />
               </div>
               <div>
@@ -144,18 +144,18 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
                     HTTP 200 IDEMPOTENT SYNC
                   </span>
                   <span className="font-mono text-xs font-bold text-slate-900">
-                    HÀNG ĐỢI ĐỒNG BỘ: {conflicts.length} GÓI DỮ LIỆU NGOẠI TUYẾN (QL1A PK-04)
+                    HÃ€NG Äá»¢I Äá»’NG Bá»˜: {conflicts.length} GÃ“I Dá»® LIá»†U NGOáº I TUYáº¾N (QL1A PK-04)
                   </span>
                   <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200">
-                    {conflicts.length - stats.pending} Đã Phân Giải / ACK
+                    {conflicts.length - stats.pending} ÄÃ£ PhÃ¢n Giáº£i / ACK
                   </span>
                   <span className="text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold border border-amber-200 animate-pulse">
-                    {stats.pending} Xung đột chờ xử lý
+                    {stats.pending} Xung Ä‘á»™t chá» xá»­ lÃ½
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  Các gói nhiệm vụ thi công ngoại tuyến tự động kiểm tra xung đột phiên bản máy chủ khi bắt được sóng 4G/Wifi.
-                  Toàn bộ dữ liệu được bảo vệ toàn vẹn bằng mã băm SHA-256 theo tiêu chuẩn{' '}
+                  CÃ¡c gÃ³i nhiá»‡m vá»¥ thi cÃ´ng ngoáº¡i tuyáº¿n tá»± Ä‘á»™ng kiá»ƒm tra xung Ä‘á»™t phiÃªn báº£n mÃ¡y chá»§ khi báº¯t Ä‘Æ°á»£c sÃ³ng 4G/Wifi.
+                  ToÃ n bá»™ dá»¯ liá»‡u Ä‘Æ°á»£c báº£o vá»‡ toÃ n váº¹n báº±ng mÃ£ bÄƒm SHA-256 theo tiÃªu chuáº©n{' '}
                   <strong className="text-slate-700">TCVN 8819:2011</strong>.
                 </p>
               </div>
@@ -163,46 +163,46 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
 
             <div className="flex items-center gap-3 shrink-0 pl-2 lg:pl-0">
               <div className="text-right">
-                <span className="text-[11px] text-slate-500 block">Tiêu chuẩn kiểm toán:</span>
-                <span className="font-mono text-xs font-bold text-slate-800">BR-15 • BR-19 • D05</span>
+                <span className="text-[11px] text-slate-500 block">TiÃªu chuáº©n kiá»ƒm toÃ¡n:</span>
+                <span className="font-mono text-xs font-bold text-slate-800">BR-15 â€¢ BR-19 â€¢ D05</span>
               </div>
               <div className="h-8 w-px bg-slate-200"></div>
               <div className="text-right">
-                <span className="text-[11px] text-slate-500 block">Độ tin cậy vị trí GPS:</span>
+                <span className="text-[11px] text-slate-500 block">Äá»™ tin cáº­y vá»‹ trÃ­ GPS:</span>
                 <span className="font-mono text-xs font-bold text-emerald-700">RTK Sub-meter (&lt;1.5m)</span>
               </div>
             </div>
           </div>
 
-          {/* 4 THẺ CHỈ SỐ KPI */}
+          {/* 4 THáºº CHá»ˆ Sá» KPI */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-[#C9A227] transition-all">
+            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-brand-gold transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Tổng ca xung đột
+                    Tá»•ng ca xung Ä‘á»™t
                   </span>
-                  <h3 className="text-xl font-bold font-sansation text-slate-900 mt-1">Hàng đợi Conflict</h3>
+                  <h3 className="text-xl font-bold font-sansation text-slate-900 mt-1">HÃ ng Ä‘á»£i Conflict</h3>
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-[#FBF6E9] text-[#C9A227] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[#FBF6E9] text-brand-gold flex items-center justify-center">
                   <Layers className="w-5 h-5" />
                 </div>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-sansation text-[#C9A227]">{stats.total}</span>
-                <span className="text-xs text-slate-500">hồ sơ ghi nhận</span>
+                <span className="text-2xl font-bold font-sansation text-brand-gold">{stats.total}</span>
+                <span className="text-xs text-slate-500">há»“ sÆ¡ ghi nháº­n</span>
               </div>
               <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Đang chờ phân giải:</span>
+                <span>Äang chá» phÃ¢n giáº£i:</span>
                 <span className="font-bold text-amber-600 font-mono">{stats.pending} ca</span>
               </div>
             </Card>
 
-            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-[#C9A227] transition-all">
+            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-brand-gold transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Đổi đội khi ngoại tuyến
+                    Äá»•i Ä‘á»™i khi ngoáº¡i tuyáº¿n
                   </span>
                   <h3 className="text-xl font-bold font-sansation text-slate-900 mt-1">Reassigned (D05)</h3>
                 </div>
@@ -217,16 +217,16 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Nguyên tắc:</span>
-                <span className="font-medium text-slate-700">Không ghi đè dữ liệu cũ</span>
+                <span>NguyÃªn táº¯c:</span>
+                <span className="font-medium text-slate-700">KhÃ´ng ghi Ä‘Ã¨ dá»¯ liá»‡u cÅ©</span>
               </div>
             </Card>
 
-            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-[#C9A227] transition-all">
+            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-brand-gold transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Lệch chính sách Fast Track
+                    Lá»‡ch chÃ­nh sÃ¡ch Fast Track
                   </span>
                   <h3 className="text-xl font-bold font-sansation text-slate-900 mt-1">Policy Mismatch</h3>
                 </div>
@@ -241,16 +241,16 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Xử lý:</span>
-                <span className="font-medium text-slate-700">Chuyển thẩm duyệt có Giám sát</span>
+                <span>Xá»­ lÃ½:</span>
+                <span className="font-medium text-slate-700">Chuyá»ƒn tháº©m duyá»‡t cÃ³ GiÃ¡m sÃ¡t</span>
               </div>
             </Card>
 
-            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-[#C9A227] transition-all">
+            <Card className="p-4 bg-white border border-brand-border relative overflow-hidden group hover:border-brand-gold transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Cứu dữ liệu thiết bị hỏng
+                    Cá»©u dá»¯ liá»‡u thiáº¿t bá»‹ há»ng
                   </span>
                   <h3 className="text-xl font-bold font-sansation text-slate-900 mt-1">Rescue Data (Q17)</h3>
                 </div>
@@ -261,12 +261,12 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-sansation text-purple-700">{stats.rescuePending}</span>
                 <span className="text-xs text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-full">
-                  Cần Sup Ký
+                  Cáº§n Sup KÃ½
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                <span>Thẩm quyền:</span>
-                <span className="font-bold text-purple-800">D06 / Quyết định 42A</span>
+                <span>Tháº©m quyá»n:</span>
+                <span className="font-bold text-purple-800">D06 / Quyáº¿t Ä‘á»‹nh 42A</span>
               </div>
             </Card>
           </div>

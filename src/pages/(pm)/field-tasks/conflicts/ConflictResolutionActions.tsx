@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Clock,
   CheckCircle2,
@@ -37,29 +37,29 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
       <div className="text-[11px] text-slate-500">
         {selectedConflict.status === 'CONFLICT_INTAKE' ? (
           <span className="flex items-center gap-1 text-amber-700 font-semibold">
-            <Clock className="w-3.5 h-3.5" /> Hồ sơ đang chờ quyết định xử lý
+            <Clock className="w-3.5 h-3.5" /> Há»“ sÆ¡ Ä‘ang chá» quyáº¿t Ä‘á»‹nh xá»­ lÃ½
           </span>
         ) : (
           <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Hồ sơ đã được chốt và lưu vết kiểm toán
+            <CheckCircle2 className="w-3.5 h-3.5" /> Há»“ sÆ¡ Ä‘Ã£ Ä‘Æ°á»£c chá»‘t vÃ  lÆ°u váº¿t kiá»ƒm toÃ¡n
           </span>
         )}
       </div>
 
-      {/* NÚT THAO TÁC CHO PROJECT MANAGER (PM CHỈ HUY TRƯỞNG) */}
+      {/* NÃšT THAO TÃC CHO PROJECT MANAGER (PM CHá»ˆ HUY TRÆ¯á»žNG) */}
       {isPM && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <div className="flex items-center gap-2 flex-wrap">
-          {/* TRƯỜNG HỢP CA 3: DEVICE_RESCUE_PENDING (Tuân thủ Q17/Decision 42A - PM là Maker, không tự duyệt) */}
+          {/* TRÆ¯á»œNG Há»¢P CA 3: DEVICE_RESCUE_PENDING (TuÃ¢n thá»§ Q17/Decision 42A - PM lÃ  Maker, khÃ´ng tá»± duyá»‡t) */}
           {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
             <>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
                 className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation"
-                title="Theo Q17/42A: PM lập tờ trình gửi Supervisor ký số phê duyệt"
+                title="Theo Q17/42A: PM láº­p tá» trÃ¬nh gá»­i Supervisor kÃ½ sá»‘ phÃª duyá»‡t"
               >
-                <ShieldAlert className="w-4 h-4 text-[#C9A227]" />
-                <span>Trình Giám sát ký duyệt cứu hộ (Q17/42A)</span>
+                <ShieldAlert className="w-4 h-4 text-brand-gold" />
+                <span>TrÃ¬nh GiÃ¡m sÃ¡t kÃ½ duyá»‡t cá»©u há»™ (Q17/42A)</span>
               </button>
 
               <button
@@ -68,7 +68,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                <span>Yêu cầu Đội thi công bổ sung biên bản</span>
+                <span>YÃªu cáº§u Äá»™i thi cÃ´ng bá»• sung biÃªn báº£n</span>
               </button>
 
               <button
@@ -77,20 +77,20 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-rose-700 hover:bg-rose-800 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <XCircle className="w-4 h-4" />
-                <span>Bác bỏ dữ liệu hỏng & Giao Đội đo lại</span>
+                <span>BÃ¡c bá» dá»¯ liá»‡u há»ng & Giao Äá»™i Ä‘o láº¡i</span>
               </button>
             </>
           ) : selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' ? (
-            /* TRƯỜNG HỢP CA 5: AGGREGATE_VERSION_CONFLICT (Tuân thủ BR-26 & Invariant #3 - Khóa cứng đợt cũ) */
+            /* TRÆ¯á»œNG Há»¢P CA 5: AGGREGATE_VERSION_CONFLICT (TuÃ¢n thá»§ BR-26 & Invariant #3 - KhÃ³a cá»©ng Ä‘á»£t cÅ©) */
             <>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-[#C9A227] hover:bg-[#8C6D1F] transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation ring-2 ring-[#C9A227]/40"
-                title="Tuân thủ BR-26: Tạo phụ lục đợt mới để giải ngân khối lượng nộp muộn"
+                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-brand-gold hover:bg-brand-goldMuted transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation ring-2 ring-brand-gold/40"
+                title="TuÃ¢n thá»§ BR-26: Táº¡o phá»¥ lá»¥c Ä‘á»£t má»›i Ä‘á»ƒ giáº£i ngÃ¢n khá»‘i lÆ°á»£ng ná»™p muá»™n"
               >
                 <Split className="w-4 h-4" />
-                <span>Tạo Phụ Lục Đợt Bổ Sung (Tuân thủ BR-26)</span>
+                <span>Táº¡o Phá»¥ Lá»¥c Äá»£t Bá»• Sung (TuÃ¢n thá»§ BR-26)</span>
               </button>
 
               <button
@@ -99,7 +99,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
                 <XCircle className="w-4 h-4 text-slate-500" />
-                <span>Bảo lưu hồ sơ đã đóng (Từ chối số liệu)</span>
+                <span>Báº£o lÆ°u há»“ sÆ¡ Ä‘Ã£ Ä‘Ã³ng (Tá»« chá»‘i sá»‘ liá»‡u)</span>
               </button>
 
               <button
@@ -108,13 +108,13 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3 py-2 rounded-xl text-slate-800 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
                 <Archive className="w-3.5 h-3.5 text-slate-600" />
-                <span>Chuyển vào Hàng đợi đợt sửa tiếp theo</span>
+                <span>Chuyá»ƒn vÃ o HÃ ng Ä‘á»£i Ä‘á»£t sá»­a tiáº¿p theo</span>
               </button>
             </>
           ) : (
-            /* CÁC TRƯỜNG HỢP CA 1, 2, 4 */
+            /* CÃC TRÆ¯á»œNG Há»¢P CA 1, 2, 4 */
             <>
-              {/* Nút 1: Chấp nhận ngoại tuyến / Bản đo chuẩn / Chuyển đợt */}
+              {/* NÃºt 1: Cháº¥p nháº­n ngoáº¡i tuyáº¿n / Báº£n Ä‘o chuáº©n / Chuyá»ƒn Ä‘á»£t */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
@@ -123,15 +123,15 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 <CheckCircle2 className="w-4 h-4" />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Chấp nhận Thiết Bị 2 (Máy chính chuẩn)'}
+                    'Cháº¥p nháº­n Thiáº¿t Bá»‹ 2 (MÃ¡y chÃ­nh chuáº©n)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Chấp nhận Đội 02 (Thu hồi lệnh Đội 01)'}
+                    'Cháº¥p nháº­n Äá»™i 02 (Thu há»“i lá»‡nh Äá»™i 01)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Chuyển sang Lập đợt sửa trình Giám sát (Policy v2.2)'}
+                    'Chuyá»ƒn sang Láº­p Ä‘á»£t sá»­a trÃ¬nh GiÃ¡m sÃ¡t (Policy v2.2)'}
                 </span>
               </button>
 
-              {/* Nút 2: Bảo lưu máy chủ */}
+              {/* NÃºt 2: Báº£o lÆ°u mÃ¡y chá»§ */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
@@ -140,28 +140,28 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 <XCircle className="w-4 h-4 text-slate-500" />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Bảo lưu Thiết Bị 1 (Máy phụ)'}
+                    'Báº£o lÆ°u Thiáº¿t Bá»‹ 1 (MÃ¡y phá»¥)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Bảo lưu lệnh Đội 01 (Hủy kết quả Đội 02)'}
+                    'Báº£o lÆ°u lá»‡nh Äá»™i 01 (Há»§y káº¿t quáº£ Äá»™i 02)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Bảo lưu chính sách v2.2 (Từ chối Fast Track)'}
+                    'Báº£o lÆ°u chÃ­nh sÃ¡ch v2.2 (Tá»« chá»‘i Fast Track)'}
                 </span>
               </button>
 
-              {/* Nút 3: Tách lần sửa mới (Fork Attempt) */}
+              {/* NÃºt 3: TÃ¡ch láº§n sá»­a má»›i (Fork Attempt) */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-[#C9A227] hover:bg-[#8C6D1F] transition shadow-xs flex items-center gap-1.5 cursor-pointer font-sansation"
+                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-xs flex items-center gap-1.5 cursor-pointer font-sansation"
               >
                 <Split className="w-4 h-4" />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Tách 2 đợt đo đối chứng (Fork)'}
+                    'TÃ¡ch 2 Ä‘á»£t Ä‘o Ä‘á»‘i chá»©ng (Fork)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Tách 2 lần sửa độc lập (Fork)'}
+                    'TÃ¡ch 2 láº§n sá»­a Ä‘á»™c láº­p (Fork)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Tách thành Đợt sửa chữa nền móng chuyên đề'}
+                    'TÃ¡ch thÃ nh Äá»£t sá»­a chá»¯a ná»n mÃ³ng chuyÃªn Ä‘á»'}
                 </span>
               </button>
             </>
@@ -169,7 +169,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
         </div>
       )}
 
-      {/* NÚT THAO TÁC CHO SUPERVISOR (GIÁM SÁT / CHỦ ĐẦU TƯ) */}
+      {/* NÃšT THAO TÃC CHO SUPERVISOR (GIÃM SÃT / CHá»¦ Äáº¦U TÆ¯) */}
       {isSupervisor && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <div className="flex items-center gap-2 flex-wrap">
           {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
@@ -180,7 +180,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-4 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                <span>Ký số Phê duyệt Cứu Dữ Liệu Thiết Bị (Decision 42A)</span>
+                <span>KÃ½ sá»‘ PhÃª duyá»‡t Cá»©u Dá»¯ Liá»‡u Thiáº¿t Bá»‹ (Decision 42A)</span>
               </button>
               <button
                 type="button"
@@ -188,12 +188,12 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3.5 py-2 rounded-xl text-rose-700 text-xs font-bold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 flex items-center gap-1.5 cursor-pointer"
               >
                 <XCircle className="w-4 h-4 text-rose-600" />
-                <span>Từ chối gói cứu hộ (Bắt buộc đo lại)</span>
+                <span>Tá»« chá»‘i gÃ³i cá»©u há»™ (Báº¯t buá»™c Ä‘o láº¡i)</span>
               </button>
             </>
           ) : (
             <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
-              Chế độ Giám sát: Quyền phân giải nghiệp vụ thuộc Chỉ huy trưởng PM (Maker-Checker).
+              Cháº¿ Ä‘á»™ GiÃ¡m sÃ¡t: Quyá»n phÃ¢n giáº£i nghiá»‡p vá»¥ thuá»™c Chá»‰ huy trÆ°á»Ÿng PM (Maker-Checker).
             </div>
           )}
         </div>

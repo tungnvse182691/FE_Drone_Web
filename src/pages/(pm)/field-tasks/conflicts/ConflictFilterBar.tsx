@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Search } from 'lucide-react'
 import { SyncConflictItem } from '../../../../types/domain'
 
@@ -33,22 +33,22 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
           onClick={() => setFilterType('ALL')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterType === 'ALL'
-              ? 'bg-[#C9A227] text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs font-sansation'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Tất cả ({conflicts.length})
+          Táº¥t cáº£ ({conflicts.length})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('PENDING')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterType === 'PENDING'
-              ? 'bg-[#C9A227] text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs font-sansation'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Chờ phân giải ({stats.pending})
+          Chá» phÃ¢n giáº£i ({stats.pending})
         </button>
         <button
           type="button"
@@ -59,18 +59,18 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Cứu dữ liệu thiết bị ({stats.rescuePending})
+          Cá»©u dá»¯ liá»‡u thiáº¿t bá»‹ ({stats.rescuePending})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('RESOLVED')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             filterType === 'RESOLVED'
-              ? 'bg-[#C9A227] text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs font-sansation'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Đã phân giải ({conflicts.length - stats.pending})
+          ÄÃ£ phÃ¢n giáº£i ({conflicts.length - stats.pending})
         </button>
       </div>
 
@@ -78,10 +78,10 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="Tìm mã xung đột, mã lỗi, lý trình, thợ..."
+          placeholder="TÃ¬m mÃ£ xung Ä‘á»™t, mÃ£ lá»—i, lÃ½ trÃ¬nh, thá»£..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
         />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { ArrowLeft, Layers, SplitSquareHorizontal, Map as MapIcon } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { Defect } from '../../../types/domain'
@@ -31,13 +31,13 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-              Thẩm Định Chi Tiết Hư Hỏng: {defect.code}
+              Tháº©m Äá»‹nh Chi Tiáº¿t HÆ° Há»ng: {defect.code}
             </h1>
             <StatusBadge status={defect.status} />
             <StatusBadge status={severity} />
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Lý trình: Km{defect.chainage_km} • Tọa độ GPS: ({defect.gps_lat}, {defect.gps_lng})
+            LÃ½ trÃ¬nh: Km{defect.chainage_km} â€¢ Tá»a Ä‘á»™ GPS: ({defect.gps_lat}, {defect.gps_lng})
           </p>
         </div>
       </div>
@@ -53,7 +53,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          Màn 08: Đơn Kỳ (Bounding Box)
+          MÃ n 08: ÄÆ¡n Ká»³ (Bounding Box)
         </button>
         <button
           onClick={() => setViewMode('TEMPORAL')}
@@ -64,18 +64,18 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
           }`}
         >
           <SplitSquareHorizontal className="w-3.5 h-3.5" />
-          Màn 09: Đa Kỳ (Trước/Sau)
+          MÃ n 09: Äa Ká»³ (TrÆ°á»›c/Sau)
         </button>
         <button
           onClick={() => setViewMode('GIS_MAP')}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
             viewMode === 'GIS_MAP'
-              ? 'bg-[#C9A227] text-white shadow-xs font-bold'
+              ? 'bg-brand-gold text-white shadow-xs font-bold'
               : 'text-slate-600 hover:text-brand-dark'
           }`}
         >
           <MapIcon className="w-3.5 h-3.5" />
-          Bản Đồ GIS (MapLibre)
+          Báº£n Äá»“ GIS (MapLibre)
         </button>
       </div>
     </div>

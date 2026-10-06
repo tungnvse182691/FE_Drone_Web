@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Smartphone, Clock, FileCheck, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { Card } from '../../../../components/ui/Card'
 import { SyncConflictItem } from '../../../../types/domain'
@@ -28,50 +28,50 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
 }) => {
   return (
     <div className="lg:col-span-7 flex flex-col gap-4">
-      <Card className="p-4 bg-white border-2 border-[#C9A227]/40 shadow-xs flex-1 flex flex-col justify-between relative">
+      <Card className="p-4 bg-white border-2 border-brand-gold/40 shadow-xs flex-1 flex flex-col justify-between relative">
         <div className="space-y-4">
-          {/* Tiêu đề & Nhãn cột 2 thay đổi động theo từng loại xung đột */}
+          {/* TiÃªu Ä‘á» & NhÃ£n cá»™t 2 thay Ä‘á»•i Ä‘á»™ng theo tá»«ng loáº¡i xung Ä‘á»™t */}
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <div className="flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-[#C9A227]" />
+              <Smartphone className="w-4 h-4 text-brand-gold" />
               <span className="font-bold text-slate-900 font-sansation text-sm uppercase tracking-wide">
                 {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                  '2. Bản Nộp Thiết Bị 2 (Máy Chính - Đội Trưởng 15:10)'}
+                  '2. Báº£n Ná»™p Thiáº¿t Bá»‹ 2 (MÃ¡y ChÃ­nh - Äá»™i TrÆ°á»Ÿng 15:10)'}
                 {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                  '2. Kết Quả Thực Tế Đội 02 Đã Thi Công Xong (10:15)'}
+                  '2. Káº¿t Quáº£ Thá»±c Táº¿ Äá»™i 02 ÄÃ£ Thi CÃ´ng Xong (10:15)'}
                 {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                  '2. Đề Xuất Fast Track Của Kỹ Sư Hiện Trường (11:45)'}
+                  '2. Äá» Xuáº¥t Fast Track Cá»§a Ká»¹ SÆ° Hiá»‡n TrÆ°á»ng (11:45)'}
                 {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' &&
-                  '2. Gói Dữ Liệu SQLite Trắc Địa Trích Xuất Qua ADB'}
+                  '2. GÃ³i Dá»¯ Liá»‡u SQLite Tráº¯c Äá»‹a TrÃ­ch Xuáº¥t Qua ADB'}
                 {selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' &&
-                  '2. Chứng Cứ Thi Công Gửi Muộn Từ Hiện Trường (14:20)'}
+                  '2. Chá»©ng Cá»© Thi CÃ´ng Gá»­i Muá»™n Tá»« Hiá»‡n TrÆ°á»ng (14:20)'}
               </span>
             </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#FBF6E9] text-[#8C6D1F] border border-[#F1E5C6] font-bold">
-              {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' && 'Thiết Bị 2 (Bản Đo Chuẩn)'}
-              {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' && 'Tổ 02 Hoàn Thành (10:15)'}
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#FBF6E9] text-brand-goldMuted border border-[#F1E5C6] font-bold">
+              {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' && 'Thiáº¿t Bá»‹ 2 (Báº£n Äo Chuáº©n)'}
+              {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' && 'Tá»• 02 HoÃ n ThÃ nh (10:15)'}
               {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' && 'Snapshot v1.8 (07:00)'}
-              {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' && 'Trích Xuất ADB An Toàn'}
-              {selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' && 'Gửi Muộn (Offline 11h45)'}
+              {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' && 'TrÃ­ch Xuáº¥t ADB An ToÃ n'}
+              {selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' && 'Gá»­i Muá»™n (Offline 11h45)'}
             </span>
           </div>
 
-          {/* 2 Ảnh Thực Tế Trước/Sau với SafeImage vectorType kỹ thuật công trình */}
+          {/* 2 áº¢nh Thá»±c Táº¿ TrÆ°á»›c/Sau vá»›i SafeImage vectorType ká»¹ thuáº­t cÃ´ng trÃ¬nh */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">
                 {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
-                  ? 'Ảnh thước dưỡng 3m (TCVN 8864)'
+                  ? 'áº¢nh thÆ°á»›c dÆ°á»¡ng 3m (TCVN 8864)'
                   : selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING'
-                  ? 'Ảnh trắc địa sụt lún chênh cốt'
+                  ? 'áº¢nh tráº¯c Ä‘á»‹a sá»¥t lÃºn chÃªnh cá»‘t'
                   : selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                  ? 'Ảnh đo dưỡng độ sâu ổ gà (62mm)'
-                  : 'Ảnh đo đạc thước vạch (Chụp ngoại tuyến)'}
+                  ? 'áº¢nh Ä‘o dÆ°á»¡ng Ä‘á»™ sÃ¢u á»• gÃ  (62mm)'
+                  : 'áº¢nh Ä‘o Ä‘áº¡c thÆ°á»›c váº¡ch (Chá»¥p ngoáº¡i tuyáº¿n)'}
               </span>
               <div className="relative h-44 w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-200 shadow-2xs group">
                 <SafeImage
                   src={selectedConflict.incoming_data.photo_evidence_url}
-                  alt="Ảnh thước đo thực tế"
+                  alt="áº¢nh thÆ°á»›c Ä‘o thá»±c táº¿"
                   vectorType={
                     selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
                       ? 'POTHOLE_BEFORE'
@@ -88,12 +88,12 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
                 />
                 {/* Floating Timestamp Badge */}
                 <div className="absolute top-2 right-2 bg-slate-950/85 backdrop-blur-xs text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-white/20 flex items-center gap-1 shadow-md z-10">
-                  <Clock className="w-3 h-3 text-[#C9A227]" />
+                  <Clock className="w-3 h-3 text-brand-gold" />
                   <span>{selectedConflict.offline_actor.captured_at}</span>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2.5 pointer-events-none">
                   <span className="text-white text-[10px] font-mono leading-tight">
-                    GPS: {selectedConflict.incoming_data.gps_coords} (±{selectedConflict.incoming_data.accuracy_m}m)
+                    GPS: {selectedConflict.incoming_data.gps_coords} (Â±{selectedConflict.incoming_data.accuracy_m}m)
                   </span>
                 </div>
               </div>
@@ -102,17 +102,17 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
             <div className="space-y-1">
               <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">
                 {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
-                  ? 'Ảnh cào bóc tạo phẳng (Wirtgen 1.0m)'
+                  ? 'áº¢nh cÃ o bÃ³c táº¡o pháº³ng (Wirtgen 1.0m)'
                   : selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING'
-                  ? 'Ảnh kiểm tra khe co giãn mố cầu'
+                  ? 'áº¢nh kiá»ƒm tra khe co giÃ£n má»‘ cáº§u'
                   : selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                  ? 'Ảnh vá phẳng Carboncor Asphalt K95'
-                  : 'Ảnh sau hoàn thiện thi công'}
+                  ? 'áº¢nh vÃ¡ pháº³ng Carboncor Asphalt K95'
+                  : 'áº¢nh sau hoÃ n thiá»‡n thi cÃ´ng'}
               </span>
               <div className="relative h-44 w-full rounded-xl overflow-hidden bg-slate-900 border border-slate-200 shadow-2xs group">
                 <SafeImage
                   src={selectedConflict.incoming_data.photo_after_url}
-                  alt="Ảnh hoàn thiện"
+                  alt="áº¢nh hoÃ n thiá»‡n"
                   vectorType={
                     selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
                       ? 'POTHOLE_AFTER'
@@ -125,105 +125,105 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
                       : 'EXPANSION_JOINT_MASTIC'
                   }
                   chainage={selectedConflict.chainage}
-                  value="ĐẦM LÈN K95 HOÀN THIỆN"
+                  value="Äáº¦M LÃˆN K95 HOÃ€N THIá»†N"
                 />
                 {/* Floating Timestamp Badge */}
                 <div className="absolute top-2 right-2 bg-slate-950/85 backdrop-blur-xs text-white px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-white/20 flex items-center gap-1 shadow-md z-10">
                   <Clock className="w-3 h-3 text-emerald-400" />
-                  <span>Hoàn tất: {selectedConflict.offline_actor.captured_at}</span>
+                  <span>HoÃ n táº¥t: {selectedConflict.offline_actor.captured_at}</span>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2.5 pointer-events-none">
                   <span className="text-white text-[10px] font-mono leading-tight">
-                    Thời điểm chụp: {selectedConflict.offline_actor.captured_at}
+                    Thá»i Ä‘iá»ƒm chá»¥p: {selectedConflict.offline_actor.captured_at}
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bảng phân tích thời gian công tác ngoại tuyến */}
+          {/* Báº£ng phÃ¢n tÃ­ch thá»i gian cÃ´ng tÃ¡c ngoáº¡i tuyáº¿n */}
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
               <span className="font-bold text-slate-800 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                <Clock className="w-3.5 h-3.5 text-[#C9A227]" />
-                Nhật ký thời gian ngoại tuyến (Offline Work Log):
+                <Clock className="w-3.5 h-3.5 text-brand-gold" />
+                Nháº­t kÃ½ thá»i gian ngoáº¡i tuyáº¿n (Offline Work Log):
               </span>
               <span className="font-mono text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded border border-amber-300">
-                Mất sóng: {selectedConflict.offline_actor.offline_duration}
+                Máº¥t sÃ³ng: {selectedConflict.offline_actor.offline_duration}
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-slate-700">
               <div className="p-2 rounded-lg bg-white border border-slate-200">
-                <div className="text-[10px] text-slate-500 font-medium">Bắt đầu mất sóng:</div>
+                <div className="text-[10px] text-slate-500 font-medium">Báº¯t Ä‘áº§u máº¥t sÃ³ng:</div>
                 <div className="font-mono font-bold text-slate-900 mt-0.5">
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                    ? '07:30 Sáng'
+                    ? '07:30 SÃ¡ng'
                     : selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH'
-                    ? '07:35 Sáng'
-                    : 'Lúc ra hiện trường'}
+                    ? '07:35 SÃ¡ng'
+                    : 'LÃºc ra hiá»‡n trÆ°á»ng'}
                 </div>
-                <div className="text-[10px] text-slate-500">Khu vực lõm sóng đèo</div>
+                <div className="text-[10px] text-slate-500">Khu vá»±c lÃµm sÃ³ng Ä‘Ã¨o</div>
               </div>
               <div className="p-2 rounded-lg bg-white border border-slate-200">
-                <div className="text-[10px] text-slate-500 font-medium">Thời điểm thi công xong:</div>
+                <div className="text-[10px] text-slate-500 font-medium">Thá»i Ä‘iá»ƒm thi cÃ´ng xong:</div>
                 <div className="font-mono font-bold text-emerald-800 mt-0.5">
                   {selectedConflict.offline_actor.captured_at}
                 </div>
-                <div className="text-[10px] text-emerald-700 font-semibold">Chụp ảnh & băm SHA</div>
+                <div className="text-[10px] text-emerald-700 font-semibold">Chá»¥p áº£nh & bÄƒm SHA</div>
               </div>
               <div className="p-2 rounded-lg bg-white border border-slate-200">
-                <div className="text-[10px] text-slate-500 font-medium">Thời điểm đồng bộ 4G:</div>
+                <div className="text-[10px] text-slate-500 font-medium">Thá»i Ä‘iá»ƒm Ä‘á»“ng bá»™ 4G:</div>
                 <div className="font-mono font-bold text-blue-800 mt-0.5">
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                    ? '11:45 Trưa'
-                    : 'Khi bắt lại sóng'}
+                    ? '11:45 TrÆ°a'
+                    : 'Khi báº¯t láº¡i sÃ³ng'}
                 </div>
-                <div className="text-[10px] text-blue-700 font-semibold">Phát sinh xung đột</div>
+                <div className="text-[10px] text-blue-700 font-semibold">PhÃ¡t sinh xung Ä‘á»™t</div>
               </div>
             </div>
           </div>
 
-          {/* Chi tiết đo đạc và thông tin thiết bị thợ */}
+          {/* Chi tiáº¿t Ä‘o Ä‘áº¡c vÃ  thÃ´ng tin thiáº¿t bá»‹ thá»£ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
               <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
-                <FileCheck className="w-3.5 h-3.5 text-[#C9A227]" />
+                <FileCheck className="w-3.5 h-3.5 text-brand-gold" />
                 <span>
                   {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING'
-                    ? 'Số liệu trắc địa phục hồi thành công:'
-                    : 'Kết quả đo đạc thực tế tại hiện trường:'}
+                    ? 'Sá»‘ liá»‡u tráº¯c Ä‘á»‹a phá»¥c há»“i thÃ nh cÃ´ng:'
+                    : 'Káº¿t quáº£ Ä‘o Ä‘áº¡c thá»±c táº¿ táº¡i hiá»‡n trÆ°á»ng:'}
                 </span>
               </div>
-              <div className="text-sm font-bold text-slate-900 font-sansation text-[#8C6D1F]">
+              <div className="text-sm font-bold text-slate-900 font-sansation text-brand-goldMuted">
                 {selectedConflict.incoming_data.measured_value}
               </div>
               <div className="text-[11px] text-slate-600">
-                Loại kiểm tra: <strong>{selectedConflict.incoming_data.measurement_type}</strong>
+                Loáº¡i kiá»ƒm tra: <strong>{selectedConflict.incoming_data.measurement_type}</strong>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
               <div className="flex items-center gap-1.5 text-slate-500 font-semibold text-[11px]">
-                <Smartphone className="w-3.5 h-3.5 text-[#C9A227]" />
-                <span>Thông số thiết bị & Kỹ sư nộp:</span>
+                <Smartphone className="w-3.5 h-3.5 text-brand-gold" />
+                <span>ThÃ´ng sá»‘ thiáº¿t bá»‹ & Ká»¹ sÆ° ná»™p:</span>
               </div>
               <div className="text-xs font-bold text-slate-900">
                 {selectedConflict.offline_actor.name} ({selectedConflict.offline_actor.team})
               </div>
               <div className="font-mono text-[10px] text-slate-500">
-                ID: {selectedConflict.offline_actor.device_id} • {selectedConflict.offline_actor.device_model}
+                ID: {selectedConflict.offline_actor.device_id} â€¢ {selectedConflict.offline_actor.device_model}
               </div>
             </div>
           </div>
 
-          {/* Toàn vẹn chuỗi chứng cứ (Chain of Custody SHA-256) */}
+          {/* ToÃ n váº¹n chuá»—i chá»©ng cá»© (Chain of Custody SHA-256) */}
           <div className="p-3 rounded-xl bg-[#FBF6E9]/40 border border-[#F1E5C6] space-y-1 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-[#8C6D1F] flex items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
-                Chuỗi chứng cứ số (Chain of Custody SHA-256):
+              <span className="font-bold text-brand-goldMuted flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-brand-gold" />
+                Chuá»—i chá»©ng cá»© sá»‘ (Chain of Custody SHA-256):
               </span>
-              <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-[#E2E5E9] text-emerald-800 font-bold">
+              <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-brand-border text-emerald-800 font-bold">
                 VERIFIED MATCH
               </span>
             </div>
@@ -231,39 +231,39 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
               {selectedConflict.incoming_data.sha256_hash}
             </div>
             <div className="text-[11px] text-slate-600 pt-1">
-              Ghi chú hiện trường: <em>"{selectedConflict.incoming_data.notes}"</em>
+              Ghi chÃº hiá»‡n trÆ°á»ng: <em>"{selectedConflict.incoming_data.notes}"</em>
             </div>
           </div>
 
-          {/* Lịch sử phân giải nếu đã quyết định */}
+          {/* Lá»‹ch sá»­ phÃ¢n giáº£i náº¿u Ä‘Ã£ quyáº¿t Ä‘á»‹nh */}
           {selectedConflict.resolution && (
             <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-1.5">
               <div className="flex items-center justify-between font-bold text-emerald-900">
                 <span className="flex items-center gap-1">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Quyết định phân giải: {selectedConflict.resolution.decision}
+                  Quyáº¿t Ä‘á»‹nh phÃ¢n giáº£i: {selectedConflict.resolution.decision}
                 </span>
                 <span className="font-mono text-[10px] text-emerald-700">
                   {selectedConflict.resolution.decided_at}
                 </span>
               </div>
               <div className="text-emerald-800 text-[11px]">
-                Người ký duyệt:{' '}
+                NgÆ°á»i kÃ½ duyá»‡t:{' '}
                 <strong>
                   {selectedConflict.resolution.decided_by} ({selectedConflict.resolution.decided_by_role})
                 </strong>
               </div>
               <div className="text-slate-700 text-[11px] bg-white/80 p-2 rounded border border-emerald-100 italic">
-                Lý do: "{selectedConflict.resolution.reason}"
+                LÃ½ do: "{selectedConflict.resolution.reason}"
               </div>
               <div className="font-mono text-[10px] text-slate-400">
-                Mã kiểm toán: {selectedConflict.resolution.audit_hash}
+                MÃ£ kiá»ƒm toÃ¡n: {selectedConflict.resolution.audit_hash}
               </div>
             </div>
           )}
         </div>
 
-        {/* 7. CỤM NÚT THAO TÁC PHÂN GIẢI THEO NGỮ CẢNH TỪNG LOẠI XUNG ĐỘT */}
+        {/* 7. Cá»¤M NÃšT THAO TÃC PHÃ‚N GIáº¢I THEO NGá»® Cáº¢NH Tá»ªNG LOáº I XUNG Äá»˜T */}
         <ConflictResolutionActions
           selectedConflict={selectedConflict}
           isPM={isPM}
