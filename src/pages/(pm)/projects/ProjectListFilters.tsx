@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Search,
   Grid,
@@ -40,11 +40,11 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           onClick={() => onSelectFilterTab('ALL')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'ALL'
-              ? 'bg-[#C9A227] text-white shadow-xs'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
-          <span>Tất cả</span>
+          <span>Táº¥t cáº£</span>
           <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">{scopedCount}</span>
         </button>
 
@@ -58,7 +58,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#1B5E20]"></span>
-          <span>Đang bảo hành</span>
+          <span>Äang báº£o hÃ nh</span>
           <span className="text-[11px] font-mono text-slate-500">{activeCount}</span>
         </button>
 
@@ -72,7 +72,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-          <span>Sắp hết hạn</span>
+          <span>Sáº¯p háº¿t háº¡n</span>
           <span className="text-[11px] font-mono text-slate-500">{nearExpiryCount}</span>
         </button>
 
@@ -86,7 +86,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
-          <span>Chờ duyệt tuyến</span>
+          <span>Chá» duyá»‡t tuyáº¿n</span>
           <span className="text-[11px] font-mono text-slate-500">{pendingAlignmentCount}</span>
         </button>
       </div>
@@ -99,8 +99,8 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onChangeSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên dự án, mã PRJ, hoặc PM phụ trách..."
-            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 text-slate-800 placeholder-slate-400 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#C9A227] transition"
+            placeholder="TÃ¬m theo tÃªn dá»± Ã¡n, mÃ£ PRJ, hoáº·c PM phá»¥ trÃ¡ch..."
+            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 text-slate-800 placeholder-slate-400 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-gold transition"
           />
         </div>
 
@@ -109,9 +109,9 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             type="button"
             onClick={() => onChangeViewMode('grid')}
             className={`p-1.5 rounded-md transition cursor-pointer ${
-              viewMode === 'grid' ? 'bg-white text-[#C9A227] shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+              viewMode === 'grid' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
-            title="Dạng lưới"
+            title="Dáº¡ng lÆ°á»›i"
           >
             <Grid className="w-4 h-4" />
           </button>
@@ -119,9 +119,9 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             type="button"
             onClick={() => onChangeViewMode('table')}
             className={`p-1.5 rounded-md transition cursor-pointer ${
-              viewMode === 'table' ? 'bg-white text-[#C9A227] shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
+              viewMode === 'table' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
-            title="Dạng bảng"
+            title="Dáº¡ng báº£ng"
           >
             <TableIcon className="w-4 h-4" />
           </button>

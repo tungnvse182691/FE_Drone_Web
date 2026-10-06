@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Users2, ShieldCheck, Tablet } from 'lucide-react'
 import { ProjectMember } from './types'
 
@@ -12,15 +12,15 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
       <div className="flex items-center justify-between pb-2 border-b border-slate-100">
         <div>
           <h2 className="text-base font-bold text-brand-dark flex items-center gap-2">
-            <Users2 className="w-5 h-5 text-[#C9A227]" />
-            <span>Cơ cấu nhân sự thực hiện</span>
+            <Users2 className="w-5 h-5 text-brand-gold" />
+            <span>CÆ¡ cáº¥u nhÃ¢n sá»± thá»±c hiá»‡n</span>
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            Phân cấp thẩm quyền &amp; phụ trách
+            PhÃ¢n cáº¥p tháº©m quyá»n &amp; phá»¥ trÃ¡ch
           </p>
         </div>
         <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-          {members.length} thành viên
+          {members.length} thÃ nh viÃªn
         </span>
       </div>
 
@@ -29,7 +29,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
         {members.map((mem) => (
           <div
             key={mem.id}
-            className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#C9A227]/50 transition-colors flex flex-col gap-2 shadow-xs"
+            className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-brand-gold/50 transition-colors flex flex-col gap-2 shadow-xs"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -42,7 +42,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
                   {mem.is_online && (
                     <span
                       className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"
-                      title="Đang online"
+                      title="Äang online"
                     ></span>
                   )}
                 </div>
@@ -58,7 +58,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
 
             <div className="text-[11px] bg-white border border-slate-200 p-2 rounded-lg flex flex-col gap-1 text-slate-600">
               <div className="flex items-center gap-1.5 text-brand-dark font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227] shrink-0" />
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-gold shrink-0" />
                 <span>{mem.authority}</span>
               </div>
               {mem.equipment && (
@@ -81,7 +81,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
         <div className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-tight px-1">
           <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
           <span>
-            Mọi thay đổi nhân sự dự án đều được ghi nhận vào Audit Log bất biến theo quy chuẩn kỹ thuật TCVN 11944.
+            Má»i thay Ä‘á»•i nhÃ¢n sá»± dá»± Ã¡n Ä‘á»u Ä‘Æ°á»£c ghi nháº­n vÃ o Audit Log báº¥t biáº¿n theo quy chuáº©n ká»¹ thuáº­t TCVN 11944.
           </span>
         </div>
       </div>

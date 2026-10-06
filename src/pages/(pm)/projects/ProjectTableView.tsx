@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { HubProject } from './types'
 
@@ -20,20 +20,20 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
-                <th className="py-3.5 px-4">Mã Dự Án</th>
-                <th className="py-3.5 px-4">Tên Tuyến Đường</th>
-                <th className="py-3.5 px-4">Khu Vực &amp; Lý Trình</th>
-                <th className="py-3.5 px-4">PM Phụ Trách</th>
-                <th className="py-3.5 px-4 text-center">Tiến Độ Bảo Hành</th>
-                <th className="py-3.5 px-4 text-center">Lỗi Mở</th>
-                <th className="py-3.5 px-4">Trạng Thái</th>
-                <th className="py-3.5 px-4 text-right">Thao Tác</th>
+                <th className="py-3.5 px-4">MÃ£ Dá»± Ãn</th>
+                <th className="py-3.5 px-4">TÃªn Tuyáº¿n ÄÆ°á»ng</th>
+                <th className="py-3.5 px-4">Khu Vá»±c &amp; LÃ½ TrÃ¬nh</th>
+                <th className="py-3.5 px-4">PM Phá»¥ TrÃ¡ch</th>
+                <th className="py-3.5 px-4 text-center">Tiáº¿n Äá»™ Báº£o HÃ nh</th>
+                <th className="py-3.5 px-4 text-center">Lá»—i Má»Ÿ</th>
+                <th className="py-3.5 px-4">Tráº¡ng ThÃ¡i</th>
+                <th className="py-3.5 px-4 text-right">Thao TÃ¡c</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredProjects.map((prj) => (
                 <tr key={prj.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-[#8C6D1F]">{prj.code}</td>
+                  <td className="py-3.5 px-4 font-mono font-bold text-brand-goldMuted">{prj.code}</td>
                   <td className="py-3.5 px-4 font-bold text-slate-900">{prj.name}</td>
                   <td className="py-3.5 px-4 text-slate-600">
                     <div>{prj.region} ({prj.location_detail})</div>
@@ -48,12 +48,12 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-amber-600 font-semibold italic">Chưa phân công</span>
+                      <span className="text-amber-600 font-semibold italic">ChÆ°a phÃ¢n cÃ´ng</span>
                     )}
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
-                    <div className="text-[10px] text-purple-700 font-mono font-bold">{prj.retention_amount || '15.5 tỷ ₫'}</div>
+                    <div className="text-[10px] text-purple-700 font-mono font-bold">{prj.retention_amount || '15.5 tá»· â‚«'}</div>
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <span
@@ -81,9 +81,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateDetail(prj.id)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-[#C9A227] hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs"
                     >
-                      Chi tiết
+                      Chi tiáº¿t
                     </button>
                   </td>
                 </tr>
@@ -97,11 +97,11 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 text-slate-500 text-xs">
         <div className="flex items-center gap-2">
           <span>
-            Hiển thị <strong className="text-slate-900 font-mono">1 - {filteredProjects.length}</strong> trong tổng số{' '}
-            <strong className="text-slate-900 font-mono">{totalProjectsCount}</strong> dự án đường bộ
+            Hiá»ƒn thá»‹ <strong className="text-slate-900 font-mono">1 - {filteredProjects.length}</strong> trong tá»•ng sá»‘{' '}
+            <strong className="text-slate-900 font-mono">{totalProjectsCount}</strong> dá»± Ã¡n Ä‘Æ°á»ng bá»™
           </span>
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-          <span>Đồng bộ vệ tinh GIS: 4 phút trước</span>
+          <span>Äá»“ng bá»™ vá»‡ tinh GIS: 4 phÃºt trÆ°á»›c</span>
         </div>
 
         <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1 shadow-2xs">
@@ -114,7 +114,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
           </button>
           <button
             type="button"
-            className="w-7 h-7 rounded bg-[#C9A227] text-white font-bold text-xs"
+            className="w-7 h-7 rounded bg-brand-gold text-white font-bold text-xs"
           >
             1
           </button>
