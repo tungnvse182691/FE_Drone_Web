@@ -1,6 +1,6 @@
 # Worklog: HARDEN SHELL (ĐỢT 4) TRÊN NHÁNH tung
 
-- **Ngày thực hiện:** 05/10/2026  
+- **Ngày thực hiện:** 06/10/2026  
 - **Nhánh:** `tung`  
 - **Baseline:** Sau commit `d977b09` và hoàn tất Đợt 3b (`549ce3a`)  
 - **Mục tiêu:** Củng cố lớp vỏ hệ thống (Route Guard, xóa cửa hậu đổi vai, chuẩn hóa Token 1 nguồn Tailwind SSOT, dọn config & docs). Tuyệt đối **CẤM đụng UI/logic màn hình**, chỉ sửa lớp vỏ. Không dùng `push --force`. Từng việc kiểm thử `tsc 0` + `build PASS` và commit riêng.
