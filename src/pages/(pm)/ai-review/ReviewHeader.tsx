@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronRight,
@@ -53,18 +53,18 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/dashboard`)}>
-            Trang chủ
+            Trang chá»§
           </span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
           <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/surveys`)}>
-            Khiếm khuyết
+            Khiáº¿m khuyáº¿t
           </span>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-semibold text-[#8F7212]">Hộp thư tiếp nhận (Triage WF-04)</span>
+          <span className="font-semibold text-[#8F7212]">Há»™p thÆ° tiáº¿p nháº­n (Triage WF-04)</span>
         </nav>
         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium bg-white px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Đồng bộ cảm biến GIS thời gian thực: 25/08/2026 21:45</span>
+          <span>Äá»“ng bá»™ cáº£m biáº¿n GIS thá»i gian thá»±c: 25/08/2026 21:45</span>
         </div>
       </div>
 
@@ -74,37 +74,37 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
               {viewSourceMode === 'CITIZEN_TRIAGE'
-                ? 'Bảng Tiếp Nhận & Điều Phối Phản Ánh Người Dân (PA03, PA04)'
+                ? 'Báº£ng Tiáº¿p Nháº­n & Äiá»u Phá»‘i Pháº£n Ãnh NgÆ°á»i DÃ¢n (PA03, PA04)'
                 : viewSourceMode === 'DRONE_AI'
-                ? 'Hộp Thư Tiếp Nhận & Thẩm Định Lỗi Drone AI (AI01-AI08)'
-                : 'Hộp Thư Tiếp Nhận Sự Cố & Triage Khiếm Khuyết Hỗn Hợp'}
+                ? 'Há»™p ThÆ° Tiáº¿p Nháº­n & Tháº©m Äá»‹nh Lá»—i Drone AI (AI01-AI08)'
+                : 'Há»™p ThÆ° Tiáº¿p Nháº­n Sá»± Cá»‘ & Triage Khiáº¿m Khuyáº¿t Há»—n Há»£p'}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#C9A227]/15 text-[#8F7212] border border-[#C9A227]/30">
-              {isSupervisor ? 'Giám sát Triage Hub' : 'PM Triage Hub'}
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-gold/15 text-[#8F7212] border border-brand-gold/30">
+              {isSupervisor ? 'GiÃ¡m sÃ¡t Triage Hub' : 'PM Triage Hub'}
             </span>
             {unassignedCitizenCount > 0 && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-                {unassignedCitizenCount} phản ánh cần điều phối dự án
+                {unassignedCitizenCount} pháº£n Ã¡nh cáº§n Ä‘iá»u phá»‘i dá»± Ã¡n
               </span>
             )}
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-              {pendingCount} ca chờ xác minh
+              {pendingCount} ca chá» xÃ¡c minh
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Tiếp nhận và điều phối phản ánh người dân (PA03), liên kết báo trùng lặp lân cận (PA04) và phân cấp hư hỏng theo 2 trục Severity × Urgency (SC14).
+            Tiáº¿p nháº­n vÃ  Ä‘iá»u phá»‘i pháº£n Ã¡nh ngÆ°á»i dÃ¢n (PA03), liÃªn káº¿t bÃ¡o trÃ¹ng láº·p lÃ¢n cáº­n (PA04) vÃ  phÃ¢n cáº¥p hÆ° há»ng theo 2 trá»¥c Severity Ã— Urgency (SC14).
           </p>
         </div>
 
         {/* Right Quick Actions */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
-            onClick={() => showToast('Đang xuất danh sách hồ sơ Triage ra file Excel TCVN...')}
+            onClick={() => showToast('Äang xuáº¥t danh sÃ¡ch há»“ sÆ¡ Triage ra file Excel TCVN...')}
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-500" />
-            <span>Xuất danh sách</span>
+            <span>Xuáº¥t danh sÃ¡ch</span>
           </button>
           <button
             onClick={onOpenLinkReportsModal}
@@ -115,15 +115,15 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            <Link2 className="w-4 h-4 text-[#C9A227]" />
-            <span>Liên kết báo trùng ({selectedReportIds.length >= 2 ? selectedReportIds.length : 2})</span>
+            <Link2 className="w-4 h-4 text-brand-gold" />
+            <span>LiÃªn káº¿t bÃ¡o trÃ¹ng ({selectedReportIds.length >= 2 ? selectedReportIds.length : 2})</span>
           </button>
           <button
             onClick={() => onNavigateFastTrack(selectedCase)}
             type="button"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <span>Điều phối Fast Track (WF-05)</span>
+            <span>Äiá»u phá»‘i Fast Track (WF-05)</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -140,12 +140,12 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
             }}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               viewSourceMode === 'CITIZEN_TRIAGE'
-                ? 'bg-[#C9A227] text-white shadow-xs'
+                ? 'bg-brand-gold text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Bảng Tiếp Nhận &amp; Điều Phối Phản Ánh Dân (PA03, PA04)</span>
+            <span>Báº£ng Tiáº¿p Nháº­n &amp; Äiá»u Phá»‘i Pháº£n Ãnh DÃ¢n (PA03, PA04)</span>
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                 viewSourceMode === 'CITIZEN_TRIAGE' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'
@@ -155,7 +155,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
             </span>
             {unassignedCitizenCount > 0 && (
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-red-600 text-white font-bold animate-pulse">
-                {unassignedCitizenCount} chưa gán
+                {unassignedCitizenCount} chÆ°a gÃ¡n
               </span>
             )}
           </button>
@@ -173,7 +173,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
             }`}
           >
             <Plane className="w-4 h-4" />
-            <span>Hộp Thư Drone AI Quét (AI01-AI08)</span>
+            <span>Há»™p ThÆ° Drone AI QuÃ©t (AI01-AI08)</span>
             <span
               className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
                 viewSourceMode === 'DRONE_AI' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'
@@ -195,7 +195,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            <span>Tất cả nguồn</span>
+            <span>Táº¥t cáº£ nguá»“n</span>
             <span className="text-[10px] opacity-70 font-mono">({cases.length})</span>
           </button>
         </div>
@@ -203,7 +203,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
         <div className="text-[11px] text-slate-500 font-medium px-2 flex items-center gap-1.5 self-center">
           <Building2 className="w-3.5 h-3.5 text-slate-400" />
           <span>
-            Quy trình: <strong>Dân báo &rarr; PM Điều phối (PA03) &rarr; Liên kết trùng (PA04) &rarr; Thẩm định (PA05)</strong>
+            Quy trÃ¬nh: <strong>DÃ¢n bÃ¡o &rarr; PM Äiá»u phá»‘i (PA03) &rarr; LiÃªn káº¿t trÃ¹ng (PA04) &rarr; Tháº©m Ä‘á»‹nh (PA05)</strong>
           </span>
         </div>
       </div>

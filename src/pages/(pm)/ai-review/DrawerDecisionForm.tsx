@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -58,12 +58,12 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[11px] font-semibold text-slate-700 mb-1">
-            Mức độ nghiêm trọng <span className="text-red-500">*</span>
+            Má»©c Ä‘á»™ nghiÃªm trá»ng <span className="text-red-500">*</span>
           </label>
           <select
             value={currentSeverity}
             onChange={(e) => setCurrentSeverity(e.target.value as any)}
-            className={`w-full text-xs font-bold px-3 py-2 rounded-lg border focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer ${
+            className={`w-full text-xs font-bold px-3 py-2 rounded-lg border focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer ${
               currentSeverity === 'CRITICAL'
                 ? 'bg-red-50 text-red-700 border-red-200'
                 : currentSeverity === 'HIGH'
@@ -71,25 +71,25 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 : 'bg-slate-50 text-slate-700 border-slate-200'
             }`}
           >
-            <option value="LOW">LOW (Nhẹ - Cấp 1)</option>
-            <option value="MEDIUM">MEDIUM (Vừa - Cấp 2)</option>
-            <option value="HIGH">HIGH (Nghiêm trọng - Cấp 3)</option>
-            <option value="CRITICAL">CRITICAL (Nguy hiểm - Cấp 4)</option>
+            <option value="LOW">LOW (Nháº¹ - Cáº¥p 1)</option>
+            <option value="MEDIUM">MEDIUM (Vá»«a - Cáº¥p 2)</option>
+            <option value="HIGH">HIGH (NghiÃªm trá»ng - Cáº¥p 3)</option>
+            <option value="CRITICAL">CRITICAL (Nguy hiá»ƒm - Cáº¥p 4)</option>
           </select>
         </div>
 
         <div className="flex flex-col">
           <label className="text-[11px] font-semibold text-slate-700 mb-1">
-            Tính khẩn cấp <span className="text-red-500">*</span>
+            TÃ­nh kháº©n cáº¥p <span className="text-red-500">*</span>
           </label>
           <select
             value={currentUrgency}
             onChange={(e) => setCurrentUrgency(e.target.value as any)}
-            className="w-full bg-amber-50 text-amber-900 border border-amber-200 font-bold text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer"
+            className="w-full bg-amber-50 text-amber-900 border border-amber-200 font-bold text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
           >
-            <option value="NORMAL">NORMAL (Theo lịch 7 ngày)</option>
-            <option value="URGENT">URGENT (Trong 24-48 giờ)</option>
-            <option value="EMERGENCY">EMERGENCY (Xử lý ngay 4h)</option>
+            <option value="NORMAL">NORMAL (Theo lá»‹ch 7 ngÃ y)</option>
+            <option value="URGENT">URGENT (Trong 24-48 giá»)</option>
+            <option value="EMERGENCY">EMERGENCY (Xá»­ lÃ½ ngay 4h)</option>
           </select>
         </div>
       </div>
@@ -97,8 +97,8 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* Area & Depth Dimensions */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
-          <label className="text-[11px] font-medium text-slate-600 mb-1">Diện tích hư hại</label>
-          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-[#C9A227] focus-within:border-[#C9A227]">
+          <label className="text-[11px] font-medium text-slate-600 mb-1">Diá»‡n tÃ­ch hÆ° háº¡i</label>
+          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
             <input
               type="number"
               step="0.01"
@@ -106,16 +106,16 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               onChange={(e) => setCurrentArea(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none"
             />
-            <span className="text-xs text-slate-500 font-semibold ml-1">m²</span>
+            <span className="text-xs text-slate-500 font-semibold ml-1">mÂ²</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5">
-            AI ước tính: {selectedCase.ai_area_sqm} m²
+            AI Æ°á»›c tÃ­nh: {selectedCase.ai_area_sqm} mÂ²
           </span>
         </div>
 
         <div className="flex flex-col">
-          <label className="text-[11px] font-medium text-slate-600 mb-1">Độ sâu lớn nhất</label>
-          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-[#C9A227] focus-within:border-[#C9A227]">
+          <label className="text-[11px] font-medium text-slate-600 mb-1">Äá»™ sÃ¢u lá»›n nháº¥t</label>
+          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
             <input
               type="number"
               step="0.1"
@@ -126,7 +126,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             <span className="text-xs text-slate-500 font-semibold ml-1">cm</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5">
-            AI ước tính: {selectedCase.ai_depth_cm} cm
+            AI Æ°á»›c tÃ­nh: {selectedCase.ai_depth_cm} cm
           </span>
         </div>
       </div>
@@ -134,15 +134,15 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* PM Notes */}
       <div className="flex flex-col">
         <div className="flex items-center justify-between mb-1">
-          <label className="text-[11px] font-semibold text-slate-700">Ghi chú thẩm định PM</label>
-          <span className="text-[10px] text-slate-400 font-normal">Lưu nhật ký công trình</span>
+          <label className="text-[11px] font-semibold text-slate-700">Ghi chÃº tháº©m Ä‘á»‹nh PM</label>
+          <span className="text-[10px] text-slate-400 font-normal">LÆ°u nháº­t kÃ½ cÃ´ng trÃ¬nh</span>
         </div>
         <textarea
           rows={2}
           value={currentNotes}
           onChange={(e) => setCurrentNotes(e.target.value)}
-          placeholder="Nhập ghi chú kỹ thuật, chỉ đạo vá nóng cấp bách hoặc đề xuất cắm biển cảnh báo tạm..."
-          className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227]"
+          placeholder="Nháº­p ghi chÃº ká»¹ thuáº­t, chá»‰ Ä‘áº¡o vÃ¡ nÃ³ng cáº¥p bÃ¡ch hoáº·c Ä‘á» xuáº¥t cáº¯m biá»ƒn cáº£nh bÃ¡o táº¡m..."
+          className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold"
         />
       </div>
 
@@ -154,14 +154,14 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
           className={`w-full py-2.5 px-4 rounded-lg text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
             selectedCase.conclusion === 'DEFECT_FOUND'
               ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-400'
-              : 'bg-[#C9A227] hover:bg-[#B38E1F]'
+              : 'bg-brand-gold hover:bg-[#B38E1F]'
           }`}
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>
             {selectedCase.conclusion === 'DEFECT_FOUND'
-              ? '✓ Đã Xác Minh DEFECT_FOUND (Bấm để cập nhật lại)'
-              : 'Xác minh có khiếm khuyết (DEFECT_FOUND - PA05)'}
+              ? 'âœ“ ÄÃ£ XÃ¡c Minh DEFECT_FOUND (Báº¥m Ä‘á»ƒ cáº­p nháº­t láº¡i)'
+              : 'XÃ¡c minh cÃ³ khiáº¿m khuyáº¿t (DEFECT_FOUND - PA05)'}
           </span>
         </button>
 
@@ -174,10 +174,10 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-red-600 text-white border-red-700'
                 : 'bg-white border-slate-200 hover:bg-red-50 text-red-600'
             }`}
-            title="Không có khiếm khuyết (Bắt buộc lý do giải trình theo BR-39)"
+            title="KhÃ´ng cÃ³ khiáº¿m khuyáº¿t (Báº¯t buá»™c lÃ½ do giáº£i trÃ¬nh theo BR-39)"
           >
             <X className="w-3.5 h-3.5" />
-            <span>{selectedCase.conclusion === 'NO_DEFECT' ? 'Đã báo sai' : 'Không có lỗi (BR-39)'}</span>
+            <span>{selectedCase.conclusion === 'NO_DEFECT' ? 'ÄÃ£ bÃ¡o sai' : 'KhÃ´ng cÃ³ lá»—i (BR-39)'}</span>
           </button>
           <button
             type="button"
@@ -187,10 +187,10 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-amber-600 text-white border-amber-700'
                 : 'bg-white border-slate-200 hover:bg-amber-50 text-amber-700'
             }`}
-            title="Ngoài phạm vi bảo hành Hoàng Hải"
+            title="NgoÃ i pháº¡m vi báº£o hÃ nh HoÃ ng Háº£i"
           >
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>{selectedCase.conclusion === 'OUT_OF_SCOPE' ? 'Đã loại trừ' : 'Ngoài phạm vi'}</span>
+            <span>{selectedCase.conclusion === 'OUT_OF_SCOPE' ? 'ÄÃ£ loáº¡i trá»«' : 'NgoÃ i pháº¡m vi'}</span>
           </button>
           <button
             type="button"
@@ -200,10 +200,10 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-blue-600 text-white border-blue-700'
                 : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
             }`}
-            title="Yêu cầu khảo sát lại hiện trường hoặc bay drone bù (WF-11)"
+            title="YÃªu cáº§u kháº£o sÃ¡t láº¡i hiá»‡n trÆ°á»ng hoáº·c bay drone bÃ¹ (WF-11)"
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>{selectedCase.status === 'NEED_SURVEY' ? 'Đã giao đo lại' : 'Yêu cầu đo lại'}</span>
+            <span>{selectedCase.status === 'NEED_SURVEY' ? 'ÄÃ£ giao Ä‘o láº¡i' : 'YÃªu cáº§u Ä‘o láº¡i'}</span>
           </button>
         </div>
 
@@ -220,8 +220,8 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
           <Send className="w-3.5 h-3.5 text-blue-600" />
           <span>
             {selectedCase.is_published
-              ? `📢 Đã công bố tiến độ cho người dân (${selectedCase.published_at || 'Hôm nay'})`
-              : 'Công bố tiến độ cho người dân (PA07)'}
+              ? `ðŸ“¢ ÄÃ£ cÃ´ng bá»‘ tiáº¿n Ä‘á»™ cho ngÆ°á»i dÃ¢n (${selectedCase.published_at || 'HÃ´m nay'})`
+              : 'CÃ´ng bá»‘ tiáº¿n Ä‘á»™ cho ngÆ°á»i dÃ¢n (PA07)'}
           </span>
         </button>
       </div>
@@ -229,8 +229,8 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* Compliance Note & Direct Action Links */}
       <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-slate-600 text-[11px]">
-          <ShieldCheck className="w-4 h-4 text-[#C9A227] shrink-0" />
-          <span>Đã đủ điều kiện kích hoạt lệnh thi công sửa chữa cấp bách (WF-05).</span>
+          <ShieldCheck className="w-4 h-4 text-brand-gold shrink-0" />
+          <span>ÄÃ£ Ä‘á»§ Ä‘iá»u kiá»‡n kÃ­ch hoáº¡t lá»‡nh thi cÃ´ng sá»­a chá»¯a cáº¥p bÃ¡ch (WF-05).</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -238,16 +238,16 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             onClick={() => navigate(`/pm/defects/${selectedCase.id}/verify`)}
             className="py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Eye className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>So sánh đa kỳ & BBox</span>
+            <Eye className="w-3.5 h-3.5 text-brand-gold" />
+            <span>So sÃ¡nh Ä‘a ká»³ & BBox</span>
           </button>
           <button
             type="button"
             onClick={() => onNavigateFastTrack(selectedCase)}
             className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-lg border border-amber-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Send className="w-3.5 h-3.5 text-[#C9A227]" />
-            <span>Điều phối Fast Track</span>
+            <Send className="w-3.5 h-3.5 text-brand-gold" />
+            <span>Äiá»u phá»‘i Fast Track</span>
           </button>
         </div>
       </div>

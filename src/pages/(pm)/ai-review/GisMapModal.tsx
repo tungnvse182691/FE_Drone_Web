@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { MapPin, X } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -26,11 +26,11 @@ export const GisMapModal: React.FC<GisMapModalProps> = ({
       <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-[#C9A227]" />
+            <MapPin className="w-5 h-5 text-brand-gold" />
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Vị Trí Bản Đồ Không Gian (GIS WGS84)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Vá»‹ TrÃ­ Báº£n Äá»“ KhÃ´ng Gian (GIS WGS84)</h3>
               <p className="text-xs text-slate-500 font-mono">
-                {selectedCase.code} • {selectedCase.stationing} ({selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E)
+                {selectedCase.code} â€¢ {selectedCase.stationing} ({selectedCase.gps.lat}Â° N, {selectedCase.gps.lng}Â° E)
               </p>
             </div>
           </div>
@@ -50,34 +50,34 @@ export const GisMapModal: React.FC<GisMapModalProps> = ({
                 onClick={() => setModalMapType('SATELLITE')}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                   modalMapType === 'SATELLITE'
-                    ? 'bg-[#C9A227] text-white shadow-2xs font-bold'
+                    ? 'bg-brand-gold text-white shadow-2xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Ảnh vệ tinh Google (Satellite)
+                áº¢nh vá»‡ tinh Google (Satellite)
               </button>
               <button
                 type="button"
                 onClick={() => setModalMapType('STREET')}
                 className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                   modalMapType === 'STREET'
-                    ? 'bg-[#C9A227] text-white shadow-2xs font-bold'
+                    ? 'bg-brand-gold text-white shadow-2xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                Bản đồ giao thông (Vector)
+                Báº£n Ä‘á»“ giao thÃ´ng (Vector)
               </button>
             </div>
             <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Vùng đệm cụm: 2.5m (Spatial Cluster)</span>
+              <span>VÃ¹ng Ä‘á»‡m cá»¥m: 2.5m (Spatial Cluster)</span>
             </div>
           </div>
 
           <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
             <div ref={modalMapContainerRef} className="w-full h-full" />
             <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg text-white text-[11px] font-mono border border-white/10 z-10 pointer-events-none">
-              Hệ quy chiếu: WGS-84 / UTM Zone 32648 (EPSG:32648) • Bán kính cụm: 2.5m
+              Há»‡ quy chiáº¿u: WGS-84 / UTM Zone 32648 (EPSG:32648) â€¢ BÃ¡n kÃ­nh cá»¥m: 2.5m
             </div>
           </div>
         </div>
@@ -88,7 +88,7 @@ export const GisMapModal: React.FC<GisMapModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors cursor-pointer"
           >
-            Đóng bản đồ
+            ÄÃ³ng báº£n Ä‘á»“
           </button>
         </div>
       </div>

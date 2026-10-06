@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Plane,
   Smartphone,
@@ -26,12 +26,12 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
     <div>
       {/* Table Header Row */}
       <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 rounded-lg mb-2">
-        <span className="col-span-2">Mã Case</span>
-        <span className="col-span-2">Nguồn Dữ Liệu</span>
-        <span className="col-span-3">Vị Trí &amp; Lý Trình</span>
-        <span className="col-span-2">Loại Hư Hại</span>
-        <span className="col-span-1">Ưu Tiên</span>
-        <span className="col-span-2 text-right">Trạng Thái</span>
+        <span className="col-span-2">MÃ£ Case</span>
+        <span className="col-span-2">Nguá»“n Dá»¯ Liá»‡u</span>
+        <span className="col-span-3">Vá»‹ TrÃ­ &amp; LÃ½ TrÃ¬nh</span>
+        <span className="col-span-2">Loáº¡i HÆ° Háº¡i</span>
+        <span className="col-span-1">Æ¯u TiÃªn</span>
+        <span className="col-span-2 text-right">Tráº¡ng ThÃ¡i</span>
       </div>
 
       <div className="space-y-2">
@@ -43,7 +43,7 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
               onClick={() => onSelectCase(item)}
               className={`p-3.5 rounded-xl cursor-pointer transition-all flex flex-col md:grid md:grid-cols-12 gap-3 items-start md:items-center border ${
                 isSelected
-                  ? 'bg-amber-50/60 border-[#C9A227] shadow-sm ring-1 ring-[#C9A227]/30'
+                  ? 'bg-amber-50/60 border-brand-gold shadow-sm ring-1 ring-brand-gold/30'
                   : 'bg-white hover:bg-slate-50/80 border-slate-200 shadow-2xs'
               }`}
             >
@@ -52,7 +52,7 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                 <span
                   className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                     isSelected
-                      ? 'bg-[#C9A227]'
+                      ? 'bg-brand-gold'
                       : item.status === 'MERGED'
                       ? 'bg-blue-400'
                       : 'bg-slate-300'
@@ -74,7 +74,7 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                 >
                   {item.source === 'DRONE_AI' && <Plane className="w-3 h-3 text-slate-500" />}
                   {item.source === 'CITIZEN' && <Smartphone className="w-3 h-3 text-blue-600" />}
-                  {item.source === 'PATROL' && <Car className="w-3 h-3 text-[#C9A227]" />}
+                  {item.source === 'PATROL' && <Car className="w-3 h-3 text-brand-gold" />}
                   <span>{item.source_label}</span>
                 </span>
               </div>
@@ -86,7 +86,7 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                   {item.cluster_duplicates && item.cluster_duplicates.length > 0 && (
                     <span
                       className="text-amber-600"
-                      title={`Có ${item.cluster_duplicates.length} phản ánh trùng lân cận`}
+                      title={`CÃ³ ${item.cluster_duplicates.length} pháº£n Ã¡nh trÃ¹ng lÃ¢n cáº­n`}
                     >
                       <AlertTriangle className="w-3 h-3" />
                     </span>
@@ -126,31 +126,31 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                 {item.status === 'PENDING' && (
                   <span className="bg-amber-100 text-[#8F7212] text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-amber-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                    <span>Chờ xác minh</span>
+                    <span>Chá» xÃ¡c minh</span>
                   </span>
                 )}
                 {item.status === 'VERIFIED' && (
                   <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-emerald-200">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>Đã xác minh</span>
+                    <span>ÄÃ£ xÃ¡c minh</span>
                   </span>
                 )}
                 {item.status === 'NEED_SURVEY' && (
                   <span className="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-blue-200">
                     <Clock className="w-3 h-3 text-blue-600" />
-                    <span>Cần đo đạc</span>
+                    <span>Cáº§n Ä‘o Ä‘áº¡c</span>
                   </span>
                 )}
                 {item.status === 'MERGED' && (
                   <span className="bg-purple-100 text-purple-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-purple-200">
                     <Merge className="w-3 h-3 text-purple-600" />
-                    <span>Đã gộp trùng</span>
+                    <span>ÄÃ£ gá»™p trÃ¹ng</span>
                   </span>
                 )}
                 {item.status === 'REJECTED' && (
                   <span className="bg-slate-100 text-slate-600 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-slate-200">
                     <X className="w-3 h-3 text-slate-500" />
-                    <span>Báo sai</span>
+                    <span>BÃ¡o sai</span>
                   </span>
                 )}
               </div>

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Send, X } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -30,8 +30,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               <Send className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Công Bố Tiến Độ Xử Lý Cho Người Dân (PA07)</h3>
-              <p className="text-xs text-slate-500">Đồng bộ thông báo công khai xuống ứng dụng di động Citizen</p>
+              <h3 className="text-base font-bold text-brand-dark">CÃ´ng Bá»‘ Tiáº¿n Äá»™ Xá»­ LÃ½ Cho NgÆ°á»i DÃ¢n (PA07)</h3>
+              <p className="text-xs text-slate-500">Äá»“ng bá»™ thÃ´ng bÃ¡o cÃ´ng khai xuá»‘ng á»©ng dá»¥ng di Ä‘á»™ng Citizen</p>
             </div>
           </div>
           <button
@@ -45,23 +45,23 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
         <div className="space-y-3.5 text-xs">
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-            <span className="font-bold text-slate-700 block">Hồ sơ phản ánh:</span>
+            <span className="font-bold text-slate-700 block">Há»“ sÆ¡ pháº£n Ã¡nh:</span>
             <span className="font-mono font-bold text-brand-dark">{targetTriageCase.code}</span>
             <p className="text-slate-600">
               {targetTriageCase.stationing} - {targetTriageCase.defect_title}
             </p>
             <span className="text-[10px] text-slate-400 block">
-              Người gửi: {targetTriageCase.reporter_name || 'Người dân'} ({targetTriageCase.reporter_phone || 'N/A'})
+              NgÆ°á»i gá»­i: {targetTriageCase.reporter_name || 'NgÆ°á»i dÃ¢n'} ({targetTriageCase.reporter_phone || 'N/A'})
             </span>
           </div>
 
           <div className="flex flex-col">
-            <label className="font-bold text-slate-700 mb-1">Nội dung thông báo công khai gửi người dân:</label>
+            <label className="font-bold text-slate-700 mb-1">Ná»™i dung thÃ´ng bÃ¡o cÃ´ng khai gá»­i ngÆ°á»i dÃ¢n:</label>
             <textarea
               rows={3}
               value={publishPublicNote}
               onChange={(e) => setPublishPublicNote(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold"
             />
           </div>
         </div>
@@ -72,15 +72,15 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
-            Đóng
+            ÄÃ³ng
           </button>
           <button
             type="button"
             onClick={onConfirmPublishResult}
-            className="px-4 py-2 text-xs font-bold bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+            className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Công Bố Xuống App Citizen</span>
+            <span>CÃ´ng Bá»‘ Xuá»‘ng App Citizen</span>
           </button>
         </div>
       </div>

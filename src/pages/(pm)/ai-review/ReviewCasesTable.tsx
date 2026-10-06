@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Search,
   RotateCcw,
@@ -71,36 +71,36 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
           <div>
             <h2 className="font-bold text-base text-brand-dark">
               {viewSourceMode === 'CITIZEN_TRIAGE'
-                ? 'Bảng Phản Ánh Người Dân & Tuần Đường (Cần Triage & Link)'
+                ? 'Báº£ng Pháº£n Ãnh NgÆ°á»i DÃ¢n & Tuáº§n ÄÆ°á»ng (Cáº§n Triage & Link)'
                 : viewSourceMode === 'DRONE_AI'
-                ? 'Danh Sách Lỗi Do Drone AI Tự Động Quét Phát Hiện'
-                : 'Toàn Bộ Hồ Sơ Khiếm Khuyết Chờ Phân Loại'}
+                ? 'Danh SÃ¡ch Lá»—i Do Drone AI Tá»± Äá»™ng QuÃ©t PhÃ¡t Hiá»‡n'
+                : 'ToÃ n Bá»™ Há»“ SÆ¡ Khiáº¿m Khuyáº¿t Chá» PhÃ¢n Loáº¡i'}
             </h2>
             <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
               <span>
-                Hiển thị {filteredCases.length} / {cases.length} hồ sơ
+                Hiá»ƒn thá»‹ {filteredCases.length} / {cases.length} há»“ sÆ¡
               </span>
               {viewSourceMode === 'CITIZEN_TRIAGE' && (
                 <>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-700 font-medium">
                     <input
                       type="checkbox"
                       checked={collapseMergedRows}
                       onChange={(e) => setCollapseMergedRows(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded text-[#C9A227] focus:ring-[#C9A227] accent-[#C9A227]"
+                      className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold"
                     />
-                    <span>Gộp báo trùng theo cây (Master-Tree)</span>
+                    <span>Gá»™p bÃ¡o trÃ¹ng theo cÃ¢y (Master-Tree)</span>
                   </label>
-                  <span>•</span>
+                  <span>â€¢</span>
                   <button
                     type="button"
                     onClick={onResetTriageData}
                     className="text-slate-500 hover:text-brand-dark hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                    title="Đặt lại dữ liệu mẫu phản ánh ban đầu"
+                    title="Äáº·t láº¡i dá»¯ liá»‡u máº«u pháº£n Ã¡nh ban Ä‘áº§u"
                   >
                     <RotateCcw className="w-3 h-3" />
-                    <span>Đặt lại dữ liệu</span>
+                    <span>Äáº·t láº¡i dá»¯ liá»‡u</span>
                   </button>
                 </>
               )}
@@ -110,10 +110,10 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm theo mã, người gửi, SĐT, lý trình..."
+              placeholder="TÃ¬m theo mÃ£, ngÆ°á»i gá»­i, SÄT, lÃ½ trÃ¬nh..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold"
             />
           </div>
         </div>
@@ -148,7 +148,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100 text-xs">
         <span className="text-slate-500">
-          Trang 1 / 3 (Tổng số {filteredCases.length} bản ghi)
+          Trang 1 / 3 (Tá»•ng sá»‘ {filteredCases.length} báº£n ghi)
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -160,7 +160,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
           </button>
           <button
             type="button"
-            className="w-7 h-7 rounded-lg text-xs font-bold bg-[#C9A227] text-white shadow-2xs"
+            className="w-7 h-7 rounded-lg text-xs font-bold bg-brand-gold text-white shadow-2xs"
           >
             1
           </button>

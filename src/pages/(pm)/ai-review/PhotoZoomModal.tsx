@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { X } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -20,9 +20,9 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
       <div className="bg-slate-900 rounded-2xl max-w-3xl w-full p-4 shadow-2xl border border-slate-700 space-y-3 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-white">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-[#C9A227]">{selectedCase.code}</span>
+            <span className="font-mono text-xs font-bold text-brand-gold">{selectedCase.code}</span>
             <span className="text-xs text-slate-300">
-              • {selectedCase.defect_title} ({selectedCase.stationing})
+              â€¢ {selectedCase.defect_title} ({selectedCase.stationing})
             </span>
           </div>
           <button
@@ -42,12 +42,12 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
         </div>
 
         <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-          <span>Độ phân giải thực: 0.3 cm/px • Nguồn chụp: Matrice 300 RTK</span>
+          <span>Äá»™ phÃ¢n giáº£i thá»±c: 0.3 cm/px â€¢ Nguá»“n chá»¥p: Matrice 300 RTK</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
           >
-            Đóng
+            ÄÃ³ng
           </button>
         </div>
       </div>

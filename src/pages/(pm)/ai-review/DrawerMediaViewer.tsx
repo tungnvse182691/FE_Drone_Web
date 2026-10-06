@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { MapPin, Maximize2, ZoomIn } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -33,19 +33,19 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            Ảnh chụp hiện trường
+            áº¢nh chá»¥p hiá»‡n trÆ°á»ng
           </button>
           <button
             type="button"
             onClick={() => setDetailViewMode('GIS_MAP')}
             className={`px-3 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
               detailViewMode === 'GIS_MAP'
-                ? 'bg-[#C9A227] text-white shadow-2xs'
+                ? 'bg-brand-gold text-white shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <MapPin className="w-3 h-3" />
-            <span>Bản đồ MapLibre</span>
+            <span>Báº£n Ä‘á»“ MapLibre</span>
           </button>
         </div>
 
@@ -55,7 +55,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           className="text-xs font-bold text-[#8F7212] hover:underline flex items-center gap-1 cursor-pointer"
         >
           <Maximize2 className="w-3.5 h-3.5" />
-          <span>Phóng to GIS</span>
+          <span>PhÃ³ng to GIS</span>
         </button>
       </div>
 
@@ -69,15 +69,15 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           />
           {/* Top-left GPS & telemetry overlay */}
           <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
-            <div className="flex items-center gap-1 font-bold text-[#C9A227]">
-              <MapPin className="w-3 h-3 text-[#C9A227]" />
+            <div className="flex items-center gap-1 font-bold text-brand-gold">
+              <MapPin className="w-3 h-3 text-brand-gold" />
               <span>
-                {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+                {selectedCase.gps.lat}Â° N, {selectedCase.gps.lng}Â° E
               </span>
             </div>
-            <span className="opacity-40">•</span>
+            <span className="opacity-40">â€¢</span>
             <span className="opacity-90">Alt: {selectedCase.gps.altitude_m}m</span>
-            <span className="opacity-40">•</span>
+            <span className="opacity-40">â€¢</span>
             <span className="opacity-90">Res: {selectedCase.gps.resolution_cm_px}cm/px</span>
           </div>
 
@@ -87,7 +87,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
               onClick={onOpenPhotoZoomModal}
               type="button"
               className="bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md text-white p-1.5 rounded-full transition-colors flex items-center shadow-md border border-white/10 cursor-pointer"
-              title="Xem ảnh gốc độ phân giải cao"
+              title="Xem áº£nh gá»‘c Ä‘á»™ phÃ¢n giáº£i cao"
             >
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
@@ -95,10 +95,10 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
               onClick={onOpenGISModal}
               type="button"
               className="bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1 shadow-md border border-white/10 cursor-pointer"
-              title="Mở vị trí trên bản đồ GIS"
+              title="Má»Ÿ vá»‹ trÃ­ trÃªn báº£n Ä‘á»“ GIS"
             >
-              <MapPin className="w-3 h-3 text-[#C9A227]" />
-              <span>Bản đồ GIS</span>
+              <MapPin className="w-3 h-3 text-brand-gold" />
+              <span>Báº£n Ä‘á»“ GIS</span>
             </button>
           </div>
 
@@ -115,7 +115,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
         <div className="w-full h-52 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
           <div ref={drawerMapContainerRef} className="w-full h-full" />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
-            {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+            {selectedCase.gps.lat}Â° N, {selectedCase.gps.lng}Â° E
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Users, Phone, Building2 } from 'lucide-react'
 import type { TriageCase } from './types'
 
@@ -19,8 +19,8 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
     <div className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-          <Users className="w-4 h-4 text-[#C9A227]" />
-          <span>Thông Tin Người Phản Ánh</span>
+          <Users className="w-4 h-4 text-brand-gold" />
+          <span>ThÃ´ng Tin NgÆ°á»i Pháº£n Ãnh</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
           {selectedCase.reporter_channel || selectedCase.source_label}
@@ -29,11 +29,11 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span className="text-[10px] text-slate-400 block">Họ và tên:</span>
-          <span className="font-semibold text-slate-800">{selectedCase.reporter_name || 'Người dân'}</span>
+          <span className="text-[10px] text-slate-400 block">Há» vÃ  tÃªn:</span>
+          <span className="font-semibold text-slate-800">{selectedCase.reporter_name || 'NgÆ°á»i dÃ¢n'}</span>
         </div>
         <div>
-          <span className="text-[10px] text-slate-400 block">Số điện thoại liên hệ:</span>
+          <span className="text-[10px] text-slate-400 block">Sá»‘ Ä‘iá»‡n thoáº¡i liÃªn há»‡:</span>
           {selectedCase.reporter_phone ? (
             <a
               href={`tel:${selectedCase.reporter_phone}`}
@@ -43,7 +43,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
               <span>{selectedCase.reporter_phone}</span>
             </a>
           ) : (
-            <span className="text-slate-400 italic">Không cung cấp</span>
+            <span className="text-slate-400 italic">KhÃ´ng cung cáº¥p</span>
           )}
         </div>
       </div>
@@ -51,7 +51,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
       {selectedCase.description && (
         <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
           <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
-            Nội dung phản ánh từ người dân:
+            Ná»™i dung pháº£n Ã¡nh tá»« ngÆ°á»i dÃ¢n:
           </span>
           <p className="italic text-slate-800 leading-relaxed">"{selectedCase.description}"</p>
         </div>
@@ -60,18 +60,18 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
       {/* Triage Project Assignment Status (PA03) */}
       <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-400">Dự án bảo hành phụ trách (PA03):</span>
+          <span className="text-[10px] text-slate-400">Dá»± Ã¡n báº£o hÃ nh phá»¥ trÃ¡ch (PA03):</span>
           <span className="font-semibold text-xs text-brand-dark">
-            {selectedCase.project_id ? selectedCase.project_name : '⚠️ Chưa điều phối gán vào dự án'}
+            {selectedCase.project_id ? selectedCase.project_name : 'âš ï¸ ChÆ°a Ä‘iá»u phá»‘i gÃ¡n vÃ o dá»± Ã¡n'}
           </span>
         </div>
         <button
           type="button"
           onClick={() => onOpenTriageProject(selectedCase)}
-          className="px-2.5 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+          className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
         >
           <Building2 className="w-3.5 h-3.5" />
-          <span>{selectedCase.project_id ? 'Đổi dự án' : 'Điều phối dự án (PA03)'}</span>
+          <span>{selectedCase.project_id ? 'Äá»•i dá»± Ã¡n' : 'Äiá»u phá»‘i dá»± Ã¡n (PA03)'}</span>
         </button>
       </div>
     </div>

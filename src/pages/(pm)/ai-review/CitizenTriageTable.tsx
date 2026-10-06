@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { TriageCase } from './types'
 import { CitizenTriageRow } from './CitizenTriageRow'
 
@@ -43,19 +43,19 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
                 type="checkbox"
                 checked={filteredCases.length > 0 && selectedReportIds.length === filteredCases.length}
                 onChange={onSelectAllReports}
-                className="w-3.5 h-3.5 rounded text-[#C9A227] focus:ring-[#C9A227] accent-[#C9A227] cursor-pointer"
-                title="Chọn tất cả"
+                className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold cursor-pointer"
+                title="Chá»n táº¥t cáº£"
               />
             </th>
-            <th className="py-2.5 px-3">Mã &amp; Kênh Gửi</th>
-            <th className="py-2.5 px-3">Người Báo &amp; SĐT</th>
-            <th className="py-2.5 px-3">Hiện Trường (GPS)</th>
-            <th className="py-2.5 px-3">Lý Trình &amp; Làn</th>
-            <th className="py-2.5 px-3">Dự Án Bảo Hành (PA03)</th>
-            <th className="py-2.5 px-3">Mô Tả / Loại Hư Hại</th>
-            <th className="py-2.5 px-3">Ưu Tiên</th>
-            <th className="py-2.5 px-3">Trạng Thái</th>
-            <th className="py-2.5 px-3 text-right">Thao Tác</th>
+            <th className="py-2.5 px-3">MÃ£ &amp; KÃªnh Gá»­i</th>
+            <th className="py-2.5 px-3">NgÆ°á»i BÃ¡o &amp; SÄT</th>
+            <th className="py-2.5 px-3">Hiá»‡n TrÆ°á»ng (GPS)</th>
+            <th className="py-2.5 px-3">LÃ½ TrÃ¬nh &amp; LÃ n</th>
+            <th className="py-2.5 px-3">Dá»± Ãn Báº£o HÃ nh (PA03)</th>
+            <th className="py-2.5 px-3">MÃ´ Táº£ / Loáº¡i HÆ° Háº¡i</th>
+            <th className="py-2.5 px-3">Æ¯u TiÃªn</th>
+            <th className="py-2.5 px-3">Tráº¡ng ThÃ¡i</th>
+            <th className="py-2.5 px-3 text-right">Thao TÃ¡c</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
