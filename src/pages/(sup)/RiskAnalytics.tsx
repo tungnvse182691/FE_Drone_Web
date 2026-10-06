@@ -1,6 +1,6 @@
 import React from 'react'
 import { Check } from 'lucide-react'
-import { PROJECTS_CONFIG } from './risk-analytics/mockData'
+import { PROJECTS_CONFIG } from './risk-analytics/data'
 import { useRiskAnalyticsState } from './risk-analytics/useRiskAnalyticsState'
 import { RiskHeader } from './risk-analytics/RiskHeader'
 import { RiskMetricsGrid } from './risk-analytics/RiskMetricsGrid'

@@ -1,5 +1,5 @@
 import { UnassignedDefectItem } from './types'
-export { AVAILABLE_ROUTES } from './routesData'
+export { AVAILABLE_ROUTES } from './data'
 
 export const DEFECTS_BY_SEGMENT: Record<string, UnassignedDefectItem[]> = {
   'seg-02': [

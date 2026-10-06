@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { ExportRecord, AsyncExportJob } from './types'
-import { PROJECTS_CONFIG, INITIAL_EXPORT_RECORDS } from './mockData'
+import { PROJECTS_CONFIG, INITIAL_EXPORT_RECORDS } from './data'
 import { computeProjectMetrics, filterAndSortRecords } from './riskAnalyticsCalculations'
 
 export function useRiskAnalyticsState() {

@@ -3,9 +3,10 @@ import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
   buildSegmentsGeoJSON,
-  buildPlanningCorridorGeoJSON
-} from './alignmentGeoJson'
-import { buildSlabsAndJointsGeoJSON, SlabsCustomConfig } from './alignmentSlabsGeoJson'
+  buildPlanningCorridorGeoJSON,
+  buildSlabsAndJointsGeoJSON,
+  SlabsCustomConfig
+} from './data'
 import { setupAlignmentSourcesAndLayers } from './alignmentMapLayers'
 import { setupAlignmentMapInteractions } from './alignmentMapInteractions'
 import { renderAlignmentMarkers } from './alignmentMapMarkers'

@@ -1,5 +1,5 @@
 import { SegmentItem } from './types'
-import { SEGMENT_COLORS } from './alignmentData'
+import { SEGMENT_COLORS } from './data'
 
 export function computeAutoSplitSegments(
   totalKm: number,

@@ -1,5 +1,5 @@
 import { SegmentItem } from './types'
-import { SEGMENT_COLORS } from './alignmentData'
+import { SEGMENT_COLORS } from './data'
 
 // Tính khoảng cách Haversine giữa 2 tọa độ GPS (km)
 export function calculateHaversineKm(c1: [number, number], c2: [number, number]): number {

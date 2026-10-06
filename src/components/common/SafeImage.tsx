@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Camera } from 'lucide-react'
-import { RoadDefectImage, RoadDefectImageProps } from '../../../components/common/RoadDefectImages'
+import { RoadDefectImage, RoadDefectImageProps } from './RoadDefectImages'
 
 export const SafeImage: React.FC<{
   src?: string

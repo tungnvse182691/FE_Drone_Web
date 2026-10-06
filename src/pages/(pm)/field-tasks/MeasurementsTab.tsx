@@ -2,7 +2,7 @@ import React from 'react'
 import { Zap, Clock, Ruler } from 'lucide-react'
 import { Card } from '../../../components/ui/Card'
 import { FieldTask } from '../../../types/domain'
-import { SafeImage } from './SafeImage'
+import { SafeImage } from '../../../components/common/SafeImage'
 
 export interface MeasurementsTabProps {
   fieldTasks: FieldTask[]

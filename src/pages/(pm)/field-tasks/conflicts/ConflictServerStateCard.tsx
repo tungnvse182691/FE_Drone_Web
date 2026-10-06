@@ -2,7 +2,7 @@ import React from 'react'
 import { Clock, Smartphone, ShieldAlert, Archive, ArrowRight } from 'lucide-react'
 import { Card } from '../../../../components/ui/Card'
 import { SyncConflictItem } from '../../../../types/domain'
-import { SafeImage } from '../SafeImage'
+import { SafeImage } from '../../../../components/common/SafeImage'
 
 export interface ConflictServerStateCardProps {
   selectedConflict: SyncConflictItem

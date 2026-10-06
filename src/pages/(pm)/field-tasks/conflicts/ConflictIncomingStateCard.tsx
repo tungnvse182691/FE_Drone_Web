@@ -2,7 +2,7 @@ import React from 'react'
 import { Smartphone, Clock, FileCheck, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { Card } from '../../../../components/ui/Card'
 import { SyncConflictItem } from '../../../../types/domain'
-import { SafeImage } from '../SafeImage'
+import { SafeImage } from '../../../../components/common/SafeImage'
 import { ConflictResolutionActions } from './ConflictResolutionActions'
 
 export interface ConflictIncomingStateCardProps {

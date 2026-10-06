@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { SegmentItem } from './types'
-import { SEGMENT_COLORS } from './alignmentData'
+import { SEGMENT_COLORS } from './data'
 import {
   checkAndEnrichSegmentsContinuity,
   generateMockSlabs

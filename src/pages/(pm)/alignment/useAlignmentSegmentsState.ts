@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { SegmentItem, SlabItem } from './types'
-import { SEGMENT_COLORS } from './alignmentData'
+import { SEGMENT_COLORS } from './data'
 import {
   interpolateCoordAtKm,
   checkAndEnrichSegmentsContinuity,

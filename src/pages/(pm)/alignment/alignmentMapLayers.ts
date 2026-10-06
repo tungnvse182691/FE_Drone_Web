@@ -3,9 +3,9 @@ import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
   buildSegmentsGeoJSON,
-  buildPlanningCorridorGeoJSON
-} from './alignmentGeoJson'
-import { buildSlabsAndJointsGeoJSON } from './alignmentSlabsGeoJson'
+  buildPlanningCorridorGeoJSON,
+  buildSlabsAndJointsGeoJSON
+} from './data'
 import { setupSlabsAndJointsLayers } from './alignmentSlabLayers'
 
 export function setupAlignmentSourcesAndLayers(

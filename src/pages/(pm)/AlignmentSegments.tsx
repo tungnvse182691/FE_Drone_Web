@@ -12,10 +12,10 @@ import { AlignmentMap } from './alignment/AlignmentMap'
 import { AlignmentSidebar } from './alignment/AlignmentSidebar'
 import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
-import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/alignmentData'
+import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/data'
 
 export type { SegmentItem, SlabItem, AssignedProjectOption } from './alignment/types'
-export { PM_ASSIGNED_PROJECTS } from './alignment/alignmentData'
+export { PM_ASSIGNED_PROJECTS } from './alignment/data'
 
 // Retain references required by invariants
 void maplibregl
