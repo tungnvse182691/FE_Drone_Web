@@ -29,7 +29,7 @@ export const BatchApproveModal: React.FC<BatchApproveModalProps> = ({
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-[#E2E5E9] rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-md overflow-hidden z-10 p-6 space-y-4">
+      <div className="relative bg-white border border-brand-border rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-md overflow-hidden z-10 p-6 space-y-4">
         <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-2xs">
           <CheckCheck className="w-6 h-6" />
         </div>

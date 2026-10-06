@@ -30,12 +30,12 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
   onToggleCitizenPublish
 }) => {
   return (
-    <section className="bg-white rounded-2xl p-6 border border-[#E2E5E9] shadow-xs space-y-4">
+    <section className="bg-white rounded-2xl p-6 border border-brand-border shadow-xs space-y-4">
       {/* Section Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
         <div>
           <h2 className="font-bold text-lg text-slate-900 flex items-center gap-2 font-sansation">
-            <Camera className="w-5 h-5 text-[#C9A227]" />
+            <Camera className="w-5 h-5 text-brand-gold" />
             Đối chứng bằng chứng hình ảnh hiện trường (BEFORE vs AFTER Integrity Audit)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -63,7 +63,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
               viewMode === 'slider' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#C9A227]" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-brand-gold" />
             <span>Vuốt trượt (Curtain)</span>
           </button>
 
@@ -131,7 +131,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
               className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_10px_rgba(0,0,0,0.5)] cursor-ew-resize flex items-center justify-center"
               style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
             >
-              <div className="w-8 h-8 rounded-full bg-white text-slate-800 shadow-xl border-2 border-[#C9A227] flex items-center justify-center text-xs font-bold pointer-events-none">
+              <div className="w-8 h-8 rounded-full bg-white text-slate-800 shadow-xl border-2 border-brand-gold flex items-center justify-center text-xs font-bold pointer-events-none">
                 ↔
               </div>
             </div>

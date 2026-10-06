@@ -44,10 +44,10 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-[#E2E5E9] rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
-        <div className="bg-[#F8F9FA] border-b border-[#E2E5E9] p-5 flex items-start justify-between">
+      <div className="relative bg-white border border-brand-border rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
+        <div className="bg-brand-surfaceAlt border-b border-brand-border p-5 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C9A227] text-white flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-10 h-10 rounded-xl bg-brand-gold text-white flex items-center justify-center shrink-0 shadow-2xs">
               <Truck className="w-5 h-5" />
             </div>
             <div>
@@ -107,7 +107,7 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
                 type="text"
                 value={dispatchDeadline}
                 onChange={(e) => setDispatchDeadline(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#C9A227]"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-gold"
               />
             </div>
             <div className="space-y-1">
@@ -129,23 +129,23 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
               rows={3}
               value={dispatchNotice}
               onChange={(e) => setDispatchNotice(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#C9A227] resize-none font-medium"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-brand-gold resize-none font-medium"
             />
           </div>
         </div>
 
-        <div className="bg-[#F8F9FA] border-t border-[#E2E5E9] px-6 py-3.5 flex items-center justify-end gap-2.5 shrink-0">
+        <div className="bg-brand-surfaceAlt border-t border-brand-border px-6 py-3.5 flex items-center justify-end gap-2.5 shrink-0">
           <button
             onClick={onClose}
             type="button"
-            className="px-4 h-9 bg-white border border-[#E2E5E9] text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
+            className="px-4 h-9 bg-white border border-brand-border text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
           >
             Hủy bỏ
           </button>
           <button
             onClick={onConfirmDispatch}
             type="button"
-            className="px-5 h-9 bg-[#C9A227] hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
+            className="px-5 h-9 bg-brand-gold hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Phát lệnh xuất quân (Dispatch)</span>

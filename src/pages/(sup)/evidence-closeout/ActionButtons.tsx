@@ -38,9 +38,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       <button
         onClick={onOpenExportModal}
         type="button"
-        className="px-3.5 h-9 bg-white border border-[#E2E5E9] hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+        className="px-3.5 h-9 bg-white border border-brand-border hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
       >
-        <FileDown className="w-4 h-4 text-[#C9A227]" />
+        <FileDown className="w-4 h-4 text-brand-gold" />
         <span>Xuất hồ sơ (RPT-07)</span>
       </button>
 
@@ -63,7 +63,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             className={`px-4 h-9 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 ${
               currentItem.status === 'ACCEPTED'
                 ? 'bg-emerald-700 text-white cursor-default'
-                : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white hover:opacity-95 cursor-pointer'
+                : 'bg-brand-gold hover:bg-[#B38E1F] text-white hover:opacity-95 cursor-pointer'
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />
@@ -85,7 +85,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
               className={`px-4 h-9 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer ${
                 currentItem.status === 'ACCEPTED'
                   ? 'bg-emerald-700 text-white cursor-default'
-                  : 'bg-[#C9A227] hover:bg-[#B38E1F] text-white'
+                  : 'bg-brand-gold hover:bg-[#B38E1F] text-white'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />

@@ -74,21 +74,21 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
           <button
             onClick={onNavigateProposals}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E2E5E9] hover:bg-slate-100 text-slate-700 rounded-full text-xs font-semibold shadow-2xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-brand-border hover:bg-slate-100 text-slate-700 rounded-full text-xs font-semibold shadow-2xs transition cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Quay lại danh sách</span>
           </button>
 
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-full border border-slate-200/80 shadow-2xs">
-            <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+            <ShieldCheck className="w-4 h-4 text-brand-gold" />
             <span>Quy trình kỹ thuật: WF-07 (Thẩm duyệt &amp; Điều phối)</span>
           </div>
         </div>
       </div>
 
       {/* 2. HEADER SECTION (Stitch 10 High Architectural Contrast) */}
-      <div className="bg-white border border-[#E2E5E9] rounded-2xl p-6 shadow-sm space-y-4">
+      <div className="bg-white border border-brand-border rounded-2xl p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center flex-wrap gap-2.5">
@@ -110,7 +110,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
 
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
               <span className="inline-flex items-center gap-1.5">
-                <Milestone className="w-4 h-4 text-[#C9A227]" />
+                <Milestone className="w-4 h-4 text-brand-gold" />
                 <span>Tuyến QL1A • Đoạn Km 1024 - Km 1045</span>
               </span>
               <span className="text-slate-300">•</span>
@@ -119,7 +119,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
                 <span>Lập bởi PM Lê Tuấn • 25/08/2026</span>
               </span>
               <span className="text-slate-300">•</span>
-              <span className="inline-flex items-center gap-1.5 text-[#C9A227] font-semibold">
+              <span className="inline-flex items-center gap-1.5 text-brand-gold font-semibold">
                 <AlertTriangle className="w-4 h-4" />
                 <span>Mức độ ưu tiên: Khẩn cấp cấp II</span>
               </span>
@@ -132,7 +132,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               <button
                 onClick={onOpenBatchApprove}
                 type="button"
-                className="inline-flex items-center gap-1.5 px-4 h-10 bg-white border border-[#E2E5E9] text-slate-800 hover:bg-slate-50 transition-colors rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 h-10 bg-white border border-brand-border text-slate-800 hover:bg-slate-50 transition-colors rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
               >
                 <CheckCheck className="w-4 h-4 text-emerald-600" />
                 <span>Duyệt nhanh tất cả mục hợp lệ</span>
@@ -142,7 +142,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
             <button
               onClick={onExportPdf}
               type="button"
-              className="inline-flex items-center gap-1.5 px-4 h-10 bg-white border border-[#E2E5E9] text-slate-800 hover:bg-slate-50 transition-colors rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 h-10 bg-white border border-brand-border text-slate-800 hover:bg-slate-50 transition-colors rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
             >
               <FileDown className="w-4 h-4 text-slate-600" />
               <span>Xuất hồ sơ gói (PDF)</span>
@@ -153,7 +153,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
                 <button
                   onClick={onOpenDispatch}
                   type="button"
-                  className="inline-flex items-center gap-1.5 px-4 h-10 bg-[#C9A227] text-white hover:bg-[#B38E1F] transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 h-10 bg-brand-gold text-white hover:bg-[#B38E1F] transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer"
                 >
                   <Truck className="w-4 h-4" />
                   <span>Giao việc cho đội thi công (Dispatch)</span>
@@ -169,7 +169,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
 
         {/* Role Guard Compliance Alert Banner */}
         <div className="flex items-start gap-3 bg-amber-50/60 border border-amber-200/80 p-3.5 rounded-xl text-xs text-slate-700">
-          <ShieldAlert className="w-5 h-5 text-[#C9A227] shrink-0 mt-0.5" />
+          <ShieldAlert className="w-5 h-5 text-brand-gold shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">
             <strong className="text-slate-900 font-bold">Quy định thẩm quyền kỹ thuật:</strong>{' '}
             Supervisor chịu trách nhiệm phê duyệt giải pháp vật liệu, phương pháp kỹ thuật &amp; khối lượng thi công từng

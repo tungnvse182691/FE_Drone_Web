@@ -19,9 +19,9 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
   onToggleCitizenPublish
 }) => {
   return (
-    <div className="flex flex-col bg-white rounded-xl overflow-hidden border border-[#E2E5E9] shadow-2xs">
+    <div className="flex flex-col bg-white rounded-xl overflow-hidden border border-brand-border shadow-2xs">
       {/* Column Header */}
-      <div className="p-3.5 bg-slate-50 border-b border-[#E2E5E9] flex items-center justify-between">
+      <div className="p-3.5 bg-slate-50 border-b border-brand-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
           <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
@@ -43,7 +43,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
 
         {/* HUD Overlays */}
         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs text-slate-900 shadow-xs flex items-center gap-1.5 border border-slate-200 font-medium">
-          <Wrench className="w-3.5 h-3.5 text-[#C9A227]" />
+          <Wrench className="w-3.5 h-3.5 text-brand-gold" />
           <span>Crew 02 • Máy Dynapac F1200CS</span>
         </div>
         <div className="absolute bottom-3 right-3 bg-black/75 backdrop-blur-md px-3 py-1 rounded-full text-white text-[11px] font-mono flex items-center gap-1.5">
@@ -58,7 +58,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-[#C9A227] font-bold">
+            <span className="text-[11px] uppercase tracking-wider text-brand-gold font-bold">
               Chữ ký số thiết bị thi công &amp; SHA-256
             </span>
             <p className="font-mono text-xs text-slate-200">Hash: {currentItem.after_hash}</p>
@@ -67,7 +67,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
             </p>
           </div>
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-[#C9A227] font-bold">
+            <span className="text-[11px] uppercase tracking-wider text-brand-gold font-bold">
               Tọa độ hoàn công &amp; Nhiệt độ vật lý
             </span>
             <p className="font-mono text-xs text-slate-200">{currentItem.after_gps}</p>
@@ -81,7 +81,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
       {/* Proof Metadata Box */}
       <div className="p-4 space-y-2.5 text-xs">
         <div className="flex items-center gap-1.5 text-slate-600">
-          <HardHat className="w-4 h-4 text-[#C9A227] shrink-0" />
+          <HardHat className="w-4 h-4 text-brand-gold shrink-0" />
           <span>
             Đơn vị thực hiện: <strong className="text-slate-900 font-semibold">{currentItem.after_crew}</strong>
           </span>
@@ -117,7 +117,7 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({
             type="checkbox"
             checked={currentItem.citizen_published}
             onChange={onToggleCitizenPublish}
-            className="w-4 h-4 rounded text-[#C9A227] accent-[#C9A227] focus:ring-[#C9A227]"
+            className="w-4 h-4 rounded text-brand-gold accent-brand-gold focus:ring-brand-gold"
           />
           <span className="text-xs text-slate-800 font-semibold">
             Chọn ảnh này làm ảnh chuẩn công bố cho ứng dụng dân cư (Citizen App &amp; Cổng thông tin giao thông)

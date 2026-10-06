@@ -47,7 +47,7 @@ export const ItemsFilterBar: React.FC<ItemsFilterBarProps> = ({
         </div>
 
         {/* Quick Filter Pills (Rounded Full) */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-[#E2E5E9] text-xs font-semibold overflow-x-auto">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-brand-border text-xs font-semibold overflow-x-auto">
           <button
             onClick={() => {
               setFilterTab('ALL')
@@ -131,7 +131,7 @@ export const ItemsFilterBar: React.FC<ItemsFilterBarProps> = ({
               setCurrentPage(1)
             }}
             placeholder="Tìm theo mã hạng mục, hư hỏng, lý trình, giải pháp..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#C9A227] transition-all font-medium"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-brand-gold transition-all font-medium"
           />
         </div>
         <span className="text-xs text-slate-500 font-medium hidden sm:inline-block">

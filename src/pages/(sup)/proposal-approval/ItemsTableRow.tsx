@@ -164,7 +164,7 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
       {/* Cột 7: Thao tác Thẩm định */}
       <td className="py-3.5 px-3.5 align-top text-center whitespace-nowrap min-w-[140px]">
         {isSupervisor ? (
-          <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-[#E2E5E9]">
+          <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-full border border-brand-border">
             <Tooltip content="Phê duyệt hạng mục này">
               <button
                 onClick={() => onQuickApprove(item.id)}
@@ -237,7 +237,7 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
           item.assigned_crew ? (
             <div className="flex flex-col gap-0.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                <Construction className="w-3.5 h-3.5 text-[#C9A227]" />
+                <Construction className="w-3.5 h-3.5 text-brand-gold" />
                 <span>{item.assigned_crew}</span>
               </span>
               <span className="text-[10px] text-slate-400 pl-1 font-medium">PM đã phân công</span>
@@ -257,7 +257,7 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
             <select
               value={item.assigned_crew}
               onChange={(e) => onCrewChange(item.id, e.target.value)}
-              className="w-48 bg-white border border-[#E2E5E9] text-slate-800 text-xs py-1.5 px-2.5 rounded-lg shadow-2xs focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium cursor-pointer"
+              className="w-48 bg-white border border-brand-border text-slate-800 text-xs py-1.5 px-2.5 rounded-lg shadow-2xs focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium cursor-pointer"
             >
               {CREW_OPTIONS.map((crew) => (
                 <option key={crew} value={crew}>
@@ -270,7 +270,7 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
               <div className="relative">
                 <select
                   disabled
-                  className="w-48 bg-slate-100 text-slate-400 text-xs py-1.5 px-2.5 rounded-lg border border-[#E2E5E9] cursor-not-allowed font-medium"
+                  className="w-48 bg-slate-100 text-slate-400 text-xs py-1.5 px-2.5 rounded-lg border border-brand-border cursor-not-allowed font-medium"
                 >
                   <option>
                     {isItemRejected ? '-- Bị từ chối phương án --' : '-- Chưa thể phân công --'}

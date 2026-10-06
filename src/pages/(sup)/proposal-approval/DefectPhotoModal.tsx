@@ -26,7 +26,7 @@ export const DefectPhotoModal: React.FC<DefectPhotoModalProps> = ({
       <div className="relative bg-slate-900 text-white rounded-2xl overflow-hidden shadow-2xl max-w-4xl w-full z-10 border border-slate-700 max-h-[95vh] flex flex-col">
         <div className="p-4 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-[#C9A227]">{viewingPhotoItem.item_code}</span>
+            <span className="font-mono font-bold text-brand-gold">{viewingPhotoItem.item_code}</span>
             <span className="text-slate-400">•</span>
             <span className="font-semibold text-sm">{viewingPhotoItem.defect_title}</span>
             <span className="text-xs text-slate-400 font-mono">({viewingPhotoItem.chainage})</span>
@@ -46,8 +46,8 @@ export const DefectPhotoModal: React.FC<DefectPhotoModalProps> = ({
             className="max-h-full max-w-full object-contain"
           />
 
-          <div className="absolute top-1/4 left-1/3 w-40 h-28 border-2 border-[#C9A227] bg-[#C9A227]/20 rounded-md pointer-events-none">
-            <span className="absolute -top-6 left-0 bg-[#C9A227] text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow">
+          <div className="absolute top-1/4 left-1/3 w-40 h-28 border-2 border-brand-gold bg-brand-gold/20 rounded-md pointer-events-none">
+            <span className="absolute -top-6 left-0 bg-brand-gold text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow">
               {viewingPhotoItem.defect_measurements}
             </span>
           </div>
@@ -55,7 +55,7 @@ export const DefectPhotoModal: React.FC<DefectPhotoModalProps> = ({
 
         <div className="p-4 bg-slate-800 border-t border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-slate-300 font-mono text-[11px]">
-            <span className="flex items-center gap-1 text-[#C9A227] font-semibold">
+            <span className="flex items-center gap-1 text-brand-gold font-semibold">
               <MapPin className="w-3.5 h-3.5" /> GPS: {viewingPhotoItem.gps_coords}
             </span>
             <span className="text-slate-400">|</span>
@@ -74,7 +74,7 @@ export const DefectPhotoModal: React.FC<DefectPhotoModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#C9A227] text-white font-bold rounded-xl text-xs hover:bg-[#B38E1F] transition cursor-pointer"
+            className="px-4 py-1.5 bg-brand-gold text-white font-bold rounded-xl text-xs hover:bg-[#B38E1F] transition cursor-pointer"
           >
             Đóng
           </button>

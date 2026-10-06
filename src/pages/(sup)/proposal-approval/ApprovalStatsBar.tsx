@@ -16,7 +16,7 @@ export interface ApprovalStatsBarProps {
 
 export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => {
   return (
-    <section className="bg-white border border-[#E2E5E9] p-6 rounded-2xl shadow-sm">
+    <section className="bg-white border border-brand-border p-6 rounded-2xl shadow-sm">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
         {/* Left: Stacked Progress & Metric Pills */}
         <div className="lg:col-span-7 space-y-3.5">
@@ -35,7 +35,7 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
           {/* Stacked Multi-Segment Progress Bar */}
           <div className="w-full bg-slate-100 rounded-full h-3.5 flex overflow-hidden p-0.5 border border-slate-200">
             <div
-              className="bg-[#C9A227] h-full rounded-l-full transition-all duration-300"
+              className="bg-brand-gold h-full rounded-l-full transition-all duration-300"
               style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }}
               title={`${stats.approved} Đã duyệt`}
             ></div>
@@ -53,14 +53,14 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
 
           {/* Metric Pills Cluster (All rounded-full) */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-700 font-medium border border-[#E2E5E9]">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-700 font-medium border border-brand-border">
               <span className="w-2 h-2 rounded-full bg-slate-500"></span>
               <span>
                 Tổng: <strong>{stats.total}</strong> hạng mục
               </span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FEF9E7] text-[#92700C] font-semibold border border-[#FDE68A]">
-              <span className="w-2 h-2 rounded-full bg-[#C9A227]"></span>
+              <span className="w-2 h-2 rounded-full bg-brand-gold"></span>
               <span>
                 Đã duyệt: <strong>{stats.approved}</strong>
               </span>
@@ -82,7 +82,7 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
 
         {/* Right: Technical Volume Breakdown (Zero Money / Zero VNĐ) */}
         <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-[#F8F9FA] border border-[#E2E5E9] p-4 rounded-xl space-y-1">
+          <div className="bg-brand-surfaceAlt border border-brand-border p-4 rounded-xl space-y-1">
             <span className="text-[11px] text-[#92700C] font-bold uppercase tracking-wider block">
               Tổng diện tích thi công đã duyệt:
             </span>
@@ -94,7 +94,7 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
             </span>
           </div>
 
-          <div className="bg-[#F8F9FA] border border-[#E2E5E9] p-4 rounded-xl space-y-1">
+          <div className="bg-brand-surfaceAlt border border-brand-border p-4 rounded-xl space-y-1">
             <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider block">
               Thời gian thi công dự kiến:
             </span>

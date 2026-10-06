@@ -51,7 +51,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
   isSupervisor = true
 }) => {
   return (
-    <section className="bg-white border border-[#E2E5E9] rounded-2xl shadow-sm p-6 space-y-4">
+    <section className="bg-white border border-brand-border rounded-2xl shadow-sm p-6 space-y-4">
       {/* Table Header & Search Filter Bar */}
       <ItemsFilterBar
         isSupervisor={isSupervisor}
@@ -68,7 +68,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       {/* Responsive Table Container */}
       <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs custom-scrollbar">
         <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
-          <thead className="bg-[#F8F9FA] border-y border-[#E2E5E9] text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+          <thead className="bg-brand-surfaceAlt border-y border-brand-border text-slate-500 font-bold uppercase tracking-wider text-[11px]">
             <tr>
               <th className="py-3 px-3.5 rounded-l-lg min-w-[150px]">
                 Mã &amp; Hư hỏng
@@ -86,7 +86,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#E2E5E9]">
+          <tbody className="divide-y divide-brand-border">
             {displayedItems.map((item) => (
               <ItemsTableRow
                 key={item.id}
@@ -113,7 +113,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       </div>
 
       {/* Table Pagination / Summary Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-[#E2E5E9] text-xs text-slate-600">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-brand-border text-xs text-slate-600">
         <div>
           Hiển thị <span className="font-bold text-slate-900">{displayedItems.length}</span> trên{' '}
           <span className="font-bold text-slate-900">{filteredItems.length}</span> hạng mục được lập kế hoạch
@@ -124,7 +124,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             type="button"
-            className="px-2.5 py-1.5 rounded-lg border border-[#E2E5E9] bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
+            className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
           >
             Trước
           </button>
@@ -137,7 +137,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                 type="button"
                 className={`w-8 h-8 rounded-full font-bold text-xs transition cursor-pointer ${
                   currentPage === p
-                    ? 'bg-[#C9A227] text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white shadow-2xs'
                     : 'hover:bg-slate-100 text-slate-600'
                 }`}
               >
@@ -149,7 +149,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             type="button"
-            className="px-2.5 py-1.5 rounded-lg border border-[#E2E5E9] bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
+            className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
           >
             Sau
           </button>

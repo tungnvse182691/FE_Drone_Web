@@ -64,7 +64,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
   return (
     <>
       {/* TOP CONTEXT BAR & BREADCRUMB */}
-      <section className="bg-white border border-[#E2E5E9] rounded-2xl p-6 shadow-xs space-y-4">
+      <section className="bg-white border border-brand-border rounded-2xl p-6 shadow-xs space-y-4">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           {/* Breadcrumb & Identity */}
           <div className="flex flex-col gap-1.5">
@@ -112,7 +112,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <UserCheck className="w-3.5 h-3.5 text-[#C9A227]" />
+                <UserCheck className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Kỹ sư Giám sát</span>
               </button>
               <button
@@ -130,7 +130,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
             </div>
 
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/80">
-              <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+              <ShieldCheck className="w-4 h-4 text-brand-gold" />
               <span>Quy trình nghiệm thu</span>
             </div>
           </div>
@@ -154,7 +154,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
 
         {/* Active Authority Micro-Banner */}
         <div className="text-xs text-slate-600 flex items-center gap-2 pt-1 font-medium">
-          <ShieldAlert className="w-4 h-4 text-[#C9A227] shrink-0" />
+          <ShieldAlert className="w-4 h-4 text-brand-gold shrink-0" />
           {isSupervisorView ? (
             <span>
               Thẩm quyền: <strong className="text-slate-900">Ban Giám sát độc lập (Supervisor)</strong> — Bắt buộc ký số PKI &amp; kiểm tra các chỉ tiêu kỹ thuật TCVN 8819 (Độ chặt K98, độ phẳng thước 3m) trước khi cho phép đóng gói hoàn công.
@@ -168,11 +168,11 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
       </section>
 
       {/* COMPOSITE CASE ALERT (Mixed Case Closeout Banner) */}
-      <section className="p-6 bg-white border border-[#E2E5E9] rounded-2xl shadow-xs space-y-3">
+      <section className="p-6 bg-white border border-brand-border rounded-2xl shadow-xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <Layers className="w-5 h-5 text-[#C9A227]" />
+              <Layers className="w-5 h-5 text-brand-gold" />
               <h3 className="font-bold text-lg text-slate-900 font-sansation">
                 Vụ việc phức hợp liên quan: #CASE-2026-0842
               </h3>
@@ -234,7 +234,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                   isCaseClosed
                     ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                     : allItemsAccepted
-                    ? 'border border-[#C9A227] text-[#92700C] bg-[#FEF9E7] hover:bg-[#FDF0CD] cursor-pointer'
+                    ? 'border border-brand-gold text-[#92700C] bg-[#FEF9E7] hover:bg-[#FDF0CD] cursor-pointer'
                     : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                 }`}
                 title={
@@ -243,7 +243,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                     : undefined
                 }
               >
-                <FileCheck className="w-4 h-4 text-[#C9A227]" />
+                <FileCheck className="w-4 h-4 text-brand-gold" />
                 <span>
                   {isCaseClosed ? 'Vụ việc đã được đóng tổng' : 'Đóng tổng thể vụ việc (Supervisor Closeout)'}
                 </span>

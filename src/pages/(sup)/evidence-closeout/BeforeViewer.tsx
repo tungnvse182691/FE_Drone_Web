@@ -17,9 +17,9 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({
   viewMode
 }) => {
   return (
-    <div className="flex flex-col bg-white rounded-xl overflow-hidden border border-[#E2E5E9] shadow-2xs">
+    <div className="flex flex-col bg-white rounded-xl overflow-hidden border border-brand-border shadow-2xs">
       {/* Column Header */}
-      <div className="p-3.5 bg-slate-50 border-b border-[#E2E5E9] flex items-center justify-between">
+      <div className="p-3.5 bg-slate-50 border-b border-brand-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
           <span className="text-xs text-slate-900 font-bold uppercase tracking-wider">
@@ -41,7 +41,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({
 
         {/* HUD Overlays */}
         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs text-slate-900 shadow-xs flex items-center gap-1.5 border border-slate-200 font-medium">
-          <MapPin className="w-3.5 h-3.5 text-[#C9A227]" />
+          <MapPin className="w-3.5 h-3.5 text-brand-gold" />
           <span>{currentItem.chainage}</span>
         </div>
         <div className="absolute bottom-3 right-3 bg-black/75 backdrop-blur-md px-3 py-1 rounded-full text-white text-[11px] font-mono flex items-center gap-1.5">
@@ -56,7 +56,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({
           }`}
         >
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-[#C9A227] font-bold">
+            <span className="text-[11px] uppercase tracking-wider text-brand-gold font-bold">
               Bảo mật tệp &amp; Cảm biến hình ảnh
             </span>
             <p className="font-mono text-xs text-slate-200">Hash SHA-256: {currentItem.before_hash}</p>
@@ -65,7 +65,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({
             </p>
           </div>
           <div className="space-y-1">
-            <span className="text-[11px] uppercase tracking-wider text-[#C9A227] font-bold">
+            <span className="text-[11px] uppercase tracking-wider text-brand-gold font-bold">
               Dữ liệu không gian RTK chuẩn
             </span>
             <p className="font-mono text-xs text-slate-200">{currentItem.before_gps}</p>
@@ -79,7 +79,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({
       {/* Proof Metadata Box */}
       <div className="p-4 space-y-2.5 text-xs">
         <div className="flex items-center gap-1.5 text-slate-600">
-          <Milestone className="w-4 h-4 text-[#C9A227] shrink-0" />
+          <Milestone className="w-4 h-4 text-brand-gold shrink-0" />
           <span>
             Nguồn ghi nhận: <strong className="text-slate-900 font-semibold">{currentItem.before_source}</strong>
           </span>

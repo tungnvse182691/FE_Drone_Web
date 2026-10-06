@@ -53,7 +53,7 @@ export const ReworkModal: React.FC<ReworkModalProps> = ({
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-[#E2E5E9] rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden z-10 flex flex-col">
+      <div className="relative bg-white border border-brand-border rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden z-10 flex flex-col">
         <div className="p-4 bg-rose-50 border-b border-rose-200 text-rose-900 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="w-5 h-5 text-rose-600" />

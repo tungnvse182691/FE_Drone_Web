@@ -40,9 +40,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-[#E2E5E9] rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
+      <div className="relative bg-white border border-brand-border rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
         {/* Modal Top Header */}
-        <div className="bg-[#F8F9FA] border-b border-[#E2E5E9] p-5 flex items-start justify-between">
+        <div className="bg-brand-surfaceAlt border-b border-brand-border p-5 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] text-[#92700C] flex items-center justify-center shrink-0 shadow-2xs">
               <Camera className="w-5 h-5" />
@@ -66,7 +66,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="bg-[#F8F9FA] border border-[#E2E5E9] p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+          <div className="bg-brand-surfaceAlt border border-brand-border p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono font-bold text-slate-900">
                 {activeModalItem.chainage} ({activeModalItem.lane_info})
@@ -89,7 +89,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                 onClick={() => setModalFeedbackType('EVIDENCE')}
                 className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
                   modalFeedbackType === 'EVIDENCE'
-                    ? 'bg-[#FEF9E7] border-[#C9A227] ring-1 ring-[#C9A227]'
+                    ? 'bg-[#FEF9E7] border-brand-gold ring-1 ring-brand-gold'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 }`}
               >
@@ -98,7 +98,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   name="feedback-type"
                   checked={modalFeedbackType === 'EVIDENCE'}
                   onChange={() => setModalFeedbackType('EVIDENCE')}
-                  className="mt-0.5 accent-[#C9A227]"
+                  className="mt-0.5 accent-brand-gold"
                 />
                 <div className="text-xs">
                   <span className="font-bold text-[#92700C] block">Cần bằng chứng</span>
@@ -169,13 +169,13 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               rows={4}
               value={modalNotes}
               onChange={(e) => setModalNotes(e.target.value)}
-              className="w-full rounded-xl bg-white border border-[#E2E5E9] text-slate-800 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#C9A227] transition-all resize-none shadow-2xs font-medium"
+              className="w-full rounded-xl bg-white border border-brand-border text-slate-800 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-gold transition-all resize-none shadow-2xs font-medium"
               placeholder="Nhập lý do cụ thể và yêu cầu kỹ thuật chi tiết đối với hạng mục này..."
             />
           </div>
 
           {/* Specific Field Directives */}
-          <div className="space-y-2 bg-[#F8F9FA] border border-[#E2E5E9] p-3.5 rounded-xl text-xs">
+          <div className="space-y-2 bg-brand-surfaceAlt border border-brand-border p-3.5 rounded-xl text-xs">
             <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold block mb-1">
               Chỉ thị bổ sung hiện trường:
             </span>
@@ -184,7 +184,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                 type="checkbox"
                 checked={modalDirectives.laser}
                 onChange={(e) => setModalDirectives({ ...modalDirectives, laser: e.target.checked })}
-                className="rounded accent-[#C9A227]"
+                className="rounded accent-brand-gold"
               />
               <span>Yêu cầu đo đạc lại hiện trường bằng máy laser thủy bình hoặc thước 3m</span>
             </label>
@@ -193,7 +193,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                 type="checkbox"
                 checked={modalDirectives.height}
                 onChange={(e) => setModalDirectives({ ...modalDirectives, height: e.target.checked })}
-                className="rounded accent-[#C9A227]"
+                className="rounded accent-brand-gold"
               />
               <span>Yêu cầu đo đạc lại cao độ trắc dọc và bề dày lớp móng cấp phối đá dăm</span>
             </label>
@@ -202,7 +202,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                 type="checkbox"
                 checked={modalDirectives.close_photo}
                 onChange={(e) => setModalDirectives({ ...modalDirectives, close_photo: e.target.checked })}
-                className="rounded accent-[#C9A227]"
+                className="rounded accent-brand-gold"
               />
               <span>Chụp lại ảnh cận cảnh có đặt thước tỷ lệ chuẩn 50cm</span>
             </label>
@@ -211,14 +211,14 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                 type="checkbox"
                 checked={modalDirectives.core_sample}
                 onChange={(e) => setModalDirectives({ ...modalDirectives, core_sample: e.target.checked })}
-                className="rounded accent-[#C9A227]"
+                className="rounded accent-brand-gold"
               />
               <span>Khoan mẫu kiểm tra độ chặt lớp móng K98</span>
             </label>
           </div>
 
           {/* Visual Evidence Preview Thumbnail */}
-          <div className="flex items-center gap-3 bg-[#F8F9FA] border border-[#E2E5E9] p-2.5 rounded-xl">
+          <div className="flex items-center gap-3 bg-brand-surfaceAlt border border-brand-border p-2.5 rounded-xl">
             <img
               src={activeModalItem.image_url}
               alt={activeModalItem.defect_title}
@@ -235,7 +235,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <button
               onClick={() => onViewPhoto(activeModalItem)}
               type="button"
-              className="px-3 py-1.5 bg-white border border-[#E2E5E9] text-[#92700C] rounded-lg text-xs font-bold font-sansation hover:bg-slate-50 transition shrink-0 cursor-pointer"
+              className="px-3 py-1.5 bg-white border border-brand-border text-[#92700C] rounded-lg text-xs font-bold font-sansation hover:bg-slate-50 transition shrink-0 cursor-pointer"
             >
               Xem ảnh gốc
             </button>
@@ -243,11 +243,11 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-[#F8F9FA] border-t border-[#E2E5E9] px-6 py-3.5 flex items-center justify-end gap-2.5 shrink-0">
+        <div className="bg-brand-surfaceAlt border-t border-brand-border px-6 py-3.5 flex items-center justify-end gap-2.5 shrink-0">
           <button
             onClick={onClose}
             type="button"
-            className="px-4 h-9 bg-white border border-[#E2E5E9] text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
+            className="px-4 h-9 bg-white border border-brand-border text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
           >
             Hủy bỏ
           </button>
@@ -257,7 +257,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             className={`px-5 h-9 text-white transition rounded-xl font-bold text-xs shadow-sm inline-flex items-center gap-1.5 cursor-pointer ${
               modalFeedbackType === 'REJECT'
                 ? 'bg-rose-600 hover:bg-rose-700'
-                : 'bg-[#C9A227] hover:bg-[#B38E1F]'
+                : 'bg-brand-gold hover:bg-[#B38E1F]'
             }`}
           >
             <Send className="w-3.5 h-3.5" />

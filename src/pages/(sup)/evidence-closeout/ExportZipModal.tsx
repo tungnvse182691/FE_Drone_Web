@@ -36,11 +36,11 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-[#E2E5E9] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden z-10 flex flex-col">
+      <div className="relative bg-white border border-brand-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden z-10 flex flex-col">
         {/* Header */}
         <div className="p-4 bg-slate-50 border-b border-slate-200 text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileArchive className="w-5 h-5 text-[#C9A227]" />
+            <FileArchive className="w-5 h-5 text-brand-gold" />
             <h3 className="font-bold text-base font-sansation">
               Xuất hồ sơ bằng chứng số (RPT-07 Evidence Dossier)
             </h3>
@@ -72,7 +72,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
                 name="exportFormat"
                 checked={false}
                 onChange={() => setExportFormat('PDF_A')}
-                className="mt-0.5 accent-[#C9A227]"
+                className="mt-0.5 accent-brand-gold"
               />
               <div className="space-y-0.5">
                 <span className="font-bold text-slate-900 block">Biên bản nghiệm thu kỹ thuật (PDF/A)</span>
@@ -84,14 +84,14 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
 
             {/* Option 2: ZIP Package (Selected) */}
             <div
-              className="p-3.5 rounded-xl border transition cursor-pointer flex items-start gap-3 bg-[#FEF9E7] border-[#C9A227] shadow-xs"
+              className="p-3.5 rounded-xl border transition cursor-pointer flex items-start gap-3 bg-[#FEF9E7] border-brand-gold shadow-xs"
             >
               <input
                 type="radio"
                 name="exportFormat"
                 checked={true}
                 readOnly
-                className="mt-0.5 accent-[#C9A227]"
+                className="mt-0.5 accent-brand-gold"
               />
               <div className="space-y-0.5">
                 <span className="font-bold text-slate-900 block">Gói hồ sơ bằng chứng gốc nén (ZIP Dossier)</span>
@@ -108,7 +108,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
                 type="checkbox"
                 checked={!!includeDroneRawTiff}
                 onChange={(e) => setIncludeDroneRawTiff(e.target.checked)}
-                className="w-4 h-4 rounded text-[#C9A227] accent-[#C9A227]"
+                className="w-4 h-4 rounded text-brand-gold accent-brand-gold"
               />
               <span className="text-slate-800 font-semibold text-xs">
                 Bao gồm tệp ảnh gốc Drone GeoTIFF độ phân giải siêu cao (cần băng thông lớn)
@@ -145,7 +145,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
             onClick={onExport}
             disabled={isExporting}
             type="button"
-            className="px-5 h-9 bg-[#C9A227] hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
+            className="px-5 h-9 bg-brand-gold hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             {isExporting ? (
               <>

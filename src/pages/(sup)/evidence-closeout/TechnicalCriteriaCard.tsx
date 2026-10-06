@@ -22,12 +22,12 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
   onAcceptItem
 }) => {
   return (
-    <section className="bg-white rounded-2xl p-6 border border-[#E2E5E9] shadow-xs space-y-4">
+    <section className="bg-white rounded-2xl p-6 border border-brand-border shadow-xs space-y-4">
       {/* TECHNICAL SPECIFICATIONS & AUDIT CARD (4 METRIC BOXES THEO TCVN 8819:2011) */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
           <div>
             <h2 className="font-bold text-lg text-slate-900 flex items-center gap-2 font-sansation">
-              <FileCheck className="w-5 h-5 text-[#C9A227]" />
+              <FileCheck className="w-5 h-5 text-brand-gold" />
               Biên bản nghiệm thu kỹ thuật &amp; Pháp lý hồ sơ hoàn công
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -45,7 +45,7 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
             <div>
               <div className="flex items-center justify-between text-slate-500 mb-1">
                 <span className="text-[11px] uppercase tracking-wider font-bold">1. Khối lượng thi công</span>
-                <Wrench className="w-4 h-4 text-[#C9A227]" />
+                <Wrench className="w-4 h-4 text-brand-gold" />
               </div>
               <div className="text-lg font-bold text-slate-900">
                 {currentItem.area_m2} m² <span className="text-xs font-normal text-slate-500">(Cắt mép vuông vắn)</span>
@@ -87,7 +87,7 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
             <div>
               <div className="flex items-center justify-between text-slate-500 mb-1">
                 <span className="text-[11px] uppercase tracking-wider font-bold">3. Đo đạc nghiệm thu</span>
-                <Sliders className="w-4 h-4 text-[#C9A227]" />
+                <Sliders className="w-4 h-4 text-brand-gold" />
               </div>
               <div className="text-lg font-bold text-slate-900">
                 K = {currentItem.compaction_k98} <span className="text-xs font-semibold text-emerald-700">(Đạt K ≥ 0.98)</span>
@@ -107,7 +107,7 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
             <div>
               <div className="flex items-center justify-between text-slate-500 mb-1">
                 <span className="text-[11px] uppercase tracking-wider font-bold">4. Bảo hành &amp; Pháp nhân</span>
-                <Award className="w-4 h-4 text-[#C9A227]" />
+                <Award className="w-4 h-4 text-brand-gold" />
               </div>
               <div className="text-lg font-bold text-slate-900">
                 12 Tháng <span className="text-xs font-normal text-slate-500">(Đến 30/08/2027)</span>
