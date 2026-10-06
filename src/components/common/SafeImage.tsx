@@ -49,7 +49,7 @@ export const SafeImage: React.FC<{
             backgroundPosition: '0 0, 8px 8px',
           }}
         />
-        <div className="w-10 h-10 rounded-xl bg-[#C9A227]/15 border border-[#C9A227]/30 flex items-center justify-center text-[#C9A227] mb-1.5 shadow-xs z-10">
+        <div className="w-10 h-10 rounded-xl bg-brand-gold/15 border border-brand-gold/30 flex items-center justify-center text-brand-gold mb-1.5 shadow-xs z-10">
           <FallbackIcon className="w-5 h-5" />
         </div>
         <span className="text-[11px] font-bold text-white font-sansation z-10 tracking-wide uppercase">
