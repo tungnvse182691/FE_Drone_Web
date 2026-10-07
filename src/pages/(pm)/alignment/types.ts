@@ -24,6 +24,25 @@ export interface SlabItem {
   status: 'GOOD' | 'CRACKED' | 'SETTLEMENT'
 }
 
+export interface BranchItem {
+  id: string
+  code: string
+  name: string
+  branchStationKm: number // Lý trình rẽ từ trục chính (Km)
+  branchStationText: string // ví dụ Km 1024+500
+  direction: 'RIGHT' | 'LEFT' | 'INTERCHANGE'
+  directionText: string
+  lengthKm: number
+  roadWidthM: number
+  laneCount: number
+  surfaceMaterial: string
+  color: string
+  status: 'DRAFT' | 'CONFIRMED'
+  coords?: [number, number][] // Tọa độ tim tuyến nhánh [lng, lat][]
+  segments: SegmentItem[] // Danh sách các phân đoạn của riêng tuyến nhánh này
+  splitDistance?: number
+}
+
 export interface AssignedProjectOption {
   id: string
   code: string
@@ -36,5 +55,6 @@ export interface AssignedProjectOption {
   defaultCoords: [number, number][]
   defaultKmPoints: number[]
   defaultSegments: SegmentItem[]
+  defaultBranches?: BranchItem[]
   defaultManualText: string
 }

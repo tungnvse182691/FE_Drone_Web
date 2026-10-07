@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronRight,
@@ -50,31 +50,31 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
               onClick={() => navigate(`${basePath}/dashboard`)}
               className="hover:text-brand-gold transition-colors cursor-pointer"
             >
-              Trang chá»§
+              Trang chủ
             </button>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             <button
               onClick={() => navigate(`${basePath}/projects`)}
               className="hover:text-brand-gold transition-colors cursor-pointer"
             >
-              Dá»± Ã¡n
+              Dự án
             </button>
             <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-800 font-semibold truncate">Thiáº¿t láº­p tim tuyáº¿n & PhÃ¢n Ä‘oáº¡n (WF-02)</span>
+            <span className="text-slate-800 font-semibold truncate">Thiết lập tim tuyến &amp; Phân đoạn (WF-02)</span>
           </nav>
 
-          <span className="text-slate-300">â€¢</span>
+          <span className="text-slate-300">•</span>
 
-          {/* Tráº¡ng thÃ¡i tim tuyáº¿n Badge */}
+          {/* Trạng thái tim tuyến Badge */}
           {alignmentStatus === 'DRAFT' ? (
             <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-              DRAFT v1.2 â€¢ Äang chá»‰nh sá»­a Ä‘á»‰nh
+              DRAFT v1.2 • Đang chỉnh sửa đỉnh
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-emerald-800 font-bold text-[11px]">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              CONFIRMED â€¢ ÄÃ£ khÃ³a tim tuyáº¿n SHA-256
+              CONFIRMED • Đã khóa tim tuyến SHA-256
             </span>
           )}
         </div>
@@ -82,14 +82,14 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         {/* Project Title & Project Switcher */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
           <h1 className="text-lg font-bold text-brand-dark tracking-tight">
-            Quáº£n LÃ½ HÃ¬nh Há»c Tuyáº¿n & PhÃ¢n Äoáº¡n LÃ½ TrÃ¬nh
+            Quản Lý Hình Học Tuyến &amp; Phân Đoạn Lý Trình
           </h1>
           <span className="hidden lg:inline text-slate-300">|</span>
 
-          {/* Dropdown chá»n dá»± Ã¡n PM phá»¥ trÃ¡ch */}
+          {/* Dropdown chọn dự án PM phụ trách */}
           <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
             <Building className="w-3.5 h-3.5 text-brand-gold shrink-0" />
-            <span className="text-[11px] font-semibold text-slate-600">Dá»± Ã¡n phá»¥ trÃ¡ch:</span>
+            <span className="text-[11px] font-semibold text-slate-600">Dự án phụ trách:</span>
             <select
               value={selectedProjectId}
               onChange={(e) => onSwitchProject(e.target.value)}
@@ -104,7 +104,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           </div>
 
           <span className="flex items-center gap-1 text-[11px] font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-            L = {importedLengthKm >= 1 ? `${importedLengthKm.toFixed(2)} km` : `${Math.round(importedLengthKm * 1000)} mÃ©t`} ({activeProject.stationOriginText.split(' ')[0]} â†’ Km {(activeProject.stationOriginKm + importedLengthKm).toFixed(1)})
+            L = {importedLengthKm >= 1 ? `${importedLengthKm.toFixed(2)} km` : `${Math.round(importedLengthKm * 1000)} mét`} ({activeProject.stationOriginText.split(' ')[0]} ➔ Km {(activeProject.stationOriginKm + importedLengthKm).toFixed(1)})
           </span>
           <span className="hidden xl:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
             <Compass className="w-3.5 h-3.5 text-brand-gold" />
@@ -121,7 +121,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           type="button"
         >
           <Upload className="w-3.5 h-3.5 text-slate-500" />
-          <span>Nháº­p Tuyáº¿n / Tá»a Ä‘á»™ (WF-02)</span>
+          <span>Nhập Tuyến / Tọa độ (WF-02)</span>
         </button>
 
         {/* PM: Submit Approval */}
@@ -137,7 +137,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             type="button"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>TrÃ¬nh duyá»‡t tim tuyáº¿n</span>
+            <span>Trình duyệt tim tuyến</span>
           </button>
         )}
 
@@ -154,7 +154,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             type="button"
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>{alignmentStatus === 'CONFIRMED' ? 'ÄÃ£ khÃ³a tim tuyáº¿n' : 'XÃ¡c nháº­n & KhÃ³a tim tuyáº¿n'}</span>
+            <span>{alignmentStatus === 'CONFIRMED' ? 'Đã khóa tim tuyến' : 'Xác nhận & Khóa tim tuyến'}</span>
           </button>
         )}
       </div>

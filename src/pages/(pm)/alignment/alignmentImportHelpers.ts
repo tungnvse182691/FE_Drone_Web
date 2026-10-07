@@ -1,5 +1,6 @@
 import { SegmentItem } from './types'
 import { SEGMENT_COLORS } from './data'
+import { smoothRoadPolyline } from './alignmentGeometryHelpers'
 
 // Tính khoảng cách Haversine giữa 2 tọa độ GPS (km)
 export function calculateHaversineKm(c1: [number, number], c2: [number, number]): number {
@@ -52,6 +53,11 @@ export function parseExtractedCoordinates(
 
   extracted = cleanCoords
 
+  // Nếu tọa độ thưa (ví dụ nhập 3-20 điểm cọc), tự động bo tròn mượt đường cong tim tuyến
+  if (extracted.length >= 3 && extracted.length < 25) {
+    extracted = smoothRoadPolyline(extracted)
+  }
+
   let totalLen = 0
   const kmPts: number[] = [originKm]
   for (let i = 0; i < extracted.length - 1; i++) {
@@ -81,7 +87,7 @@ export function parseExtractedCoordinates(
       lengthKm: parseFloat((next - cur).toFixed(3)),
       roadWidthM: roadWidthM || 8.0,
       status: 'VALID',
-      statusText: 'HỢP LỆ (Valid)',
+      statusText: 'HỢP LỆ',
       laneCount: 4,
       surfaceMaterial: i % 2 === 0 ? 'Mặt BTN C19' : 'Mặt BTN C12.5',
       color: SEGMENT_COLORS[(i - 1) % SEGMENT_COLORS.length]
@@ -102,6 +108,7 @@ export function parseGeoJsonText(text: string): [number, number][] {
   let rawCoords: [number, number][] = []
 
   if (parsed.type === 'FeatureCollection' && Array.isArray(parsed.features)) {
+    // 1. Tìm feature tim tuyến có thuộc tính đặc thù
     let targetFeature = parsed.features.find((f: any) => {
       const type = (f.properties?.type || '').toLowerCase()
       const layer = (f.properties?.layer || '').toLowerCase()
@@ -117,28 +124,55 @@ export function parseGeoJsonText(text: string): [number, number][] {
       )
     })
 
-    if (!targetFeature) {
-      const lineFeatures = parsed.features.filter(
-        (f: any) =>
-          (f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString') &&
-          Array.isArray(f.geometry?.coordinates) &&
-          f.geometry.coordinates.length >= 2
-      )
-      if (lineFeatures.length > 0) {
-        targetFeature = lineFeatures.reduce((prev: any, curr: any) => {
-          const prevLen = prev.geometry?.coordinates?.length || 0
-          const currLen = curr.geometry?.coordinates?.length || 0
-          return currLen > prevLen ? curr : prev
-        })
-      }
-    }
-
     if (targetFeature && targetFeature.geometry) {
       const geom = targetFeature.geometry
       if (geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
         rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
       } else if (geom.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
         rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
+      }
+    }
+
+    // 2. Nếu không tìm thấy thuộc tính đặc thù, trích xuất tất cả các đường LineString
+    if (rawCoords.length < 2) {
+      const lineFeatures = parsed.features.filter(
+        (f: any) =>
+          (f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString') &&
+          Array.isArray(f.geometry?.coordinates) &&
+          f.geometry.coordinates.length >= 2
+      )
+      if (lineFeatures.length === 1) {
+        const geom = lineFeatures[0].geometry
+        if (geom.type === 'LineString') {
+          rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
+        } else {
+          rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
+        }
+      } else if (lineFeatures.length > 1) {
+        lineFeatures.forEach((lf: any) => {
+          const geom = lf.geometry
+          if (geom.type === 'LineString') {
+            geom.coordinates.forEach((pt: any) => rawCoords.push([Number(pt[0]), Number(pt[1])]))
+          } else if (geom.type === 'MultiLineString') {
+            geom.coordinates.flat(1).forEach((pt: any) => rawCoords.push([Number(pt[0]), Number(pt[1])]))
+          }
+        })
+      }
+    }
+
+    // 3. Nếu tệp GeoJSON chứa danh sách các điểm mốc Point
+    if (rawCoords.length < 2) {
+      const pointFeatures = parsed.features.filter(
+        (f: any) =>
+          f.geometry?.type === 'Point' &&
+          Array.isArray(f.geometry?.coordinates) &&
+          f.geometry.coordinates.length >= 2
+      )
+      if (pointFeatures.length >= 2) {
+        rawCoords = pointFeatures.map((f: any) => [
+          Number(f.geometry.coordinates[0]),
+          Number(f.geometry.coordinates[1])
+        ])
       }
     }
   } else if (parsed.type === 'Feature') {

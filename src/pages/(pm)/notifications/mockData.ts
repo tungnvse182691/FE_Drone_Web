@@ -8,7 +8,7 @@ export const initialNotifications: NotificationItem[] = [
     category: 'ACTION_REQUIRED',
     categoryLabel: 'Yêu cầu thẩm duyệt',
     title: 'Bàn giao thẩm duyệt Gói đề xuất sửa chữa đợt 3 (PKG-2026-08)',
-    message: 'PM Đỗ Quốc Hoàng đã hoàn tất lập hồ sơ thiết kế BOQ 4 hạng mục trên QL1A Km 1032. Hồ sơ đang chờ Supervisor thẩm định và phê duyệt theo FR-19.',
+    message: 'PM Đỗ Quốc Hoàng đã hoàn tất lập hồ sơ phương án kỹ thuật 4 hạng mục trên QL1A Km 1032. Hồ sơ đang chờ Supervisor thẩm định và phê duyệt theo FR-19.',
     resourceType: 'REPAIR_PROPOSAL',
     resourceId: 'PKG-2026-08',
     routeCode: 'QL1A • PK-04',
@@ -182,7 +182,7 @@ export const initialNotifications: NotificationItem[] = [
     category: 'HANDOVER',
     categoryLabel: 'Phản hồi phê duyệt',
     title: 'Supervisor đã chấp thuận Phương án kỹ thuật Gói PKG-2026-07',
-    message: 'Tư vấn giám sát đã duyệt 3/3 hạng mục dự toán BOQ và mở khóa trạng thái APPROVED. PM có thể tiến hành phân công Đội thi công ra hiện trường.',
+    message: 'Tư vấn giám sát đã duyệt 3/3 hạng mục phương án sửa chữa và mở khóa trạng thái APPROVED. PM có thể tiến hành phân công Đội thi công ra hiện trường.',
     resourceType: 'REPAIR_PROPOSAL',
     resourceId: 'PKG-2026-07',
     routeCode: 'QL1A • PK-04',
@@ -244,7 +244,7 @@ export const initialNotifications: NotificationItem[] = [
     category: 'HANDOVER',
     categoryLabel: 'Yêu cầu sửa đổi hồ sơ',
     title: 'Yêu cầu điều chỉnh hồ sơ gói PKG-2026-06 (REVISION_REQUIRED)',
-    message: 'Supervisor từ chối hạng mục bù bê tông nhựa do đơn giá nhân công lu lèn chưa đúng định mức Bộ GTVT. PM vui lòng điều chỉnh lại dự toán chi tiết.',
+    message: 'Supervisor từ chối hạng mục bù bê tông nhựa do biện pháp kỹ thuật lu lèn chưa đúng định mức Bộ GTVT. PM vui lòng điều chỉnh lại phương án kỹ thuật chi tiết.',
     resourceType: 'REPAIR_PROPOSAL',
     resourceId: 'PKG-2026-06',
     routeCode: 'QL1A • PK-04',
@@ -257,6 +257,6 @@ export const initialNotifications: NotificationItem[] = [
     occurredAt: 'Hôm qua',
     timeAgo: 'Hôm qua',
     actionUrl: '/pm/proposals',
-    actionLabel: 'Chỉnh sửa hồ sơ dự toán'
+    actionLabel: 'Chỉnh sửa phương án sửa chữa'
   }
 ]

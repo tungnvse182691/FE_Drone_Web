@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { Check, FileCheck2 } from 'lucide-react'
+import React from 'react'
+import { FileCheck2 } from 'lucide-react'
 import type { UnassignedDefectItem } from './types'
 
 export interface ProposalBOQCardProps {
@@ -15,20 +15,20 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      {/* Danh sÃ¡ch khiáº¿m khuyáº¿t trong phÃ¢n Ä‘oáº¡n */}
+      {/* Danh sách khiếm khuyết trong phân đoạn */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="font-bold text-slate-700 uppercase text-[11px]">
-            Chá»n cÃ¡c hÆ° há»ng gom vÃ o Ä‘á»£t sá»­a chá»¯a ({unassignedDefects.length} Ä‘iá»ƒm tá»“n Ä‘á»ng):
+            Chọn các hư hỏng gom vào đợt sửa chữa ({unassignedDefects.length} điểm tồn đọng):
           </label>
           <span className="text-[11px] text-brand-gold font-semibold">
-            ÄÃ£ chá»n {modalCalculations.count} Ä‘iá»ƒm
+            Đã chọn {modalCalculations.count} điểm
           </span>
         </div>
 
         {unassignedDefects.length === 0 ? (
           <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-slate-400 text-xs">
-            PhÃ¢n Ä‘oáº¡n nÃ y hiá»‡n khÃ´ng cÃ³ khiáº¿m khuyáº¿t tá»“n Ä‘á»ng chÆ°a gÃ¡n gÃ³i.
+            Phân đoạn này hiện không có khiếm khuyết tồn đọng chưa gán gói.
           </div>
         ) : (
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-56 overflow-y-auto bg-white custom-scrollbar">
@@ -58,7 +58,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                   </div>
                 </div>
                 <span className="font-mono text-xs font-bold text-slate-700 shrink-0 ml-3 bg-slate-100 px-2 py-0.5 rounded">
-                  {def.area_m2} mÂ² (SÃ¢u {def.depth_cm}cm)
+                  {def.area_m2} m² (Sâu {def.depth_cm}cm)
                 </span>
               </label>
             ))}
@@ -66,26 +66,26 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
         )}
       </div>
 
-      {/* Summary Technical Scope Calculation / BOQ Box */}
+      {/* Tổng kết khối lượng kỹ thuật */}
       <div className="rounded-xl bg-amber-50/70 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-brand-gold text-white flex items-center justify-center shrink-0">
             <FileCheck2 className="w-4 h-4" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-xs text-amber-950">Tá»•ng káº¿t ká»¹ thuáº­t tá»± Ä‘á»™ng</span>
+            <span className="font-bold text-xs text-amber-950">Tổng kết kỹ thuật tự động</span>
             <span className="text-[11px] text-amber-900">
-              ÄÃ£ chá»n: <strong>{modalCalculations.count} háº¡ng má»¥c khiáº¿m khuyáº¿t</strong>
+              Đã chọn: <strong>{modalCalculations.count} hạng mục khiếm khuyết</strong>
             </span>
           </div>
         </div>
 
         <div className="flex flex-col items-start sm:items-end">
-          <span className="text-[10px] font-bold text-slate-500 uppercase">Khá»‘i lÆ°á»£ng thi cÃ´ng Æ°á»›c tÃ­nh (BOQ)</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase">Khối lượng thi công kỹ thuật</span>
           <span className="font-mono text-base font-black text-[#8F7212]">
             {modalCalculations.description}
           </span>
-          <span className="text-[11px] text-slate-500 font-medium">BÃ³c tÃ¡ch theo phÆ°Æ¡ng Ã¡n ká»¹ thuáº­t</span>
+          <span className="text-[11px] text-slate-500 font-medium">Bóc tách theo phương án kỹ thuật</span>
         </div>
       </div>
     </div>

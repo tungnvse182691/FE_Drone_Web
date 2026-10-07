@@ -158,7 +158,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             <ul className="space-y-1.5 text-[11px] text-amber-900/90 list-disc list-inside">
               {selectedUserDetail.role === RoleCode.SUPERVISOR ? (
                 <>
-                  <li>Toàn quyền thẩm duyệt hồ sơ đợt sửa chữa &amp; dự toán (WF-12).</li>
+                  <li>Toàn quyền thẩm duyệt hồ sơ đợt sửa chữa &amp; phương án kỹ thuật (WF-12).</li>
                   <li>Quyền bật / tắt lệnh phong tỏa pháp lý (Legal Hold BR-45) khi có yêu cầu thanh tra.</li>
                   <li>Nghiệm thu chất lượng thi công hiện trường &amp; Ký số đóng đợt sửa chữa (WF-16/18).</li>
                   <li>Quản lý danh sách nhân sự, phân bổ dự án và phê duyệt hủy dữ liệu hết hạn bảo hành.</li>

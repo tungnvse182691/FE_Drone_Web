@@ -14,6 +14,8 @@ import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
 import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/data'
 
+import { AlignmentAddBranchModal } from './alignment/AlignmentAddBranchModal'
+
 export type { SegmentItem, SlabItem, AssignedProjectOption } from './alignment/types'
 export { PM_ASSIGNED_PROJECTS } from './alignment/data'
 
@@ -51,10 +53,45 @@ export const AlignmentSegments: React.FC = () => {
     setExpansionGapMm,
     syncJointWithSlab,
     setSyncJointWithSlab,
+    branches,
+    selectedTargetType,
+    setSelectedTargetType,
+    isAddBranchModalOpen,
+    setIsAddBranchModalOpen,
+    handleAddBranch,
+    isMainline,
+    currentBranch,
+    activeSegments,
+    activeLengthKm,
+    activeSplitDistance,
+    handleSetSplitDistance,
+    handleApplyAutoSplit,
+    handleSplitSegmentSubmit,
+    handleUpdateSegmentWidth,
+    handleUpdateAllWidths,
+    handleSnapSegment,
+    handleSaveEditedSegment,
+    handleDeleteSegment,
+    handleDeleteBranch,
+    currentCoords,
+    currentKmPoints,
+    importedLengthKm,
     segmentsState,
     mapState,
     importState
   } = useAlignmentState()
+
+  const handleSelectAllRoute = () => {
+    if (isMainline) {
+      segmentsState.handleSelectAllRoute(currentCoords)
+    } else if (currentBranch) {
+      segmentsState.setSelectedSegmentId('ALL')
+      if (currentBranch.coords && currentBranch.coords.length > 0) {
+        mapState.handleFitBounds(currentBranch.coords)
+      }
+      showToast(`Đang chọn Toàn tuyến nhánh: [${currentBranch.code}] ${currentBranch.name}`)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -88,20 +125,31 @@ export const AlignmentSegments: React.FC = () => {
         editingSegment={segmentsState.editingSegment}
         onCloseEditSegment={() => segmentsState.setEditingSegment(null)}
         onChangeEditingSegment={segmentsState.setEditingSegment}
-        onSaveEditedSegment={segmentsState.handleSaveEditedSegment}
+        onSaveEditedSegment={handleSaveEditedSegment}
 
         isAddSegmentModalOpen={segmentsState.isAddSegmentModalOpen}
         onCloseAddSegmentModal={() => segmentsState.setIsAddSegmentModalOpen(false)}
         newSegForm={segmentsState.newSegForm}
         onChangeNewSegForm={segmentsState.setNewSegForm}
         onCreateNewSegment={segmentsState.handleCreateNewSegment}
-        segmentsCount={segmentsState.segments.length}
+        segmentsCount={activeSegments.length}
 
         splitModalSegment={segmentsState.splitModalSegment}
         onCloseSplitModal={() => segmentsState.setSplitModalSegment(null)}
         customSplitKm={segmentsState.customSplitKm}
         onChangeCustomSplitKm={segmentsState.setCustomSplitKm}
-        onSplitSegmentSubmit={segmentsState.handleSplitSegmentSubmit}
+        onSplitSegmentSubmit={handleSplitSegmentSubmit}
+      />
+
+      {/* MODAL TẠO TUYẾN NHÁNH MỚI */}
+      <AlignmentAddBranchModal
+        isOpen={isAddBranchModalOpen}
+        onClose={() => setIsAddBranchModalOpen(false)}
+        onAddBranch={handleAddBranch}
+        mainlineLengthKm={importedLengthKm}
+        stationOriginKm={activeProject.stationOriginKm}
+        currentCoords={currentCoords}
+        currentKmPoints={currentKmPoints}
       />
 
       {/* TOP HEADER */}
@@ -111,7 +159,7 @@ export const AlignmentSegments: React.FC = () => {
         activeProject={activeProject}
         selectedProjectId={selectedProjectId}
         assignedProjects={PM_ASSIGNED_PROJECTS}
-        importedLengthKm={importState.importedLengthKm}
+        importedLengthKm={importedLengthKm}
         isSupervisor={isSupervisor}
         onSwitchProject={handleSwitchProject}
         onOpenImportModal={() => importState.setIsImportModalOpen(true)}
@@ -139,46 +187,43 @@ export const AlignmentSegments: React.FC = () => {
             mapState.setRulerPoints([])
             showToast(mapState.rulerActive ? 'Đã tắt thước đo.' : 'Bật thước đo: Bấm chọn 2 điểm trên bản đồ để đo cự ly.')
           }}
-          onSelectAllRoute={() => segmentsState.handleSelectAllRoute(importState.currentCoords)}
+          onSelectAllRoute={handleSelectAllRoute}
           selectedSegmentId={segmentsState.selectedSegmentId}
           segments={segmentsState.segments}
-          importedLengthKm={importState.importedLengthKm}
+          importedLengthKm={importedLengthKm}
           slabLengthM={slabLengthM}
           slabThicknessCm={slabThicknessCm}
           contractionSpacingM={contractionSpacingM}
           expansionSpacingM={expansionSpacingM}
           expansionGapMm={expansionGapMm}
+          branches={branches}
+          selectedTargetType={selectedTargetType}
+          currentBranch={currentBranch}
+          // Chế độ chấm điểm trên bản đồ
+          isPickingOnMap={mapState.isPickingOnMap}
+          pickedCoords={mapState.pickedCoords}
+          detectedDivergeStation={mapState.detectedDivergeStation}
+          onRemoveLastPickedCoord={mapState.removeLastPickedCoord}
+          onClearAllPickedCoords={mapState.clearAllPickedCoords}
+          onFinishPickingCoords={mapState.finishPickingCoords}
+          onCancelPickingCoords={mapState.cancelPickingCoords}
         />
 
         <AlignmentSidebar
           rightTab={rightTab}
           onSetRightTab={setRightTab}
-          segments={segmentsState.segments}
+          segments={activeSegments}
           selectedSegmentId={segmentsState.selectedSegmentId}
           onSelectSegment={segmentsState.handleSelectSegment}
-          splitDistance={segmentsState.splitDistance}
-          onSetSplitDistance={segmentsState.setSplitDistance}
+          splitDistance={activeSplitDistance}
+          onSetSplitDistance={handleSetSplitDistance}
           splitSortOrder={segmentsState.splitSortOrder}
           onSetSplitSortOrder={segmentsState.setSplitSortOrder}
-          onApplyAutoSplit={segmentsState.handleApplyAutoSplit}
-          onOpenAddSegmentModal={() => {
-            const lastSeg = segmentsState.segments[segmentsState.segments.length - 1]
-            const nextStart = lastSeg ? lastSeg.endKm : 1020.0
-            const segLen = segmentsState.splitDistance || 1.0
-            segmentsState.setNewSegForm({
-              code: `Phân đoạn #${String(segmentsState.segments.length + 1).padStart(2, '0')}`,
-              startKm: parseFloat(nextStart.toFixed(3)),
-              endKm: parseFloat((nextStart + segLen).toFixed(3)),
-              roadWidthM: 8.0,
-              laneCount: 4,
-              surfaceMaterial: 'Mặt BTN C12.5',
-              color: SEGMENT_COLORS[segmentsState.segments.length % SEGMENT_COLORS.length]
-            })
-            segmentsState.setIsAddSegmentModalOpen(true)
-          }}
-          onSelectAllRoute={() => segmentsState.handleSelectAllRoute(importState.currentCoords)}
-          currentKmPoints={importState.currentKmPoints}
-          importedLengthKm={importState.importedLengthKm}
+          onApplyAutoSplit={handleApplyAutoSplit}
+          onOpenAddSegmentModal={() => {}}
+          onSelectAllRoute={handleSelectAllRoute}
+          currentKmPoints={currentKmPoints}
+          importedLengthKm={activeLengthKm}
           slabLengthM={slabLengthM}
           onSetSlabLengthM={setSlabLengthM}
           slabThicknessCm={slabThicknessCm}
@@ -196,17 +241,18 @@ export const AlignmentSegments: React.FC = () => {
             segmentsState.setCustomSplitKm(parseFloat(((seg.startKm + seg.endKm) / 2).toFixed(3)))
           }}
           onEditSegment={(seg) => segmentsState.setEditingSegment({ ...seg })}
-          onDeleteSegment={segmentsState.handleDeleteSegment}
-          onSnapSegment={segmentsState.handleSnapSegment}
-          onUpdateSegmentWidth={segmentsState.handleUpdateSegmentWidth}
-          onUpdateAllWidths={(wVal) => {
-            const updated = segmentsState.segments.map((s) => ({ ...s, roadWidthM: wVal }))
-            segmentsState.setSegments(updated)
-            mapState.syncMap(updated, segmentsState.selectedSegmentId)
-            showToast(`Đã cập nhật tất cả phân đoạn bề rộng ${wVal}m!`)
-          }}
+          onDeleteSegment={handleDeleteSegment}
+          onSnapSegment={handleSnapSegment}
+          onUpdateSegmentWidth={handleUpdateSegmentWidth}
+          onUpdateAllWidths={handleUpdateAllWidths}
           slabs={segmentsState.slabs}
           showToast={showToast}
+          branches={branches}
+          selectedTargetType={selectedTargetType}
+          onSelectTargetType={setSelectedTargetType}
+          onOpenAddBranchModal={() => setIsAddBranchModalOpen(true)}
+          onDeleteBranch={handleDeleteBranch}
+          mainlineLengthKm={importedLengthKm}
         />
       </section>
     </div>
@@ -214,3 +260,5 @@ export const AlignmentSegments: React.FC = () => {
 }
 
 export default AlignmentSegments
+
+

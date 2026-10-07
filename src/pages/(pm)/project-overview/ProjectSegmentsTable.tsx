@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Route as RouteIcon, ChevronRight, Eye } from 'lucide-react'
 import { Segment } from './types'
 
@@ -21,10 +21,10 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
         <div>
           <h2 className="text-lg font-bold text-brand-dark flex items-center gap-2">
             <RouteIcon className="w-5 h-5 text-brand-gold" />
-            <span>Danh sÃ¡ch cÃ¡c phÃ¢n Ä‘oáº¡n tuyáº¿n chÃ­nh (5 Segments)</span>
+            <span>Danh sách các phân đoạn tuyến chính (5 Segments)</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            PhÃ¢n bá»• lÃ½ trÃ¬nh, tÃ¬nh tráº¡ng máº·t Ä‘Æ°á»ng vÃ  sá»‘ lÆ°á»£ng khiáº¿m khuyáº¿t theo tá»«ng cung Ä‘Æ°á»ng.
+            Phân bổ lý trình, tình trạng mặt đường và số lượng khiếm khuyết theo từng cung đường.
           </p>
         </div>
         <button
@@ -32,7 +32,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           type="button"
           className="text-xs text-[#8F7212] hover:text-brand-gold hover:underline flex items-center gap-1 font-semibold cursor-pointer"
         >
-          <span>Xem báº£n Ä‘á»“ GIS phÃ¢n Ä‘oáº¡n (WF-02)</span>
+          <span>Xem bản đồ GIS phân đoạn (WF-02)</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -42,12 +42,12 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50 text-slate-600 font-semibold border-y border-slate-200">
-              <th className="py-2.5 px-3">MÃ£ Ä‘oáº¡n</th>
-              <th className="py-2.5 px-3">Pháº¡m vi lÃ½ trÃ¬nh</th>
-              <th className="py-2.5 px-3">Chiá»u dÃ i</th>
-              <th className="py-2.5 px-3">TÃ¬nh tráº¡ng máº·t Ä‘Æ°á»ng</th>
-              <th className="py-2.5 px-3">Khiáº¿m khuyáº¿t má»Ÿ</th>
-              <th className="py-2.5 px-3 text-right">Thao tÃ¡c</th>
+              <th className="py-2.5 px-3">Mã đoạn</th>
+              <th className="py-2.5 px-3">Phạm vi lý trình</th>
+              <th className="py-2.5 px-3">Chiều dài</th>
+              <th className="py-2.5 px-3">Tình trạng mặt đường</th>
+              <th className="py-2.5 px-3">Khiếm khuyết mở</th>
+              <th className="py-2.5 px-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -108,7 +108,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                   <button
                     onClick={() => onViewSegment(seg.code)}
                     className="p-1 hover:text-brand-gold text-slate-400 hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                    title="Chi tiáº¿t"
+                    title="Chi tiết"
                   >
                     <Eye className="w-4 h-4" />
                   </button>

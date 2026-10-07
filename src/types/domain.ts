@@ -74,8 +74,6 @@ export interface RepairItem {
   task_name: string
   unit: string // m2, m, vị trí
   quantity: number
-  unit_price: number // VND
-  total_price: number // Derived: quantity * unit_price
 }
 
 export interface RepairBatch {
@@ -87,7 +85,6 @@ export interface RepairBatch {
   status: RepairBatchStatus
   items: RepairItem[]
   defects: Defect[]
-  estimated_total_cost: number // Derived: SUM(items.total_price)
   created_by_name: string
   assigned_crew_name?: string
   deadline?: string
@@ -564,6 +561,7 @@ export interface HubProject {
   is_assigned: boolean
   is_restricted_for_pm?: boolean
   kml_status?: string
+  inspection_standard?: string
   retention_amount?: string
 }
 

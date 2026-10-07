@@ -91,7 +91,7 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     defect_title: 'Trồi lún cục bộ lớp mặt',
     defect_measurements: 'Độ nhô 4.0cm • S = 1.20 m²',
     solution_title: 'Cào gọt phẳng & lu nén lại',
-    solution_standard: 'Đơn giá định mức ca máy cào bóc',
+    solution_standard: 'Định mức ca máy cào bóc TCVN',
     volume_display: '14.2 m²',
     volume_sub: 'Cào bóc san phẳng',
     area_m2: 14.2,

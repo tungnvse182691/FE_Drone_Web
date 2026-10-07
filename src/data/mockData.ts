@@ -853,43 +853,35 @@ export const mockTriageCases: TriageCase[] = [
 // TẦNG 4: ACTION ENTITIES (ĐỢT SỬA CHỮA, LỆNH THI CÔNG & NHIỆM VỤ HIỆN TRƯỜNG)
 // =============================================================================
 
-// 4.1 Chi tiết hạng mục thi công (BOQ) - Chi phí phái sinh từ số lượng * đơn giá
+// 4.1 Chi tiết hạng mục thi công (Phương án kỹ thuật)
 export const mockRepairItems: RepairItem[] = [
   {
     id: 'itm-01',
     defect_id: 'def-0042',
     task_name: 'Đục tẩy góc bản BTXM vỡ, khoan cấy thép dowel và đổ bê tông ninh kết nhanh M350',
     unit: 'm2',
-    quantity: 12.5,
-    unit_price: 1850000,
-    total_price: 23125000 // 12.5 * 1850000
+    quantity: 12.5
   },
   {
     id: 'itm-02',
     defect_id: 'def-0068',
     task_name: 'Cắt mở rộng và trám chèn khe nứt mặt đường BTXM bằng mastic bitum-polyme nóng TCVN 8864',
     unit: 'm',
-    quantity: 45.0,
-    unit_price: 95000,
-    total_price: 4275000 // 45 * 95000
+    quantity: 45.0
   },
   {
     id: 'itm-03',
     defect_id: 'def-0091',
     task_name: 'Bơm vữa xi măng không co ngót nâng tấm bản BTXM bị lún chênh cốt (Slab jacking)',
     unit: 'vị trí',
-    quantity: 2,
-    unit_price: 18500000,
-    total_price: 37000000 // 2 * 18500000
+    quantity: 2
   },
   {
     id: 'itm-04',
     defect_id: 'def-0029',
     task_name: 'Sửa chữa khe co giãn ngang, thay thế thanh truyền lực dowel bar phi 28 và chèn đệm xốp',
     unit: 'm',
-    quantity: 15.0,
-    unit_price: 450000,
-    total_price: 6750000 // 15 * 450000
+    quantity: 15.0
   }
 ]
 
@@ -904,7 +896,6 @@ export const mockRepairBatches: RepairBatch[] = [
     status: RepairBatchStatus.APPROVED,
     items: [mockRepairItems[0], mockRepairItems[1]],
     defects: [mockDefects[0], mockDefects[1]],
-    estimated_total_cost: 27400000, // 23125000 + 4275000 (SUM chính xác)
     created_by_name: 'Đỗ Quốc Hoàng (PM)',
     assigned_crew_name: 'Đội thi công sửa chữa Hoàng Hải 01',
     deadline: '2026-09-15',
@@ -920,7 +911,6 @@ export const mockRepairBatches: RepairBatch[] = [
     status: RepairBatchStatus.IN_PROGRESS,
     items: [mockRepairItems[2], mockRepairItems[3]],
     defects: [mockDefects[2], mockDefects[3]],
-    estimated_total_cost: 43750000, // 37000000 + 6750000 (SUM chính xác)
     created_by_name: 'Đỗ Quốc Hoàng (PM)',
     assigned_crew_name: 'Tổ cơ động sửa chữa BTXM 02',
     deadline: '2026-09-30',
@@ -1069,14 +1059,11 @@ export function getPMDashboardStats() {
   const activeBatches = mockRepairBatches.filter(
     b => b.status === RepairBatchStatus.IN_PROGRESS || b.status === RepairBatchStatus.PENDING_APPROVAL
   ).length
-  const totalEstimatedCost = mockRepairBatches.reduce((acc, b) => acc + b.estimated_total_cost, 0)
-
   return {
     totalSurveys,
     openDefects,
     criticalDefects,
-    activeBatches,
-    totalEstimatedCost
+    activeBatches
   }
 }
 

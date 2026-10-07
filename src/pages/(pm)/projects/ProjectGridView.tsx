@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   Route,
   ArrowRight,
@@ -28,7 +28,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       {filteredProjects.map((prj) => {
-        // Kiá»ƒm tra tráº¡ng thÃ¡i 403 Restricted khi xem á»Ÿ gÃ³c nhÃ¬n PM
+        // Kiểm tra trạng thái 403 Restricted khi xem ở góc nhìn PM
         const isRestrictedForCurrentPM = !isSupervisor && prj.is_restricted_for_pm
 
         return (
@@ -36,7 +36,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
             key={prj.id}
             className="bg-white rounded-2xl border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative"
           >
-            {/* IDOR 403 Restricted Overlay khi á»Ÿ vai trÃ² PM xem dá»± Ã¡n ngoÃ i tháº©m quyá»n */}
+            {/* IDOR 403 Restricted Overlay khi ở vai trò PM xem dự án ngoài thẩm quyền */}
             {isRestrictedForCurrentPM && (
               <div className="absolute inset-0 z-30 bg-slate-900/80 backdrop-blur-[2px] p-5 flex flex-col items-center justify-center text-center gap-3 select-none">
                 <div className="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-inner">
@@ -47,11 +47,11 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <span className="font-mono px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px]">
                       403 RESTRICTED
                     </span>
-                    <span className="text-xs text-rose-300 font-semibold">ChÃ­nh sÃ¡ch Scope &amp; IDOR</span>
+                    <span className="text-xs text-rose-300 font-semibold">Chính sách Scope &amp; IDOR</span>
                   </div>
-                  <span className="text-sm text-white font-bold mt-1">Dá»± Ã¡n ngoÃ i pháº¡m vi phá»¥ trÃ¡ch</span>
+                  <span className="text-sm text-white font-bold mt-1">Dự án ngoài phạm vi phụ trách</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Báº¡n hiá»‡n chá»‰ Ä‘Æ°á»£c cáº¥p quyá»n táº¡i <strong className="text-white">QL1A - Huáº¿</strong>. Má»i thao tÃ¡c truy cáº­p trÃ¡i tháº©m quyá»n Ä‘á»u Ä‘Æ°á»£c ghi láº¡i trong chuá»—i kiá»ƒm toÃ¡n báº£o máº­t.
+                    Bạn hiện chỉ được cấp quyền tại <strong className="text-white">QL1A - Huế</strong>. Mọi thao tác truy cập trái thẩm quyền đều được ghi lại trong chuỗi kiểm toán bảo mật.
                   </p>
                 </div>
                 <button
@@ -60,7 +60,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   className="px-3 py-1.5 bg-white/10 text-slate-300 rounded-lg text-xs cursor-not-allowed border border-white/10 flex items-center gap-1.5"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  <span>YÃªu cáº§u quyá»n truy cáº­p tá»« Supervisor</span>
+                  <span>Yêu cầu quyền truy cập từ Supervisor</span>
                 </button>
               </div>
             )}
@@ -150,8 +150,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <AlertCircle className="w-4 h-4 text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-[#92400E] font-bold">ChÆ°a phÃ¢n cÃ´ng PM</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Cáº§n PM trÆ°á»›c khi kÃ­ch hoáº¡t tuyáº¿n</span>
+                        <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
+                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
                       </div>
                     </div>
                   </div>
@@ -163,10 +163,10 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <span className="text-slate-500 font-medium">
                       {prj.status === 'NEAR_EXPIRY' ? (
                         <span className="text-rose-600 font-semibold flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Cáº§n láº­p há»“ sÆ¡ quyáº¿t toÃ¡n
+                          <AlertCircle className="w-3 h-3" /> Cần lập hồ sơ bàn giao
                         </span>
                       ) : (
-                        'Thá»i háº¡n báº£o hÃ nh'
+                        'Thời hạn bảo hành'
                       )}
                     </span>
                     <span
@@ -175,7 +175,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                       }`}
                     >
                       {prj.warranty_passed_percent}%{' '}
-                      <span className="font-normal text-slate-500 text-[11px]">(CÃ²n {prj.days_remaining} ngÃ y)</span>
+                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span>
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -195,29 +195,29 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 {/* 3-Col Mini Technical Spec Grid */}
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] text-slate-500 block">Chiá»u dÃ i</span>
+                    <span className="text-[10px] text-slate-500 block">Chiều dài</span>
                     <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km} km</span>
                   </div>
                   <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] text-slate-500 block">Lá»—i má»Ÿ</span>
+                    <span className="text-[10px] text-slate-500 block">Lỗi mở</span>
                     <span
                       className={`font-mono text-xs font-bold ${
                         prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
                       }`}
                     >
-                      {prj.open_defects} Ä‘iá»ƒm
+                      {prj.open_defects} điểm
                     </span>
                   </div>
                   <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] text-slate-500 block">GÃ³i sá»­a</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gÃ³i</span>
+                    <span className="text-[10px] text-slate-500 block">Gói sửa</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
                   </div>
                 </div>
 
-                {/* Retention Value (v2.2 DA04) */}
-                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-purple-50/70 border border-purple-100 text-[11px]">
-                  <span className="text-slate-500 font-medium">Báº£o lÃ£nh giá»¯ láº¡i:</span>
-                  <span className="font-mono font-bold text-purple-700">{prj.retention_amount || '15.5 tá»· â‚« (5% HÄ)'}</span>
+                {/* Technical Standard (v2.2) */}
+                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px]">
+                  <span className="text-slate-500 font-medium">Tiêu chuẩn kiểm định:</span>
+                  <span className="font-mono font-bold text-slate-800">{prj.inspection_standard || 'TCVN 8819:2011'}</span>
                 </div>
               </div>
 
@@ -230,7 +230,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     className="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                   >
                     <Route className="w-3.5 h-3.5 text-brand-gold" />
-                    <span>Xem thiáº¿t láº­p tuyáº¿n (WF-02)</span>
+                    <span>Xem thiết lập tuyến (WF-02)</span>
                   </button>
                 ) : (
                   <button
@@ -238,7 +238,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     onClick={() => onNavigateDetail(prj.id)}
                     className="w-full py-2.5 px-3 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                   >
-                    <span>VÃ o quáº£n lÃ½ dá»± Ã¡n</span>
+                    <span>Vào quản lý dự án</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -248,7 +248,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
         )
       })}
 
-      {/* CARD CALLOUT QUICK ADD (DÃ€NH CHO SUPERVISOR) */}
+      {/* CARD CALLOUT QUICK ADD (DÀNH CHO SUPERVISOR) */}
       {isSupervisor && (
         <div
           onClick={onOpenCreateModal}
@@ -258,9 +258,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
             <Building2 className="w-7 h-7 stroke-[2.2]" />
           </div>
           <div className="flex flex-col gap-1 max-w-xs">
-            <h4 className="text-base font-bold text-slate-900 font-headline">Táº¡o há»“ sÆ¡ dá»± Ã¡n má»›i</h4>
+            <h4 className="text-base font-bold text-slate-900 font-headline">Tạo hồ sơ dự án mới</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Báº¯t Ä‘áº§u chu trÃ¬nh bÃ n giao tá»« ban quáº£n lÃ½ dá»± Ã¡n BOT/VEC sang bá»™ pháº­n báº£o hÃ nh háº¡ táº§ng.
+              Bắt đầu chu trình bàn giao từ ban quản lý dự án BOT/VEC sang bộ phận bảo hành hạ tầng.
             </p>
           </div>
           <button
@@ -268,7 +268,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
             className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer mt-1"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Má»Ÿ form khá»Ÿi táº¡o</span>
+            <span>Mở form khởi tạo</span>
           </button>
         </div>
       )}

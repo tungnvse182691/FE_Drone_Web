@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   Search,
   Grid,
@@ -44,7 +44,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
-          <span>Táº¥t cáº£</span>
+          <span>Tất cả</span>
           <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">{scopedCount}</span>
         </button>
 
@@ -58,7 +58,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#1B5E20]"></span>
-          <span>Äang báº£o hÃ nh</span>
+          <span>Đang bảo hành</span>
           <span className="text-[11px] font-mono text-slate-500">{activeCount}</span>
         </button>
 
@@ -72,7 +72,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-          <span>Sáº¯p háº¿t háº¡n</span>
+          <span>Sắp hết hạn</span>
           <span className="text-[11px] font-mono text-slate-500">{nearExpiryCount}</span>
         </button>
 
@@ -86,7 +86,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
-          <span>Chá» duyá»‡t tuyáº¿n</span>
+          <span>Chờ duyệt tuyến</span>
           <span className="text-[11px] font-mono text-slate-500">{pendingAlignmentCount}</span>
         </button>
       </div>
@@ -99,7 +99,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => onChangeSearchQuery(e.target.value)}
-            placeholder="TÃ¬m theo tÃªn dá»± Ã¡n, mÃ£ PRJ, hoáº·c PM phá»¥ trÃ¡ch..."
+            placeholder="Tìm theo tên dự án, mã PRJ, hoặc PM phụ trách..."
             className="w-full pl-9 pr-3 py-1.5 bg-slate-50 text-slate-800 placeholder-slate-400 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-gold transition"
           />
         </div>
@@ -111,7 +111,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             className={`p-1.5 rounded-md transition cursor-pointer ${
               viewMode === 'grid' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
-            title="Dáº¡ng lÆ°á»›i"
+            title="Dạng lưới"
           >
             <Grid className="w-4 h-4" />
           </button>
@@ -121,7 +121,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
             className={`p-1.5 rounded-md transition cursor-pointer ${
               viewMode === 'table' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
-            title="Dáº¡ng báº£ng"
+            title="Dạng bảng"
           >
             <TableIcon className="w-4 h-4" />
           </button>

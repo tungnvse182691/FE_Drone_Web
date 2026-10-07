@@ -24,7 +24,7 @@ export function computeAutoSplitSegments(
       lengthKm: len,
       roadWidthM: roadWidthM || 8.0,
       status: 'VALID',
-      statusText: 'HỢP LỆ (Valid)',
+      statusText: 'HỢP LỆ',
       laneCount: 4,
       surfaceMaterial: idx % 2 === 0 ? 'Mặt BTN C19' : 'Mặt BTN C12.5',
       color: SEGMENT_COLORS[(idx - 1) % SEGMENT_COLORS.length]

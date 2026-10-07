@@ -89,7 +89,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             </div>
             <div>
               <div className="font-bold text-amber-950">PM Thẩm định &amp; Lập Đề xuất</div>
-              <div className="text-[11px] text-amber-800">Xác minh Bounding box, gộp đợt BOQ hoặc mở lệnh Fast Track</div>
+              <div className="text-[11px] text-amber-800">Xác minh Bounding box, gộp đợt sửa chữa hoặc mở lệnh Fast Track</div>
             </div>
           </div>
 
@@ -99,8 +99,8 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
               3
             </div>
             <div>
-              <div className="font-bold text-blue-950">Supervisor Thẩm Duyệt BOQ</div>
-              <div className="text-[11px] text-blue-800">Duyệt từng hạng mục hoặc yêu cầu chỉnh sửa định mức</div>
+              <div className="font-bold text-blue-950">Supervisor Thẩm Duyệt Phương Án</div>
+              <div className="text-[11px] text-blue-800">Duyệt từng hạng mục hoặc yêu cầu chỉnh sửa phương án kỹ thuật</div>
             </div>
           </div>
 

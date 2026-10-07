@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Search, SlidersHorizontal, RotateCcw } from 'lucide-react'
 
 export interface ProposalFilterBarProps {
@@ -52,7 +52,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
               onSearchChange(e.target.value)
               onSetPage(1)
             }}
-            placeholder="TÃ¬m theo mÃ£ gÃ³i, tÃªn cÃ´ng viá»‡c hoáº·c lÃ½ trÃ¬nh..."
+            placeholder="Tìm theo mã gói, tên công việc hoặc lý trình..."
             className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-brand-gold transition-all font-medium"
           />
         </div>
@@ -68,7 +68,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Táº¥t cáº£ ({stats.total})
+            Tất cả ({stats.total})
           </button>
           <button
             onClick={() => onTabChange('SUBMITTED')}
@@ -79,7 +79,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Chá» duyá»‡t ({stats.submitted})
+            Chờ duyệt ({stats.submitted})
           </button>
           <button
             onClick={() => onTabChange('DECIDED')}
@@ -90,7 +90,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            ÄÃ£ duyá»‡t ({stats.decided})
+            Đã duyệt ({stats.decided})
           </button>
           <button
             onClick={() => onTabChange('DISPATCHED')}
@@ -101,7 +101,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Äang thi cÃ´ng ({stats.dispatched})
+            Đang thi công ({stats.dispatched})
           </button>
           <button
             onClick={() => onTabChange('DRAFT')}
@@ -112,21 +112,21 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Báº£n nhÃ¡p ({stats.draft})
+            Bản nháp ({stats.draft})
           </button>
         </div>
       </div>
 
-      {/* INLINE Bá»˜ Lá»ŒC TRá»°C TIáº¾P */}
+      {/* INLINE BỘ LỌC TRỰC TIẾP */}
       <div className="flex items-center gap-2.5 flex-wrap pt-1 text-xs">
         <span className="text-slate-500 font-semibold text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
           <SlidersHorizontal className="w-3.5 h-3.5 text-brand-gold" />
-          <span>Bá»™ lá»c:</span>
+          <span>Bộ lọc:</span>
         </span>
 
-        {/* Tuyáº¿n Ä‘Æ°á»ng */}
+        {/* Tuyến đường */}
         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px] font-medium">Tuyáº¿n:</span>
+          <span className="text-slate-400 text-[11px] font-medium">Tuyến:</span>
           <select
             value={advRoute}
             onChange={(e) => {
@@ -135,16 +135,16 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
             }}
             className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
           >
-            <option value="ALL">Táº¥t cáº£ tuyáº¿n Ä‘Æ°á»ng</option>
-            <option value="QL1A_PK04">QL1A - Giai Ä‘oáº¡n 2 (Km 1024 - 1045)</option>
-            <option value="QL1A_PK01">QL1A - Giai Ä‘oáº¡n 1 (Km 1000 - 1024)</option>
-            <option value="EXPR_NORTH_SOUTH">ÄÆ°á»ng ná»‘i Cao tá»‘c Báº¯c - Nam</option>
+            <option value="ALL">Tất cả tuyến đường</option>
+            <option value="QL1A_PK04">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
+            <option value="QL1A_PK01">QL1A - Giai đoạn 1 (Km 1000 - 1024)</option>
+            <option value="EXPR_NORTH_SOUTH">Đường nối Cao tốc Bắc - Nam</option>
           </select>
         </div>
 
-        {/* Quy mÃ´ khiáº¿m khuyáº¿t */}
+        {/* Quy mô khiếm khuyết */}
         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px] font-medium">Quy mÃ´:</span>
+          <span className="text-slate-400 text-[11px] font-medium">Quy mô:</span>
           <select
             value={advScale}
             onChange={(e) => {
@@ -153,16 +153,16 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
             }}
             className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
           >
-            <option value="ALL">Táº¥t cáº£ quy mÃ´</option>
-            <option value="LARGE">GÃ³i lá»›n (&gt; 10 khiáº¿m khuyáº¿t)</option>
-            <option value="MEDIUM">GÃ³i vá»«a (5 - 10 khiáº¿m khuyáº¿t)</option>
-            <option value="SMALL">GÃ³i nhá» (&lt; 5 khiáº¿m khuyáº¿t)</option>
+            <option value="ALL">Tất cả quy mô</option>
+            <option value="LARGE">Gói lớn (&gt; 10 khiếm khuyết)</option>
+            <option value="MEDIUM">Gói vừa (5 - 10 khiếm khuyết)</option>
+            <option value="SMALL">Gói nhỏ (&lt; 5 khiếm khuyết)</option>
           </select>
         </div>
 
-        {/* Tá»• Ä‘á»™i thi cÃ´ng */}
+        {/* Tổ đội thi công */}
         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px] font-medium">ÄÆ¡n vá»‹ thi cÃ´ng:</span>
+          <span className="text-slate-400 text-[11px] font-medium">Đơn vị thi công:</span>
           <select
             value={advContractor}
             onChange={(e) => {
@@ -171,11 +171,11 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
             }}
             className="bg-transparent text-slate-800 text-xs font-semibold focus:outline-none cursor-pointer"
           >
-            <option value="ALL">Táº¥t cáº£ Ä‘Æ¡n vá»‹ thi cÃ´ng</option>
-            <option value="Tá»• vÃ¡ dáº·m cÆ¡ giá»›i 01">Tá»• vÃ¡ dáº·m cÆ¡ giá»›i 01</option>
-            <option value="XÃ­ nghiá»‡p Cáº§u ÄÆ°á»ng 4">XÃ­ nghiá»‡p Cáº§u ÄÆ°á»ng 4</option>
-            <option value="Tá»• duy tu báº£o dÆ°á»¡ng Ä‘Æ°á»ng bá»™ 03">Tá»• duy tu báº£o dÆ°á»¡ng 03</option>
-            <option value="Äá»™i cÆ¡ Ä‘á»™ng">Äá»™i cÆ¡ Ä‘á»™ng kháº¯c phá»¥c sá»± cá»‘</option>
+            <option value="ALL">Tất cả đơn vị thi công</option>
+            <option value="Tổ vá dặm cơ giới 01">Tổ vá dặm cơ giới 01</option>
+            <option value="Xí nghiệp Cầu Đường 4">Xí nghiệp Cầu Đường 4</option>
+            <option value="Tổ duy tu bảo dưỡng đường bộ 03">Tổ duy tu bảo dưỡng 03</option>
+            <option value="Đội cơ động">Đội cơ động khắc phục sự cố</option>
           </select>
         </div>
 
@@ -190,7 +190,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
             className="px-2.5 py-1.5 text-brand-gold hover:text-[#9E7B15] text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ml-auto"
           >
             <RotateCcw className="w-3 h-3" />
-            <span>Äáº·t láº¡i bá»™ lá»c</span>
+            <span>Đặt lại bộ lọc</span>
           </button>
         )}
       </div>

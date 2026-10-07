@@ -57,7 +57,7 @@
      - **Khu vực địa lý quản lý:** **Cho phép Supervisor tự do gõ tay 100%** (VD: *Bình Phước - Bình Dương*, *Thừa Thiên Huế*, *Hà Nội*...), không giới hạn cứng 4 vùng.
      - **Chỉ định Kỹ sư PM:** Chọn PM phụ trách (Đỗ Quốc Hoàng, Trần Minh Tâm, Lê Văn Cường...).
      - **Khung thời gian bảo hành:** Ngày bắt đầu và ngày kết thúc (36 tháng).
-     - **BỎ HOÀN TOÀN ô Hạn mức dự phòng bảo hành tiền tệ:** Bước tạo dự án không tính toán chi phí (chi phí chỉ xuất hiện ở bước BOQ chi tiết tại Màn 10).
+     - **BỎ HOÀN TOÀN ô Hạn mức dự phòng bảo hành tiền tệ:** Hệ thống quản lý thuần túy kỹ thuật bảo hành (khối lượng cào bóc m², trám nứt mét dài, định mức TCVN), không tính toán chi phí tài chính.
      - **Phạm vi lý trình & Quy mô tuyến:**
        - Lý trình bắt đầu (VD: `Km 0+000`).
        - Lý trình kết thúc (VD: `Km 28+500`).
@@ -74,7 +74,7 @@
 * **Mục đích:** Thiết lập phiên bản chính sách Fast Track và điều phối lực lượng kỹ thuật/cứu hộ ra hiện trường theo 3 chế độ công tác.
 * **Quy chuẩn nghiệp vụ đã chốt:**
   1. **3 Chế độ giao việc (Dispatch Modes):**
-     - **Gom lô đo đạc (`MEASURE_ONLY`):** Cho phép chọn nhiều lỗi cùng tuyến để tổ trắc địa tuần tra 1 vòng lấy số liệu, tuyệt đối nghiêm cấm cào bóc hay tự ý sửa khi chưa lập dự toán BOQ.
+     - **Gom lô đo đạc (`MEASURE_ONLY`):** Cho phép chọn nhiều lỗi cùng tuyến để tổ trắc địa tuần tra 1 vòng lấy số liệu, tuyệt đối nghiêm cấm cào bóc hay tự ý sửa khi chưa lập phương án kỹ thuật được duyệt.
      - **Đo và Sửa ngay (`INSPECT_AND_REPAIR` — Fast Track Direct):** Tuân thủ **Quy tắc BR-08**, chỉ cho phép chọn đúng **1 lỗi đơn lẻ** đạt chuẩn chính sách (diện tích $\le 0.5\text{ m}^2$, sâu $\le 5\text{ cm}$). Cho phép thợ mang vật liệu vá nguội xử lý dứt điểm tại chỗ.
      - **Xử lý khẩn cấp 24/7 (`EMERGENCY`):** Chỉ chọn đúng **1 vị trí nguy hiểm** (sụt lún sâu, ổ voi gây lật xe) để điều động xe cơ động cứu hộ, cắm cọc tiêu phân luồng và khắc phục tạm thời để thông xe. Không đóng trạng thái lỗi gốc trên hệ thống.
   2. **Ràng buộc an toàn & Chống lạm dụng điều xe khẩn cấp:**

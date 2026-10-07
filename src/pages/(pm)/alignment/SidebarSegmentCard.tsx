@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   SplitSquareVertical,
   AlertTriangle,
@@ -67,23 +67,23 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
 
       <div className="flex flex-wrap items-center gap-1.5 text-slate-500 text-[11px]">
         <span className="bg-slate-100 px-2 py-0.5 rounded-full font-mono font-semibold text-slate-700">
-          DÃ i: {segment.lengthKm >= 1 ? `${segment.lengthKm.toFixed(2)} km` : `${Math.round(segment.lengthKm * 1000)} mÃ©t`}
+          Dài: {segment.lengthKm >= 1 ? `${segment.lengthKm.toFixed(2)} km` : `${Math.round(segment.lengthKm * 1000)} mét`}
         </span>
         <span className="bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full font-mono font-bold">
-          Rá»™ng: {segment.roadWidthM || 8.0}m (Â±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m)
+          Rộng: {segment.roadWidthM || 8.0}m (±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m)
         </span>
-        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.laneCount} lÃ n</span>
+        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.laneCount} làn</span>
         <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.surfaceMaterial}</span>
       </div>
 
-      {/* Cáº£nh bÃ¡o khoáº£ng há»Ÿ & NÃºt ná»‘i tiáº¿p giÃ¡p */}
+      {/* Cảnh báo khoảng hở & Nút nối tiếp giáp */}
       {segment.hasGap && (
         <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs mt-1">
           <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-800">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
             {segment.gapDistance && segment.gapDistance > 0
-              ? `Há»Ÿ ${segment.gapDistance}m so vá»›i Ä‘oáº¡n trÆ°á»›c`
-              : `Chá»“ng láº¥n ${Math.abs(segment.gapDistance || 0)}m`}
+              ? `Hở ${segment.gapDistance}m so với đoạn trước`
+              : `Chồng lấn ${Math.abs(segment.gapDistance || 0)}m`}
           </span>
           <button
             type="button"
@@ -92,10 +92,10 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               onSnap()
             }}
             className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
-            title="KhÃ©p kÃ­n khoáº£ng há»Ÿ vá»›i phÃ¢n Ä‘oáº¡n liá»n trÆ°á»›c"
+            title="Khép kín khoảng hở với phân đoạn liền trước"
           >
             <Link2 className="w-3 h-3" />
-            <span>Ná»‘i tiáº¿p giÃ¡p</span>
+            <span>Nối tiếp giáp</span>
           </button>
         </div>
       )}
@@ -104,12 +104,12 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
         {segment.hasGap ? (
           <span className="flex items-center gap-1 text-[11px] text-amber-700 font-medium">
             <AlertTriangle className="w-3 h-3 text-amber-600" />
-            ChÆ°a khÃ©p kÃ­n
+            Chưa khép kín
           </span>
         ) : (
           <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
             <Check className="w-3 h-3 text-emerald-600" />
-            Tiáº¿p giÃ¡p khÃ©p kÃ­n
+            Tiếp giáp khép kín
           </span>
         )}
         <div className="flex items-center gap-1">
@@ -120,7 +120,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               onEdit()
             }}
             className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
-            title="Chá»‰nh sá»­a lÃ½ trÃ¬nh & thÃ´ng sá»‘"
+            title="Chỉnh sửa lý trình & thông số"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
@@ -132,7 +132,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               onOpenSplit()
             }}
             className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
-            title="TÃ¡ch phÃ¢n Ä‘oáº¡n nÃ y táº¡i má»‘c Km"
+            title="Tách phân đoạn này tại mốc Km"
           >
             <SplitSquareVertical className="w-3.5 h-3.5" />
           </button>
@@ -143,8 +143,8 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               e.stopPropagation()
               onDelete()
             }}
-            className="p-1.5 hover:bg-red-100/60 rounded-md text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-            title="XÃ³a phÃ¢n Ä‘oáº¡n"
+            className="p-1.5 hover:bg-rose-100/60 rounded-md text-slate-500 hover:text-rose-700 transition-colors cursor-pointer"
+            title="Xóa phân đoạn"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>

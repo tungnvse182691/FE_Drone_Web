@@ -16,7 +16,7 @@
 | **Dự án bảo hành** | **`QL1A - Giai đoạn 2 (Km 1020 - Km 1045)`** | Mã: **`PRJ-QL1A-02`** |
 | **Phạm vi & Chiều dài** | **`Km 1020+000` $\rightarrow$ `Km 1045+000`** (Tổng dài: **`25.0 km`**) | Kết cấu: `ASPHALT` (Bê tông nhựa) |
 | **Hệ quy chiếu phẳng (CRS)** | **`UTM Zone 48N (EPSG: 32648)`** | Bắt buộc theo quy tắc BR-35 |
-| **Thời hạn bảo hành** | **`01/01/2026` $\rightarrow$ `01/01/2028`** (24 tháng) | Tiền giữ lại: `5.000.000.000 VNĐ` |
+| **Thời hạn bảo hành** | **`01/01/2026` $\rightarrow$ `01/01/2028`** (24 tháng) | Tiêu chuẩn kiểm định: `TCVN 8819:2011` |
 | **Giám sát viên (Supervisor)** | **`Kỹ sư Nguyễn Văn An`** (`suphoang@gmail.com`) | Toàn quyền Admin hệ thống (BR-02) |
 | **Chỉ huy trưởng (PM chính)** | **`Đỗ Quốc Hoàng (PM)`** (`pmhoang@gmail.com`) | PM phụ trách duy nhất dự án (BR-02) |
 | **Phi công Drone (Operator)** | **`Nguyễn Văn Tiến`** (`tien.nguyen@drone.hoanghai.vn`) | Đội bay trắc địa không ảnh 01 |
@@ -77,7 +77,7 @@
      - **Mã dự án:** `PRJ-QL1A-02`
      - **Loại kết cấu mặt đường:** Chọn `Bê tông nhựa (ASPHALT)`
      - **Ngày bắt đầu bảo hành:** `01/01/2026` | **Thời hạn:** `24 tháng` $\rightarrow$ Ngày hết hạn: `01/01/2028`
-     - **Giá trị giữ lại bảo hành:** `5.000.000.000` (5 tỷ đồng)
+     - **Tiêu chuẩn kiểm định bảo hành:** `TCVN 8819:2011 (Mặt đường bê tông nhựa)`
      - **Hệ tọa độ trắc địa phẳng (CRS):** Chọn `UTM Zone 48N (EPSG: 32648)` (BR-35)
   4. Bấm **"Tạo dự án"** $\rightarrow$ Dự án xuất hiện trong danh sách ở trạng thái `ACTIVE`.
 
@@ -245,7 +245,7 @@
 
 ---
 
-## 🔴 GIAI ĐOẠN 6: LẬP DỰ TOÁN, TRÌNH DUYỆT & THẨM DUYỆT PHƯƠNG ÁN (APPROVAL TRACK)
+## 🔴 GIAI ĐOẠN 6: LẬP GÓI ĐỀ XUẤT KỸ THUẬT, TRÌNH DUYỆT & THẨM DUYỆT PHƯƠNG ÁN (APPROVAL TRACK)
 
 ### Bước 6.1 — PM Lập gói đề xuất sửa chữa & Khóa phiên bản trình duyệt
 - **Tài khoản:** `pmhoang@gmail.com`

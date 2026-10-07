@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Eye,
@@ -45,14 +45,14 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
 
   return (
     <tr key={pkg.id} className="hover:bg-amber-50/20 transition-colors group">
-      {/* Sticky Column: MÃ£ gÃ³i */}
+      {/* Sticky Column: Mã gói */}
       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap sticky left-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
         <div className="flex items-center gap-1.5">
           <span className="text-slate-800">{pkg.code}</span>
         </div>
       </td>
 
-      {/* TÃªn gÃ³i cÃ´ng viá»‡c & LÃ½ trÃ¬nh */}
+      {/* Tên gói công việc & Lý trình */}
       <td className="py-3.5 px-4 max-w-[340px]">
         <div className="flex flex-col gap-0.5">
           <TruncatedText
@@ -62,23 +62,23 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
           />
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className="font-medium text-slate-700">{pkg.route_name}</span>
-            <span>â€¢</span>
+            <span>•</span>
             <span className="font-mono text-[#8F7212] font-semibold">{pkg.chainage_display}</span>
-            <span>â€¢</span>
-            <span>{pkg.segments_count} phÃ¢n Ä‘oáº¡n</span>
+            <span>•</span>
+            <span>{pkg.segments_count} phân đoạn</span>
           </div>
         </div>
       </td>
 
-      {/* Háº¡ng má»¥c lá»—i */}
+      {/* Hạng mục lỗi */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{pkg.defect_count} Ä‘iá»ƒm lá»—i</span>
+          <span className="font-bold text-slate-800">{pkg.defect_count} điểm lỗi</span>
           <span className="text-[11px] text-slate-500">{pkg.defect_summary}</span>
         </div>
       </td>
 
-      {/* Khá»‘i lÆ°á»£ng ká»¹ thuáº­t dá»± kiáº¿n */}
+      {/* Khối lượng kỹ thuật dự kiến */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex flex-col">
           <span className="font-semibold text-slate-800">{pkg.technical_scope}</span>
@@ -86,15 +86,15 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         </div>
       </td>
 
-      {/* Thá»i gian thi cÃ´ng */}
+      {/* Thời gian thi công */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{pkg.duration_days} ngÃ y</span>
+          <span className="font-bold text-slate-800">{pkg.duration_days} ngày</span>
           <span className="text-[11px] text-slate-500">{pkg.date_range}</span>
         </div>
       </td>
 
-      {/* NgÆ°á»i láº­p / NgÃ y trÃ¬nh */}
+      {/* Người lập / Ngày trình */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0">
@@ -107,40 +107,40 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         </div>
       </td>
 
-      {/* Tráº¡ng thÃ¡i */}
+      {/* Trạng thái */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         {pkg.status === 'SUBMITTED' && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
             <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
-            <span>Chá» phÃª duyá»‡t</span>
+            <span>Chờ phê duyệt</span>
           </span>
         )}
         {pkg.status === 'DECIDED' && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-            <span>ÄÃ£ phÃª duyá»‡t</span>
+            <span>Đã phê duyệt</span>
           </span>
         )}
         {pkg.status === 'DISPATCHED' && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
             <Construction className="w-3 h-3 text-blue-600" />
-            <span>Äang thi cÃ´ng</span>
+            <span>Đang thi công</span>
           </span>
         )}
         {pkg.status === 'DRAFT' && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-            <span>Báº£n nhÃ¡p</span>
+            <span>Bản nháp</span>
           </span>
         )}
       </td>
 
-      {/* Tiáº¿n Ä‘á»™ phÃª duyá»‡t */}
+      {/* Tiến độ phê duyệt */}
       <td className="py-3.5 px-4 whitespace-nowrap">
         <div className="flex flex-col gap-1 w-32">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-semibold text-slate-700">
-              {pkg.approved_items}/{pkg.total_items} Ä‘iá»ƒm
+              {pkg.approved_items}/{pkg.total_items} điểm
             </span>
             <span className="font-mono text-slate-500 font-bold">{Math.round(approvalRatio)}%</span>
           </div>
@@ -159,53 +159,53 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         </div>
       </td>
 
-      {/* Sticky Column: Thao tÃ¡c */}
+      {/* Sticky Column: Thao tác */}
       <td className="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-end gap-1.5 relative">
-          {/* Vai trÃ² Supervisor */}
+          {/* Vai trò Supervisor */}
           {isSupervisor && pkg.status === 'SUBMITTED' && (
-            <Tooltip content="Ká»¹ sÆ° GiÃ¡m sÃ¡t phÃª duyá»‡t nhanh gÃ³i Ä‘á» xuáº¥t nÃ y">
+            <Tooltip content="Kỹ sư Giám sát phê duyệt nhanh gói đề xuất này">
               <button
                 onClick={() => onQuickApprove(pkg.id, pkg.code)}
                 type="button"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>PhÃª duyá»‡t</span>
+                <span>Phê duyệt</span>
               </button>
             </Tooltip>
           )}
 
           {isSupervisor && pkg.status === 'DECIDED' && (
-            <Tooltip content="Theo dÃµi tiáº¿n Ä‘á»™ tá»• thi cÃ´ng ngoÃ i hiá»‡n trÆ°á»ng">
+            <Tooltip content="Theo dõi tiến độ tổ thi công ngoài hiện trường">
               <button
                 onClick={() => {
-                  showToast(`GÃ³i [${pkg.code}] Ä‘Ã£ Ä‘Æ°á»£c phÃª duyá»‡t há»£p lá»‡. Äang chuyá»ƒn hÆ°á»›ng kiá»ƒm tra hiá»‡n trÆ°á»ng.`)
+                  showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ. Đang chuyển hướng kiểm tra hiện trường.`)
                   navigate(`${basePath}/proposals/${pkg.id}`)
                 }}
                 type="button"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5" />
-                <span>Theo dÃµi thi cÃ´ng</span>
+                <span>Theo dõi thi công</span>
               </button>
             </Tooltip>
           )}
 
-          {/* Vai trÃ² PM */}
+          {/* Vai trò PM */}
           {isPM && pkg.status === 'DRAFT' && (
             <>
-              <Tooltip content="KhÃ³a vÃ  trÃ¬nh ná»™p há»“ sÆ¡ lÃªn GiÃ¡m sÃ¡t">
+              <Tooltip content="Khóa và trình nộp hồ sơ lên Giám sát">
                 <button
                   onClick={() => onSubmitDraft(pkg.id, pkg.code)}
                   type="button"
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>TrÃ¬nh duyá»‡t</span>
+                  <span>Trình duyệt</span>
                 </button>
               </Tooltip>
-              <Tooltip content="XÃ³a báº£n nhÃ¡p nÃ y">
+              <Tooltip content="Xóa bản nháp này">
                 <button
                   onClick={() => onDeleteDraft(pkg.id, pkg.code)}
                   type="button"
@@ -217,20 +217,20 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             </>
           )}
 
-          {/* NÃºt xem chi tiáº¿t / tháº©m Ä‘á»‹nh */}
-          <Tooltip content={isSupervisor ? 'Tháº©m Ä‘á»‹nh ká»¹ thuáº­t chi tiáº¿t' : 'Xem chi tiáº¿t há»“ sÆ¡ gÃ³i'}>
+          {/* Nút xem chi tiết / thẩm định */}
+          <Tooltip content={isSupervisor ? 'Thẩm định kỹ thuật chi tiết' : 'Xem chi tiết hồ sơ gói'}>
             <button
               onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
               type="button"
               className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5 text-slate-600" />
-              <span>{isSupervisor ? 'Tháº©m Ä‘á»‹nh' : 'Xem há»“ sÆ¡'}</span>
+              <span>{isSupervisor ? 'Thẩm định' : 'Xem hồ sơ'}</span>
             </button>
           </Tooltip>
 
-          {/* NÃºt Menu tÃ¹y chá»n */}
-          <Tooltip content="TÃ¹y chá»n khÃ¡c">
+          {/* Nút Menu tùy chọn */}
+          <Tooltip content="Tùy chọn khác">
             <button
               onClick={(e) => onToggleMenu(pkg, e)}
               type="button"

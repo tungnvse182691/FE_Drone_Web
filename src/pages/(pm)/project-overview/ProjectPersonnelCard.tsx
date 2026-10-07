@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Users2, ShieldCheck, Tablet } from 'lucide-react'
 import { ProjectMember } from './types'
 
@@ -13,14 +13,14 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
         <div>
           <h2 className="text-base font-bold text-brand-dark flex items-center gap-2">
             <Users2 className="w-5 h-5 text-brand-gold" />
-            <span>CÆ¡ cáº¥u nhÃ¢n sá»± thá»±c hiá»‡n</span>
+            <span>Cơ cấu nhân sự thực hiện</span>
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            PhÃ¢n cáº¥p tháº©m quyá»n &amp; phá»¥ trÃ¡ch
+            Phân cấp thẩm quyền &amp; phụ trách
           </p>
         </div>
         <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-          {members.length} thÃ nh viÃªn
+          {members.length} thành viên
         </span>
       </div>
 
@@ -42,7 +42,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
                   {mem.is_online && (
                     <span
                       className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"
-                      title="Äang online"
+                      title="Đang online"
                     ></span>
                   )}
                 </div>
@@ -81,7 +81,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
         <div className="flex items-start gap-1.5 text-[10px] text-slate-400 leading-tight px-1">
           <ShieldCheck className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
           <span>
-            Má»i thay Ä‘á»•i nhÃ¢n sá»± dá»± Ã¡n Ä‘á»u Ä‘Æ°á»£c ghi nháº­n vÃ o Audit Log báº¥t biáº¿n theo quy chuáº©n ká»¹ thuáº­t TCVN 11944.
+            Mọi thay đổi nhân sự dự án đều được ghi nhận vào Audit Log bất biến theo quy chuẩn kỹ thuật TCVN 11944.
           </span>
         </div>
       </div>

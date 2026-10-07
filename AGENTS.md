@@ -54,7 +54,7 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 | **07** | Hộp thư tiếp nhận lỗi do AI phát hiện | PM | `/pm/ai-inbox` | `src/pages/(pm)/AIReviewInbox.tsx` |
 | **08** | Thẩm định chi tiết lỗi AI (Bounding box) | PM | `/pm/defects/:id/verify-a` | `src/pages/(pm)/DefectDetailVerify.tsx` |
 | **09** | So sánh ảnh hư hỏng đa kỳ (Temporal) | PM | `/pm/defects/:id/verify-b` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **10** | Gom đợt sửa chữa & Lập dự toán BOQ | PM | `/pm/proposals` (alias: `/pm/repair-batches/create`) | `src/pages/(pm)/RepairProposals.tsx` |
+| **10** | Gom đợt sửa chữa & Lập phương án khối lượng kỹ thuật | PM | `/pm/proposals` (alias: `/pm/repair-batches/create`) | `src/pages/(pm)/RepairProposals.tsx` |
 | **11** | Trình duyệt hồ sơ đợt sửa chữa | PM | `/pm/proposals/:id` (alias: `/pm/repair-batches/:id/submit`) | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
 | **12** | Danh sách & Thẩm duyệt đợt sửa chữa | SUP | `/sup/proposals`, `/sup/approvals/:id` | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
 | **13** | Yêu cầu sửa đổi / Từ chối đợt sửa | SUP | `/sup/approvals/:id/reject` | `src/pages/(sup)/BatchRejection.tsx` |
@@ -68,9 +68,9 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 
 ## 🔒 PHẦN D: 10 ĐIỀU BẤT BIẾN (BUSINESS INVARIANTS)
 
-1. **Tổng tiền dự toán đợt sửa chữa (`estimated_total_cost`):** Luôn bằng SUM(các hạng mục công việc chi tiết). Tuyệt đối **KHÔNG CÓ** ô input gõ tay tổng tiền.
+1. **Khối lượng kỹ thuật thi công (Zero Money / Không tính toán giá tiền):** Hệ thống chỉ quản lý các chỉ số kỹ thuật công trình đường bộ (diện tích cào bóc $m^2$, chiều dài trám nứt $m$, chiều sâu $cm$, định mức vật tư theo TCVN 8819:2011). Tuyệt đối **KHÔNG CÓ** trường giá tiền, đơn giá hay bảng BOQ tài chính.
 2. **Quyền Duyệt/Từ chối:** Chỉ tài khoản có `role === RoleCode.SUPERVISOR` mới được nhìn thấy và bấm nút Phê duyệt / Từ chối đợt sửa chữa. PM không bao giờ có nút này.
-3. **Đóng băng hồ sơ (`APPROVED`):** Khi đợt sửa chữa đã được Supervisor duyệt (`APPROVED`), toàn bộ danh sách hư hỏng và dự toán trong đợt đó bị khóa cứng (Read-only), không ai được sửa/xóa.
+3. **Đóng băng hồ sơ (`APPROVED`):** Khi đợt sửa chữa đã được Supervisor duyệt (`APPROVED`), toàn bộ danh sách khiếm khuyết và phương án kỹ thuật trong đợt đó bị khóa cứng (Read-only), không ai được sửa/xóa.
 4. **Ảnh đa kỳ (Temporal epoch):** Ảnh kỳ mới nhất luôn được so sánh trực quan song song (Side-by-side hoặc Overlay) với ảnh kỳ trước đó để đánh giá tốc độ nứt lún.
 5. **Geometry chuẩn GeoJSON:** Tọa độ hư hỏng tương thích `geography(4326)` và hệ quy chiếu UTM Zone 32648 (EPSG:32648).
 6. **Token Authentication:** Bearer Access Token chỉ lưu `in-memory` (Zustand state). Refresh token nằm trong HttpOnly Cookie hoặc cơ chế bảo mật tiêu chuẩn. Tự động redirect về `/login` khi 401.

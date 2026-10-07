@@ -66,7 +66,7 @@ Toàn bộ 6 file bộ khung ban đầu (tàn dư từ 18 màn Stitch thô) đã
 |:---:|---|:---:|---|---|
 | 01 | Khởi tạo dự án & gán PM | ✅ ĐÃ CÓ | `ProjectList.tsx` | Đã có Popup Form: Nhập tên, mã, tỉnh thành, mốc bảo hành, lý trình, chỉ định PM (có option để trống). |
 | 02 | Phân công nhân sự dự án | ✅ ĐÃ CÓ | `SystemControl.tsx`, `ProjectOverview.tsx` | Phân công Operator, Crew, PM. |
-| 03 | Quản lý thời hạn bảo hành | ✅ ĐÃ CÓ | `ProjectList.tsx`, `ProjectOverview.tsx` | Xem mốc bảo hành, giá trị giữ lại. |
+| 03 | Quản lý thời hạn bảo hành | ✅ ĐÃ CÓ | `ProjectList.tsx`, `ProjectOverview.tsx` | Xem mốc bảo hành, tiêu chuẩn TCVN. |
 | 04 | Đóng dự án (Close Project) | ✅ ĐÃ CÓ | `ProjectOverview.tsx`, `SystemControl.tsx` | Chuyển trạng thái sang CLOSED (Read-only). |
 | 05 | Duyệt xác nhận tuyến đường | ✅ ĐÃ CÓ | `AlignmentSegments.tsx` | Supervisor xem MapLibre & bấm duyệt. |
 | 06 | Thẩm duyệt từng RepairItem | ✅ ĐÃ CÓ | `ProposalApprovalDetail.tsx` | Duyệt độc lập: APPROVE / REJECT / EVIDENCE. |
@@ -96,7 +96,7 @@ Toàn bộ 6 file bộ khung ban đầu (tàn dư từ 18 màn Stitch thô) đã
 | 09 | Phân cấp Severity x Urgency | ✅ ĐÃ CÓ | `AIReviewInbox.tsx`, `DefectDetailVerify.tsx` | Độc lập 2 trục mức độ & khẩn cấp. |
 | 10 | Lập chính sách Fast Track | ✅ ĐÃ CÓ | `FastTrackDispatch.tsx` | Cấu hình ngưỡng kích thước, biện pháp sửa. |
 | 11 | Giao đo đạc (MEASURE_ONLY vs Sửa) | ✅ ĐÃ CÓ | `FieldTasks.tsx`, `FastTrackDispatch.tsx` | Gom đo nhiều lỗi vs 1 lỗi nhỏ sửa nhanh. |
-| 12 | Lập gói đề xuất sửa chữa BOQ | ✅ ĐÃ CÓ | `RepairProposals.tsx` | Gom lỗi Verified, bóc tách dự toán, trình duyệt. |
+| 12 | Lập gói đề xuất sửa chữa kỹ thuật | ✅ ĐÃ CÓ | `RepairProposals.tsx` | Gom lỗi Verified, bóc tách khối lượng, trình duyệt. |
 | 13 | Sửa mục bị trả & Giao Crew | ✅ ĐÃ CÓ | `RepairProposals.tsx` | Giao việc cho các item đã APPROVED. |
 | 14 | Tự kiểm tra & Đóng lỗi Fast Track | ✅ ĐÃ CÓ | `EvidenceCloseoutDetail.tsx` | Tự đóng lỗi Fast Track, gửi thông báo cho Sup. |
 | 15 | Kích hoạt xử lý khẩn cấp Emergency | ✅ ĐÃ CÓ | `FastTrackDispatch.tsx` | Biển báo rào chắn tạm, cảnh báo Sup. |

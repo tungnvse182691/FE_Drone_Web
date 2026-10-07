@@ -7,7 +7,7 @@ import { ArrowLeft, AlertTriangle } from 'lucide-react'
 export const BatchRejection: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [reasonCategory, setReasonCategory] = useState('Đơn giá vượt định mức quy định')
+  const [reasonCategory, setReasonCategory] = useState('Biện pháp kỹ thuật chưa phù hợp quy chuẩn')
   const [comments, setComments] = useState('Khối lượng cào bóc bê tông nhựa tại Km26.35 tính toán chưa khớp với ảnh khảo sát')
 
   const handleReject = (e: React.FormEvent) => {
@@ -30,7 +30,7 @@ export const BatchRejection: React.FC = () => {
             Yêu Cầu Sửa Đổi Hồ Sơ Đợt Sửa Chữa (Revision Required)
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Phản hồi kỹ thuật của Tư vấn Giám sát yêu cầu PM giải trình hoặc tính toán lại định mức dự toán
+            Phản hồi kỹ thuật của Tư vấn Giám sát yêu cầu PM giải trình hoặc tính toán lại khối lượng kỹ thuật
           </p>
         </div>
       </div>
@@ -46,7 +46,7 @@ export const BatchRejection: React.FC = () => {
               onChange={(e) => setReasonCategory(e.target.value)}
               className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
             >
-              <option value="Đơn giá vượt định mức quy định">Đơn giá vượt định mức quy định của Bộ GTVT</option>
+              <option value="Biện pháp kỹ thuật chưa phù hợp quy chuẩn">Biện pháp kỹ thuật chưa phù hợp quy chuẩn kỹ thuật</option>
               <option value="Thiếu ảnh đo đạc kiểm chứng hiện trường">Thiếu ảnh đo đạc kiểm chứng hiện trường</option>
               <option value="Khối lượng tính toán chưa khớp">Khối lượng tính toán chưa khớp với diện tích hư hỏng</option>
               <option value="Biện pháp thi công chưa đảm bảo an toàn giao thông">Biện pháp an toàn giao thông chưa đạt</option>

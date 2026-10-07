@@ -200,7 +200,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
               >
                 <option value="ALL">Tất cả nhánh (Fast Track, Approval Track, Emergency)</option>
                 <option value="FAST_TRACK">Chỉ nhánh Fast Track (Sửa nhanh &lt; 24h)</option>
-                <option value="APPROVAL_TRACK">Chỉ nhánh Ban Duy tu &amp; TVGS thẩm duyệt (Có BOQ)</option>
+                <option value="APPROVAL_TRACK">Chỉ nhánh Ban Duy tu &amp; TVGS thẩm duyệt (Hồ sơ kỹ thuật)</option>
                 <option value="EMERGENCY">Chỉ nhánh Xử lý khẩn cấp (Emergency 24/7)</option>
               </select>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />

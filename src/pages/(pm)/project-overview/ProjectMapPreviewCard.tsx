@@ -1,4 +1,4 @@
-﻿import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle } from '../../../utils/maplibre'
@@ -110,7 +110,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
           <Map className="w-4 h-4 text-brand-gold" />
-          <span>HÃ nh lang lÃ½ trÃ¬nh tuyáº¿n</span>
+          <span>Hành lang lý trình tuyến</span>
         </span>
         <span className="font-mono text-[10px] text-slate-500">WGS84 EPSG:4326</span>
       </div>
@@ -119,18 +119,18 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
       <div className="w-full h-48 rounded-xl relative overflow-hidden shadow-xs border border-slate-200">
         <div ref={previewMapContainerRef} className="w-full h-full" />
         <div className="absolute top-2 left-2 bg-slate-900/85 backdrop-blur-sm text-white px-2 py-1 rounded-md text-[10px] font-mono flex items-center justify-between gap-2 pointer-events-none z-10 border border-white/10">
-          <span>Km 1024+000 âž” Km 1045+500</span>
-          <span className="text-[#ebe695] font-bold">5 Segments</span>
+          <span>Km 1024+000 ➔ Km 1045+500</span>
+          <span className="text-[#ebe695] font-bold">5 Phân đoạn</span>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-slate-500 px-0.5">
-        <span>Tá»a Ä‘á»™ trung tÃ¢m: 16.205Â°N, 108.165Â°E</span>
+        <span>Tọa độ trung tâm: 16.205°N, 108.165°E</span>
         <button
           onClick={() => onNavigate(`${basePath}/projects/${projectId}/alignment`)}
           className="text-[#8F7212] font-semibold hover:underline cursor-pointer flex items-center gap-1"
         >
-          <span>Má»Ÿ báº£n Ä‘á»“ lá»›p tim tuyáº¿n (WF-02)</span>
+          <span>Mở bản đồ lớp tim tuyến (WF-02)</span>
           <ArrowRight className="w-3 h-3" />
         </button>
       </div>

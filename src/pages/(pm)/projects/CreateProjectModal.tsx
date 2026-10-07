@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Route, X, Calendar, ShieldCheck, Shield, PlusCircle } from 'lucide-react'
 
 interface CreateProjectModalProps {
@@ -16,8 +16,10 @@ interface CreateProjectModalProps {
   onChangeStartDate: (val: string) => void
   endDate: string
   onChangeEndDate: (val: string) => void
-  retentionAmount: string
-  onChangeRetentionAmount: (val: string) => void
+  inspectionStandard?: string
+  onChangeInspectionStandard?: (val: string) => void
+  retentionAmount?: string
+  onChangeRetentionAmount?: (val: string) => void
   startKm: string
   onChangeStartKm: (val: string) => void
   endKm: string
@@ -42,8 +44,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeStartDate,
   endDate,
   onChangeEndDate,
-  retentionAmount,
-  onChangeRetentionAmount,
+  inspectionStandard = 'TCVN 8819:2011',
+  onChangeInspectionStandard,
+  retentionAmount: _retentionAmount,
+  onChangeRetentionAmount: _onChangeRetentionAmount,
   startKm,
   onChangeStartKm,
   endKm,
@@ -65,10 +69,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 leading-tight font-headline">
-                Khá»Ÿi táº¡o dá»± Ã¡n báº£o hÃ nh Ä‘Æ°á»ng bá»™ má»›i
+                Khởi tạo dự án bảo hành đường bộ mới
               </h2>
               <p className="text-xs text-slate-500">
-                Há»‡ thá»‘ng tá»± Ä‘á»™ng thiáº¿t láº­p pháº¡m vi lÃ½ trÃ¬nh vÃ  cáº¥p quyá»n quáº£n lÃ½ cho PM phá»¥ trÃ¡ch.
+                Hệ thống tự động thiết lập phạm vi lý trình và cấp quyền quản lý cho PM phụ trách.
               </p>
             </div>
           </div>
@@ -87,20 +91,21 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-1.5">
               <label className="block font-semibold text-slate-700">
-                TÃªn dá»± Ã¡n Ä‘Æ°á»ng bá»™ <span className="text-rose-600">*</span>
+                Tên dự án đường bộ <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={projectName}
                 onChange={(e) => onChangeProjectName(e.target.value)}
-                placeholder="VD: Quá»‘c lá»™ 14 - Äoáº¡n ChÆ¡n ThÃ nh"
+                placeholder="VD: Quốc lộ 14 - Đoạn Chơn Thành"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
+
             <div className="space-y-1.5">
               <label className="block font-semibold text-slate-700">
-                MÃ£ dá»± Ã¡n (PRJ) <span className="text-rose-600">*</span>
+                Mã dự án (PRJ) <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
@@ -110,7 +115,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 placeholder="VD: PRJ-QL14-01"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-800 font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
-              <span className="text-[10px] text-slate-400">Äá»‹nh dáº¡ng mÃ£ chuáº©n: PRJ-[MÃƒ_TUYáº¾N]-[STT]</span>
+              <span className="text-[10px] text-slate-400">Định dạng mã chuẩn: PRJ-[MÃ_TUYẾN]-[STT]</span>
             </div>
           </div>
 
@@ -118,14 +123,14 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="block font-semibold text-slate-700">
-                Khu vá»±c Ä‘á»‹a lÃ½ / Tá»‰nh thÃ nh quáº£n lÃ½ <span className="text-rose-600">*</span>
+                Khu vực địa lý / Tỉnh thành quản lý <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={projectRegion}
                 onChange={(e) => onChangeProjectRegion(e.target.value)}
-                placeholder="VD: BÃ¬nh PhÆ°á»›c - BÃ¬nh DÆ°Æ¡ng, Thá»«a ThiÃªn Huáº¿, HÃ  Ná»™i..."
+                placeholder="VD: Bình Phước - Bình Dương, Thừa Thiên Huế, Hà Nội..."
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
@@ -133,10 +138,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block font-semibold text-slate-700">
-                  Chá»‰ Ä‘á»‹nh Ká»¹ sÆ° PM <span className="text-rose-600">*</span>
+                  Chỉ định Kỹ sư PM <span className="text-rose-600">*</span>
                 </label>
                 <span className="text-[10px] font-bold text-brand-goldMuted bg-brand-gold/15 px-1.5 py-0.2 rounded">
-                  CCHN Háº¡ng I
+                  CCHN Hạng I
                 </span>
               </div>
               <select
@@ -144,10 +149,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => onChangeProjectPM(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
-                <option value="Äá»— Quá»‘c HoÃ ng (pmhoang@gmail.com)">Ká»¹ sÆ° Äá»— Quá»‘c HoÃ ng (pmhoang@gmail.com)</option>
-                <option value="Tráº§n Minh TÃ¢m (tam.tm@hoanghai-infra.vn)">Ká»¹ sÆ° Tráº§n Minh TÃ¢m (tam.tm@hoanghai-infra.vn)</option>
-                <option value="LÃª VÄƒn CÆ°á»ng (cuong.lv@hoanghai-infra.vn)">Ká»¹ sÆ° LÃª VÄƒn CÆ°á»ng (cuong.lv@hoanghai-infra.vn)</option>
-                <option value="-- Äá»ƒ trá»‘ng --">-- Äá»ƒ trá»‘ng (PhÃ¢n cÃ´ng sau táº¡i Quáº£n trá»‹ há»‡ thá»‘ng) --</option>
+                <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
+                <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
+                <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+                <option value="-- Để trống --">-- Để trống (Phân công sau tại Quản trị hệ thống) --</option>
               </select>
             </div>
           </div>
@@ -156,11 +161,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
             <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
               <Calendar className="w-4 h-4 text-brand-gold" />
-              Khung thá»i gian hiá»‡u lá»±c báº£o hÃ nh (BiÃªn báº£n nghiá»‡m thu Ä‘Æ°a vÃ o sá»­ dá»¥ng)
+              Khung thời gian hiệu lực bảo hành (Biên bản nghiệm thu đưa vào sử dụng)
             </span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="text-[11px] text-slate-500">NgÃ y báº¯t Ä‘áº§u hiá»‡u lá»±c</span>
+                <span className="text-[11px] text-slate-500">Ngày bắt đầu hiệu lực</span>
                 <input
                   type="date"
                   value={startDate}
@@ -169,7 +174,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <span className="text-[11px] text-slate-500">NgÃ y káº¿t thÃºc báº£o hÃ nh (36 thÃ¡ng)</span>
+                <span className="text-[11px] text-slate-500">Ngày kết thúc bảo hành (36 tháng)</span>
                 <input
                   type="date"
                   value={endDate}
@@ -180,42 +185,42 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
           </div>
 
-          {/* GiÃ¡ trá»‹ giá»¯ láº¡i báº£o hÃ nh há»£p Ä‘á»“ng (v2.2 DA04 / retained_value) */}
+          {/* Tiêu chuẩn kiểm định kỹ thuật (TCVN) */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
                 <ShieldCheck className="w-4 h-4 text-brand-gold" />
-                Khoáº£n tiá»n báº£o lÃ£nh giá»¯ láº¡i báº£o hÃ nh (VNÄ)
+                Tiêu chuẩn nghiệm thu &amp; kiểm định kỹ thuật (TCVN)
               </span>
               <span className="text-[10px] font-mono font-bold text-brand-goldMuted bg-brand-gold/15 px-2 py-0.5 rounded">
-                Quy chuáº©n v2.2 (DA04 / retained_value)
+                Quy chuẩn kỹ thuật v2.2
               </span>
             </div>
             <div className="relative">
               <input
                 type="text"
                 required
-                value={retentionAmount}
-                onChange={(e) => onChangeRetentionAmount(e.target.value)}
-                placeholder="VD: 15.500.000.000 â‚« (5% giÃ¡ trá»‹ há»£p Ä‘á»“ng)"
+                value={inspectionStandard}
+                onChange={(e) => onChangeInspectionStandard && onChangeInspectionStandard(e.target.value)}
+                placeholder="VD: TCVN 8819:2011 (Mặt đường BTN nóng)"
                 className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
             <p className="text-[10px] text-slate-500">
-              Khoáº£n tiá»n báº£o lÃ£nh há»£p Ä‘á»“ng chá»§ Ä‘áº§u tÆ° giá»¯ láº¡i (thÆ°á»ng 3% â€“ 5% giÃ¡ trá»‹ cÃ´ng trÃ¬nh) Ä‘á»ƒ báº£o Ä‘áº£m nghÄ©a vá»¥ sá»­a chá»¯a O&amp;M cá»§a nhÃ  tháº§u HoÃ ng Háº£i.
+              Quy chuẩn kỹ thuật quốc gia áp dụng cho công tác nghiệm thu bảo hành và bảo trì đường bộ.
             </p>
           </div>
 
-          {/* Pháº¡m vi lÃ½ trÃ¬nh tuyáº¿n Ä‘Æ°á»ng (Km báº¯t Ä‘áº§u - Km káº¿t thÃºc - Tá»•ng chiá»u dÃ i) */}
+          {/* Phạm vi lý trình tuyến đường (Km bắt đầu - Km kết thúc - Tổng chiều dài) */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
             <span className="font-semibold text-slate-800 flex items-center gap-1.5 text-xs">
               <Route className="w-4 h-4 text-brand-gold" />
-              Pháº¡m vi lÃ½ trÃ¬nh &amp; Quy mÃ´ tuyáº¿n Ä‘Æ°á»ng
+              Phạm vi lý trình &amp; Quy mô tuyến đường
             </span>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <span className="text-[11px] text-slate-500 font-medium">
-                  LÃ½ trÃ¬nh báº¯t Ä‘áº§u <span className="text-rose-600">*</span>
+                  Lý trình bắt đầu <span className="text-rose-600">*</span>
                 </span>
                 <input
                   type="text"
@@ -228,7 +233,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
               <div className="space-y-1">
                 <span className="text-[11px] text-slate-500 font-medium">
-                  LÃ½ trÃ¬nh káº¿t thÃºc <span className="text-rose-600">*</span>
+                  Lý trình kết thúc <span className="text-rose-600">*</span>
                 </span>
                 <input
                   type="text"
@@ -241,7 +246,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
               <div className="space-y-1">
                 <span className="text-[11px] text-slate-500 font-medium">
-                  Chiá»u dÃ i tuyáº¿n (Km) <span className="text-rose-600">*</span>
+                  Chiều dài tuyến (Km) <span className="text-rose-600">*</span>
                 </span>
                 <div className="relative">
                   <input
@@ -265,7 +270,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <div className="p-3 rounded-xl bg-brand-gold/10 border border-brand-gold/20 flex items-start gap-2.5">
             <Shield className="w-4 h-4 text-brand-gold shrink-0 mt-0.5" />
             <p className="text-[11px] text-slate-700 leading-relaxed">
-              <strong className="text-slate-900">Quy Ä‘á»‹nh tháº©m quyá»n (Nghá»‹ Ä‘á»‹nh 06/2021/NÄ-CP):</strong> Sau khi khá»Ÿi táº¡o, dá»± Ã¡n sáº½ Ä‘Æ°á»£c Ä‘Æ°a vÃ o danh má»¥c báº£o hÃ nh. ToÃ n bá»™ viá»‡c quáº£n lÃ½, phÃ¢n cÃ´ng vÃ  bá»• sung nhÃ¢n sá»± dá»± Ã¡n Ä‘Æ°á»£c quáº£n trá»‹ táº­p trung táº¡i <strong>Quáº£n trá»‹ há»‡ thá»‘ng</strong> (Supervisor).
+              <strong className="text-slate-900">Quy định thẩm quyền (Nghị định 06/2021/NĐ-CP):</strong> Sau khi khởi tạo, dự án sẽ được đưa vào danh mục bảo hành. Toàn bộ việc quản lý, phân công và bổ sung nhân sự dự án được quản trị tập trung tại <strong>Quản trị hệ thống</strong> (Supervisor).
             </p>
           </div>
 
@@ -276,14 +281,14 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition cursor-pointer text-xs"
             >
-              Há»§y bá»
+              Hủy bỏ
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-xl font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5 text-xs"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span>Khá»Ÿi táº¡o dá»± Ã¡n</span>
+              <span>Khởi tạo dự án</span>
             </button>
           </div>
         </form>

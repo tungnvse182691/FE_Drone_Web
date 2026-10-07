@@ -25,9 +25,12 @@ export interface UseAlignmentImportStateParams {
   mapRef: React.RefObject<maplibregl.Map | null>
   handleFitBounds: (coords?: [number, number][]) => void
   setSplitDistance: (d: number) => void
-  initialCoords: [number, number][]
-  initialKmPoints: number[]
-  initialLengthKm: number
+  currentCoords: [number, number][]
+  setCurrentCoords: (coords: [number, number][]) => void
+  currentKmPoints: number[]
+  setCurrentKmPoints: (pts: number[]) => void
+  importedLengthKm: number
+  setImportedLengthKm: (len: number) => void
 }
 
 export function useAlignmentImportState({
@@ -43,17 +46,16 @@ export function useAlignmentImportState({
   mapRef,
   handleFitBounds,
   setSplitDistance,
-  initialCoords,
-  initialKmPoints,
-  initialLengthKm
+  currentCoords,
+  setCurrentCoords,
+  currentKmPoints,
+  setCurrentKmPoints,
+  importedLengthKm,
+  setImportedLengthKm
 }: UseAlignmentImportStateParams) {
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
   const [importTab, setImportTab] = useState<'FILE' | 'MANUAL'>('FILE')
   const [manualCoordsText, setManualCoordsText] = useState<string>(defaultManualText)
-
-  const [currentCoords, setCurrentCoords] = useState<[number, number][]>(initialCoords)
-  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(initialKmPoints)
-  const [importedLengthKm, setImportedLengthKm] = useState<number>(initialLengthKm)
 
   const processGeoJSONFile = (file: File) => {
     const reader = new FileReader()
@@ -152,7 +154,7 @@ export function useAlignmentImportState({
         lengthKm: parseFloat((next - cur).toFixed(2)),
         roadWidthM: roadWidthM || 8.0,
         status: 'VALID',
-        statusText: 'HỢP LỆ (Valid)',
+        statusText: 'HỢP LỆ',
         laneCount: 4,
         surfaceMaterial: 'Mặt BTN C12.5',
         color: SEGMENT_COLORS[(i - 1) % SEGMENT_COLORS.length]

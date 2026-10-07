@@ -69,7 +69,7 @@ export const INITIAL_MEMBERS: ProjectMember[] = [
     role_badge: 'PM CHÍNH',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     is_online: true,
-    authority: 'Điều phối hiện trường, lập gói sửa chữa BOQ, quản lý tiến độ SLA',
+    authority: 'Điều phối hiện trường, lập gói sửa chữa kỹ thuật, quản lý tiến độ SLA',
     contact: 'hoang.ks@hoanghai-infra.vn • Hoạt động 12p trước',
     unit: 'Ban Chỉ huy Công trường'
   },

@@ -29,7 +29,7 @@ export enum Severity {
 }
 
 export enum RepairBatchStatus {
-  DRAFT                  = 'DRAFT',                  // Đang lập dự toán
+  DRAFT                  = 'DRAFT',                  // Đang lập phương án kỹ thuật
   PENDING_APPROVAL       = 'PENDING_APPROVAL',       // Chờ Supervisor duyệt
   REVISION_REQUIRED      = 'REVISION_REQUIRED',      // Trả về yêu cầu sửa đổi
   APPROVED               = 'APPROVED',               // Đã duyệt (khóa hồ sơ)

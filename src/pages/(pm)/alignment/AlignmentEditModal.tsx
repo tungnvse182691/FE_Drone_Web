@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { X, Sliders } from 'lucide-react'
 import { SegmentItem } from './types'
 
@@ -29,7 +29,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               className="w-4 h-4 rounded-full shadow-xs"
             />
             <h3 className="font-bold text-slate-900 text-base">
-              Chá»‰nh Sá»­a: {segment.code}
+              Chỉnh sửa: {segment.code}
             </h3>
           </div>
           <button
@@ -43,7 +43,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
         <form onSubmit={onSave} className="flex flex-col gap-3">
           <div>
             <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-              MÃ£ / TÃªn PhÃ¢n Äoáº¡n
+              Mã / Tên Phân Đoạn
             </label>
             <input
               type="text"
@@ -57,7 +57,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                LÃ½ trÃ¬nh báº¯t Ä‘áº§u (Km)
+                Lý trình bắt đầu (Km)
               </label>
               <input
                 type="number"
@@ -77,7 +77,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                LÃ½ trÃ¬nh káº¿t thÃºc (Km)
+                Lý trình kết thúc (Km)
               </label>
               <input
                 type="number"
@@ -98,56 +98,56 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
           </div>
 
           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-medium">Chiá»u dÃ i tÃ­nh toÃ¡n:</span>
+            <span className="text-slate-500 font-medium">Chiều dài tính toán:</span>
             <span className="font-mono font-bold text-[#8F7212]">
-              {(segment.endKm - segment.startKm >= 1)
+              {segment.endKm - segment.startKm >= 1
                 ? `${(segment.endKm - segment.startKm).toFixed(3)} km`
-                : `${Math.round((segment.endKm - segment.startKm) * 1000)} mÃ©t`}
+                : `${Math.round((segment.endKm - segment.startKm) * 1000)} mét`}
             </span>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Sá»‘ lÃ n xe
+                Số làn xe
               </label>
               <select
                 value={segment.laneCount}
                 onChange={(e) => onChangeSegment({ ...segment, laneCount: parseInt(e.target.value) || 4 })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
-                <option value={2}>2 lÃ n xe</option>
-                <option value={4}>4 lÃ n xe (TiÃªu chuáº©n)</option>
-                <option value={6}>6 lÃ n xe (Cao tá»‘c)</option>
-                <option value={8}>8 lÃ n xe</option>
+                <option value={2}>2 làn xe</option>
+                <option value={4}>4 làn xe (Tiêu chuẩn)</option>
+                <option value={6}>6 làn xe (Cao tốc)</option>
+                <option value={8}>8 làn xe</option>
               </select>
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Váº­t liá»‡u máº·t Ä‘Æ°á»ng
+                Vật liệu mặt đường
               </label>
               <select
                 value={segment.surfaceMaterial}
                 onChange={(e) => onChangeSegment({ ...segment, surfaceMaterial: e.target.value })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
-                <option value="Máº·t BTN C12.5">Máº·t BTN C12.5</option>
-                <option value="Máº·t BTN C19">Máº·t BTN C19</option>
-                <option value="Máº·t BTN Polymer">Máº·t BTN Polymer</option>
-                <option value="BTXM DÃ y 26cm">BTXM DÃ y 26cm</option>
+                <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
+                <option value="Mặt BTN C19">Mặt BTN C19</option>
+                <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
+                <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
               </select>
             </div>
           </div>
 
-          {/* Bá» rá»™ng máº·t Ä‘Æ°á»ng */}
+          {/* Bề rộng mặt đường */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
                 <Sliders className="w-3 h-3 text-brand-gold" />
-                <span>Bá» rá»™ng máº·t Ä‘Æ°á»ng (RoadWidthProfile - mÃ©t)</span>
+                <span>Bề rộng mặt đường (RoadWidthProfile - mét)</span>
               </label>
               <span className="text-[11px] font-mono font-bold text-[#8F7212]">
-                Â±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m má»—i bÃªn tim
+                ±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m mỗi bên tim
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                   required
                 />
                 <span className="absolute right-3 top-2 text-[11px] font-semibold text-slate-400 pointer-events-none">
-                  mÃ©t
+                  mét
                 </span>
               </div>
 
@@ -190,13 +190,13 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               </div>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">
-              Äoáº¡n nÃ y rá»™ng {segment.roadWidthM || 8.0}m (trÃ¡i {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m, pháº£i {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m). Diá»‡n tÃ­ch: {Math.round((segment.lengthKm || 0) * 1000 * (segment.roadWidthM || 8.0)).toLocaleString()} mÂ².
+              Đoạn này rộng {segment.roadWidthM || 8.0}m (trái {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m, phải {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m). Diện tích: {Math.round((segment.lengthKm || 0) * 1000 * (segment.roadWidthM || 8.0)).toLocaleString()} m².
             </p>
           </div>
 
           <div>
             <label className="text-[11px] font-semibold text-slate-700 block mb-1.5">
-              MÃ u sáº¯c phÃ¢n Ä‘oáº¡n trÃªn báº£n Ä‘á»“
+              Màu sắc phân đoạn trên bản đồ
             </label>
             <div className="flex items-center gap-2">
               {colors.map((c) => (
@@ -221,13 +221,13 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
             >
-              Há»§y bá»
+              Hủy bỏ
             </button>
             <button
               type="submit"
               className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-brand-gold hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
             >
-              LÆ°u thay Ä‘á»•i
+              Lưu thay đổi
             </button>
           </div>
         </form>
@@ -235,3 +235,4 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
     </div>
   )
 }
+

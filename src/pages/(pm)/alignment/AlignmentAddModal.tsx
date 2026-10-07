@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { X, Plus, Sliders } from 'lucide-react'
 
 export interface AlignmentAddModalProps {
@@ -37,7 +37,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-brand-gold" />
             <h3 className="font-bold text-slate-900 text-base">
-              ThÃªm Má»›i PhÃ¢n Äoáº¡n Tuyáº¿n
+              Thêm Mới Phân Đoạn Tuyến
             </h3>
           </div>
           <button
@@ -51,11 +51,11 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
         <form onSubmit={onCreateNewSegment} className="flex flex-col gap-3">
           <div>
             <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-              MÃ£ / TÃªn PhÃ¢n Äoáº¡n
+              Mã / Tên Phân Đoạn
             </label>
             <input
               type="text"
-              placeholder={`PhÃ¢n Ä‘oáº¡n #${String(segmentsCount + 1).padStart(2, '0')}`}
+              placeholder={`Phân đoạn #${String(segmentsCount + 1).padStart(2, '0')}`}
               value={newSegForm.code}
               onChange={(e) => onChangeNewSegForm({ ...newSegForm, code: e.target.value })}
               className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
@@ -65,7 +65,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                LÃ½ trÃ¬nh báº¯t Ä‘áº§u (Km)
+                Lý trình bắt đầu (Km)
               </label>
               <input
                 type="number"
@@ -78,7 +78,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                LÃ½ trÃ¬nh káº¿t thÃºc (Km)
+                Lý trình kết thúc (Km)
               </label>
               <input
                 type="number"
@@ -94,45 +94,45 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Sá»‘ lÃ n xe
+                Số làn xe
               </label>
               <select
                 value={newSegForm.laneCount}
                 onChange={(e) => onChangeNewSegForm({ ...newSegForm, laneCount: parseInt(e.target.value) || 4 })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
-                <option value={2}>2 lÃ n xe</option>
-                <option value={4}>4 lÃ n xe (TiÃªu chuáº©n)</option>
-                <option value={6}>6 lÃ n xe (Cao tá»‘c)</option>
-                <option value={8}>8 lÃ n xe</option>
+                <option value={2}>2 làn xe</option>
+                <option value={4}>4 làn xe (Tiêu chuẩn)</option>
+                <option value={6}>6 làn xe (Cao tốc)</option>
+                <option value={8}>8 làn xe</option>
               </select>
             </div>
             <div>
               <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Váº­t liá»‡u máº·t Ä‘Æ°á»ng
+                Vật liệu mặt đường
               </label>
               <select
                 value={newSegForm.surfaceMaterial}
                 onChange={(e) => onChangeNewSegForm({ ...newSegForm, surfaceMaterial: e.target.value })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
-                <option value="Máº·t BTN C12.5">Máº·t BTN C12.5</option>
-                <option value="Máº·t BTN C19">Máº·t BTN C19</option>
-                <option value="Máº·t BTN Polymer">Máº·t BTN Polymer</option>
-                <option value="BTXM DÃ y 26cm">BTXM DÃ y 26cm</option>
+                <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
+                <option value="Mặt BTN C19">Mặt BTN C19</option>
+                <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
+                <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
               </select>
             </div>
           </div>
 
-          {/* Bá» rá»™ng máº·t Ä‘Æ°á»ng */}
+          {/* Bề rộng mặt đường */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
                 <Sliders className="w-3 h-3 text-brand-gold" />
-                <span>Bá» rá»™ng máº·t Ä‘Æ°á»ng (RoadWidthProfile - mÃ©t)</span>
+                <span>Bề rộng mặt đường (RoadWidthProfile - mét)</span>
               </label>
               <span className="text-[11px] font-mono font-bold text-[#8F7212]">
-                Â±{((newSegForm.roadWidthM || 8.0) / 2).toFixed(1)}m má»—i bÃªn tim
+                ±{((newSegForm.roadWidthM || 8.0) / 2).toFixed(1)}m mỗi bên tim
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -153,7 +153,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
                   required
                 />
                 <span className="absolute right-3 top-2 text-[11px] font-semibold text-slate-400 pointer-events-none">
-                  mÃ©t
+                  mét
                 </span>
               </div>
 
@@ -178,7 +178,7 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
 
           <div>
             <label className="text-[11px] font-semibold text-slate-700 block mb-1.5">
-              MÃ u sáº¯c phÃ¢n Ä‘oáº¡n trÃªn báº£n Ä‘á»“
+              Màu sắc phân đoạn trên bản đồ
             </label>
             <div className="flex items-center gap-2">
               {colors.map((c) => (
@@ -203,13 +203,13 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
             >
-              Há»§y bá»
+              Hủy bỏ
             </button>
             <button
               type="submit"
               className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-brand-gold hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
             >
-              ThÃªm phÃ¢n Ä‘oáº¡n
+              Thêm phân đoạn
             </button>
           </div>
         </form>

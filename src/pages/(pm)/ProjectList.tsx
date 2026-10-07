@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -28,7 +28,7 @@ export const ProjectList: React.FC = () => {
   // Projects state
   const [projects, setProjects] = useState<HubProject[]>(() => projectService.getProjects())
 
-  // Äá»“ng bá»™ real-time giá»¯a Supervisor khá»Ÿi táº¡o vÃ  PM
+  // Đồng bộ real-time giữa Supervisor khởi tạo và PM
   useEffect(() => {
     const handleStateChange = () => {
       setProjects(projectService.getProjects())
@@ -50,25 +50,25 @@ export const ProjectList: React.FC = () => {
     }, 3800)
   }
 
-  // Modal Khá»Ÿi táº¡o dá»± Ã¡n má»›i
+  // Modal Khởi tạo dự án mới
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [newProjectName, setNewProjectName] = useState('Quá»‘c lá»™ 14 - Äoáº¡n ChÆ¡n ThÃ nh')
+  const [newProjectName, setNewProjectName] = useState('Quốc lộ 14 - Đoạn Chơn Thành')
   const [newProjectCode, setNewProjectCode] = useState('PRJ-QL14-01')
-  const [newProjectRegion, setNewProjectRegion] = useState('BÃ¬nh PhÆ°á»›c - BÃ¬nh DÆ°Æ¡ng')
-  const [newProjectPM, setNewProjectPM] = useState('Äá»— Quá»‘c HoÃ ng (pmhoang@gmail.com)')
+  const [newProjectRegion, setNewProjectRegion] = useState('Bình Phước - Bình Dương')
+  const [newProjectPM, setNewProjectPM] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
   const [newStartDate, setNewStartDate] = useState('2026-10-01')
   const [newEndDate, setNewEndDate] = useState('2029-10-01')
   const [newStartKm, setNewStartKm] = useState('Km 0+000')
   const [newEndKm, setNewEndKm] = useState('Km 28+500')
   const [newLengthKm, setNewLengthKm] = useState('28.5')
-  const [newRetentionAmount, setNewRetentionAmount] = useState('15.500.000.000 â‚« (5% HÄ)')
+  const [newInspectionStandard, setNewInspectionStandard] = useState('TCVN 8819:2011 (Mặt đường BTN nóng)')
 
-  // Submit táº¡o dá»± Ã¡n má»›i (Supervisor quáº£n lÃ½)
+  // Submit tạo dự án mới (Supervisor quản lý)
   const handleCreateProjectSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const parsedLength = parseFloat(newLengthKm) || 28.5
-    const isUnassigned = newProjectPM === '-- Äá»ƒ trá»‘ng --'
-    const pmName = isUnassigned ? 'ChÆ°a phÃ¢n cÃ´ng' : newProjectPM.split(' (')[0]
+    const isUnassigned = newProjectPM === '-- Để trống --'
+    const pmName = isUnassigned ? 'Chưa phân công' : newProjectPM.split(' (')[0]
     const pmEmail = isUnassigned
       ? ''
       : newProjectPM.includes('(')
@@ -83,13 +83,13 @@ export const ProjectList: React.FC = () => {
       location_detail: newProjectRegion,
       start_km: 0.0,
       end_km: parsedLength,
-      stationing_text: `${newStartKm} â†’ ${newEndKm}`,
+      stationing_text: `${newStartKm} ➔ ${newEndKm}`,
       status: 'PENDING_ALIGNMENT',
-      status_label: 'Chá» duyá»‡t tuyáº¿n',
+      status_label: 'Chờ duyệt tuyến',
       status_color: '#D97706',
       pm_name: pmName,
       pm_email: pmEmail,
-      pm_role_badge: isUnassigned ? 'ChÆ°a gÃ¡n' : 'PM Tuyáº¿n',
+      pm_role_badge: isUnassigned ? 'Chưa gán' : 'PM Tuyến',
       warranty_passed_percent: 0,
       days_remaining: 1095,
       length_km: parsedLength,
@@ -98,26 +98,27 @@ export const ProjectList: React.FC = () => {
       image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
       is_assigned: !isUnassigned,
       is_restricted_for_pm: false,
-      kml_status: 'Chá» phÃª duyá»‡t KML',
-      retention_amount: newRetentionAmount || '15.5 tá»· â‚« (5% HÄ)'
+      kml_status: 'Chờ phê duyệt KML',
+      inspection_standard: newInspectionStandard || 'TCVN 8819:2011'
     }
 
     projectService.createProject(newProject)
     setProjects(projectService.getProjects())
     setIsModalOpen(false)
-    showToast(`Khá»Ÿi táº¡o thÃ nh cÃ´ng dá»± Ã¡n [${newProject.code}] vÃ  Ä‘Ã£ chuyá»ƒn sang tráº¡ng thÃ¡i Chá» phÃª duyá»‡t tim tuyáº¿n (WF-02)!`)
+    showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
   }
 
-  // Lá»c danh sÃ¡ch dá»± Ã¡n dá»±a theo vai trÃ² (Role-based Project Scope)
+  // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope)
   const scopedProjects = useMemo(() => {
     if (isSupervisor) return projects
     return projects.filter((prj) => {
       const isAssigned =
         prj.pm_email === user?.email ||
         prj.pm_name === user?.full_name ||
-        prj.pm_name === 'Äá»— Quá»‘c HoÃ ng' ||
+        prj.pm_name === 'Đỗ Quốc Hoàng' ||
         prj.id === 'prj-ql1a-02' ||
         prj.id === 'prj-lstl-05'
+
       return isAssigned && !prj.is_restricted_for_pm
     })
   }, [projects, isSupervisor, user])
@@ -144,7 +145,7 @@ export const ProjectList: React.FC = () => {
     })
   }, [scopedProjects, filterTab, searchQuery])
 
-  // KPI Metrics Calculation dá»±a trÃªn pháº¡m vi dá»± Ã¡n Ä‘Æ°á»£c phÃ¢n cÃ´ng
+  // KPI Metrics Calculation dựa trên phạm vi dự án được phân công
   const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
@@ -174,7 +175,7 @@ export const ProjectList: React.FC = () => {
       <ProjectListHeader
         isSupervisor={isSupervisor}
         onNavigateHome={handleNavigateHome}
-        onExportGis={() => showToast('Äang káº¿t xuáº¥t tá»‡p GIS GeoJSON & KML toÃ n tuyáº¿n máº¡ng lÆ°á»›i Ä‘Æ°á»ng bá»™...')}
+        onExportGis={() => showToast('Đang kết xuất tệp GIS GeoJSON & KML toàn tuyến mạng lưới đường bộ...')}
         onOpenCreateModal={() => setIsModalOpen(true)}
       />
 
@@ -224,8 +225,8 @@ export const ProjectList: React.FC = () => {
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
-        retentionAmount={newRetentionAmount}
-        onChangeRetentionAmount={setNewRetentionAmount}
+        inspectionStandard={newInspectionStandard}
+        onChangeInspectionStandard={setNewInspectionStandard}
         startKm={newStartKm}
         onChangeStartKm={setNewStartKm}
         endKm={newEndKm}

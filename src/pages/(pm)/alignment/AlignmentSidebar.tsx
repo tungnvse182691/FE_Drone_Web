@@ -1,10 +1,10 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   SplitSquareVertical,
   Sliders,
   Grid
 } from 'lucide-react'
-import { SegmentItem, SlabItem } from './types'
+import { SegmentItem, SlabItem, BranchItem } from './types'
 import { SidebarSegmentsTab } from './SidebarSegmentsTab'
 import { SidebarWidthProfileTab } from './SidebarWidthProfileTab'
 import { SidebarSlabsTab } from './SidebarSlabsTab'
@@ -45,6 +45,13 @@ export interface AlignmentSidebarProps {
   onUpdateAllWidths: (width: number) => void
   slabs: SlabItem[]
   showToast: (msg: string) => void
+  // Quản lý Tuyến nhánh
+  branches?: BranchItem[]
+  selectedTargetType?: 'MAINLINE' | string
+  onSelectTargetType?: (type: 'MAINLINE' | string) => void
+  onOpenAddBranchModal?: () => void
+  onDeleteBranch?: (branchId: string) => void
+  mainlineLengthKm?: number
 }
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
@@ -81,7 +88,13 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onUpdateSegmentWidth,
   onUpdateAllWidths,
   slabs,
-  showToast
+  showToast,
+  branches = [],
+  selectedTargetType = 'MAINLINE',
+  onSelectTargetType,
+  onOpenAddBranchModal,
+  onDeleteBranch,
+  mainlineLengthKm
 }) => {
   return (
     <div className="xl:col-span-4 flex flex-col gap-3">
@@ -98,7 +111,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             }`}
           >
             <SplitSquareVertical className="w-3.5 h-3.5 text-brand-gold" />
-            <span className="truncate">PhÃ¢n Ä‘oáº¡n</span>
+            <span className="truncate">Phân đoạn</span>
             <span className="text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-brand-gold">
               {segments.length}
             </span>
@@ -113,7 +126,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             }`}
           >
             <Sliders className="w-3.5 h-3.5 text-brand-gold" />
-            <span className="truncate">Bá» rá»™ng (m)</span>
+            <span className="truncate">Bề rộng (m)</span>
             <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
               v2.2
             </span>
@@ -128,7 +141,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             }`}
           >
             <Grid className="w-3.5 h-3.5 text-brand-gold" />
-            <span className="truncate">Táº¥m & Khe</span>
+            <span className="truncate">Tấm & Khe</span>
             <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
               TCVN
             </span>
@@ -155,10 +168,16 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onEditSegment={onEditSegment}
             onDeleteSegment={onDeleteSegment}
             onSnapSegment={onSnapSegment}
+            branches={branches}
+            selectedTargetType={selectedTargetType}
+            onSelectTargetType={onSelectTargetType}
+            onOpenAddBranchModal={onOpenAddBranchModal}
+            onDeleteBranch={onDeleteBranch}
+            mainlineLengthKm={mainlineLengthKm}
           />
         )}
 
-        {/* TAB CONTENT: WIDTH_PROFILE */}
+        {/* TAB CONTENT: ROAD WIDTH PROFILE */}
         {rightTab === 'WIDTH_PROFILE' && (
           <SidebarWidthProfileTab
             segments={segments}
@@ -168,7 +187,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           />
         )}
 
-        {/* TAB CONTENT: SLABS & JOINTS */}
+        {/* TAB CONTENT: SLABS & JOINTS CONFIG */}
         {rightTab === 'SLABS' && (
           <SidebarSlabsTab
             slabLengthM={slabLengthM}
@@ -187,13 +206,13 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             showToast={showToast}
           />
         )}
-
-        {/* Summary Statistics Footer */}
-        <SidebarFooterKpis
-          segments={segments}
-          importedLengthKm={importedLengthKm}
-        />
       </div>
+
+      {/* KPI TỔNG KẾT DƯỚI SIDEBAR */}
+      <SidebarFooterKpis
+        segments={segments}
+        importedLengthKm={importedLengthKm}
+      />
     </div>
   )
 }

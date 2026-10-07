@@ -235,9 +235,9 @@ Hệ thống dùng **Sansation** cho logo và headline, **Roboto** cho toàn b�
 
 - Do dùng vàng đồng `{colors.primary}` cho đúng một hành động chính trên mỗi màn hình.
 - Do hiển thị đủ 4 nhánh phê duyệt WF-07 (APPROVE / REQUEST_EVIDENCE / REQUEST_RECONSIDER / REJECT) kèm lý do bắt buộc cho 3 nhánh sau.
-- Do khóa Read-only toàn bộ BOQ khi đợt đã APPROVED.
+- Do khóa Read-only toàn bộ phương án kỹ thuật khi đợt đã APPROVED.
 - Do hiển thị Before/After + EXIF trước khi cho nghiệm thu.
-- Do BOQ = SUM tự động, không ô nhập tổng tiền.
+- Do quản lý khối lượng kỹ thuật thuần túy (m², mét dài, cm sâu, TCVN 8819), không chứa bảng BOQ tài chính hay ô nhập giá tiền.
 - Don't dùng gradient hoặc shadow đậm.
 - Don't optimistic UI cho phê duyệt/đóng đợt/publish (phải chờ server ACK).
 - Don't copy text/data giả từ Stitch vào web (Stitch chỉ tham khảo layout + mã màu).

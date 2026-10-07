@@ -128,7 +128,7 @@ export function useAlignmentSegmentsState({
       lengthKm: parseFloat((end - start).toFixed(3)),
       roadWidthM: Number(newSegForm.roadWidthM) || 8.0,
       status: 'VALID',
-      statusText: 'HỢP LỆ (Valid)',
+      statusText: 'HỢP LỆ',
       laneCount: newSegForm.laneCount || 4,
       surfaceMaterial: newSegForm.surfaceMaterial || 'Mặt BTN C12.5',
       color: newSegForm.color || SEGMENT_COLORS[segments.length % SEGMENT_COLORS.length]
@@ -176,19 +176,18 @@ export function useAlignmentSegmentsState({
   }
 
   const handleDeleteSegment = (segId: string) => {
-    if (segments.length <= 1) {
-      showToast('Tuyến đường phải có ít nhất 1 phân đoạn!')
-      return
-    }
-
     const updatedList = segments.filter((s) => s.id !== segId)
     const validated = checkAndEnrichSegmentsContinuity(updatedList)
     setSegments(validated)
-    const nextSelId = selectedSegmentId === segId ? validated[0]?.id || null : selectedSegmentId
+    const nextSelId = selectedSegmentId === segId ? (validated[0]?.id || null) : selectedSegmentId
     setSelectedSegmentId(nextSelId)
     syncMap(validated, nextSelId)
 
-    showToast('Đã xóa phân đoạn khỏi danh sách tuyến!')
+    if (validated.length === 0) {
+      showToast('Đã xóa phân đoạn. Tuyến hiện chưa có phân đoạn, bạn có thể áp dụng chia đoạn tự động hoặc tạo lại!')
+    } else {
+      showToast('Đã xóa phân đoạn khỏi danh sách tuyến!')
+    }
   }
 
   const handleUpdateSegmentWidth = (segId: string, widthM: number) => {

@@ -54,26 +54,26 @@ Skill này cung cấp toàn bộ đặc tả chức năng của 18 màn hình tr
 
 ---
 
-### Giai Đoạn 3: Gom Đợt Sửa Chữa & Lập Dự Toán (Batching & Approval)
-- **Màn 10: Gom đợt sửa chữa & Dự toán chi phí** (`/pm/repair-batches/create`)
-  - *File:* `src/pages/(pm)/RepairBatching.tsx`
-  - *Mục đích:* Gom các lỗi đã thẩm định vào 1 đợt sửa chữa và tự động lập bảng khối lượng dự toán (BOQ).
+### Giai Đoạn 3: Gom Đợt Sửa Chữa & Lập Phương Án Kỹ Thuật (Batching & Approval)
+- **Màn 10: Gom đợt sửa chữa & Bóc tách khối lượng kỹ thuật** (`/pm/repair-batches/create`)
+  - *File:* `src/pages/(pm)/RepairProposals.tsx`
+  - *Mục đích:* Gom các lỗi đã thẩm định vào 1 đợt sửa chữa và tự động lập bảng bóc tách khối lượng kỹ thuật thi công.
   - *Thành phần:*
     - Danh sách các lỗi đã xác nhận (`VERIFIED`) chưa gán đợt.
-    - Bảng dự toán chi phí tự động: Tên hạng mục, Đơn vị tính, Đơn giá định mức, Khối lượng tính toán, Thành tiền.
-    - Tổng tiền dự toán (`estimated_total_cost` = tự động SUM, không cho gõ tay).
+    - Bảng khối lượng kỹ thuật: Tên hạng mục, Quy cách vật liệu, Chiều sâu cào bóc (cm), Diện tích tính toán (m²), Chiều dài (m).
+    - Quy mô kỹ thuật tổng hợp (Tổng diện tích m² cào bóc, thời gian thi công dự kiến).
 - **Màn 11: Trình duyệt hồ sơ đợt sửa** (`/pm/repair-batches/:id/submit`)
-  - *File:* `src/pages/(pm)/SubmitApproval.tsx`
-  - *Mục đích:* Kiểm tra lại toàn bộ hồ sơ đợt sửa trước khi gửi cho Giám sát.
-  - *Thành phần:* Tóm tắt hồ sơ, danh sách hư hỏng đính kèm, bảng dự toán chi phí, nút [Gửi Giám sát phê duyệt].
-- **Màn 12: Thẩm duyệt đợt sửa chữa (Supervisor)** (`/sup/approvals`)
-  - *File:* `src/pages/(sup)/BatchApprovals.tsx`
-  - *Mục đích:* Supervisor kiểm tra tính hợp lý của đợt sửa và đơn giá dự toán.
+  - *File:* `src/pages/(sup)/ProposalApprovalDetail.tsx`
+  - *Mục đích:* Kiểm tra lại toàn bộ hồ sơ phương án kỹ thuật trước khi gửi cho Giám sát.
+  - *Thành phần:* Tóm tắt hồ sơ, danh sách hư hỏng đính kèm, bảng khối lượng kỹ thuật, nút [Gửi Giám sát phê duyệt].
+- **Màn 12: Thẩm duyệt đợt sửa chữa (Supervisor)** (`/sup/proposals`)
+  - *File:* `src/pages/(sup)/ProposalApprovalDetail.tsx`
+  - *Mục đích:* Supervisor kiểm tra tính hợp lý của phương án kỹ thuật và tiêu chuẩn thi công TCVN.
   - *Thành phần:* Bảng danh sách đợt sửa chờ duyệt (`PENDING_APPROVAL`), xem chi tiết từng hạng mục, nút [Phê duyệt đợt sửa] (chuyển trạng thái sang `APPROVED`), nút [Yêu cầu chỉnh sửa].
 - **Màn 13: Yêu cầu chỉnh sửa / Trả về hồ sơ** (`/sup/approvals/:id/reject`)
   - *File:* `src/pages/(sup)/BatchRejection.tsx`
-  - *Mục đích:* Ghi rõ lý do không đồng ý với hồ sơ để PM điều chỉnh.
-  - *Thành phần:* Chọn lý do chuẩn (Đơn giá vượt định mức, Thiếu ảnh khảo sát, Phạm vi chưa hợp lý...), nhập ghi chú chi tiết, nút [Gửi trả hồ sơ] (chuyển sang `REVISION_REQUIRED`).
+  - *Mục đích:* Ghi rõ lý do không đồng ý với phương án để PM điều chỉnh.
+  - *Thành phần:* Chọn lý do chuẩn (Phương án chưa đạt TCVN, Thiếu ảnh đo độ sâu, Phạm vi chưa hợp lý...), nhập ghi chú chi tiết, nút [Gửi trả hồ sơ] (chuyển sang `REVISION_REQUIRED`).
 
 ---
 
