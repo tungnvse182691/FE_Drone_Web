@@ -1,259 +1,363 @@
-﻿import React, { useState } from 'react'
-import { Sparkles, AlertTriangle, Database, Info } from 'lucide-react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Defect } from '../../../types/domain'
+import { Icon } from '../../../components/ui/Icon'
 
 interface DefectTemporalComparisonProps {
   defect: Defect
 }
 
 export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> = ({ defect }) => {
-  const [temporalMode, setTemporalMode] = useState<'EVOLUTION' | 'FRESH_DEFECT' | 'INITIAL_BASELINE'>('FRESH_DEFECT')
+  const hasPreviousEpoch = Boolean(defect.previous_epoch_image_url)
+
+  // Vị trí thanh trượt Split-screen (0% -> 100%)
+  const [sliderPos, setSliderPos] = useState<number>(50)
+  const [isDraggingSlider, setIsDraggingSlider] = useState<boolean>(false)
+  const [comparisonMode, setComparisonMode] = useState<'SPLIT_SLIDER' | 'SIDE_BY_SIDE'>('SPLIT_SLIDER')
+  const sliderContainerRef = useRef<HTMLDivElement>(null)
+
+  // Tính toán diện tích hiện tại
+  const currentArea = ((defect.length_m || 0.85) * (defect.width_m || 0.65)).toFixed(2)
+  const isCrackType = defect.defect_type.includes('CRACK')
+
+  // Ngày chụp thực tế 2 kỳ
+  const epochPrevDate = '15/06/2026'
+  const epochPrevMission = 'QL1A-MS-02 (Đợt 2)'
+  const epochCurrDate = '24/09/2026'
+  const epochCurrMission = `Đợt bay ${defect.survey_id || 'srv-01'}`
+  const deltaDays = 101
+
+  // Xử lý kéo thanh trượt
+  const handleSliderMove = useCallback((clientX: number) => {
+    if (!sliderContainerRef.current) return
+    const rect = sliderContainerRef.current.getBoundingClientRect()
+    const x = clientX - rect.left
+    const percent = Math.min(Math.max(5, (x / rect.width) * 100), 95)
+    setSliderPos(percent)
+  }, [])
+
+  const handleMouseDown = () => {
+    setIsDraggingSlider(true)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDraggingSlider) {
+      handleSliderMove(e.clientX)
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDraggingSlider(false)
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Scenario Switcher Tabs */}
-      <div className="bg-slate-100 p-1 rounded-xl border border-slate-200 flex items-center justify-between gap-1 flex-wrap">
-        <div className="flex items-center gap-1 text-[11px] font-semibold flex-wrap">
-          <button
-            type="button"
-            onClick={() => setTemporalMode('FRESH_DEFECT')}
-            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              temporalMode === 'FRESH_DEFECT'
-                ? 'bg-white text-emerald-800 font-bold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Lá»—i má»›i phÃ¡t sinh (Ká»³ trÆ°á»›c bÃ¬nh thÆ°á»ng)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTemporalMode('EVOLUTION')}
-            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              temporalMode === 'EVOLUTION'
-                ? 'bg-white text-rose-800 font-bold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-            <span>Váº¿t ná»©t tiáº¿n triá»ƒn (+18%)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTemporalMode('INITIAL_BASELINE')}
-            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              temporalMode === 'INITIAL_BASELINE'
-                ? 'bg-white text-blue-800 font-bold shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5 text-blue-600" />
-            <span>Láº§n Ä‘áº§u ghi nháº­n (ChÆ°a cÃ³ áº£nh ká»³ trÆ°á»›c)</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Scenario 1: HÆ¯ Há»ŽNG Má»šI PHÃT SINH */}
-      {temporalMode === 'FRESH_DEFECT' && (
-        <div className="space-y-3 animate-in fade-in">
-          <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>Äa Ká»³: Ká»³ TrÆ°á»›c (Máº·t Ä‘Æ°á»ng nguyÃªn váº¹n) vs Ká»³ NÃ y (Má»›i xuáº¥t hiá»‡n)</span>
-            </span>
-            <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[11px]">
-              âœ¨ HÆ° há»ng má»›i phÃ¡t sinh (Fresh Defect)
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500">Ká»³ TrÆ°á»›c (ThÃ¡ng 06/2026 - Chu ká»³ T-1)</span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                  âœ“ Máº·t Ä‘Æ°á»ng nguyÃªn váº¹n
+    <div className="space-y-4" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+      {/* 1. TRƯỜNG HỢP CÓ DỮ LIỆU ĐA KỲ (CÓ ẢNH KỲ TRƯỚC T-1 ĐỂ SO SÁNH) */}
+      {hasPreviousEpoch ? (
+        <div className="space-y-4">
+          {/* Header trạng thái so sánh & chuyển đổi chế độ */}
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#E2E5E9] flex-wrap">
+            <div className="flex items-center gap-2">
+              <Icon name="compare" size={18} className="text-[#8C6D1F]" />
+              <div>
+                <span className="text-xs font-bold text-[#1A1D20] block">
+                  So sánh ảnh đa kỳ (Temporal Epoch Analysis)
                 </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-video bg-black group">
-                <img
-                  src="https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80"
-                  alt="Ká»³ trÆ°á»›c máº·t Ä‘Æ°á»ng nguyÃªn váº¹n"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-2 left-2 bg-emerald-950/80 backdrop-blur-xs text-white px-2 py-0.5 rounded text-[10px] font-medium border border-emerald-400/30">
-                  Km 1024+300 â€¢ Káº¿t cáº¥u á»•n Ä‘á»‹nh
-                </div>
+                <span className="text-[11px] text-slate-500">
+                  Chu kỳ T-1 ({epochPrevDate}) đối chiếu Chu kỳ T0 ({epochCurrDate}) • Khoảng cách: {deltaDays} ngày (~3.3 tháng)
+                </span>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#8F7212]">Ká»³ NÃ y (ThÃ¡ng 10/2026 - Chu ká»³ T0)</span>
-                <span className="text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.2 rounded border border-red-200">
-                  âš  PhÃ¡t sinh á»• gÃ  / ná»©t
-                </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden border-2 border-brand-gold aspect-video bg-black">
+            {/* Chuyển đổi giữa Split Slider và Side-by-Side */}
+            <div className="flex items-center bg-[#F8F9FA] p-0.5 rounded-lg border border-[#E2E5E9] text-xs">
+              <button
+                type="button"
+                onClick={() => setComparisonMode('SPLIT_SLIDER')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${
+                  comparisonMode === 'SPLIT_SLIDER'
+                    ? 'bg-white text-[#8C6D1F] shadow-2xs border border-[#E2E5E9]'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Kéo thanh trượt chồng ảnh Before / After"
+              >
+                <Icon name="splitscreen" size={14} />
+                <span>Thanh trượt (Split)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setComparisonMode('SIDE_BY_SIDE')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all font-semibold cursor-pointer ${
+                  comparisonMode === 'SIDE_BY_SIDE'
+                    ? 'bg-white text-[#8C6D1F] shadow-2xs border border-[#E2E5E9]'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Xem song song 2 ảnh cạnh nhau"
+              >
+                <Icon name="view_column" size={14} />
+                <span>Song song (2 cột)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CHẾ ĐỘ 1: THANH TRƯỢT SPLIT-SCREEN CHỒNG ẢNH TRỰC QUAN */}
+          {comparisonMode === 'SPLIT_SLIDER' && (
+            <div className="space-y-2">
+              <div
+                ref={sliderContainerRef}
+                onMouseMove={handleMouseMove}
+                className="relative rounded-xl overflow-hidden border border-slate-300 bg-black aspect-video select-none cursor-ew-resize group shadow-md"
+              >
+                {/* Lớp ảnh 1: Kỳ trước T-1 (Nằm dưới cùng, chiếm toàn bộ) */}
                 <img
-                  src={defect.image_url}
-                  alt="Ká»³ nÃ y má»›i ná»©t"
-                  className="w-full h-full object-cover"
+                  src={defect.previous_epoch_image_url}
+                  alt="Ảnh kỳ trước"
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                 />
+
+                {/* Nhãn Kỳ trước T-1 (Góc trái) */}
+                <div className="absolute top-3 left-3 bg-[#1A1D20]/85 text-white backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px] font-medium border border-white/10 pointer-events-none z-10 flex items-center gap-1.5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Kỳ trước T-1: <strong>{epochPrevDate}</strong> ({epochPrevMission})</span>
+                </div>
+
+                {/* Lớp ảnh 2: Kỳ này T0 (Nằm đè lên trên, cắt theo sliderPos) */}
                 <div
-                  className="absolute border-2 border-red-500 bg-red-500/20 rounded shadow-md pointer-events-none"
+                  className="absolute inset-0 overflow-hidden pointer-events-none"
                   style={{
-                    left: `${defect.bounding_box.x * 100}%`,
-                    top: `${defect.bounding_box.y * 100}%`,
-                    width: `${defect.bounding_box.width * 100}%`,
-                    height: `${defect.bounding_box.height * 100}%`
+                    clipPath: `inset(0 0 0 ${sliderPos}%)`
                   }}
                 >
-                  <span className="bg-red-600 text-white text-[9px] font-bold px-1 py-0.5 rounded absolute -top-4 left-0">
-                    Lá»—i má»›i (SÃ¢u {defect.depth_mm ? (defect.depth_mm / 10).toFixed(1) : '7.0'}cm)
+                  <img
+                    src={defect.image_url}
+                    alt="Ảnh kỳ này"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* Bounding box AI trên ảnh kỳ này */}
+                  <div
+                    className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded"
+                    style={{
+                      left: `${defect.bounding_box.x * 100}%`,
+                      top: `${defect.bounding_box.y * 100}%`,
+                      width: `${defect.bounding_box.width * 100}%`,
+                      height: `${defect.bounding_box.height * 100}%`
+                    }}
+                  >
+                    <span className="bg-[#8C6D1F] text-white text-[9px] font-bold px-1.5 py-0.5 rounded absolute -top-4 left-0">
+                      {defect.defect_type} ({Math.round(defect.confidence_score * 100)}%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Nhãn Kỳ này T0 (Góc phải) */}
+                <div className="absolute top-3 right-3 bg-[#1A1D20]/85 text-white backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px] font-medium border border-white/10 pointer-events-none z-10 flex items-center gap-1.5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>Kỳ này T0: <strong>{epochCurrDate}</strong> ({epochCurrMission})</span>
+                </div>
+
+                {/* Thanh kẻ dọc chia đôi (Divider Line) */}
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-[#C9A227] shadow-[0_0_10px_rgba(201,162,39,0.8)] z-20 pointer-events-none"
+                  style={{ left: `${sliderPos}%` }}
+                >
+                  {/* Tay cầm kéo tròn (Draggable Knob) */}
+                  <div
+                    onMouseDown={handleMouseDown}
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-white border-2 border-[#C9A227] shadow-xl flex items-center justify-center text-[#8C6D1F] pointer-events-auto cursor-ew-resize hover:scale-110 active:scale-95 transition-transform"
+                    title="Kéo qua lại để so sánh đối chiếu vết nứt"
+                  >
+                    <Icon name="compare_arrows" size={18} />
+                  </div>
+                </div>
+
+                {/* Hướng dẫn kéo trượt ở đáy khung */}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white/90 px-3 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-xs pointer-events-none z-10 border border-white/10 flex items-center gap-1.5">
+                  <Icon name="drag_handle" size={12} className="text-[#C9A227]" />
+                  <span>Kéo thanh trượt qua trái/phải để đối chiếu sự lan rộng của vết nứt</span>
+                </div>
+              </div>
+
+              {/* Range input trượt mượt mà phụ trợ */}
+              <div className="flex items-center gap-3 px-2 pt-1">
+                <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                  Kỳ trước ({epochPrevDate})
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={sliderPos}
+                  onChange={(e) => setSliderPos(Number(e.target.value))}
+                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#C9A227]"
+                />
+                <span className="text-[11px] font-medium text-slate-700 font-bold whitespace-nowrap">
+                  Kỳ này ({epochCurrDate})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* CHẾ ĐỘ 2: KHUNG ẢNH SONG SONG SIDE-BY-SIDE (2 CỘT) */}
+          {comparisonMode === 'SIDE_BY_SIDE' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cột trái: Kỳ trước T-1 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Kỳ trước T-1: <strong>{epochPrevDate}</strong></span>
                   </span>
+                  <span className="text-[10px] font-medium text-emerald-800 bg-[#E9F7EC] px-2 py-0.5 rounded border border-emerald-200">
+                    Mặt đường nguyên vẹn
+                  </span>
+                </div>
+                <div className="relative rounded-lg overflow-hidden border border-[#E2E5E9] aspect-video bg-black">
+                  <img
+                    src={defect.previous_epoch_image_url}
+                    alt="Ảnh kỳ trước"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 bg-[#1A1D20]/80 text-white px-2 py-0.5 rounded text-[10px] font-medium border border-white/10 flex items-center gap-1">
+                    <Icon name="history" size={13} className="text-slate-300" />
+                    <span>{epochPrevMission} • Chưa phát sinh khuyết tật</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột phải: Kỳ này T0 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-[#1A1D20] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>Kỳ này T0: <strong>{epochCurrDate}</strong></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-[#E5484D] bg-[#FDECEC] px-2 py-0.5 rounded border border-red-200">
+                    Phát sinh hư hỏng mới
+                  </span>
+                </div>
+                <div className="relative rounded-lg overflow-hidden border-2 border-[#C9A227] aspect-video bg-black">
+                  <img
+                    src={defect.image_url}
+                    alt="Ảnh kỳ này"
+                    className="w-full h-full object-cover"
+                  />
+                  <div
+                    className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded pointer-events-none"
+                    style={{
+                      left: `${defect.bounding_box.x * 100}%`,
+                      top: `${defect.bounding_box.y * 100}%`,
+                      width: `${defect.bounding_box.width * 100}%`,
+                      height: `${defect.bounding_box.height * 100}%`
+                    }}
+                  >
+                    <span className="bg-[#8C6D1F] text-white text-[9px] font-bold px-1.5 py-0.5 rounded absolute -top-4 left-0">
+                      {defect.defect_type} ({Math.round(defect.confidence_score * 100)}%)
+                    </span>
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-[#1A1D20]/80 text-white px-2 py-0.5 rounded text-[10px] font-medium border border-white/10 flex items-center gap-1">
+                    <Icon name="photo_camera" size={13} className="text-amber-300" />
+                    <span>{epochCurrMission}</span>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Bảng chỉ số kỹ thuật biến động & Đánh giá tốc độ suy thoái */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-[#F8F9FA] rounded-lg border border-[#E2E5E9] text-xs">
+            <div>
+              <span className="text-slate-500 text-[11px] block">Diện tích kỳ trước</span>
+              <span className="font-mono font-bold text-slate-700">0.00 m²</span>
+            </div>
+            <div>
+              <span className="text-slate-500 text-[11px] block">Diện tích kỳ này</span>
+              <span className="font-mono font-bold text-[#1A1D20]">{currentArea} m²</span>
+            </div>
+            <div>
+              <span className="text-slate-500 text-[11px] block">Tốc độ mở rộng</span>
+              <span className="font-mono font-bold text-[#E5484D] flex items-center gap-1">
+                <Icon name="trending_up" size={14} className="text-red-500" />
+                <span>Tăng nhanh (+34%/tháng)</span>
+              </span>
+            </div>
+            <div>
+              <span className="text-slate-500 text-[11px] block">Đánh giá suy thoái</span>
+              <span className="font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded text-[10px] inline-block mt-0.5">
+                Cần xử lý kịp thời
+              </span>
+            </div>
           </div>
 
-          <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs space-y-1 text-emerald-950">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-              <Info className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Káº¿t luáº­n tháº©m Ä‘á»‹nh so sÃ¡nh Ä‘a ká»³:</span>
+          {/* Đánh giá phân tích suy thoái từ mô hình AI */}
+          <div className="p-3.5 bg-white border border-[#E2E5E9] rounded-lg text-xs space-y-1.5 shadow-2xs">
+            <div className="flex items-center gap-1.5 font-bold text-[#1A1D20]">
+              <Icon name="analytics" size={16} className="text-[#8C6D1F]" />
+              <span>Đánh giá diễn biến theo thời gian (Temporal Analysis):</span>
             </div>
-            <p className="text-[11px] text-emerald-900 leading-relaxed">
-              Camera Drone á»Ÿ ká»³ bay trÆ°á»›c (T-1) Ä‘Ã£ chá»¥p quÃ©t qua vá»‹ trÃ­ nÃ y vÃ  xÃ¡c nháº­n <strong>máº·t Ä‘Æ°á»ng cÃ²n nguyÃªn váº¹n, chÆ°a cÃ³ váº¿t ná»©t</strong>. HÆ° há»ng nÃ y xuáº¥t hiá»‡n Ä‘á»™t ngá»™t trong chu ká»³ hiá»‡n táº¡i (Tá»· lá»‡ tÄƒng diá»‡n tÃ­ch: <strong>0% â†’ 100%</strong>, phÃ¡t sinh má»›i sau Ä‘á»£t mÆ°a bÃ£o). Äá» xuáº¥t Ä‘Æ°a vÃ o káº¿ hoáº¡ch sá»­a chá»¯a ngay Ä‘á»ƒ ngÄƒn nÆ°á»›c tháº¥m phÃ¡ hoáº¡i mÃ³ng Ä‘Æ°á»ng.
+            <p className="text-[12px] text-slate-600 leading-relaxed font-normal">
+              Đối chiếu dữ liệu ảnh bay quét giữa Chu kỳ T-1 (<strong>{epochPrevDate}</strong>) và Chu kỳ T0 (<strong>{epochCurrDate}</strong>) xác nhận:
+              tại vị trí lý trình Km {defect.chainage_km}, mặt đường bê tông xi măng đã{' '}
+              {isCrackType ? 'xuất hiện vết nứt lan rộng với tốc độ nhanh' : 'phát sinh hố sụt lún / vỡ góc bản mới'}{' '}
+              sau chu kỳ khai thác và đợt mưa bão ({deltaDays} ngày). Đề xuất PM phê duyệt đưa vào đợt sửa chữa cấp bách để trám chèn khe nứt, ngăn nước thâm nhập phá hoại móng đường.
             </p>
           </div>
         </div>
-      )}
-
-      {/* Scenario 2: Váº¾T Ná»¨T TIáº¾N TRIá»‚N */}
-      {temporalMode === 'EVOLUTION' && (
-        <div className="space-y-3 animate-in fade-in">
-          <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-              <span>Äa Ká»³: Theo DÃµi Tá»‘c Äá»™ Ná»©t Lan Tá»a (Crack Growth Evolution)</span>
-            </span>
-            <span className="text-rose-600 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full text-[11px]">
-              Tá»‘c Ä‘á»™ má»Ÿ rá»™ng váº¿t ná»©t: +18%
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500">Ká»³ Kháº£o SÃ¡t TrÆ°á»›c (ThÃ¡ng 06/2026)</span>
-                <span className="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded font-mono">
-                  Diá»‡n tÃ­ch: 0.32 mÂ²
-                </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-video bg-black">
-                <img
-                  src="https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80"
-                  alt="Ká»³ trÆ°á»›c ná»©t nhá»"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute top-1/4 left-1/3 w-1/4 h-1/4 border-2 border-amber-400 bg-amber-400/20 rounded pointer-events-none">
-                  <span className="bg-amber-500 text-slate-950 text-[9px] font-bold px-1 py-0.2 rounded absolute -top-3.5 left-0">
-                    Ná»©t chÃ¢n chim (0.32 mÂ²)
-                  </span>
-                </div>
-              </div>
+      ) : (
+        /* 2. TRƯỜNG HỢP LẦN ĐẦU GHI NHẬN (BASELINE T0 - CHƯA CÓ LỊCH SỬ KỲ TRƯỚC) */
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#E2E5E9] flex-wrap">
+            <div className="flex items-center gap-2">
+              <Icon name="history_toggle_off" size={18} className="text-slate-500" />
+              <span className="text-xs font-semibold text-[#1A1D20]">
+                Khảo sát ban đầu: Ghi nhận mốc chuẩn Baseline (Chu kỳ T0: {epochCurrDate})
+              </span>
             </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#8F7212]">Ká»³ Kháº£o SÃ¡t NÃ y (ThÃ¡ng 10/2026)</span>
-                <span className="text-[10px] text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded font-mono font-bold">
-                  Diá»‡n tÃ­ch: {((defect.length_m || 1.2) * (defect.width_m || 0.8)).toFixed(2)} mÂ² (+18%)
-                </span>
-              </div>
-              <div className="relative rounded-lg overflow-hidden border-2 border-brand-gold aspect-video bg-black">
-                <img
-                  src={defect.image_url}
-                  alt="Ká»³ nÃ y ná»©t to"
-                  className="w-full h-full object-cover"
-                />
-                <div
-                  className="absolute border-2 border-rose-500 bg-rose-500/20 rounded pointer-events-none"
-                  style={{
-                    left: `${defect.bounding_box.x * 100}%`,
-                    top: `${defect.bounding_box.y * 100}%`,
-                    width: `${defect.bounding_box.width * 100}%`,
-                    height: `${defect.bounding_box.height * 100}%`
-                  }}
-                >
-                  <span className="bg-rose-600 text-white text-[9px] font-bold px-1 py-0.2 rounded absolute -top-3.5 left-0">
-                    Ná»©t lÆ°á»›i lan rá»™ng ({((defect.length_m || 1.2) * (defect.width_m || 0.8)).toFixed(2)} mÂ²)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs space-y-1 text-amber-950">
-            <div className="flex items-center gap-1.5 font-bold text-amber-900">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Cáº£nh bÃ¡o tiáº¿n triá»ƒn suy thoÃ¡i káº¿t cáº¥u:</span>
-            </div>
-            <p className="text-[11px] text-amber-900 leading-relaxed">
-              Váº¿t ná»©t tá»« dáº¡ng sá»£i Ä‘Æ¡n láº» á»Ÿ ká»³ trÆ°á»›c Ä‘Ã£ xÃ© rá»™ng thÃ nh dáº¡ng máº¡ng lÆ°á»›i cÃ¡ sáº¥u (Alligator cracking) vá»›i tá»‘c Ä‘á»™ tÄƒng trÆ°á»Ÿng <strong>+18% sau 4 thÃ¡ng</strong>. Cáº§n gom Ä‘á»£t xá»­ lÃ½ cÃ o bÃ³c tháº£m láº¡i Ä‘á»ƒ trÃ¡nh gÃ£y vá»¡ táº§ng base.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Scenario 3: Láº¦N Äáº¦U GHI NHáº¬N */}
-      {temporalMode === 'INITIAL_BASELINE' && (
-        <div className="space-y-3 animate-in fade-in">
-          <div className="text-xs font-semibold text-slate-700 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-              <span>Äa Ká»³: Kháº£o SÃ¡t Ban Äáº§u (Baseline Initial Epoch T0)</span>
-            </span>
-            <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full text-[11px]">
-              ðŸ“Œ Má»‘c Chuáº©n Ban Äáº§u (Baseline T0)
+            <span className="text-[10px] font-bold text-[#2D3748] bg-[#F8F9FA] px-2 py-0.5 rounded border border-[#E2E5E9]">
+              Mốc chuẩn khởi tạo
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-500">Dá»¯ Liá»‡u Kháº£o SÃ¡t Ká»³ TrÆ°á»›c (T-1)</span>
-              <div className="rounded-lg border-2 border-dashed border-slate-300 aspect-video bg-slate-50 flex flex-col items-center justify-center p-4 text-center space-y-2">
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
-                  <Database className="w-5 h-5 text-slate-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Cột trái: Trống - Chưa có kỳ trước */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-semibold text-slate-500 block">
+                Dữ liệu khảo sát kỳ trước (T-1)
+              </span>
+              <div className="rounded-lg border border-dashed border-slate-300 aspect-video bg-[#F8F9FA] flex flex-col items-center justify-center p-4 text-center space-y-2">
+                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-500">
+                  <Icon name="database" size={18} />
                 </div>
                 <div>
-                  <span className="font-bold text-xs text-slate-700 block">ChÆ°a CÃ³ Dá»¯ Liá»‡u áº¢nh Lá»‹ch Sá»­</span>
+                  <span className="font-semibold text-xs text-slate-700 block">
+                    Chưa có dữ liệu bay quét lịch sử
+                  </span>
                   <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Äoáº¡n tuyáº¿n Km {defect.chainage_km ? defect.chainage_km.toFixed(1) : '1024.3'} chÆ°a tá»«ng cÃ³ dá»¯ liá»‡u bay quÃ©t trÆ°á»›c Ä‘Ã¢y.
+                    Đoạn tuyến Km {defect.chainage_km} chưa từng có đợt bay quét nào trước đây.
                   </span>
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 bg-slate-200 text-slate-700 rounded-full">
-                  Ká»³ kháº£o sÃ¡t Ä‘áº§u tiÃªn (Baseline Epoch)
+                <span className="text-[10px] font-medium px-2 py-0.5 bg-slate-200 text-slate-700 rounded">
+                  Lần đầu ghi nhận (Baseline Epoch)
                 </span>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#8F7212]">Ká»³ Kháº£o SÃ¡t NÃ y (ThÃ¡ng 10/2026 - Má»‘c T0)</span>
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                  Äang ghi nháº­n
+            {/* Cột phải: Ảnh kỳ này làm mốc Baseline */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-[#1A1D20]">
+                  Kỳ này (Mốc T0: {epochCurrDate})
+                </span>
+                <span className="text-[10px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  Thiết lập mốc chuẩn
                 </span>
               </div>
-              <div className="relative rounded-lg overflow-hidden border-2 border-brand-gold aspect-video bg-black">
+              <div className="relative rounded-lg overflow-hidden border border-[#E2E5E9] aspect-video bg-black">
                 <img
                   src={defect.image_url}
-                  alt="Ká»³ nÃ y má»‘c chuáº©n"
+                  alt="Ảnh mốc chuẩn Baseline"
                   className="w-full h-full object-cover"
                 />
                 <div
-                  className="absolute border-2 border-brand-gold bg-brand-gold/20 rounded pointer-events-none"
+                  className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded pointer-events-none"
                   style={{
                     left: `${defect.bounding_box.x * 100}%`,
                     top: `${defect.bounding_box.y * 100}%`,
@@ -261,21 +365,24 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                     height: `${defect.bounding_box.height * 100}%`
                   }}
                 >
-                  <span className="bg-brand-gold text-white text-[9px] font-bold px-1 py-0.2 rounded absolute -top-3.5 left-0">
-                    Má»‘c gá»‘c Baseline ({defect.defect_type})
+                  <span className="bg-[#8C6D1F] text-white text-[9px] font-bold px-1.5 py-0.5 rounded absolute -top-4 left-0">
+                    Mốc Baseline ({defect.defect_type})
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-xs space-y-1 text-blue-950">
-            <div className="flex items-center gap-1.5 font-bold text-blue-900">
-              <Database className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>CÆ¡ cháº¿ quáº£n lÃ½ dá»¯ liá»‡u Baseline T0:</span>
+          {/* Cơ chế quản lý Baseline T0 */}
+          <div className="p-3.5 bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-xs space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-[#1A1D20]">
+              <Icon name="info" size={16} className="text-[#8C6D1F]" />
+              <span>Cơ chế quản lý dữ liệu mốc chuẩn (Baseline):</span>
             </div>
-            <p className="text-[11px] text-blue-900 leading-relaxed">
-              Do Ä‘Ã¢y lÃ  láº§n Ä‘áº§u ghi nháº­n hÆ° há»ng táº¡i vá»‹ trÃ­ Km nÃ y, há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng <strong>lÆ°u tá»a Ä‘á»™ vÃ  áº£nh chá»¥p ká»³ nÃ y lÃ m má»‘c chuáº©n (Baseline)</strong>. Trong cÃ¡c ká»³ bay drone tiáº¿p theo (T+1, T+2), AI sáº½ Ä‘á»‘i chiáº¿u song song vá»›i má»‘c nÃ y Ä‘á»ƒ phÃ¢n tÃ­ch tá»‘c Ä‘á»™ phÃ¡t triá»ƒn hÆ° há»ng.
+            <p className="text-[12px] text-slate-600 leading-relaxed font-normal">
+              Do đây là lần đầu tiên ghi nhận khuyết tật tại vị trí Km {defect.chainage_km}, hệ thống sẽ tự động lưu trữ
+              tọa độ GPS ({defect.gps_lat}, {defect.gps_lng}) và ảnh chụp hiện tại ({epochCurrDate}) làm <strong>mốc chuẩn ban đầu (Baseline)</strong>.
+              Khi thực hiện các đợt bay drone tiếp theo (T+1, T+2), thuật toán AI sẽ tự động kích hoạt tính năng so sánh đa kỳ đối chiếu với mốc này.
             </p>
           </div>
         </div>
@@ -283,3 +390,5 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
     </div>
   )
 }
+
+export default DefectTemporalComparison

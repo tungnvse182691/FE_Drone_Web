@@ -1,14 +1,5 @@
-﻿import React from 'react'
-import {
-  Plane,
-  Smartphone,
-  Car,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Merge,
-  X
-} from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 
 export interface DroneAiQueueViewProps {
@@ -26,12 +17,12 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
     <div>
       {/* Table Header Row */}
       <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 rounded-lg mb-2">
-        <span className="col-span-2">MÃ£ Case</span>
-        <span className="col-span-2">Nguá»“n Dá»¯ Liá»‡u</span>
-        <span className="col-span-3">Vá»‹ TrÃ­ &amp; LÃ½ TrÃ¬nh</span>
-        <span className="col-span-2">Loáº¡i HÆ° Háº¡i</span>
-        <span className="col-span-1">Æ¯u TiÃªn</span>
-        <span className="col-span-2 text-right">Tráº¡ng ThÃ¡i</span>
+        <span className="col-span-2">Mã Case</span>
+        <span className="col-span-2">Nguồn Dữ Liệu</span>
+        <span className="col-span-3">Vị Trí &amp; Lý Trình</span>
+        <span className="col-span-2">Loại Hư Hỏng</span>
+        <span className="col-span-1">Ưu Tiên</span>
+        <span className="col-span-2 text-right">Trạng Thái</span>
       </div>
 
       <div className="space-y-2">
@@ -72,9 +63,11 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                       : 'bg-amber-50 text-[#8F7212] border border-amber-200'
                   }`}
                 >
-                  {item.source === 'DRONE_AI' && <Plane className="w-3 h-3 text-slate-500" />}
-                  {item.source === 'CITIZEN' && <Smartphone className="w-3 h-3 text-blue-600" />}
-                  {item.source === 'PATROL' && <Car className="w-3 h-3 text-brand-gold" />}
+                  <Icon
+                    name={item.source === 'DRONE_AI' ? 'flight_takeoff' : item.source === 'CITIZEN' ? 'smartphone' : 'directions_car'}
+                    size={13}
+                    className={item.source === 'CITIZEN' ? 'text-blue-600' : item.source === 'DRONE_AI' ? 'text-slate-500' : 'text-brand-gold'}
+                  />
                   <span>{item.source_label}</span>
                 </span>
               </div>
@@ -86,14 +79,20 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                   {item.cluster_duplicates && item.cluster_duplicates.length > 0 && (
                     <span
                       className="text-amber-600"
-                      title={`CÃ³ ${item.cluster_duplicates.length} pháº£n Ã¡nh trÃ¹ng lÃ¢n cáº­n`}
+                      title={`Có ${item.cluster_duplicates.length} phản ánh trùng lân cận`}
                     >
-                      <AlertTriangle className="w-3 h-3" />
+                      <Icon name="warning" size={13} />
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="font-mono text-[11px] font-medium bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span
+                    className={`font-mono text-[11px] font-medium px-2 py-0.5 rounded border ${
+                      item.stationing.includes('Nhánh')
+                        ? 'bg-amber-50 text-amber-900 border-amber-300 font-semibold'
+                        : 'bg-slate-100 text-slate-800 border-slate-200'
+                    }`}
+                  >
                     {item.stationing}
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium">({item.lane})</span>
@@ -126,31 +125,31 @@ export const DroneAiQueueView: React.FC<DroneAiQueueViewProps> = ({
                 {item.status === 'PENDING' && (
                   <span className="bg-amber-100 text-[#8F7212] text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-amber-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                    <span>Chá» xÃ¡c minh</span>
+                    <span>Chờ xác minh</span>
                   </span>
                 )}
                 {item.status === 'VERIFIED' && (
                   <span className="bg-emerald-100 text-emerald-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-emerald-200">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    <span>ÄÃ£ xÃ¡c minh</span>
+                    <Icon name="check_circle" size={13} className="text-emerald-600" />
+                    <span>Đã xác minh</span>
                   </span>
                 )}
                 {item.status === 'NEED_SURVEY' && (
                   <span className="bg-blue-100 text-blue-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-blue-200">
-                    <Clock className="w-3 h-3 text-blue-600" />
-                    <span>Cáº§n Ä‘o Ä‘áº¡c</span>
+                    <Icon name="schedule" size={13} className="text-blue-600" />
+                    <span>Cần đo đạc</span>
                   </span>
                 )}
                 {item.status === 'MERGED' && (
                   <span className="bg-purple-100 text-purple-800 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-purple-200">
-                    <Merge className="w-3 h-3 text-purple-600" />
-                    <span>ÄÃ£ gá»™p trÃ¹ng</span>
+                    <Icon name="call_merge" size={13} className="text-purple-600" />
+                    <span>Đã gộp trùng</span>
                   </span>
                 )}
                 {item.status === 'REJECTED' && (
                   <span className="bg-slate-100 text-slate-600 text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 border border-slate-200">
-                    <X className="w-3 h-3 text-slate-500" />
-                    <span>BÃ¡o sai</span>
+                    <Icon name="close" size={13} className="text-slate-500" />
+                    <span>Báo sai</span>
                   </span>
                 )}
               </div>

@@ -1,6 +1,6 @@
-﻿import React from 'react'
-import { Clock, Smartphone, Split, Eye } from 'lucide-react'
+import React from 'react'
 import { Card } from '../../../../components/ui/Card'
+import { Icon } from '../../../../components/ui/Icon'
 import { SyncConflictItem } from '../../../../types/domain'
 
 export interface ConflictQueueTableProps {
@@ -20,14 +20,14 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-brand-border bg-slate-50 text-slate-600">
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">MÃ£ Xung Äá»™t</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">Khiáº¿m Khuyáº¿t & LÃ½ TrÃ¬nh</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">Loáº¡i Xung Äá»™t</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">Äá»™i Ngoáº¡i Tuyáº¿n</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">Thá»i Gian Báº¯t Láº¡i Máº¡ng</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider">MÃ£ BÄƒm SHA-256</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider text-center">Tráº¡ng ThÃ¡i</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Chi Tiáº¿t</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Mã Xung Đột</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Khiếm Khuyết & Lý Trình</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Loại Xung Đột</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Đội Ngoại Tuyến</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Thời Gian Bắt Lại Mạng</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider">Mã Băm SHA-256</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider text-center">Trạng Thái</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Chi Tiết</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -52,7 +52,7 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                   <td className="py-3 px-4">
                     <div className="font-semibold text-slate-900">{item.defect_type_label}</div>
                     <div className="text-[11px] font-mono text-slate-500">
-                      {item.defect_code} â€¢ {item.chainage}
+                      {item.defect_code} • {item.chainage}
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -65,9 +65,13 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                           : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {item.conflict_type === 'DEVICE_RESCUE_PENDING' && <Smartphone className="w-3 h-3" />}
-                      {item.conflict_type === 'ASSIGNMENT_REASSIGNED' && <Split className="w-3 h-3" />}
-                      {item.conflict_type_label}
+                      {item.conflict_type === 'DEVICE_RESCUE_PENDING' && (
+                        <Icon name="phonelink_erase" size={12} />
+                      )}
+                      {item.conflict_type === 'ASSIGNMENT_REASSIGNED' && (
+                        <Icon name="call_split" size={12} />
+                      )}
+                      <span>{item.conflict_type_label}</span>
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -76,11 +80,11 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-slate-800">
-                      <Clock className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+                      <Icon name="schedule" size={14} className="text-brand-gold shrink-0" />
                       <span>{item.offline_actor.captured_at}</span>
                     </div>
                     <div className="text-[10px] font-mono text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded mt-0.5 inline-block border border-amber-200/70">
-                      Máº¥t sÃ³ng: {item.offline_actor.offline_duration}
+                      Mất sóng: {item.offline_actor.offline_duration}
                     </div>
                   </td>
                   <td className="py-3 px-4 font-mono text-[11px] text-slate-500">
@@ -108,14 +112,14 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                         e.stopPropagation()
                         setSelectedConflictId(item.id)
                       }}
-                      className={`p-1.5 rounded-lg border transition-all ${
+                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-brand-gold text-white border-brand-gold'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                       }`}
-                      title="Xem Ä‘á»‘i chiáº¿u Side-by-side"
+                      title="Xem đối chiếu Side-by-side"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Icon name="visibility" size={16} />
                     </button>
                   </td>
                 </tr>

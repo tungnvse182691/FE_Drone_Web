@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link2, Unlink } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerMergedReportsListProps {
@@ -21,7 +21,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
     <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-xl space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-          <Link2 className="w-4 h-4 text-purple-600" />
+          <Icon name="link" size={16} className="text-purple-600" />
           <span>Các Phản Ánh Trùng Đã Gộp ({selectedCase.linked_report_ids.length})</span>
         </span>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 border border-purple-300">
@@ -58,7 +58,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0 text-purple-600">
-                    <Link2 className="w-5 h-5" />
+                    <Icon name="link" size={20} />
                   </div>
                 )}
                 <div className="min-w-0">
@@ -84,7 +84,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 hover:border-red-300 text-xs font-bold transition-all cursor-pointer shrink-0 shadow-2xs"
                 title="Tách phản ánh này khỏi hồ sơ gốc để xử lý độc lập"
               >
-                <Unlink className="w-3.5 h-3.5" />
+                <Icon name="link_off" size={14} />
                 <span>Tách hồ sơ</span>
               </button>
             </div>

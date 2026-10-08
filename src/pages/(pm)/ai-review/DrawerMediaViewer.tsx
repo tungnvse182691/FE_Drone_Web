@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { MapPin, Maximize2, ZoomIn } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerMediaViewerProps {
@@ -33,7 +33,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            áº¢nh chá»¥p hiá»‡n trÆ°á»ng
+            Ảnh chụp hiện trường
           </button>
           <button
             type="button"
@@ -44,8 +44,8 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
-            <MapPin className="w-3 h-3" />
-            <span>Báº£n Ä‘á»“ MapLibre</span>
+            <Icon name="location_on" size={14} />
+            <span>Bản đồ MapLibre</span>
           </button>
         </div>
 
@@ -54,8 +54,8 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           type="button"
           className="text-xs font-bold text-[#8F7212] hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <Maximize2 className="w-3.5 h-3.5" />
-          <span>PhÃ³ng to GIS</span>
+          <Icon name="fullscreen" size={16} />
+          <span>Phóng to GIS</span>
         </button>
       </div>
 
@@ -70,14 +70,14 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           {/* Top-left GPS & telemetry overlay */}
           <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
             <div className="flex items-center gap-1 font-bold text-brand-gold">
-              <MapPin className="w-3 h-3 text-brand-gold" />
+              <Icon name="location_on" size={12} className="text-brand-gold" />
               <span>
-                {selectedCase.gps.lat}Â° N, {selectedCase.gps.lng}Â° E
+                {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
               </span>
             </div>
-            <span className="opacity-40">â€¢</span>
+            <span className="opacity-40">•</span>
             <span className="opacity-90">Alt: {selectedCase.gps.altitude_m}m</span>
-            <span className="opacity-40">â€¢</span>
+            <span className="opacity-40">•</span>
             <span className="opacity-90">Res: {selectedCase.gps.resolution_cm_px}cm/px</span>
           </div>
 
@@ -87,18 +87,18 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
               onClick={onOpenPhotoZoomModal}
               type="button"
               className="bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md text-white p-1.5 rounded-full transition-colors flex items-center shadow-md border border-white/10 cursor-pointer"
-              title="Xem áº£nh gá»‘c Ä‘á»™ phÃ¢n giáº£i cao"
+              title="Xem ảnh gốc độ phân giải cao"
             >
-              <ZoomIn className="w-3.5 h-3.5" />
+              <Icon name="zoom_in" size={16} />
             </button>
             <button
               onClick={onOpenGISModal}
               type="button"
               className="bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1 shadow-md border border-white/10 cursor-pointer"
-              title="Má»Ÿ vá»‹ trÃ­ trÃªn báº£n Ä‘á»“ GIS"
+              title="Mở vị trí trên bản đồ GIS"
             >
-              <MapPin className="w-3 h-3 text-brand-gold" />
-              <span>Báº£n Ä‘á»“ GIS</span>
+              <Icon name="location_on" size={14} className="text-brand-gold" />
+              <span>Bản đồ GIS</span>
             </button>
           </div>
 
@@ -115,7 +115,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
         <div className="w-full h-52 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
           <div ref={drawerMapContainerRef} className="w-full h-full" />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
-            {selectedCase.gps.lat}Â° N, {selectedCase.gps.lng}Â° E
+            {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
           </div>
         </div>
       )}

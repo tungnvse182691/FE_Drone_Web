@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { ChevronRight, Sparkles, PlusCircle, ArrowRight } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 
 interface SurveyHeaderProps {
   basePath: string
@@ -13,81 +13,83 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
   onNavigate
 }) => {
   return (
-    <>
+    <div className="space-y-4 max-w-full">
       {/* Top Banner / Breadcrumb */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1 font-medium">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 text-xs text-[#2D3748] mb-1 font-medium">
             <span
-              className="hover:text-brand-dark cursor-pointer"
+              className="hover:text-[#1A1D20] cursor-pointer"
               onClick={() => onNavigate(`${basePath}/dashboard`)}
             >
               Dashboard
             </span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-brand-dark font-semibold">Kháº£o SÃ¡t Drone &amp; Tháº©m Äá»‹nh AI</span>
+            <Icon name="chevron_right" size={16} className="text-slate-400" />
+            <span className="text-[#1A1D20] font-semibold truncate">Khảo Sát Drone & Thẩm Định AI</span>
           </div>
-          <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-            Káº¿ Hoáº¡ch &amp; YÃªu Cáº§u Bay Kháº£o SÃ¡t Drone
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1A1D20] font-sansation tracking-tight truncate">
+            Kế Hoạch & Yêu Cầu Bay Khảo Sát Drone
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Quáº£n lÃ½ cÃ¡c Ä‘á»£t bay chá»¥p áº£nh há»“ng ngoáº¡i/RGB Ä‘á»™ phÃ¢n giáº£i cao vÃ  tháº©m Ä‘á»‹nh AI Bounding Box máº·t Ä‘Æ°á»ng (WF-09)
+          <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+            Quản lý các đợt bay chụp ảnh trắc địa/RGB độ phân giải cao và thẩm định AI Bounding Box mặt đường (WF-09)
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
           <button
             onClick={() => onNavigate(`${basePath}/surveys/srv-01/review`)}
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Má»Ÿ Canvas Tháº©m Äá»‹nh AI (#MS-2026-0924)</span>
+            <Icon name="auto_awesome" size={16} className="text-white" />
+            <span>Mở Canvas Thẩm Định AI</span>
           </button>
           {!isSupervisor && (
             <button
               onClick={() => onNavigate('/pm/surveys/create')}
               type="button"
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-[#E2E5E9] text-[#1A1D20] text-xs font-semibold hover:bg-[#F8F9FA] transition-colors shadow-2xs cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              <PlusCircle className="w-4 h-4 text-slate-500" />
-              <span>Táº¡o YÃªu Cáº§u Bay Má»›i</span>
+              <Icon name="add_circle" size={16} className="text-slate-500" />
+              <span>Tạo Yêu Cầu Bay</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Prominent Action Banner for Mission #MS-2026-0924 */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-2 border-brand-gold/40 rounded-xl p-4.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-brand-gold text-white flex items-center justify-center shrink-0 shadow-sm">
-            <Sparkles className="w-5 h-5 animate-pulse" />
+      {/* Prominent Action Banner for Latest Mission #MS-2026-0924 */}
+      <div className="bg-[#FFFFFF] border border-[#E2E5E9] border-l-4 border-l-[#C9A227] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-[#FEF3E2] text-[#8C6D1F] flex items-center justify-center shrink-0 border border-amber-200">
+            <Icon name="auto_awesome" size={18} className="text-[#C9A227]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-sm text-brand-dark">
-                Äá»£t bay má»›i nháº¥t: #MS-2026-0924 (QL1A Km 1024+000 â€“ Km 1030+000)
+              <span className="font-bold text-sm text-[#1A1D20]">
+                Đợt bay mới nhất: #MS-2026-0924 (QL1A Km 1024+000 – Km 1030+000)
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-                8 Khiáº¿m Khuyáº¿t AI Chá» Duyá»‡t
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FDECEC] text-[#E5484D] border border-red-200 whitespace-nowrap">
+                8 Khiếm Khuyết AI Chờ Duyệt
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-[#8F7212] border border-amber-200">
-                Äá»™ phá»§ 87% (Cáº§n Bay Bá»• Sung)
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FEF3E2] text-[#F59E0B] border border-amber-200 whitespace-nowrap">
+                Độ phủ 87% (Cần Bay Bổ Sung)
               </span>
             </div>
-            <p className="text-xs text-slate-600 mt-1">
-              MÃ´ hÃ¬nh Road-YOLOv9 Ä‘Ã£ nháº­n diá»‡n xong 1,920 khung hÃ¬nh. Project Manager cáº§n vÃ o Canvas Ä‘á»ƒ tháº©m Ä‘á»‹nh há»™p bao (Bounding box), xÃ¡c nháº­n váº¿t ná»©t/á»• gÃ  vÃ  duyá»‡t Ä‘iá»u kiá»‡n khÃ³a Baseline.
+            <p className="text-xs text-slate-600 mt-1 line-clamp-2 md:line-clamp-1">
+              Mô hình Road-YOLOv9 đã nhận diện xong 1,920 khung hình. Project Manager cần vào Canvas để thẩm định hộp bao (Bounding box), xác nhận vết nứt/ổ gà và duyệt điều kiện khóa Baseline.
             </p>
           </div>
         </div>
         <button
           onClick={() => onNavigate(`${basePath}/surveys/srv-01/review`)}
           type="button"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#2D3748] hover:bg-[#1A1D20] text-white text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer whitespace-nowrap"
         >
-          <span>Má»Ÿ Canvas Tháº©m Äá»‹nh AI (WF-09)</span>
-          <ArrowRight className="w-4 h-4" />
+          <span>Mở Canvas Thẩm Định (WF-09)</span>
+          <Icon name="arrow_forward" size={15} className="text-white" />
         </button>
       </div>
-    </>
+    </div>
   )
 }

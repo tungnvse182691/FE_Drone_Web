@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { X } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface PhotoZoomModalProps {
@@ -22,14 +22,14 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-brand-gold">{selectedCase.code}</span>
             <span className="text-xs text-slate-300">
-              â€¢ {selectedCase.defect_title} ({selectedCase.stationing})
+              • {selectedCase.defect_title} ({selectedCase.stationing})
             </span>
           </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -42,12 +42,12 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
         </div>
 
         <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-          <span>Äá»™ phÃ¢n giáº£i thá»±c: 0.3 cm/px â€¢ Nguá»“n chá»¥p: Matrice 300 RTK</span>
+          <span>Độ phân giải thực: 0.3 cm/px • Nguồn chụp: Matrice 300 RTK</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
           >
-            ÄÃ³ng
+            Đóng
           </button>
         </div>
       </div>

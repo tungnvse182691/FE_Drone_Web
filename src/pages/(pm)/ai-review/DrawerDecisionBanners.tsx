@@ -1,14 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Link2,
-  ArrowRight,
-  CheckCircle2,
-  X,
-  AlertCircle,
-  Camera,
-  Send,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerDecisionBannersProps {
@@ -31,7 +23,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
       {selectedCase.master_case_id && (
         <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between text-purple-950 animate-in fade-in">
           <div className="flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-purple-600 shrink-0" />
+            <Icon name="link" size={20} className="text-purple-600 shrink-0" />
             <div>
               <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO MASTER CASE</span>
               <span className="text-[11px] text-purple-700">
@@ -46,7 +38,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
             >
               <span>Xem Case Gốc</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Icon name="arrow_forward" size={14} />
             </button>
             <button
               type="button"
@@ -63,7 +55,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
       {selectedCase.conclusion === 'DEFECT_FOUND' && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-950 animate-in fade-in">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <Icon name="check_circle" size={20} className="text-emerald-600 shrink-0" />
             <div>
               <span className="font-bold text-xs block">KẾT LUẬN: ĐÃ XÁC MINH CÓ KHIẾM KHUYẾT (DEFECT_FOUND)</span>
               <span className="text-[11px] text-emerald-700">
@@ -80,7 +72,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               title="Gom vào gói đề xuất sửa chữa kỹ thuật (Repair Package)"
             >
               <span>Gom gói sửa chữa</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Icon name="arrow_forward" size={14} />
             </button>
             <button
               type="button"
@@ -97,7 +89,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
       {selectedCase.conclusion === 'NO_DEFECT' && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between text-red-950 animate-in fade-in">
           <div className="flex items-start gap-2">
-            <X className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <Icon name="close" size={20} className="text-red-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-xs block">KẾT LUẬN: KHÔNG CÓ KHIẾM KHUYẾT (NO_DEFECT - BÁO SAI)</span>
               <p className="text-[11px] text-red-800 mt-0.5 italic">
@@ -118,7 +110,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
       {selectedCase.conclusion === 'OUT_OF_SCOPE' && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start justify-between text-amber-950 animate-in fade-in">
           <div className="flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <Icon name="warning" size={20} className="text-amber-600 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-xs block">KẾT LUẬN: NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE)</span>
               <p className="text-[11px] text-amber-800 mt-0.5">
@@ -140,7 +132,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
         <div className="p-3.5 bg-blue-50/90 border border-blue-200 rounded-xl space-y-2.5 text-blue-950 animate-in fade-in">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Camera className="w-5 h-5 text-blue-600 shrink-0" />
+              <Icon name="photo_camera" size={20} className="text-blue-600 shrink-0" />
               <div>
                 <span className="font-bold text-xs block text-blue-900">
                   LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG (WF-11)
@@ -164,7 +156,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1 shrink-0"
             >
               <span>Xem nhiệm vụ</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <Icon name="arrow_forward" size={14} />
             </button>
           </div>
 
@@ -176,7 +168,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               </div>
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-slate-500 font-medium">Hạn cam kết SLA:</span>
-                <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.2 rounded-full text-[10px]">
+                <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full text-[10px]">
                   Trong {selectedCase.survey_assignment.sla_hours} giờ
                 </span>
               </div>
@@ -198,7 +190,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
         <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl space-y-1 text-sky-950 animate-in fade-in">
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-sky-800 flex items-center gap-1.5">
-              <Send className="w-3.5 h-3.5 text-sky-600" />
+              <Icon name="campaign" size={16} className="text-sky-600" />
               <span>Đã công bố tiến độ cho người dân (PA07)</span>
             </span>
             <span className="text-[10px] text-sky-600 font-mono">{selectedCase.published_at}</span>

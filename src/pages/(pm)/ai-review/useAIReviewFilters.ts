@@ -10,52 +10,56 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const sourceParam = searchParams.get('source')
 
-  // Chế độ xem: Bảng tiếp nhận & điều phối phản ánh dân (PA03, PA04) vs Hộp thư Drone AI
-  const [viewSourceMode, setViewSourceMode] = useState<ViewSourceMode>(() => {
-    if (sourceParam === 'drone') return 'DRONE_AI'
-    if (sourceParam === 'all') return 'ALL'
-    return 'CITIZEN_TRIAGE'
-  })
-
-  useEffect(() => {
-    if (sourceParam === 'drone') setViewSourceMode('DRONE_AI')
-    else if (sourceParam === 'citizen') setViewSourceMode('CITIZEN_TRIAGE')
-    else if (sourceParam === 'all') setViewSourceMode('ALL')
-  }, [sourceParam])
-
-  const handleSetViewSourceMode = (mode: ViewSourceMode) => {
-    setViewSourceMode(mode)
-    if (mode === 'DRONE_AI') setSearchParams({ source: 'drone' })
-    else if (mode === 'CITIZEN_TRIAGE') setSearchParams({ source: 'citizen' })
-    else setSearchParams({ source: 'all' })
-  }
+  // Chế độ xem: Hộp thư tiếp nhận tích hợp toàn diện
+  const [viewSourceMode, setViewSourceMode] = useState<ViewSourceMode>('ALL')
 
   // Tabs & filters
   const [activeTab, setActiveTab] = useState<ActiveTabFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<string>('ALL')
   const [projectFilter, setProjectFilter] = useState<string>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL')
+  const [lineTypeFilter, setLineTypeFilter] = useState<string>('ALL') // 'ALL' | 'MAIN_LINE' | 'BRANCH_LINE'
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    if (sourceParam === 'drone') {
+      setSourceFilter('DRONE_AI')
+    } else if (sourceParam === 'citizen') {
+      setSourceFilter('CITIZEN')
+    } else if (sourceParam === 'patrol') {
+      setSourceFilter('PATROL')
+    }
+  }, [sourceParam])
+
+  // Chuyển chế độ xem: tự động reset bộ lọc để không bao giờ bị lọc chéo ra 0 bản ghi
+  const handleSetViewSourceMode = (mode: ViewSourceMode) => {
+    setViewSourceMode(mode)
+    setSourceFilter('ALL')
+    setLineTypeFilter('ALL')
+    setActiveTab('ALL')
+  }
 
   // Filtered cases
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
-      // View Source Mode Filter
-      if (viewSourceMode === 'CITIZEN_TRIAGE' && c.source === 'DRONE_AI') return false
-      if (viewSourceMode === 'DRONE_AI' && c.source !== 'DRONE_AI') return false
-
-      // Tab filter
+      // 1. Tab filter
       if (activeTab === 'PENDING' && c.status !== 'PENDING') return false
       if (activeTab === 'MERGED' && c.status !== 'MERGED') return false
       if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY') return false
       if (activeTab === 'CRITICAL' && c.severity !== 'CRITICAL') return false
 
-      // Dropdown filters
+      // 3. Dropdown filters: Nguồn tiếp nhận
       if (sourceFilter !== 'ALL' && c.source !== sourceFilter) return false
+
+      // 4. Lọc theo phạm vi tuyến (Trục chính vs Tuyến nhánh theo PM-05)
+      if (lineTypeFilter === 'MAIN_LINE' && c.stationing.includes('Nhánh')) return false
+      if (lineTypeFilter === 'BRANCH_LINE' && !c.stationing.includes('Nhánh')) return false
+
+      // 5. Dự án & Ưu tiên
       if (projectFilter !== 'ALL' && c.project_name !== projectFilter) return false
       if (priorityFilter !== 'ALL' && c.severity !== priorityFilter) return false
 
-      // Search Query
+      // 6. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         return (
@@ -70,7 +74,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       }
       return true
     })
-  }, [cases, viewSourceMode, activeTab, sourceFilter, projectFilter, priorityFilter, searchQuery])
+  }, [cases, viewSourceMode, activeTab, sourceFilter, lineTypeFilter, projectFilter, priorityFilter, searchQuery])
 
   // Count stats
   const pendingCount = cases.filter((c) => c.status === 'PENDING').length
@@ -91,6 +95,8 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
     setActiveTab,
     sourceFilter,
     setSourceFilter,
+    lineTypeFilter,
+    setLineTypeFilter,
     projectFilter,
     setProjectFilter,
     priorityFilter,

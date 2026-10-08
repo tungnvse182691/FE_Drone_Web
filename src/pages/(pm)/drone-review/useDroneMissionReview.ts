@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
 import { AIDetectionItem } from './types'
 import { INITIAL_DETECTIONS } from './mockData'
+import { surveyService } from '../../../api/services'
 
 const CORRIDOR_COORDS: [number, number][] = [
   [108.194, 16.049], [108.197, 16.052], [108.2, 16.0545],
@@ -14,7 +15,7 @@ const MARKER_COORDS: [number, number][] = [
   [108.2052, 16.0592], [108.2072, 16.0612], [108.2091, 16.0631], [108.2112, 16.0655]
 ]
 
-export function useDroneMissionReview() {
+export function useDroneMissionReview(surveyId: string = 'srv-01') {
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [currentFrame, setCurrentFrame] = useState<number>(1420)
@@ -33,6 +34,10 @@ export function useDroneMissionReview() {
     'Bay quét bù dải phân cách giữa tại lý trình Km 1027+100 bằng góc nghiêng 45° Oblique.'
   )
 
+  const [isBaselineModalOpen, setIsBaselineModalOpen] = useState<boolean>(false)
+  const [isLockedSuccess, setIsLockedSuccess] = useState<boolean>(false)
+  const [lockedBaselineRange, setLockedBaselineRange] = useState<string | null>(null)
+
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const showToast = (msg: string) => {
     setToastMessage(msg)
@@ -40,6 +45,31 @@ export function useDroneMissionReview() {
   }
 
   const [detections, setDetections] = useState<AIDetectionItem[]>(INITIAL_DETECTIONS)
+  const [isLoadingDetections, setIsLoadingDetections] = useState<boolean>(true)
+
+  // Tải danh sách detections từ Mock API Service (surveyService)
+  useEffect(() => {
+    let isMounted = true
+    const fetchDetections = async () => {
+      try {
+        setIsLoadingDetections(true)
+        const data = await surveyService.getSurveyDetections(surveyId)
+        if (isMounted) {
+          setDetections(data)
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách phát hiện AI:', err)
+      } finally {
+        if (isMounted) {
+          setIsLoadingDetections(false)
+        }
+      }
+    }
+    fetchDetections()
+    return () => {
+      isMounted = false
+    }
+  }, [surveyId])
 
   const totalCount = detections.length
   const approvedCount = detections.filter((d) => d.status === 'APPROVED').length
@@ -62,17 +92,31 @@ export function useDroneMissionReview() {
             return totalFrames
           }
           return prev + Math.floor(4 * playbackSpeed)
-        })
-      }, 100)
+      })
+    }, 100)
+  }
+  return () => clearInterval(interval)
+}, [isPlaying, playbackSpeed])
+
+const isBaselineLocked = isLockedSuccess
+const canLockBaseline = pendingCount === 0
+
+const handleSelectDetection = (item: AIDetectionItem) => {
+  setSelectedDetectionId(item.id)
+    const frameMap: Record<string, number> = {
+      'DET-01': 1420,
+      'DET-02': 1480,
+      'DET-03': 1540,
+      'DET-04': 1590,
+      'DET-05': 1680,
+      'DET-06': 1720,
+      'DET-07': 1810,
+      'DET-08': 1880,
     }
-    return () => clearInterval(interval)
-  }, [isPlaying, playbackSpeed])
-
-  const isBaselineLocked = coveragePercentage >= 95 && pendingCount === 0
-
-  const handleSelectDetection = (item: AIDetectionItem) => {
-    setSelectedDetectionId(item.id)
-    showToast(`Đã định vị khung hình ${item.code} tại lý trình ${item.stationing}`)
+    if (frameMap[item.id]) {
+      setCurrentFrame(frameMap[item.id])
+    }
+    showToast(`Đã trích xuất khung hình ${item.code} tại lý trình ${item.stationing}`)
   }
 
   useEffect(() => {
@@ -132,7 +176,7 @@ export function useDroneMissionReview() {
             <div style="background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); margin-bottom:2px; white-space:nowrap; border:1px solid #fff;">
               ${det.code || det.id} (${det.stationing})
             </div>
-            <div style="width:${isCurrent ? '20px' : '14px'}; height:${isCurrent ? '20px' : '14px'}; background:${det.severityLevel.includes('Khẩn cấp') ? '#DC2626' : det.severityLevel.includes('Nghiêm trọng') ? '#D97706' : '#2563EB'}; border:2px solid #fff; border-radius:50%; box-shadow:${isCurrent ? '0 0 10px #C9A227' : 'none'};"></div>
+            <div style="width:${isCurrent ? '20px' : '14px'}; height:${isCurrent ? '20px' : '14px'}; background:${det.severityLevel?.includes('Khẩn cấp') ? '#DC2626' : det.severityLevel?.includes('Nghiêm trọng') ? '#D97706' : '#2563EB'}; border:2px solid #fff; border-radius:50%; box-shadow:${isCurrent ? '0 0 10px #C9A227' : 'none'};"></div>
           </div>
         `
         el.onclick = () => {
@@ -165,51 +209,80 @@ export function useDroneMissionReview() {
     }
   }, [viewerMode, selectedDetectionId, detections])
 
-  const handleApproveDetection = (detId: string) => {
+  const handleApproveDetection = async (detId: string, reason?: string) => {
     const defectCodeGenerated = `DEF-2026-0${Math.floor(100 + Math.random() * 900)}`
-    setDetections((prev) =>
-      prev.map((d) =>
-        d.id === detId
-          ? {
-              ...d,
-              status: 'APPROVED',
-              defectCode: defectCodeGenerated,
-              metrics: { ...d.metrics, reviewer: 'KS. Đỗ Quốc Hoàng' }
-            }
-          : d
-      )
-    )
-    showToast(`Đã phê duyệt ${detId}! Hệ thống đã tự động khởi tạo Hồ sơ khiếm khuyết mã ${defectCodeGenerated}.`)
+    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
+      status: 'APPROVED',
+      defectCode: defectCodeGenerated,
+      metrics: {
+        reviewer: 'KS. Đỗ Quốc Hoàng',
+        dismissReason: undefined
+      }
+    })
+    if (updated) {
+      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
+      showToast(`Đã phê duyệt ${detId}! Hệ thống đã tự động khởi tạo Hồ sơ khiếm khuyết mã ${defectCodeGenerated}.`)
+    }
   }
 
-  const handleRejectDetection = (detId: string) => {
-    setDetections((prev) =>
-      prev.map((d) =>
-        d.id === detId
-          ? {
-              ...d,
-              status: 'REJECTED',
-              metrics: { ...d.metrics, dismissReason: 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.' }
-            }
-          : d
-      )
-    )
-    showToast(`Đã đánh dấu ${detId} là Báo sai (False Positive). Dữ liệu này được gửi ngược về huấn luyện Road-YOLOv9.`)
+  const handleRejectDetection = async (detId: string, reason?: string) => {
+    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
+      status: 'REJECTED',
+      metrics: {
+        dismissReason: reason || 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.'
+      }
+    })
+    if (updated) {
+      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
+      showToast(`Đã đánh dấu ${detId} là Báo sai (False Positive). Dữ liệu này được gửi ngược về huấn luyện Road-YOLOv9.`)
+    }
   }
 
-  const handleSubmitReFlight = () => {
-    setCoveragePercentage(98)
-    setHasBlindspot(false)
-    setIsReFlightModalOpen(false)
-    showToast('Đã tiếp nhận nhiệm vụ bay bổ sung QL1A-MS-04B! Tỷ lệ độ phủ ảnh đã cập nhật đạt 98% (PASS).')
+  const handleSubmitReFlight = async (pilot?: string) => {
+    const pilotLabel = pilot || 'Lê Hoàng Long'
+    const res = await surveyService.requestReFlight(surveyId, { note: `${pilotNote} (Giao cho: ${pilotLabel})`, targetKm: 'Km 1027+100' })
+    if (res.success) {
+      setCoveragePercentage(res.newCoverage)
+      setHasBlindspot(false)
+      setIsReFlightModalOpen(false)
+      showToast(`Đã giao lệnh bay bổ sung cho [${pilotLabel}]! Dữ liệu quét bù đã nạp bổ sung, độ phủ đạt 98% (ĐẠT). PM có thể bấm "Khóa Baseline đoạn đường" để chốt dữ liệu gốc.`)
+    }
   }
 
-  const handleLockBaseline = () => {
-    if (!isBaselineLocked) {
-      alert('Chưa đủ điều kiện khóa Baseline: Cần độ phủ ≥ 95% và giải quyết hết các mục chờ rà soát!')
+  const handleLockBaseline = async () => {
+    if (pendingCount > 0) {
+      showToast(`Chưa thể khóa Baseline: Cần hoàn tất thẩm định ${pendingCount} mục còn lại trong danh sách!`)
       return
     }
-    showToast('Đoạn đường Km 1024 - Km 1030 đã chính thức KHÓA BASELINE THÀNH CÔNG! Bản đồ hoàn công số đã được kích hoạt.')
+
+    // Nếu độ phủ chưa đạt 95% (đang 87% do điểm mù Km 1027+100), mở Modal lựa chọn theo BR-40 / DA10
+    if (coveragePercentage < 95) {
+      setIsBaselineModalOpen(true)
+      return
+    }
+
+    // Nếu độ phủ đã đạt >= 95%, khóa toàn tuyến
+    const success = await surveyService.lockBaseline(surveyId)
+    if (success) {
+      setIsLockedSuccess(true)
+      setLockedBaselineRange('Km 1024+000 - Km 1030+000 (Toàn tuyến)')
+      showToast('Đoạn đường Km 1024 - Km 1030 đã chính thức KHÓA BASELINE THÀNH CÔNG! Bản đồ hoàn công số đã được kích hoạt.')
+    }
+  }
+
+  const handleConfirmBaseline = async (isPartial: boolean) => {
+    const success = await surveyService.lockBaseline(surveyId)
+    if (success) {
+      setIsLockedSuccess(true)
+      setIsBaselineModalOpen(false)
+      if (isPartial) {
+        setLockedBaselineRange('Km 1024+000 - Km 1027+000 (Phân đoạn đạt chuẩn)')
+        showToast('Đã xác nhận và KHÓA BASELINE THÀNH CÔNG phân đoạn Km 1024 - Km 1027 (Quy tắc BR-40 / DA10)! Giữ phần đạt, lập nhiệm vụ bay bù điểm mù sau.')
+      } else {
+        setLockedBaselineRange('Km 1024+000 - Km 1030+000 (Toàn tuyến)')
+        showToast('Đã KHÓA BASELINE THÀNH CÔNG toàn tuyến Km 1024 - Km 1030! Hồ sơ gốc bàn giao đã được đóng băng số.')
+      }
+    }
   }
 
   const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]
@@ -249,6 +322,12 @@ export function useDroneMissionReview() {
     setViewerMode,
     corridorMapContainerRef,
     isBaselineLocked,
+    canLockBaseline,
+    isBaselineModalOpen,
+    setIsBaselineModalOpen,
+    isLockedSuccess,
+    lockedBaselineRange,
+    handleConfirmBaseline,
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,

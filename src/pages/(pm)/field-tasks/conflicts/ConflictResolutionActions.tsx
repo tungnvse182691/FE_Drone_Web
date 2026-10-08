@@ -1,14 +1,5 @@
-﻿import React from 'react'
-import {
-  Clock,
-  CheckCircle2,
-  ShieldAlert,
-  RefreshCw,
-  XCircle,
-  Split,
-  Archive,
-  ShieldCheck
-} from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../../components/ui/Icon'
 import { SyncConflictItem } from '../../../../types/domain'
 
 export interface ConflictResolutionActionsProps {
@@ -37,29 +28,29 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
       <div className="text-[11px] text-slate-500">
         {selectedConflict.status === 'CONFLICT_INTAKE' ? (
           <span className="flex items-center gap-1 text-amber-700 font-semibold">
-            <Clock className="w-3.5 h-3.5" /> Há»“ sÆ¡ Ä‘ang chá» quyáº¿t Ä‘á»‹nh xá»­ lÃ½
+            <Icon name="schedule" size={14} /> Hồ sơ đang chờ quyết định xử lý
           </span>
         ) : (
           <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Há»“ sÆ¡ Ä‘Ã£ Ä‘Æ°á»£c chá»‘t vÃ  lÆ°u váº¿t kiá»ƒm toÃ¡n
+            <Icon name="check_circle" size={14} /> Hồ sơ đã được chốt và lưu vết kiểm toán
           </span>
         )}
       </div>
 
-      {/* NÃšT THAO TÃC CHO PROJECT MANAGER (PM CHá»ˆ HUY TRÆ¯á»žNG) */}
+      {/* NÚT THAO TÁC CHO PROJECT MANAGER (PM CHỈ HUY TRƯỞNG) */}
       {isPM && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <div className="flex items-center gap-2 flex-wrap">
-          {/* TRÆ¯á»œNG Há»¢P CA 3: DEVICE_RESCUE_PENDING (TuÃ¢n thá»§ Q17/Decision 42A - PM lÃ  Maker, khÃ´ng tá»± duyá»‡t) */}
+          {/* TRƯỜNG HỢP CA 3: DEVICE_RESCUE_PENDING (Tuân thủ Q17/Decision 42A - PM là Maker, không tự duyệt) */}
           {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
             <>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
-                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation"
-                title="Theo Q17/42A: PM láº­p tá» trÃ¬nh gá»­i Supervisor kÃ½ sá»‘ phÃª duyá»‡t"
+                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                title="Theo Q17/42A: PM lập tờ trình gửi Supervisor ký số phê duyệt"
               >
-                <ShieldAlert className="w-4 h-4 text-brand-gold" />
-                <span>TrÃ¬nh GiÃ¡m sÃ¡t kÃ½ duyá»‡t cá»©u há»™ (Q17/42A)</span>
+                <Icon name="verified_user" size={16} className="text-amber-300" />
+                <span>Trình Giám sát ký duyệt cứu hộ (Q17/42A)</span>
               </button>
 
               <button
@@ -67,8 +58,8 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
                 className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                <span>YÃªu cáº§u Äá»™i thi cÃ´ng bá»• sung biÃªn báº£n</span>
+                <Icon name="refresh" size={14} className="text-slate-500" />
+                <span>Yêu cầu Đội thi công bổ sung biên bản</span>
               </button>
 
               <button
@@ -76,21 +67,21 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
                 className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-rose-700 hover:bg-rose-800 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <XCircle className="w-4 h-4" />
-                <span>BÃ¡c bá» dá»¯ liá»‡u há»ng & Giao Äá»™i Ä‘o láº¡i</span>
+                <Icon name="cancel" size={14} />
+                <span>Bác bỏ dữ liệu hỏng & Giao Đội đo lại</span>
               </button>
             </>
           ) : selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' ? (
-            /* TRÆ¯á»œNG Há»¢P CA 5: AGGREGATE_VERSION_CONFLICT (TuÃ¢n thá»§ BR-26 & Invariant #3 - KhÃ³a cá»©ng Ä‘á»£t cÅ©) */
+            /* TRƯỜNG HỢP CA 5: AGGREGATE_VERSION_CONFLICT (Tuân thủ BR-26 & Invariant #3 - Khóa cứng đợt cũ) */
             <>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-brand-gold hover:bg-brand-goldMuted transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation ring-2 ring-brand-gold/40"
-                title="TuÃ¢n thá»§ BR-26: Táº¡o phá»¥ lá»¥c Ä‘á»£t má»›i Ä‘á»ƒ giáº£i ngÃ¢n khá»‘i lÆ°á»£ng ná»™p muá»™n"
+                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-brand-gold hover:bg-brand-goldMuted transition shadow-sm flex items-center gap-1.5 cursor-pointer ring-2 ring-brand-gold/40"
+                title="Tuân thủ BR-26: Tạo phụ lục đợt mới để giải ngân khối lượng nộp muộn"
               >
-                <Split className="w-4 h-4" />
-                <span>Táº¡o Phá»¥ Lá»¥c Äá»£t Bá»• Sung (TuÃ¢n thá»§ BR-26)</span>
+                <Icon name="call_split" size={16} />
+                <span>Tạo Phụ Lục Đợt Bổ Sung (Tuân thủ BR-26)</span>
               </button>
 
               <button
@@ -98,8 +89,8 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
                 className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
-                <XCircle className="w-4 h-4 text-slate-500" />
-                <span>Báº£o lÆ°u há»“ sÆ¡ Ä‘Ã£ Ä‘Ã³ng (Tá»« chá»‘i sá»‘ liá»‡u)</span>
+                <Icon name="cancel" size={14} className="text-slate-500" />
+                <span>Bảo lưu hồ sơ đã đóng (Từ chối số liệu)</span>
               </button>
 
               <button
@@ -107,61 +98,61 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
                 className="px-3 py-2 rounded-xl text-slate-800 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
-                <Archive className="w-3.5 h-3.5 text-slate-600" />
-                <span>Chuyá»ƒn vÃ o HÃ ng Ä‘á»£i Ä‘á»£t sá»­a tiáº¿p theo</span>
+                <Icon name="archive" size={14} className="text-slate-600" />
+                <span>Chuyển vào Hàng đợi đợt sửa tiếp theo</span>
               </button>
             </>
           ) : (
-            /* CÃC TRÆ¯á»œNG Há»¢P CA 1, 2, 4 */
+            /* CÁC TRƯỜNG HỢP CA 1, 2, 4 */
             <>
-              {/* NÃºt 1: Cháº¥p nháº­n ngoáº¡i tuyáº¿n / Báº£n Ä‘o chuáº©n / Chuyá»ƒn Ä‘á»£t */}
+              {/* Nút 1: Chấp nhận ngoại tuyến / Bản đo chuẩn / Chuyển đợt */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer font-sansation"
+                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <Icon name="check_circle" size={16} />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Cháº¥p nháº­n Thiáº¿t Bá»‹ 2 (MÃ¡y chÃ­nh chuáº©n)'}
+                    'Chấp nhận Thiết Bị 2 (Máy chính chuẩn)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Cháº¥p nháº­n Äá»™i 02 (Thu há»“i lá»‡nh Äá»™i 01)'}
+                    'Chấp nhận Đội 02 (Thu hồi lệnh Đội 01)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Chuyá»ƒn sang Láº­p Ä‘á»£t sá»­a trÃ¬nh GiÃ¡m sÃ¡t (Policy v2.2)'}
+                    'Chuyển sang Lập đợt sửa trình Giám sát (Policy v2.2)'}
                 </span>
               </button>
 
-              {/* NÃºt 2: Báº£o lÆ°u mÃ¡y chá»§ */}
+              {/* Nút 2: Bảo lưu máy chủ */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
                 className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
               >
-                <XCircle className="w-4 h-4 text-slate-500" />
+                <Icon name="cancel" size={14} className="text-slate-500" />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Báº£o lÆ°u Thiáº¿t Bá»‹ 1 (MÃ¡y phá»¥)'}
+                    'Bảo lưu Thiết Bị 1 (Máy phụ)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Báº£o lÆ°u lá»‡nh Äá»™i 01 (Há»§y káº¿t quáº£ Äá»™i 02)'}
+                    'Bảo lưu lệnh Đội 01 (Hủy kết quả Đội 02)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Báº£o lÆ°u chÃ­nh sÃ¡ch v2.2 (Tá»« chá»‘i Fast Track)'}
+                    'Bảo lưu chính sách v2.2 (Từ chối Fast Track)'}
                 </span>
               </button>
 
-              {/* NÃºt 3: TÃ¡ch láº§n sá»­a má»›i (Fork Attempt) */}
+              {/* Nút 3: Tách lần sửa mới (Fork Attempt) */}
               <button
                 type="button"
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-xs flex items-center gap-1.5 cursor-pointer font-sansation"
+                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Split className="w-4 h-4" />
+                <Icon name="call_split" size={16} />
                 <span>
                   {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'TÃ¡ch 2 Ä‘á»£t Ä‘o Ä‘á»‘i chá»©ng (Fork)'}
+                    'Tách 2 đợt đo đối chứng (Fork)'}
                   {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'TÃ¡ch 2 láº§n sá»­a Ä‘á»™c láº­p (Fork)'}
+                    'Tách 2 lần sửa độc lập (Fork)'}
                   {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'TÃ¡ch thÃ nh Äá»£t sá»­a chá»¯a ná»n mÃ³ng chuyÃªn Ä‘á»'}
+                    'Tách thành Đợt sửa chữa nền móng chuyên đề'}
                 </span>
               </button>
             </>
@@ -169,7 +160,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
         </div>
       )}
 
-      {/* NÃšT THAO TÃC CHO SUPERVISOR (GIÃM SÃT / CHá»¦ Äáº¦U TÆ¯) */}
+      {/* NÚT THAO TÁC CHO SUPERVISOR (GIÁM SÁT / CHỦ ĐẦU TƯ) */}
       {isSupervisor && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <div className="flex items-center gap-2 flex-wrap">
           {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
@@ -177,23 +168,23 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('AUTHORIZE_RESCUE')}
-                className="px-4 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer font-sansation"
+                className="px-4 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
-                <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                <span>KÃ½ sá»‘ PhÃª duyá»‡t Cá»©u Dá»¯ Liá»‡u Thiáº¿t Bá»‹ (Decision 42A)</span>
+                <Icon name="verified_user" size={16} className="text-emerald-300" />
+                <span>Ký số Phê duyệt Cứu Dữ Liệu Thiết Bị (Decision 42A)</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('SUPERVISOR_REJECT_RESCUE')}
                 className="px-3.5 py-2 rounded-xl text-rose-700 text-xs font-bold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 flex items-center gap-1.5 cursor-pointer"
               >
-                <XCircle className="w-4 h-4 text-rose-600" />
-                <span>Tá»« chá»‘i gÃ³i cá»©u há»™ (Báº¯t buá»™c Ä‘o láº¡i)</span>
+                <Icon name="cancel" size={14} className="text-rose-600" />
+                <span>Từ chối gói cứu hộ (Bắt buộc đo lại)</span>
               </button>
             </>
           ) : (
             <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
-              Cháº¿ Ä‘á»™ GiÃ¡m sÃ¡t: Quyá»n phÃ¢n giáº£i nghiá»‡p vá»¥ thuá»™c Chá»‰ huy trÆ°á»Ÿng PM (Maker-Checker).
+              Chế độ Giám sát: Quyền phân giải nghiệp vụ thuộc Chỉ huy trưởng PM (Maker-Checker).
             </div>
           )}
         </div>

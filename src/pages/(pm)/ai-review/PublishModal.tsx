@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { Send, X } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface PublishModalProps {
@@ -27,11 +27,11 @@ export const PublishModal: React.FC<PublishModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
-              <Send className="w-5 h-5" />
+              <Icon name="send" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">CÃ´ng Bá»‘ Tiáº¿n Äá»™ Xá»­ LÃ½ Cho NgÆ°á»i DÃ¢n (PA07)</h3>
-              <p className="text-xs text-slate-500">Äá»“ng bá»™ thÃ´ng bÃ¡o cÃ´ng khai xuá»‘ng á»©ng dá»¥ng di Ä‘á»™ng Citizen</p>
+              <h3 className="text-base font-bold text-brand-dark">Công Bố Tiến Độ Xử Lý Cho Người Dân (PA07)</h3>
+              <p className="text-xs text-slate-500">Đồng bộ thông báo công khai xuống ứng dụng di động Citizen</p>
             </div>
           </div>
           <button
@@ -39,24 +39,24 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
         <div className="space-y-3.5 text-xs">
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-            <span className="font-bold text-slate-700 block">Há»“ sÆ¡ pháº£n Ã¡nh:</span>
+            <span className="font-bold text-slate-700 block">Hồ sơ phản ánh:</span>
             <span className="font-mono font-bold text-brand-dark">{targetTriageCase.code}</span>
             <p className="text-slate-600">
               {targetTriageCase.stationing} - {targetTriageCase.defect_title}
             </p>
             <span className="text-[10px] text-slate-400 block">
-              NgÆ°á»i gá»­i: {targetTriageCase.reporter_name || 'NgÆ°á»i dÃ¢n'} ({targetTriageCase.reporter_phone || 'N/A'})
+              Người gửi: {targetTriageCase.reporter_name || 'Người dân'} ({targetTriageCase.reporter_phone || 'N/A'})
             </span>
           </div>
 
           <div className="flex flex-col">
-            <label className="font-bold text-slate-700 mb-1">Ná»™i dung thÃ´ng bÃ¡o cÃ´ng khai gá»­i ngÆ°á»i dÃ¢n:</label>
+            <label className="font-bold text-slate-700 mb-1">Nội dung thông báo công khai gửi người dân:</label>
             <textarea
               rows={3}
               value={publishPublicNote}
@@ -72,15 +72,15 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
-            ÄÃ³ng
+            Đóng
           </button>
           <button
             type="button"
             onClick={onConfirmPublishResult}
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
-            <Send className="w-3.5 h-3.5" />
-            <span>CÃ´ng Bá»‘ Xuá»‘ng App Citizen</span>
+            <Icon name="send" size={16} />
+            <span>Công Bố Xuống App Citizen</span>
           </button>
         </div>
       </div>

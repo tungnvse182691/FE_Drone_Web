@@ -1,5 +1,5 @@
 import React from 'react'
-import { CornerDownRight, Link2, Unlink } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 
 export interface CitizenTriageChildRowProps {
@@ -26,10 +26,10 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
         isSelected ? 'ring-2 ring-purple-500 bg-purple-100' : ''
       }`}
     >
-      <td className="py-2 px-3 text-center">
-        <CornerDownRight className="w-4 h-4 text-purple-600 inline" />
+      <td className="py-2 px-2.5 text-center">
+        <Icon name="subdirectory_arrow_right" size={14} className="text-purple-600 inline" />
       </td>
-      <td className="py-2 px-3">
+      <td className="py-2 px-2.5">
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className="font-mono font-bold text-xs text-purple-950">{child.code}</span>
@@ -37,21 +37,13 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
               Đã gộp trùng
             </span>
           </div>
-          <span className="text-[10px] text-purple-800 mt-0.5">
-            {child.reporter_channel || child.source_label}
+          <span className="text-[10px] text-purple-800 mt-0.5 truncate max-w-[150px]">
+            {child.reporter_name ? `${child.reporter_name}` : child.reporter_channel || child.source_label}
           </span>
         </div>
       </td>
-      <td className="py-2 px-3">
-        <span className="font-semibold text-xs text-slate-800">{child.reporter_name}</span>
-        {child.reporter_phone && (
-          <span className="text-[10px] text-blue-600 block font-mono">
-            {child.reporter_phone}
-          </span>
-        )}
-      </td>
-      <td className="py-2 px-3">
-        <div className="relative w-12 h-9 rounded overflow-hidden bg-slate-900 border border-purple-200 shrink-0">
+      <td className="py-2 px-2 text-center">
+        <div className="relative w-12 h-9 rounded overflow-hidden bg-slate-900 border border-purple-200 shrink-0 mx-auto">
           <img
             src={child.image_url}
             alt={child.defect_title}
@@ -62,18 +54,18 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
           </div>
         </div>
       </td>
-      <td className="py-2 px-3">
-        <span className="font-mono text-[11px] font-bold text-slate-700">
-          {child.stationing}
-        </span>
-        <span className="text-[10px] text-slate-500 block">{child.lane}</span>
+      <td className="py-2 px-2.5">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[11px] text-purple-900 font-semibold truncate max-w-[200px]">
+            Theo {masterProjectName}
+          </span>
+          <div className="flex items-center gap-1 text-[10px]">
+            <span className="font-mono font-bold text-purple-900">{child.stationing}</span>
+            <span className="text-purple-700">• {child.lane}</span>
+          </div>
+        </div>
       </td>
-      <td className="py-2 px-3">
-        <span className="text-[11px] text-purple-900 italic font-medium">
-          Theo Master ({masterProjectName})
-        </span>
-      </td>
-      <td className="py-2 px-3 max-w-[210px]">
+      <td className="py-2 px-2.5 max-w-[220px]">
         <span className="font-medium text-xs text-purple-950 truncate block">
           {child.defect_title}
         </span>
@@ -81,26 +73,32 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
           "{child.description}"
         </p>
       </td>
-      <td className="py-2 px-3">
+      <td className="py-2 px-2 text-center whitespace-nowrap">
         <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-          {child.severity}
+          {child.severity === 'CRITICAL'
+            ? 'Khẩn cấp'
+            : child.severity === 'HIGH'
+            ? 'Cao'
+            : child.severity === 'MEDIUM'
+            ? 'Vừa'
+            : 'Thấp'}
         </span>
       </td>
-      <td className="py-2 px-3">
-        <span className="bg-purple-200 text-purple-950 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 w-fit border border-purple-300">
-          <Link2 className="w-3 h-3 text-purple-700" />
+      <td className="py-2 px-2.5 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700">
+          <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
           <span>Gộp vào {masterCode}</span>
         </span>
       </td>
-      <td className="py-2 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+      <td className="py-2 px-2.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={(e) => onUnlinkReport(child.id, e)}
-          className="px-2 py-1 rounded bg-white hover:bg-red-50 text-red-600 hover:border-red-300 border border-slate-200 text-[10px] font-semibold transition-colors cursor-pointer flex items-center gap-1 ml-auto shadow-2xs"
+          className="px-2 py-1 rounded bg-white hover:bg-red-50 text-red-600 hover:border-red-300 border border-slate-200 text-[10px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
           title="Tách khỏi Master Case thành hồ sơ riêng"
         >
-          <Unlink className="w-3 h-3 text-red-500" />
-          <span>Tách riêng</span>
+          <Icon name="link_off" size={12} />
+          <span>Tách</span>
         </button>
       </td>
     </tr>

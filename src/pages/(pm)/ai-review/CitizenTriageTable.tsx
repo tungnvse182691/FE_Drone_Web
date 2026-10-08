@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { TriageCase } from './types'
 import { CitizenTriageRow } from './CitizenTriageRow'
 
@@ -38,24 +38,22 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-            <th className="py-2.5 px-3 w-8">
+            <th className="py-2.5 px-2.5 w-9 text-center">
               <input
                 type="checkbox"
                 checked={filteredCases.length > 0 && selectedReportIds.length === filteredCases.length}
                 onChange={onSelectAllReports}
                 className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold cursor-pointer"
-                title="Chá»n táº¥t cáº£"
+                title="Chọn tất cả"
               />
             </th>
-            <th className="py-2.5 px-3">MÃ£ &amp; KÃªnh Gá»­i</th>
-            <th className="py-2.5 px-3">NgÆ°á»i BÃ¡o &amp; SÄT</th>
-            <th className="py-2.5 px-3">Hiá»‡n TrÆ°á»ng (GPS)</th>
-            <th className="py-2.5 px-3">LÃ½ TrÃ¬nh &amp; LÃ n</th>
-            <th className="py-2.5 px-3">Dá»± Ãn Báº£o HÃ nh (PA03)</th>
-            <th className="py-2.5 px-3">MÃ´ Táº£ / Loáº¡i HÆ° Háº¡i</th>
-            <th className="py-2.5 px-3">Æ¯u TiÃªn</th>
-            <th className="py-2.5 px-3">Tráº¡ng ThÃ¡i</th>
-            <th className="py-2.5 px-3 text-right">Thao TÃ¡c</th>
+            <th className="py-2.5 px-2.5 w-44">MÃ &amp; NGUỒN TIẾP NHẬN</th>
+            <th className="py-2.5 px-2 w-16 text-center">ẢNH (GPS)</th>
+            <th className="py-2.5 px-2.5 min-w-[220px]">DỰ ÁN &amp; VỊ TRÍ TUYẾN</th>
+            <th className="py-2.5 px-2.5 min-w-[200px]">LOẠI HƯ HỎNG &amp; MÔ TẢ</th>
+            <th className="py-2.5 px-2 w-20 text-center">ƯU TIÊN</th>
+            <th className="py-2.5 px-2.5 w-28">TRẠNG THÁI</th>
+            <th className="py-2.5 px-2.5 w-24 text-right">THAO TÁC</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">

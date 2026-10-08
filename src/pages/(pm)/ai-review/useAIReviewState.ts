@@ -1,46 +1,50 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { mockTriageCases } from '../../../data/mockData'
 import { TriageCase } from './types'
+import { triageService } from '../../../api/services/triageService'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
-const TRIAGE_STORAGE_KEY = 'roadguard_triage_cases_v2'
-
 export const useAIReviewState = () => {
-  // Dữ liệu hồ sơ tiếp nhận từ Single Source of Truth + Đồng bộ LocalStorage
-  const [cases, setCases] = useState<TriageCase[]>(() => {
-    try {
-      const saved = localStorage.getItem(TRIAGE_STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed
-      }
-    } catch (err) {
-      console.error('Failed to load triage cases from storage', err)
-    }
-    return mockTriageCases
-  })
+  // Dữ liệu hồ sơ tiếp nhận từ Mock API Service bất đồng bộ (Zero localStorage)
+  const [cases, setCases] = useState<TriageCase[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // Tự động lưu LocalStorage khi dữ liệu cases thay đổi
+  // Nạp dữ liệu từ Mock API khi khởi tạo
   useEffect(() => {
-    try {
-      localStorage.setItem(TRIAGE_STORAGE_KEY, JSON.stringify(cases))
-    } catch (err) {
-      console.error('Failed to save triage cases to storage', err)
+    let isMounted = true
+    const loadCases = async () => {
+      try {
+        setIsLoading(true)
+        const data = await triageService.getCases()
+        if (isMounted) {
+          setCases(data)
+          if (data.length > 0 && !selectedCaseId) {
+            setSelectedCaseId(data[0].id)
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
     }
-  }, [cases])
+    loadCases()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Selected Case for Right Detail Panel
-  const [selectedCaseId, setSelectedCaseId] = useState<string>('cas-05')
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('cas-01')
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
   const selectedCase = useMemo(() => {
-    return cases.find((c) => c.id === selectedCaseId) || cases[0]
+    return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
   }, [cases, selectedCaseId])
 
   // Thu gọn / Mở rộng nhóm báo cáo trùng (Accordion)
-  const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>(['cas-05'])
+  const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>(['cas-01'])
   const [collapseMergedRows, setCollapseMergedRows] = useState<boolean>(true)
 
   const handleToggleExpandMaster = (id: string, e?: React.MouseEvent) => {
@@ -124,19 +128,67 @@ export const useAIReviewState = () => {
     currentNotes
   })
 
-  // Reset dữ liệu mẫu
-  const handleResetTriageData = () => {
-    setCases(mockTriageCases)
+  // Reset dữ liệu mẫu qua Mock API Service
+  const handleResetTriageData = async () => {
     try {
-      localStorage.removeItem(TRIAGE_STORAGE_KEY)
-    } catch {}
+      const freshData = await triageService.resetCases()
+      setCases(freshData)
+      linkActions.setSelectedReportIds([])
+      showToast('Đã đặt lại dữ liệu phản ánh & triage về mặc định ban đầu qua API!')
+    } catch (err) {
+      showToast('Không thể đặt lại dữ liệu phản ánh')
+    }
+  }
+
+  // Thao tác hàng loạt (Bulk Actions): Xác nhận hàng loạt & Đánh dấu kiểm tra lại
+  const handleBulkVerify = () => {
+    const ids = linkActions.selectedReportIds
+    if (ids.length === 0) return
+
+    setCases((prev) =>
+      prev.map((c) =>
+        ids.includes(c.id)
+          ? {
+              ...c,
+              status: 'VERIFIED',
+              status_label: 'Đã xác minh (Verified)',
+              conclusion: 'DEFECT_FOUND',
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_VERIFY] Đã xác nhận hàng loạt ngày ${new Date().toLocaleDateString('vi-VN')}`
+            }
+          : c
+      )
+    )
     linkActions.setSelectedReportIds([])
-    showToast('Đã đặt lại dữ liệu phản ánh & triage về mặc định ban đầu!')
+    showToast(`Đã xác nhận hàng loạt ${ids.length} khiếm khuyết thành công! Sẵn sàng đưa vào kế hoạch sửa chữa.`)
+  }
+
+  const handleBulkNeedSurvey = () => {
+    const ids = linkActions.selectedReportIds
+    if (ids.length === 0) return
+
+    const surveyCode = `SR-2026-BULK-${Date.now().toString().slice(-4)}`
+    setCases((prev) =>
+      prev.map((c) =>
+        ids.includes(c.id)
+          ? {
+              ...c,
+              status: 'NEED_SURVEY',
+              status_label: 'Cần đo đạc bổ sung',
+              conclusion: null,
+              survey_request_code: surveyCode,
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_SURVEY] Đã yêu cầu đo đạc lại hiện trường (${surveyCode})`
+            }
+          : c
+      )
+    )
+    linkActions.setSelectedReportIds([])
+    showToast(`Đã đánh dấu kiểm tra lại hiện trường cho ${ids.length} hồ sơ! Mã phiếu: ${surveyCode}`)
   }
 
   return {
     cases,
     setCases,
+    isLoading,
     expandedMasterIds,
     handleToggleExpandMaster,
     collapseMergedRows,
@@ -170,6 +222,8 @@ export const useAIReviewState = () => {
     setActiveTab: filters.setActiveTab,
     sourceFilter: filters.sourceFilter,
     setSourceFilter: filters.setSourceFilter,
+    lineTypeFilter: filters.lineTypeFilter,
+    setLineTypeFilter: filters.setLineTypeFilter,
     projectFilter: filters.projectFilter,
     setProjectFilter: filters.setProjectFilter,
     priorityFilter: filters.priorityFilter,
@@ -252,6 +306,8 @@ export const useAIReviewState = () => {
     handleResetConclusion: actions.handleResetConclusion,
     handleOpenPublishModal: actions.handleOpenPublishModal,
     handleConfirmPublishResult: actions.handleConfirmPublishResult,
-    handleExecuteMerge: actions.handleExecuteMerge
+    handleExecuteMerge: actions.handleExecuteMerge,
+    handleBulkVerify,
+    handleBulkNeedSurvey
   }
 }

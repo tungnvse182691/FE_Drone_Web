@@ -1,14 +1,6 @@
-﻿import React from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CheckCircle2,
-  X,
-  AlertCircle,
-  Camera,
-  Send,
-  ShieldCheck,
-  Eye,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerDecisionFormProps {
@@ -58,7 +50,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
           <label className="text-[11px] font-semibold text-slate-700 mb-1">
-            Má»©c Ä‘á»™ nghiÃªm trá»ng <span className="text-red-500">*</span>
+            Mức độ nghiêm trọng <span className="text-red-500">*</span>
           </label>
           <select
             value={currentSeverity}
@@ -71,25 +63,25 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 : 'bg-slate-50 text-slate-700 border-slate-200'
             }`}
           >
-            <option value="LOW">LOW (Nháº¹ - Cáº¥p 1)</option>
-            <option value="MEDIUM">MEDIUM (Vá»«a - Cáº¥p 2)</option>
-            <option value="HIGH">HIGH (NghiÃªm trá»ng - Cáº¥p 3)</option>
-            <option value="CRITICAL">CRITICAL (Nguy hiá»ƒm - Cáº¥p 4)</option>
+            <option value="LOW">Nhẹ (Cấp 1 - Theo dõi)</option>
+            <option value="MEDIUM">Vừa (Cấp 2 - Kế hoạch)</option>
+            <option value="HIGH">Nghiêm trọng (Cấp 3 - Ưu tiên)</option>
+            <option value="CRITICAL">Khẩn cấp (Cấp 4 - Nguy hiểm)</option>
           </select>
         </div>
 
         <div className="flex flex-col">
           <label className="text-[11px] font-semibold text-slate-700 mb-1">
-            TÃ­nh kháº©n cáº¥p <span className="text-red-500">*</span>
+            Tính khẩn cấp <span className="text-red-500">*</span>
           </label>
           <select
             value={currentUrgency}
             onChange={(e) => setCurrentUrgency(e.target.value as any)}
             className="w-full bg-amber-50 text-amber-900 border border-amber-200 font-bold text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
           >
-            <option value="NORMAL">NORMAL (Theo lá»‹ch 7 ngÃ y)</option>
-            <option value="URGENT">URGENT (Trong 24-48 giá»)</option>
-            <option value="EMERGENCY">EMERGENCY (Xá»­ lÃ½ ngay 4h)</option>
+            <option value="NORMAL">Bình thường (Theo lịch 7 ngày)</option>
+            <option value="URGENT">Khẩn cấp (Trong 24 - 48 giờ)</option>
+            <option value="EMERGENCY">Đặc biệt khẩn cấp (Xử lý ngay 4 giờ)</option>
           </select>
         </div>
       </div>
@@ -97,7 +89,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* Area & Depth Dimensions */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col">
-          <label className="text-[11px] font-medium text-slate-600 mb-1">Diá»‡n tÃ­ch hÆ° háº¡i</label>
+          <label className="text-[11px] font-medium text-slate-600 mb-1">Diện tích hư hại</label>
           <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
             <input
               type="number"
@@ -106,15 +98,15 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               onChange={(e) => setCurrentArea(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none"
             />
-            <span className="text-xs text-slate-500 font-semibold ml-1">mÂ²</span>
+            <span className="text-xs text-slate-500 font-semibold ml-1">m²</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5">
-            AI Æ°á»›c tÃ­nh: {selectedCase.ai_area_sqm} mÂ²
+            AI ước tính: {selectedCase.ai_area_sqm} m²
           </span>
         </div>
 
         <div className="flex flex-col">
-          <label className="text-[11px] font-medium text-slate-600 mb-1">Äá»™ sÃ¢u lá»›n nháº¥t</label>
+          <label className="text-[11px] font-medium text-slate-600 mb-1">Độ sâu lớn nhất</label>
           <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
             <input
               type="number"
@@ -126,7 +118,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             <span className="text-xs text-slate-500 font-semibold ml-1">cm</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5">
-            AI Æ°á»›c tÃ­nh: {selectedCase.ai_depth_cm} cm
+            AI ước tính: {selectedCase.ai_depth_cm} cm
           </span>
         </div>
       </div>
@@ -134,19 +126,19 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* PM Notes */}
       <div className="flex flex-col">
         <div className="flex items-center justify-between mb-1">
-          <label className="text-[11px] font-semibold text-slate-700">Ghi chÃº tháº©m Ä‘á»‹nh PM</label>
-          <span className="text-[10px] text-slate-400 font-normal">LÆ°u nháº­t kÃ½ cÃ´ng trÃ¬nh</span>
+          <label className="text-[11px] font-semibold text-slate-700">Ghi chú thẩm định PM</label>
+          <span className="text-[10px] text-slate-400 font-normal">Lưu nhật ký công trình</span>
         </div>
         <textarea
           rows={2}
           value={currentNotes}
           onChange={(e) => setCurrentNotes(e.target.value)}
-          placeholder="Nháº­p ghi chÃº ká»¹ thuáº­t, chá»‰ Ä‘áº¡o vÃ¡ nÃ³ng cáº¥p bÃ¡ch hoáº·c Ä‘á» xuáº¥t cáº¯m biá»ƒn cáº£nh bÃ¡o táº¡m..."
+          placeholder="Nhập ghi chú kỹ thuật, chỉ đạo vá nóng cấp bách hoặc đề xuất cắm biển cảnh báo tạm..."
           className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold"
         />
       </div>
 
-      {/* Decision Action Buttons (PA05: DEFECT_FOUND / NO_DEFECT / OUT_OF_SCOPE) */}
+      {/* Decision Action Buttons */}
       <div className="space-y-2 pt-1">
         <button
           type="button"
@@ -157,11 +149,11 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               : 'bg-brand-gold hover:bg-[#B38E1F]'
           }`}
         >
-          <CheckCircle2 className="w-4 h-4" />
+          <Icon name="check_circle" size={16} />
           <span>
             {selectedCase.conclusion === 'DEFECT_FOUND'
-              ? 'âœ“ ÄÃ£ XÃ¡c Minh DEFECT_FOUND (Báº¥m Ä‘á»ƒ cáº­p nháº­t láº¡i)'
-              : 'XÃ¡c minh cÃ³ khiáº¿m khuyáº¿t (DEFECT_FOUND - PA05)'}
+              ? '✓ Đã xác minh có khiếm khuyết (Bấm để cập nhật lại)'
+              : 'Xác minh có khiếm khuyết (Hợp lệ)'}
           </span>
         </button>
 
@@ -174,10 +166,10 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-red-600 text-white border-red-700'
                 : 'bg-white border-slate-200 hover:bg-red-50 text-red-600'
             }`}
-            title="KhÃ´ng cÃ³ khiáº¿m khuyáº¿t (Báº¯t buá»™c lÃ½ do giáº£i trÃ¬nh theo BR-39)"
+            title="Không có khiếm khuyết (Bắt buộc lý do giải trình theo BR-39)"
           >
-            <X className="w-3.5 h-3.5" />
-            <span>{selectedCase.conclusion === 'NO_DEFECT' ? 'ÄÃ£ bÃ¡o sai' : 'KhÃ´ng cÃ³ lá»—i (BR-39)'}</span>
+            <Icon name="close" size={14} />
+            <span>{selectedCase.conclusion === 'NO_DEFECT' ? 'Đã báo sai' : 'Không có lỗi (BR-39)'}</span>
           </button>
           <button
             type="button"
@@ -187,10 +179,10 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-amber-600 text-white border-amber-700'
                 : 'bg-white border-slate-200 hover:bg-amber-50 text-amber-700'
             }`}
-            title="NgoÃ i pháº¡m vi báº£o hÃ nh HoÃ ng Háº£i"
+            title="Ngoài phạm vi bảo hành Hoàng Hải"
           >
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>{selectedCase.conclusion === 'OUT_OF_SCOPE' ? 'ÄÃ£ loáº¡i trá»«' : 'NgoÃ i pháº¡m vi'}</span>
+            <Icon name="warning" size={14} />
+            <span>{selectedCase.conclusion === 'OUT_OF_SCOPE' ? 'Đã loại trừ' : 'Ngoài phạm vi'}</span>
           </button>
           <button
             type="button"
@@ -200,14 +192,14 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 ? 'bg-blue-600 text-white border-blue-700'
                 : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
             }`}
-            title="YÃªu cáº§u kháº£o sÃ¡t láº¡i hiá»‡n trÆ°á»ng hoáº·c bay drone bÃ¹ (WF-11)"
+            title="Yêu cầu khảo sát lại hiện trường hoặc bay drone bù"
           >
-            <Camera className="w-3.5 h-3.5" />
-            <span>{selectedCase.status === 'NEED_SURVEY' ? 'ÄÃ£ giao Ä‘o láº¡i' : 'YÃªu cáº§u Ä‘o láº¡i'}</span>
+            <Icon name="photo_camera" size={14} />
+            <span>{selectedCase.status === 'NEED_SURVEY' ? 'Đã giao đo lại' : 'Yêu cầu đo lại'}</span>
           </button>
         </div>
 
-        {/* Public Notice Action (PA07) */}
+        {/* Public Notice Action */}
         <button
           type="button"
           onClick={() => onOpenPublishModal(selectedCase)}
@@ -217,11 +209,11 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
           }`}
         >
-          <Send className="w-3.5 h-3.5 text-blue-600" />
+          <Icon name="campaign" size={16} className="text-blue-600" />
           <span>
             {selectedCase.is_published
-              ? `ðŸ“¢ ÄÃ£ cÃ´ng bá»‘ tiáº¿n Ä‘á»™ cho ngÆ°á»i dÃ¢n (${selectedCase.published_at || 'HÃ´m nay'})`
-              : 'CÃ´ng bá»‘ tiáº¿n Ä‘á»™ cho ngÆ°á»i dÃ¢n (PA07)'}
+              ? `Đã công bố tiến độ cho người dân (${selectedCase.published_at || 'Hôm nay'})`
+              : 'Công bố tiến độ cho người dân'}
           </span>
         </button>
       </div>
@@ -229,25 +221,25 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       {/* Compliance Note & Direct Action Links */}
       <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-slate-600 text-[11px]">
-          <ShieldCheck className="w-4 h-4 text-brand-gold shrink-0" />
-          <span>ÄÃ£ Ä‘á»§ Ä‘iá»u kiá»‡n kÃ­ch hoáº¡t lá»‡nh thi cÃ´ng sá»­a chá»¯a cáº¥p bÃ¡ch (WF-05).</span>
+          <Icon name="verified_user" size={16} className="text-brand-gold shrink-0" />
+          <span>Đã đủ điều kiện kích hoạt lệnh thi công sửa chữa cấp bách.</span>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => navigate(`/pm/defects/${selectedCase.id}/verify`)}
+            onClick={() => navigate(`/pm/defects/${selectedCase.id}/verify-a`)}
             className="py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Eye className="w-3.5 h-3.5 text-brand-gold" />
-            <span>So sÃ¡nh Ä‘a ká»³ & BBox</span>
+            <Icon name="visibility" size={14} className="text-brand-gold" />
+            <span>Thẩm định BBox &amp; Đa kỳ</span>
           </button>
           <button
             type="button"
             onClick={() => onNavigateFastTrack(selectedCase)}
             className="py-2 px-3 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-lg border border-amber-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
-            <Send className="w-3.5 h-3.5 text-brand-gold" />
-            <span>Äiá»u phá»‘i Fast Track</span>
+            <Icon name="send" size={14} className="text-brand-gold" />
+            <span>Điều phối xử lý nhanh</span>
           </button>
         </div>
       </div>

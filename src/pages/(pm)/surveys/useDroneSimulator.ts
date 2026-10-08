@@ -48,7 +48,7 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
             setSimStep('AI_SCANNING')
 
             let def = 0
-            const aiInterval = setInterval(() => {
+            const aiInterval = setInterval(async () => {
               def += 2
               if (def >= 8) {
                 def = 8
@@ -56,7 +56,7 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
                 setSimDefectCount(8)
                 setSimStep('COMPLETED')
 
-                const updated = surveyService.simulateDroneFlightCompletion(selectedMissionForSim.id)
+                const updated = await surveyService.simulateDroneFlightCompletion(selectedMissionForSim.id)
                 onMissionUpdated()
                 if (updated) {
                   setSelectedMissionForSim(updated)

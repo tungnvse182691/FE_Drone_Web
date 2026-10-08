@@ -1,12 +1,6 @@
-﻿import React from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Map as MapIcon
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
 export interface MissionScrubberProps {
@@ -17,7 +11,7 @@ export interface MissionScrubberProps {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>
   playbackSpeed: number
   setPlaybackSpeed: React.Dispatch<React.SetStateAction<number>>
-  selectedItem: AIDetectionItem
+  selectedItem?: AIDetectionItem | null
   detections: AIDetectionItem[]
   onSelectDetection: (item: AIDetectionItem) => void
 }
@@ -39,7 +33,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
       <div className="flex items-center justify-between font-mono text-xs text-slate-500">
         <span className="text-slate-800 font-bold">02:14</span>
         <span className="text-xs">
-          Äang xem: <strong>{selectedItem.stationing}</strong> (Frame {currentFrame} / {totalFrames})
+          Đang xem: <strong>{selectedItem?.stationing || 'Toàn tuyến'}</strong> (Frame {currentFrame} / {totalFrames})
         </span>
         <span>03:45</span>
       </div>
@@ -78,7 +72,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
               }}
               style={{ left: `${percent}%` }}
               className={`absolute top-0 bottom-0 w-2 ${dotColor} rounded-full transition-transform hover:scale-150`}
-              title={`${d.code}: ${d.type} táº¡i ${d.stationing}`}
+              title={`${d.code}: ${d.type} tại ${d.stationing}`}
             ></div>
           )
         })}
@@ -96,28 +90,28 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
           <button
             onClick={() => setCurrentFrame((prev) => Math.max(1, prev - 50))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="LÃ¹i 50 frames"
+            title="Lùi 50 frames"
             type="button"
           >
-            <SkipBack className="w-4 h-4" />
+            <Icon name="skip_previous" size={16} />
           </button>
 
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="p-1.5 rounded-full bg-brand-gold hover:bg-[#B38E1F] text-white shadow-xs flex items-center justify-center cursor-pointer transition-all"
-            title={isPlaying ? 'Táº¡m dá»«ng' : 'PhÃ¡t'}
+            title={isPlaying ? 'Tạm dừng' : 'Phát'}
             type="button"
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            <Icon name={isPlaying ? 'pause' : 'play_arrow'} size={16} />
           </button>
 
           <button
             onClick={() => setCurrentFrame((prev) => Math.min(totalFrames, prev + 50))}
             className="p-1 rounded-lg hover:bg-slate-100 text-slate-700 cursor-pointer"
-            title="Tiáº¿n 50 frames"
+            title="Tiến 50 frames"
             type="button"
           >
-            <SkipForward className="w-4 h-4" />
+            <Icon name="skip_next" size={16} />
           </button>
 
           {/* Speed toggle */}
@@ -134,8 +128,8 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
             to="/pm/projects/prj-ql1a-02/alignment"
             className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1 transition-colors"
           >
-            <MapIcon className="w-3.5 h-3.5 text-brand-gold" />
-            <span>Xem trÃªn GIS (MapLibre)</span>
+            <Icon name="map" size={14} className="text-brand-gold" />
+            <span>Xem trên GIS (MapLibre)</span>
           </Link>
         </div>
       </div>

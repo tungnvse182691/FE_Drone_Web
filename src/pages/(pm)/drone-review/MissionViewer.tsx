@@ -1,13 +1,5 @@
-﻿import React from 'react'
-import {
-  Maximize2,
-  Minimize2,
-  Video,
-  Eye,
-  EyeOff,
-  Camera,
-  Map as MapIcon
-} from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 import { MissionViewport } from './MissionViewport'
 import { MissionScrubber } from './MissionScrubber'
@@ -29,7 +21,7 @@ export interface MissionViewerProps {
   selectedDetectionId: string
   onSelectDetection: (item: AIDetectionItem) => void
   detections: AIDetectionItem[]
-  selectedItem: AIDetectionItem
+  selectedItem?: AIDetectionItem | null
   corridorMapContainerRef: React.RefObject<HTMLDivElement | null>
   showToast: (msg: string) => void
 }
@@ -57,20 +49,20 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
 }) => {
   return (
     <section
-      className={`lg:col-span-7 bg-white border border-brand-border rounded-xl shadow-2xs overflow-hidden flex flex-col ${
+      className={`lg:col-span-7 bg-white border border-[#E2E5E9] rounded-xl shadow-2xs overflow-hidden flex flex-col ${
         isCanvasFullscreen ? 'fixed inset-4 z-50 max-w-none h-auto' : ''
       }`}
     >
       {/* Canvas Header */}
       <div className="p-3 bg-slate-50 flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center gap-2">
-          <Video className="w-4 h-4 text-brand-gold" />
+          <Icon name="photo_camera" size={18} className="text-[#C9A227]" />
           <div>
-            <h3 className="font-bold text-xs text-brand-dark leading-tight">
-              Khung hÃ¬nh trÃ­ch xuáº¥t #FR-{currentFrame}
+            <h3 className="font-bold text-xs text-[#1A1D20] leading-tight">
+              Khung hình trích xuất {selectedItem ? `#FR-${selectedItem.id === 'DET-01' ? '1420' : selectedItem.id === 'DET-02' ? '1480' : selectedItem.id === 'DET-03' ? '1540' : selectedItem.id === 'DET-04' ? '1590' : selectedItem.id === 'DET-05' ? '1680' : selectedItem.id === 'DET-06' ? '1720' : selectedItem.id === 'DET-07' ? '1810' : '1880'}` : `#FR-${currentFrame}`}
             </h3>
             <span className="font-mono text-[11px] text-slate-500">
-              Äoáº¡n tráº¯c lÆ°á»£ng: {selectedItem.stationing} â€¢ Cáº£m biáº¿n RGB Sony Alpha 7R V
+              {selectedItem ? `${selectedItem.stationing} (${selectedItem.lane})` : 'Toàn tuyến'}
             </span>
           </div>
         </div>
@@ -81,25 +73,25 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
             <button
               type="button"
               onClick={() => setViewerMode('ORTHO')}
-              className={`px-2.5 py-1 rounded-md transition-all ${
+              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                 viewerMode === 'ORTHO'
-                  ? 'bg-white text-brand-dark shadow-2xs font-bold'
+                  ? 'bg-white text-[#1A1D20] shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              KhÃ´ng áº£nh Drone
+              Không ảnh
             </button>
             <button
               type="button"
               onClick={() => setViewerMode('GIS_MAP')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
                 viewerMode === 'GIS_MAP'
-                  ? 'bg-brand-gold text-white shadow-2xs font-bold'
+                  ? 'bg-[#C9A227] text-white shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <MapIcon className="w-3.5 h-3.5" />
-              <span>Báº£n Ä‘á»“ bay GIS (MapLibre)</span>
+              <Icon name="map" size={14} />
+              <span>Bản đồ GIS</span>
             </button>
           </div>
 
@@ -110,7 +102,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                 type="button"
                 onClick={() => {
                   setIsAiOverlayVisible(!isAiOverlayVisible)
-                  showToast(isAiOverlayVisible ? 'ÄÃ£ táº¯t lá»›p AI Bounding Box.' : 'ÄÃ£ báº­t lá»›p AI Bounding Box.')
+                  showToast(isAiOverlayVisible ? 'Đã tắt lớp AI Bounding Box.' : 'Đã bật lớp AI Bounding Box.')
                 }}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer ${
                   isAiOverlayVisible
@@ -118,28 +110,28 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {isAiOverlayVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                <span>Lá»›p AI ({isAiOverlayVisible ? 'Báº­t' : 'Táº¯t'})</span>
+                <Icon name={isAiOverlayVisible ? 'visibility' : 'visibility_off'} size={14} />
+                <span>Lớp AI ({isAiOverlayVisible ? 'Bật' : 'Tắt'})</span>
               </button>
 
               {/* Snapshot Button */}
               <button
-                onClick={() => showToast(`ÄÃ£ xuáº¥t áº£nh chá»¥p tráº¯c Ä‘á»‹a khung hÃ¬nh #FR-${currentFrame}.png`)}
+                onClick={() => showToast(`Đã xuất ảnh chụp trắc địa khung hình #FR-${currentFrame}.png`)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="Chá»¥p áº£nh khung hÃ¬nh"
+                title="Chụp ảnh khung hình"
                 type="button"
               >
-                <Camera className="w-4 h-4" />
+                <Icon name="photo_camera" size={16} />
               </button>
 
               {/* Fullscreen Button */}
               <button
                 onClick={() => setIsCanvasFullscreen(!isCanvasFullscreen)}
                 className="p-1 text-slate-400 hover:text-slate-700 rounded cursor-pointer"
-                title="ToÃ n mÃ n hÃ¬nh Canvas"
+                title="Toàn màn hình Canvas"
                 type="button"
               >
-                {isCanvasFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                <Icon name="fullscreen_exit" size={16} />
               </button>
             </div>
           )}
@@ -154,6 +146,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
         detections={detections}
         selectedDetectionId={selectedDetectionId}
         onSelectDetection={onSelectDetection}
+        selectedItem={selectedItem}
       />
 
       {/* Video Timeline Scrubber & Player Controls */}

@@ -2,6 +2,14 @@ export interface ProjectRouteConfig {
   id: string
   code: string
   name: string
+  type: 'MAINLINE' | 'BRANCH'
+  parentProjectId: string
+  parentProjectCode: string
+  parentProjectName: string
+  branchStationKm?: number
+  branchStationText?: string
+  directionText?: string
+  lengthKm?: number
   startKm: number
   endKm: number
   defaultCoords: [number, number][]

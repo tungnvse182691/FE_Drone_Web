@@ -1,30 +1,29 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { surveyService } from '../../api/services'
-import {
-  SURVEY_PROJECTS,
-  AVAILABLE_PILOTS,
-  getSubLineCoordinates
-} from './create-survey/mockData'
+import { surveyService, INITIAL_SURVEY_ROUTES, INITIAL_PILOTS } from '../../api/services'
+import { getSubLineCoordinates } from './create-survey/mockData'
 import { CreateSurveyHeader } from './create-survey/CreateSurveyHeader'
 import { CreateSurveyForm } from './create-survey/CreateSurveyForm'
 import { FlightCorridorMap } from './create-survey/FlightCorridorMap'
+import { ProjectRouteConfig, AvailablePilot } from './create-survey/types'
+import { Icon } from '../../components/ui/Icon'
 
 export const CreateSurvey: React.FC = () => {
   const navigate = useNavigate()
 
-  // State dự án và lý trình
-  const [projectId, setProjectId] = useState<string>(SURVEY_PROJECTS[0].id)
-  const currentProject = useMemo(() => {
-    return SURVEY_PROJECTS.find((p) => p.id === projectId) || SURVEY_PROJECTS[0]
-  }, [projectId])
+  // State nạp từ Mock API (Khởi tạo sẵn với đầy đủ Tuyến chính & Tuyến phụ)
+  const [routes, setRoutes] = useState<ProjectRouteConfig[]>(INITIAL_SURVEY_ROUTES)
+  const [pilots, setPilots] = useState<AvailablePilot[]>(INITIAL_PILOTS)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
+  // State dự án và lý trình
+  const [projectId, setProjectId] = useState<string>(INITIAL_SURVEY_ROUTES[0]?.id || 'prj-ql1a-02')
   const [startKm, setStartKm] = useState<string>('1020.0')
   const [endKm, setEndKm] = useState<string>('1025.0')
   const [date, setDate] = useState<string>('2026-10-15')
 
   // Phi công chỉ định
-  const [pilotId, setPilotId] = useState<string>(AVAILABLE_PILOTS[0].id)
+  const [pilotId, setPilotId] = useState<string>('')
 
   // Độ cao bay thiết kế
   const [altitudeMode, setAltitudeMode] = useState<'preset' | 'custom'>('preset')
@@ -40,11 +39,75 @@ export const CreateSurvey: React.FC = () => {
     'Khảo sát định kỳ quý IV sau mùa bão lũ. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.'
   )
 
+  // Nạp dữ liệu Tuyến đường & Phi công từ Mock API bất đồng bộ
+  useEffect(() => {
+    let isMounted = true
+    const loadMockApiData = async () => {
+      try {
+        setIsLoading(true)
+        const [routesData, pilotsData] = await Promise.all([
+          surveyService.getSurveyRoutes(),
+          surveyService.getAvailablePilots()
+        ])
+        if (!isMounted) return
+
+        setRoutes(routesData)
+        setPilots(pilotsData)
+
+        if (routesData.length > 0) {
+          const defaultRoute = routesData[0]
+          setProjectId(defaultRoute.id)
+          setStartKm(defaultRoute.startKm.toFixed(1))
+          setEndKm(Math.min(defaultRoute.startKm + 5.0, defaultRoute.endKm).toFixed(1))
+        }
+
+        if (pilotsData.length > 0) {
+          setPilotId(pilotsData[0].id)
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải danh mục tuyến & phi công từ Mock API:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadMockApiData()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const currentProject = useMemo(() => {
+    return (
+      routes.find((p) => p.id === projectId) ||
+      INITIAL_SURVEY_ROUTES.find((p) => p.id === projectId) ||
+      routes[0] ||
+      INITIAL_SURVEY_ROUTES[0]
+    )
+  }, [routes, projectId])
+
   const handleProjectChange = (newPrjId: string) => {
     setProjectId(newPrjId)
-    const targetPrj = SURVEY_PROJECTS.find((p) => p.id === newPrjId) || SURVEY_PROJECTS[0]
-    setStartKm(targetPrj.startKm.toFixed(1))
-    setEndKm(Math.min(targetPrj.startKm + 5.0, targetPrj.endKm).toFixed(1))
+    const targetPrj =
+      routes.find((p) => p.id === newPrjId) ||
+      INITIAL_SURVEY_ROUTES.find((p) => p.id === newPrjId)
+    if (!targetPrj) return
+
+    if (targetPrj.type === 'BRANCH') {
+      // Tuyến phụ: Tự động khởi tạo từ Km 0.0 đến hết chiều dài nhánh
+      setStartKm(targetPrj.startKm.toFixed(2))
+      setEndKm(targetPrj.endKm.toFixed(2))
+      setNotes(
+        `Khảo sát chuyên đề tuyến phụ [${targetPrj.code}] ${targetPrj.name} (${targetPrj.branchStationText || ''}). Yêu cầu bay trần 50-65m kiểm tra nứt lún bề mặt.`
+      )
+    } else {
+      // Tuyến chính
+      setStartKm(targetPrj.startKm.toFixed(1))
+      setEndKm(Math.min(targetPrj.startKm + 5.0, targetPrj.endKm).toFixed(1))
+      setNotes(
+        `Khảo sát định kỳ tuyến chính [${targetPrj.code}] ${targetPrj.name}. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
+      )
+    }
   }
 
   const actualAltitude = altitudeMode === 'custom' ? parseFloat(customAltitude) || 65 : parseFloat(presetAltitude) || 65
@@ -61,34 +124,38 @@ export const CreateSurvey: React.FC = () => {
     return getSubLineCoordinates(sKm, eKm, currentProject.defaultCoords, currentProject.defaultKmPoints)
   }, [sKm, eKm, currentProject])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const selectedPilot = AVAILABLE_PILOTS.find((p) => p.id === pilotId)
+    const selectedPilot = pilots.find((p) => p.id === pilotId)
 
-    const newSurvey = surveyService.createSurvey({
+    const newSurvey = await surveyService.createSurvey({
       project_id: currentProject.id,
       project_name: currentProject.name,
-      start_km: `Km ${sKm.toFixed(1)}`,
-      end_km: `Km ${eKm.toFixed(1)}`,
+      start_km: `Km ${sKm.toFixed(currentProject.type === 'BRANCH' ? 2 : 1)}`,
+      end_km: `Km ${eKm.toFixed(currentProject.type === 'BRANCH' ? 2 : 1)}`,
       pilot_name: selectedPilot?.name || 'Lê Hoàng Long',
       drone_model: selectedPilot?.device || 'DJI Matrice 350 RTK',
       notes
     })
 
-    alert(
-      `Đã ban hành thành công Lệnh Bay Khảo Sát [${newSurvey.code}]!\n` +
-      `• Dự án: [${currentProject.code}] ${currentProject.name}\n` +
-      `• Đoạn lý trình: Km ${sKm.toFixed(1)} → Km ${eKm.toFixed(1)} (Cự ly: ${flightDistanceKm.toFixed(1)} km)\n` +
-      `• Độ cao bay thiết kế: ${actualAltitude}m (GSD: ~${gsdCmPx} cm/px)\n` +
-      `• Độ phủ ảnh: ${overlap}% dọc / ${parseInt(overlap) - 10}% ngang\n` +
-      `• Phi công được chỉ định: ${selectedPilot?.name} (${selectedPilot?.device})\n` +
-      `Hồ sơ đã được lưu trữ và đồng bộ tới danh sách nhiệm vụ bay!`
+    navigate(`/pm/surveys?highlightCode=${encodeURIComponent(newSurvey.code)}`, {
+      state: {
+        successMessage: `Đã ban hành Lệnh bay khảo sát [${newSurvey.code}] thành công! Trạng thái: Lên lịch bay.`
+      }
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-6xl mx-auto p-12 flex flex-col items-center justify-center space-y-3 bg-white border border-[#E2E5E9] rounded-xl shadow-2xs min-h-[360px]">
+        <Icon name="sync" size={32} className="text-[#C9A227] animate-spin" />
+        <p className="text-xs text-slate-500 font-medium">Đang tải danh mục Tuyến chính & Tuyến phụ từ máy chủ...</p>
+      </div>
     )
-    navigate(`/pm/surveys?highlightCode=${encodeURIComponent(newSurvey.code)}`)
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto overflow-x-hidden space-y-6">
       {/* 1. Header */}
       <CreateSurveyHeader onBack={() => navigate('/pm/surveys')} />
 
@@ -96,7 +163,7 @@ export const CreateSurvey: React.FC = () => {
         {/* 2. Form Cột Trái (7 cols) */}
         <div className="lg:col-span-7">
           <CreateSurveyForm
-            projects={SURVEY_PROJECTS}
+            projects={routes}
             projectId={projectId}
             onProjectChange={handleProjectChange}
             currentProject={currentProject}
@@ -117,7 +184,7 @@ export const CreateSurvey: React.FC = () => {
             setShowOverlapHelp={setShowOverlapHelp}
             date={date}
             setDate={setDate}
-            pilots={AVAILABLE_PILOTS}
+            pilots={pilots}
             pilotId={pilotId}
             setPilotId={setPilotId}
             notes={notes}
@@ -130,6 +197,7 @@ export const CreateSurvey: React.FC = () => {
         {/* 3. Bản Đồ Cột Phải (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <FlightCorridorMap
+            currentProject={currentProject}
             fullRouteCoords={fullRouteCoords}
             surveySegmentCoords={surveySegmentCoords}
             sKm={sKm}

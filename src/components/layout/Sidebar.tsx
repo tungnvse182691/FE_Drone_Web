@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { Icon } from '../ui/Icon'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -20,10 +21,16 @@ import {
   Users
 } from 'lucide-react'
 
+interface NavNestedChild {
+  label: string
+  path: string
+}
+
 interface NavSubItem {
   label: string
   path: string
   icon: React.ComponentType<{ className?: string }>
+  children?: NavNestedChild[]
 }
 
 interface NavGroup {
@@ -37,6 +44,7 @@ interface NavGroup {
 export const Sidebar: React.FC = () => {
   const { user } = useAuthStore()
   const location = useLocation()
+  const navigate = useNavigate()
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   // Danh mục nhóm điều hướng PM (Chỉ huy trưởng)
@@ -61,9 +69,18 @@ export const Sidebar: React.FC = () => {
       title: 'Khảo sát & AI',
       icon: PlaneTakeoff,
       items: [
-        { label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff },
-        { label: 'Hộp thư Drone AI', path: '/pm/ai-inbox?source=drone', icon: Inbox },
-        { label: 'Phản ánh người dân & Tuần đường', path: '/pm/ai-inbox?source=citizen', icon: Users },
+        {
+          label: 'Đợt bay Drone',
+          path: '/pm/surveys',
+          icon: PlaneTakeoff,
+          children: [
+            { label: 'Danh sách đợt bay', path: '/pm/surveys' },
+            { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' },
+            { label: 'Canvas thẩm định AI', path: '/pm/surveys/srv-01/review' },
+            { label: 'Thẩm định Bounding Box', path: '/pm/defects/det-03/verify-a' }
+          ]
+        },
+        { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },
         { label: 'Điều phối nhanh', path: '/pm/fast-track', icon: Zap }
       ]
     },
@@ -113,8 +130,7 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         { label: 'Giám sát Drone', path: '/sup/surveys', icon: PlaneTakeoff },
-        { label: 'Hộp thư Drone AI', path: '/sup/ai-inbox?source=drone', icon: Inbox },
-        { label: 'Phản ánh người dân & Tuần đường', path: '/sup/ai-inbox?source=citizen', icon: Users },
+        { label: 'Hộp thư tiếp nhận lỗi', path: '/sup/ai-inbox', icon: Inbox },
         { label: 'Xử lý cấp bách', path: '/sup/fast-track', icon: Zap }
       ]
     },
@@ -143,8 +159,8 @@ export const Sidebar: React.FC = () => {
 
   const navGroups = isPM ? pmNavGroups : supNavGroups
 
-  // Quản lý trạng thái mở/đóng từng nhóm Accordion
-  const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({
+  // Trạng thái đóng/mở từng nhóm Accordion cấp 1
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     dashboard: true,
     projects: true,
     surveys: true,
@@ -153,18 +169,42 @@ export const Sidebar: React.FC = () => {
     reports: false
   })
 
-  // Tự động mở nhóm cha khi truy cập vào route con tương ứng
+  // Trạng thái đóng/mở nhánh con cấp 2 (ví dụ Đợt bay Drone -> Tạo yêu cầu bay)
+  const [openSubBranches, setOpenSubBranches] = useState<Record<string, boolean>>({
+    '/pm/surveys': true
+  })
+
+  // Tự động mở nhóm cha và nhánh con khi truy cập vào route tương ứng
   useEffect(() => {
     navGroups.forEach((group) => {
       if (group.items) {
-        const hasActiveChild = group.items.some((item) =>
-          location.pathname.startsWith(item.path)
-        )
+        const hasActiveChild = group.items.some((item) => {
+          if (location.pathname.startsWith(item.path.split('?')[0])) return true
+          if (
+            item.children?.some(
+              (c) =>
+                location.pathname === c.path ||
+                (c.path.includes('/review') &&
+                  (location.pathname.includes('/review') || location.pathname.startsWith('/pm/drone-mission'))) ||
+                (c.path.includes('/defects') && location.pathname.startsWith('/pm/defects'))
+            )
+          )
+            return true
+          return false
+        })
         if (hasActiveChild) {
           setOpenGroups((prev) => ({ ...prev, [group.id]: true }))
         }
       }
     })
+
+    if (
+      location.pathname.startsWith('/pm/surveys') ||
+      location.pathname.startsWith('/pm/drone-mission') ||
+      location.pathname.startsWith('/pm/defects')
+    ) {
+      setOpenSubBranches((prev) => ({ ...prev, '/pm/surveys': true }))
+    }
   }, [location.pathname, isPM])
 
   const toggleGroup = (groupId: string) => {
@@ -174,8 +214,15 @@ export const Sidebar: React.FC = () => {
     }))
   }
 
+  const toggleSubBranch = (path: string) => {
+    setOpenSubBranches((prev) => ({
+      ...prev,
+      [path]: !prev[path]
+    }))
+  }
+
   return (
-    <aside className="w-64 bg-white border-r border-brand-border flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none shrink-0 shadow-2xs">
+    <aside className="w-64 bg-white border-r border-[#E2E5E9] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none shrink-0 shadow-2xs">
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
         {/* Tiêu đề phân hệ */}
         <div className="px-3 py-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex items-center justify-between">
@@ -198,8 +245,8 @@ export const Sidebar: React.FC = () => {
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                     isActive
                       ? isPM
-                        ? 'bg-amber-50 text-amber-900 border-l-4 border-brand-gold shadow-2xs'
-                        : 'bg-slate-100 text-slate-900 border-l-4 border-brand-navy shadow-2xs'
+                        ? 'bg-amber-50 text-[#8C6D1F] border-l-4 border-[#C9A227] shadow-2xs'
+                        : 'bg-slate-100 text-slate-900 border-l-4 border-[#2D3748] shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`
                 }
@@ -211,9 +258,24 @@ export const Sidebar: React.FC = () => {
           }
 
           // Kiểm tra xem trong nhóm có item con nào đang active không
-          const hasActiveChild = group.items?.some((item) =>
-            location.pathname.startsWith(item.path.split('?')[0])
-          )
+          const hasActiveChild = group.items?.some((item) => {
+            const basePath = item.path.split('?')[0]
+            if (location.pathname.startsWith(basePath)) return true
+            if (
+              item.children?.some((c) => {
+                if (location.pathname === c.path) return true
+                if (
+                  c.path.includes('/review') &&
+                  (location.pathname.includes('/review') || location.pathname.startsWith('/pm/drone-mission'))
+                )
+                  return true
+                if (c.path.includes('/defects') && location.pathname.startsWith('/pm/defects')) return true
+                return false
+              })
+            )
+              return true
+            return false
+          })
 
           return (
             <div key={group.id} className="rounded-xl overflow-hidden transition-all">
@@ -232,8 +294,8 @@ export const Sidebar: React.FC = () => {
                     className={`w-4 h-4 shrink-0 ${
                       hasActiveChild
                         ? isPM
-                          ? 'text-brand-gold'
-                          : 'text-brand-navy'
+                          ? 'text-[#C9A227]'
+                          : 'text-[#2D3748]'
                         : 'text-slate-400'
                     }`}
                   />
@@ -257,25 +319,84 @@ export const Sidebar: React.FC = () => {
                           location.search === `?${itemQuery}` ||
                           (!location.search && itemQuery === 'citizen')
                         )
-                      : location.pathname === subItem.path
+                      : location.pathname === subItem.path ||
+                        (subItem.children && (
+                          location.pathname.startsWith(subItem.path) ||
+                          (subItem.path === '/pm/surveys' && location.pathname.startsWith('/pm/defects'))
+                        ))
+
+                    const hasChildren = Boolean(subItem.children && subItem.children.length > 0)
+                    const isBranchOpen = Boolean(openSubBranches[subItem.path])
 
                     return (
-                      <NavLink
-                        key={subItem.path}
-                        to={subItem.path}
-                        className={() =>
-                          `flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-lg text-xs transition-all relative ${
-                            isCustomActive
-                              ? isPM
-                                ? 'bg-amber-50/90 text-amber-950 font-bold border-l-3 border-brand-gold shadow-2xs'
-                                : 'bg-slate-100 text-slate-950 font-bold border-l-3 border-brand-navy shadow-2xs'
-                              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
-                          }`
-                        }
-                      >
-                        <SubIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                        <span className="truncate">{subItem.label}</span>
-                      </NavLink>
+                      <div key={subItem.path} className="space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          <NavLink
+                            to={subItem.path}
+                            className={() =>
+                              `flex-1 flex items-center gap-2.5 pl-4 pr-2 py-2 rounded-lg text-xs transition-all relative ${
+                                isCustomActive
+                                  ? isPM
+                                    ? 'bg-amber-50/90 text-amber-950 font-bold border-l-3 border-[#C9A227] shadow-2xs'
+                                    : 'bg-slate-100 text-slate-950 font-bold border-l-3 border-[#2D3748] shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium'
+                              }`
+                            }
+                          >
+                            <SubIcon className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                            <span className="truncate">{subItem.label}</span>
+                          </NavLink>
+
+                          {hasChildren && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleSubBranch(subItem.path)
+                              }}
+                              className="p-1 hover:bg-slate-200/60 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                              title={isBranchOpen ? 'Thu gọn nhánh' : 'Mở rộng nhánh'}
+                            >
+                              <ChevronDown
+                                className={`w-3 h-3 transition-transform duration-200 ${
+                                  isBranchOpen ? 'rotate-180 text-slate-600' : ''
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Nhánh nhỏ cấp 3 xổ ra (VD: Danh sách đợt bay & Tạo yêu cầu bay) */}
+                        {hasChildren && isBranchOpen && (
+                          <div className="pl-7 pr-1 py-0.5 space-y-1 relative before:absolute before:left-6 before:top-1 before:bottom-1 before:w-[1px] before:bg-amber-200">
+                            {subItem.children!.map((child) => {
+                              const isChildActive = child.path.includes('/review')
+                                ? location.pathname.includes('/review') || location.pathname.startsWith('/pm/drone-mission')
+                                : child.path.includes('/defects')
+                                ? location.pathname.startsWith('/pm/defects')
+                                : location.pathname === child.path
+                              return (
+                                <NavLink
+                                  key={child.path}
+                                  to={child.path}
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] transition-all ${
+                                    isChildActive
+                                      ? 'bg-amber-100/80 text-[#8C6D1F] font-bold shadow-2xs'
+                                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50 font-medium'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      isChildActive ? 'bg-[#C9A227]' : 'bg-slate-300'
+                                    }`}
+                                  />
+                                  <span className="truncate">{child.label}</span>
+                                </NavLink>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
@@ -286,7 +407,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Footer bản quyền & phiên bản */}
-      <div className="p-3.5 border-t border-brand-border bg-slate-50/60 text-[11px] text-slate-500">
+      <div className="p-3.5 border-t border-[#E2E5E9] bg-slate-50/60 text-[11px] text-slate-500">
         <div className="font-bold text-slate-700">Dự án Nhà thầu Hoàng Hải</div>
         <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ v2.2</div>
       </div>

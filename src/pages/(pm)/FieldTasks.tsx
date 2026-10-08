@@ -31,37 +31,8 @@ export const FieldTasks: React.FC = () => {
     }
   }, [tabParam])
 
-  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường (Đồng bộ từ LocalStorage + mockFieldTasks)
-  const [fieldTasks] = useState<FieldTask[]>(() => {
-    try {
-      const saved = localStorage.getItem('roadguard_field_tasks')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const mapped: FieldTask[] = parsed.map((item: any, idx: number) => ({
-            id: item.id || `ft-local-${idx}`,
-            code: item.code || `TSK-MEAS-2026-${String(idx + 10).padStart(3, '0')}`,
-            defect_id: item.defectId || item.defect_id || 'def-01',
-            defect_code: item.defectCode || item.defect_code || '#REP-2026-0813',
-            measurement_type:
-              item.mode === 'DRONE_RESURVEY'
-                ? 'Bay quét Drone bổ sung (DRONE_RESURVEY)'
-                : 'Đo thước cơ học & độ sâu lòng hố (MEASURE_ONLY)',
-            chainage_km:
-              parseFloat((item.stationing || 'Km 1024+300').replace(/[^0-9.]/g, '')) || 1024.3,
-            status: item.status || 'ASSIGNED',
-            measured_value: item.measured_value || undefined,
-            evidence_photo_url: item.evidence_photo_url || undefined,
-            technician_name: item.assignedTo || 'Tổ đo đạc hiện trường 01'
-          }))
-          return [...mapped, ...mockFieldTasks]
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse roadguard_field_tasks', e)
-    }
-    return mockFieldTasks
-  })
+  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường (In-memory Mock API)
+  const [fieldTasks] = useState<FieldTask[]>(() => [...mockFieldTasks])
 
   // Dữ liệu xung đột được quản lý tập trung từ mockSyncConflicts
   const [conflicts, setConflicts] = useState<SyncConflictItem[]>(mockSyncConflicts)

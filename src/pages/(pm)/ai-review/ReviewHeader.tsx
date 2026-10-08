@@ -1,27 +1,14 @@
-﻿import React from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  ChevronRight,
-  Download,
-  Link2,
-  Users,
-  Plane,
-  Building2,
-} from 'lucide-react'
-import type { TriageCase, ViewSourceMode } from './types'
+import { Icon } from '../../../components/ui/Icon'
+import type { TriageCase } from './types'
 
 export interface ReviewHeaderProps {
   basePath: string
   isSupervisor: boolean
-  viewSourceMode: ViewSourceMode
-  setViewSourceMode: (mode: ViewSourceMode) => void
   cases: TriageCase[]
-  unassignedCitizenCount: number
   pendingCount: number
-  citizenCount: number
-  droneAICount: number
   selectedReportIds: string[]
-  setSelectedReportIds: React.Dispatch<React.SetStateAction<string[]>>
   selectedCase: TriageCase
   onOpenLinkReportsModal: () => void
   onNavigateFastTrack: (c: TriageCase) => void
@@ -31,15 +18,9 @@ export interface ReviewHeaderProps {
 export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
   basePath,
   isSupervisor,
-  viewSourceMode,
-  setViewSourceMode,
   cases,
-  unassignedCitizenCount,
   pendingCount,
-  citizenCount,
-  droneAICount,
   selectedReportIds,
-  setSelectedReportIds,
   selectedCase,
   onOpenLinkReportsModal,
   onNavigateFastTrack,
@@ -48,163 +29,66 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
   const navigate = useNavigate()
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Top Breadcrumb & Status Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/dashboard`)}>
-            Trang chá»§
+            Trang chủ
           </span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hover:text-brand-dark cursor-pointer" onClick={() => navigate(`${basePath}/surveys`)}>
-            Khiáº¿m khuyáº¿t
-          </span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-semibold text-[#8F7212]">Há»™p thÆ° tiáº¿p nháº­n (Triage WF-04)</span>
+          <Icon name="chevron_right" size={14} className="text-slate-400" />
+          <span className="font-semibold text-brand-gold">Hộp thư tiếp nhận &amp; Sàng lọc lỗi</span>
         </nav>
         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium bg-white px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Äá»“ng bá»™ cáº£m biáº¿n GIS thá»i gian thá»±c: 25/08/2026 21:45</span>
+          <span>Đồng bộ cảm biến GIS: 25/08/2026</span>
         </div>
       </div>
 
       {/* Page Header & Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-brand-border">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-              {viewSourceMode === 'CITIZEN_TRIAGE'
-                ? 'Báº£ng Tiáº¿p Nháº­n & Äiá»u Phá»‘i Pháº£n Ãnh NgÆ°á»i DÃ¢n (PA03, PA04)'
-                : viewSourceMode === 'DRONE_AI'
-                ? 'Há»™p ThÆ° Tiáº¿p Nháº­n & Tháº©m Äá»‹nh Lá»—i Drone AI (AI01-AI08)'
-                : 'Há»™p ThÆ° Tiáº¿p Nháº­n Sá»± Cá»‘ & Triage Khiáº¿m Khuyáº¿t Há»—n Há»£p'}
+              Hộp Thư Tiếp Nhận &amp; Sàng Lọc Lỗi
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-gold/15 text-[#8F7212] border border-brand-gold/30">
-              {isSupervisor ? 'GiÃ¡m sÃ¡t Triage Hub' : 'PM Triage Hub'}
-            </span>
-            {unassignedCitizenCount > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
-                {unassignedCitizenCount} pháº£n Ã¡nh cáº§n Ä‘iá»u phá»‘i dá»± Ã¡n
-              </span>
-            )}
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
-              {pendingCount} ca chá» xÃ¡c minh
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+              {pendingCount} ca chờ xác minh
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Tiáº¿p nháº­n vÃ  Ä‘iá»u phá»‘i pháº£n Ã¡nh ngÆ°á»i dÃ¢n (PA03), liÃªn káº¿t bÃ¡o trÃ¹ng láº·p lÃ¢n cáº­n (PA04) vÃ  phÃ¢n cáº¥p hÆ° há»ng theo 2 trá»¥c Severity Ã— Urgency (SC14).
+            Sàng lọc khiếm khuyết từ Drone AI và phản ánh hiện trường theo quy chuẩn TCVN
           </p>
         </div>
 
         {/* Right Quick Actions */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <button
-            onClick={() => showToast('Äang xuáº¥t danh sÃ¡ch há»“ sÆ¡ Triage ra file Excel TCVN...')}
+            onClick={() => showToast('Đang xuất danh sách hồ sơ Triage ra file Excel TCVN...')}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>Xuáº¥t danh sÃ¡ch</span>
+            <Icon name="download" size={16} className="text-slate-500" />
+            <span>Xuất báo cáo Excel</span>
           </button>
-          <button
-            onClick={onOpenLinkReportsModal}
-            type="button"
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer ${
-              selectedReportIds.length >= 2
-                ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 border border-amber-400 shadow-sm animate-pulse'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            <Link2 className="w-4 h-4 text-brand-gold" />
-            <span>LiÃªn káº¿t bÃ¡o trÃ¹ng ({selectedReportIds.length >= 2 ? selectedReportIds.length : 2})</span>
-          </button>
+          {selectedReportIds.length >= 2 && (
+            <button
+              onClick={onOpenLinkReportsModal}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 border border-amber-400 shadow-sm animate-pulse cursor-pointer"
+            >
+              <Icon name="link" size={16} />
+              <span>Liên kết báo trùng ({selectedReportIds.length})</span>
+            </button>
+          )}
           <button
             onClick={() => onNavigateFastTrack(selectedCase)}
             type="button"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <span>Äiá»u phá»‘i Fast Track (WF-05)</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>Điều phối xử lý nhanh</span>
+            <Icon name="chevron_right" size={16} />
           </button>
-        </div>
-      </div>
-
-      {/* Primary Module Switcher: Citizen Triage vs Drone AI vs All */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-100 p-1.5 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            type="button"
-            onClick={() => {
-              setViewSourceMode('CITIZEN_TRIAGE')
-              setSelectedReportIds([])
-            }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              viewSourceMode === 'CITIZEN_TRIAGE'
-                ? 'bg-brand-gold text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Báº£ng Tiáº¿p Nháº­n &amp; Äiá»u Phá»‘i Pháº£n Ãnh DÃ¢n (PA03, PA04)</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                viewSourceMode === 'CITIZEN_TRIAGE' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {citizenCount}
-            </span>
-            {unassignedCitizenCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-red-600 text-white font-bold animate-pulse">
-                {unassignedCitizenCount} chÆ°a gÃ¡n
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setViewSourceMode('DRONE_AI')
-              setSelectedReportIds([])
-            }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-              viewSourceMode === 'DRONE_AI'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <Plane className="w-4 h-4" />
-            <span>Há»™p ThÆ° Drone AI QuÃ©t (AI01-AI08)</span>
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                viewSourceMode === 'DRONE_AI' ? 'bg-white/20' : 'bg-slate-200 text-slate-700'
-              }`}
-            >
-              {droneAICount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setViewSourceMode('ALL')
-              setSelectedReportIds([])
-            }}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              viewSourceMode === 'ALL'
-                ? 'bg-white text-brand-dark shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-            }`}
-          >
-            <span>Táº¥t cáº£ nguá»“n</span>
-            <span className="text-[10px] opacity-70 font-mono">({cases.length})</span>
-          </button>
-        </div>
-
-        <div className="text-[11px] text-slate-500 font-medium px-2 flex items-center gap-1.5 self-center">
-          <Building2 className="w-3.5 h-3.5 text-slate-400" />
-          <span>
-            Quy trÃ¬nh: <strong>DÃ¢n bÃ¡o &rarr; PM Äiá»u phá»‘i (PA03) &rarr; LiÃªn káº¿t trÃ¹ng (PA04) &rarr; Tháº©m Ä‘á»‹nh (PA05)</strong>
-          </span>
         </div>
       </div>
     </div>

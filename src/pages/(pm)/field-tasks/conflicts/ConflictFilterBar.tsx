@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { Search } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../../components/ui/Icon'
 import { SyncConflictItem } from '../../../../types/domain'
 
 export interface ConflictFilterBarProps {
@@ -31,57 +31,57 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
         <button
           type="button"
           onClick={() => setFilterType('ALL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             filterType === 'ALL'
-              ? 'bg-brand-gold text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Táº¥t cáº£ ({conflicts.length})
+          Tất cả ({conflicts.length})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('PENDING')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             filterType === 'PENDING'
-              ? 'bg-brand-gold text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Chá» phÃ¢n giáº£i ({stats.pending})
+          Chờ phân giải ({stats.pending})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('RESCUE')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             filterType === 'RESCUE'
-              ? 'bg-purple-600 text-white shadow-xs font-sansation'
+              ? 'bg-purple-600 text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          Cá»©u dá»¯ liá»‡u thiáº¿t bá»‹ ({stats.rescuePending})
+          Cứu dữ liệu thiết bị ({stats.rescuePending})
         </button>
         <button
           type="button"
           onClick={() => setFilterType('RESOLVED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             filterType === 'RESOLVED'
-              ? 'bg-brand-gold text-white shadow-xs font-sansation'
+              ? 'bg-brand-gold text-white shadow-xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
-          ÄÃ£ phÃ¢n giáº£i ({conflicts.length - stats.pending})
+          Đã phân giải ({conflicts.length - stats.pending})
         </button>
       </div>
 
       <div className="relative min-w-[280px]">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <Icon name="search" size={16} className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <input
           type="text"
-          placeholder="TÃ¬m mÃ£ xung Ä‘á»™t, mÃ£ lá»—i, lÃ½ trÃ¬nh, thá»£..."
+          placeholder="Tìm mã xung đột, mã lỗi, lý trình, thợ..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-gold"
         />
       </div>
     </div>

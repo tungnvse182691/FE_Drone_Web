@@ -2,7 +2,7 @@ import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { mockProjects } from '../../data/mockData'
-import { CheckCircle2, X } from 'lucide-react'
+import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
 import { ReviewFilterBar } from './ai-review/ReviewFilterBar'
@@ -29,7 +29,7 @@ export const AIReviewInbox: React.FC = () => {
     setPublishPublicNote, isRequestSurveyModalOpen, setIsRequestSurveyModalOpen, surveyMode, setSurveyMode,
     surveyReason, setSurveyReason, surveyAssignedCrew, setSurveyAssignedCrew, surveySlaHours, setSurveySlaHours,
     setSelectedCaseId, isDetailModalOpen, setIsDetailModalOpen, selectedCase, activeTab, setActiveTab,
-    sourceFilter, setSourceFilter, projectFilter, setProjectFilter, priorityFilter, setPriorityFilter,
+    sourceFilter, setSourceFilter, lineTypeFilter, setLineTypeFilter, projectFilter, setProjectFilter, priorityFilter, setPriorityFilter,
     searchQuery, setSearchQuery, toastMessage, setToastMessage, showToast, detailViewMode, setDetailViewMode,
     modalMapType, setModalMapType, isGISModalOpen, setIsGISModalOpen, isMergeModalOpen, setIsMergeModalOpen,
     isPhotoZoomModalOpen, setIsPhotoZoomModalOpen, modalMapContainerRef, drawerMapContainerRef,
@@ -42,35 +42,29 @@ export const AIReviewInbox: React.FC = () => {
     handleConfirmLinkReports, handleUnlinkReport, handleOpenTriageProject, handleConfirmTriageProject,
     handleOpenNoDefectModal, handleConfirmNoDefect, handleConclusionOutOfScope,
     handleResetConclusion, handleOpenPublishModal, handleConfirmPublishResult,
-    handleExecuteMerge
+    handleExecuteMerge, handleBulkVerify, handleBulkNeedSurvey
   } = state
 
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+          <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
           <span className="text-xs font-medium">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white">
-            <X className="w-4 h-4" />
+          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white cursor-pointer ml-2">
+            <Icon name="close" size={16} />
           </button>
         </div>
       )}
 
-      {/* 1. Header & Source Selector */}
+      {/* 1. Header & Quick Actions */}
       <ReviewHeader
         basePath={basePath}
         isSupervisor={isSupervisor}
-        viewSourceMode={viewSourceMode}
-        setViewSourceMode={handleSetViewSourceMode}
         cases={cases}
-        unassignedCitizenCount={unassignedCitizenCount}
         pendingCount={pendingCount}
-        citizenCount={citizenCount}
-        droneAICount={droneAICount}
         selectedReportIds={selectedReportIds}
-        setSelectedReportIds={setSelectedReportIds}
         selectedCase={selectedCase}
         onOpenLinkReportsModal={handleOpenLinkReportsModal}
         onNavigateFastTrack={handleNavigateFastTrack}
@@ -88,6 +82,8 @@ export const AIReviewInbox: React.FC = () => {
         criticalCount={criticalCount}
         sourceFilter={sourceFilter}
         setSourceFilter={setSourceFilter}
+        lineTypeFilter={lineTypeFilter}
+        setLineTypeFilter={setLineTypeFilter}
         projectFilter={projectFilter}
         setProjectFilter={setProjectFilter}
         priorityFilter={priorityFilter}
@@ -122,6 +118,8 @@ export const AIReviewInbox: React.FC = () => {
           }}
           onResetTriageData={handleResetTriageData}
           onClearSelectedReports={() => setSelectedReportIds([])}
+          onBulkVerify={handleBulkVerify}
+          onBulkNeedSurvey={handleBulkNeedSurvey}
         />
       </div>
 

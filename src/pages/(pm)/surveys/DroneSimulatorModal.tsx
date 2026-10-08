@@ -1,16 +1,5 @@
-﻿import React from 'react'
-import {
-  Radio,
-  X,
-  PlaneTakeoff,
-  Camera,
-  Cpu,
-  CheckCircle2,
-  Loader2,
-  ShieldCheck,
-  Play,
-  Sparkles
-} from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import { type SurveyMissionItem as SurveyMission } from '../../../api/services'
 import { SimulatorTelemetryGrid } from './SimulatorTelemetryGrid'
 
@@ -48,59 +37,59 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
   if (!isOpen || !mission) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl border border-[#E2E5E9] w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-slate-900 text-white px-6 py-4.5 flex items-center justify-between border-b border-slate-800">
+        <div className="bg-[#1A1D20] text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center">
-              <Radio className="w-5 h-5 animate-pulse" />
+            <div className="w-10 h-10 rounded-lg bg-amber-500/20 text-[#C9A227] border border-amber-500/30 flex items-center justify-center">
+              <Icon name="sensors" size={20} className="text-[#C9A227]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white tracking-tight">
-                  MÃ´ Phá»ng Chuyáº¿n Bay Drone (Flight Simulator)
+                <h3 className="text-base font-bold text-white tracking-tight font-sansation">
+                  Mô Phỏng Chuyến Bay Drone (Flight Simulator)
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">
-                  RTK FIX â€¢ {mission.code}
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-900/60 text-amber-300 border border-amber-700/50">
+                  RTK FIX • {mission.code}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                MÃ´ phá»ng quÃ¡ trÃ¬nh cáº¥t cÃ¡nh, thu náº¡p 1,920 khÃ´ng áº£nh 4K vÃ  kÃ­ch hoáº¡t pipeline AI Road-YOLOv9
+                Mô phỏng quá trình cất cánh, thu nạp 1,920 không ảnh 4K và kích hoạt pipeline AI Road-YOLOv9
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
           {/* Mission Summary Banner */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-[#F8F9FA] border border-[#E2E5E9] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="text-xs font-bold text-slate-800">{mission.title}</div>
+              <div className="text-xs font-bold text-[#1A1D20]">{mission.title}</div>
               <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                {mission.project_name} â€¢ {mission.start_km} â†’ {mission.end_km}
+                {mission.project_name} • {mission.start_km} → {mission.end_km}
               </div>
-              <div className="text-[11px] text-slate-600 mt-1 flex items-center gap-2">
-                <span>Phi cÃ´ng: <strong>{mission.pilot_name}</strong></span>
-                <span>â€¢</span>
-                <span>Thiáº¿t bá»‹: <strong>{mission.drone_model}</strong></span>
+              <div className="text-[11px] text-slate-600 mt-1 flex items-center gap-2 flex-wrap">
+                <span>Phi công: <strong>{mission.pilot_name}</strong></span>
+                <span>•</span>
+                <span>Thiết bị: <strong>{mission.drone_model}</strong></span>
               </div>
             </div>
             <div className="shrink-0 flex items-center gap-2">
               <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
                 mission.status === 'PENDING_AI_REVIEW'
-                  ? 'bg-amber-100 text-[#8F7212] border-amber-300'
-                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  ? 'bg-[#FEF3E2] text-[#F59E0B] border-amber-200'
+                  : 'bg-slate-100 text-[#2D3748] border-[#E2E5E9]'
               }`}>
-                {mission.status === 'PENDING_AI_REVIEW' ? 'Chá» Tháº©m Äá»‹nh AI' : 'Äang LÃªn Lá»‹ch (SCHEDULED)'}
+                {mission.status === 'PENDING_AI_REVIEW' ? 'Chờ Thẩm Định AI' : 'Đang Lên Lịch (SCHEDULED)'}
               </span>
             </div>
           </div>
@@ -115,14 +104,14 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
 
           {/* Progress Steps Timeline */}
           <div className="space-y-3">
-            <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
-              <span>Tiáº¿n TrÃ¬nh Chuyáº¿n Bay &amp; Pipeline AI</span>
-              <span className="text-indigo-600 font-mono">
-                {simStep === 'IDLE' && 'Sáºµn sÃ ng khá»Ÿi Ä‘á»™ng'}
-                {simStep === 'FLYING' && 'Giai Ä‘oáº¡n 1/3: Bay quÃ©t hÃ nh lang'}
-                {simStep === 'INGESTING' && 'Giai Ä‘oáº¡n 2/3: Truyá»n áº£nh trá»±c giao 4K'}
-                {simStep === 'AI_SCANNING' && 'Giai Ä‘oáº¡n 3/3: Pipeline AI phÃ¡t hiá»‡n lá»—i'}
-                {simStep === 'COMPLETED' && 'HoÃ n thÃ nh 100%'}
+            <div className="text-xs font-semibold text-[#2D3748] uppercase tracking-wider flex items-center justify-between">
+              <span>Tiến Trình Chuyến Bay & Pipeline AI</span>
+              <span className="text-[#C9A227] font-mono font-medium">
+                {simStep === 'IDLE' && 'Sẵn sàng khởi động'}
+                {simStep === 'FLYING' && 'Giai đoạn 1/3: Bay quét hành lang'}
+                {simStep === 'INGESTING' && 'Giai đoạn 2/3: Truyền ảnh trực giao 4K'}
+                {simStep === 'AI_SCANNING' && 'Giai đoạn 3/3: Pipeline AI phát hiện lỗi'}
+                {simStep === 'COMPLETED' && 'Hoàn thành 100%'}
               </span>
             </div>
 
@@ -130,28 +119,28 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               {/* Step 1 */}
               <div className={`p-3 rounded-xl border text-xs transition-all ${
                 simStep === 'FLYING'
-                  ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                  ? 'bg-amber-50/60 border-amber-300 ring-1 ring-amber-200'
                   : simFlightProgress === 100
                   ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-400'
+                  : 'bg-[#F8F9FA] border-[#E2E5E9] text-slate-400'
               }`}>
                 <div className="flex items-center gap-2 font-bold mb-1">
                   {simFlightProgress === 100 ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <Icon name="check_circle" size={16} className="text-[#2F9E44]" />
                   ) : simStep === 'FLYING' ? (
-                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                    <Icon name="sync" size={16} className="text-[#C9A227] animate-spin" />
                   ) : (
-                    <PlaneTakeoff className="w-4 h-4 text-slate-400" />
+                    <Icon name="flight_takeoff" size={16} className="text-slate-400" />
                   )}
-                  <span>1. QuÃ©t Waypoints RTK</span>
+                  <span>1. Quét Waypoints RTK</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Tá»± Ä‘á»™ng bay theo tá»a Ä‘á»™ tráº¯c dá»c Km 1036 â†’ Km 1042.
+                  Tự động bay theo tọa độ trắc dọc {mission.start_km} → {mission.end_km}.
                 </p>
                 {simStep === 'FLYING' && (
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
                     <div
-                      className="bg-indigo-600 h-full transition-all duration-200"
+                      className="bg-[#C9A227] h-full transition-all duration-200"
                       style={{ width: `${simFlightProgress}%` }}
                     ></div>
                   </div>
@@ -161,28 +150,28 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               {/* Step 2 */}
               <div className={`p-3 rounded-xl border text-xs transition-all ${
                 simStep === 'INGESTING'
-                  ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                  ? 'bg-amber-50/60 border-amber-300 ring-1 ring-amber-200'
                   : simPhotosCount === 1920
                   ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-400'
+                  : 'bg-[#F8F9FA] border-[#E2E5E9] text-slate-400'
               }`}>
                 <div className="flex items-center gap-2 font-bold mb-1">
                   {simPhotosCount === 1920 ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <Icon name="check_circle" size={16} className="text-[#2F9E44]" />
                   ) : simStep === 'INGESTING' ? (
-                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                    <Icon name="sync" size={16} className="text-[#C9A227] animate-spin" />
                   ) : (
-                    <Camera className="w-4 h-4 text-slate-400" />
+                    <Icon name="photo_camera" size={16} className="text-slate-400" />
                   )}
-                  <span>2. Náº¡p áº¢nh Trá»±c Giao</span>
+                  <span>2. Nạp Ảnh Trực Giao</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Náº¡p 1,920 áº£nh 4K vÃ  trÃ­ch xuáº¥t EXIF GPS, Ä‘á»™ cao, gÃ³c chá»¥p.
+                  Nạp 1,920 ảnh 4K và trích xuất EXIF GPS, độ cao, góc chụp.
                 </p>
                 {simStep === 'INGESTING' && (
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
                     <div
-                      className="bg-indigo-600 h-full transition-all duration-150"
+                      className="bg-[#C9A227] h-full transition-all duration-150"
                       style={{ width: `${(simPhotosCount / 1920) * 100}%` }}
                     ></div>
                   </div>
@@ -192,28 +181,28 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               {/* Step 3 */}
               <div className={`p-3 rounded-xl border text-xs transition-all ${
                 simStep === 'AI_SCANNING'
-                  ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200'
+                  ? 'bg-amber-50/60 border-amber-300 ring-1 ring-amber-200'
                   : simStep === 'COMPLETED'
                   ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
-                  : 'bg-slate-50 border-slate-200 text-slate-400'
+                  : 'bg-[#F8F9FA] border-[#E2E5E9] text-slate-400'
               }`}>
                 <div className="flex items-center gap-2 font-bold mb-1">
                   {simStep === 'COMPLETED' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <Icon name="check_circle" size={16} className="text-[#2F9E44]" />
                   ) : simStep === 'AI_SCANNING' ? (
-                    <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                    <Icon name="sync" size={16} className="text-[#C9A227] animate-spin" />
                   ) : (
-                    <Cpu className="w-4 h-4 text-slate-400" />
+                    <Icon name="memory" size={16} className="text-slate-400" />
                   )}
-                  <span>3. Road-YOLOv9 QuÃ©t Lá»—i</span>
+                  <span>3. Road-YOLOv9 Quét Lỗi</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  PhÃ¡t hiá»‡n váº¿t ná»©t, á»• gÃ , lÃºn vá»‡t bÃ¡nh xe ({simDefectCount} khiáº¿m khuyáº¿t).
+                  Phát hiện vết nứt, ổ gà, lún vệt bánh xe ({simDefectCount} khiếm khuyết).
                 </p>
                 {simStep === 'AI_SCANNING' && (
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
                     <div
-                      className="bg-amber-500 h-full transition-all duration-200"
+                      className="bg-[#F59E0B] h-full transition-all duration-200"
                       style={{ width: `${(simDefectCount / 8) * 100}%` }}
                     ></div>
                   </div>
@@ -224,17 +213,17 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
 
           {/* Completion Success Callout */}
           {simStep === 'COMPLETED' && (
-            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 flex items-center justify-between gap-4 animate-in fade-in duration-300">
+            <div className="bg-[#E9F7EC] border border-[#2F9E44]/40 rounded-xl p-4 flex items-center justify-between gap-4 animate-in fade-in duration-300">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-full bg-[#2F9E44] text-white flex items-center justify-center shrink-0">
+                  <Icon name="verified" size={20} className="text-white" />
                 </div>
                 <div>
                   <div className="text-sm font-bold text-emerald-900">
-                    Chuyáº¿n bay mÃ´ phá»ng Ä‘Ã£ hoÃ n táº¥t thÃ nh cÃ´ng!
+                    Chuyến bay mô phỏng đã hoàn tất thành công!
                   </div>
                   <div className="text-xs text-emerald-700 mt-0.5">
-                    Nhiá»‡m vá»¥ [{mission.code}] Ä‘Ã£ chuyá»ƒn sang <strong>PENDING_AI_REVIEW</strong>. ÄÃ£ sáºµn sÃ ng má»Ÿ Canvas Ä‘á»ƒ Project Manager tháº©m Ä‘á»‹nh bounding box!
+                    Nhiệm vụ [{mission.code}] đã chuyển sang <strong>PENDING_AI_REVIEW</strong>. Đã sẵn sàng mở Canvas để Project Manager thẩm định bounding box!
                   </div>
                 </div>
               </div>
@@ -243,13 +232,13 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
         </div>
 
         {/* Footer Buttons */}
-        <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
+        <div className="bg-[#F8F9FA] border-t border-[#E2E5E9] px-6 py-4 flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100 transition-colors"
+            className="px-4 py-2 rounded-lg bg-white border border-[#E2E5E9] text-[#1A1D20] text-xs font-semibold hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            ÄÃ³ng
+            Đóng
           </button>
 
           <div className="flex items-center gap-2">
@@ -257,10 +246,10 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               <button
                 type="button"
                 onClick={onRunSimulation}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#2D3748] hover:bg-[#1A1D20] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
               >
-                <Play className="w-4 h-4 fill-current" />
-                <span>Báº¯t Äáº§u MÃ´ Phá»ng Bay Ngay</span>
+                <Icon name="play_arrow" size={16} className="text-white" />
+                <span>Bắt Đầu Mô Phỏng Bay Ngay</span>
               </button>
             )}
 
@@ -268,10 +257,10 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               <button
                 disabled
                 type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-300 text-slate-600 text-xs font-bold cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-200 text-slate-500 text-xs font-semibold cursor-not-allowed"
               >
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Äang MÃ´ Phá»ng &amp; Xá»­ LÃ½ Pipeline...</span>
+                <Icon name="sync" size={16} className="animate-spin text-slate-500" />
+                <span>Đang Mô Phỏng & Xử Lý Pipeline...</span>
               </button>
             )}
 
@@ -282,10 +271,10 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
                   onClose()
                   onNavigate(`${basePath}/surveys/${mission.id}/review`)
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Má»Ÿ Canvas Tháº©m Äá»‹nh AI (WF-09) âž”</span>
+                <Icon name="auto_awesome" size={16} className="text-white" />
+                <span>Mở Canvas Thẩm Định AI (WF-09)</span>
               </button>
             )}
           </div>

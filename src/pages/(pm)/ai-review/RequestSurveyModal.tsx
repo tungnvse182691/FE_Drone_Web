@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { Camera, X, Check } from 'lucide-react'
+import React from 'react'
+import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface RequestSurveyModalProps {
@@ -39,12 +39,12 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
-              <Camera className="w-5 h-5" />
+              <Icon name="photo_camera" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Lá»‡nh Kháº£o SÃ¡t &amp; Äo Äáº¡c Bá»• Sung (WF-11)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Lệnh Khảo Sát &amp; Đo Đạc Bổ Sung (WF-11)</h3>
               <p className="text-xs text-slate-500">
-                NÃªu lÃ½ do ká»¹ thuáº­t, chá»n hÃ¬nh thá»©c vÃ  phÃ¢n cÃ´ng Ä‘Æ¡n vá»‹ Ä‘i Ä‘o / bay drone láº¡i
+                Nêu lý do kỹ thuật, chọn hình thức và phân công đơn vị đi đo / bay drone lại
               </p>
             </div>
           </div>
@@ -53,7 +53,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -68,18 +68,18 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             </div>
             <div className="font-semibold text-slate-800">{targetTriageCase.defect_title}</div>
             <div className="text-slate-500 text-[11px]">
-              LÃ½ trÃ¬nh:{' '}
+              Lý trình:{' '}
               <span className="font-medium text-slate-700">
                 {targetTriageCase.stationing} ({targetTriageCase.lane})
               </span>{' '}
-              â€¢ Tuyáº¿n: <span className="font-medium text-slate-700">{targetTriageCase.project_name}</span>
+              • Tuyến: <span className="font-medium text-slate-700">{targetTriageCase.project_name}</span>
             </div>
           </div>
 
-          {/* 1. Chá»n hÃ¬nh thá»©c kháº£o sÃ¡t */}
+          {/* 1. Chọn hình thức khảo sát */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700 block">
-              1. HÃ¬nh thá»©c kháº£o sÃ¡t / Ä‘o Ä‘áº¡c láº¡i: <span className="text-red-500">*</span>
+              1. Hình thức khảo sát / đo đạc lại: <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <label
@@ -96,18 +96,18 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
                     checked={surveyMode === 'MEASURE_ONLY'}
                     onChange={() => {
                       setSurveyMode('MEASURE_ONLY')
-                      setSurveyAssignedCrew('Tá»• Ä‘o Ä‘áº¡c hiá»‡n trÆ°á»ng 01 (Km 1020 - Km 1035)')
+                      setSurveyAssignedCrew('Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)')
                     }}
                     className="mt-0.5 accent-blue-600"
                   />
                   <div>
-                    <span className="font-bold text-slate-800 block text-xs">ðŸ“ Äo Ä‘áº¡c hiá»‡n trÆ°á»ng</span>
+                    <span className="font-bold text-slate-800 block text-xs">Đo đạc hiện trường</span>
                     <span className="text-[10px] text-blue-700 font-semibold uppercase">
-                      Cháº¿ Ä‘á»™ MEASURE_ONLY (BR-09)
+                      Chế độ MEASURE_ONLY (BR-09)
                     </span>
                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                      Ká»¹ sÆ°/Tá»• Ä‘á»™i Ä‘i thá»±c Ä‘á»‹a dÃ¹ng thÆ°á»›c Ä‘o Ä‘á»™ sÃ¢u lÃ²ng há»‘ (depth) vÃ  Ä‘o diá»‡n tÃ­ch ná»©t vá»¡ chuáº©n
-                      xÃ¡c.
+                      Kỹ sư/Tổ đội đi thực địa dùng thước đo độ sâu lòng hố (depth) và đo diện tích nứt vỡ chuẩn
+                      xác.
                     </p>
                   </div>
                 </div>
@@ -127,18 +127,18 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
                     checked={surveyMode === 'DRONE_RESURVEY'}
                     onChange={() => {
                       setSurveyMode('DRONE_RESURVEY')
-                      setSurveyAssignedCrew('Äá»™i bay Drone HoÃ ng Háº£i 01 - Phi cÃ´ng: LÃª Minh KhÃ´i')
+                      setSurveyAssignedCrew('Đội bay Drone Hoàng Hải 01 - Phi công: Lê Minh Khôi')
                     }}
                     className="mt-0.5 accent-blue-600"
                   />
                   <div>
-                    <span className="font-bold text-slate-800 block text-xs">ðŸ›¸ Bay Drone bá»• sung</span>
+                    <span className="font-bold text-slate-800 block text-xs">Bay Drone bổ sung</span>
                     <span className="text-[10px] text-blue-700 font-semibold uppercase">
-                      Cháº¿ Ä‘á»™ DRONE_RESURVEY
+                      Chế độ DRONE_RESURVEY
                     </span>
                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                      Chá»‰ Ä‘á»‹nh phi cÃ´ng bay quÃ©t láº¡i á»Ÿ Ä‘á»™ cao tháº¥p hÆ¡n hoáº·c gÃ³c chá»¥p xiÃªn do áº£nh cÅ© bá»‹ má», ngÆ°á»£c
-                      sÃ¡ng.
+                      Chỉ định phi công bay quét lại ở độ cao thấp hơn hoặc góc chụp xiên do ảnh cũ bị mờ, ngược
+                      sáng.
                     </p>
                   </div>
                 </div>
@@ -146,23 +146,23 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             </div>
           </div>
 
-          {/* 2. LÃ½ do ká»¹ thuáº­t yÃªu cáº§u Ä‘o láº¡i (Báº¯t buá»™c) */}
+          {/* 2. Lý do kỹ thuật yêu cầu đo lại (Bắt buộc) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="font-bold text-slate-700">
-                2. LÃ½ do ká»¹ thuáº­t yÃªu cáº§u Ä‘o Ä‘áº¡c láº¡i: <span className="text-red-500">*</span>
+                2. Lý do kỹ thuật yêu cầu đo đạc lại: <span className="text-red-500">*</span>
               </label>
-              <span className="text-[10px] text-slate-400">Báº¯t buá»™c theo chuáº©n tháº©m Ä‘á»‹nh</span>
+              <span className="text-[10px] text-slate-400">Bắt buộc theo chuẩn thẩm định</span>
             </div>
 
             {/* Quick Tags */}
             <div className="flex items-center gap-1.5 flex-wrap">
               {[
-                'áº¢nh bá»‹ má» / che khuáº¥t táº§m nhÃ¬n',
-                'Cáº§n Ä‘o Ä‘á»™ sÃ¢u lÃ²ng há»‘ (depth)',
-                'Nghi ngá» ná»©t káº¿t cáº¥u táº§ng dÆ°á»›i',
-                'XÃ¡c Ä‘á»‹nh láº¡i chÃ­nh xÃ¡c lÃ½ trÃ¬nh Km',
-                'GÃ³c chá»¥p xiÃªn khÃ´ng Ä‘á»§ cÆ¡ sá»Ÿ tÃ­nh diá»‡n tÃ­ch',
+                'Ảnh bị mờ / che khuất tầm nhìn',
+                'Cần đo độ sâu lòng hố (depth)',
+                'Nghi ngờ nứt kết cấu tầng dưới',
+                'Xác định lại chính xác lý trình Km',
+                'Góc chụp xiên không đủ cơ sở tính diện tích',
               ].map((tag) => (
                 <button
                   key={tag}
@@ -179,15 +179,15 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
               rows={3}
               value={surveyReason}
               onChange={(e) => setSurveyReason(e.target.value)}
-              placeholder="VÃ­ dá»¥: áº¢nh ngÆ°á»i dÃ¢n gá»­i gÃ³c xiÃªn vÃ  bá»‹ ngÆ°á»£c sÃ¡ng, cáº§n tá»• Ä‘á»™i ra Ä‘o thÆ°á»›c kiá»ƒm tra lÃ²ng sÃ¢u há»‘ sá»¥t vÃ  diá»‡n tÃ­ch hÆ° háº¡i thá»±c táº¿..."
+              placeholder="Ví dụ: Ảnh người dân gửi góc xiên và bị ngược sáng, cần tổ đội ra đo thước kiểm tra lòng sâu hố sụt và diện tích hư hại thực tế..."
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold"
             />
           </div>
 
-          {/* 3. PhÃ¢n cÃ´ng Ä‘Æ¡n vá»‹ thá»±c hiá»‡n */}
+          {/* 3. Phân công đơn vị thực hiện */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700 block">
-              3. PhÃ¢n cÃ´ng Ä‘Æ¡n vá»‹ thá»±c hiá»‡n: <span className="text-red-500">*</span>
+              3. Phân công đơn vị thực hiện: <span className="text-red-500">*</span>
             </label>
             <select
               value={surveyAssignedCrew}
@@ -196,40 +196,40 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             >
               {surveyMode === 'MEASURE_ONLY' ? (
                 <>
-                  <option value="Tá»• Ä‘o Ä‘áº¡c hiá»‡n trÆ°á»ng 01 (Km 1020 - Km 1035)">
-                    Tá»• Ä‘o Ä‘áº¡c hiá»‡n trÆ°á»ng 01 (Km 1020 - Km 1035) â€” TrÆ°á»Ÿng tá»•: Nguyá»…n VÄƒn ThÃ nh
+                  <option value="Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)">
+                    Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035) — Trưởng tổ: Nguyễn Văn Thành
                   </option>
-                  <option value="Tá»• Ä‘o Ä‘áº¡c cÆ¡ Ä‘á»™ng 02 (Km 1035 - Km 1060)">
-                    Tá»• Ä‘o Ä‘áº¡c cÆ¡ Ä‘á»™ng 02 (Km 1035 - Km 1060) â€” TrÆ°á»Ÿng tá»•: Tráº§n ÄÃ¬nh Trá»ng
+                  <option value="Tổ đo đạc cơ động 02 (Km 1035 - Km 1060)">
+                    Tổ đo đạc cơ động 02 (Km 1035 - Km 1060) — Trưởng tổ: Trần Đình Trọng
                   </option>
-                  <option value="Äá»™i ká»¹ thuáº­t pháº£n á»©ng nhanh sá»‘ 3">
-                    Äá»™i ká»¹ thuáº­t pháº£n á»©ng nhanh sá»‘ 3 â€” Ká»¹ sÆ°: LÃª VÄƒn Nam
+                  <option value="Đội kỹ thuật phản ứng nhanh số 3">
+                    Đội kỹ thuật phản ứng nhanh số 3 — Kỹ sư: Lê Văn Nam
                   </option>
                 </>
               ) : (
                 <>
-                  <option value="Äá»™i bay Drone HoÃ ng Háº£i 01 - Phi cÃ´ng: LÃª Minh KhÃ´i">
-                    Äá»™i bay Drone HoÃ ng Háº£i 01 â€” Phi cÃ´ng: LÃª Minh KhÃ´i (DJI Matrice 350 RTK)
+                  <option value="Đội bay Drone Hoàng Hải 01 - Phi công: Lê Minh Khôi">
+                    Đội bay Drone Hoàng Hải 01 — Phi công: Lê Minh Khôi (DJI Matrice 350 RTK)
                   </option>
-                  <option value="Äá»™i bay Kháº£o sÃ¡t 02 - Phi cÃ´ng: HoÃ ng Quá»‘c Tuáº¥n">
-                    Äá»™i bay Kháº£o sÃ¡t 02 â€” Phi cÃ´ng: HoÃ ng Quá»‘c Tuáº¥n (DJI Mavic 3 Enterprise)
+                  <option value="Đội bay Khảo sát 02 - Phi công: Hoàng Quốc Tuấn">
+                    Đội bay Khảo sát 02 — Phi công: Hoàng Quốc Tuấn (DJI Mavic 3 Enterprise)
                   </option>
-                  <option value="Tá»• bay cá»©u náº¡n kháº©n cáº¥p 03 - Phi cÃ´ng: Pháº¡m Anh DÅ©ng">
-                    Tá»• bay cá»©u náº¡n kháº©n cáº¥p 03 â€” Phi cÃ´ng: Pháº¡m Anh DÅ©ng
+                  <option value="Tổ bay cứu nạn khẩn cấp 03 - Phi công: Phạm Anh Dũng">
+                    Tổ bay cứu nạn khẩn cấp 03 — Phi công: Phạm Anh Dũng
                   </option>
                 </>
               )}
             </select>
           </div>
 
-          {/* 4. Cam káº¿t thá»i háº¡n SLA */}
+          {/* 4. Cam kết thời hạn SLA */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">4. Cam káº¿t thá»i háº¡n hoÃ n thÃ nh (SLA):</label>
+            <label className="font-bold text-slate-700 block">4. Cam kết thời hạn hoàn thành (SLA):</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { value: 24, label: 'Kháº©n cáº¥p (24h)', note: 'Æ¯u tiÃªn hÃ ng Ä‘áº§u' },
-                { value: 48, label: 'TiÃªu chuáº©n (48h)', note: 'Theo ca trá»±c chuáº©n' },
-                { value: 168, label: 'Äá»‹nh ká»³ (7 ngÃ y)', note: 'Äá»£t kháº£o sÃ¡t tuáº§n' },
+                { value: 24, label: 'Khẩn cấp (24h)', note: 'Ưu tiên hàng đầu' },
+                { value: 48, label: 'Tiêu chuẩn (48h)', note: 'Theo ca trực chuẩn' },
+                { value: 168, label: 'Định kỳ (7 ngày)', note: 'Đợt khảo sát tuần' },
               ].map((sla) => (
                 <button
                   key={sla.value}
@@ -255,15 +255,15 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
-            Há»§y bá»
+            Hủy bỏ
           </button>
           <button
             type="button"
             onClick={onConfirmRequestSurvey}
             className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
-            <Check className="w-3.5 h-3.5" />
-            <span>PhÃ¡t Lá»‡nh Kháº£o SÃ¡t / Äo Láº¡i (WF-11)</span>
+            <Icon name="check" size={16} />
+            <span>Phát Lệnh Khảo Sát / Đo Lại (WF-11)</span>
           </button>
         </div>
       </div>
