@@ -55,17 +55,6 @@ export const StatusBar: React.FC<StatusBarProps> = ({ currentItem }) => {
         <span className="material-symbols-outlined text-[14px]">history</span>
         <span>Lần #{currentItem.attempt_number}</span>
       </span>
-
-      {/* SLA Nghiệm thu */}
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
-        <span className="material-symbols-outlined text-[14px]">schedule</span>
-        <span>SLA: Còn 18h</span>
-      </span>
-
-      {/* Mã băm kiểm toán SHA-256 */}
-      <span className="font-mono text-slate-500 text-[11px] px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
-        SHA-256: 7B8F..A49
-      </span>
     </div>
   )
 }

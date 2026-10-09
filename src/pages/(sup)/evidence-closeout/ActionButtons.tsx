@@ -5,24 +5,28 @@ export interface ActionButtonsProps {
   currentItem: CaseItem
   isSupervisorView: boolean
   isPMView: boolean
+  allItemsAccepted?: boolean
+  isCaseClosed?: boolean
   onOpenExportModal: () => void
   onOpenReworkModal: () => void
   onAcceptItem: () => void
   onPMCloseFastTrack: () => void
   onPMSubmitToSupervisor: () => void
-  onOpenPublishModal: () => void
+  onOpenCloseCaseModal?: () => void
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   currentItem,
   isSupervisorView,
   isPMView,
+  allItemsAccepted = false,
+  isCaseClosed = false,
   onOpenExportModal,
   onOpenReworkModal,
   onAcceptItem,
   onPMCloseFastTrack,
   onPMSubmitToSupervisor,
-  onOpenPublishModal
+  onOpenCloseCaseModal
 }) => {
   return (
     <div className="flex items-center flex-wrap gap-2">
@@ -32,39 +36,51 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         type="button"
         className="px-3 h-8 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
       >
-        <span className="material-symbols-outlined text-[16px] text-[#C9A227]">download</span>
+        <span className="material-symbols-outlined text-[16px] text-slate-600">download</span>
         <span>Xuất hồ sơ</span>
       </button>
 
       {/* SUPERVISOR ACTIONS */}
       {isSupervisorView && (
         <>
-          <button
-            onClick={onOpenReworkModal}
-            type="button"
-            className="px-3 h-8 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px] text-rose-600">replay</span>
-            <span>Yêu cầu sửa lại</span>
-          </button>
+          {currentItem.status !== 'ACCEPTED' && (
+            <button
+              onClick={onOpenReworkModal}
+              type="button"
+              className="px-3 h-8 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] text-rose-600">replay</span>
+              <span>Yêu cầu sửa lại</span>
+            </button>
+          )}
 
-          <button
-            onClick={onAcceptItem}
-            disabled={currentItem.status === 'ACCEPTED'}
-            type="button"
-            className={`px-3.5 h-8 font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 ${
-              currentItem.status === 'ACCEPTED'
-                ? 'bg-[#2F9E44] text-white cursor-default'
-                : 'bg-[#C9A227] hover:bg-[#8C6D1F] text-white cursor-pointer'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              {currentItem.status === 'ACCEPTED' ? 'task_alt' : 'verified'}
+          {currentItem.status !== 'ACCEPTED' ? (
+            <button
+              onClick={onAcceptItem}
+              type="button"
+              className="px-3.5 h-8 font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 bg-[#C9A227] hover:bg-[#8C6D1F] text-white cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">verified</span>
+              <span>Chấp thuận nghiệm thu</span>
+            </button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
+              <span className="material-symbols-outlined text-[16px]">task_alt</span>
+              <span>Đã nghiệm thu đạt</span>
             </span>
-            <span>
-              {currentItem.status === 'ACCEPTED' ? 'Đã ký số nghiệm thu' : 'Chấp thuận nghiệm thu (Ký số)'}
-            </span>
-          </button>
+          )}
+
+          {/* Nút Đóng đợt thi công cho Giám sát khi 100% đạt */}
+          {allItemsAccepted && !isCaseClosed && onOpenCloseCaseModal && (
+            <button
+              onClick={onOpenCloseCaseModal}
+              type="button"
+              className="px-3.5 h-8 bg-[#2D3748] hover:bg-[#1A1D20] text-white font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">lock</span>
+              <span>Đóng đợt thi công</span>
+            </button>
+          )}
         </>
       )}
 
@@ -72,54 +88,60 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {isPMView && (
         <>
           {currentItem.track_type === 'FAST_TRACK' ? (
-            <button
-              onClick={onPMCloseFastTrack}
-              disabled={currentItem.status === 'ACCEPTED'}
-              type="button"
-              className={`px-3.5 h-8 font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
-                currentItem.status === 'ACCEPTED'
-                  ? 'bg-[#2F9E44] text-white cursor-default'
-                  : 'bg-[#C9A227] hover:bg-[#8C6D1F] text-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {currentItem.status === 'ACCEPTED' ? 'check_circle' : 'bolt'}
-              </span>
-              <span>
-                {currentItem.status === 'ACCEPTED' ? 'Fast Track đã đóng' : 'Chấp thuận & Đóng Fast Track'}
-              </span>
-            </button>
+            <>
+              {currentItem.status !== 'ACCEPTED' ? (
+                <>
+                  <button
+                    onClick={onOpenReworkModal}
+                    type="button"
+                    className="px-3 h-8 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-rose-600">replay</span>
+                    <span>Yêu cầu sửa lại</span>
+                  </button>
+                  <button
+                    onClick={onPMCloseFastTrack}
+                    type="button"
+                    className="px-3.5 h-8 font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 bg-[#C9A227] hover:bg-[#8C6D1F] text-white cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">bolt</span>
+                    <span>Chấp thuận &amp; Đóng Fast Track</span>
+                  </button>
+                </>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  <span>Fast Track đã đóng (BR-25)</span>
+                </span>
+              )}
+            </>
           ) : (
             <>
-              <button
-                onClick={onPMSubmitToSupervisor}
-                type="button"
-                className="px-3 h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium text-xs rounded-md border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px] text-slate-700">send</span>
-                <span>Trình Giám sát</span>
-              </button>
+              {currentItem.status !== 'ACCEPTED' && (
+                <button
+                  onClick={onOpenReworkModal}
+                  type="button"
+                  className="px-3 h-8 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-medium text-xs rounded-md shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-rose-600">replay</span>
+                  <span>Yêu cầu sửa lại</span>
+                </button>
+              )}
 
               {currentItem.status !== 'ACCEPTED' ? (
-                <div className="relative group">
-                  <button
-                    disabled
-                    type="button"
-                    className="px-3 h-8 bg-slate-100 text-slate-400 font-medium text-xs rounded-md border border-slate-200 flex items-center gap-1.5 cursor-not-allowed"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">lock</span>
-                    <span>Chờ Giám sát duyệt</span>
-                  </button>
-                </div>
-              ) : (
                 <button
-                  onClick={onOpenPublishModal}
+                  onClick={onPMSubmitToSupervisor}
                   type="button"
-                  className="px-3.5 h-8 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 h-8 bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-medium text-xs rounded-md shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[16px]">share</span>
-                  <span>{currentItem.citizen_published ? 'Đã công bố Citizen' : 'Công bố kết quả'}</span>
+                  <span className="material-symbols-outlined text-[16px]">send</span>
+                  <span>Trình Giám sát nghiệm thu</span>
                 </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
+                  <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                  <span>Giám sát đã phê duyệt</span>
+                </span>
               )}
             </>
           )}

@@ -28,6 +28,31 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
         </span>
       </div>
 
+      {/* Cảnh báo yêu cầu sửa lại (Rework Banner) */}
+      {currentItem.status === 'REWORK_REQUIRED' && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg space-y-2 text-xs">
+          <div className="flex items-center gap-2 text-rose-800 font-semibold">
+            <span className="material-symbols-outlined text-[18px]">error</span>
+            <span>Hạng mục bị yêu cầu sửa lại (Lần #{currentItem.attempt_number})</span>
+          </div>
+          <p className="text-rose-900 leading-relaxed">
+            <strong>Lý do trả về:</strong> {currentItem.rework_reason || 'Chất lượng bề mặt hoặc số đo kiểm định chưa đạt tiêu chuẩn kỹ thuật.'}
+          </p>
+          {currentItem.rework_directives && currentItem.rework_directives.length > 0 && (
+            <div className="pt-1 space-y-1 border-t border-rose-200/70">
+              <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider block">
+                Chỉ đạo khắc phục bắt buộc:
+              </span>
+              <ul className="list-disc list-inside space-y-0.5 text-rose-900">
+                {currentItem.rework_directives.map((dir, i) => (
+                  <li key={i}>{dir}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 text-xs">
         {/* Metric 1: Khối lượng thi công */}
         <div className="bg-slate-50 p-3.5 rounded-lg space-y-2 border border-slate-200 flex flex-col justify-between">
@@ -50,24 +75,24 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
           </div>
         </div>
 
-        {/* Metric 2: Tính toàn vẹn số */}
+        {/* Metric 2: Tính toàn vẹn dữ liệu */}
         <div className="bg-slate-50 p-3.5 rounded-lg space-y-2 border border-slate-200 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-[11px] uppercase tracking-wider font-semibold">2. Tính toàn vẹn số</span>
+              <span className="text-[11px] uppercase tracking-wider font-semibold">2. Tính toàn vẹn dữ liệu</span>
               <span className="material-symbols-outlined text-[16px] text-[#2F9E44]">check_circle</span>
             </div>
             <div className="text-base font-bold text-[#2F9E44] flex items-center gap-1.5">
-              <span>PASS</span>
-              <span className="text-xs font-normal text-slate-500">(Chữ ký số hợp lệ)</span>
+              <span>ĐẠT</span>
+              <span className="text-xs font-normal text-slate-500">(Ảnh gốc hợp lệ)</span>
             </div>
             <p className="text-slate-600 mt-1 leading-relaxed">
-              Checksum SHA-256 đối chiếu khớp 100% thời gian thực. Không phát hiện chỉnh sửa metadata ảnh hiện trường.
+              Mã hash đối chiếu khớp ảnh hiện trường. Metadata thời gian và tọa độ GPS EXIF hợp lệ theo quy chuẩn.
             </p>
           </div>
           <div className="pt-2 text-[11px] text-slate-700 bg-white p-2 rounded-md border border-slate-200">
-            <span className="font-semibold block text-[#C9A227] mb-0.5">Quy trình thẩm quyền:</span>
-            <span>Đã lưu → Phân loại → Giao việc → Đã sửa → <strong className="text-[#2F9E44]">{currentItem.status === 'ACCEPTED' ? 'ĐÃ DUYỆT' : 'ĐANG DUYỆT'}</strong></span>
+            <span className="font-semibold block text-[#C9A227] mb-0.5">Tiến trình hồ sơ:</span>
+            <span>Đã giao → Đã sửa → <strong className="text-[#2F9E44]">{currentItem.status === 'ACCEPTED' ? 'ĐÃ DUYỆT' : 'CHỜ DUYỆT'}</strong></span>
           </div>
         </div>
 
@@ -109,29 +134,6 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
             <span className="font-semibold block text-[#C9A227] mb-0.5">Đơn vị chịu trách nhiệm:</span>
             <span>Xí nghiệp Quản lý Đường bộ 2 (Nhà thầu phụ trách tuyến).</span>
           </div>
-        </div>
-      </div>
-
-      {/* Thông tin chữ ký điện tử */}
-      <div className="mt-3 p-3.5 bg-slate-50 rounded-lg border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center font-bold text-sm bg-white text-[#C9A227] border border-slate-200">
-            GS
-          </div>
-          <div className="space-y-0.5 text-xs">
-            <div className="font-semibold text-slate-900 font-sansation">Kỹ sư Giám sát trưởng (ID: GS-2041)</div>
-            <div className="text-slate-500">Ban Quản lý Hạ tầng Hoàng Hải Miền Trung</div>
-            <div className="font-mono text-[11px] text-slate-600">
-              Mã xác thực: SHA-256: 540211ab89c9a227e2e5e9
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-700 font-medium px-2.5 py-1 bg-white rounded-md border border-slate-200 inline-flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px] text-[#2F9E44]">fingerprint</span>
-            <span>{currentItem.status === 'ACCEPTED' ? 'Đã ký số xác thực' : 'Khóa điện tử sẵn sàng'}</span>
-          </span>
         </div>
       </div>
     </section>

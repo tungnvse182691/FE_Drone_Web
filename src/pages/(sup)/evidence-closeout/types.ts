@@ -3,6 +3,8 @@ export type ItemReviewStatus = 'PENDING_INSPECTION' | 'ACCEPTED' | 'REWORK_REQUI
 
 export interface CaseItem {
   id: string
+  package_id?: string
+  package_code?: string
   item_code: string
   defect_code: string
   title: string

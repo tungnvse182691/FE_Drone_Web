@@ -6,11 +6,8 @@ import { ExportPdfAModal } from './ExportPdfAModal'
 import { ExportZipModal } from './ExportZipModal'
 
 export interface CloseoutModalsProps {
-  publishHeadline: string
-  setPublishHeadline: (h: string) => void
   currentItem: CaseItem
   caseItems: CaseItem[]
-  acceptedCount: number
   isReworkModalOpen: boolean
   setIsReworkModalOpen: (open: boolean) => void
   reworkChecklist: {
@@ -32,9 +29,6 @@ export interface CloseoutModalsProps {
   reworkNotes: string
   setReworkNotes: (s: string) => void
   handleSubmitRework: () => void
-  isPublishModalOpen: boolean
-  setIsPublishModalOpen: (open: boolean) => void
-  onConfirmPublish: () => void
   isCloseCaseModalOpen: boolean
   setIsCloseCaseModalOpen: (open: boolean) => void
   onConfirmCloseCase: () => void
@@ -51,11 +45,8 @@ export interface CloseoutModalsProps {
 }
 
 export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
-  publishHeadline,
-  setPublishHeadline,
   currentItem,
   caseItems,
-  acceptedCount: _acceptedCount,
   isReworkModalOpen,
   setIsReworkModalOpen,
   reworkChecklist,
@@ -65,9 +56,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   reworkNotes,
   setReworkNotes,
   handleSubmitRework,
-  isPublishModalOpen,
-  setIsPublishModalOpen,
-  onConfirmPublish,
   isCloseCaseModalOpen,
   setIsCloseCaseModalOpen,
   onConfirmCloseCase,
@@ -84,7 +72,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
 }) => {
   return (
     <>
-      {/* MODAL 1: REWORK REQUEST MODAL */}
+      {/* MODAL 1: REWORK REQUEST MODAL (HT10) */}
       <ReworkModal
         isOpen={isReworkModalOpen}
         onClose={() => setIsReworkModalOpen(false)}
@@ -98,89 +86,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         onSubmitRework={handleSubmitRework}
       />
 
-      {/* MODAL 2: CITIZEN APP PUBLISH PREVIEW MODAL */}
-      {isPublishModalOpen && (
-        <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-          <div
-            onClick={() => setIsPublishModalOpen(false)}
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
-          ></div>
-
-          <div className="relative bg-white border border-slate-200 rounded-xl w-full max-w-lg shadow-xl overflow-hidden z-10 flex flex-col">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px] text-slate-700">share</span>
-                <h3 className="font-bold text-sm text-slate-900 font-sansation">
-                  Công bố kết quả lên Citizen App
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsPublishModalOpen(false)}
-                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">close</span>
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3.5 text-xs">
-              <div className="space-y-1">
-                <label className="font-medium text-slate-700 block">Tiêu đề bản tin công bố cho người dân:</label>
-                <input
-                  type="text"
-                  value={publishHeadline}
-                  onChange={(e) => setPublishHeadline(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-normal focus:outline-none focus:border-[#C9A227]"
-                />
-              </div>
-
-              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="font-semibold text-slate-700">Citizen App • Bản tin giao thông cộng đồng</span>
-                  <span>Vừa xong</span>
-                </div>
-
-                <div className="aspect-video w-full rounded-md overflow-hidden border border-slate-200 relative bg-black">
-                  <img
-                    src={currentItem.after_image}
-                    alt="Kết quả sau khi hoàn thành"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-[#2F9E44] text-white font-medium text-[10px] px-2 py-0.5 rounded-md shadow-xs">
-                    ✓ ĐÃ KHẮC PHỤC
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <h4 className="font-bold text-xs text-slate-900">{publishHeadline}</h4>
-                  <p className="text-slate-600 text-xs leading-relaxed">
-                    Vị trí: {currentItem.chainage} • Nhà thầu Hoàng Hải đã hoàn thành thảm lại bê tông nhựa phẳng phiu, đảm bảo an toàn giao thông cho người dân.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
-              <button
-                onClick={() => setIsPublishModalOpen(false)}
-                type="button"
-                className="px-3.5 h-8 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition rounded-md font-medium text-xs cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={onConfirmPublish}
-                type="button"
-                className="px-4 h-8 bg-[#C9A227] hover:bg-[#8C6D1F] text-white transition rounded-md font-medium text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[15px]">share</span>
-                <span>Công bố ngay</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 3: CLOSE COMPOSITE CASE MODAL (SUPERVISOR CLOSEOUT) */}
+      {/* MODAL 2: CLOSE COMPOSITE CASE MODAL (SUPERVISOR CLOSEOUT - BR-26) */}
       <VerifyModal
         isOpen={isCloseCaseModalOpen}
         onClose={() => setIsCloseCaseModalOpen(false)}
@@ -188,7 +94,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         caseItems={caseItems}
       />
 
-      {/* MODAL 4: EXPORT EVIDENCE DOSSIER RPT-07 */}
+      {/* MODAL 3: EXPORT EVIDENCE DOSSIER RPT-07 */}
       {isExportModalOpen && (
         exportFormat === 'PDF_A' ? (
           <ExportPdfAModal

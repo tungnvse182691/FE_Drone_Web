@@ -7,7 +7,7 @@ import { CloseoutHeader } from './evidence-closeout/CloseoutHeader'
 import { ComparisonViewer } from './evidence-closeout/ComparisonViewer'
 import { TechnicalCriteriaCard } from './evidence-closeout/TechnicalCriteriaCard'
 import { CloseoutModals } from './evidence-closeout/CloseoutModals'
-import { acceptanceService } from '../../api/services/acceptanceService'
+import { acceptanceService, AcceptancePackage } from '../../api/services/acceptanceService'
 
 export type { RepairTrackType, ItemReviewStatus, CaseItem }
 
@@ -21,10 +21,11 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const isPMView = user?.role === RoleCode.PROJECT_MANAGER
   const basePath = isSupervisorView ? '/sup' : '/pm'
 
-  // Items State được đồng bộ từ Async Mock API Service (Zero localStorage)
+  // Package & Items State được đồng bộ từ Async Mock API Service (Zero localStorage)
+  const [currentPackage, setCurrentPackage] = useState<AcceptancePackage | null>(null)
   const [caseItems, setCaseItems] = useState<CaseItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [selectedItemId, setSelectedItemId] = useState<string>('item-01')
+  const [selectedItemId, setSelectedItemId] = useState<string>('')
 
   // Load dữ liệu từ Mock API
   useEffect(() => {
@@ -32,16 +33,18 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const [items, statusInfo] = await Promise.all([
-          acceptanceService.getCloseoutItems(),
-          acceptanceService.getCaseCloseoutStatus()
+        const targetPkgId = batchId || id || 'pkg-08'
+        const [pkg, items, statusInfo] = await Promise.all([
+          acceptanceService.getAcceptancePackageById(targetPkgId),
+          acceptanceService.getCloseoutItems(targetPkgId),
+          acceptanceService.getCaseCloseoutStatus(targetPkgId)
         ])
         if (isMounted) {
+          setCurrentPackage(pkg)
           setCaseItems(items)
           setIsCaseClosed(statusInfo.isCaseClosed)
-          const targetId = id || batchId
-          if (targetId && items.some((it) => it.id === targetId || it.defect_code === targetId)) {
-            setSelectedItemId(targetId)
+          if (items.length > 0) {
+            setSelectedItemId(items[0].id)
           }
         }
       } catch (err) {
@@ -61,16 +64,14 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     return caseItems.find((it) => it.id === selectedItemId) || caseItems[0]
   }, [caseItems, selectedItemId])
 
-  // View mode comparison: Side-by-side vs Slider vs Metadata
-  const [viewMode, setViewMode] = useState<'side' | 'slider' | 'meta'>('side')
+  // View mode comparison: Side-by-side vs Slider
+  const [viewMode, setViewMode] = useState<'side' | 'slider'>('side')
   const [sliderPosition, setSliderPosition] = useState<number>(50)
 
   // Modals state
   const [isReworkModalOpen, setIsReworkModalOpen] = useState(false)
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false)
   const [isCloseCaseModalOpen, setIsCloseCaseModalOpen] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
-  const [publishHeadline, setPublishHeadline] = useState('Thông báo: Hoàn thành bảo trì mặt đường Quốc Lộ 1A - Đoạn Km 28+400')
 
   // Rework Form State
   const [reworkNotes, setReworkNotes] = useState(
@@ -137,9 +138,9 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     try {
       const updated = await acceptanceService.acceptCloseoutItem(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
-      showToast(`Giám sát đã chấp thuận nghiệm thu thành công hạng mục ${currentItem.item_code} (Ký số SHA-256)!`)
+      showToast(`Giám sát đã chấp thuận nghiệm thu đạt hạng mục ${currentItem.item_code}!`)
     } catch (err) {
-      showToast('Có lỗi xảy ra khi ký số nghiệm thu.')
+      showToast('Có lỗi xảy ra khi phê duyệt nghiệm thu.')
     }
   }
 
@@ -157,35 +158,25 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const handlePMSubmitToSupervisor = async () => {
     if (!currentItem) return
     try {
-      await acceptanceService.submitItemToSupervisor(currentItem.id)
+      const updated = await acceptanceService.submitItemToSupervisor(currentItem.id)
+      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
       showToast(`PM đã trình hồ sơ ${currentItem.item_code} lên Giám sát nghiệm thu!`)
     } catch (err) {
       showToast('Có lỗi khi trình hồ sơ.')
     }
   }
 
-  const handleConfirmPublish = async () => {
-    if (!currentItem) return
-    try {
-      const updated = await acceptanceService.publishCitizenResult(currentItem.id, true)
-      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
-      setIsPublishModalOpen(false)
-      showToast(`Đã công bố thành công kết quả khắc phục lên Citizen App!`)
-    } catch (err) {
-      showToast('Có lỗi khi công bố kết quả.')
-    }
-  }
-
   const handleConfirmCloseCase = async () => {
     if (!allItemsAccepted) {
-      showToast('Chưa thể đóng vụ việc khi còn hạng mục chưa nghiệm thu đạt!')
+      showToast('Chưa thể đóng gói/vụ việc khi còn hạng mục chưa nghiệm thu đạt!')
       return
     }
     try {
-      await acceptanceService.closeCompositeCase('#CASE-2026-0842')
+      const caseCode = currentPackage?.case_code || '#CASE-2026-0842'
+      await acceptanceService.closeCompositeCase(caseCode, currentPackage?.id)
       setIsCloseCaseModalOpen(false)
       setIsCaseClosed(true)
-      showToast(`Đã đóng tổng thể vụ việc #CASE-2026-0842 thành công! Hồ sơ đã lưu trữ bảo hành.`)
+      showToast(`Đã đóng gói ${currentPackage?.code || caseCode} thành công! Hồ sơ đã lưu trữ bảo hành.`)
     } catch (err: any) {
       showToast(err.message || 'Có lỗi khi đóng vụ việc.')
     }
@@ -233,6 +224,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
 
       {/* Header, Identity & Case Selector */}
       <CloseoutHeader
+        currentPackage={currentPackage}
         currentItem={currentItem}
         caseItems={caseItems}
         selectedItemId={selectedItemId}
@@ -248,7 +240,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         onAcceptItem={handleAcceptItem}
         onPMCloseFastTrack={handlePMCloseFastTrack}
         onPMSubmitToSupervisor={handlePMSubmitToSupervisor}
-        onOpenPublishModal={() => setIsPublishModalOpen(true)}
         onOpenCloseCaseModal={() => setIsCloseCaseModalOpen(true)}
         onNavigateHome={() => navigate(`${basePath}/dashboard`)}
         onNavigateProposals={() => navigate(`${basePath}/acceptance`)}
@@ -262,11 +253,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         sliderPosition={sliderPosition}
         setSliderPosition={setSliderPosition}
         isPMView={isPMView}
-        onToggleCitizenPublish={() => {
-          acceptanceService.publishCitizenResult(currentItem.id, !currentItem.citizen_published).then((updated) => {
-            setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
-          })
-        }}
       />
 
       {/* Technical Criteria Checklist (TCVN 8819:2011) */}
@@ -280,9 +266,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       <CloseoutModals
         currentItem={currentItem}
         caseItems={caseItems}
-        acceptedCount={acceptedCount}
-        publishHeadline={publishHeadline}
-        setPublishHeadline={setPublishHeadline}
         isReworkModalOpen={isReworkModalOpen}
         setIsReworkModalOpen={setIsReworkModalOpen}
         reworkChecklist={reworkChecklist}
@@ -292,9 +275,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         reworkNotes={reworkNotes}
         setReworkNotes={setReworkNotes}
         handleSubmitRework={handleSubmitRework}
-        isPublishModalOpen={isPublishModalOpen}
-        setIsPublishModalOpen={setIsPublishModalOpen}
-        onConfirmPublish={handleConfirmPublish}
         isCloseCaseModalOpen={isCloseCaseModalOpen}
         setIsCloseCaseModalOpen={setIsCloseCaseModalOpen}
         onConfirmCloseCase={handleConfirmCloseCase}

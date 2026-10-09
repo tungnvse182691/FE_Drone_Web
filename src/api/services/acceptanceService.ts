@@ -165,6 +165,36 @@ let inMemoryCaseItems: CaseItem[] = JSON.parse(JSON.stringify(INITIAL_CASE_ITEMS
 let inMemoryAcceptanceRecords: AcceptanceRecord[] = JSON.parse(JSON.stringify(INITIAL_ACCEPTANCE_RECORDS))
 let inMemoryIsCaseClosed: boolean = false
 
+// Helper to re-sync package aggregate stats based on its items
+function syncPackageStats(packageId?: string) {
+  if (!packageId) return
+  const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
+  if (!pkg) return
+  const items = inMemoryCaseItems.filter((it) => it.package_id === pkg.id)
+  if (items.length === 0) return
+
+  const total = items.length
+  const accepted = items.filter((it) => it.status === 'ACCEPTED').length
+  const rework = items.filter((it) => it.status === 'REWORK_REQUIRED').length
+  const pending = items.filter((it) => it.status === 'PENDING_INSPECTION').length
+
+  pkg.total_items = total
+  pkg.accepted_items = accepted
+  pkg.rework_items = rework
+  pkg.pending_items = pending
+
+  if (accepted === total) {
+    pkg.status = 'PASSED'
+    pkg.status_label = `Đã nghiệm thu đạt (${total}/${total})`
+  } else if (rework > 0) {
+    pkg.status = 'REWORK_REQUIRED'
+    pkg.status_label = `Yêu cầu sửa lại (${rework} mục)`
+  } else {
+    pkg.status = 'PENDING_INSPECTION'
+    pkg.status_label = `Chờ nghiệm thu (${accepted}/${total} đạt)`
+  }
+}
+
 export const acceptanceService = {
   /**
    * Lấy danh sách các gói đề xuất / đợt thi công chờ nghiệm thu
@@ -197,20 +227,36 @@ export const acceptanceService = {
   },
 
   /**
-   * Lấy chi tiết gói nghiệm thu theo mã
+   * Lấy chi tiết gói nghiệm thu theo mã (id hoặc code)
    */
   async getAcceptancePackageById(packageId: string): Promise<AcceptancePackage | null> {
     await new Promise((resolve) => setTimeout(resolve, 60))
-    const found = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
-    return found ? JSON.parse(JSON.stringify(found)) : null
+    const found = inMemoryPackages.find(
+      (p) => p.id === packageId || p.code === packageId || p.case_code === packageId
+    )
+    if (found) {
+      syncPackageStats(found.id)
+      return JSON.parse(JSON.stringify(found))
+    }
+    return null
   },
 
   /**
-   * Lấy danh sách hạng mục nghiệm thu trong hồ sơ vụ việc
-   * (GET /api/v1/evidence-closeout/items)
+   * Lấy danh sách hạng mục nghiệm thu trong hồ sơ vụ việc của một gói
+   * (GET /api/v1/evidence-closeout/items?packageId=...)
    */
-  async getCloseoutItems(): Promise<CaseItem[]> {
+  async getCloseoutItems(packageId?: string): Promise<CaseItem[]> {
     await new Promise((resolve) => setTimeout(resolve, 80))
+    if (packageId) {
+      const matchedPkg = inMemoryPackages.find(
+        (p) => p.id === packageId || p.code === packageId || p.case_code === packageId
+      )
+      const targetPkgId = matchedPkg ? matchedPkg.id : packageId
+      const items = inMemoryCaseItems.filter((it) => it.package_id === targetPkgId)
+      if (items.length > 0) {
+        return JSON.parse(JSON.stringify(items))
+      }
+    }
     return JSON.parse(JSON.stringify(inMemoryCaseItems))
   },
 
@@ -218,11 +264,12 @@ export const acceptanceService = {
    * Lấy trạng thái đóng tổng thể vụ việc
    * (GET /api/v1/evidence-closeout/case-status)
    */
-  async getCaseCloseoutStatus(): Promise<{ isCaseClosed: boolean; caseCode: string }> {
+  async getCaseCloseoutStatus(packageId?: string): Promise<{ isCaseClosed: boolean; caseCode: string }> {
     await new Promise((resolve) => setTimeout(resolve, 60))
+    const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
     return {
-      isCaseClosed: inMemoryIsCaseClosed,
-      caseCode: '#CASE-2026-0842'
+      isCaseClosed: inMemoryIsCaseClosed && (!pkg || pkg.status === 'PASSED'),
+      caseCode: pkg ? pkg.case_code : '#CASE-2026-0842'
     }
   },
 
@@ -241,11 +288,12 @@ export const acceptanceService = {
       status: 'ACCEPTED',
       status_label: 'ĐÃ NGHIỆM THU ĐẠT'
     }
+    syncPackageStats(inMemoryCaseItems[index].package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
 
   /**
-   * Supervisor phát lệnh yêu cầu tái thi công (REWORK)
+   * Supervisor hoặc PM phát lệnh yêu cầu tái thi công (REWORK)
    * (POST /api/v1/evidence-closeout/items/:id/rework)
    */
   async reworkCloseoutItem(
@@ -267,6 +315,7 @@ export const acceptanceService = {
       rework_reason: payload.notes,
       rework_directives: payload.directives
     }
+    syncPackageStats(current.package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
 
@@ -285,11 +334,12 @@ export const acceptanceService = {
       status: 'ACCEPTED',
       status_label: 'ĐÃ ĐÓNG (FAST-TRACK RESOLVED)'
     }
+    syncPackageStats(inMemoryCaseItems[index].package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
 
   /**
-   * PM xác nhận đủ điều kiện và trình hồ sơ lên Supervisor
+   * PM xác nhận đủ điều kiện và trình hồ sơ lên Supervisor (HT09, HT11)
    * (POST /api/v1/evidence-closeout/items/:id/submit-supervisor)
    */
   async submitItemToSupervisor(itemId: string): Promise<CaseItem> {
@@ -298,20 +348,36 @@ export const acceptanceService = {
     if (index === -1) {
       throw new Error(`Item ${itemId} not found`)
     }
+    inMemoryCaseItems[index] = {
+      ...inMemoryCaseItems[index],
+      status: 'PENDING_INSPECTION',
+      status_label: 'CHỜ GIÁM SÁT KIỂM TRA'
+    }
+    syncPackageStats(inMemoryCaseItems[index].package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
 
   /**
-   * Supervisor Đóng tổng thể vụ việc phức hợp sau khi 100% hạng mục đạt
+   * Supervisor Đóng tổng thể vụ việc phức hợp sau khi 100% hạng mục đạt (BR-26)
    * (POST /api/v1/evidence-closeout/close-case)
    */
-  async closeCompositeCase(caseCode: string): Promise<{ success: boolean; caseCode: string }> {
+  async closeCompositeCase(caseCode: string, packageId?: string): Promise<{ success: boolean; caseCode: string }> {
     await new Promise((resolve) => setTimeout(resolve, 150))
-    const hasPending = inMemoryCaseItems.some((it) => it.status !== 'ACCEPTED')
+    const targetItems = packageId
+      ? inMemoryCaseItems.filter((it) => it.package_id === packageId)
+      : inMemoryCaseItems
+    const hasPending = targetItems.some((it) => it.status !== 'ACCEPTED')
     if (hasPending) {
       throw new Error('CASE_HAS_OPEN_REQUIRED_ITEMS: Chưa thể đóng vụ việc khi còn hạng mục dở dang')
     }
     inMemoryIsCaseClosed = true
+    if (packageId) {
+      const pkg = inMemoryPackages.find((p) => p.id === packageId)
+      if (pkg) {
+        pkg.status = 'PASSED'
+        pkg.status_label = `Đã nghiệm thu đạt (${pkg.total_items}/${pkg.total_items})`
+      }
+    }
     return {
       success: true,
       caseCode

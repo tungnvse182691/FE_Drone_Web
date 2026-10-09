@@ -106,7 +106,7 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
                 className="w-4 h-4 rounded text-[#C9A227] accent-[#C9A227]"
               />
               <span className="text-slate-800 font-medium text-xs">
-                Kèm phụ lục xác thực chữ ký số SHA-256 cho toàn bộ ảnh hiện trường
+                Kèm phụ lục kiểm tra tính toàn vẹn (mã băm SHA-256) cho toàn bộ ảnh hiện trường
               </span>
             </label>
           )}
