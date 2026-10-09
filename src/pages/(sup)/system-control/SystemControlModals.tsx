@@ -1,6 +1,6 @@
 import React from 'react'
 import { RoleCode } from '../../../types/enums'
-import { SystemUserAccount } from '../../../types/domain'
+import { SystemUserAccount, LegalHoldProject } from '../../../types/domain'
 import { SuspendUserModal } from './SuspendUserModal'
 import { CreateDeletionRequestModal } from './CreateDeletionRequestModal'
 import { UserDetailModal } from './UserDetailModal'
@@ -28,6 +28,7 @@ interface SystemControlModalsProps {
   newDelJustification: string
   setNewDelJustification: (val: string) => void
   handleCreateDeletionSubmit: (e: React.FormEvent) => void
+  legalHoldProjects?: LegalHoldProject[]
 
   // 3. User Detail Modal
   selectedUserDetail: SystemUserAccount | null
@@ -98,6 +99,7 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
   newDelJustification,
   setNewDelJustification,
   handleCreateDeletionSubmit,
+  legalHoldProjects,
 
   selectedUserDetail,
   setSelectedUserDetail,
@@ -168,6 +170,7 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
         newDelJustification={newDelJustification}
         setNewDelJustification={setNewDelJustification}
         handleCreateDeletionSubmit={handleCreateDeletionSubmit}
+        legalHoldProjects={legalHoldProjects}
       />
 
       <UserDetailModal

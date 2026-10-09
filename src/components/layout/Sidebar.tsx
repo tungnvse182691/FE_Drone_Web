@@ -102,7 +102,8 @@ export const Sidebar: React.FC = () => {
         { label: 'Báo cáo KPI', path: '/pm/reports', icon: BarChart3 },
         { label: 'Thực nghiệm AI', path: '/pm/research-validation', icon: Sparkles },
         { label: 'Nhật ký hoạt động', path: '/pm/audit-trail', icon: History },
-        { label: 'Lưu trữ hồ sơ', path: '/pm/retention', icon: Sliders }
+        { label: 'Lưu trữ hồ sơ', path: '/pm/retention', icon: Sliders },
+        { label: 'Nhân sự dự án', path: '/pm/personnel', icon: Users }
       ]
     }
   ]
@@ -152,7 +153,9 @@ export const Sidebar: React.FC = () => {
         { label: 'Phân tích rủi ro', path: '/sup/risk-analytics', icon: BarChart3 },
         { label: 'Kiểm định mô hình', path: '/sup/research-validation', icon: Sparkles },
         { label: 'Nhật ký hoạt động', path: '/sup/audit-trail', icon: History },
-        { label: 'Quản trị hệ thống', path: '/sup/system-control', icon: Sliders }
+        { label: 'Lưu trữ hồ sơ', path: '/sup/retention', icon: Sliders },
+        { label: 'Nhân sự & Phân quyền', path: '/sup/personnel', icon: Users },
+        { label: 'Cấu hình hệ thống', path: '/sup/system-control', icon: Sliders }
       ]
     }
   ]
@@ -166,7 +169,7 @@ export const Sidebar: React.FC = () => {
     surveys: true,
     construction: true,
     approval: true,
-    reports: false
+    reports: true
   })
 
   // Trạng thái đóng/mở nhánh con cấp 2 (ví dụ Đợt bay Drone -> Tạo yêu cầu bay)

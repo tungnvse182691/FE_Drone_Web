@@ -1,20 +1,14 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { AccountsTab } from './system-control/AccountsTab'
 import { AIModelsTab } from './system-control/AIModelsTab'
 import { DefectCatalogTab } from './system-control/DefectCatalogTab'
 import { RetentionLegalHoldTab } from './system-control/RetentionLegalHoldTab'
-import { SystemControlModals } from './system-control/SystemControlModals'
 import { SystemControlHeader } from './system-control/SystemControlHeader'
+import { CreateDeletionRequestModal } from './system-control/CreateDeletionRequestModal'
+import { DeletionRequestDetailModal } from './system-control/DeletionRequestDetailModal'
+import { ProjectRetentionDetailModal } from './system-control/ProjectRetentionDetailModal'
 import { useSystemControlState } from './system-control/useSystemControlState'
-import {
-  Users,
-  Cpu,
-  BookmarkCheck,
-  Archive,
-  CheckCircle2
-} from 'lucide-react'
 
 export const SystemControl: React.FC = () => {
   const { user } = useAuthStore()
@@ -23,127 +17,117 @@ export const SystemControl: React.FC = () => {
   const s = useSystemControlState(user, isSupervisor)
 
   return (
-    <div className="flex flex-col gap-5 max-w-[1720px] mx-auto w-full pb-16 bg-brand-surfaceAlt">
+    <div className="flex flex-col gap-5 max-w-[1720px] mx-auto w-full pb-16 bg-slate-50/50">
       {/* Thông báo thành công nổi lên */}
       {s.actionSuccessNotice && (
-        <div className="fixed top-20 right-6 z-50 bg-[#151C27] text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-2 border border-brand-border">
-          <CheckCircle2 className="w-4 h-4 text-brand-gold" />
+        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-2 border border-slate-800">
+          <span className="material-symbols-outlined text-[18px] text-brand-gold">
+            check_circle
+          </span>
           <span>{s.actionSuccessNotice}</span>
         </div>
       )}
 
-      {/* 1. Header & Cảnh báo Legal Hold */}
+      {/* 1. Header chuyên biệt cho Lưu trữ hồ sơ & Phong tỏa pháp lý */}
       <SystemControlHeader
         isSupervisor={isSupervisor}
-        activeLegalHoldProject={s.activeLegalHoldProject}
         onOpenCreateDeletion={() => s.setShowCreateDeletionRequestModal(true)}
-        onOpenAddPersonnel={() => {
-          s.setAddPersonnelTab('NEW')
-          s.setShowAddPersonnelModal(true)
-        }}
-        onViewLegalHoldDetail={() => s.setActiveTab('retention-legal-hold')}
       />
 
-      {/* 2. Tabs Navigation */}
-      <div className="bg-white border border-brand-border px-4 pt-2 rounded-xl shadow-sm flex items-center gap-2 overflow-x-auto select-none">
-        <button
-          type="button"
-          onClick={() => s.setActiveTab('accounts')}
-          className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
-            s.activeTab === 'accounts'
-              ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
-              : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
-          }`}
-        >
-          <Users className={`w-4 h-4 ${s.activeTab === 'accounts' ? 'text-brand-gold' : ''}`} />
-          <span>{isSupervisor ? 'Tài khoản & Phân quyền (FR-02)' : 'Nhân sự dự án (BR-02)'}</span>
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-              s.activeTab === 'accounts'
-                ? 'bg-[#FBF6E9] text-[#8C6D15] border-[#F3E6C4]'
-                : 'bg-[#F0F2F5] text-[#555F6F] border-transparent'
+      {/* 2. Tabs Navigation (Chỉ hiển thị cho Supervisor khi cần chuyển sang AI Models hoặc Danh mục khiếm khuyết) */}
+      {isSupervisor && (
+        <div className="bg-white border border-slate-200 px-4 pt-2 rounded-xl shadow-xs flex items-center gap-2 overflow-x-auto select-none">
+          <button
+            type="button"
+            onClick={() => s.setActiveTab('retention-legal-hold')}
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+              s.activeTab === 'retention-legal-hold'
+                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {s.usersList.length} thành viên
-          </span>
-        </button>
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                s.activeLegalHoldProject
+                  ? 'text-rose-600'
+                  : s.activeTab === 'retention-legal-hold'
+                  ? 'text-brand-gold'
+                  : 'text-slate-400'
+              }`}
+            >
+              inventory_2
+            </span>
+            <span>Lưu trữ &amp; Phong tỏa pháp lý</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                s.activeLegalHoldProject
+                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {s.activeLegalHoldProject ? 'ĐANG BẬT' : 'BÌNH THƯỜNG'}
+            </span>
+          </button>
 
-        {isSupervisor && (
-          <>
-            <button
-              type="button"
-              onClick={() => s.setActiveTab('ai-models')}
-              className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
+          <button
+            type="button"
+            onClick={() => s.setActiveTab('ai-models')}
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+              s.activeTab === 'ai-models'
+                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                s.activeTab === 'ai-models' ? 'text-brand-gold' : 'text-slate-400'
+              }`}
+            >
+              psychology
+            </span>
+            <span>Mô hình AI &amp; Đánh giá</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                 s.activeTab === 'ai-models'
-                  ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
-                  : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
+                  ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
+                  : 'bg-slate-100 text-slate-600 border-transparent'
               }`}
             >
-              <Cpu className={`w-4 h-4 ${s.activeTab === 'ai-models' ? 'text-brand-gold' : ''}`} />
-              <span>Mô hình AI &amp; Đánh giá (FR-36)</span>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  s.activeTab === 'ai-models'
-                    ? 'bg-[#FBF6E9] text-[#8C6D15] border-[#F3E6C4]'
-                    : 'bg-[#F0F2F5] text-[#555F6F] border-transparent'
-                }`}
-              >
-                v2.4.1 Active
-              </span>
-            </button>
+              v2.4.1 Active
+            </span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => s.setActiveTab('defect-catalog')}
-              className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
-                s.activeTab === 'defect-catalog'
-                  ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
-                  : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
-              }`}
-            >
-              <BookmarkCheck className={`w-4 h-4 ${s.activeTab === 'defect-catalog' ? 'text-brand-gold' : ''}`} />
-              <span>Danh mục khiếm khuyết TCVN (FR-36)</span>
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                  s.activeTab === 'defect-catalog'
-                    ? 'bg-[#FBF6E9] text-[#8C6D15] border-[#F3E6C4]'
-                    : 'bg-[#F0F2F5] text-[#555F6F] border-transparent'
-                }`}
-              >
-                {s.defectCatalog.length} quy tắc
-              </span>
-            </button>
-          </>
-        )}
-
-        <button
-          type="button"
-          onClick={() => s.setActiveTab('retention-legal-hold')}
-          className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all ${
-            s.activeTab === 'retention-legal-hold'
-              ? 'text-[#151C27] font-bold border-b-2 border-brand-gold'
-              : 'border-b-2 border-transparent text-[#555F6F] hover:text-[#151C27]'
-          }`}
-        >
-          <Archive
-            className={`w-4 h-4 ${
-              s.activeLegalHoldProject ? 'text-[#BA1A1A]' : s.activeTab === 'retention-legal-hold' ? 'text-brand-gold' : ''
-            }`}
-          />
-          <span>{isSupervisor ? 'Lưu trữ & Phong tỏa pháp lý (Legal Hold)' : 'Lưu trữ bảo hành & Hết hạn (QT11)'}</span>
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-              s.activeLegalHoldProject
-                ? 'bg-[#FFDAD6] text-[#BA1A1A] border border-[#FFCDD2]'
-                : 'bg-[#F0F2F5] text-[#555F6F]'
+          <button
+            type="button"
+            onClick={() => s.setActiveTab('defect-catalog')}
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+              s.activeTab === 'defect-catalog'
+                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {s.activeLegalHoldProject ? 'ĐANG BẬT' : 'BÌNH THƯỜNG'}
-          </span>
-        </button>
-      </div>
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                s.activeTab === 'defect-catalog' ? 'text-brand-gold' : 'text-slate-400'
+              }`}
+            >
+              fact_check
+            </span>
+            <span>Danh mục khiếm khuyết TCVN</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                s.activeTab === 'defect-catalog'
+                  ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
+                  : 'bg-slate-100 text-slate-600 border-transparent'
+              }`}
+            >
+              {s.defectCatalog.length} quy tắc
+            </span>
+          </button>
+        </div>
+      )}
 
-      {/* 3. Nội dung Tab */}
+      {/* 3. Nội dung trang */}
       <div className="w-full">
         {s.activeTab === 'retention-legal-hold' && (
           <RetentionLegalHoldTab
@@ -153,25 +137,8 @@ export const SystemControl: React.FC = () => {
             handleToggleLegalHold={s.handleToggleLegalHold}
             handleRejectDeletion={s.handleRejectDeletion}
             handleApprovePurge={s.handleApprovePurge}
-          />
-        )}
-
-        {s.activeTab === 'accounts' && (
-          <AccountsTab
-            isSupervisor={isSupervisor}
-            currentUser={user}
-            filteredUsers={s.filteredUsers}
-            userSearchTerm={s.userSearchTerm}
-            setUserSearchTerm={s.setUserSearchTerm}
-            userRoleFilter={s.userRoleFilter}
-            setUserRoleFilter={s.setUserRoleFilter}
-            setAddPersonnelTab={s.setAddPersonnelTab}
-            setShowAddPersonnelModal={s.setShowAddPersonnelModal}
-            setSelectedUserDetail={s.setSelectedUserDetail}
-            handleOpenEdit={s.handleOpenEdit}
-            handleRestoreUser={s.handleRestoreUser}
-            setUserToSuspend={s.setUserToSuspend}
-            setShowSuspendModal={s.setShowSuspendModal}
+            onViewDetail={s.handleViewDetail}
+            onViewProjectDetail={s.handleViewProjectDetail}
           />
         )}
 
@@ -187,15 +154,8 @@ export const SystemControl: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Modals */}
-      <SystemControlModals
-        showSuspendModal={s.showSuspendModal}
-        setShowSuspendModal={s.setShowSuspendModal}
-        userToSuspend={s.userToSuspend}
-        handoffAssignee={s.handoffAssignee}
-        setHandoffAssignee={s.setHandoffAssignee}
-        handleConfirmSuspend={s.handleConfirmSuspend}
-
+      {/* 4. Modal tạo yêu cầu xóa dữ liệu (với cơ chế chặn tự động theo BR-45) */}
+      <CreateDeletionRequestModal
         showCreateDeletionRequestModal={s.showCreateDeletionRequestModal}
         setShowCreateDeletionRequestModal={s.setShowCreateDeletionRequestModal}
         newDelProject={s.newDelProject}
@@ -207,52 +167,25 @@ export const SystemControl: React.FC = () => {
         newDelJustification={s.newDelJustification}
         setNewDelJustification={s.setNewDelJustification}
         handleCreateDeletionSubmit={s.handleCreateDeletionSubmit}
+        legalHoldProjects={s.legalHoldProjects}
+      />
 
-        selectedUserDetail={s.selectedUserDetail}
-        setSelectedUserDetail={s.setSelectedUserDetail}
+      {/* 5. Modal xem chi tiết yêu cầu xóa hồ sơ lưu trữ (GET /retention/deletion-requests/{requestId}) */}
+      <DeletionRequestDetailModal
+        request={s.selectedDeletionRequest}
+        isOpen={s.showDetailModal}
         isSupervisor={isSupervisor}
-        handleOpenEdit={s.handleOpenEdit}
+        onClose={() => s.setShowDetailModal(false)}
+        onApprove={s.handleApprovePurge}
+        onReject={s.handleRejectDeletion}
+      />
 
-        userToEdit={s.userToEdit}
-        setUserToEdit={s.setUserToEdit}
-        editFullName={s.editFullName}
-        setEditFullName={s.setEditFullName}
-        editEmail={s.editEmail}
-        setEditEmail={s.setEditEmail}
-        editPhone={s.editPhone}
-        setEditPhone={s.setEditPhone}
-        editRole={s.editRole}
-        setEditRole={s.setEditRole}
-        editProjectScope={s.editProjectScope}
-        setEditProjectScope={s.setEditProjectScope}
-        editCertificate={s.editCertificate}
-        setEditCertificate={s.setEditCertificate}
-        editStatus={s.editStatus}
-        setEditStatus={s.setEditStatus}
-        handleSaveEdit={s.handleSaveEdit}
-
-        showAddPersonnelModal={s.showAddPersonnelModal}
-        setShowAddPersonnelModal={s.setShowAddPersonnelModal}
-        addPersonnelTab={s.addPersonnelTab}
-        setAddPersonnelTab={s.setAddPersonnelTab}
-        newPersonnelName={s.newPersonnelName}
-        setNewPersonnelName={s.setNewPersonnelName}
-        newPersonnelEmail={s.newPersonnelEmail}
-        setNewPersonnelEmail={s.setNewPersonnelEmail}
-        newPersonnelPhone={s.newPersonnelPhone}
-        setNewPersonnelPhone={s.setNewPersonnelPhone}
-        newPersonnelRole={s.newPersonnelRole}
-        setNewPersonnelRole={s.setNewPersonnelRole}
-        newPersonnelProject={s.newPersonnelProject}
-        setNewPersonnelProject={s.setNewPersonnelProject}
-        newPersonnelCert={s.newPersonnelCert}
-        setNewPersonnelCert={s.setNewPersonnelCert}
-        assignExistingUserId={s.assignExistingUserId}
-        setAssignExistingUserId={s.setAssignExistingUserId}
-        assignExistingProject={s.assignExistingProject}
-        setAssignExistingProject={s.setAssignExistingProject}
-        usersList={s.usersList}
-        handleAddPersonnelSubmit={s.handleAddPersonnelSubmit}
+      {/* 6. Modal xem chi tiết hồ sơ lưu trữ & quyết định phong tỏa pháp lý của từng dự án */}
+      <ProjectRetentionDetailModal
+        project={s.selectedProjectForDetail}
+        isOpen={s.showProjectDetailModal}
+        onClose={() => s.setShowProjectDetailModal(false)}
+        onOpenCreateDeletionForProject={s.handleOpenCreateDeletionForProject}
       />
     </div>
   )

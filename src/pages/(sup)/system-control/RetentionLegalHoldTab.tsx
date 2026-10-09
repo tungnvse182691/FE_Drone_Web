@@ -10,6 +10,8 @@ interface RetentionLegalHoldTabProps {
   handleToggleLegalHold: (projectId: string) => void
   handleRejectDeletion: (requestId: string) => void
   handleApprovePurge: (requestId: string) => void
+  onViewDetail?: (req: DataDeletionRequest) => void
+  onViewProjectDetail?: (project: LegalHoldProject) => void
 }
 
 export const RetentionLegalHoldTab: React.FC<RetentionLegalHoldTabProps> = ({
@@ -18,7 +20,9 @@ export const RetentionLegalHoldTab: React.FC<RetentionLegalHoldTabProps> = ({
   isSupervisor,
   handleToggleLegalHold,
   handleRejectDeletion,
-  handleApprovePurge
+  handleApprovePurge,
+  onViewDetail,
+  onViewProjectDetail
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
@@ -27,6 +31,7 @@ export const RetentionLegalHoldTab: React.FC<RetentionLegalHoldTabProps> = ({
         legalHoldProjects={legalHoldProjects}
         isSupervisor={isSupervisor}
         handleToggleLegalHold={handleToggleLegalHold}
+        onViewProjectDetail={onViewProjectDetail}
       />
 
       {/* Cột phải (7 cols): Thẩm duyệt yêu cầu xóa dữ liệu (Deletion Requests) */}
@@ -35,6 +40,7 @@ export const RetentionLegalHoldTab: React.FC<RetentionLegalHoldTabProps> = ({
         isSupervisor={isSupervisor}
         handleRejectDeletion={handleRejectDeletion}
         handleApprovePurge={handleApprovePurge}
+        onViewDetail={onViewDetail}
       />
     </div>
   )

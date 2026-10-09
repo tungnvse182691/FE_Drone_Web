@@ -1,11 +1,4 @@
 import React from 'react'
-import {
-  Search,
-  UserPlus,
-  Eye,
-  Edit3,
-  RotateCcw
-} from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
@@ -43,41 +36,43 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   setShowSuspendModal
 }) => {
   return (
-    <div className="bg-white border border-brand-border rounded-xl shadow-sm p-5 flex flex-col gap-4 w-full">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-brand-border">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 flex flex-col gap-4 w-full">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
-          <h2 className="text-sm font-bold text-[#151C27]">
+          <h2 className="text-sm font-bold text-slate-900">
             Danh sách nhân sự &amp; Thiết bị hiện trường
           </h2>
-          <p className="text-xs text-[#555F6F]">
+          <p className="text-xs text-slate-500">
             {isSupervisor
-              ? 'Quản lý phiên đăng nhập thực tế, thiết bị thu thập GIS/RTK và thu hồi token tức thì (UAT-09)'
+              ? 'Quản lý phiên đăng nhập thực tế, thiết bị thu thập dữ liệu hiện trường và kiểm soát tài khoản'
               : 'Danh sách nhân sự và thiết bị trong ban điều hành dự án (Chế độ xem Chỉ huy trưởng PM)'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative w-64">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#555F6F]" />
+            <span className="material-symbols-outlined text-[18px] absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              search
+            </span>
             <input
               type="text"
               value={userSearchTerm}
               onChange={(e) => setUserSearchTerm(e.target.value)}
               placeholder="Tìm tên, email, dự án..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs text-[#151C27] focus:outline-none focus:border-brand-gold transition-all"
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-900 focus:outline-none focus:border-brand-gold transition-all"
             />
           </div>
 
           <select
             value={userRoleFilter}
             onChange={(e) => setUserRoleFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-brand-border bg-brand-surfaceAlt text-xs font-semibold text-[#151C27] focus:outline-none focus:border-brand-gold cursor-pointer"
+            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none focus:border-brand-gold cursor-pointer"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value={RoleCode.SUPERVISOR}>SUPERVISOR</option>
-            <option value={RoleCode.PROJECT_MANAGER}>PM (Project Manager)</option>
-            <option value={RoleCode.DRONE_OPERATOR}>DRONE_OPERATOR</option>
-            <option value={RoleCode.REPAIR_CREW}>CREW_LEAD</option>
+            <option value={RoleCode.SUPERVISOR}>Giám sát (Supervisor)</option>
+            <option value={RoleCode.PROJECT_MANAGER}>Chỉ huy trưởng (PM)</option>
+            <option value={RoleCode.DRONE_OPERATOR}>Kỹ sư Drone</option>
+            <option value={RoleCode.REPAIR_CREW}>Đội trưởng thi công</option>
           </select>
 
           {isSupervisor && (
@@ -87,9 +82,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 setAddPersonnelTab('NEW')
                 setShowAddPersonnelModal(true)
               }}
-              className="px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
               <span>+ Thêm nhân sự</span>
             </button>
           )}
@@ -99,7 +94,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-brand-surfaceAlt text-[#555F6F] font-semibold uppercase tracking-wider border-b border-brand-border text-[11px]">
+            <tr className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 text-[11px]">
               <th className="py-3 px-4">Thành viên &amp; Liên hệ</th>
               <th className="py-3 px-3">Vai trò phân quyền</th>
               <th className="py-3 px-3">Phạm vi phụ trách</th>
@@ -108,7 +103,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               <th className="py-3 px-4 text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-brand-border text-[#151C27]">
+          <tbody className="divide-y divide-slate-100 text-slate-800">
             {filteredUsers.map((u) => {
               const isCurrent = Boolean(
                 currentUser?.email && u.email.toLowerCase() === currentUser.email.toLowerCase()
@@ -120,38 +115,38 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               return (
                 <tr
                   key={u.id}
-                  className={`hover:bg-brand-surfaceAlt transition-colors ${
-                    isSuspended ? 'bg-brand-surfaceAlt/40 opacity-70' : ''
+                  className={`hover:bg-slate-50/70 transition-colors ${
+                    isSuspended ? 'bg-slate-50/50 opacity-70' : ''
                   }`}
                 >
                   {/* Thành viên */}
                   <td className="py-3.5 px-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-9 h-9 rounded-full font-bold flex items-center justify-center text-xs shadow-sm text-white ${
+                        className={`w-9 h-9 rounded-full font-bold flex items-center justify-center text-xs shadow-xs text-white ${
                           isSuspended
-                            ? 'bg-[#CAC7B5] text-[#555F6F]'
+                            ? 'bg-slate-400'
                             : u.role === RoleCode.SUPERVISOR
                             ? 'bg-brand-gold'
                             : u.role === RoleCode.PROJECT_MANAGER
-                            ? 'bg-[#555F6F]'
-                            : 'bg-[#7A7768]'
+                            ? 'bg-slate-700'
+                            : 'bg-slate-600'
                         }`}
                       >
                         {u.full_name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-semibold text-[#151C27] flex items-center gap-1.5">
-                          <span className={isSuspended ? 'line-through text-[#7A7768]' : ''}>
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <span className={isSuspended ? 'line-through text-slate-400' : ''}>
                             {u.full_name}
                           </span>
                           {isCurrent && (
-                            <span className="text-[10px] text-brand-gold font-bold font-mono">
+                            <span className="text-[10px] text-brand-goldDark font-bold font-mono">
                               (Chính bạn)
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-[#555F6F] font-mono">{u.email}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
                       </div>
                     </div>
                   </td>
@@ -161,12 +156,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold ${
                         u.role === RoleCode.SUPERVISOR
-                          ? 'bg-[#ECDCFF] text-[#24113F]'
+                          ? 'bg-purple-100 text-purple-900 border border-purple-200'
                           : u.role === RoleCode.PROJECT_MANAGER
-                          ? 'bg-[#D9E3F6] text-[#3D4756]'
+                          ? 'bg-blue-100 text-blue-900 border border-blue-200'
                           : u.role === RoleCode.DRONE_OPERATOR
-                          ? 'bg-[#FBF6E9] border border-[#F3E6C4] text-[#8C6D15]'
-                          : 'bg-[#F0F2F5] text-[#555F6F]'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}
                     >
                       {u.role === RoleCode.SUPERVISOR
@@ -180,21 +175,21 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                   </td>
 
                   {/* Phạm vi phụ trách */}
-                  <td className="py-3.5 px-3 whitespace-nowrap font-mono text-[#151C27]">
+                  <td className="py-3.5 px-3 whitespace-nowrap font-mono text-slate-800">
                     <span className="font-medium">{u.project_scope}</span>
                   </td>
 
                   {/* Phiên & Thiết bị */}
                   <td className="py-3.5 px-3 whitespace-nowrap">
-                    <div className="text-[#151C27] font-medium flex items-center gap-1.5">
+                    <div className="text-slate-800 font-medium flex items-center gap-1.5">
                       <span
                         className={`w-2 h-2 rounded-full ${
-                          isSuspended ? 'bg-[#7A7768]' : 'bg-brand-gold'
+                          isSuspended ? 'bg-slate-400' : 'bg-brand-gold'
                         }`}
                       ></span>
                       <span>{u.device_info}</span>
                     </div>
-                    <div className="text-[10px] font-mono text-[#555F6F]">
+                    <div className="text-[10px] font-mono text-slate-500">
                       {u.last_active} • IP: {u.ip_address}
                     </div>
                   </td>
@@ -202,18 +197,18 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                   {/* Trạng thái 100% Tiếng Việt */}
                   <td className="py-3.5 px-3 whitespace-nowrap">
                     {isSuspended ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F1F3F5] text-[#555F6F] font-semibold text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#555F6F]"></span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold text-[10px] border border-slate-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                         ĐÃ TẠM KHÓA
                       </span>
                     ) : isInvited ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FBF6E9] border border-[#F3E6C4] text-[#8C6D15] font-semibold text-[10px]">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 font-semibold text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-brand-gold"></span>
                         CHỜ KÍCH HOẠT
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0] font-semibold text-[10px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#059669]"></span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-[10px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                         ĐANG HOẠT ĐỘNG
                       </span>
                     )}
@@ -225,10 +220,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedUserDetail(u)}
-                        className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white hover:border-brand-gold hover:text-brand-gold text-[#151C27] font-semibold text-xs shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-brand-gold hover:text-brand-goldDark text-slate-700 font-semibold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                         title="Xem chi tiết hồ sơ nhân sự, dự án và thiết bị"
                       >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="material-symbols-outlined text-[15px] text-slate-500">
+                          visibility
+                        </span>
                         <span>Chi tiết</span>
                       </button>
 
@@ -237,15 +234,17 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(u)}
-                            className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-[#8C6D15] font-semibold text-xs shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-semibold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                             title="Chỉnh sửa thông tin nhân sự và dự án phụ trách"
                           >
-                            <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
+                            <span className="material-symbols-outlined text-[15px] text-brand-gold">
+                              edit
+                            </span>
                             <span>Sửa</span>
                           </button>
 
                           {isCurrent ? (
-                            <span className="text-[10px] text-[#7A7768] italic px-1">
+                            <span className="text-[10px] text-slate-400 italic px-1">
                               (Hiện tại)
                             </span>
                           ) : isSuspended ? (
@@ -255,7 +254,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                               className="px-2 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
                               title="Khôi phục quyền truy cập"
                             >
-                              <RotateCcw className="w-3 h-3 text-emerald-600" />
+                              <span className="material-symbols-outlined text-[15px] text-emerald-600">
+                                restore
+                              </span>
                               <span>Khôi phục</span>
                             </button>
                           ) : (
@@ -266,7 +267,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                                 setShowSuspendModal(true)
                               }}
                               className="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors border border-rose-200 cursor-pointer"
-                              title="Đình chỉ nhân sự và bàn giao công việc theo kịch bản UAT-09"
+                              title="Đình chỉ nhân sự và bàn giao công việc"
                             >
                               Đình chỉ
                             </button>
