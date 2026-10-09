@@ -601,20 +601,23 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC PM-15: Thực nghiệm Đối soát Mô hình AI & Dữ liệu Thực địa (RS01 - RS06, RPT-09, WF-10)
+#### BƯỚC PM-15: Thực nghiệm Đối soát Mô hình AI & Dữ liệu Thực địa (RS01 - RS06, RPT-09, FR-31, BR-44, MET-12)
 - **Đường dẫn URL:** `/pm/research-validation` (hoặc `/pm/rpt-09`)
-- **Mục tiêu:** Thực hiện quy trình đối soát khoa học giữa mô hình AI Drone với dữ liệu đo thực địa (Ground-truth) để đánh giá độ chính xác thuật toán.
+- **Mục tiêu:** Thực hiện quy trình đối soát khoa học độc lập (Research Validation Track) giữa số đo mô hình trích xuất từ Drone (Derived) với số đo thực địa đo bằng thước thẳng & thước đo sâu (Ground Truth) để đánh giá độ chính xác thuật toán.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Bấm **"Khai báo đợt thực nghiệm mới (Create Validation Run)"** (`RS01` - `POST /projects/{projectId}/validation-runs`).
-  2. [ ] Chọn tập dữ liệu phát hiện hư hỏng của Drone AI và tải lên tệp đo đạc thực địa đối chứng (Ground-truth CSV/GeoJSON).
-  3. [ ] Bấm **"Chạy đối soát mô hình (Run Surface & Defect Alignment)"** (`RS02`): Hệ thống kích hoạt thuật toán so khớp bề mặt DSM/Orthophoto và tọa độ lỗi.
-  4. [ ] Xem bảng tổng hợp sai số định lượng kỹ thuật (`RS03`):
-     - Sai số tuyệt đối trung bình ($MAE$ - Mean Absolute Error).
-     - Sai số căn phương trung bình ($RMSE$ - Root Mean Squared Error).
-     - Độ lệch hệ thống ($Bias$).
-  5. [ ] Kiểm tra Ma trận nhầm lẫn (Confusion Matrix) và đường cong Precision/Recall phân loại hư hỏng nứt/ổ gà (`RS04`).
-  6. [ ] Bấm **"Xuất báo cáo thực nghiệm"** (`RS05`) hoặc **"Trích xuất Dataset chuẩn hóa"** (`RS06`) để phục vụ nghiên cứu và tinh chỉnh mô hình.
-- **Tiêu chuẩn đạt (Expected):** Đợt thực nghiệm khởi tạo thành công, các chỉ số $MAE$, $RMSE$, ma trận nhầm lẫn hiển thị minh bạch, hỗ trợ tải về tập kết quả đối soát.
+  1. [ ] Kiểm tra thông tin phiên bản mô hình AI, tập dữ liệu thực nghiệm và phương pháp đo đối chứng (Thước thẳng 3m TCVN 8864, Thước đo sâu điện tử theo `RS02`, `RS03`).
+  2. [ ] Bấm **"Chạy Thẩm định Mới (Run Validation Job)"** (`FR-31`): Kích hoạt tác vụ nền bất đồng bộ (HTTP 202 Accepted) để tính toán ghép cặp mẫu đối soát (`RS04`).
+  3. [ ] Kiểm tra bộ 4 thẻ chỉ số sai số kỹ thuật định lượng theo chuẩn `MET-12` (`RS05`):
+     - Tỷ lệ mẫu hợp lệ (`used_count / sample_count`) và số lượng mẫu bị loại trừ (`excluded_count`).
+     - Độ lệch hệ thống có dấu ($\text{Bias} = \sum e / N$ theo đơn vị $mm$).
+     - Sai số tuyệt đối trung bình ($\text{MAE} = \sum |e| / N$ theo đơn vị $mm$).
+     - Căn bậc hai sai số toàn phương ($\text{RMSE} = \sqrt{\sum e^2 / N}$ theo đơn vị $mm$).
+  4. [ ] Kiểm tra Bảng danh sách các cặp mẫu đối soát (`Paired Ground Truth Samples` - `RS04`):
+     - Bộ lọc phân loại mẫu: Tất cả / Hợp lệ (`INCLUDED`) / Bị loại (`EXCLUDED`) / Ngoại lai (`OUTLIER`).
+     - Chi tiết từng mẫu (`sample_id` theo `RS01`): Loại hư hỏng, Lý trình Km, Số đo thực tế Ground Truth ($mm$), Số đo Drone AI Derived ($mm$), Sai số có dấu ($e = Derived - GroundTruth$), Dụng cụ đo và Kỹ sư thực hiện (Chain of Custody - `RS03`).
+  5. [ ] Kiểm tra Bảng Lịch sử các đợt chạy kiểm định (`Validation Runs` - `RS05`): Truy vết nguồn dữ liệu thực địa vs mock theo `BR-44`, phiên bản thuật toán, số lượng mẫu và các chỉ số sai số Bias / MAE / RMSE tương ứng.
+  6. [ ] Bấm **"Xuất CSV Dữ Liệu Đối Soát"** (`RS06` / `RPT-09`): Tải về tệp chuẩn hóa `RPT-09-Research-Validation-Paired-Data-v2.2.csv` phục vụ báo cáo khoa học và tinh chỉnh mô hình.
+- **Tiêu chuẩn đạt (Expected):** Khởi tạo tác vụ kiểm định bất đồng bộ thành công, các chỉ số sai số hình học ($Bias$, $MAE$, $RMSE$) hiển thị chính xác theo đơn vị $mm$, phân biệt rõ ràng mẫu hợp lệ/bị loại theo `BR-44`, hỗ trợ tải về tệp CSV đối soát nguyên vẹn.
 
 ---
 
