@@ -187,6 +187,30 @@
 
 ---
 
+### 9. Module Nhiệm vụ Đo đạc & Phân giải Xung đột Ngoại tuyến (Bước PM-12 / BR-16 / Q04 / D05 / D06)
+- **Tệp chỉnh sửa/tạo mới:**
+  - `src/api/services/conflictService.ts` (Tạo mới: In-Memory Mock API Service phân giải xung đột)
+  - `src/api/services/fieldTaskService.ts` (Tạo mới: In-Memory Mock API Service quản lý phiếu đo đạc)
+  - `src/components/common/ImageComparisonSlider.tsx` (Tạo mới: Thanh trượt Split-screen so sánh ảnh)
+  - `src/components/common/PhotoLightboxModal.tsx` (Tạo mới: Lightbox soi ảnh vạch thước toàn màn hình)
+  - `src/pages/(pm)/field-tasks/conflicts/ConflictResolutionActions.tsx`
+  - `src/pages/(pm)/field-tasks/conflicts/ConflictQueueTable.tsx`
+  - `src/pages/(pm)/field-tasks/ConflictResolveModal.tsx`
+  - `src/pages/(pm)/field-tasks/ConflictsTab.tsx`
+  - `src/pages/(pm)/FieldTasks.tsx`
+  - `docs/archive/DANH_MUC_CHUC_NANG_VA_CHI_TIET_MOCK_API.md`
+- **Nghiệp vụ đã xử lý:**
+  - **Chuẩn hóa đối chiếu theo Spec 29_9 (§12 Mục 12 tài liệu `09_Offline_App_Sync_Spec.md` & `BR-16`):**
+    * *Ca Đổi đội khi ngoại tuyến (`ASSIGNMENT_REASSIGNED` - D05/Q04):* Xóa bỏ hoàn toàn nút Hợp nhất. Bảo toàn Actor/Provenance kiểm toán. PM có 2 lựa chọn: **"Công nhận kết quả Tổ 02 (Thu hồi Đội 01)"** hoặc **"Từ chối kết quả Tổ 02 (Giữ Đội 01)"**.
+    * *Ca Lệch chính sách Fast Track (`POLICY_VERSION_MISMATCH` - D06/BR-16):* Xóa bỏ nút Hợp nhất (chính sách là quy tắc nhị phân). PM có 2 lựa chọn: **"Đặc cách duyệt Fast Track"** (theo v1.8) hoặc **"Từ chối Fast Track - Chuyển duyệt đợt"** (theo v2.2, hiển thị badge màu đỏ/rose).
+    * *Ca Trùng lặp 2 thiết bị (`DUPLICATE_WORK_ATTEMPT` - DEDUP):* Duy nhất ca này có tùy chọn **"Hợp nhất thủ công (Manual Merge)"** để nhặt từng trường giữa 2 nguồn đo.
+    * *Ca Cứu hộ thiết bị (`DEVICE_RESCUE_PENDING` - Q17 / Quyết định 42A):* Quy trình 2 lớp, PM chỉ có quyền **"Trình Giám sát duyệt cứu hộ"**, Supervisor có quyền **"Ký số phê duyệt cứu hộ"** hoặc **"Từ chối"**.
+    * *Ca Đóng băng hồ sơ (`AGGREGATE_VERSION_CONFLICT` - BR-26):* PM chọn **"Tạo phụ lục đợt mới (BR-26)"** hoặc **"Từ chối số liệu nộp muộn"**.
+  - **Sửa đổi tài liệu kiểm thử:** Cập nhật lại Bước PM-12 trong `DANH_MUC_CHUC_NANG_VA_CHI_TIET_MOCK_API.md` loại bỏ hoàn toàn các mô tả tự chế trước đây (Ghi đè, Hợp nhất tùy tiện).
+  - **Tối ưu trải nghiệm giao diện:** Tách giao diện thành 2 sub-tab độc lập (`Hàng đợi xung đột` & `Bảng đối chiếu chi tiết`), không dồn bảng chi tiết xuống cuối trang.
+
+---
+
 ## III. THỐNG KÊ BIẾN ĐỘNG MÃ NGUỒN (CODE METRICS)
 
 - **Tổng số tệp nguồn (`src/`) đã chỉnh sửa/tối ưu:** 35 files
