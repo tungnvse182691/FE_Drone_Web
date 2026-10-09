@@ -226,3 +226,21 @@
 3. **Phong cách Minimalism:** Giao diện phẳng, đường viền mảnh `border-slate-200`, bo góc tiêu chuẩn `rounded-xl`/`rounded-2xl`, màu sắc vàng đồng thương hiệu `#C9A227` được sử dụng có điểm nhấn vào CTA chính và KPI.
 4. **Cấu trúc phẳng:** Giữ nguyên 100% cây thư mục chuẩn của dự án theo `AGENTS.md`, không tạo file trùng lặp hay phá vỡ kiến trúc module.
 
+---
+
+## V. CẬP NHẬT CHUẨN HÓA KỊCH BẢN KIỂM THỬ PM (PM-13 ĐẾN PM-17)
+
+- **Tệp chỉnh sửa:** `docs/archive/DANH_MUC_CHUC_NANG_VA_CHI_TIET_MOCK_API.md`
+- **Nghiệp vụ đã chuẩn hóa theo Spec 29_9:**
+  1. **Bước PM-13 (HT09, HT11, HT12, BR-25):** 
+     - Chuẩn hóa mã Use Case thành `HT09` (PM kiểm tra ảnh Before/After, số đo hình học, biên bản lấy mẫu/lu lèn TCVN 8819:2011) và `HT11` (PM Trình kết quả nghiệm thu).
+     - Phân định rõ 2 nhánh nghiệp vụ:
+       * *Nhánh duyệt thông thường (`APPROVAL_TRACK`):* PM bấm "Trình Giám sát nghiệm thu", chuyển sang `PENDING_INSPECTION` (hoặc `PM_CHECKED`), chờ Supervisor nghiệm thu và ký số.
+       * *Nhánh cấp bách Fast Track (`FAST_TRACK` - BR-25):* PM tự kiểm tra và bấm "Đóng hoàn thành Fast Track" (`HT12`), đóng thẳng về `CLOSED`/`RESOLVED`, hệ thống tự phát thông báo hậu kiểm cho Supervisor mà không cần duyệt lại.
+       * *Nhánh thi công không đạt (`HT10`):* PM bấm "Yêu cầu làm lại (Request Rework)".
+  2. **Bổ sung Bước PM-14 (Báo cáo KPI & Rủi ro suy thoái - BC02, RPT-01..06):** Tuyến URL `/pm/reports` / `/pm/risk-analytics`, theo dõi chỉ số nghiệm thu đợt đầu, tỷ lệ phân luồng Fast Track và Heatmap cảnh báo rủi ro lún nứt.
+  3. **Bổ sung Bước PM-15 (Thực nghiệm Đối soát AI & Ground-truth - RS01..06, RPT-09, WF-10):** Tuyến URL `/pm/research-validation`, đối soát mô hình DSM/Orthophoto với số liệu đo thực địa, tính sai số $MAE$, $RMSE$, $Bias$, xuất ma trận nhầm lẫn và Dataset nghiên cứu.
+  4. **Bổ sung Bước PM-16 (Tra cứu Nhật ký Kiểm toán - RPT-10, Durable Audit Trail):** Tuyến URL `/pm/audit-trail`, tra cứu dòng sự kiện bất biến hệ thống (`GET /audit-events`), xác thực chữ ký/mã băm SHA-256 payload dữ liệu.
+  5. **Bổ sung Bước PM-17 (Quản lý Vòng đời & Đề xuất Hủy Hồ sơ - BR-45, WF-12):** Tuyến URL `/pm/retention` / `/pm/system-control`, theo dõi hạn lưu trữ hồ sơ (hết bảo hành + 5 năm), kiểm tra điều kiện Legal Hold và gửi đề xuất hủy sang Giám sát phê duyệt (nguyên tắc kiểm soát 4 mắt).
+
+

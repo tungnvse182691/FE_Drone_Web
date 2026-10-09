@@ -570,15 +570,80 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC PM-13: Hoàn tất & Trình Nghiệm thu Hạng mục (HT08)
-- **Đường dẫn URL:** `/pm/evidence-closeout` (hoặc màn hình Xác nhận hoàn thành công việc)
-- **Mục tiêu:** Nộp bằng chứng ảnh đối chứng (Before/After) lên Giám sát để đề nghị nghiệm thu.
+#### BƯỚC PM-13: Hoàn tất & Trình Nghiệm thu Hạng mục (HT09, HT11, HT12, BR-25)
+- **Đường dẫn URL:** `/pm/evidence-closeout` (hoặc `/pm/work-orders/:id/confirm`, `/pm/acceptance`)
+- **Mục tiêu:** PM kiểm tra hồ sơ hoàn thành thi công do đội hiện trường gửi về (ảnh Before/After, số đo hình học, chứng từ lấy mẫu) và xử lý theo đúng phân luồng nghiệp vụ.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Mở hạng mục thi công đã hoàn tất.
-  2. [ ] Kiểm tra cặp ảnh: Ảnh hư hỏng ban đầu (Before) và Ảnh sau khi thảm nhựa hoàn thiện (After) có tọa độ GPS/EXIF.
-  3. [ ] Đính kèm biên bản lấy mẫu/thí nghiệm độ chặt lu lèn (nếu có).
-  4. [ ] Bấm **"Trình Giám sát nghiệm thu (Submit for Inspection)"**.
-- **Tiêu chuẩn đạt (Expected):** Chuyển trạng thái sang `PENDING_INSPECTION`, chờ Supervisor nghiệm thu.
+  1. [ ] Mở hạng mục thi công đã hoàn tất do đội hiện trường báo cáo.
+  2. [ ] Kiểm tra tính toàn vẹn của cặp ảnh đối chứng: Ảnh hư hỏng ban đầu (Before) và Ảnh sau khi thảm nhựa hoàn thiện (After) có tọa độ GPS/EXIF hợp lệ.
+  3. [ ] Kiểm tra các tệp đính kèm: Biên bản lấy mẫu hiện trường, kết quả thí nghiệm độ chặt lu lèn (TCVN 8819:2011).
+  4. [ ] **Thực hiện xử lý theo đúng phân luồng nghiệp vụ:**
+     - **Nhánh Duyệt thông thường (APPROVAL_TRACK - HT09, HT11):** Bấm **"Trình Giám sát nghiệm thu (Submit for Inspection)"** (`POST /repair-attempts/{attemptId}/review` với decision `ACCEPT`). Ca sửa chữa chuyển trạng thái sang `PENDING_INSPECTION` (hoặc `PM_CHECKED`), chờ Supervisor nghiệm thu và ký số.
+     - **Nhánh Cấp bách Fast Track (FAST_TRACK - BR-25, HT12):** Đối với các hư hỏng thuộc diện đặc cách khẩn cấp, PM tự kiểm tra bằng chứng đạt yêu cầu và bấm **"Đóng hoàn thành Fast Track (Close Fast Track)"**. Hạng mục chuyển thẳng sang trạng thái `RESOLVED` / `CLOSED`, hệ thống tự phát thông báo hậu kiểm sang Giám sát mà không cần phê duyệt lại.
+     - **Trường hợp thi công không đạt (HT10):** PM bấm **"Yêu cầu làm lại (Request Rework)"**, nhập lý do sai sót kỹ thuật để yêu cầu đội hiện trường khắc phục lại.
+- **Tiêu chuẩn đạt (Expected):**
+  - Luồng duyệt `APPROVAL_TRACK` chuyển đúng trạng thái `PENDING_INSPECTION`.
+  - Luồng `FAST_TRACK` đóng thẳng về `CLOSED`/`RESOLVED` theo đúng quy định phân quyền tại `BR-25`.
+  - Ảnh đối chứng và chứng từ nghiệm thu được lưu vết bất biến trong hồ sơ đợt sửa.
+
+---
+
+#### BƯỚC PM-14: Báo cáo Phân tích & Chỉ số Rủi ro KPI (BC02, RPT-01, RPT-04, RPT-06)
+- **Đường dẫn URL:** `/pm/reports` (hoặc `/pm/risk-analytics`)
+- **Mục tiêu:** Theo dõi các chỉ số KPI vận hành, chất lượng bảo hành, tỷ lệ xử lý Fast Track và mô hình cảnh báo rủi ro suy thoái mặt đường.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] Chọn dự án bảo hành và khoảng thời gian để lọc báo cáo.
+  2. [ ] Kiểm tra biểu đồ chất lượng bảo hành công trình (`RPT-01`): Tỷ lệ nghiệm thu đạt ngay đợt đầu, tốc độ phát triển hư hỏng lún nứt.
+  3. [ ] Kiểm tra báo cáo thống kê phân luồng xử lý (`RPT-04`): Tỷ lệ các ca xử lý Fast Track so với quy trình thẩm duyệt thông thường.
+  4. [ ] Xem bản đồ nhiệt (Heatmap) và biểu đồ phân tích nguy cơ suy thoái mặt đường theo lý trình Km (`RPT-06`): Đánh giá các đoạn đường có chỉ số rủi ro cao để đưa vào kế hoạch bay khảo sát định kỳ tiếp theo.
+  5. [ ] Bấm nút **"Xuất báo cáo (Export)"** định dạng PDF/Excel phục vụ họp giao ban công trường.
+- **Tiêu chuẩn đạt (Expected):** Dữ liệu phân tích hiển thị chính xác, biểu đồ trực quan, hỗ trợ kết xuất dữ liệu báo cáo đầy đủ theo phân quyền PM.
+
+---
+
+#### BƯỚC PM-15: Thực nghiệm Đối soát Mô hình AI & Dữ liệu Thực địa (RS01 - RS06, RPT-09, WF-10)
+- **Đường dẫn URL:** `/pm/research-validation` (hoặc `/pm/rpt-09`)
+- **Mục tiêu:** Thực hiện quy trình đối soát khoa học giữa mô hình AI Drone với dữ liệu đo thực địa (Ground-truth) để đánh giá độ chính xác thuật toán.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] Bấm **"Khai báo đợt thực nghiệm mới (Create Validation Run)"** (`RS01` - `POST /projects/{projectId}/validation-runs`).
+  2. [ ] Chọn tập dữ liệu phát hiện hư hỏng của Drone AI và tải lên tệp đo đạc thực địa đối chứng (Ground-truth CSV/GeoJSON).
+  3. [ ] Bấm **"Chạy đối soát mô hình (Run Surface & Defect Alignment)"** (`RS02`): Hệ thống kích hoạt thuật toán so khớp bề mặt DSM/Orthophoto và tọa độ lỗi.
+  4. [ ] Xem bảng tổng hợp sai số định lượng kỹ thuật (`RS03`):
+     - Sai số tuyệt đối trung bình ($MAE$ - Mean Absolute Error).
+     - Sai số căn phương trung bình ($RMSE$ - Root Mean Squared Error).
+     - Độ lệch hệ thống ($Bias$).
+  5. [ ] Kiểm tra Ma trận nhầm lẫn (Confusion Matrix) và đường cong Precision/Recall phân loại hư hỏng nứt/ổ gà (`RS04`).
+  6. [ ] Bấm **"Xuất báo cáo thực nghiệm"** (`RS05`) hoặc **"Trích xuất Dataset chuẩn hóa"** (`RS06`) để phục vụ nghiên cứu và tinh chỉnh mô hình.
+- **Tiêu chuẩn đạt (Expected):** Đợt thực nghiệm khởi tạo thành công, các chỉ số $MAE$, $RMSE$, ma trận nhầm lẫn hiển thị minh bạch, hỗ trợ tải về tập kết quả đối soát.
+
+---
+
+#### BƯỚC PM-16: Tra cứu Nhật ký Kiểm toán & Lịch sử Hoạt động (RPT-10, Durable Audit Trail)
+- **Đường dẫn URL:** `/pm/audit-trail` (hoặc `/pm/rpt-10`)
+- **Mục tiêu:** Kiểm tra dòng sự kiện bất biến (Durable Audit Trail) và truy vết toàn bộ thao tác nghiệp vụ trên hệ thống.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] Bộ lọc tìm kiếm: Lọc theo Khoảng thời gian, Vai trò tác nhân (Actor Role), Mã hồ sơ công trình hoặc Loại hành động (Khảo sát, Duyệt đợt, Giải quyết xung đột, Nghiệm thu).
+  2. [ ] Xem danh sách các bản ghi sự kiện kiểm toán (`GET /audit-events`):
+     - Thời gian ghi nhận (Timestamp).
+     - Tác nhân thực hiện (Tên người dùng, vai trò PM / Sup / Drone Operator / Field Crew).
+     - Mã thực thể liên quan (Survey ID, Batch ID, Incident ID, Conflict Case ID).
+     - Chi tiết hành động và mã băm SHA-256 xác thực payload dữ liệu.
+  3. [ ] Bấm xem chi tiết một sự kiện để đối chiếu tính toàn vẹn của chuỗi dữ liệu (IncidentCaseHistory).
+- **Tiêu chuẩn đạt (Expected):** Toàn bộ sự kiện hệ thống hiển thị đầy đủ, không cho phép chỉnh sửa hoặc xóa lịch sử, đảm bảo tuân thủ nguyên tắc kiểm toán độc lập.
+
+---
+
+#### BƯỚC PM-17: Quản lý Vòng đời Dữ liệu & Đề xuất Hủy Hồ sơ Lưu trữ (BR-45, WF-12)
+- **Đường dẫn URL:** `/pm/retention` (hoặc `/pm/system-control`)
+- **Mục tiêu:** Theo dõi thời hạn lưu trữ hồ sơ công trình (hết bảo hành + 5 năm) và lập đề xuất hủy dữ liệu khi đủ điều kiện theo quy định tại `BR-45`.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] Kiểm tra danh sách các gói hồ sơ công trình bảo hành kèm trạng thái lưu trữ và thời hạn pháp lý (Retention Policy).
+  2. [ ] Kiểm tra điều kiện khóa pháp lý (Legal Hold): Các hồ sơ đang có tranh chấp hoặc thanh tra sẽ bị khóa cứng, không được phép đề xuất hủy.
+  3. [ ] Đối với hồ sơ đã hết thời hạn bảo hành trên 5 năm và không có khóa pháp lý: Bấm **"Lập đề xuất hủy hồ sơ (Request Deletion)"** (`POST /retention/deletion-requests`).
+  4. [ ] Điền thông tin căn cứ pháp lý, đính kèm biên bản thanh lý hợp đồng bảo hành và bấm **"Gửi đề xuất sang Giám sát"**.
+- **Tiêu chuẩn đạt (Expected):**
+  - Hệ thống tự động chặn mọi đề xuất hủy hồ sơ khi chưa đủ thời hạn 5 năm sau bảo hành hoặc đang có `Legal Hold`.
+  - Đề xuất tạo thành công chuyển sang trạng thái chờ Giám sát phê duyệt (`PENDING_SUPERVISOR_APPROVAL`), bảo đảm nguyên tắc kiểm soát chéo (4 mắt).
 
 ---
 
