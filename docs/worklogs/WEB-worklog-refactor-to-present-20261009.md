@@ -167,12 +167,30 @@
 
 ---
 
+### 8. Module Điều phối xuất quân & Phân công Đội thi công (Bước PM-11 / SC10 / FR-20)
+- **Tệp chỉnh sửa/hoàn thiện:**
+  - `src/pages/(sup)/proposal-approval/ProposalDispatchModal.tsx`
+  - `src/pages/(sup)/proposal-approval/ApprovalDetailHeader.tsx`
+  - `src/pages/(sup)/proposal-approval/useProposalApprovalState.ts`
+  - `src/pages/(pm)/repair-proposals/ProposalTableRow.tsx`
+  - `src/pages/(pm)/repair-proposals/ProposalFilterBar.tsx`
+  - `src/pages/(pm)/repair-proposals/ProposalStats.tsx`
+  - `src/pages/(pm)/repair-proposals/useRepairProposalsState.ts`
+  - `src/components/ui/StatusBadge.tsx`
+  - `src/api/services/repairService.ts`
+- **Nghiệp vụ đã xử lý:**
+  - **Tôn trọng phân công chi tiết từng hạng mục (SC10 / FR-20):** Bảng danh sách cho phép PM chọn tổ chuyên trách theo tính chất từng điểm hư hỏng (Asphalt 01, Cơ giới 02, Bảo dưỡng thường xuyên). Modal "Ban hành Lệnh công tác (Dispatch)" hiển thị chính xác tổ đã chọn của từng dòng kèm thẻ tóm tắt khối lượng các đội, chỉ ghi đè khi PM tích chọn tùy chọn "Gán nhanh cho 1 đội duy nhất".
+  - **Sửa lỗi hiển thị & đồng bộ máy trạng thái chuẩn (`ASSIGNED / DISPATCHED`):** Khắc phục thứ tự điều kiện hiển thị huy hiệu trên Header để phản ánh ngay lập tức khi phát lệnh giao việc; kết nối state phản ứng trong hook `useProposalApprovalState`.
+  - **Chuẩn hóa thuật ngữ công trường:** Thay đổi toàn bộ nhãn từ "Đang thi công" sang "Đã giao việc" (`ASSIGNED`) cho bước phát lệnh từ văn phòng; chỉ chuyển sang "Đang thi công" (`IN_PROGRESS`) khi thợ hiện trường bấm bắt đầu thực hiện trên Mobile App.
+  - **Lưu trữ bền vững (Local Persistence):** Tích hợp `repairService.ts` với `storageHelper.ts` (`localStorage`), bảo toàn toàn bộ trạng thái gói và phân công tổ thi công khi F5 hoặc đóng tab.
+  - **Tối ưu hiển thị danh sách gói đề xuất:** Tăng phân trang `pageSize` từ 4 lên 10 dòng/trang, giúp gói đã duyệt và gói đã giao việc hiển thị trực quan mà không bị đẩy sang trang phụ.
+
+---
+
 ## III. THỐNG KÊ BIẾN ĐỘNG MÃ NGUỒN (CODE METRICS)
 
-- **Tổng số tệp nguồn (`src/`) đã chỉnh sửa/tối ưu:** 29 files
-- **Số dòng mã bổ sung (Additions):** +1,299 lines
-- **Số dòng mã lược bỏ/tinh gọn (Deletions):** -597 lines
-- **Trạng thái kiểm tra kiểu (Typecheck):** `npx tsc --noEmit` $\rightarrow$ **Exit Code 0 (100% sạch lỗi TypeScript)**
+- **Tổng số tệp nguồn (`src/`) đã chỉnh sửa/tối ưu:** 35 files
+- **Trạng thái kiểm tra kiểu (Typecheck):** `npx tsc -b && vite build` $\rightarrow$ **Exit Code 0 (100% sạch lỗi TypeScript)**
 - **Trạng thái Dev Server:** Vite server chạy ổn định trên cổng `http://localhost:5173`.
 
 ---
@@ -180,6 +198,7 @@
 ## IV. BẢO ĐẢM KỶ LUẬT THIẾT KẾ VÀ QUY TẮC BẤT BIẾN (INVARIANTS)
 
 1. **Zero-Money Policy:** Toàn bộ form tạo đề xuất và bảng thẩm duyệt chỉ quản lý khối lượng kỹ thuật công trình ($m^2$ cào bóc, $m$ trám nứt, $cm$ độ sâu, định mức TCVN 8819), tuyệt đối không có trường đơn giá hay BOQ tài chính.
-2. **Kỷ luật Spec v2.2:** Nghiệp vụ, tên trạng thái, luồng phê duyệt tuân thủ chặt chẽ theo bộ tài liệu 29_9.
+2. **Kỷ luật Spec v2.2:** Nghiệp vụ, tên trạng thái, luồng phê duyệt tuân thủ chặt chẽ theo bộ tài liệu 29_9 và máy trạng thái Điều 8 AGENTS.md (`DRAFT` $\rightarrow$ `SUBMITTED` $\rightarrow$ `APPROVED` $\rightarrow$ `ASSIGNED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `PENDING_INSPECTION` $\rightarrow$ `COMPLETED`).
 3. **Phong cách Minimalism:** Giao diện phẳng, đường viền mảnh `border-slate-200`, bo góc tiêu chuẩn `rounded-xl`/`rounded-2xl`, màu sắc vàng đồng thương hiệu `#C9A227` được sử dụng có điểm nhấn vào CTA chính và KPI.
 4. **Cấu trúc phẳng:** Giữ nguyên 100% cây thư mục chuẩn của dự án theo `AGENTS.md`, không tạo file trùng lặp hay phá vỡ kiến trúc module.
+

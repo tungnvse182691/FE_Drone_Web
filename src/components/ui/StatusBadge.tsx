@@ -121,9 +121,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, classNa
       case 'REVISION_REQUIRED_WORK': return 'Yêu cầu làm lại'
       case 'REQUEST_EVIDENCE': return 'Yêu cầu bổ sung minh chứng'
       case 'REQUEST_RECONSIDER': return 'Xem xét lại phương án'
-      case 'ASSIGNED': return 'Đã giao việc'
-      case 'IN_PROGRESS':
+      case 'ASSIGNED':
       case 'DISPATCHED':
+        return 'Đã giao việc'
+      case 'IN_PROGRESS':
         return 'Đang thi công'
       case 'PENDING_INSPECTION': return 'Chờ nghiệm thu'
       case 'COMPLETED': return 'Đã hoàn thành'

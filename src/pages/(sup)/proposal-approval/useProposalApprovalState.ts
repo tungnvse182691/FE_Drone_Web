@@ -4,10 +4,12 @@ import { mockRepairBatches } from '../../../data/mockData'
 import { ItemApprovalStatus, RepairItemDetail } from './types'
 
 export function useProposalApprovalState(id: string | undefined) {
-  const targetPackage = useMemo(() => {
+  const [currentPkg, setCurrentPkg] = useState(() => {
     if (!id) return null
     return repairService.getPackageById(id)
-  }, [id])
+  })
+
+  const targetPackage = currentPkg || (id ? repairService.getPackageById(id) : null)
 
   const matchedBatch = useMemo(() => {
     if (!id) return null
@@ -40,6 +42,10 @@ export function useProposalApprovalState(id: string | undefined) {
   useEffect(() => {
     const handleStateChange = () => {
       setItems(repairService.getItems(id) || repairService.getItems(packageCode))
+      if (id) {
+        const pkg = repairService.getPackageById(id)
+        if (pkg) setCurrentPkg(pkg)
+      }
     }
     window.addEventListener('roadguard_state_change', handleStateChange)
     return () => window.removeEventListener('roadguard_state_change', handleStateChange)
@@ -244,11 +250,33 @@ export function useProposalApprovalState(id: string | undefined) {
   }
 
   // Dispatch Work Order submit
-  const handleConfirmDispatch = () => {
-    repairService.dispatchPackage(packageCode, dispatchDeadline, dispatchNotice)
+  const handleConfirmDispatch = (crewName?: string) => {
+    let updatedItems = items
+    if (crewName) {
+      // PM chọn ghi đè nhanh cho 1 đội duy nhất
+      updatedItems = items.map((it) =>
+        it.status === 'APPROVED' ? { ...it, assigned_crew: crewName } : it
+      )
+      repairService.setPackageItems(packageCode, updatedItems)
+      setItems(updatedItems)
+    }
+
+    const approvedItems = updatedItems.filter((it) => it.status === 'APPROVED')
+    const distinctCrews = Array.from(
+      new Set(approvedItems.map((it) => it.assigned_crew).filter(Boolean))
+    )
+    const crewSummary =
+      distinctCrews.length > 0
+        ? distinctCrews.join(', ')
+        : crewName || 'Tổ thi công Asphalt 01'
+
+    const updatedPkg = repairService.dispatchPackage(id || packageCode, crewSummary, dispatchDeadline)
+    if (updatedPkg) {
+      setCurrentPkg(updatedPkg)
+    }
     setIsDispatchModalOpen(false)
     showToast(
-      `Đã phát Lệnh công tác thi công (Work Order) thành công cho ${stats.approved} hạng mục đã APPROVED! Hạn hoàn thành: ${dispatchDeadline}`
+      `Đã phát Lệnh công tác thi công thành công (${stats.approved} hạng mục)! Đội tiếp nhận: [${crewSummary}]. Hạn hoàn thành: ${dispatchDeadline}`
     )
   }
 

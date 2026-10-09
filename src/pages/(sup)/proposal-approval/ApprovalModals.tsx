@@ -36,7 +36,7 @@ export interface ApprovalModalsProps {
   setDispatchDeadline: (dl: string) => void
   dispatchNotice: string
   setDispatchNotice: (notice: string) => void
-  onConfirmDispatch: () => void
+  onConfirmDispatch: (crewName?: string) => void
 
   isBatchApproveConfirmOpen: boolean
   onCloseBatchApproveConfirm: () => void

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   Construction,
+  Truck,
   ShieldCheck,
   UserCheck,
   MoreVertical,
@@ -123,8 +124,8 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         )}
         {pkg.status === 'DISPATCHED' && (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
-            <Construction className="w-3 h-3 text-blue-600" />
-            <span>Đang thi công</span>
+            <Truck className="w-3 h-3 text-blue-600" />
+            <span>Đã giao việc</span>
           </span>
         )}
         {pkg.status === 'DRAFT' && (

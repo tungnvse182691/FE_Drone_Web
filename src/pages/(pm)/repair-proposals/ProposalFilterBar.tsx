@@ -101,7 +101,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
             }`}
           >
-            Đang thi công ({stats.dispatched})
+            Đã giao việc ({stats.dispatched})
           </button>
           <button
             onClick={() => onTabChange('DRAFT')}

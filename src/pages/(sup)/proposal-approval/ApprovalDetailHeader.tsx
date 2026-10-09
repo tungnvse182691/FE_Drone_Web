@@ -105,7 +105,12 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-sansation">
                 {packageName} ({packageCode})
               </h1>
-              {status === 'DRAFT' ? (
+              {status === 'DISPATCHED' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs">
+                  <Truck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>ASSIGNED - Đã giao việc cho Đội thi công</span>
+                </span>
+              ) : status === 'DRAFT' ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs">
                   <span className="w-2 h-2 rounded-full bg-slate-400"></span>
                   <span>DRAFT - Bản nháp (Đang chuẩn bị hồ sơ)</span>
@@ -113,12 +118,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               ) : status === 'DECIDED' || stats.approved === stats.total ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>DECIDED - Đã phê duyệt {Math.round(stats.percent)}%</span>
-                </span>
-              ) : status === 'DISPATCHED' ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs">
-                  <Truck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>DISPATCHED - Đang thi công hiện trường</span>
+                  <span>APPROVED / DECIDED - Đã phê duyệt {Math.round(stats.percent)}%</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 shadow-2xs">
@@ -173,14 +173,23 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
                 <button
                   onClick={onOpenDispatch}
                   type="button"
-                  className="inline-flex items-center gap-1.5 px-4 h-10 bg-brand-gold text-white hover:bg-[#B38E1F] transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer"
+                  className={`inline-flex items-center gap-1.5 px-4 h-10 transition-all rounded-xl font-bold text-xs shadow-xs cursor-pointer ${
+                    status === 'DISPATCHED'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-brand-gold hover:bg-[#B38E1F] text-white'
+                  }`}
                 >
                   <Truck className="w-4 h-4" />
-                  <span>Giao việc cho đội thi công (Dispatch)</span>
+                  <span>
+                    {status === 'DISPATCHED'
+                      ? 'Đã phát lệnh giao việc (Xem / Điều chỉnh)'
+                      : 'Giao việc cho đội thi công (Dispatch)'}
+                  </span>
                 </button>
                 <div className="absolute right-0 top-full mt-1.5 w-64 bg-slate-900 text-white text-[11px] p-2.5 rounded-xl shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-20 font-medium">
-                  Đã sẵn sàng giao {stats.approved}/{stats.total} hạng mục kỹ thuật đã có phê duyệt chính thức từ
-                  Supervisor.
+                  {status === 'DISPATCHED'
+                    ? `Đã giao việc ${stats.approved}/${stats.total} hạng mục cho các tổ thi công. Nhấn để xem hoặc điều chỉnh.`
+                    : `Đã sẵn sàng giao ${stats.approved}/${stats.total} hạng mục kỹ thuật đã có phê duyệt chính thức từ Supervisor.`}
                 </div>
               </div>
             )}

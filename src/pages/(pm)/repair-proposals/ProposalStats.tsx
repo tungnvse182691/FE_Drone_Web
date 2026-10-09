@@ -3,7 +3,8 @@ import {
   Edit3,
   Clock,
   CheckCircle2,
-  Construction
+  Construction,
+  Truck
 } from 'lucide-react'
 
 export interface ProposalStatsProps {
@@ -104,17 +105,17 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
       >
         <div className="flex items-start justify-between">
           <div className="flex flex-col gap-1">
-            <span className="font-bold text-[11px] uppercase tracking-wider text-blue-800">Gói đang thi công</span>
+            <span className="font-bold text-[11px] uppercase tracking-wider text-blue-800">Gói đã giao việc</span>
             <span className="text-3xl font-bold text-blue-700">{stats.dispatched.toString().padStart(2, '0')}</span>
           </div>
           <div className="w-11 h-11 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center shrink-0">
-            <Construction className="w-5 h-5" />
+            <Truck className="w-5 h-5" />
           </div>
         </div>
         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Tổ thi công rải thảm và vá dặm</span>
+          <span className="text-slate-500">Đã phân công tổ thi công</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-blue-100 text-blue-800">
-            DISPATCHED
+            ASSIGNED
           </span>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600"></div>

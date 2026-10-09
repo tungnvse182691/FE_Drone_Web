@@ -1,11 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   X,
   Truck,
   CheckCircle2,
-  Send
+  Send,
+  Users2
 } from 'lucide-react'
-import { RepairItemDetail } from './types'
+import { RepairItemDetail, CREW_OPTIONS } from './types'
 
 export interface ProposalDispatchModalProps {
   isOpen: boolean
@@ -20,7 +21,7 @@ export interface ProposalDispatchModalProps {
   setDispatchDeadline: (dl: string) => void
   dispatchNotice: string
   setDispatchNotice: (notice: string) => void
-  onConfirmDispatch: () => void
+  onConfirmDispatch: (bulkCrewName?: string) => void
 }
 
 export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
@@ -35,7 +36,19 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
   setDispatchNotice,
   onConfirmDispatch
 }) => {
+  const [isBulkOverride, setIsBulkOverride] = useState(false)
+  const [bulkCrew, setBulkCrew] = useState<string>(CREW_OPTIONS[0])
+
   if (!isOpen) return null
+
+  const approvedItems = items.filter((i) => i.status === 'APPROVED')
+
+  // Group approved items by assigned crew to show overview
+  const crewBreakdown = approvedItems.reduce<Record<string, number>>((acc, item) => {
+    const crew = item.assigned_crew || 'Chưa gán'
+    acc[crew] = (acc[crew] || 0) + 1
+    return acc
+  }, {})
 
   return (
     <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
@@ -75,28 +88,102 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <span className="font-bold text-slate-900 block uppercase tracking-wider text-[11px]">
-              Danh sách hạng mục bàn giao xuất quân:
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-900 block uppercase tracking-wider text-[11px]">
+                Danh sách hạng mục bàn giao xuất quân:
+              </span>
+              <span className="text-[11px] text-slate-500">
+                {approvedItems.length} vị trí đã sẵn sàng
+              </span>
+            </div>
+
             <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-slate-50/50">
-              {items
-                .filter((i) => i.status === 'APPROVED')
-                .map((item) => (
-                  <div key={item.id} className="p-2.5 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
+              {approvedItems.map((item) => {
+                const assignedCrew = isBulkOverride ? bulkCrew : (item.assigned_crew || 'Chưa gán')
+                return (
+                  <div key={item.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-white/70 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span className="font-mono font-bold text-slate-800">{item.item_code}</span>
-                      <span className="text-slate-500">({item.chainage})</span>
-                      <span className="text-slate-700 font-medium truncate max-w-xs">{item.defect_title}</span>
+                      <span className="text-slate-500 font-mono text-[11px]">({item.chainage})</span>
+                      <span className="text-slate-700 font-medium truncate max-w-[200px]" title={item.defect_title}>
+                        {item.defect_title}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono font-bold text-[#92700C]">{item.volume_display}</span>
-                      <span className="bg-white border border-slate-200 px-2 py-0.5 rounded text-[10px] text-slate-600 font-semibold">
-                        {item.assigned_crew}
+                      <span className="font-mono font-bold text-[#92700C] text-[11px]">{item.volume_display}</span>
+                      <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded text-[10px] text-amber-900 font-semibold shadow-2xs">
+                        <Users2 className="w-3 h-3 text-brand-gold shrink-0" />
+                        <span>{assignedCrew}</span>
                       </span>
                     </div>
                   </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Phân công tổ thi công: Tôn trọng phân công chi tiết + Tùy chọn gán nhanh */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                <Users2 className="w-4 h-4 text-brand-gold" />
+                <span>Phân công các tổ thi công:</span>
+              </span>
+              {!isBulkOverride && (
+                <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md font-medium">
+                  ✓ Theo phân công chi tiết từng vị trí
+                </span>
+              )}
+            </div>
+
+            {!isBulkOverride && (
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                {Object.entries(crewBreakdown).map(([crew, count]) => (
+                  <span
+                    key={crew}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 font-medium text-[11px] shadow-2xs"
+                  >
+                    <span className="font-bold text-slate-900">{crew}:</span>
+                    <span className="text-[#92700C] font-mono font-bold">{count}</span> hạng mục
+                  </span>
                 ))}
+              </div>
+            )}
+
+            {/* Checkbox Gán nhanh cho 1 đội duy nhất */}
+            <div className="pt-1 border-t border-slate-200/80">
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer font-medium select-none">
+                <input
+                  type="checkbox"
+                  checked={isBulkOverride}
+                  onChange={(e) => setIsBulkOverride(e.target.checked)}
+                  className="rounded border-slate-300 text-brand-gold focus:ring-brand-gold cursor-pointer"
+                />
+                <span>Gán nhanh 1 Đội thi công duy nhất cho toàn bộ {stats.approved} hạng mục</span>
+              </label>
+
+              {isBulkOverride && (
+                <div className="mt-2 pl-6 space-y-1">
+                  <label className="block text-[11px] font-semibold text-slate-600">
+                    Chọn đội tiếp nhận toàn bộ gói đề xuất:
+                  </label>
+                  <select
+                    value={bulkCrew}
+                    onChange={(e) => setBulkCrew(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold cursor-pointer"
+                  >
+                    {CREW_OPTIONS.map((crew) => (
+                      <option key={crew} value={crew}>
+                        {crew}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    Lựa chọn này sẽ thay thế các tổ đã chọn riêng ở ngoài bảng cho tất cả {stats.approved} hạng mục.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -143,7 +230,7 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
             Hủy bỏ
           </button>
           <button
-            onClick={onConfirmDispatch}
+            onClick={() => onConfirmDispatch(isBulkOverride ? bulkCrew : undefined)}
             type="button"
             className="px-5 h-9 bg-brand-gold hover:bg-[#B38E1F] text-white transition rounded-xl font-bold text-xs shadow-sm inline-flex items-center gap-1.5 cursor-pointer"
           >

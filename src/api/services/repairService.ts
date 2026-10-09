@@ -3,6 +3,7 @@ import {
   ItemApprovalStatus,
   RepairItemDetail,
 } from '../../types/domain'
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 
 export type { ProposalWorkPackage, ItemApprovalStatus, RepairItemDetail }
 
@@ -57,7 +58,7 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     status_label: 'Đã phê duyệt',
     approved_items: 10,
     total_items: 10,
-    contractor_name: 'Xí nghiệp Cầu Đường 4'
+    contractor_name: 'Tổ thi công Asphalt 01'
   },
   {
     id: 'pkg-09',
@@ -180,17 +181,237 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
   }
 ]
 
-// IN-MEMORY DATA STORE (Thay thế hoàn toàn localStorage, mô phỏng Backend DB)
-let inMemoryPackages: ProposalWorkPackage[] = [...INITIAL_PACKAGES]
-const inMemoryItemsByPackage: Record<string, RepairItemDetail[]> = {
-  'pkg-08': [...INITIAL_ITEMS],
-  'PKG-2026-08': [...INITIAL_ITEMS]
-}
+export const PKG_07_ITEMS: RepairItemDetail[] = [
+  {
+    id: 'item-07-01',
+    item_code: '#ITEM-01',
+    defect_code: 'DEF-2026-0021',
+    chainage: 'Km 1033+620',
+    lane_info: 'Làn phải R1 • Tấm #12',
+    defect_title: 'Ổ gà mặt đường sâu 5cm',
+    defect_measurements: 'Diện tích 25 m² • Sâu 5.0cm',
+    solution_title: 'Cào bóc 5cm & thảm lại BTN C12.5',
+    solution_standard: 'Tiêu chuẩn TCVN 8819',
+    volume_display: '25.0 m²',
+    volume_sub: 'Sâu 5.0 cm',
+    area_m2: 25.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1033_R1_POTHOLE.JPG',
+    gps_coords: '15.8245, 108.2140',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-02',
+    item_code: '#ITEM-02',
+    defect_code: 'DEF-2026-0023',
+    chainage: 'Km 1034+150',
+    lane_info: 'Làn trái L2 • Tấm #24',
+    defect_title: 'Nứt dọc kéo dài kèm sứt mép',
+    defect_measurements: 'Dài 18m • Rộng 12mm',
+    solution_title: 'Xẻ rãnh chữ U rót Mastic đàn hồi',
+    solution_standard: 'Quy trình AASHTO M324',
+    volume_display: '18.0 m',
+    volume_sub: 'Rót chèn khe',
+    area_m2: 1.5,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Đội cơ giới Sửa chữa 02',
+    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1034_L2_CRACK.JPG',
+    gps_coords: '15.8260, 108.2155',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-03',
+    item_code: '#ITEM-03',
+    defect_code: 'DEF-2026-0025',
+    chainage: 'Km 1034+780',
+    lane_info: 'Làn giữa M1 • Tấm #45',
+    defect_title: 'Lún vệt bánh xe sâu 28mm',
+    defect_measurements: 'Chiều dài vệt 35m',
+    solution_title: 'Cào bóc san phẳng bù vênh lu lèn',
+    solution_standard: 'Tiêu chuẩn lu lèn K98',
+    volume_display: '55.0 m²',
+    volume_sub: 'Dày 5.0 cm',
+    area_m2: 55.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1034_M1_RUT.JPG',
+    gps_coords: '15.8290, 108.2180',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-04',
+    item_code: '#ITEM-04',
+    defect_code: 'DEF-2026-0028',
+    chainage: 'Km 1035+220',
+    lane_info: 'Làn phải R1 • Tấm #56',
+    defect_title: 'Bong bật bong tróc lớp thảm mặt',
+    defect_measurements: 'Diện tích 32 m² • Sâu 3.5cm',
+    solution_title: 'Cào bóc sâu 4cm thảm lớp hao mòn C9.5',
+    solution_standard: 'Tiêu chuẩn TCVN 8819',
+    volume_display: '32.0 m²',
+    volume_sub: 'Dày 4.0 cm',
+    area_m2: 32.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1035_R1_RAVEL.JPG',
+    gps_coords: '15.8310, 108.2200',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-05',
+    item_code: '#ITEM-05',
+    defect_code: 'DEF-2026-0030',
+    chainage: 'Km 1035+800',
+    lane_info: 'Làn trái L1 • Tấm #68',
+    defect_title: 'Ổ gà cục bộ mép dải phân cách',
+    defect_measurements: 'Diện tích 16.5 m² • Sâu 4.0cm',
+    solution_title: 'Trám vá nhựa nguội Carboncor đầm K95',
+    solution_standard: 'Định mức TCVN 8819',
+    volume_display: '16.5 m²',
+    volume_sub: 'Dày 4.0 cm',
+    area_m2: 16.5,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Đội bảo dưỡng Thường xuyên',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1035_L1_POTHOLE.JPG',
+    gps_coords: '15.8335, 108.2225',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-06',
+    item_code: '#ITEM-06',
+    defect_code: 'DEF-2026-0033',
+    chainage: 'Km 1036+150',
+    lane_info: 'Làn giữa M1 • Tấm #75',
+    defect_title: 'Nứt mạng lưới rạn mai rùa',
+    defect_measurements: 'Diện tích 48 m² • Rạn nứt sâu',
+    solution_title: 'Cào bóc xử lý móng CPĐD + thảm 2 lớp',
+    solution_standard: 'Gia cố móng TCVN 8859',
+    volume_display: '48.0 m²',
+    volume_sub: 'Cào bóc sâu 8cm',
+    area_m2: 48.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1036_M1_ALLIG.JPG',
+    gps_coords: '15.8360, 108.2250',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-07',
+    item_code: '#ITEM-07',
+    defect_code: 'DEF-2026-0036',
+    chainage: 'Km 1036+700',
+    lane_info: 'Làn phải R2 • Tấm #84',
+    defect_title: 'Trám mastic khe nối bị bong bật',
+    defect_measurements: 'Dài 22m dọc khe co giãn',
+    solution_title: 'Làm sạch và bơm mastic polymer chịu nhiệt',
+    solution_standard: 'Tiêu chuẩn AASHTO M324',
+    volume_display: '22.0 m',
+    volume_sub: 'Chèn kín khe',
+    area_m2: 2.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Đội cơ giới Sửa chữa 02',
+    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1036_R2_JOINT.JPG',
+    gps_coords: '15.8385, 108.2275',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-08',
+    item_code: '#ITEM-08',
+    defect_code: 'DEF-2026-0039',
+    chainage: 'Km 1037+120',
+    lane_info: 'Làn trái L1 • Tấm #92',
+    defect_title: 'Lún võng cục bộ vệt bánh xe',
+    defect_measurements: 'Diện tích 42 m² • Sâu 3.0cm',
+    solution_title: 'Cào bóc bù vênh bê tông nhựa polime',
+    solution_standard: 'Độ chặt lu lèn K98',
+    volume_display: '42.0 m²',
+    volume_sub: 'Dày 4.5 cm',
+    area_m2: 42.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1037_L1_RUT.JPG',
+    gps_coords: '15.8410, 108.2300',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-09',
+    item_code: '#ITEM-09',
+    defect_code: 'DEF-2026-0042',
+    chainage: 'Km 1037+550',
+    lane_info: 'Làn giữa M1 • Tấm #101',
+    defect_title: 'Nứt chân chim diện rộng',
+    defect_measurements: 'Diện tích 45 m²',
+    solution_title: 'Tưới nhựa dính bám & thảm phủ bảo vệ',
+    solution_standard: 'Quy chuẩn TCVN 8819',
+    volume_display: '45.0 m²',
+    volume_sub: 'Lớp phủ 3.0 cm',
+    area_m2: 45.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1037_M1_CRACK.JPG',
+    gps_coords: '15.8435, 108.2325',
+    resolution: '4K • 3840x2160'
+  },
+  {
+    id: 'item-07-10',
+    item_code: '#ITEM-10',
+    defect_code: 'DEF-2026-0045',
+    chainage: 'Km 1037+900',
+    lane_info: 'Làn phải R1 • Tấm #110',
+    defect_title: 'Ổ gà sâu mép lề đường',
+    defect_measurements: 'Diện tích 53 m² • Sâu 6.0cm',
+    solution_title: 'Đục tẩy vuông thành vá dặm thảm BTN C12.5',
+    solution_standard: 'Định mức TCVN 8819',
+    volume_display: '53.0 m²',
+    volume_sub: 'Sâu 6.0 cm',
+    area_m2: 53.0,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ thi công Asphalt 01',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1037_R1_POTHOLE.JPG',
+    gps_coords: '15.8460, 108.2350',
+    resolution: '4K • 3840x2160'
+  }
+]
+
+// PERSISTENT LOCAL STORAGE STORE (Mô phỏng DB đồng bộ giữa các màn hình và giữ trạng thái khi F5)
+let inMemoryPackages: ProposalWorkPackage[] = getFromStorage(
+  STORAGE_KEYS.REPAIR_PROPOSALS,
+  [...INITIAL_PACKAGES]
+)
+const inMemoryItemsByPackage: Record<string, RepairItemDetail[]> = getFromStorage(
+  STORAGE_KEYS.PROPOSAL_ITEMS,
+  {
+    'pkg-08': [...INITIAL_ITEMS],
+    'PKG-2026-08': [...INITIAL_ITEMS],
+    'pkg-07': [...PKG_07_ITEMS],
+    'PKG-2026-07': [...PKG_07_ITEMS]
+  }
+)
 
 const notifyStateChange = () => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('roadguard_state_change'))
-  }
+  saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, inMemoryPackages)
+  saveToStorage(STORAGE_KEYS.PROPOSAL_ITEMS, inMemoryItemsByPackage)
 }
 
 export const repairService = {
