@@ -70,3 +70,23 @@
    - Không thay đổi hoặc phá vỡ bất kỳ đường dẫn nào trong cấu trúc router của dự án.
 3. **Kiểm tra tính độc lập & In-Memory:**
    - Mock API hoạt động bất đồng bộ, phản hồi nhanh và lưu trạng thái trong RAM theo đúng vòng đời phiên làm việc, không lưu rác vào `localStorage`.
+
+---
+
+## IV. BỔ SUNG: CHUẨN HÓA MÀN HÌNH THỰC NGHIỆM AI (RPT-09 / RESEARCH VALIDATION)
+
+1. **Tạo In-Memory Service chuẩn `validationService.ts`:**
+   - Tách rời hoàn toàn khỏi `mock/data` tĩnh và loại bỏ 100% `localStorage`.
+   - Cung cấp các API bất đồng bộ: `getValidationOverview()`, `getSamples()`, `triggerValidationRun()`, `cancelValidationJob()`, `exportValidationCsv()`.
+   - Bổ sung tập dữ liệu 10 cặp mẫu thực tế đa dạng các loại hư hỏng (Ổ gà, Chênh cốt mép tấm, Lún vệt bánh xe, Võng lún đầu cống, Nứt dọc, Nứt ngang) với trạng thái hợp lệ `INCLUDED`, bị loại `EXCLUDED` và ngoại lai `OUTLIER`.
+
+2. **Dọn dẹp chi tiết thừa & Bám sát DESIGN.md:**
+   - Xóa bỏ khối văn bản màu đỏ dài 5 dòng gây rối mắt ở giữa màn hình; thay bằng thanh tóm tắt tiêu chí loại trừ theo `BR-44 & DD-C09` tinh gọn, thanh lịch.
+   - Xóa bỏ các watermark hình tròn góc che khuất card metrics.
+   - Thay thế toàn bộ hộp thoại `alert(...)` thô sơ của trình duyệt bằng Toast Notification thông báo nổi tại góc dưới màn hình.
+   - Tuân thủ quy tắc 1 nút CTA chính: Nút vàng đồng Hoàng Hải `#C9A227` cho hành động "Chạy kiểm định mới", nút phụ màu trắng viền xám cho "Xuất CSV đối soát".
+
+3. **Chuyển đổi 100% Google Material Symbols:**
+   - Gỡ bỏ hoàn toàn thư viện `lucide-react` trong toàn bộ các file con của `research/` (`ResearchHeader`, `ValidationMetricsCards`, `ValidationRunsTable`, `AsyncValidationJobBanner`, `PairedSamplesTable`).
+   - Sử dụng thống nhất: `science`, `download`, `play_arrow`, `verified`, `check_circle`, `info`, `schedule`, `analytics`, `sync`.
+

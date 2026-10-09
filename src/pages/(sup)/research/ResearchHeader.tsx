@@ -1,5 +1,4 @@
 import React from 'react'
-import { Sparkles, Download, PlayCircle, Verified } from 'lucide-react'
 import { MeasurementValidationRun } from '../../../types/domain'
 
 interface ResearchHeaderProps {
@@ -20,22 +19,22 @@ export const ResearchHeader: React.FC<ResearchHeaderProps> = ({
   return (
     <>
       {/* 1. Header & Active Model Specs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-brand-border pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <span>Hệ thống báo cáo</span>
+            <span>Báo cáo &amp; Hồ sơ</span>
             <span>/</span>
-            <span className="text-brand-goldDark font-semibold">RPT-09: Báo cáo thực nghiệm (Research Validation)</span>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+            <span className="text-slate-800 font-semibold">Thực nghiệm AI (RPT-09)</span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
               Chuẩn v2.2 (FR-31 / BR-44)
             </span>
           </div>
-          <h1 className="text-2xl font-black text-brand-dark tracking-tight flex items-center gap-2">
-            Báo Cáo Nghiên Cứu &amp; Kiểm Chứng Thực Nghiệm (RPT-09)
-            <Sparkles className="w-5 h-5 text-brand-gold" />
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2 font-sansation">
+            <span>Thực Nghiệm Đối Soát Mô Hình AI &amp; Thực Địa</span>
+            <span className="material-symbols-outlined text-[22px] text-brand-gold">science</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Đối soát kết quả ghép cặp giữa số đo thực tế (Ground Truth) và số đo mô hình (Derived) — Tính toán Bias, MAE, RMSE theo RS01–RS06, BR-44, MET-12
+            Đối soát kết quả ghép cặp giữa số đo thực tế (Ground Truth) và số đo mô hình trích xuất từ Drone (Derived) — Bias, MAE, RMSE theo RS01–RS06, MET-12
           </p>
         </div>
 
@@ -44,50 +43,54 @@ export const ResearchHeader: React.FC<ResearchHeaderProps> = ({
           <button
             onClick={onExport}
             disabled={isExporting}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-all disabled:opacity-50"
+            type="button"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50 cursor-pointer"
             title="Xuất bảng đối soát số đo thực tế và dự đoán AI theo quy chuẩn RPT-09"
           >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>{isExporting ? 'Đang kết xuất...' : 'Xuất CSV Dữ Liệu Đối Soát'}</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-500">download</span>
+            <span>{isExporting ? 'Đang kết xuất...' : 'Xuất CSV đối soát'}</span>
           </button>
 
           <button
             onClick={onTriggerValidation}
             disabled={isRunningVal}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-navy hover:bg-slate-800 shadow-md transition-all disabled:opacity-50"
+            type="button"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-slate-900 bg-brand-gold hover:bg-amber-400 shadow-2xs transition disabled:opacity-50 cursor-pointer"
           >
-            <PlayCircle className="w-4 h-4 text-brand-gold" />
-            <span>{isRunningVal ? 'Đang khởi tạo Job...' : 'Chạy Thẩm Định Mới'}</span>
+            <span className="material-symbols-outlined text-[16px] text-slate-900">
+              {isRunningVal ? 'sync' : 'play_arrow'}
+            </span>
+            <span>{isRunningVal ? 'Đang khởi tạo Job...' : 'Chạy kiểm định mới'}</span>
           </button>
         </div>
       </div>
 
       {/* Model & Dataset Metadata Ribbon */}
-      <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="text-slate-500">Mô hình AI:</span>
-            <span className="font-bold text-brand-dark">{activeRun.algorithm_version}</span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+            <span className="font-bold text-slate-800">{activeRun.algorithm_version}</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
               {activeRun.run_code}
             </span>
           </div>
-          <div className="h-4 w-px bg-slate-300" />
+          <div className="h-4 w-px bg-slate-300 hidden sm:block" />
           <div className="flex items-center gap-1.5">
             <span className="text-slate-500">Tập dữ liệu:</span>
             <span className="font-semibold text-slate-700">{activeRun.dataset_name}</span>
           </div>
-          <div className="h-4 w-px bg-slate-300" />
+          <div className="h-4 w-px bg-slate-300 hidden sm:block" />
           <div className="flex items-center gap-1.5">
             <span className="text-slate-500">Phương pháp đo:</span>
-            <span className="font-semibold text-slate-700">Thước thẳng 3m &amp; Thước đo sâu điện tử (Straightedge/Depth gauge)</span>
+            <span className="font-semibold text-slate-700">Thước thẳng 3m &amp; Thước đo sâu điện tử (TCVN 8864)</span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            <Verified className="w-3.5 h-3.5" />
-            {activeRun.is_mock_data ? 'Dữ liệu Giả Lập (MOCK)' : 'Dữ Liệu Thực Địa (REAL - BR-44)'}
+            <span className="material-symbols-outlined text-[14px]">verified</span>
+            <span>{activeRun.is_mock_data ? 'Dữ liệu Giả Lập (MOCK)' : 'Dữ Liệu Thực Địa (REAL - BR-44)'}</span>
           </span>
           <span className="text-[11px] text-slate-400">
             Cập nhật: {activeRun.executed_at}

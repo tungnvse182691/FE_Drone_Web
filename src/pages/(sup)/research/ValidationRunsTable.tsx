@@ -1,6 +1,5 @@
 import React from 'react'
 import { Card } from '../../../components/ui/Card'
-import { Activity, Clock } from 'lucide-react'
 import { MeasurementValidationRun } from '../../../types/domain'
 
 interface ValidationRunsTableProps {
@@ -15,7 +14,7 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
     >
       <div className="overflow-x-auto">
         <table className="w-full text-xs text-left">
-          <thead className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+          <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
             <tr>
               <th className="py-2.5 px-3">Mã Đợt Chạy (Run Code)</th>
               <th className="py-2.5 px-3">Thuật Toán &amp; Phương Pháp Đo</th>
@@ -29,12 +28,12 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
               <th className="py-2.5 px-3 text-center">Trạng Thái</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-100">
             {runs.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+              <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                 <td className="py-2.5 px-3">
-                  <div className="font-mono font-bold text-brand-dark flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-brand-gold" />
+                  <div className="font-mono font-bold text-slate-900 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[14px] text-brand-gold">analytics</span>
                     <span>{r.run_code}</span>
                   </div>
                   <div className="text-[10px] text-slate-400 font-mono mt-0.5">
@@ -55,11 +54,11 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
                 </td>
                 <td className="py-2.5 px-3 text-center">
                   {r.is_mock_data ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                       GIẢ LẬP (MOCK)
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                       THỰC ĐỊA (REAL)
                     </span>
                   )}
@@ -81,23 +80,23 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
                 <td className="py-2.5 px-3">
                   <div className="font-medium text-slate-700">{r.triggered_by_name}</div>
                   <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
-                    <Clock className="w-3 h-3 text-slate-400" />
+                    <span className="material-symbols-outlined text-[12px]">schedule</span>
                     <span>{r.executed_at}</span>
                   </div>
                 </td>
                 <td className="py-2.5 px-3 text-center">
                   {r.status === 'COMPLETED' && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                       HOÀN TẤT
                     </span>
                   )}
                   {r.status === 'RUNNING' && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 animate-pulse">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                       ĐANG CHẠY 202
                     </span>
                   )}
                   {r.status === 'FAILED' && (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                       THẤT BÀI
                     </span>
                   )}
