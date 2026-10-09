@@ -1,9 +1,10 @@
 import React from 'react'
-import { Check } from 'lucide-react'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { PROJECTS_CONFIG } from './risk-analytics/data'
 import { useRiskAnalyticsState } from './risk-analytics/useRiskAnalyticsState'
 import { RiskHeader } from './risk-analytics/RiskHeader'
 import { RiskMetricsGrid } from './risk-analytics/RiskMetricsGrid'
+import { RiskDeteriorationSection } from './risk-analytics/RiskDeteriorationSection'
 import { RiskExportsTable } from './risk-analytics/RiskExportsTable'
 import { RiskModals } from './risk-analytics/RiskModals'
 
@@ -40,6 +41,17 @@ export const RiskAnalytics: React.FC = () => {
     setExportForm,
     showToast,
     processedRecords,
+    rpt06Segments,
+    activeSegmentId,
+    activeSegment,
+    mapContainerRef,
+    mapLayer,
+    setMapLayer,
+    handleFocusSegment,
+    handleToggleSurveyPlan,
+    handleZoomIn,
+    handleZoomOut,
+    handleFitBounds,
     handleToggleSort,
     handleCreateExportJob,
     handleCancelActiveJob,
@@ -54,9 +66,9 @@ export const RiskAnalytics: React.FC = () => {
     <div className="space-y-6 pb-16 text-[#1E293B]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <Check className="w-5 h-5 text-brand-gold shrink-0" />
-          <span className="text-sm font-medium">{toastMessage}</span>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <span className="material-symbols-outlined text-[18px] text-[#C9A227] shrink-0">check_circle</span>
+          <span className="text-xs font-medium">{toastMessage}</span>
         </div>
       )}
 
@@ -96,6 +108,22 @@ export const RiskAnalytics: React.FC = () => {
         exportRecords={exportRecords}
         setSelectedRecordForDetail={setSelectedRecordForDetail}
         setIsPreviewModalOpen={setIsPreviewModalOpen}
+      />
+
+      {/* RPT-06: GIS Risk Map & Deterioration Progression by Chainage Km */}
+      <RiskDeteriorationSection
+        segments={rpt06Segments}
+        activeSegmentId={activeSegmentId}
+        activeSegment={activeSegment}
+        mapContainerRef={mapContainerRef}
+        mapLayer={mapLayer}
+        setMapLayer={setMapLayer}
+        onFocusSegment={handleFocusSegment}
+        onToggleSurveyPlan={handleToggleSurveyPlan}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onFitBounds={handleFitBounds}
+        projectName={currentProject.name}
       />
 
       {/* Export Records Table & Legal Strip */}

@@ -96,12 +96,12 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'reports',
-      title: 'Báo cáo & Kiểm toán',
+      title: 'Báo cáo & Hồ sơ',
       icon: BarChart3,
       items: [
         { label: 'Báo cáo KPI', path: '/pm/reports', icon: BarChart3 },
         { label: 'Thực nghiệm AI', path: '/pm/research-validation', icon: Sparkles },
-        { label: 'Nhật ký kiểm toán', path: '/pm/audit-trail', icon: History },
+        { label: 'Nhật ký hoạt động', path: '/pm/audit-trail', icon: History },
         { label: 'Lưu trữ hồ sơ', path: '/pm/retention', icon: Sliders }
       ]
     }
@@ -151,7 +151,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Phân tích rủi ro', path: '/sup/risk-analytics', icon: BarChart3 },
         { label: 'Kiểm định mô hình', path: '/sup/research-validation', icon: Sparkles },
-        { label: 'Nhật ký kiểm toán', path: '/sup/audit-trail', icon: History },
+        { label: 'Nhật ký hoạt động', path: '/sup/audit-trail', icon: History },
         { label: 'Quản trị hệ thống', path: '/sup/system-control', icon: Sliders }
       ]
     }

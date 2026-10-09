@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { surveyService, INITIAL_SURVEY_ROUTES, INITIAL_PILOTS } from '../../api/services'
 import { getSubLineCoordinates } from './create-survey/mockData'
 import { CreateSurveyHeader } from './create-survey/CreateSurveyHeader'
@@ -10,16 +10,21 @@ import { Icon } from '../../components/ui/Icon'
 
 export const CreateSurvey: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const queryProject = searchParams.get('project') || searchParams.get('projectId')
+  const queryStartKm = searchParams.get('startKm')
+  const queryEndKm = searchParams.get('endKm')
 
   // State nạp từ Mock API (Khởi tạo sẵn với đầy đủ Tuyến chính & Tuyến phụ)
   const [routes, setRoutes] = useState<ProjectRouteConfig[]>(INITIAL_SURVEY_ROUTES)
   const [pilots, setPilots] = useState<AvailablePilot[]>(INITIAL_PILOTS)
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
-  // State dự án và lý trình
-  const [projectId, setProjectId] = useState<string>(INITIAL_SURVEY_ROUTES[0]?.id || 'prj-ql1a-02')
-  const [startKm, setStartKm] = useState<string>('1020.0')
-  const [endKm, setEndKm] = useState<string>('1025.0')
+  // State dự án và lý trình (Ưu tiên nạp từ query parameters nếu được chuyển tiếp từ RPT-06)
+  const [projectId, setProjectId] = useState<string>(queryProject || INITIAL_SURVEY_ROUTES[0]?.id || 'prj-ql1a-02')
+  const [startKm, setStartKm] = useState<string>(queryStartKm || '1020.0')
+  const [endKm, setEndKm] = useState<string>(queryEndKm || '1025.0')
   const [date, setDate] = useState<string>('2026-10-15')
 
   // Phi công chỉ định
@@ -35,9 +40,12 @@ export const CreateSurvey: React.FC = () => {
   const [showOverlapHelp, setShowOverlapHelp] = useState<boolean>(false)
 
   // Ghi chú
-  const [notes, setNotes] = useState<string>(
-    'Khảo sát định kỳ quý IV sau mùa bão lũ. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.'
-  )
+  const [notes, setNotes] = useState<string>(() => {
+    if (queryStartKm && queryEndKm) {
+      return `Bay khảo sát rà soát nứt lún suy thoái đoạn Km ${queryStartKm} - Km ${queryEndKm} theo cảnh báo RPT-06. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
+    }
+    return 'Khảo sát định kỳ quý IV sau mùa bão lũ. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.'
+  })
 
   // Nạp dữ liệu Tuyến đường & Phi công từ Mock API bất đồng bộ
   useEffect(() => {
@@ -55,10 +63,23 @@ export const CreateSurvey: React.FC = () => {
         setPilots(pilotsData)
 
         if (routesData.length > 0) {
-          const defaultRoute = routesData[0]
-          setProjectId(defaultRoute.id)
-          setStartKm(defaultRoute.startKm.toFixed(1))
-          setEndKm(Math.min(defaultRoute.startKm + 5.0, defaultRoute.endKm).toFixed(1))
+          const matchedRoute = queryProject
+            ? routesData.find((r) => r.id === queryProject || r.code === queryProject)
+            : null
+          const activeRoute = matchedRoute || routesData[0]
+          setProjectId(activeRoute.id)
+
+          if (queryStartKm) {
+            setStartKm(queryStartKm)
+          } else if (!matchedRoute) {
+            setStartKm(activeRoute.startKm.toFixed(1))
+          }
+
+          if (queryEndKm) {
+            setEndKm(queryEndKm)
+          } else if (!matchedRoute) {
+            setEndKm(Math.min(activeRoute.startKm + 5.0, activeRoute.endKm).toFixed(1))
+          }
         }
 
         if (pilotsData.length > 0) {
@@ -75,7 +96,7 @@ export const CreateSurvey: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [queryProject, queryStartKm, queryEndKm])
 
   const currentProject = useMemo(() => {
     return (

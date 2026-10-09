@@ -65,3 +65,37 @@ export interface ExportFormState {
   compressRawTiff?: boolean
   format?: string
 }
+
+export interface Rpt06RiskSegment {
+  id: string
+  project_id: string
+  project_name: string
+  section_name: string
+  chainage_start: string
+  chainage_end: string
+  chainage_display: string
+  risk_level: 'CRITICAL' | 'WATCH' | 'MODERATE'
+  risk_level_label: string
+  risk_score: number
+  open_defects_count: number
+  defect_summary: string
+  damaged_area_m2: number
+  crack_length_m: number
+  avg_depth_cm: number
+  deterioration_rate_pct: number
+  temporal_comparison: {
+    baseline_epoch: string
+    current_epoch: string
+    growth_pct: number
+    severity_progression: string
+  }
+  sla_remaining: string
+  sla_status: 'urgent' | 'warning' | 'normal'
+  gps_lat: number
+  gps_lng: number
+  recommended_action: string
+  survey_plan_suggested: boolean
+  start_km_num: number
+  end_km_num: number
+  coordinates: [number, number][]
+}

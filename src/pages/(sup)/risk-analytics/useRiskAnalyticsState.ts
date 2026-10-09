@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
-import { ExportRecord, AsyncExportJob } from './types'
-import { PROJECTS_CONFIG, INITIAL_EXPORT_RECORDS } from './data'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import * as maplibregl from 'maplibre-gl'
+import { getMapLibreStyle } from '../../../utils/maplibre'
+import { ExportRecord, AsyncExportJob, Rpt06RiskSegment } from './types'
+import { PROJECTS_CONFIG } from './data'
 import { computeProjectMetrics, filterAndSortRecords } from './riskAnalyticsCalculations'
+import { reportService } from '../../../api/services/reportService'
 
 export function useRiskAnalyticsState() {
   const [selectedProject, setSelectedProject] = useState('prj-ql1a-02')
@@ -23,18 +26,18 @@ export function useRiskAnalyticsState() {
     return computeProjectMetrics(base, selectedTrack, selectedTimeRange)
   }, [selectedProject, selectedTrack, selectedTimeRange])
 
-  const [activeJob, setActiveJob] = useState<AsyncExportJob | null>({
-    id: 'JOB-EXP-8842',
-    name: 'QL1A_Q3_2026.zip',
-    progress: 65,
-    processedItems: 31,
-    totalItems: 48,
-    estimatedSecondsRemaining: 18,
-    tempSizeMb: 92.4,
-    status: 'PROCESSING'
-  })
+  const [activeJob, setActiveJob] = useState<AsyncExportJob | null>(null)
+  const [exportRecords, setExportRecords] = useState<ExportRecord[]>([])
 
-  const [exportRecords, setExportRecords] = useState<ExportRecord[]>(INITIAL_EXPORT_RECORDS)
+  // RPT-06 Deterioration Risks & GIS State
+  const [rpt06Segments, setRpt06Segments] = useState<Rpt06RiskSegment[]>([])
+  const [mainlineCoords, setMainlineCoords] = useState<[number, number][]>([])
+  const [activeSegmentId, setActiveSegmentId] = useState<string>('rpt06-ql1a-01')
+  const [mapLayer, setMapLayer] = useState<'satellite' | 'vector'>('satellite')
+
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<maplibregl.Map | null>(null)
+  const markersRef = useRef<maplibregl.Marker[]>([])
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
@@ -51,18 +54,46 @@ export function useRiskAnalyticsState() {
     format: 'ZIP_PDF'
   })
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3500)
-  }
+  }, [])
 
+  // Load initial data from async Mock API (No localStorage!)
+  const loadData = useCallback(async () => {
+    try {
+      const [records, job, segments, mainline] = await Promise.all([
+        reportService.getExportRecords(),
+        reportService.getActiveJob(),
+        reportService.getRpt06DeteriorationRisks(selectedProject),
+        reportService.getProjectMainline(selectedProject)
+      ])
+      setExportRecords(records as ExportRecord[])
+      if (job) {
+        setActiveJob(job as AsyncExportJob)
+      }
+      setRpt06Segments(segments as Rpt06RiskSegment[])
+      setMainlineCoords(mainline)
+      if (segments.length > 0) {
+        setActiveSegmentId(segments[0].id)
+      }
+    } catch {
+      // Fallback
+    }
+  }, [selectedProject])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Background worker progress simulation
   useEffect(() => {
     if (!activeJob || activeJob.status !== 'PROCESSING') return
     const interval = setInterval(() => {
       setActiveJob((prev) => {
         if (!prev || prev.status !== 'PROCESSING') return prev
         if (prev.progress >= 98) {
-          showToast('Tác vụ #JOB-EXP-8842 đã đóng gói thành công!')
+          showToast(`Tác vụ #${prev.id} đã hoàn tất đóng gói hồ sơ!`)
           return {
             ...prev,
             progress: 100,
@@ -70,9 +101,9 @@ export function useRiskAnalyticsState() {
             estimatedSecondsRemaining: 0
           }
         }
-        const nextProgress = Math.min(prev.progress + 2, 98)
+        const nextProgress = Math.min(prev.progress + 3, 98)
         const nextItems = Math.min(Math.floor((nextProgress / 100) * prev.totalItems), prev.totalItems)
-        const nextTime = Math.max(Math.round(((100 - nextProgress) / 100) * 24), 2)
+        const nextTime = Math.max(Math.round(((100 - nextProgress) / 100) * 20), 2)
         return {
           ...prev,
           progress: nextProgress,
@@ -80,9 +111,9 @@ export function useRiskAnalyticsState() {
           estimatedSecondsRemaining: nextTime
         }
       })
-    }, 2500)
+    }, 2000)
     return () => clearInterval(interval)
-  }, [activeJob?.status])
+  }, [activeJob?.status, showToast])
 
   const processedRecords = useMemo(() => {
     return filterAndSortRecords(
@@ -97,6 +128,277 @@ export function useRiskAnalyticsState() {
     )
   }, [exportRecords, selectedProject, statusFilter, selectedTimeRange, selectedTrack, searchQuery, sortField, sortAsc])
 
+  const activeSegment = useMemo(() => {
+    return rpt06Segments.find((s) => s.id === activeSegmentId) || rpt06Segments[0]
+  }, [rpt06Segments, activeSegmentId])
+
+  // Đồng bộ nguồn dữ liệu GeoJSON đường tim tuyến và các dải phân đoạn nứt lún lên MapLibre
+  const syncMapGeometry = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map || !map.isStyleLoaded()) return
+
+    // 1. Tuyến đường tim tuyến toàn dự án (LineString chính)
+    if (mainlineCoords.length > 1) {
+      const mainlineGeoJson: GeoJSON.Feature = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: mainlineCoords
+        }
+      }
+
+      if (map.getSource('project-mainline')) {
+        ;(map.getSource('project-mainline') as maplibregl.GeoJSONSource).setData(mainlineGeoJson)
+      } else {
+        map.addSource('project-mainline', {
+          type: 'geojson',
+          data: mainlineGeoJson
+        })
+
+        map.addLayer({
+          id: 'project-mainline-casing',
+          type: 'line',
+          source: 'project-mainline',
+          paint: {
+            'line-color': '#0F172A',
+            'line-width': 7,
+            'line-opacity': 0.65
+          }
+        })
+
+        map.addLayer({
+          id: 'project-mainline-layer',
+          type: 'line',
+          source: 'project-mainline',
+          paint: {
+            'line-color': '#94A3B8',
+            'line-width': 4,
+            'line-opacity': 0.85
+          }
+        })
+      }
+    }
+
+    // 2. Các phân đoạn suy thoái mặt đường rủi ro cao (RPT-06)
+    const validSegments = rpt06Segments.filter((s) => s.coordinates && s.coordinates.length > 1)
+    const features: GeoJSON.Feature[] = validSegments.map((s) => ({
+      type: 'Feature',
+      properties: {
+        id: s.id,
+        color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#3B82F6',
+        chainage: s.chainage_display
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: s.coordinates
+      }
+    }))
+
+    const segmentsGeoJson: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features
+    }
+
+    if (map.getSource('risk-segments')) {
+      ;(map.getSource('risk-segments') as maplibregl.GeoJSONSource).setData(segmentsGeoJson)
+    } else {
+      map.addSource('risk-segments', {
+        type: 'geojson',
+        data: segmentsGeoJson
+      })
+
+      // Viền phát quang (glow halo)
+      map.addLayer({
+        id: 'risk-segments-halo',
+        type: 'line',
+        source: 'risk-segments',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 12,
+          'line-opacity': 0.45,
+          'line-blur': 4
+        }
+      })
+
+      // Nét vẽ chính của phân đoạn hư hỏng
+      map.addLayer({
+        id: 'risk-segments-line',
+        type: 'line',
+        source: 'risk-segments',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 6
+        }
+      })
+
+      // Viền đứt nét màu trắng cho phân đoạn đang chọn
+      map.addLayer({
+        id: 'risk-segments-selected',
+        type: 'line',
+        source: 'risk-segments',
+        filter: ['==', ['get', 'id'], activeSegmentId],
+        paint: {
+          'line-color': '#FFFFFF',
+          'line-width': 8,
+          'line-opacity': 0.9,
+          'line-dasharray': [2, 1]
+        }
+      })
+
+      // Bắt sự kiện click vào đường phân đoạn để chọn
+      map.on('click', 'risk-segments-line', (e) => {
+        if (e.features && e.features[0]) {
+          const clickedId = e.features[0].properties?.id
+          if (clickedId) {
+            setActiveSegmentId(clickedId)
+          }
+        }
+      })
+
+      map.on('mouseenter', 'risk-segments-line', () => {
+        map.getCanvas().style.cursor = 'pointer'
+      })
+      map.on('mouseleave', 'risk-segments-line', () => {
+        map.getCanvas().style.cursor = ''
+      })
+    }
+
+    if (map.getLayer('risk-segments-selected')) {
+      map.setFilter('risk-segments-selected', ['==', ['get', 'id'], activeSegmentId])
+    }
+  }, [mainlineCoords, rpt06Segments, activeSegmentId])
+
+  // MapLibre Initialization
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+
+    if (!mapInstanceRef.current) {
+      const defaultCenter: [number, number] = [108.1492, 16.2238]
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: getMapLibreStyle('SATELLITE'),
+        center: defaultCenter,
+        zoom: 12,
+        minZoom: 5,
+        maxZoom: 18,
+        pitch: 25
+      })
+
+      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
+
+      map.on('style.load', () => {
+        syncMapGeometry()
+      })
+
+      mapInstanceRef.current = map
+    } else {
+      const styleUrl = getMapLibreStyle(mapLayer === 'satellite' ? 'SATELLITE' : 'STREETS')
+      mapInstanceRef.current.setStyle(styleUrl)
+    }
+  }, [mapLayer, syncMapGeometry])
+
+  // Kích hoạt vẽ đường hình học khi dữ liệu hoặc phân đoạn chọn thay đổi
+  useEffect(() => {
+    syncMapGeometry()
+  }, [syncMapGeometry])
+
+  // Render Markers on Map
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    markersRef.current.forEach((m) => m.remove())
+    markersRef.current = []
+
+    rpt06Segments.forEach((item) => {
+      const isSelected = item.id === activeSegmentId
+      const el = document.createElement('div')
+      el.className = 'cursor-pointer transition-transform duration-200'
+      el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)'
+
+      const badgeColor =
+        item.risk_level === 'CRITICAL'
+          ? 'bg-rose-600 border-rose-200 text-white'
+          : item.risk_level === 'WATCH'
+          ? 'bg-amber-600 border-amber-200 text-white'
+          : 'bg-blue-600 border-blue-200 text-white'
+
+      el.innerHTML = `
+        <div class="flex flex-col items-center">
+          <div class="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md border ${badgeColor} whitespace-nowrap mb-1">
+            ${item.chainage_start}: ${item.open_defects_count} lỗi
+          </div>
+          <div class="w-4 h-4 rounded-full ${
+            item.risk_level === 'CRITICAL' ? 'bg-rose-500' : item.risk_level === 'WATCH' ? 'bg-amber-500' : 'bg-blue-500'
+          } border-2 border-white shadow-lg animate-pulse"></div>
+        </div>
+      `
+
+      el.addEventListener('click', () => {
+        setActiveSegmentId(item.id)
+      })
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat([item.gps_lng, item.gps_lat])
+        .addTo(map)
+
+      markersRef.current.push(marker)
+    })
+
+    // If active segment changes, center map
+    if (activeSegment && map) {
+      map.flyTo({
+        center: [activeSegment.gps_lng, activeSegment.gps_lat],
+        zoom: 14,
+        speed: 1.2
+      })
+    }
+  }, [rpt06Segments, activeSegmentId, activeSegment])
+
+  const handleFocusSegment = useCallback((segment: Rpt06RiskSegment) => {
+    setActiveSegmentId(segment.id)
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo({
+        center: [segment.gps_lng, segment.gps_lat],
+        zoom: 14.5,
+        speed: 1.2,
+        curve: 1.4
+      })
+    }
+  }, [])
+
+  const handleToggleSurveyPlan = useCallback(async (segmentId: string) => {
+    try {
+      const updated = await reportService.toggleSurveyPlan(segmentId)
+      setRpt06Segments((prev) =>
+        prev.map((s) => (s.id === segmentId ? (updated as Rpt06RiskSegment) : s))
+      )
+      showToast(
+        updated.survey_plan_suggested
+          ? `Đã đánh dấu phân đoạn ${updated.chainage_display} vào kế hoạch bay khảo sát định kỳ tiếp theo!`
+          : `Đã hủy đánh dấu phân đoạn ${updated.chainage_display} khỏi kế hoạch bay!`
+      )
+    } catch {
+      showToast('Có lỗi khi cập nhật kế hoạch bay khảo sát.')
+    }
+  }, [showToast])
+
+  const handleZoomIn = useCallback(() => {
+    if (mapInstanceRef.current) mapInstanceRef.current.zoomIn({ duration: 300 })
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    if (mapInstanceRef.current) mapInstanceRef.current.zoomOut({ duration: 300 })
+  }, [])
+
+  const handleFitBounds = useCallback(() => {
+    if (!mapInstanceRef.current || rpt06Segments.length === 0) return
+    const bounds = new maplibregl.LngLatBounds()
+    rpt06Segments.forEach((s) => bounds.extend([s.gps_lng, s.gps_lat]))
+    mapInstanceRef.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 })
+  }, [rpt06Segments])
+
   const handleToggleSort = (field: 'as_of_timestamp' | 'code' | 'scope_display' | 'file_size_mb' | 'status') => {
     if (sortField === field) {
       setSortAsc(!sortAsc)
@@ -106,92 +408,53 @@ export function useRiskAnalyticsState() {
     }
   }
 
-  const handleCreateExportJob = (e: React.FormEvent) => {
+  const handleCreateExportJob = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsExportModalOpen(false)
-    const newJobId = `JOB-EXP-${Math.floor(Math.random() * 8999 + 1000)}`
-    const newExportCode = `#EXP-2026-${Math.floor(Math.random() * 899 + 100)}`
 
-    setActiveJob({
-      id: newJobId,
-      name: `BaoCao_KiemToan_${currentProject.shortName.replace(/\s+/g, '_')}_Q3.zip`,
-      progress: 5,
-      processedItems: 2,
-      totalItems: 42,
-      estimatedSecondsRemaining: 32,
-      tempSizeMb: 14.5,
-      status: 'PROCESSING'
-    })
-
-    const newRecord: ExportRecord = {
-      id: `rec-${Date.now()}`,
-      code: newExportCode,
-      project_id: selectedProject === 'ALL' ? 'prj-ql1a-02' : selectedProject,
-      project_code: currentProject.code,
-      quarter: 'Q3_2026',
-      track: selectedTrack === 'FAST_TRACK' ? 'FAST_TRACK' : 'APPROVAL_TRACK',
-      type:
-        exportForm.reportType === 'DOSSIER_COMPLETE'
-          ? 'Hồ sơ kiểm toán & Bằng chứng số tổng hợp'
-          : exportForm.reportType === 'BEFORE_AFTER_ZIP'
-          ? 'Gói ảnh nghiệm thu Before/After (Gốc)'
-          : 'Báo cáo trắc dọc & Bình đồ GIS',
-      type_badge_color: 'bg-emerald-100 text-emerald-900 border-emerald-200',
-      type_category_name: 'Dossier Hoàn công',
-      dossier_no: 'SHA-256 Checksum Verified',
-      scope_display: currentProject.chainage,
-      as_of_time: '25/08/2026 21:50',
-      as_of_timestamp: Date.now(),
-      file_size: 'Đang nén...',
-      file_size_mb: 45,
-      format_display: 'Đang xếp hàng đợi',
-      status: 'PROCESSING',
-      total_items: 42,
-      hash_sha256: '9a4f21e0b5c192d77a94efbc1249826189af0e74cb29471928dfb81a029381ea'
+    try {
+      const res = await reportService.createExportJob(exportForm)
+      setActiveJob(res.job as AsyncExportJob)
+      setExportRecords((prev) => [res.record as ExportRecord, ...prev])
+      showToast(`Đã khởi tạo lệnh xuất hồ sơ (${res.job.id})!`)
+    } catch {
+      showToast('Có lỗi xảy ra khi tạo tác vụ xuất.')
     }
-
-    setExportRecords([newRecord, ...exportRecords])
-    showToast(`Đã khởi tạo lệnh xuất bất đồng bộ (${newJobId})!`)
   }
 
-  const handleCancelActiveJob = () => {
+  const handleCancelActiveJob = async () => {
     if (!activeJob) return
+    await reportService.cancelExportJob(activeJob.id)
     setActiveJob((prev) => (prev ? { ...prev, status: 'CANCELLED' } : null))
     showToast(`Đã dừng tác vụ ${activeJob.id}`)
   }
 
-  const handleDeleteRecord = (id: string, code: string) => {
+  const handleDeleteRecord = async (id: string, code: string) => {
+    await reportService.deleteExportRecord(id)
     setExportRecords((prev) => prev.filter((r) => r.id !== id))
     showToast(`Đã xóa hồ sơ lưu trữ ${code}`)
   }
 
-  const handleRetryRecord = (id: string) => {
-    setExportRecords((prev) =>
-      prev.map((r) => {
-        if (r.id === id) {
-          return {
-            ...r,
-            status: 'PROCESSING',
-            format_display: 'Đang xếp lại hàng đợi',
-            file_size: 'Đang nén...'
-          }
-        }
-        return r
-      })
-    )
-    showToast('Đã gửi yêu cầu chạy lại tiến trình xuất!')
+  const handleRetryRecord = async (id: string) => {
+    try {
+      const updated = await reportService.retryExportRecord(id)
+      setExportRecords((prev) => prev.map((r) => (r.id === id ? (updated as ExportRecord) : r)))
+      showToast('Đã gửi yêu cầu chạy lại tiến trình xuất!')
+    } catch {
+      showToast('Có lỗi khi khởi động lại tiến trình.')
+    }
   }
 
-  const handleDownloadFile = (filename: string) => {
-    showToast(`Đang tải tệp: ${filename} (Chứng thực chữ ký số SHA-256 hợp lệ)`)
+  const handleDownloadFile = async (filename: string) => {
+    const res = await reportService.downloadExportFile(filename)
+    showToast(`Đang tải tệp: ${res.fileName} (Chứng thực mã băm SHA-256 hợp lệ)`)
   }
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => {
-      setIsRefreshing(false)
-      showToast('Dữ liệu chỉ số KPI và hàng đợi xuất đã được đồng bộ mới nhất!')
-    }, 600)
+    await loadData()
+    setIsRefreshing(false)
+    showToast('Dữ liệu chỉ số KPI, bản đồ rủi ro và hàng đợi xuất đã được đồng bộ mới nhất!')
   }
 
   const resetFilters = () => {
@@ -237,6 +500,17 @@ export function useRiskAnalyticsState() {
     setExportForm,
     showToast,
     processedRecords,
+    rpt06Segments,
+    activeSegmentId,
+    activeSegment,
+    mapContainerRef,
+    mapLayer,
+    setMapLayer,
+    handleFocusSegment,
+    handleToggleSurveyPlan,
+    handleZoomIn,
+    handleZoomOut,
+    handleFitBounds,
     handleToggleSort,
     handleCreateExportJob,
     handleCancelActiveJob,
