@@ -91,7 +91,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Gói sửa chữa', path: '/pm/proposals', icon: Boxes },
         { label: 'Nghiệm thu', path: '/pm/acceptance', icon: ShieldCheck },
-        { label: 'Đồng bộ hiện trường', path: '/pm/field-tasks', icon: ClipboardList }
+        { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList }
       ]
     },
     {

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
+import { triageService } from '../../../api/services/triageService'
 
 export interface UseAIReviewActionsProps {
   cases: TriageCase[]
@@ -15,6 +16,7 @@ export interface UseAIReviewActionsProps {
   currentArea: number
   currentDepth: number
   currentNotes: string
+  setIsDetailModalOpen?: (open: boolean) => void
 }
 
 export const useAIReviewActions = ({
@@ -28,7 +30,8 @@ export const useAIReviewActions = ({
   currentUrgency,
   currentArea,
   currentDepth,
-  currentNotes
+  currentNotes,
+  setIsDetailModalOpen
 }: UseAIReviewActionsProps) => {
   const navigate = useNavigate()
 
@@ -49,29 +52,44 @@ export const useAIReviewActions = ({
     selectedCase,
     showToast,
     targetTriageCase,
-    setTargetTriageCase
+    setTargetTriageCase,
+    setIsDetailModalOpen
   })
 
   // Handlers for Triage Decision Actions
-  const handleVerifyDefect = (c?: TriageCase) => {
+  const handleVerifyDefect = async (c?: TriageCase) => {
     const target = c || selectedCase
+    const updates: Partial<TriageCase> = {
+      status: 'VERIFIED',
+      status_label: 'Đã xác minh (Verified)',
+      conclusion: 'DEFECT_FOUND',
+      severity: currentSeverity,
+      urgency: currentUrgency,
+      area_sqm: currentArea,
+      max_depth_cm: currentDepth,
+      pm_notes: currentNotes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'
+    }
+
     setCases((prev) =>
       prev.map((item) =>
-        item.id === target.id
+        item.id === target.id || item.code === target.code
           ? {
               ...item,
-              status: 'VERIFIED',
-              status_label: 'Đã xác minh (Verified)',
-              conclusion: 'DEFECT_FOUND',
-              severity: currentSeverity,
-              urgency: currentUrgency,
-              area_sqm: currentArea,
-              max_depth_cm: currentDepth,
-              pm_notes: currentNotes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'
+              ...updates
             }
           : item
       )
     )
+
+    try {
+      await triageService.updateCase(target.id, updates)
+    } catch (e) {
+      console.warn('Could not sync updateCase to triageService', e)
+    }
+
+    // Đóng drawer modal và trả về bảng danh sách
+    setIsDetailModalOpen?.(false)
+
     showToast(
       `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào lệnh sửa chữa (WF-05).`
     )
@@ -80,7 +98,10 @@ export const useAIReviewActions = ({
   const handleOpenNoDefectModal = (c?: TriageCase) => {
     const target = c || selectedCase
     setTargetTriageCase(target)
-    setNoDefectReason('')
+    setNoDefectReason(
+      target.conclusion_reason ||
+        'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
+    )
     setIsNoDefectModalOpen(true)
   }
 
@@ -99,50 +120,79 @@ export const useAIReviewActions = ({
     )
   }
 
-  const handleConfirmNoDefect = () => {
-    if (!noDefectReason.trim()) {
-      showToast('Lỗi BR-39: Bắt buộc nhập lý do giải trình kỹ thuật khi kết luận NO_DEFECT!')
-      return
-    }
+  const handleConfirmNoDefect = async () => {
+    const finalReason =
+      noDefectReason.trim() ||
+      'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
     const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
+    const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
+
+    const updates: Partial<TriageCase> = {
+      status: 'REJECTED',
+      status_label: 'Báo sai (No Defect)',
+      conclusion: 'NO_DEFECT',
+      conclusion_reason: finalReason,
+      pm_notes: `[NO_DEFECT - BR-39] ${finalReason}`
+    }
+
     setCases((prev) =>
       prev.map((c) =>
-        c.id === targetId
+        c.id === targetId || c.code === targetCode
           ? {
               ...c,
-              status: 'REJECTED',
-              status_label: 'Báo sai (No Defect)',
-              conclusion: 'NO_DEFECT',
-              conclusion_reason: noDefectReason,
-              pm_notes: `[NO_DEFECT - BR-39] ${noDefectReason}`
+              ...updates
             }
           : c
       )
     )
+
+    try {
+      await triageService.updateCase(targetId, updates)
+    } catch (e) {
+      console.warn('Could not sync updateCase to triageService', e)
+    }
+
+    // Đóng modal lý do từ chối và đóng luôn modal/drawer thẩm định để trả về danh sách
     setIsNoDefectModalOpen(false)
+    setIsDetailModalOpen?.(false)
+
     showToast(
-      `Đã ghi nhận kết luận NO_DEFECT cho hồ sơ [${targetTriageCase?.code || selectedCase.code}] (Tuân thủ BR-39)!`
+      `Đã ghi nhận kết luận Từ chối (NO_DEFECT) cho hồ sơ [${targetCode}] (Tuân thủ BR-39)!`
     )
   }
 
   // OUT_OF_SCOPE Conclusion
-  const handleConclusionOutOfScope = (c?: TriageCase) => {
+  const handleConclusionOutOfScope = async (c?: TriageCase) => {
     const target = c || selectedCase
+    const updates: Partial<TriageCase> = {
+      status: 'REJECTED',
+      status_label: 'Ngoài phạm vi',
+      conclusion: 'OUT_OF_SCOPE',
+      conclusion_reason: 'Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.',
+      pm_notes:
+        '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
+    }
+
     setCases((prev) =>
       prev.map((item) =>
-        item.id === target.id
+        item.id === target.id || item.code === target.code
           ? {
               ...item,
-              status: 'REJECTED',
-              status_label: 'Ngoài phạm vi',
-              conclusion: 'OUT_OF_SCOPE',
-              conclusion_reason: 'Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.',
-              pm_notes:
-                '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
+              ...updates
             }
           : item
       )
     )
+
+    try {
+      await triageService.updateCase(target.id, updates)
+    } catch (e) {
+      console.warn('Could not sync updateCase to triageService', e)
+    }
+
+    // Đóng modal/drawer thẩm định và trả về danh sách
+    setIsDetailModalOpen?.(false)
+
     showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
   }
 

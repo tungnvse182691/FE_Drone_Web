@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { mockDefects } from '../../api/mock/data'
 import { surveyService } from '../../api/services'
+import { triageService } from '../../api/services/triageService'
 import { DefectStatus, Severity, DefectType } from '../../types/enums'
 import { Defect } from '../../types/domain'
 import { AIDetectionItem } from './drone-review/types'
@@ -306,6 +307,20 @@ export const DefectDetailVerify: React.FC = () => {
           metrics: { dismissReason: `Yêu cầu bay bổ sung KS11/BR-43: ${reason}` }
         })
       } catch (e) {}
+      try {
+        await triageService.updateCase(rawId, {
+          status: 'NEED_SURVEY',
+          status_label: 'Cần đo đạc',
+          conclusion: 'NEED_SURVEY',
+          survey_assignment: {
+            mode: 'DRONE_RESURVEY',
+            reason: reason || 'Yêu cầu bay Drone bổ sung',
+            assigned_crew: 'Đội bay Drone Hoàng Hải 01 - Phi công: Lê Minh Khôi',
+            sla_hours: 24,
+            created_at: new Date().toLocaleTimeString('vi-VN')
+          }
+        })
+      } catch (e) {}
       showToast(`Đã tạo Lệnh Bay Bổ Sung (KS11 / BR-43) tại Km ${defect.chainage_km}. Tiếp tục rà soát đợt bay.`)
       setTimeout(() => {
         navigate(returnUrl)
@@ -316,6 +331,20 @@ export const DefectDetailVerify: React.FC = () => {
         await surveyService.updateSurveyDetection('srv-01', finalDetId, {
           status: 'PENDING',
           metrics: { depth: 'Chờ đo thực địa AI13', reviewer: 'Chờ kết quả đo' }
+        })
+      } catch (e) {}
+      try {
+        await triageService.updateCase(rawId, {
+          status: 'NEED_SURVEY',
+          status_label: 'Cần đo đạc',
+          conclusion: 'NEED_SURVEY',
+          survey_assignment: {
+            mode: 'MEASURE_ONLY',
+            reason: reason || 'Yêu cầu đo đạc hiện trường bổ sung',
+            assigned_crew: 'Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)',
+            sla_hours: 24,
+            created_at: new Date().toLocaleTimeString('vi-VN')
+          }
         })
       } catch (e) {}
       showToast(`Đã giao nhiệm vụ Đo Đạc Hiện Trường (AI13 / TN01) tại Km ${defect.chainage_km}.`)

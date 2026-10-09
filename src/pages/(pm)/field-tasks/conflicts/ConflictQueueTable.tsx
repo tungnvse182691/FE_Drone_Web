@@ -7,12 +7,14 @@ export interface ConflictQueueTableProps {
   filteredConflicts: SyncConflictItem[]
   selectedConflict: SyncConflictItem
   setSelectedConflictId: (id: string) => void
+  onOpenDetail?: (id: string) => void
 }
 
 export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
   filteredConflicts,
   selectedConflict,
-  setSelectedConflictId
+  setSelectedConflictId,
+  onOpenDetail
 }) => {
   return (
     <Card className="overflow-hidden border border-brand-border">
@@ -27,16 +29,23 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
               <th className="py-3 px-4 font-bold uppercase tracking-wider">Thời Gian Bắt Lại Mạng</th>
               <th className="py-3 px-4 font-bold uppercase tracking-wider">Mã Băm SHA-256</th>
               <th className="py-3 px-4 font-bold uppercase tracking-wider text-center">Trạng Thái</th>
-              <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Chi Tiết</th>
+              <th className="py-3 px-4 font-bold uppercase tracking-wider text-right">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredConflicts.map((item) => {
               const isSelected = item.id === selectedConflict?.id
+              const handleClick = () => {
+                setSelectedConflictId(item.id)
+                if (onOpenDetail) {
+                  onOpenDetail(item.id)
+                }
+              }
+
               return (
                 <tr
                   key={item.id}
-                  onClick={() => setSelectedConflictId(item.id)}
+                  onClick={handleClick}
                   className={`cursor-pointer transition-colors ${
                     isSelected ? 'bg-[#FBF6E9]/60 border-l-4 border-l-brand-gold' : 'hover:bg-slate-50/80'
                   }`}
@@ -99,6 +108,10 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                           ? 'bg-amber-100 text-amber-900 border border-amber-200'
                           : item.status === 'RESCUE_AUTHORIZED'
                           ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                          : item.status === 'RESOLVED_KEEP_SERVER' || item.status === 'RESCUE_REJECTED'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : item.status === 'RESOLVED_FORK_ATTEMPT'
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
                           : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
                       }`}
                     >
@@ -110,16 +123,13 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        setSelectedConflictId(item.id)
+                        handleClick()
                       }}
-                      className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-brand-gold text-white border-brand-gold'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                      title="Xem đối chiếu Side-by-side"
+                      className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer bg-white text-slate-700 border-slate-300 hover:bg-brand-dark hover:text-[#F1E5C6] hover:border-brand-dark shadow-2xs"
+                      title="Mở tab đối chiếu chi tiết và phân giải"
                     >
-                      <Icon name="visibility" size={16} />
+                      <Icon name="compare_arrows" size={14} className="text-brand-gold" />
+                      <span>Xem đối chiếu</span>
                     </button>
                   </td>
                 </tr>

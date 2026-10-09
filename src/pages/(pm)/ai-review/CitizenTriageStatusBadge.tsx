@@ -35,17 +35,33 @@ export const CitizenTriageStatusBadge: React.FC<CitizenTriageStatusBadgeProps> =
     )
   }
   if (status === 'REJECTED') {
+    const isOutOfScope = conclusion === 'OUT_OF_SCOPE'
+    const isNoDefect = conclusion === 'NO_DEFECT'
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 whitespace-nowrap">
-        <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
-        <span>{conclusion === 'NO_DEFECT' ? 'Báo sai (No Defect)' : 'Từ chối'}</span>
+      <span
+        className={`inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap ${
+          isOutOfScope ? 'text-amber-800' : 'text-slate-600'
+        }`}
+      >
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            isOutOfScope ? 'bg-amber-500' : 'bg-slate-400'
+          }`}
+        />
+        <span>
+          {isNoDefect
+            ? 'Báo sai (No Defect)'
+            : isOutOfScope
+            ? 'Ngoài phạm vi'
+            : 'Từ chối'}
+        </span>
       </span>
     )
   }
   if (status === 'NEED_SURVEY') {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 whitespace-nowrap">
-        <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 whitespace-nowrap">
+        <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0" />
         <span>Cần đo đạc</span>
       </span>
     )

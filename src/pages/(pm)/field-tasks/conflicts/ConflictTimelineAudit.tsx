@@ -41,8 +41,8 @@ export const ConflictTimelineAudit: React.FC<ConflictTimelineAuditProps> = ({
                 Dòng Thời Gian Diễn Biến Xung Đột ({selectedConflict.conflict_code})
               </span>
             </div>
-            <span className="text-[11px] font-mono text-slate-500">
-              Nguyên tắc xử lý: <strong className="text-slate-800">Q04 / D05 Không Tự Ý Ghi Đè (No Silent Overwrite)</strong>
+            <span className="text-xs font-mono text-slate-500">
+              Diễn biến sự kiện
             </span>
           </div>
 

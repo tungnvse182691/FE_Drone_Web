@@ -1,13 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
 import { triageService } from '../../../api/services/triageService'
+import { STORAGE_KEYS } from '../../../api/services/storageHelper'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
-  // Dữ liệu hồ sơ tiếp nhận từ Mock API Service bất đồng bộ (Zero localStorage)
+  // Dữ liệu hồ sơ tiếp nhận từ Mock API Service bất đồng bộ
   const [cases, setCases] = useState<TriageCase[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
@@ -31,8 +32,17 @@ export const useAIReviewState = () => {
       }
     }
     loadCases()
+
+    const handleStorageChange = (e: any) => {
+      if (e.detail?.key === STORAGE_KEYS.TRIAGE_CASES && e.detail?.value) {
+        setCases(e.detail.value)
+      }
+    }
+    window.addEventListener('roadguard_state_change', handleStorageChange)
+
     return () => {
       isMounted = false
+      window.removeEventListener('roadguard_state_change', handleStorageChange)
     }
   }, [])
 
@@ -125,7 +135,8 @@ export const useAIReviewState = () => {
     currentUrgency,
     currentArea,
     currentDepth,
-    currentNotes
+    currentNotes,
+    setIsDetailModalOpen
   })
 
   // Reset dữ liệu mẫu qua Mock API Service

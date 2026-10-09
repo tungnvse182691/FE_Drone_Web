@@ -921,41 +921,172 @@ export const mockRepairBatches: RepairBatch[] = [
 
 // 4.3 Nhiệm vụ đo đạc bổ sung ngoài hiện trường (Field Tasks)
 export const mockFieldTasks: FieldTask[] = [
+  // 1. Cần thực hiện (ASSIGNED)
   {
     id: 'ft-01',
-    code: 'TSK-MEAS-1025',
-    defect_id: 'def-0042',
-    defect_code: 'DEF-2026-0042',
-    measurement_type: 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách',
-    chainage_km: 1025.4,
-    status: 'SUBMITTED',
-    measured_value: 62,
-    evidence_photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80',
-    technician_name: 'Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)'
+    code: 'TSK-MEAS-1024',
+    defect_id: 'def-0038',
+    defect_code: 'DEF-2026-0038',
+    defect_name: 'Vệt hằn lún bánh xe cục bộ (Rutting)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Đo dưỡng chiều sâu vệt hằn lún bánh xe',
+    chainage_km: 1024.35,
+    lane: 'Làn cơ giới 1',
+    status: 'ASSIGNED',
+    technician_name: 'Kỹ sư Nguyễn Trọng Hải (Tổ cơ động 01)',
+    created_at: '2026-08-25',
+    notes: 'Yêu cầu đo dưỡng thước 3m xác định chiều sâu rãnh lún vệt bánh',
+    gps_lat: 16.2458,
+    gps_lng: 108.1245,
+    exif_device: 'DJI Matrice 350 RTK (Zenmuse P1)',
+    exif_captured_at: '2026-08-25 08:35:10'
   },
   {
     id: 'ft-02',
+    code: 'TSK-MEAS-1029',
+    defect_id: 'def-0075',
+    defect_code: 'DEF-2026-0075',
+    defect_name: 'Bong bật chất trám khe co giãn (Joint Seal Failure)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Thước kẹp cơ khí đo độ hở khe nối tấm BTXM',
+    chainage_km: 1029.8,
+    lane: 'Làn 2',
+    status: 'ASSIGNED',
+    technician_name: 'Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)',
+    created_at: '2026-08-26',
+    notes: 'Kiểm tra khe co giãn bị bong bật chất trám khe',
+    gps_lat: 16.2112,
+    gps_lng: 108.1623,
+    exif_device: 'DJI Matrice 350 RTK (Zenmuse P1)',
+    exif_captured_at: '2026-08-26 09:12:44'
+  },
+
+  // 2. Đang đo đạc (IN_PROGRESS)
+  {
+    id: 'ft-03',
+    code: 'TSK-MEAS-1026',
+    defect_id: 'def-0052',
+    defect_code: 'DEF-2026-0052',
+    defect_name: 'Nứt chân vịt góc bản BTXM (Map Cracking)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Kính hiển vi quang học đo độ mở vết nứt chân vịt',
+    chainage_km: 1026.15,
+    lane: 'Làn cơ giới 1',
+    status: 'IN_PROGRESS',
+    technician_name: 'Kỹ sư Lê Quốc Tuấn (Đội tuần đường)',
+    created_at: '2026-08-27',
+    notes: 'Kỹ sư đang thao tác đo kính quang học hiện trường tại Km 1026+150',
+    gps_lat: 16.2341,
+    gps_lng: 108.1398,
+    exif_device: 'Samsung Galaxy Tab Active 4 Pro',
+    exif_captured_at: '2026-08-27 10:20:00'
+  },
+  {
+    id: 'ft-04',
+    code: 'TSK-MEAS-1033',
+    defect_id: 'def-0104',
+    defect_code: 'DEF-2026-0104',
+    defect_name: 'Chênh cốt cao độ hai tấm BTXM (Slab Faulting)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Thước trắc địa đo độ chênh cao bậc tấm bê tông',
+    chainage_km: 1033.4,
+    lane: 'Làn rẽ phải',
+    status: 'IN_PROGRESS',
+    technician_name: 'Kỹ sư Trần Đức Minh (Tổ kiểm định)',
+    created_at: '2026-08-27',
+    notes: 'Đang đo cao độ chênh giữa tấm bản 1 và bản 2 bằng dưỡng laser',
+    gps_lat: 16.1874,
+    gps_lng: 108.1882,
+    exif_device: 'Samsung Galaxy Tab Active 4 Pro',
+    exif_captured_at: '2026-08-27 11:05:30'
+  },
+
+  // 3. Đã có số đo (SUBMITTED)
+  {
+    id: 'ft-05',
+    code: 'TSK-MEAS-1025',
+    defect_id: 'def-0042',
+    defect_code: 'DEF-2026-0042',
+    defect_name: 'Vỡ góc bản BTXM & bong tách mép tấm (Corner Break)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách',
+    chainage_km: 1025.4,
+    lane: 'Làn cơ giới 1',
+    status: 'SUBMITTED',
+    measured_value: 62,
+    evidence_photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80',
+    technician_name: 'Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)',
+    created_at: '2026-08-28',
+    notes: 'Độ sâu vỡ góc đạt 62mm, vượt ngưỡng cho phép 30mm (TCVN 8864)',
+    gps_lat: 16.2405,
+    gps_lng: 108.1310,
+    exif_device: 'Samsung Galaxy Tab Active 4 Pro (Camera 13MP)',
+    exif_captured_at: '2026-08-28 14:15:22'
+  },
+  {
+    id: 'ft-06',
     code: 'TSK-POL-1028',
     defect_id: 'def-0068',
     defect_code: 'DEF-2026-0068',
-    measurement_type: 'Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM',
+    defect_name: 'Nứt dọc mép tấm vệt bánh xe (Longitudinal Crack)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Thước đo quang học độ mở rộng khe nứt BTXM',
     chainage_km: 1028.15,
+    lane: 'Làn 2',
     status: 'SUBMITTED',
     measured_value: 25,
-    evidence_photo_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
-    technician_name: 'Kỹ sư Lê Quốc Tuấn (Đội tuần đường)'
+    evidence_photo_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
+    technician_name: 'Kỹ sư Lê Quốc Tuấn (Đội tuần đường)',
+    created_at: '2026-08-28',
+    notes: 'Vết nứt mở rộng 25mm, cần cào bóc hoặc trám bitum polyme',
+    gps_lat: 16.2215,
+    gps_lng: 108.1512,
+    exif_device: 'Samsung Galaxy Tab Active 4 Pro (Camera 13MP)',
+    exif_captured_at: '2026-08-28 15:40:18'
   },
+
+  // 4. Đã xác minh (VERIFIED)
   {
-    id: 'ft-03',
+    id: 'ft-07',
     code: 'TSK-RSC-1031',
     defect_id: 'def-0091',
     defect_code: 'DEF-2026-0091',
+    defect_name: 'Chênh cốt mép khe co giãn (Slab Faulting > 45mm)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
     measurement_type: 'Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM',
     chainage_km: 1031.9,
-    status: 'SUBMITTED',
+    lane: 'Làn cơ giới 1',
+    status: 'VERIFIED',
     measured_value: 48,
-    evidence_photo_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
-    technician_name: 'Kỹ sư Hoàng Văn Bách (Tổ kết cấu)'
+    evidence_photo_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&auto=format&fit=crop&q=80',
+    technician_name: 'Kỹ sư Hoàng Văn Bách (Tổ kết cấu)',
+    created_at: '2026-08-29',
+    notes: 'Chỉ huy trưởng đã thẩm định số liệu, đưa vào hồ sơ sửa chữa',
+    gps_lat: 16.1985,
+    gps_lng: 108.1755,
+    exif_device: 'Leica Disto D2 Laser Distance Meter + Mobile Sync',
+    exif_captured_at: '2026-08-29 09:20:15'
+  },
+  {
+    id: 'ft-08',
+    code: 'TSK-MEAS-1022',
+    defect_id: 'def-0019',
+    defect_code: 'DEF-2026-0019',
+    defect_name: 'Ổ gà lún sụt mép tấm (Pothole Depth 54mm)',
+    defect_photo_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
+    measurement_type: 'Thước đo lún kỹ thuật số đo chiều sâu ổ gà mép tấm',
+    chainage_km: 1022.6,
+    lane: 'Làn cơ giới 2',
+    status: 'VERIFIED',
+    measured_value: 54,
+    evidence_photo_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
+    technician_name: 'Kỹ sư Nguyễn Trọng Hải (Tổ cơ động 01)',
+    created_at: '2026-08-29',
+    notes: 'Đã xác minh và chuyển sang gói đề xuất kỹ thuật đợt 3',
+    gps_lat: 16.2589,
+    gps_lng: 108.1102,
+    exif_device: 'Samsung Galaxy Tab Active 4 Pro (Camera 13MP)',
+    exif_captured_at: '2026-08-29 11:45:00'
   }
 ]
 
@@ -1000,8 +1131,9 @@ export const mockInspectionRecords: InspectionRecord[] = [
   }
 ]
 
-// 4.6 Xử lý xung đột ngoại tuyến (Sync Conflicts)
+// 4.6 Xử lý xung đột ngoại tuyến (Sync Conflicts theo BR-16, D05, D06, Q17, 42A)
 export const mockSyncConflicts: SyncConflictItem[] = [
+  // CA 1: ĐỔI ĐỘI KHI NGOẠI TUYẾN (D05 / Q04)
   {
     id: 'conf-01',
     conflict_code: '#CONF-2026-081',
@@ -1009,7 +1141,7 @@ export const mockSyncConflicts: SyncConflictItem[] = [
     defect_code: 'DEF-2026-0042',
     defect_type_label: 'Vỡ góc bản bê tông xi măng (Corner Break)',
     route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
-    chainage: 'Km 1025+400 (Làn xe cơ giới)',
+    chainage: 'Km 1025+400 (Làn xe cơ giới 1)',
     conflict_type: 'ASSIGNMENT_REASSIGNED',
     conflict_type_label: 'Đổi đội khi ngoại tuyến (D05/Q04)',
     severity: 'HIGH',
@@ -1042,9 +1174,230 @@ export const mockSyncConflicts: SyncConflictItem[] = [
       policy_version: 'POL-MNT-2026-v2',
       policy_summary: 'Ưu tiên đội chuyên trách BTXM',
       last_updated: '24/08/2026 - 08:00:00',
-      server_photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80',
+      server_photo_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
       server_notes: 'Chỉ định lại cho Đội 01 để tập trung vật tư xi măng đặc chủng.'
-    }
+    },
+    timeline: [
+      { time: '08:00:00', event: 'PM điều chuyển nhiệm vụ từ Tổ 02 sang Đội 01 trên hệ thống máy chủ', actor: 'Đỗ Quốc Hoàng (PM)', badge: 'Máy chủ', type: 'info' },
+      { time: '08:30:15', event: 'Tổ 02 di chuyển vào vùng lõm sóng đèo Hải Vân, thiết bị chuyển sang chế độ Ngoại tuyến', actor: 'Thiết bị Tab-882', badge: 'Offline', type: 'warning' },
+      { time: '10:15:22', event: 'Tổ 02 hoàn tất đo đạc hiện trường, lưu số đo 62mm và ảnh bằng chứng vào bộ nhớ cục bộ SQLite', actor: 'Kỹ sư Phạm Văn Hùng', badge: 'Hiện trường', type: 'info' },
+      { time: '14:55:40', event: 'Thiết bị bắt lại sóng 4G, tiến hành đồng bộ dữ liệu ngoại tuyến về trung tâm -> Phát hiện xung đột D05', actor: 'Hệ thống Sync Sync Gateway', badge: 'Xung đột', type: 'alert' }
+    ]
+  },
+
+  // CA 2: LỆCH PHIÊN BẢN CHÍNH SÁCH FAST TRACK (D06 / BR-12)
+  {
+    id: 'conf-02',
+    conflict_code: '#CONF-2026-082',
+    task_code: 'TSK-POL-1028',
+    defect_code: 'DEF-2026-0068',
+    defect_type_label: 'Nứt dọc mép tấm vệt bánh xe (Longitudinal Crack)',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage: 'Km 1028+150 (Làn xe cơ giới 2)',
+    conflict_type: 'POLICY_VERSION_MISMATCH',
+    conflict_type_label: 'Lệch phiên bản chính sách Fast Track (D06)',
+    severity: 'MEDIUM',
+    status: 'CONFLICT_INTAKE',
+    status_label: 'Chờ PM phân giải (Lệch chính sách)',
+    offline_actor: {
+      name: 'Kỹ sư Lê Quốc Tuấn',
+      role: 'Đội trưởng tuần đường',
+      team: 'Đội tuần đường & sửa chữa nhanh 03',
+      device_id: 'DEV-HH-TAB-710',
+      device_model: 'Samsung Galaxy Tab Active 3',
+      offline_duration: '4 giờ 10 phút (mất kết nối trạm BTS)',
+      captured_at: '24/08/2026 - 11:45:10'
+    },
+    incoming_data: {
+      measurement_type: 'Thước đo quang học khe nứt BTXM & Đề xuất Fast Track',
+      measured_value: '25 mm (Độ mở rộng) / 3.2 m (Chiều dài nứt)',
+      depth_mm: 25,
+      area_m2: 0.26,
+      photo_evidence_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
+      sha256_hash: '7c4a18d9b23f5e08c16d9a4b82f7e31c0a9e8b7d6c5a4f3e2b1c0d9e8f7a6b5c',
+      gps_coords: '16.2215° N, 108.1512° E (Sai số ±0.04m)',
+      accuracy_m: 0.04,
+      notes: 'Đề xuất trám mastic bitum-polyme nóng theo quy chuẩn Fast Track v1.8 (ngưỡng < 30mm).'
+    },
+    server_state: {
+      initial_assignee: 'Đội tuần đường 03',
+      current_assignee: 'Đội tuần đường 03',
+      current_status: 'POLICY_UPDATED',
+      policy_version: 'POL-FAST-TRACK-v2.2',
+      policy_summary: 'Hạ ngưỡng Fast Track nứt dọc xuống tối đa 20mm, vết nứt > 20mm bắt buộc lập đợt sửa trình Giám sát duyệt',
+      last_updated: '24/08/2026 - 09:00:00',
+      server_photo_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
+      server_notes: 'Chính sách v2.2 có hiệu lực từ 09:00 ngày 24/08 sau cuộc họp với Ban QLDA.'
+    },
+    timeline: [
+      { time: '07:00:00', event: 'Kỹ sư Tuấn đồng bộ đầu ngày, nhận chính sách Fast Track v1.8 cho phép tự xử lý vết nứt < 30mm', actor: 'Thiết bị Tab-710', badge: 'Policy v1.8', type: 'info' },
+      { time: '09:00:00', event: 'PM ban hành chính sách mới v2.2 hạ ngưỡng tự xử lý xuống 20mm, bắt buộc trình duyệt hồ sơ nếu > 20mm', actor: 'Đỗ Quốc Hoàng (PM)', badge: 'Policy v2.2', type: 'warning' },
+      { time: '11:45:10', event: 'Kỹ sư nộp số đo 25mm và đăng ký nhánh Fast Track theo phiên bản cũ v1.8 lúc ngoại tuyến', actor: 'Kỹ sư Lê Quốc Tuấn', badge: 'Hiện trường', type: 'info' },
+      { time: '13:10:00', event: 'Đồng bộ trực tuyến bị chặn: Máy chủ phát hiện vi phạm ngưỡng chính sách hiện hành v2.2', actor: 'Hệ thống Policy Gate', badge: 'Xung đột', type: 'alert' }
+    ]
+  },
+
+  // CA 3: TRÙNG LẶP GHI NHẬN HIỆN TRƯỜNG - 2 THIẾT BỊ CÙNG NỘP (D05 / DEDUP)
+  {
+    id: 'conf-03',
+    conflict_code: '#CONF-2026-083',
+    task_code: 'TSK-MEAS-1033',
+    defect_code: 'DEF-2026-0104',
+    defect_type_label: 'Chênh cốt cao độ hai tấm BTXM (Slab Faulting)',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage: 'Km 1033+400 (Làn rẽ phải)',
+    conflict_type: 'DUPLICATE_WORK_ATTEMPT',
+    conflict_type_label: 'Trùng lặp 2 thiết bị nộp cùng vị trí (Dedup)',
+    severity: 'MEDIUM',
+    status: 'CONFLICT_INTAKE',
+    status_label: 'Chờ PM chọn bản ghi chuẩn',
+    offline_actor: {
+      name: 'Kỹ sư Trần Đức Minh',
+      role: 'Tổ trưởng kiểm định',
+      team: 'Tổ kiểm định chất lượng hiện trường 01',
+      device_id: 'DEV-HH-TAB-901',
+      device_model: 'Samsung Galaxy Tab Active 4 Pro (Thiết bị 2 - Máy chính)',
+      offline_duration: '2 giờ 15 phút',
+      captured_at: '24/08/2026 - 15:10:00'
+    },
+    incoming_data: {
+      measurement_type: 'Thước thẳng 3m kết hợp thước nêm cơ học đo độ chênh cao bậc tấm (TCVN 8864)',
+      measured_value: '38 mm (Độ chênh cốt bậc tấm)',
+      depth_mm: 38,
+      area_m2: 1.2,
+      photo_evidence_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
+      sha256_hash: 'a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0',
+      gps_coords: '16.1874° N, 108.1882° E (Sai số ±0.02m RTK)',
+      accuracy_m: 0.02,
+      notes: 'Bản đo chính xác của Đội trưởng: dùng dưỡng thẳng 3m chuẩn cơ học, độ chênh đạt 38mm.'
+    },
+    duplicate_device_a: {
+      name: 'Kỹ sư thực tập Nguyễn Văn Bình',
+      role: 'Kỹ thuật viên phụ',
+      team: 'Tổ kiểm định chất lượng hiện trường 01',
+      device_id: 'DEV-HH-PHONE-112',
+      device_model: 'Xiaomi Redmi Note 12 (Thiết bị 1 - Máy phụ)',
+      captured_at: '24/08/2026 - 14:00:30',
+      measurement_type: 'Ước lượng thước dây cầm tay 5m',
+      measured_value: '45 mm (Ước tính sơ bộ)',
+      photo_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&auto=format&fit=crop&q=80',
+      sha256_hash: 'b2c3d4e5f6a17890123456789abcdef0123456789abcdef0123456789abcdef1',
+      notes: 'Bản đo sơ bộ của kỹ thuật viên phụ nộp trước khi Đội trưởng đến kiểm định lại.'
+    },
+    server_state: {
+      current_assignee: 'Tổ kiểm định chất lượng hiện trường 01',
+      current_status: 'IN_PROGRESS',
+      policy_version: 'POL-TCVN-8864',
+      policy_summary: 'Bắt buộc dụng cụ thước thẳng 3m có kiểm định',
+      last_updated: '24/08/2026 - 14:05:00',
+      server_photo_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&auto=format&fit=crop&q=80',
+      server_notes: 'Đã nhận bản nộp sơ bộ 45mm từ Máy phụ (DEV-HH-PHONE-112 lúc 14:00).'
+    },
+    timeline: [
+      { time: '14:00:30', event: 'Thiết bị 1 (Máy phụ) nộp trước bản đo sơ bộ 45mm bằng thước dây cầm tay', actor: 'Kỹ sư Nguyễn Văn Bình', badge: 'Máy phụ', type: 'info' },
+      { time: '15:10:00', event: 'Thiết bị 2 (Máy chính) của Đội trưởng đo lại bằng thước thẳng 3m chuẩn TCVN, nộp số đo 38mm', actor: 'Kỹ sư Trần Đức Minh', badge: 'Máy chính', type: 'success' },
+      { time: '15:12:00', event: 'Hệ thống phát hiện trùng lặp 2 bản ghi cùng vị trí Km 1033+400 -> Yêu cầu PM phân giải bản chuẩn', actor: 'Hệ thống Dedup Engine', badge: 'Xung đột', type: 'alert' }
+    ]
+  },
+
+  // CA 4: CỨU HỘ DỮ LIỆU THIẾT BỊ GẶP SỰ CỐ HIỆN TRƯỜNG (Q17 / DECISION 42A)
+  {
+    id: 'conf-04',
+    conflict_code: '#CONF-2026-084',
+    task_code: 'TSK-RSC-1031',
+    defect_code: 'DEF-2026-0091',
+    defect_type_label: 'Chênh cốt mép khe co giãn (Slab Faulting > 45mm)',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage: 'Km 1031+900 (Làn xe cơ giới 1)',
+    conflict_type: 'DEVICE_RESCUE_PENDING',
+    conflict_type_label: 'Cứu hộ thiết bị gặp sự cố (Q17/Decision 42A)',
+    severity: 'CRITICAL',
+    status: 'CONFLICT_INTAKE',
+    status_label: 'Chờ PM trình Supervisor ký số cứu hộ',
+    offline_actor: {
+      name: 'Kỹ sư Hoàng Văn Bách',
+      role: 'Đội trưởng kết cấu',
+      team: 'Tổ kết cấu công trình ngầm Hoàng Hải',
+      device_id: 'DEV-HH-TAB-550',
+      device_model: 'Samsung Galaxy Tab Active 4 Pro (Thiết bị vỡ màn hình)',
+      offline_duration: '8 giờ 40 phút (Rơi nứt màn hình)',
+      captured_at: '24/08/2026 - 16:30:15'
+    },
+    incoming_data: {
+      measurement_type: 'Thước laser trắc địa Leica Disto D2 trích xuất SQLite qua ADB',
+      measured_value: '48 mm (Chênh cốt khe co giãn)',
+      depth_mm: 48,
+      area_m2: 1.5,
+      photo_evidence_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&auto=format&fit=crop&q=80',
+      sha256_hash: '9f8e7d6c5b4a3928170654321fedcba0987654321fedcba0987654321fedcba0',
+      gps_coords: '16.1985° N, 108.1755° E (Sai số ±0.01m Laser)',
+      accuracy_m: 0.01,
+      notes: 'Gói dữ liệu SQLite trích xuất an toàn bằng cáp ADB vật lý, chữ ký số thiết bị toàn vẹn.'
+    },
+    server_state: {
+      current_assignee: 'Tổ kết cấu công trình ngầm',
+      current_status: 'DEVICE_INCIDENT_REPORTED',
+      policy_version: 'POL-RESCUE-42A',
+      policy_summary: 'Bắt buộc quy trình 2 lớp: PM trình tờ trình, Supervisor ký số duyệt',
+      last_updated: '24/08/2026 - 17:00:00',
+      server_photo_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80',
+      server_notes: 'Đã lập biên bản sự cố thiết bị hiện trường do rơi trên mặt đường bê tông xi măng.'
+    },
+    timeline: [
+      { time: '16:30:15', event: 'Kỹ sư Bách đo xong độ chênh cao 48mm thì thiết bị bị xe công vụ va chạm làm rơi vỡ nứt màn hình', actor: 'Kỹ sư Hoàng Văn Bách', badge: 'Hiện trường', type: 'warning' },
+      { time: '17:45:00', event: 'Bộ phận IT cứu hộ trích xuất an toàn cơ sở dữ liệu SQLite qua cáp kết nối ADB có mã hash SHA-256', actor: 'Kỹ sư IT cứu hộ', badge: 'Cứu hộ ADB', type: 'info' },
+      { time: '18:00:00', event: 'Hồ sơ đưa vào luồng thẩm định cứu hộ theo Quy chuẩn Q17 / Quyết định 42A', actor: 'Hệ thống Bảo mật', badge: 'Chờ duyệt', type: 'alert' }
+    ]
+  },
+
+  // CA 5: CHỨNG CỨ THI CÔNG GỬI MUỘN SAU KHI HỒ SƠ ĐỢT ĐÃ ĐÓNG BĂNG (BR-26 / INVARIANT #3)
+  {
+    id: 'conf-05',
+    conflict_code: '#CONF-2026-085',
+    task_code: 'TSK-MEAS-1022',
+    defect_code: 'DEF-2026-0019',
+    defect_type_label: 'Ổ gà lún sụt mép tấm (Pothole Depth 54mm)',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage: 'Km 1022+600 (Làn xe cơ giới 2)',
+    conflict_type: 'AGGREGATE_VERSION_CONFLICT',
+    conflict_type_label: 'Chứng cứ gửi muộn khi đợt đã đóng băng (BR-26)',
+    severity: 'HIGH',
+    status: 'CONFLICT_INTAKE',
+    status_label: 'Chờ PM tạo phụ lục đợt mới (BR-26)',
+    offline_actor: {
+      name: 'Kỹ sư Nguyễn Trọng Hải',
+      role: 'Đội trưởng thi công',
+      team: 'Tổ cơ động sửa chữa BTXM 01',
+      device_id: 'DEV-HH-TAB-665',
+      device_model: 'Samsung Galaxy Tab Active 4 Pro',
+      offline_duration: '12 giờ (Nộp muộn sau khi đợt đã APPROVED)',
+      captured_at: '24/08/2026 - 17:30:00'
+    },
+    incoming_data: {
+      measurement_type: 'Thước đo lún kỹ thuật số & Hồ sơ hoàn thành sửa chữa ổ gà',
+      measured_value: '54 mm (Độ sâu) / Đã cào bóc thảm lại BTN C12.5 (1.8 m²)',
+      depth_mm: 54,
+      area_m2: 1.8,
+      photo_evidence_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
+      sha256_hash: '3d2e1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b5a4f3e2d',
+      gps_coords: '16.2589° N, 108.1102° E (Sai số ±0.03m)',
+      accuracy_m: 0.03,
+      notes: 'Đội 01 nộp bổ sung khối lượng cào bóc thảm lại 1.8m2 sau khi về lán trại.'
+    },
+    server_state: {
+      current_assignee: 'Tổ cơ động sửa chữa BTXM 01',
+      current_status: 'BATCH_FROZEN_APPROVED',
+      policy_version: 'POL-INVARIANT-BR26',
+      policy_summary: 'Hồ sơ đợt PKG-2026-05 đã được Supervisor duyệt APPROVED (Khóa cứng cấm sửa)',
+      last_updated: '24/08/2026 - 15:00:00',
+      server_photo_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80',
+      server_notes: 'Đợt sửa chữa PKG-2026-05 đã đóng băng theo Điều bất biến #3. Không cho phép ghi đè.'
+    },
+    timeline: [
+      { time: '15:00:00', event: 'Supervisor ký số Phê duyệt đợt sửa chữa PKG-2026-05 -> Hồ sơ bị khóa cứng Read-only (Invariant #3)', actor: 'Kỹ sư Nguyễn Văn An (Supervisor)', badge: 'Khóa cứng', type: 'warning' },
+      { time: '17:30:00', event: 'Tổ 01 nộp khối lượng hoàn thành cào bóc thảm lại cho ổ gà DEF-2026-0019', actor: 'Kỹ sư Nguyễn Trọng Hải', badge: 'Gửi muộn', type: 'info' },
+      { time: '17:35:00', event: 'Hệ thống chặn ghi đè vào đợt cũ, kích hoạt luồng tạo phụ lục đợt mới theo BR-26', actor: 'Hệ thống Khóa hồ sơ BR-26', badge: 'Xung đột', type: 'alert' }
+    ]
   }
 ]
 

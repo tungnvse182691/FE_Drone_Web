@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { mockSyncConflicts, mockFieldTasks } from '../../api/mock/data'
+import { fieldTaskService } from '../../api/services/fieldTaskService'
+import { conflictService } from '../../api/services/conflictService'
 import { SyncConflictItem, ResolutionStatus, FieldTask } from '../../types/domain'
+import { Icon } from '../../components/ui/Icon'
 import { FieldTasksHeader } from './field-tasks/FieldTasksHeader'
 import { ConflictsTab } from './field-tasks/ConflictsTab'
 import { MeasurementsTab } from './field-tasks/MeasurementsTab'
@@ -18,9 +20,9 @@ export const FieldTasks: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
-  // Tab chuyển đổi: Xử lý xung đột vs Nhật ký đo đạc hiện trường
+  // Tab chuyển đổi: Nhật ký đo đạc hiện trường (Ưu tiên mặc định cho PM-12) vs Xử lý xung đột
   const [activeTab, setActiveTab] = useState<'CONFLICTS' | 'MEASUREMENTS'>(
-    tabParam === 'MEASUREMENTS' ? 'MEASUREMENTS' : 'CONFLICTS'
+    tabParam === 'CONFLICTS' ? 'CONFLICTS' : 'MEASUREMENTS'
   )
 
   useEffect(() => {
@@ -31,12 +33,43 @@ export const FieldTasks: React.FC = () => {
     }
   }, [tabParam])
 
-  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường (In-memory Mock API)
-  const [fieldTasks] = useState<FieldTask[]>(() => [...mockFieldTasks])
+  // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường qua Mock API Service
+  const [fieldTasks, setFieldTasks] = useState<FieldTask[]>([])
+  const [isLoadingTasks, setIsLoadingTasks] = useState<boolean>(true)
 
-  // Dữ liệu xung đột được quản lý tập trung từ mockSyncConflicts
-  const [conflicts, setConflicts] = useState<SyncConflictItem[]>(mockSyncConflicts)
-  const [selectedConflictId, setSelectedConflictId] = useState<string>(mockSyncConflicts[0]?.id || 'conf-01')
+  const loadTasks = async () => {
+    setIsLoadingTasks(true)
+    try {
+      const data = await fieldTaskService.getTasks()
+      setFieldTasks(data)
+    } finally {
+      setIsLoadingTasks(false)
+    }
+  }
+
+  // Dữ liệu xung đột ngoại tuyến qua Mock API Service (conflictService)
+  const [conflicts, setConflicts] = useState<SyncConflictItem[]>([])
+  const [isLoadingConflicts, setIsLoadingConflicts] = useState<boolean>(true)
+  const [selectedConflictId, setSelectedConflictId] = useState<string>('conf-01')
+
+  const loadConflicts = async () => {
+    setIsLoadingConflicts(true)
+    try {
+      const data = await conflictService.getConflicts()
+      setConflicts(data)
+      if (data.length > 0 && !data.some((c) => c.id === selectedConflictId)) {
+        setSelectedConflictId(data[0].id)
+      }
+    } finally {
+      setIsLoadingConflicts(false)
+    }
+  }
+
+  useEffect(() => {
+    loadTasks()
+    loadConflicts()
+  }, [])
+
   const [filterType, setFilterType] = useState<string>('ALL')
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [isResolveModalOpen, setIsResolveModalOpen] = useState<boolean>(false)
@@ -50,6 +83,16 @@ export const FieldTasks: React.FC = () => {
     | null
   >(null)
   const [resolutionReason, setResolutionReason] = useState<string>('')
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type?: 'success' | 'info' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => {
+      setToast(null)
+    }, 3500)
+  }
 
   // Tìm item đang được chọn để soi chi tiết Side-by-side
   const selectedConflict = useMemo(() => {
@@ -87,11 +130,25 @@ export const FieldTasks: React.FC = () => {
     })
   }, [conflicts, searchTerm, filterType])
 
-  // Reset dữ liệu về ban đầu phục vụ người dùng test
-  const handleResetData = () => {
-    setConflicts([...mockSyncConflicts])
-    setSelectedConflictId(mockSyncConflicts[0]?.id || 'conf-01')
-    alert('Đã khôi phục toàn bộ dữ liệu mẫu ban đầu để bạn tiếp tục test!')
+  // Reset dữ liệu về ban đầu phục vụ người dùng test qua API
+  const handleResetData = async () => {
+    setIsLoadingTasks(true)
+    setIsLoadingConflicts(true)
+    try {
+      const [resetTasks, resetConflicts] = await Promise.all([
+        fieldTaskService.resetTasks(),
+        conflictService.resetConflicts()
+      ])
+      setFieldTasks(resetTasks)
+      setConflicts(resetConflicts)
+      if (resetConflicts.length > 0) {
+        setSelectedConflictId(resetConflicts[0].id)
+      }
+      showToast('Đã khôi phục toàn bộ dữ liệu mẫu API ban đầu cho cả 2 tab!', 'info')
+    } finally {
+      setIsLoadingTasks(false)
+      setIsLoadingConflicts(false)
+    }
   }
 
   // Mở modal xác nhận hành động
@@ -109,72 +166,57 @@ export const FieldTasks: React.FC = () => {
     setIsResolveModalOpen(true)
   }
 
-  // Thực thi phân giải
-  const handleExecuteResolution = (e: React.FormEvent) => {
+  // Thực thi phân giải qua Mock API Service (conflictService.resolveConflict)
+  const handleExecuteResolution = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!pendingDecision || !selectedConflict) return
 
-    let nextStatus: ResolutionStatus = 'RESOLVED_ACCEPT_INCOMING'
-    let decisionText = 'Chấp nhận chứng cứ ngoại tuyến (Accept Incoming)'
+    try {
+      const updatedItem = await conflictService.resolveConflict(selectedConflict.id, {
+        decision: pendingDecision,
+        reason: resolutionReason,
+        decidedBy: user?.full_name || 'Đỗ Quốc Hoàng (PM)',
+        decidedByRole: isSupervisor ? 'SUPERVISOR' : 'PROJECT_MANAGER'
+      })
 
-    if (pendingDecision === 'KEEP_SERVER_STATE') {
-      nextStatus = 'RESOLVED_KEEP_SERVER'
-      decisionText = 'Bảo lưu trạng thái máy chủ (Keep Server State)'
-    } else if (pendingDecision === 'FORK_NEW_ATTEMPT') {
-      nextStatus = 'RESOLVED_FORK_ATTEMPT'
-      decisionText = 'Tách thành lần sửa chữa độc lập mới (Fork New Attempt)'
-    } else if (pendingDecision === 'SUBMIT_RESCUE_TO_SUP') {
-      nextStatus = 'CONFLICT_INTAKE'
-      decisionText = 'PM đã lập tờ trình cứu hộ thiết bị gửi Giám sát (Q17/Decision 42A)'
-    } else if (pendingDecision === 'AUTHORIZE_RESCUE') {
-      nextStatus = 'RESCUE_AUTHORIZED'
-      decisionText = 'Supervisor ký số Phê duyệt đưa gói cứu hộ vào kho chứng cứ (Decision 42A)'
-    } else if (pendingDecision === 'SUPERVISOR_REJECT_RESCUE') {
-      nextStatus = 'RESCUE_REJECTED'
-      decisionText = 'Supervisor từ chối gói cứu hộ thiết bị (Bắt buộc đo đạc lại hiện trường)'
+      setConflicts((prev) => prev.map((c) => (c.id === updatedItem.id ? updatedItem : c)))
+      setIsResolveModalOpen(false)
+      showToast(
+        `Xác nhận thành công: ${updatedItem.resolution?.decision} cho hồ sơ ${updatedItem.conflict_code}!`,
+        'success'
+      )
+    } catch (err: any) {
+      showToast(`Lỗi phân giải: ${err?.message || 'Không thể xử lý'}`, 'error')
     }
-
-    const updated = conflicts.map((c) => {
-      if (c.id === selectedConflict.id) {
-        return {
-          ...c,
-          status: nextStatus,
-          status_label:
-            nextStatus === 'RESCUE_AUTHORIZED'
-              ? 'ĐÃ DUYỆT CỨU HỘ (42A)'
-              : nextStatus === 'RESCUE_REJECTED'
-              ? 'TỪ CHỐI CỨU HỘ'
-              : nextStatus === 'RESOLVED_ACCEPT_INCOMING'
-              ? 'ĐÃ DUYỆT NGOẠI TUYẾN'
-              : nextStatus === 'RESOLVED_KEEP_SERVER'
-              ? 'ĐÃ BẢO LƯU MÁY CHỦ'
-              : nextStatus === 'RESOLVED_FORK_ATTEMPT'
-              ? 'ĐÃ TÁCH LẦN SỬA'
-              : 'CHỜ SUP DUYỆT CỨU HỘ',
-          resolution: {
-            decision: decisionText,
-            decided_by: user?.full_name || 'Đỗ Quốc Hoàng (PM)',
-            decided_by_role: isSupervisor ? 'SUPERVISOR' : 'PROJECT_MANAGER',
-            decided_at: new Date().toLocaleTimeString('vi-VN', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit'
-            }) + ' Hôm nay',
-            reason: resolutionReason.trim() || 'Thực hiện phân giải theo đúng thẩm quyền và hồ sơ kiểm toán TCVN.',
-            audit_hash: '0x' + Math.random().toString(16).substring(2, 10).toUpperCase() + '...SHA256'
-          }
-        }
-      }
-      return c
-    })
-
-    setConflicts(updated)
-    setIsResolveModalOpen(false)
-    alert(`Xác nhận thành công: ${decisionText} cho hồ sơ ${selectedConflict.conflict_code}!`)
   }
 
   return (
     <div className="space-y-6 pb-16 text-[#1E293B]">
+      {/* Toast Notification (Minimalist & Non-blocking) */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#1A1D20] text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <Icon
+            name={toast.type === 'error' ? 'error' : toast.type === 'info' ? 'info' : 'check_circle'}
+            size={18}
+            className={
+              toast.type === 'error'
+                ? 'text-rose-400'
+                : toast.type === 'info'
+                ? 'text-blue-400'
+                : 'text-[#C9A227]'
+            }
+          />
+          <span className="text-xs font-medium">{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-white ml-2 text-xs cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header, Tab Switchers & KPI Cards */}
       <FieldTasksHeader
         isSupervisor={isSupervisor}
@@ -209,7 +251,10 @@ export const FieldTasks: React.FC = () => {
       {activeTab === 'MEASUREMENTS' && (
         <MeasurementsTab
           fieldTasks={fieldTasks}
+          onRefreshTasks={loadTasks}
           highlightCode={highlightCode}
+          isLoading={isLoadingTasks}
+          showToast={showToast}
         />
       )}
 

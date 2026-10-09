@@ -31,26 +31,61 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
     if (!sliderContainerRef.current) return
     const rect = sliderContainerRef.current.getBoundingClientRect()
     const x = clientX - rect.left
-    const percent = Math.min(Math.max(5, (x / rect.width) * 100), 95)
-    setSliderPos(percent)
+    const percent = Math.min(Math.max(0, (x / rect.width) * 100), 100)
+    setSliderPos(Math.round(percent))
   }, [])
 
-  const handleMouseDown = () => {
+  // Lắng nghe sự kiện toàn cục khi đang kéo thả để di chuyển chuột mượt mà không bị ngắt
+  useEffect(() => {
+    if (!isDraggingSlider) return
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      e.preventDefault()
+      handleSliderMove(e.clientX)
+    }
+
+    const handleWindowMouseUp = () => {
+      setIsDraggingSlider(false)
+    }
+
+    const handleWindowTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        handleSliderMove(e.touches[0].clientX)
+      }
+    }
+
+    const handleWindowTouchEnd = () => {
+      setIsDraggingSlider(false)
+    }
+
+    window.addEventListener('mousemove', handleWindowMouseMove)
+    window.addEventListener('mouseup', handleWindowMouseUp)
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: false })
+    window.addEventListener('touchend', handleWindowTouchEnd)
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove)
+      window.removeEventListener('mouseup', handleWindowMouseUp)
+      window.removeEventListener('touchmove', handleWindowTouchMove)
+      window.removeEventListener('touchend', handleWindowTouchEnd)
+    }
+  }, [isDraggingSlider, handleSliderMove])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
     setIsDraggingSlider(true)
+    handleSliderMove(e.clientX)
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingSlider) {
-      handleSliderMove(e.clientX)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches[0]) {
+      setIsDraggingSlider(true)
+      handleSliderMove(e.touches[0].clientX)
     }
   }
 
-  const handleMouseUp = () => {
-    setIsDraggingSlider(false)
-  }
-
   return (
-    <div className="space-y-4" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+    <div className="space-y-4">
       {/* 1. TRƯỜNG HỢP CÓ DỮ LIỆU ĐA KỲ (CÓ ẢNH KỲ TRƯỚC T-1 ĐỂ SO SÁNH) */}
       {hasPreviousEpoch ? (
         <div className="space-y-4">
@@ -104,7 +139,8 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
             <div className="space-y-2">
               <div
                 ref={sliderContainerRef}
-                onMouseMove={handleMouseMove}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
                 className="relative rounded-xl overflow-hidden border border-slate-300 bg-black aspect-video select-none cursor-ew-resize group shadow-md"
               >
                 {/* Lớp ảnh 1: Kỳ trước T-1 (Nằm dưới cùng, chiếm toàn bộ) */}
@@ -176,22 +212,63 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                 </div>
               </div>
 
-              {/* Range input trượt mượt mà phụ trợ */}
-              <div className="flex items-center gap-3 px-2 pt-1">
-                <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
-                  Kỳ trước ({epochPrevDate})
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={sliderPos}
-                  onChange={(e) => setSliderPos(Number(e.target.value))}
-                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#C9A227]"
-                />
-                <span className="text-[11px] font-medium text-slate-700 font-bold whitespace-nowrap">
-                  Kỳ này ({epochCurrDate})
-                </span>
+              {/* Range input trượt mượt mà phụ trợ & Các nút Preset nhanh */}
+              <div className="flex items-center justify-between gap-3 px-2 pt-1 flex-wrap">
+                <div className="flex-1 flex items-center gap-2 min-w-[220px]">
+                  <span className="text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                    Kỳ trước ({epochPrevDate})
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={sliderPos}
+                    onChange={(e) => setSliderPos(Number(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#C9A227]"
+                    title="Kéo trượt để điều chỉnh tỷ lệ hiển thị"
+                  />
+                  <span className="text-[11px] font-medium text-slate-700 font-bold whitespace-nowrap">
+                    Kỳ này ({epochCurrDate})
+                  </span>
+                </div>
+
+                {/* Các nút Preset nhanh */}
+                <div className="flex items-center gap-1 text-[11px]">
+                  <span className="text-[10px] text-slate-400 mr-1">Vị trí:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSliderPos(25)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+                      sliderPos === 25
+                        ? 'bg-[#C9A227] text-white font-bold'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    25%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSliderPos(50)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+                      sliderPos === 50
+                        ? 'bg-[#C9A227] text-white font-bold'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    50% (Cân bằng)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSliderPos(75)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+                      sliderPos === 75
+                        ? 'bg-[#C9A227] text-white font-bold'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                    }`}
+                  >
+                    75%
+                  </button>
+                </div>
               </div>
             </div>
           )}

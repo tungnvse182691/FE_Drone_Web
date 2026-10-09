@@ -23,168 +23,226 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
   isSupervisor,
   handleOpenResolve
 }) => {
+  const isRescueConflict = selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING'
+  const isAggregateConflict = selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT'
+  const isPolicyConflict = selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH'
+  const isReassignConflict = selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED'
+  const isDuplicateConflict = selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
+
   return (
     <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-      <div className="text-[11px] text-slate-500">
+      <div className="text-xs text-slate-500">
         {selectedConflict.status === 'CONFLICT_INTAKE' ? (
-          <span className="flex items-center gap-1 text-amber-700 font-semibold">
-            <Icon name="schedule" size={14} /> Hồ sơ đang chờ quyết định xử lý
+          selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
+            <span className="flex items-center gap-1.5 text-purple-700 font-medium">
+              <Icon name="schedule" size={15} /> Đã trình Giám sát (Chờ ký số)
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-amber-700 font-medium">
+              <Icon name="schedule" size={15} /> Chờ phân giải
+            </span>
+          )
+        ) : selectedConflict.status === 'RESOLVED_KEEP_SERVER' || selectedConflict.status === 'RESCUE_REJECTED' ? (
+          <span className="flex items-center gap-1.5 text-rose-700 font-medium">
+            <Icon name="cancel" size={15} /> {selectedConflict.status_label}
+          </span>
+        ) : selectedConflict.status === 'RESCUE_AUTHORIZED' ? (
+          <span className="flex items-center gap-1.5 text-purple-700 font-medium">
+            <Icon name="verified_user" size={15} /> {selectedConflict.status_label}
+          </span>
+        ) : selectedConflict.status === 'RESOLVED_FORK_ATTEMPT' ? (
+          <span className="flex items-center gap-1.5 text-amber-800 font-medium">
+            <Icon name="call_split" size={15} /> {selectedConflict.status_label}
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-            <Icon name="check_circle" size={14} /> Hồ sơ đã được chốt và lưu vết kiểm toán
+          <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+            <Icon name="check_circle" size={15} /> {selectedConflict.status_label}
           </span>
         )}
       </div>
 
-      {/* NÚT THAO TÁC CHO PROJECT MANAGER (PM CHỈ HUY TRƯỞNG) */}
-      {isPM && selectedConflict.status === 'CONFLICT_INTAKE' && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* TRƯỜNG HỢP CA 3: DEVICE_RESCUE_PENDING (Tuân thủ Q17/Decision 42A - PM là Maker, không tự duyệt) */}
-          {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
-            <>
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
-                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
-                title="Theo Q17/42A: PM lập tờ trình gửi Supervisor ký số phê duyệt"
-              >
-                <Icon name="verified_user" size={16} className="text-amber-300" />
-                <span>Trình Giám sát ký duyệt cứu hộ (Q17/42A)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
-                className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="refresh" size={14} className="text-slate-500" />
-                <span>Yêu cầu Đội thi công bổ sung biên bản</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-rose-700 hover:bg-rose-800 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="cancel" size={14} />
-                <span>Bác bỏ dữ liệu hỏng & Giao Đội đo lại</span>
-              </button>
-            </>
-          ) : selectedConflict.conflict_type === 'AGGREGATE_VERSION_CONFLICT' ? (
-            /* TRƯỜNG HỢP CA 5: AGGREGATE_VERSION_CONFLICT (Tuân thủ BR-26 & Invariant #3 - Khóa cứng đợt cũ) */
-            <>
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3.5 py-2 rounded-xl text-white text-xs font-bold bg-brand-gold hover:bg-brand-goldMuted transition shadow-sm flex items-center gap-1.5 cursor-pointer ring-2 ring-brand-gold/40"
-                title="Tuân thủ BR-26: Tạo phụ lục đợt mới để giải ngân khối lượng nộp muộn"
-              >
-                <Icon name="call_split" size={16} />
-                <span>Tạo Phụ Lục Đợt Bổ Sung (Tuân thủ BR-26)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
-                className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="cancel" size={14} className="text-slate-500" />
-                <span>Bảo lưu hồ sơ đã đóng (Từ chối số liệu)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
-                className="px-3 py-2 rounded-xl text-slate-800 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="archive" size={14} className="text-slate-600" />
-                <span>Chuyển vào Hàng đợi đợt sửa tiếp theo</span>
-              </button>
-            </>
-          ) : (
-            /* CÁC TRƯỜNG HỢP CA 1, 2, 4 */
-            <>
-              {/* Nút 1: Chấp nhận ngoại tuyến / Bản đo chuẩn / Chuyển đợt */}
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="check_circle" size={16} />
-                <span>
-                  {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Chấp nhận Thiết Bị 2 (Máy chính chuẩn)'}
-                  {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Chấp nhận Đội 02 (Thu hồi lệnh Đội 01)'}
-                  {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Chuyển sang Lập đợt sửa trình Giám sát (Policy v2.2)'}
-                </span>
-              </button>
-
-              {/* Nút 2: Bảo lưu máy chủ */}
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
-                className="px-3 py-2 rounded-xl text-slate-700 text-xs font-semibold bg-slate-100 hover:bg-slate-200 transition border border-slate-300 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="cancel" size={14} className="text-slate-500" />
-                <span>
-                  {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Bảo lưu Thiết Bị 1 (Máy phụ)'}
-                  {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Bảo lưu lệnh Đội 01 (Hủy kết quả Đội 02)'}
-                  {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Bảo lưu chính sách v2.2 (Từ chối Fast Track)'}
-                </span>
-              </button>
-
-              {/* Nút 3: Tách lần sửa mới (Fork Attempt) */}
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
-                className="px-3 py-2 rounded-xl text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="call_split" size={16} />
-                <span>
-                  {selectedConflict.conflict_type === 'DUPLICATE_WORK_ATTEMPT' &&
-                    'Tách 2 đợt đo đối chứng (Fork)'}
-                  {selectedConflict.conflict_type === 'ASSIGNMENT_REASSIGNED' &&
-                    'Tách 2 lần sửa độc lập (Fork)'}
-                  {selectedConflict.conflict_type === 'POLICY_VERSION_MISMATCH' &&
-                    'Tách thành Đợt sửa chữa nền móng chuyên đề'}
-                </span>
-              </button>
-            </>
+      {/* 1. TRƯỜNG HỢP CỨU HỘ THIẾT BỊ GẶP SỰ CỐ (Q17 / QUYẾT ĐỊNH 42A) */}
+      {isRescueConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+        <>
+          {isPM && (
+            selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
+              <div className="text-xs text-slate-500 italic flex items-center gap-1.5">
+                <Icon name="hourglass_top" size={14} className="text-purple-600" />
+                <span>Đã gửi tờ trình cứu hộ lên Giám sát. Chờ ký số phê duyệt (Q17).</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
+                  className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-dark hover:bg-slate-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  title="Quy chuẩn Q17: PM lập tờ trình chuyển Supervisor ký số phê duyệt gói SQLite"
+                >
+                  <Icon name="send" size={15} className="text-brand-gold" />
+                  <span>Trình Giám sát duyệt cứu hộ (Q17)</span>
+                </button>
+              </div>
+            )
           )}
-        </div>
-      )}
 
-      {/* NÚT THAO TÁC CHO SUPERVISOR (GIÁM SÁT / CHỦ ĐẦU TƯ) */}
-      {isSupervisor && selectedConflict.status === 'CONFLICT_INTAKE' && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {selectedConflict.conflict_type === 'DEVICE_RESCUE_PENDING' ? (
-            <>
+          {isSupervisor && (
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => handleOpenResolve('AUTHORIZE_RESCUE')}
-                className="px-4 py-2 rounded-xl text-white text-xs font-bold bg-purple-700 hover:bg-purple-800 transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-purple-700 hover:bg-purple-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Icon name="verified_user" size={16} className="text-emerald-300" />
-                <span>Ký số Phê duyệt Cứu Dữ Liệu Thiết Bị (Decision 42A)</span>
+                <Icon name="verified_user" size={15} />
+                <span>Ký số phê duyệt cứu hộ</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('SUPERVISOR_REJECT_RESCUE')}
-                className="px-3.5 py-2 rounded-xl text-rose-700 text-xs font-bold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Icon name="cancel" size={14} className="text-rose-600" />
-                <span>Từ chối gói cứu hộ (Bắt buộc đo lại)</span>
+                <Icon name="cancel" size={15} />
+                <span>Từ chối gói cứu hộ</span>
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* 2. TRƯỜNG HỢP HỒ SƠ ĐỢT ĐÃ ĐÓNG BĂNG ĐÃ DUYỆT (BR-26 / ĐIỀU BẤT BIẾN #3) */}
+      {isAggregateConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {isPM && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Tạo đợt phụ lục mới theo quy tắc BR-26 do đợt cũ đã đóng băng"
+              >
+                <Icon name="add_circle" size={15} />
+                <span>Tạo phụ lục đợt mới (BR-26)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
+                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-white hover:bg-rose-50 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Icon name="cancel" size={15} className="text-rose-600" />
+                <span>Từ chối số liệu nộp muộn</span>
               </button>
             </>
-          ) : (
-            <div className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200">
-              Chế độ Giám sát: Quyền phân giải nghiệp vụ thuộc Chỉ huy trưởng PM (Maker-Checker).
+          )}
+          {isSupervisor && (
+            <div className="text-xs text-slate-500 italic">
+              Đợt đã đóng băng (APPROVED). PM xử lý tạo phụ lục đợt mới hoặc từ chối.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. TRƯỜNG HỢP LỆCH CHÍNH SÁCH FAST TRACK (D06 / BR-16) - CHỈ CÓ 2 QUYẾT ĐỊNH: ĐẶC CÁCH DUYỆT HOẶC TỪ CHỐI */}
+      {isPolicyConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {isPM && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Đặc cách cho phép tự sửa Fast Track theo chính sách v1.8"
+              >
+                <Icon name="check_circle" size={15} />
+                <span>Đặc cách duyệt Fast Track</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
+                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-white hover:bg-rose-50 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Bác bỏ đề xuất Fast Track, chuyển sang diện lập hồ sơ đợt sửa theo chính sách v2.2"
+              >
+                <Icon name="cancel" size={15} className="text-rose-600" />
+                <span>Từ chối Fast Track (Chuyển duyệt đợt)</span>
+              </button>
+            </>
+          )}
+          {isSupervisor && (
+            <div className="text-xs text-slate-500 italic">
+              Chỉ huy trưởng (PM) có thẩm quyền phân giải chính sách Fast Track.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. TRƯỜNG HỢP ĐỔI ĐỘI THI CÔNG KHI NGOẠI TUYẾN (D05 / Q04) - CÔNG NHẬN KẾT QUẢ ĐỘI CŨ HOẶC TỪ CHỐI GIỮ ĐỘI MỚI */}
+      {isReassignConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {isPM && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Công nhận kết quả đo 62mm của Tổ 02 nộp lên, thu hồi điều động đối với Đội 01"
+              >
+                <Icon name="check_circle" size={15} />
+                <span>Công nhận kết quả Tổ 02 (Thu hồi Đội 01)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
+                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-white hover:bg-rose-50 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Bác bỏ kết quả nộp của Tổ 02, giữ nguyên phân công cho Đội 01 thi công"
+              >
+                <Icon name="cancel" size={15} className="text-rose-600" />
+                <span>Từ chối kết quả Tổ 02 (Giữ Đội 01)</span>
+              </button>
+            </>
+          )}
+          {isSupervisor && (
+            <div className="text-xs text-slate-500 italic">
+              Chỉ huy trưởng (PM) có thẩm quyền phân giải điều phối đội thi công.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. TRƯỜNG HỢP TRÙNG LẶP 2 THIẾT BỊ CÙNG ĐO (DEDUP) - CHỌN MÁY CHÍNH, MÁY PHỤ HOẶC HỢP NHẤT THỦ CÔNG */}
+      {isDuplicateConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {isPM && (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Công nhận bản đo 38mm của Máy chính (chuẩn TCVN 8864)"
+              >
+                <Icon name="check_circle" size={15} />
+                <span>Chọn bản Máy chính (38mm)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
+                className="px-3.5 py-2 rounded-lg text-slate-700 text-xs font-semibold bg-white hover:bg-slate-100 transition border border-slate-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Công nhận bản đo 45mm của Máy phụ"
+              >
+                <Icon name="devices" size={15} className="text-slate-500" />
+                <span>Chọn bản Máy phụ (45mm)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
+                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Đối soát và chọn từng trường dữ liệu giữa 2 bản nộp"
+              >
+                <Icon name="call_split" size={15} />
+                <span>Hợp nhất thủ công</span>
+              </button>
+            </>
+          )}
+          {isSupervisor && (
+            <div className="text-xs text-slate-500 italic">
+              Chỉ huy trưởng (PM) có thẩm quyền phân giải trùng lặp dữ liệu.
             </div>
           )}
         </div>

@@ -98,12 +98,21 @@ export interface FieldTask {
   code: string
   defect_id: string
   defect_code: string
+  defect_name?: string
+  defect_photo_url?: string // Ảnh chụp khiếm khuyết từ Drone (Triage)
   measurement_type: string
   chainage_km: number
-  status: 'ASSIGNED' | 'SUBMITTED' | 'VERIFIED'
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED'
   measured_value?: number
-  evidence_photo_url?: string
+  evidence_photo_url?: string // Ảnh chụp thước đo đối chứng từ hiện trường (Mobile)
   technician_name: string
+  created_at?: string
+  lane?: string
+  notes?: string
+  gps_lat?: number
+  gps_lng?: number
+  exif_device?: string
+  exif_captured_at?: string
 }
 
 export interface WorkOrder {

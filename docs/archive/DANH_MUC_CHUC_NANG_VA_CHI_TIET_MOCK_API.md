@@ -525,14 +525,48 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC PM-12: Theo dõi Nhiệm vụ Đo đạc Bổ sung (KT01, KT02)
+#### BƯỚC PM-12: Nhiệm vụ Đo đạc Hiện trường & Phân giải Xung đột Ngoại tuyến (KT01, KT02, BR-16)
 - **Đường dẫn URL:** `/pm/field-tasks`
-- **Mục tiêu:** Quản lý các phiếu yêu cầu đo đạc thước/laser bổ sung ngoài hiện trường khi ảnh Drone chưa đủ rõ.
+- **Mục tiêu:** Quản lý các phiếu yêu cầu đo đạc thước/laser bổ sung ngoài hiện trường khi ảnh Drone chưa đủ rõ, theo dõi tiến độ nộp số liệu từ App Mobile của Repair Crew và thẩm định xác minh kết quả đo đạc; đồng thời tiếp nhận và phân giải các xung đột dữ liệu ngoại tuyến (Offline Sync Conflicts) từ thiết bị Mobile theo quy tắc BR-16.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Xem danh sách nhiệm vụ hiện trường (Field Tasks).
-  2. [ ] Bấm "Tạo nhiệm vụ đo đạc bổ sung": Chỉ định vị trí lỗi, loại thiết bị đo (thước đo lún, máy laser).
-  3. [ ] Xem kết quả số liệu nộp về từ kỹ thuật viên hiện trường và cập nhật ngược lại vào hồ sơ lỗi.
-- **Tiêu chuẩn đạt (Expected):** Quản lý trạng thái phiếu đo đạc mượt mà (`OPEN` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `RESOLVED`).
+  - **Phần A: Quản lý & Xác minh Nhiệm vụ Đo đạc (Tab 1):**
+    1. [ ] Xem danh sách nhiệm vụ đo đạc hiện trường (Field Tasks) theo các trạng thái (`Cần thực hiện`, `Đang đo đạc`, `Đã có số đo`, `Đã xác minh`).
+    2. [ ] Bấm **"+ Tạo nhiệm vụ"**: Giao nhiệm vụ cho Đội thi công (Repair Crew) / Kỹ sư hiện trường (chỉ định vị trí Km, làn đường, thiết bị đo).
+    3. [ ] Theo dõi các phiếu đã được Repair Crew đo đạc và nộp số đo thực tế (mm) kèm ảnh thước đo từ Mobile lên hệ thống (trạng thái `ĐÃ CÓ SỐ ĐO` - SUBMITTED).
+    4. [ ] Bấm nút **"Chi tiết & Ảnh"** hoặc bấm trực tiếp vào thumbnail ảnh ở cột **"Ảnh Đối Chứng"**:
+       - Mở Modal Chi Tiết: Hiển thị song song thông tin kỹ thuật, số mm đo được và hình ảnh kỹ thuật.
+       - Cho phép chuyển đổi linh hoạt giữa **Ảnh Thước Đo (Mobile)** và **Ảnh Khảo Sát Ban Đầu (Drone)**.
+       - Bấm **"Phóng to"** hoặc **"So sánh 2 ảnh"**: Kích hoạt **Photo Lightbox toàn màn hình** hỗ trợ Zoom in (+), Zoom out (-), Reset (100%), Xoay 90°, xem chi tiết EXIF GPS / Thiết bị / Thời gian chụp.
+    5. [ ] Bấm **"Xác minh số liệu"**: Chỉ huy trưởng (PM) xác nhận số liệu hợp lệ (ngay trên bảng, trong modal chi tiết hoặc ngay trong Lightbox) để chuyển sang `VERIFIED` và cập nhật vào hồ sơ khiếm khuyết.
+  - **Phần B: Phân giải Xung đột Ngoại tuyến Offline Sync (Tab 2 - BR-16):**
+    1. [ ] Bấm chuyển sang Tab **"Xử lý xung đột ngoại tuyến"**.
+    2. [ ] Xem danh sách các ca xung đột do kỹ sư hiện trường nộp lên khi có mạng trở lại (ví dụ ca xung đột `#CONF-2026-081`).
+    3. [ ] Mở bảng đối chiếu chi tiết giữa hai phiên bản:
+       - Bấm nút **"Phóng to ảnh"** trên ảnh Cột Trái (Dữ liệu cơ sở / Server) hoặc Cột Phải (Ảnh thước đo thực địa / Ảnh hoàn thiện) để soi chi tiết vạch thước và chất lượng thi công.
+       - Kiểm tra nhãn thời gian, mã băm SHA-256, vị trí GPS và lịch sử ngoại tuyến.
+       - **Dữ liệu hiện trường (Local Client / Mobile):** Bản ghi thu thập offline, nhãn thời gian thiết bị.
+       - **Dữ liệu hệ thống (Server Version):** Bản ghi hiện hành trên cơ sở dữ liệu trung tâm.
+    4. [ ] Lựa chọn quyết định giải quyết xung đột chuẩn xác theo từng loại nguyên nhân (Quy tắc BR-16 & Mục 12 tài liệu `09_Offline_App_Sync_Spec.md` — cấm Last-write-wins và cấm silent overwrite):
+       - **Đổi đội khi ngoại tuyến (`ASSIGNMENT_REASSIGNED` - D05/Q04):** Bảo toàn Actor và tính toàn vẹn kiểm toán (Provenance), cấm merge bản ghi lai ghép giữa 2 đội. PM chọn:
+         + *Công nhận kết quả Tổ 02 (Thu hồi Đội 01):* Công nhận số đo 62mm do Tổ 02 đã đo thực tế, thu hồi lệnh điều chuyển Đội 01.
+         + *Từ chối kết quả Tổ 02 (Giữ Đội 01):* Bác bỏ số đo của Tổ 02, giữ nguyên phân công cho Đội 01 đo/thi công lại.
+       - **Lệch chính sách Fast Track (`POLICY_VERSION_MISMATCH` - D06/BR-16):** Quyết định phân luồng kỹ thuật nhị phân, cấm hợp nhất chính sách. PM chọn:
+         + *Đặc cách duyệt Fast Track:* Cho phép tự sửa nhanh theo chính sách v1.8 (ngưỡng < 30mm).
+         + *Từ chối Fast Track (Chuyển duyệt đợt):* Bác bỏ đề xuất theo chính sách v2.2 (ngưỡng ≤ 20mm), chuyển khiếm khuyết sang hồ sơ đợt sửa (Approval Track).
+       - **Trùng lặp 2 thiết bị cùng nộp (`DUPLICATE_WORK_ATTEMPT` - DEDUP):** Duy nhất ca này mới có đối soát dữ liệu trùng lặp. PM chọn:
+         + *Chọn bản Máy chính (38mm)* (chuẩn TCVN 8864).
+         + *Chọn bản Máy phụ (45mm)* (ước lượng sơ bộ).
+         + *Hợp nhất thủ công (Manual Merge):* Đối soát nhặt từng trường dữ liệu hợp lệ giữa 2 thiết bị.
+       - **Cứu hộ thiết bị gặp sự cố (`DEVICE_RESCUE_PENDING` - Q17 / Quyết định 42A):** Quy trình thẩm quyền 2 lớp bảo mật:
+         + *Phía PM:* Không được tự duyệt gói cứu hộ, chỉ có quyền bấm **"Trình Giám sát duyệt cứu hộ (Q17)"**.
+         + *Phía Supervisor:* Duy nhất Supervisor có thẩm quyền bấm **"Ký số phê duyệt cứu hộ"** hoặc **"Từ chối gói cứu hộ"**.
+       - **Hồ sơ đợt đã đóng băng APPROVED (`AGGREGATE_VERSION_CONFLICT` - BR-26 / Invariant #3):** Tuân thủ Điều bất biến #3 cấm ghi đè đợt cũ. PM chọn:
+         + *Tạo phụ lục đợt mới (BR-26):* Chuyển khối lượng nộp muộn sang đợt mới.
+         + *Từ chối số liệu nộp muộn:* Bác bỏ khối lượng nộp muộn sau khi đợt đã khóa cứng.
+    5. [ ] Xác nhận giải quyết xung đột $\rightarrow$ Ca xung đột chuyển sang trạng thái phân giải tương ứng (`ĐÃ CÔNG NHẬN (TỔ 02)`, `TỪ CHỐI (GIỮ ĐỘI 01)`, `ĐẶC CÁCH FAST TRACK`, `TỪ CHỐI FAST TRACK`, `ĐÃ KÝ SỐ DUYỆT CỨU HỘ`...) và ghi nhận mã băm SHA-256 vào Audit Log.
+- **Tiêu chuẩn đạt (Expected):**
+  - Quản lý trạng thái phiếu đo đạc mượt mà (`OPEN` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `RESOLVED` / `VERIFIED`).
+  - Danh sách xung đột phân giải đúng thẩm quyền PM / Supervisor, phản ánh chuẩn xác bản chất kỹ thuật theo spec 29_9, tuyệt đối không tự động ghi đè hoặc trộn dữ liệu sai quy chuẩn.
 
 ---
 

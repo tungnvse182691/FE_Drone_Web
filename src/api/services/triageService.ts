@@ -1,8 +1,12 @@
 import { TriageCase } from '../../types/domain'
 import { mockTriageCases } from '../../data/mockData'
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 
-// In-memory Mock Data Store (Tuân thủ nguyên tắc Zero localStorage, giả lập RESTful API bất đồng bộ)
-let inMemoryTriageCases: TriageCase[] = JSON.parse(JSON.stringify(mockTriageCases))
+// Mock Data Store đồng bộ qua STORAGE_KEYS.TRIAGE_CASES
+let inMemoryTriageCases: TriageCase[] = getFromStorage(
+  STORAGE_KEYS.TRIAGE_CASES,
+  JSON.parse(JSON.stringify(mockTriageCases))
+)
 
 export interface TriageFilterParams {
   source?: string
@@ -74,6 +78,7 @@ export const triageService = {
       ...inMemoryTriageCases[index],
       ...updates
     }
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
     return JSON.parse(JSON.stringify(inMemoryTriageCases[index]))
   },
 
@@ -115,6 +120,8 @@ export const triageService = {
       pm_notes: `${master.pm_notes ? master.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG PA04] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${auditNotes}`
     }
 
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+
     return {
       success: true,
       master: JSON.parse(JSON.stringify(inMemoryTriageCases[masterIndex]))
@@ -155,7 +162,11 @@ export const triageService = {
       }
     }
 
-    return { success: true }
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+
+    return {
+      success: true
+    }
   },
 
   /**
@@ -164,6 +175,7 @@ export const triageService = {
   async resetCases(): Promise<TriageCase[]> {
     await new Promise((resolve) => setTimeout(resolve, 100))
     inMemoryTriageCases = JSON.parse(JSON.stringify(mockTriageCases))
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
     return JSON.parse(JSON.stringify(inMemoryTriageCases))
   }
 }
