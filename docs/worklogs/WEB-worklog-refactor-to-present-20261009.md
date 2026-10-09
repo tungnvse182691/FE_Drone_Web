@@ -243,4 +243,37 @@
   4. **Bổ sung Bước PM-16 (Tra cứu Nhật ký Kiểm toán - RPT-10, Durable Audit Trail):** Tuyến URL `/pm/audit-trail`, tra cứu dòng sự kiện bất biến hệ thống (`GET /audit-events`), xác thực chữ ký/mã băm SHA-256 payload dữ liệu.
   5. **Bổ sung Bước PM-17 (Quản lý Vòng đời & Đề xuất Hủy Hồ sơ - BR-45, WF-12):** Tuyến URL `/pm/retention` / `/pm/system-control`, theo dõi hạn lưu trữ hồ sơ (hết bảo hành + 5 năm), kiểm tra điều kiện Legal Hold và gửi đề xuất hủy sang Giám sát phê duyệt (nguyên tắc kiểm soát 4 mắt).
 
+---
+
+## VI. TÁI CẤU TRÚC MÀN HÌNH NGHIỆM THU KỸ THUẬT (EVIDENCE CLOSEOUT) THEO MINIMALISM & ZERO LOCALSTORAGE
+
+- **Tệp chỉnh sửa:**
+  - `src/pages/(sup)/EvidenceCloseoutDetail.tsx`
+  - `src/pages/(sup)/evidence-closeout/CloseoutHeader.tsx`
+  - `src/pages/(sup)/evidence-closeout/StatusBar.tsx`
+  - `src/pages/(sup)/evidence-closeout/ActionButtons.tsx`
+  - `src/pages/(sup)/evidence-closeout/ComparisonViewer.tsx`
+  - `src/pages/(sup)/evidence-closeout/BeforeViewer.tsx`
+  - `src/pages/(sup)/evidence-closeout/AfterViewer.tsx`
+  - `src/pages/(sup)/evidence-closeout/TechnicalCriteriaCard.tsx`
+  - `src/pages/(sup)/evidence-closeout/CloseoutModals.tsx`
+  - `src/pages/(sup)/evidence-closeout/VerifyModal.tsx`
+  - `src/pages/(sup)/evidence-closeout/ReworkModal.tsx`
+  - `src/pages/(sup)/evidence-closeout/ExportPdfAModal.tsx`
+  - `src/pages/(sup)/evidence-closeout/ExportZipModal.tsx`
+  - `src/api/services/acceptanceService.ts`
+  - `src/types/domain.ts`
+- **Nghiệp vụ & Kỷ luật thiết kế đã xử lý:**
+  1. **Xóa bỏ hoàn toàn widget tráo role (Role Switcher):** Loại bỏ các nút chuyển đổi role giả lập trong Header. Vai trò được xác thực trực tiếp và an toàn từ `useAuthStore().user?.role` (`RoleCode.SUPERVISOR` hoặc `RoleCode.PROJECT_MANAGER`). Hiển thị badge vai trò tĩnh thanh lịch ở góc trên.
+  2. **Dọn sạch chi tiết rác (UI Clutter / Developer notes):**
+     - Xóa bỏ micro-banner rác *"Thẩm quyền: Ban Giám sát độc lập..."*.
+     - Xóa bỏ dòng ghi chú kỹ thuật lộ mã nội bộ *"Quy tắc kiểm soát Backend v2.2: CASE_HAS_OPEN_REQUIRED_ITEMS = ..."*.
+     - Giữ nguyên thông tin kỹ thuật cốt lõi (TCVN 8819:2011, độ chặt K98, độ phẳng thước 3m, độ nhám rắc cát, nhiệt độ thảm rải/lu lèn).
+  3. **Chuyển đổi toàn diện sang Google Material Symbols:** 100% icon chuyển sang `<span className="material-symbols-outlined">...</span>` theo đúng chuẩn của `skills/roadguard-web/DESIGN.md`.
+  4. **Chuyển đổi sang Mock API bất đồng bộ (Zero localStorage):**
+     - Nâng cấp `acceptanceService` thành API Service bất đồng bộ mô phỏng RESTful backend với In-Memory store (`getCloseoutItems`, `acceptCloseoutItem`, `reworkCloseoutItem`, `closeFastTrackItem`, `submitItemToSupervisor`, `closeCompositeCase`, `publishCitizenResult`).
+     - Tuyệt đối không lưu mock state hay ghi đè vào `localStorage`.
+  5. **Typecheck & Build:** `npx tsc -b && npx vite build` đạt Exit Code 0, dev server chạy mượt mà trên cổng 3000.
+
+
 

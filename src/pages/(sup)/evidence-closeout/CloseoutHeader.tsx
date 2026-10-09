@@ -1,15 +1,4 @@
 import React from 'react'
-import {
-  FileCheck,
-  ChevronRight,
-  ShieldCheck,
-  ShieldAlert,
-  CheckCircle2,
-  AlertTriangle,
-  UserCheck,
-  Share2,
-  Layers
-} from 'lucide-react'
 import { CaseItem } from './types'
 import { StatusBar } from './StatusBar'
 import { ActionButtons } from './ActionButtons'
@@ -19,8 +8,6 @@ export interface CloseoutHeaderProps {
   caseItems: CaseItem[]
   selectedItemId: string
   setSelectedItemId: (id: string) => void
-  activeRoleView: 'SUPERVISOR' | 'PROJECT_MANAGER'
-  setActiveRoleView: (r: 'SUPERVISOR' | 'PROJECT_MANAGER') => void
   isSupervisorView: boolean
   isPMView: boolean
   basePath: string
@@ -43,8 +30,6 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
   caseItems,
   selectedItemId,
   setSelectedItemId,
-  activeRoleView: _activeRoleView,
-  setActiveRoleView,
   isSupervisorView,
   isPMView,
   basePath: _basePath,
@@ -64,80 +49,57 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
   return (
     <>
       {/* TOP CONTEXT BAR & BREADCRUMB */}
-      <section className="bg-white border border-brand-border rounded-2xl p-6 shadow-xs space-y-4">
+      <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           {/* Breadcrumb & Identity */}
           <div className="flex flex-col gap-1.5">
-            <nav aria-label="Đường dẫn điều hướng" className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <nav aria-label="Đường dẫn điều hướng" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
               <button
                 onClick={onNavigateHome}
                 className="hover:text-slate-900 transition-colors cursor-pointer"
               >
                 Trang chủ
               </button>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+              <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
               <button
                 onClick={onNavigateProposals}
                 className="hover:text-slate-900 transition-colors cursor-pointer"
               >
                 Gói đề xuất sửa chữa
               </button>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-slate-900 font-semibold">Nghiệm thu hồ sơ {currentItem.defect_code}</span>
+              <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
+              <span className="text-slate-900 font-medium">Nghiệm thu hồ sơ {currentItem.defect_code}</span>
             </nav>
 
             <div className="flex flex-wrap items-baseline gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-sansation">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-sansation">
                 Hồ sơ nghiệm thu kỹ thuật: {currentItem.defect_code}
               </h1>
-              <span className="font-mono bg-slate-100 px-3 py-1 rounded-full text-slate-800 font-bold text-xs border border-slate-200 shadow-2xs">
+              <span className="font-mono bg-slate-100 px-2.5 py-0.5 rounded-md text-slate-800 font-bold text-xs border border-slate-200">
                 {currentItem.chainage}
               </span>
             </div>
 
-            <p className="text-xs text-slate-600 font-medium">
-              Dự án: <strong className="text-slate-800">QL1A - Giai đoạn 2 (Km 1020 - Km 1045)</strong> • Gói đề xuất: <strong className="text-slate-800">PKG-2026-08</strong> • Hạng mục: <strong className="text-[#92700C]">{currentItem.item_code}</strong> • Phân đoạn: Thừa Thiên Huế - Đà Nẵng
+            <p className="text-xs text-slate-500">
+              Dự án: <span className="font-medium text-slate-700">QL1A - Giai đoạn 2 (Km 1020 - Km 1045)</span> • Gói đề xuất: <span className="font-medium text-slate-700">PKG-2026-08</span> • Hạng mục: <span className="font-medium text-[#C9A227]">{currentItem.item_code}</span> • Phân đoạn: Thừa Thiên Huế - Đà Nẵng
             </p>
           </div>
 
-          {/* Role Switcher Widget */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl shadow-2xs border border-slate-200" role="tablist">
-              <button
-                onClick={() => setActiveRoleView('SUPERVISOR')}
-                type="button"
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isSupervisorView
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <UserCheck className="w-3.5 h-3.5 text-brand-gold" />
-                <span>Kỹ sư Giám sát</span>
-              </button>
-              <button
-                onClick={() => setActiveRoleView('PROJECT_MANAGER')}
-                type="button"
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isPMView
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Share2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>Chỉ huy trưởng (PM)</span>
-              </button>
-            </div>
-
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/80">
-              <ShieldCheck className="w-4 h-4 text-brand-gold" />
-              <span>Quy trình nghiệm thu</span>
+          {/* Vai trò xác thực của người dùng (Tĩnh, không có nút switch role) */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-50 border border-slate-200 text-slate-700">
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">
+                {isSupervisorView ? 'verified_user' : 'engineering'}
+              </span>
+              <span>
+                {isSupervisorView ? 'Kỹ sư Giám sát' : 'Chỉ huy trưởng (PM)'}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Status & Policy Indicator Bar */}
-        <div className="pt-2 flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+        {/* Thanh trạng thái & Hành động xử lý */}
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
           <StatusBar currentItem={currentItem} />
           <ActionButtons
             currentItem={currentItem}
@@ -151,69 +113,55 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
             onOpenPublishModal={onOpenPublishModal}
           />
         </div>
-
-        {/* Active Authority Micro-Banner */}
-        <div className="text-xs text-slate-600 flex items-center gap-2 pt-1 font-medium">
-          <ShieldAlert className="w-4 h-4 text-brand-gold shrink-0" />
-          {isSupervisorView ? (
-            <span>
-              Thẩm quyền: <strong className="text-slate-900">Ban Giám sát độc lập (Supervisor)</strong> — Bắt buộc ký số PKI &amp; kiểm tra các chỉ tiêu kỹ thuật TCVN 8819 (Độ chặt K98, độ phẳng thước 3m) trước khi cho phép đóng gói hoàn công.
-            </span>
-          ) : (
-            <span>
-              Thẩm quyền: <strong className="text-slate-900">Project Manager (PM Chỉ huy trưởng)</strong> — Trực tiếp đóng lỗi nhánh Fast Track trong 48h; đối với nhánh Approval Track, PM kiểm tra hiện trường, trình Giám sát duyệt rồi phát hành dữ liệu lên Citizen App.
-            </span>
-          )}
-        </div>
       </section>
 
-      {/* COMPOSITE CASE ALERT (Mixed Case Closeout Banner) */}
-      <section className="p-6 bg-white border border-brand-border rounded-2xl shadow-xs space-y-3">
+      {/* COMPOSITE CASE PANEL (Vụ việc phức hợp liên quan) */}
+      <section className="p-5 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <Layers className="w-5 h-5 text-brand-gold" />
-              <h3 className="font-bold text-lg text-slate-900 font-sansation">
-                Vụ việc phức hợp liên quan: #CASE-2026-0842
-              </h3>
+              <span className="material-symbols-outlined text-[18px] text-[#C9A227]">layers</span>
+              <h2 className="font-bold text-base text-slate-900 font-sansation">
+                Vụ việc phức hợp: #CASE-2026-0842
+              </h2>
               {isCaseClosed ? (
-                <span className="px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-bold border border-slate-700 shadow-2xs">
-                  ✓ HỒ SƠ ĐÃ ĐÓNG TỔNG THỂ &amp; LƯU TRỮ PHÁP LÝ
+                <span className="px-2.5 py-0.5 rounded-md bg-slate-900 text-white text-[11px] font-medium border border-slate-700">
+                  Hồ sơ đã đóng tổng thể
                 </span>
               ) : allItemsAccepted ? (
-                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 shadow-2xs">
-                  ĐÃ HOÀN THÀNH {acceptedCount}/{caseItems.length} HẠNG MỤC (ĐỦ ĐIỀU KIỆN ĐÓNG VỤ VIỆC)
+                <span className="px-2.5 py-0.5 rounded-md bg-[#E9F7EC] text-[#2F9E44] text-[11px] font-medium border border-[#C3E6CB]">
+                  Đã hoàn thành {acceptedCount}/{caseItems.length} hạng mục (Đủ điều kiện đóng)
                 </span>
               ) : (
-                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-200 shadow-2xs">
-                  ĐÃ HOÀN THÀNH {acceptedCount}/{caseItems.length} HẠNG MỤC
+                <span className="px-2.5 py-0.5 rounded-md bg-[#FEF3E2] text-[#B45309] text-[11px] font-medium border border-[#FDE68A]">
+                  Đã hoàn thành {acceptedCount}/{caseItems.length} hạng mục
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-slate-600 font-medium">
-              Phạm vi công trình: Đoạn Km 1024+350 - Km 1024+450 (Gói bảo trì QL1A PKG-2026-08). Nghiệm thu toàn bộ các hạng mục thành phần sẽ cho phép Supervisor bấm Đóng tổng thể vụ việc.
+            <p className="text-xs text-slate-500">
+              Đoạn Km 1024+350 - Km 1024+450 (Gói PKG-2026-08). Nghiệm thu toàn bộ các hạng mục để đóng tổng thể vụ việc.
             </p>
 
-            {/* List of items in this case for fast switching */}
+            {/* Danh sách hạng mục thành phần chuyển đổi nhanh */}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
               {caseItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setSelectedItemId(item.id)}
                   type="button"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold transition cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer border ${
                     selectedItemId === item.id
-                      ? 'bg-[#FEF9E7] text-[#92700C] border border-[#FDE68A] shadow-xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border border-slate-200'
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
                   }`}
                 >
                   {item.status === 'ACCEPTED' ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="material-symbols-outlined text-[15px] text-[#2F9E44]">check_circle</span>
                   ) : item.status === 'REWORK_REQUIRED' ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                    <span className="material-symbols-outlined text-[15px] text-[#E5484D]">error</span>
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                   )}
                   <span>
                     {item.item_code}: {item.title} ({item.track_type === 'FAST_TRACK' ? 'Fast Track' : 'Approval'})
@@ -223,44 +171,35 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
             </div>
           </div>
 
-          {/* Close Composite Case Action Button */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 shrink-0">
+          {/* Nút Đóng tổng thể vụ việc (Chỉ dành cho Supervisor) */}
+          <div className="flex items-center gap-2 shrink-0">
             {isSupervisorView ? (
               <button
                 onClick={onOpenCloseCaseModal}
                 disabled={!allItemsAccepted || isCaseClosed}
                 type="button"
-                className={`px-4 h-10 rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-2 ${
+                className={`px-3.5 h-9 rounded-md font-medium text-xs shadow-xs transition flex items-center gap-1.5 ${
                   isCaseClosed
                     ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                     : allItemsAccepted
-                    ? 'border border-brand-gold text-[#92700C] bg-[#FEF9E7] hover:bg-[#FDF0CD] cursor-pointer'
+                    ? 'border border-[#C9A227] text-[#C9A227] bg-amber-50 hover:bg-amber-100 cursor-pointer'
                     : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60'
                 }`}
-                title={
-                  !allItemsAccepted
-                    ? 'Chặn đóng tổng theo quy tắc CASE_HAS_OPEN_REQUIRED_ITEMS: Phải nghiệm thu 100% hạng mục'
-                    : undefined
-                }
               >
-                <FileCheck className="w-4 h-4 text-brand-gold" />
+                <span className="material-symbols-outlined text-[16px]">
+                  {isCaseClosed ? 'lock' : 'task_alt'}
+                </span>
                 <span>
-                  {isCaseClosed ? 'Vụ việc đã được đóng tổng' : 'Đóng tổng thể vụ việc (Supervisor Closeout)'}
+                  {isCaseClosed ? 'Vụ việc đã đóng' : 'Đóng tổng thể vụ việc'}
                 </span>
               </button>
             ) : (
               <span className="text-xs text-slate-400 italic">
-                * Chỉ Supervisor mới có quyền Đóng tổng thể vụ việc.
+                * Thẩm quyền Supervisor đóng tổng thể hồ sơ
               </span>
             )}
           </div>
         </div>
-
-        <p className="text-[11px] text-slate-500 font-medium">
-          * Quy tắc kiểm soát Backend v2.2: Nút sẽ tự động vô hiệu hóa nếu còn bất kỳ hạng mục nào dở dang (
-          <span className="font-mono text-slate-700 font-bold">CASE_HAS_OPEN_REQUIRED_ITEMS = {!allItemsAccepted ? 'TRUE' : 'FALSE'}</span>
-          ).
-        </p>
       </section>
     </>
   )

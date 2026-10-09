@@ -623,7 +623,7 @@ export interface TriageCase {
   reporter_phone?: string
   reporter_channel?: string
   description?: string
-  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | null
+  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | null
   conclusion_reason?: string
   linked_report_ids?: string[]
   master_case_id?: string

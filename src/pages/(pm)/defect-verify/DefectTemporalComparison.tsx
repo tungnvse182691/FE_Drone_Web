@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { Defect } from '../../../types/domain'
 import { Icon } from '../../../components/ui/Icon'
 

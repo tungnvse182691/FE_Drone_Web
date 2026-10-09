@@ -1,11 +1,4 @@
 import React from 'react'
-import {
-  Shield,
-  CheckCircle2,
-  Clock,
-  History,
-  AlertCircle
-} from 'lucide-react'
 import { CaseItem } from './types'
 
 export interface StatusBarProps {
@@ -15,60 +8,65 @@ export interface StatusBarProps {
 export const StatusBar: React.FC<StatusBarProps> = ({ currentItem }) => {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Track badge */}
+      {/* Phân loại luồng thi công (Track badge) */}
       <span
-        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold shadow-2xs border ${
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border ${
           currentItem.track_type === 'APPROVAL_TRACK'
-            ? 'bg-purple-100 text-purple-900 border-purple-200'
+            ? 'bg-slate-100 text-slate-800 border-slate-200'
             : currentItem.track_type === 'FAST_TRACK'
-            ? 'bg-sky-100 text-sky-900 border-sky-200'
-            : 'bg-rose-100 text-rose-900 border-rose-200'
+            ? 'bg-amber-50 text-amber-900 border-amber-200'
+            : 'bg-rose-50 text-rose-900 border-rose-200'
         }`}
       >
-        <Shield className="w-3.5 h-3.5" />
-        Nhánh:{' '}
-        {currentItem.track_type === 'APPROVAL_TRACK'
-          ? 'Phê duyệt tiêu chuẩn'
-          : currentItem.track_type === 'FAST_TRACK'
-          ? 'Xử lý cấp bách'
-          : 'Điều phối trực tiếp'}
+        <span className="material-symbols-outlined text-[14px] text-slate-600">
+          {currentItem.track_type === 'FAST_TRACK' ? 'bolt' : 'route'}
+        </span>
+        <span>
+          {currentItem.track_type === 'APPROVAL_TRACK'
+            ? 'Nhánh: Phê duyệt tiêu chuẩn'
+            : currentItem.track_type === 'FAST_TRACK'
+            ? 'Nhánh: Cấp bách Fast Track'
+            : 'Nhánh: Điều phối khẩn'}
+        </span>
       </span>
 
-      {/* Status badge */}
+      {/* Trạng thái nghiệm thu */}
       {currentItem.status === 'ACCEPTED' && (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-emerald-100 text-emerald-900 border border-emerald-200 shadow-2xs">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-          TRẠNG THÁI: {currentItem.status_label}
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
+          <span className="material-symbols-outlined text-[15px] leading-none">check_circle</span>
+          <span>{currentItem.status_label}</span>
         </span>
       )}
       {currentItem.status === 'PENDING_INSPECTION' && (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          TRẠNG THÁI: {currentItem.status_label}
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#FEF3E2] text-[#B45309] border border-[#FDE68A]">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <span>{currentItem.status_label}</span>
         </span>
       )}
       {currentItem.status === 'REWORK_REQUIRED' && (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold bg-rose-100 text-rose-900 border border-rose-200 shadow-2xs">
-          <AlertCircle className="w-3.5 h-3.5 text-rose-700" />
-          TRẠNG THÁI: YÊU CẦU SỬA LẠI (REWORK)
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#FDECEC] text-[#E5484D] border border-[#F8B4B4]">
+          <span className="material-symbols-outlined text-[15px] leading-none">error</span>
+          <span>YÊU CẦU SỬA LẠI</span>
         </span>
       )}
 
-      {/* Attempt badge */}
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-slate-200 text-slate-800 border border-slate-300 shadow-2xs">
-        <History className="w-3 h-3" />
-        Lần thi công: #{currentItem.attempt_number}
+      {/* Lần thi công */}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+        <span className="material-symbols-outlined text-[14px]">history</span>
+        <span>Lần #{currentItem.attempt_number}</span>
       </span>
 
-      {/* SLA badge */}
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
-        <Clock className="w-3.5 h-3.5 text-emerald-700" />
-        SLA Nghiệm thu: Còn 18h
+      {/* SLA Nghiệm thu */}
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-200">
+        <span className="material-symbols-outlined text-[14px]">schedule</span>
+        <span>SLA: Còn 18h</span>
       </span>
 
-      <span className="font-mono text-slate-500 text-[11px] px-3 py-1 bg-white rounded-full border border-slate-200 shadow-2xs">
-        Mã băm SHA-256: 7B8F..A49
+      {/* Mã băm kiểm toán SHA-256 */}
+      <span className="font-mono text-slate-500 text-[11px] px-2.5 py-1 bg-slate-50 rounded-md border border-slate-200">
+        SHA-256: 7B8F..A49
       </span>
     </div>
   )
 }
+export default StatusBar

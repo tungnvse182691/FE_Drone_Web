@@ -273,9 +273,9 @@ export const ConflictIncomingStateCard: React.FC<ConflictIncomingStateCardProps>
           title={`Chứng Cứ Ngoại Tuyến: ${selectedConflict.conflict_code} • ${selectedConflict.defect_code}`}
           subtitle={`Đội thi công: ${selectedConflict.offline_actor.name} (${selectedConflict.offline_actor.team}) — Lý trình ${selectedConflict.chainage}`}
           primaryPhotoUrl={
-            lightboxInitialMode === 'SECONDARY'
+            (lightboxInitialMode === 'SECONDARY'
               ? selectedConflict.incoming_data.photo_after_url
-              : selectedConflict.incoming_data.photo_evidence_url
+              : selectedConflict.incoming_data.photo_evidence_url) || ''
           }
           primaryPhotoLabel={
             lightboxInitialMode === 'SECONDARY'

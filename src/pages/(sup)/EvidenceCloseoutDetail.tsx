@@ -1,14 +1,13 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { RepairTrackType, ItemReviewStatus, CaseItem } from './evidence-closeout/types'
-import { INITIAL_CASE_ITEMS } from './evidence-closeout/mockData'
 import { CloseoutHeader } from './evidence-closeout/CloseoutHeader'
 import { ComparisonViewer } from './evidence-closeout/ComparisonViewer'
 import { TechnicalCriteriaCard } from './evidence-closeout/TechnicalCriteriaCard'
 import { CloseoutModals } from './evidence-closeout/CloseoutModals'
+import { acceptanceService } from '../../api/services/acceptanceService'
 
 export type { RepairTrackType, ItemReviewStatus, CaseItem }
 
@@ -17,20 +16,47 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
-  // Chế độ xem vai trò (mặc định theo role đăng nhập, hỗ trợ Switcher như Stitch 11)
-  const [activeRoleView, setActiveRoleView] = useState<'SUPERVISOR' | 'PROJECT_MANAGER'>(
-    user?.role === RoleCode.SUPERVISOR ? 'SUPERVISOR' : 'PROJECT_MANAGER'
-  )
-
-  const isSupervisorView = activeRoleView === 'SUPERVISOR'
-  const isPMView = activeRoleView === 'PROJECT_MANAGER'
+  // Thẩm quyền xác thực trực tiếp từ phiên đăng nhập (KHÔNG dùng widget switcher đổi role giả lập)
+  const isSupervisorView = user?.role === RoleCode.SUPERVISOR
+  const isPMView = user?.role === RoleCode.PROJECT_MANAGER
   const basePath = isSupervisorView ? '/sup' : '/pm'
 
-  // Items State
-  const [caseItems, setCaseItems] = useState<CaseItem[]>(INITIAL_CASE_ITEMS)
+  // Items State được đồng bộ từ Async Mock API Service (Zero localStorage)
+  const [caseItems, setCaseItems] = useState<CaseItem[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
   const [selectedItemId, setSelectedItemId] = useState<string>('item-01')
 
+  // Load dữ liệu từ Mock API
+  useEffect(() => {
+    let isMounted = true
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const [items, statusInfo] = await Promise.all([
+          acceptanceService.getCloseoutItems(),
+          acceptanceService.getCaseCloseoutStatus()
+        ])
+        if (isMounted) {
+          setCaseItems(items)
+          setIsCaseClosed(statusInfo.isCaseClosed)
+          if (id && items.some((it) => it.id === id || it.defect_code === id)) {
+            setSelectedItemId(id)
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải dữ liệu nghiệm thu từ Mock API:', err)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+    fetchData()
+    return () => {
+      isMounted = false
+    }
+  }, [id])
+
   const currentItem = useMemo(() => {
+    if (!caseItems.length) return null
     return caseItems.find((it) => it.id === selectedItemId) || caseItems[0]
   }, [caseItems, selectedItemId])
 
@@ -65,7 +91,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false)
 
   // Status Success feedback
-  const [isPublishedSuccess, setIsPublishedSuccess] = useState(false)
   const [isCaseClosed, setIsCaseClosed] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -79,10 +104,11 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     return caseItems.filter((i) => i.status === 'ACCEPTED').length
   }, [caseItems])
 
-  const allItemsAccepted = acceptedCount === caseItems.length
+  const allItemsAccepted = caseItems.length > 0 && acceptedCount === caseItems.length
 
-  // Handlers
-  const handleSubmitRework = () => {
+  // Handlers gọi bất đồng bộ qua Mock API Service
+  const handleSubmitRework = async () => {
+    if (!currentItem) return
     if (reworkChecklist.other_defect && !otherDefectText.trim()) return
 
     const selectedIssues: string[] = []
@@ -92,86 +118,76 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     if (reworkChecklist.compaction_k98) selectedIssues.push('Độ chặt lu lèn móng K98 chưa đạt chứng chỉ kiểm định')
     if (reworkChecklist.other_defect && otherDefectText.trim()) selectedIssues.push(otherDefectText.trim())
 
-    setCaseItems((prev) =>
-      prev.map((it) => {
-        if (it.id === currentItem.id) {
-          return {
-            ...it,
-            status: 'REWORK_REQUIRED',
-            status_label: 'YÊU CẦU SỬA LẠI (LẦN ' + (it.attempt_number + 1) + ')',
-            attempt_number: it.attempt_number + 1,
-            rework_reason: reworkNotes,
-            rework_directives: selectedIssues
-          }
-        }
-        return it
+    try {
+      const updated = await acceptanceService.reworkCloseoutItem(currentItem.id, {
+        notes: reworkNotes,
+        directives: selectedIssues
       })
-    )
-
-    setIsReworkModalOpen(false)
-    showToast(
-      `Đã phát lệnh yêu cầu tái thi công (REWORK) thành công cho hạng mục ${currentItem.item_code}! Hồ sơ đã chuyển về PM và Đội thi công.`
-    )
+      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      setIsReworkModalOpen(false)
+      showToast(`Đã phát lệnh yêu cầu sửa lại (REWORK) cho hạng mục ${currentItem.item_code}!`)
+    } catch (err) {
+      showToast('Có lỗi xảy ra khi phát lệnh sửa lại.')
+    }
   }
 
-  const handleAcceptItem = () => {
-    setCaseItems((prev) =>
-      prev.map((it) => {
-        if (it.id === currentItem.id) {
-          return {
-            ...it,
-            status: 'ACCEPTED',
-            status_label: 'ĐÃ NGHIỆM THU ĐẠT'
-          }
-        }
-        return it
-      })
-    )
-    showToast(`Supervisor đã chấp thuận nghiệm thu thành công hạng mục ${currentItem.item_code} (Xác thực toàn vẹn SHA-256)!`)
+  const handleAcceptItem = async () => {
+    if (!currentItem) return
+    try {
+      const updated = await acceptanceService.acceptCloseoutItem(currentItem.id)
+      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      showToast(`Giám sát đã chấp thuận nghiệm thu thành công hạng mục ${currentItem.item_code} (Ký số SHA-256)!`)
+    } catch (err) {
+      showToast('Có lỗi xảy ra khi ký số nghiệm thu.')
+    }
   }
 
-  const handlePMCloseFastTrack = () => {
-    setCaseItems((prev) =>
-      prev.map((it) => {
-        if (it.id === currentItem.id) {
-          return {
-            ...it,
-            status: 'ACCEPTED',
-            status_label: 'ĐÃ ĐÓNG (FAST-TRACK RESOLVED)'
-          }
-        }
-        return it
-      })
-    )
-    showToast(`PM đã chấp thuận và đóng lỗi Fast Track ${currentItem.item_code}! Lỗi chuyển trạng thái RESOLVED, thông báo đã gửi Giám sát.`)
+  const handlePMCloseFastTrack = async () => {
+    if (!currentItem) return
+    try {
+      const updated = await acceptanceService.closeFastTrackItem(currentItem.id)
+      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      showToast(`PM đã chấp thuận và đóng lỗi Fast Track ${currentItem.item_code} (BR-25)!`)
+    } catch (err) {
+      showToast('Có lỗi khi đóng lỗi Fast Track.')
+    }
   }
 
-  const handlePMSubmitToSupervisor = () => {
-    showToast(`PM đã xác nhận đủ điều kiện và trình hồ sơ ${currentItem.item_code} lên Ban Giám sát nghiệm thu!`)
+  const handlePMSubmitToSupervisor = async () => {
+    if (!currentItem) return
+    try {
+      await acceptanceService.submitItemToSupervisor(currentItem.id)
+      showToast(`PM đã trình hồ sơ ${currentItem.item_code} lên Giám sát nghiệm thu!`)
+    } catch (err) {
+      showToast('Có lỗi khi trình hồ sơ.')
+    }
   }
 
-  const handleConfirmPublish = () => {
-    setCaseItems((prev) =>
-      prev.map((it) => {
-        if (it.id === currentItem.id) {
-          return { ...it, citizen_published: true }
-        }
-        return it
-      })
-    )
-    setIsPublishModalOpen(false)
-    setIsPublishedSuccess(true)
-    showToast(`Đã công bố thành công kết quả khắc phục lên Citizen App & Cổng thông tin giao thông!`)
+  const handleConfirmPublish = async () => {
+    if (!currentItem) return
+    try {
+      const updated = await acceptanceService.publishCitizenResult(currentItem.id, true)
+      setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      setIsPublishModalOpen(false)
+      showToast(`Đã công bố thành công kết quả khắc phục lên Citizen App!`)
+    } catch (err) {
+      showToast('Có lỗi khi công bố kết quả.')
+    }
   }
 
-  const handleConfirmCloseCase = () => {
+  const handleConfirmCloseCase = async () => {
     if (!allItemsAccepted) {
-      showToast('Lỗi CASE_HAS_OPEN_REQUIRED_ITEMS: Không thể đóng tổng vụ việc khi còn hạng mục dở dang!')
+      showToast('Chưa thể đóng vụ việc khi còn hạng mục chưa nghiệm thu đạt!')
       return
     }
-    setIsCloseCaseModalOpen(false)
-    setIsCaseClosed(true)
-    showToast(`Đã đóng tổng thể vụ việc #CASE-2026-0842 thành công! Toàn bộ hồ sơ đã được khóa cứng và lưu trữ bảo hành.`)
+    try {
+      await acceptanceService.closeCompositeCase('#CASE-2026-0842')
+      setIsCloseCaseModalOpen(false)
+      setIsCaseClosed(true)
+      showToast(`Đã đóng tổng thể vụ việc #CASE-2026-0842 thành công! Hồ sơ đã lưu trữ bảo hành.`)
+    } catch (err: any) {
+      showToast(err.message || 'Có lỗi khi đóng vụ việc.')
+    }
   }
 
   const handleTriggerExport = () => {
@@ -181,19 +197,30 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       setIsExportModalOpen(false)
       showToast(
         exportFormat === 'PDF_A'
-          ? `Đã tạo tệp PDF/A thành công: Bien_Ban_Nghiem_Thu_${currentItem.defect_code}_TCVN8819.pdf!`
-          : `Đã đóng gói tệp nén ZIP: Dossier_${currentItem.defect_code}_SHA256_Verified.zip (Kèm file checksum.sha256)!`
+          ? `Đã tạo tệp PDF/A: Bien_Ban_Nghiem_Thu_${currentItem?.defect_code}_TCVN8819.pdf!`
+          : `Đã đóng gói tệp nén: Dossier_${currentItem?.defect_code}_SHA256_Verified.zip!`
       )
-    }, 1200)
+    }, 1000)
+  }
+
+  if (isLoading || !currentItem) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-2 text-slate-500">
+          <span className="w-6 h-6 border-2 border-[#C9A227] border-t-transparent rounded-full animate-spin"></span>
+          <span className="text-xs font-medium">Đang tải hồ sơ nghiệm thu...</span>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6 pb-20 text-[#1F2937]">
+    <div className="space-y-5 pb-16 text-[#1A1D20]">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <Sparkles className="w-5 h-5 text-brand-gold shrink-0" />
-          <span className="text-sm font-medium">{toastMessage}</span>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl border border-slate-700 animate-in fade-in duration-200">
+          <span className="material-symbols-outlined text-[18px] text-[#C9A227]">check_circle</span>
+          <span className="text-xs font-medium">{toastMessage}</span>
           <button
             onClick={() => setToastMessage(null)}
             className="text-slate-400 hover:text-white ml-2 text-xs font-bold cursor-pointer"
@@ -209,8 +236,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         caseItems={caseItems}
         selectedItemId={selectedItemId}
         setSelectedItemId={setSelectedItemId}
-        activeRoleView={activeRoleView}
-        setActiveRoleView={setActiveRoleView}
         isSupervisorView={isSupervisorView}
         isPMView={isPMView}
         basePath={basePath}
@@ -237,15 +262,13 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         setSliderPosition={setSliderPosition}
         isPMView={isPMView}
         onToggleCitizenPublish={() => {
-          setCaseItems((prev) =>
-            prev.map((it) =>
-              it.id === currentItem.id ? { ...it, citizen_published: !it.citizen_published } : it
-            )
-          )
+          acceptanceService.publishCitizenResult(currentItem.id, !currentItem.citizen_published).then((updated) => {
+            setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+          })
         }}
       />
 
-      {/* Technical Criteria Checklist (TCVN 8819) */}
+      {/* Technical Criteria Checklist (TCVN 8819:2011) */}
       <TechnicalCriteriaCard
         currentItem={currentItem}
         isSupervisorView={isSupervisorView}
@@ -288,3 +311,4 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     </div>
   )
 }
+export default EvidenceCloseoutDetail

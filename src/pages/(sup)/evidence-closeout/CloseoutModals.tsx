@@ -1,8 +1,4 @@
 import React from 'react'
-import {
-  X,
-  Share2
-} from 'lucide-react'
 import { CaseItem } from './types'
 import { ReworkModal } from './ReworkModal'
 import { VerifyModal } from './VerifyModal'
@@ -107,77 +103,77 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
           <div
             onClick={() => setIsPublishModalOpen(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
           ></div>
 
-          <div className="relative bg-white border border-brand-border rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden z-10 flex flex-col">
-            <div className="p-4 bg-blue-50 border-b border-blue-200 text-blue-900 flex items-center justify-between">
+          <div className="relative bg-white border border-slate-200 rounded-xl w-full max-w-lg shadow-xl overflow-hidden z-10 flex flex-col">
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Share2 className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-base font-sansation">
-                  Công bố kết quả sửa chữa lên Citizen App &amp; Cổng giao thông
+                <span className="material-symbols-outlined text-[20px] text-slate-700">share</span>
+                <h3 className="font-bold text-sm text-slate-900 font-sansation">
+                  Công bố kết quả lên Citizen App
                 </h3>
               </div>
               <button
                 onClick={() => setIsPublishModalOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
+                className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs">
+            <div className="p-4 space-y-3.5 text-xs">
               <div className="space-y-1">
-                <label className="font-bold text-slate-800 block">Tiêu đề bản tin công bố cho người dân:</label>
+                <label className="font-medium text-slate-700 block">Tiêu đề bản tin công bố cho người dân:</label>
                 <input
                   type="text"
                   value={publishHeadline}
                   onChange={(e) => setPublishHeadline(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-xs font-normal focus:outline-none focus:border-[#C9A227]"
                 />
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2.5">
                 <div className="flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="font-bold text-blue-700">Citizen App • Bản tin giao thông cộng đồng</span>
+                  <span className="font-semibold text-slate-700">Citizen App • Bản tin giao thông cộng đồng</span>
                   <span>Vừa xong</span>
                 </div>
 
-                <div className="aspect-video w-full rounded-xl overflow-hidden border border-slate-200 relative bg-black">
+                <div className="aspect-video w-full rounded-md overflow-hidden border border-slate-200 relative bg-black">
                   <img
                     src={currentItem.after_image}
                     alt="Kết quả sau khi hoàn thành"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute bottom-2 left-2 bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow">
-                    ✓ ĐÃ KHẮC PHỤC XONG
+                  <div className="absolute bottom-2 left-2 bg-[#2F9E44] text-white font-medium text-[10px] px-2 py-0.5 rounded-md shadow-xs">
+                    ✓ ĐÃ KHẮC PHỤC
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <h4 className="font-bold text-sm text-slate-900">{publishHeadline}</h4>
+                  <h4 className="font-bold text-xs text-slate-900">{publishHeadline}</h4>
                   <p className="text-slate-600 text-xs leading-relaxed">
-                    Vị trí: {currentItem.chainage} • Nhà thầu Hoàng Hải đã hoàn thành thảm lại bê tông nhựa phẳng phiu, đảm bảo an toàn giao thông cho người dân. Cảm ơn phản ánh của cộng đồng!
+                    Vị trí: {currentItem.chainage} • Nhà thầu Hoàng Hải đã hoàn thành thảm lại bê tông nhựa phẳng phiu, đảm bảo an toàn giao thông cho người dân.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2.5">
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
               <button
                 onClick={() => setIsPublishModalOpen(false)}
                 type="button"
-                className="px-4 h-9 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs cursor-pointer"
+                className="px-3.5 h-8 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition rounded-md font-medium text-xs cursor-pointer"
               >
                 Hủy bỏ
               </button>
               <button
                 onClick={onConfirmPublish}
                 type="button"
-                className="px-5 h-9 bg-blue-600 hover:bg-blue-700 text-white transition rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-4 h-8 bg-[#C9A227] hover:bg-[#8C6D1F] text-white transition rounded-md font-medium text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Phát hành công bố ngay</span>
+                <span className="material-symbols-outlined text-[15px]">share</span>
+                <span>Công bố ngay</span>
               </button>
             </div>
           </div>
