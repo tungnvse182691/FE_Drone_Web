@@ -65,7 +65,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                 onClick={onNavigateProposals}
                 className="hover:text-slate-900 transition-colors cursor-pointer"
               >
-                Gói đề xuất sửa chữa
+                Nghiệm thu công trình
               </button>
               <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
               <span className="text-slate-900 font-medium">Nghiệm thu hồ sơ {currentItem.defect_code}</span>

@@ -12,7 +12,7 @@ import { acceptanceService } from '../../api/services/acceptanceService'
 export type { RepairTrackType, ItemReviewStatus, CaseItem }
 
 export const EvidenceCloseoutDetail: React.FC = () => {
-  const { id } = useParams<{ id?: string }>()
+  const { id, batchId } = useParams<{ id?: string; batchId?: string }>()
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
@@ -39,8 +39,9 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         if (isMounted) {
           setCaseItems(items)
           setIsCaseClosed(statusInfo.isCaseClosed)
-          if (id && items.some((it) => it.id === id || it.defect_code === id)) {
-            setSelectedItemId(id)
+          const targetId = id || batchId
+          if (targetId && items.some((it) => it.id === targetId || it.defect_code === targetId)) {
+            setSelectedItemId(targetId)
           }
         }
       } catch (err) {
@@ -53,7 +54,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, batchId])
 
   const currentItem = useMemo(() => {
     if (!caseItems.length) return null
@@ -250,7 +251,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         onOpenPublishModal={() => setIsPublishModalOpen(true)}
         onOpenCloseCaseModal={() => setIsCloseCaseModalOpen(true)}
         onNavigateHome={() => navigate(`${basePath}/dashboard`)}
-        onNavigateProposals={() => navigate(`${basePath}/proposals`)}
+        onNavigateProposals={() => navigate(`${basePath}/acceptance`)}
       />
 
       {/* Before / After Inspection Viewer */}

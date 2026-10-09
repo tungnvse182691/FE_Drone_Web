@@ -36,6 +36,7 @@ import { SupDashboard } from './pages/(sup)/SupDashboard'
 import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
+import { AcceptanceList } from './pages/(sup)/AcceptanceList'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
 import { AuditTrail } from './pages/(sup)/AuditTrail'
@@ -95,7 +96,8 @@ export const App: React.FC = () => {
             <Route path="work-orders/:id/confirm" element={<EvidenceCloseoutDetail />} />
             <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
             <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
-            <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+            <Route path="acceptance" element={<AcceptanceList />} />
+            <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
             <Route path="research-validation" element={<ResearchValidation />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
             <Route path="audit-trail" element={<AuditTrail />} />
@@ -137,7 +139,7 @@ export const App: React.FC = () => {
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
             <Route path="approvals/:id/reject" element={<BatchRejection />} />
-            <Route path="acceptance" element={<EvidenceCloseoutDetail />} />
+            <Route path="acceptance" element={<AcceptanceList />} />
             <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
             <Route path="research-validation" element={<ResearchValidation />} />

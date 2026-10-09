@@ -275,5 +275,24 @@
      - Tuyệt đối không lưu mock state hay ghi đè vào `localStorage`.
   5. **Typecheck & Build:** `npx tsc -b && npx vite build` đạt Exit Code 0, dev server chạy mượt mà trên cổng 3000.
 
+---
 
+## VII. TRIỂN KHAI TRANG DANH SÁCH NGHIỆM THU (ACCEPTANCE QUEUE) THEO PHƯƠNG ÁN 1
 
+- **Tệp chỉnh sửa / tạo mới:**
+  - `src/pages/(sup)/AcceptanceList.tsx` (Mới)
+  - `src/App.tsx`
+  - `src/api/services/acceptanceService.ts`
+  - `src/pages/(sup)/EvidenceCloseoutDetail.tsx`
+  - `src/pages/(sup)/evidence-closeout/CloseoutHeader.tsx`
+- **Nghiệp vụ đã xử lý:**
+  1. **Tách biệt kiến trúc Danh sách vs Chi tiết:**
+     - Khi bấm menu *"Nghiệm thu"* trên Sidebar (`/pm/acceptance` hoặc `/sup/acceptance`), hệ thống mở **Trang Danh sách nghiệm thu (`AcceptanceList`)**, không còn bị nhảy trực tiếp vào hồ sơ mẫu của một dự án cố định.
+     - Cho phép PM và Giám sát xem tổng quan toàn bộ các gói thầu, lọc theo Dự án (QL1A, Cao tốc Mai Sơn, Đường ven biển...), lọc theo trạng thái (`Chờ nghiệm thu`, `Cần sửa lại`, `Đã hoàn thành`) và tìm kiếm từ khóa.
+  2. **Điều hướng vào Chi tiết theo `batchId`:**
+     - Nút CTA *"Vào nghiệm thu"* / *"Xem hồ sơ"* trên mỗi dòng chuyển sang URL `/pm/acceptance/:batchId` (hoặc `/sup/acceptance/:batchId`), mở đúng hồ sơ Before/After của gói thầu đó trong `EvidenceCloseoutDetail`.
+     - Breadcrumb hỗ trợ bấm quay lại trang danh sách nghiệm thu thuận tiện.
+  3. **Kỷ luật thiết kế & Mock API:**
+     - Tuân thủ phong cách Minimalism theo `skills/roadguard-web/DESIGN.md`, 100% Google Material Symbols.
+     - Bổ sung `getAcceptancePackages` vào Mock API bất đồng bộ `acceptanceService` (In-Memory, Zero localStorage).
+     - Kiểm tra `npx tsc -b && npx vite build` đạt Exit Code 0.

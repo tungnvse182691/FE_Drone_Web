@@ -21,6 +21,105 @@ export interface AcceptanceRecord {
   inspected_at?: string
 }
 
+export interface AcceptancePackage {
+  id: string
+  code: string
+  case_code: string
+  title: string
+  project_id: string
+  project_name: string
+  chainage_display: string
+  contractor_name: string
+  total_items: number
+  accepted_items: number
+  pending_items: number
+  rework_items: number
+  technical_scope: string
+  status: 'PENDING_INSPECTION' | 'PASSED' | 'REWORK_REQUIRED'
+  status_label: string
+  sla_display: string
+  completion_date: string
+}
+
+export const INITIAL_ACCEPTANCE_PACKAGES: AcceptancePackage[] = [
+  {
+    id: 'pkg-08',
+    code: 'PKG-2026-08',
+    case_code: '#CASE-2026-0842',
+    title: 'Khắc phục ổ gà & lún nứt đợt 3',
+    project_id: 'prj-01',
+    project_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage_display: 'Km 1024+350 - Km 1024+450',
+    contractor_name: 'Đội thi công Crew 02 - Xí nghiệp QLĐB 2',
+    total_items: 4,
+    accepted_items: 2,
+    pending_items: 2,
+    rework_items: 0,
+    technical_scope: '180 m² cào bóc thảm BTN C12.5 / C19',
+    status: 'PENDING_INSPECTION',
+    status_label: 'Chờ nghiệm thu (2/4 đạt)',
+    sla_display: 'Còn 18h',
+    completion_date: '25/08/2026'
+  },
+  {
+    id: 'pkg-07',
+    code: 'PKG-2026-07',
+    case_code: '#CASE-2026-0789',
+    title: 'Vá cào bóc thảm nhựa polime phân đoạn Km 1033+500',
+    project_id: 'prj-01',
+    project_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    chainage_display: 'Km 1033+500 - Km 1038+000',
+    contractor_name: 'Tổ thi công Asphalt 01',
+    total_items: 10,
+    accepted_items: 10,
+    pending_items: 0,
+    rework_items: 0,
+    technical_scope: '320 m² thảm BTN polime',
+    status: 'PASSED',
+    status_label: 'Đã nghiệm thu đạt (10/10)',
+    sla_display: 'Đã hoàn thành',
+    completion_date: '18/08/2026'
+  },
+  {
+    id: 'pkg-11',
+    code: 'PKG-2026-11',
+    case_code: '#CASE-2026-1102',
+    title: 'Xử lý lún đầu cầu vượt dân sinh & nứt dọc',
+    project_id: 'prj-02',
+    project_name: 'Cao tốc Mai Sơn - QL45 (Km 285 - Km 315)',
+    chainage_display: 'Km 298+120',
+    contractor_name: 'Xí nghiệp Cầu đường Miền Trung',
+    total_items: 3,
+    accepted_items: 1,
+    pending_items: 0,
+    rework_items: 2,
+    technical_scope: '75 m² bù vênh lu lèn móng',
+    status: 'REWORK_REQUIRED',
+    status_label: 'Yêu cầu sửa lại (Lần 2)',
+    sla_display: 'Quá hạn 4h',
+    completion_date: '24/08/2026'
+  },
+  {
+    id: 'pkg-12',
+    code: 'PKG-2026-12',
+    case_code: '#CASE-2026-1215',
+    title: 'Trám khe co giãn bê tông xi măng & trám vết nứt nông',
+    project_id: 'prj-03',
+    project_name: 'Đường ven biển Dung Quất - Sa Huỳnh',
+    chainage_display: 'Km 22+450',
+    contractor_name: 'Đội bảo dưỡng thường xuyên 03',
+    total_items: 3,
+    accepted_items: 0,
+    pending_items: 3,
+    rework_items: 0,
+    technical_scope: '120 mét dài trám khe Mastic',
+    status: 'PENDING_INSPECTION',
+    status_label: 'Chờ Giám sát kiểm tra',
+    sla_display: 'Còn 36h',
+    completion_date: '25/08/2026'
+  }
+]
+
 export const INITIAL_ACCEPTANCE_RECORDS: AcceptanceRecord[] = [
   {
     id: 'acc-01',
@@ -61,11 +160,51 @@ export const INITIAL_ACCEPTANCE_RECORDS: AcceptanceRecord[] = [
 // ==========================================
 // In-Memory Mock Store (Tuân thủ nguyên tắc Zero localStorage, giả lập RESTful API bất đồng bộ)
 // ==========================================
+let inMemoryPackages: AcceptancePackage[] = JSON.parse(JSON.stringify(INITIAL_ACCEPTANCE_PACKAGES))
 let inMemoryCaseItems: CaseItem[] = JSON.parse(JSON.stringify(INITIAL_CASE_ITEMS))
 let inMemoryAcceptanceRecords: AcceptanceRecord[] = JSON.parse(JSON.stringify(INITIAL_ACCEPTANCE_RECORDS))
 let inMemoryIsCaseClosed: boolean = false
 
 export const acceptanceService = {
+  /**
+   * Lấy danh sách các gói đề xuất / đợt thi công chờ nghiệm thu
+   * (GET /api/v1/acceptance/packages)
+   */
+  async getAcceptancePackages(filter?: {
+    status?: string
+    projectId?: string
+    query?: string
+  }): Promise<AcceptancePackage[]> {
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    let result = JSON.parse(JSON.stringify(inMemoryPackages)) as AcceptancePackage[]
+    if (filter?.status && filter.status !== 'ALL') {
+      result = result.filter((p) => p.status === filter.status)
+    }
+    if (filter?.projectId && filter.projectId !== 'ALL') {
+      result = result.filter((p) => p.project_id === filter.projectId)
+    }
+    if (filter?.query && filter.query.trim()) {
+      const q = filter.query.trim().toLowerCase()
+      result = result.filter(
+        (p) =>
+          p.code.toLowerCase().includes(q) ||
+          p.title.toLowerCase().includes(q) ||
+          p.project_name.toLowerCase().includes(q) ||
+          p.case_code.toLowerCase().includes(q)
+      )
+    }
+    return result
+  },
+
+  /**
+   * Lấy chi tiết gói nghiệm thu theo mã
+   */
+  async getAcceptancePackageById(packageId: string): Promise<AcceptancePackage | null> {
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    const found = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
+    return found ? JSON.parse(JSON.stringify(found)) : null
+  },
+
   /**
    * Lấy danh sách hạng mục nghiệm thu trong hồ sơ vụ việc
    * (GET /api/v1/evidence-closeout/items)
