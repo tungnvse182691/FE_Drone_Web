@@ -1,14 +1,4 @@
 import React from 'react'
-import {
-  Camera,
-  X,
-  Calendar,
-  MapPin,
-  Download,
-  FileText,
-  FileCheck,
-  CheckCircle2
-} from 'lucide-react'
 import { ImageModalData, ExportFormat, AuditProjectOption } from './types'
 
 interface AuditTrailModalsProps {
@@ -33,22 +23,25 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
   onCloseExportModal,
   exportFormat,
   onChangeExportFormat,
-  isPM,
+  isPM: _isPM,
   selectedProject,
   projectList,
   filteredCount,
   exportSuccess,
   onExport
 }) => {
+  const currentProjectName =
+    projectList.find((p) => p.id === selectedProject)?.name || 'Dự án hiện hành'
+
   return (
     <>
-      {/* 6. MODAL: XEM ẢNH PHÓNG TO & METADATA HIỆN TRƯỜNG (LIGHTBOX MODAL) */}
+      {/* 1. MODAL: XEM ẢNH HIỆN TRƯỜNG PHÓNG TO */}
       {activeImageModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-5 flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 max-w-2xl w-full p-4 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-emerald-600" />
+              <div className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-emerald-600">photo_camera</span>
                 <h3 className="text-sm font-bold text-slate-900">
                   {activeImageModal.caption}
                 </h3>
@@ -56,147 +49,142 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
               <button
                 type="button"
                 onClick={onCloseImageModal}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="relative rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[420px]">
+            <div className="rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center max-h-[400px]">
               <img
                 src={activeImageModal.url}
                 alt={activeImageModal.caption}
-                className="w-full h-auto max-h-[420px] object-contain"
+                onError={(e) => {
+                  e.currentTarget.onerror = null
+                  e.currentTarget.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360" fill="none"><rect width="600" height="360" fill="%230F172A"/><rect x="20" y="20" width="560" height="320" rx="8" fill="%231E293B" stroke="%23334155" stroke-width="1.5"/><line x1="20" y1="180" x2="580" y2="180" stroke="%23475569" stroke-width="2" stroke-dasharray="8 8"/><circle cx="300" cy="180" r="32" fill="%23C9A227" fill-opacity="0.2" stroke="%23C9A227" stroke-width="2"/><circle cx="300" cy="180" r="6" fill="%23C9A227"/><text x="300" y="240" font-family="sans-serif" font-size="14" font-weight="700" fill="%23E2E8F0" text-anchor="middle">BIÊN BẢN KIỂM TRA HIỆN TRƯỜNG</text><text x="300" y="265" font-family="sans-serif" font-size="11" fill="%2394A3B8" text-anchor="middle">Dữ liệu khảo sát &amp; Trắc địa công trình</text></svg>`
+                }}
+                className="w-full h-auto max-h-[400px] object-contain"
               />
             </div>
 
             {/* EXIF Metadata Card */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-xs text-slate-700">
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1 text-xs text-slate-700">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> Thời điểm ghi nhận:
-                </span>
+                <span className="text-slate-500">Thời điểm ghi nhận:</span>
                 <span className="font-mono font-semibold">{activeImageModal.captured_at}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" /> Tọa độ GPS EXIF:
-                </span>
+                <span className="text-slate-500">Tọa độ GPS EXIF:</span>
                 <span className="font-mono font-semibold text-brand-goldDark">{activeImageModal.gps_coordinates}</span>
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-1">
               <button
                 type="button"
                 onClick={onCloseImageModal}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition cursor-pointer"
               >
-                Đóng ảnh
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 7. MODAL: XUẤT NHẬT KÝ KIỂM TOÁN (EXPORT AUDIT LOG MODAL - FR-35, US-16, Điều 11.5) */}
+      {/* 2. MODAL: XUẤT NHẬT KÝ HOẠT ĐỘNG (RPT-10) */}
       {showExportModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 flex flex-col gap-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Download className="w-5 h-5 text-brand-gold" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Xuất hồ sơ lịch sử hoạt động (RPT-10)
+                <span className="material-symbols-outlined text-[20px] text-brand-gold">download</span>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Xuất Nhật Ký Hoạt Động (RPT-10)
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onCloseExportModal}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                className="p-1 rounded text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="flex flex-col gap-4 text-xs">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-slate-700 font-semibold">Chọn định dạng tệp xuất (FR-35, Điều 11.5):</label>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Trích xuất dữ liệu dòng sự kiện bất biến phục vụ công tác đối soát hồ sơ hoàn công và quản lý bảo hành theo quy định BR-45.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1.5">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Phạm vi trích xuất:</span>
+                  <span className="font-semibold text-slate-800 text-right truncate max-w-[200px]">
+                    {currentProjectName}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Số lượng sự kiện:</span>
+                  <span className="font-mono font-bold text-slate-800">{filteredCount} bản ghi</span>
+                </div>
+              </div>
+
+              {/* Chọn định dạng */}
+              <div className="space-y-1.5">
+                <label className="font-semibold text-slate-700">Định dạng tệp:</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => onChangeExportFormat('PDF')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+                    className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                       exportFormat === 'PDF'
-                        ? 'border-brand-gold bg-amber-50/50 text-brand-goldDark font-bold'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                        ? 'border-brand-gold bg-amber-50/60 text-brand-dark'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <FileText className="w-5 h-5 text-red-600" />
-                    <span>PDF Báo cáo pháp lý</span>
+                    <span className="material-symbols-outlined text-[16px] text-rose-600">picture_as_pdf</span>
+                    <span>Tệp PDF</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => onChangeExportFormat('CSV')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all ${
+                    className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                       exportFormat === 'CSV'
-                        ? 'border-brand-gold bg-amber-50/50 text-brand-goldDark font-bold'
-                        : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                        ? 'border-brand-gold bg-amber-50/60 text-brand-dark'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                     }`}
                   >
-                    <FileCheck className="w-5 h-5 text-emerald-600" />
-                    <span>CSV Bảng kê sự kiện</span>
+                    <span className="material-symbols-outlined text-[16px] text-emerald-600">csv</span>
+                    <span>Tệp CSV</span>
                   </button>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 text-slate-600 text-[11px]">
-                <div className="flex justify-between">
-                  <span>Phạm vi xuất:</span>
-                  <span className="font-semibold text-slate-900">
-                    {isPM
-                      ? 'Dự án QL1A - Giai đoạn 2'
-                      : selectedProject === 'all'
-                      ? 'Toàn bộ các dự án hệ thống'
-                      : projectList.find((p) => p.id === selectedProject)?.name}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Số lượng sự kiện:</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {filteredCount} sự kiện
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Thời điểm kết xuất:</span>
-                  <span className="font-mono text-slate-900">
-                    {new Date().toLocaleString('vi-VN')}
-                  </span>
                 </div>
               </div>
 
               {exportSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Tệp hồ sơ kiểm toán RPT-10 đã được tải xuống thành công!</span>
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
+                  <span>Tệp nhật ký hoạt động RPT-10 đã được tải xuống thành công!</span>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={onCloseExportModal}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"
                 onClick={onExport}
-                className="px-4 py-2 rounded-xl bg-brand-gold text-white text-xs font-semibold hover:bg-brand-goldDark transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-semibold transition cursor-pointer"
               >
-                Tải xuống tệp {exportFormat}
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                <span>Tải tệp ngay</span>
               </button>
             </div>
           </div>

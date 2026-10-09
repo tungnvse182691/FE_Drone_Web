@@ -1,10 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { mockAuditEvents } from '../../api/mock/data'
 import { AuditEvent } from '../../types/domain'
+import { auditService, AUDIT_PROJECT_OPTIONS } from '../../api/services'
 import { TimeFilter, ExportFormat, ImageModalData } from './audit-trail/types'
-import { AUDIT_PROJECT_LIST } from './audit-trail/mockData'
 import { AuditTrailHeader } from './audit-trail/AuditTrailHeader'
 import { AuditTrailMetrics } from './audit-trail/AuditTrailMetrics'
 import { AuditTrailFilters } from './audit-trail/AuditTrailFilters'
@@ -12,22 +11,34 @@ import { AuditTrailTable } from './audit-trail/AuditTrailTable'
 import { AuditTrailInspector } from './audit-trail/AuditTrailInspector'
 import { AuditTrailModals } from './audit-trail/AuditTrailModals'
 
+// Bộ lọc thời gian chuẩn theo mốc thời gian hệ thống
+const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
+  if (filter === 'all') return true
+  const eventTime = new Date(occurredAtStr).getTime()
+  // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
+  const now = new Date('2026-10-10T12:00:00Z').getTime()
+  const diffHours = (now - eventTime) / (1000 * 60 * 60)
+  if (filter === '24h') return diffHours <= 24 && diffHours >= 0
+  if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
+  if (filter === '30d') return diffHours <= 30 * 24 && diffHours >= 0
+  return true
+}
+
 export const AuditTrail: React.FC = () => {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
-  // Dữ liệu dòng sự kiện hoạt động (Activity Timeline / Audit Log) theo v2.2 (RPT-10, US-29, FR-34)
-  const [events, setEvents] = useState<AuditEvent[]>(mockAuditEvents)
-  const [selectedEventId, setSelectedEventId] = useState<string>(mockAuditEvents[0]?.id || '')
+  // Dữ liệu dòng sự kiện hoạt động bất đồng bộ từ auditService (In-Memory Mock API, zero localStorage)
+  const [events, setEvents] = useState<AuditEvent[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [selectedEventId, setSelectedEventId] = useState<string>('')
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
 
-  // Phân định phạm vi dự án theo vai trò (Role Scope - US-29-AC-02 & UAT-08)
-  // PM: Khóa cứng ở dự án phụ trách 'proj-01' (QL1A - Giai đoạn 2)
-  // Supervisor: Xem toàn hệ thống ('all') hoặc từng dự án cụ thể
-  const [selectedProject, setSelectedProject] = useState<string>(isPM ? 'proj-01' : 'all')
+  // Phân định phạm vi dự án (Mặc định: Tất cả dự án phụ trách)
+  const [selectedProject, setSelectedProject] = useState<string>('all')
 
-  // Bộ lọc chuẩn theo v2.2 Phần 11.4
+  // Bộ lọc tiêu chí nghiệp vụ
   const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
   const [selectedActionType, setSelectedActionType] = useState<string>('all')
   const [selectedEntityType, setSelectedEntityType] = useState<string>('all')
@@ -43,36 +54,78 @@ export const AuditTrail: React.FC = () => {
   // Xem ảnh phóng to (Lightbox)
   const [activeImageModal, setActiveImageModal] = useState<ImageModalData | null>(null)
 
-  // Lọc dữ liệu theo vai trò và tiêu chí lọc nghiệp vụ (v2.2 US-29, Phần 11.4)
+  // Trạng thái mở ngăn kéo (Drawer) xem chi tiết sự kiện
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(false)
+
+  // Đóng Drawer khi nhấn phím Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsInspectorOpen(false)
+      }
+    }
+    if (isInspectorOpen) {
+      window.addEventListener('keydown', handleKeyDown)
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isInspectorOpen])
+
+  // Tải dữ liệu bất đồng bộ từ auditService
+  useEffect(() => {
+    let mounted = true
+    const loadEvents = async () => {
+      try {
+        setLoading(true)
+        const data = await auditService.getAuditEvents({
+          projectId: selectedProject
+        })
+        if (mounted) {
+          setEvents(data)
+          if (data.length > 0) {
+            setSelectedEventId((prev) => prev || data[0].id)
+          }
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    loadEvents()
+    return () => {
+      mounted = false
+    }
+  }, [selectedProject])
+
+  // Lọc dữ liệu theo vai trò, dự án, mốc thời gian và từ khóa
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
-      // 1. Phân định quyền truy cập theo vai trò (Role Scope - BR-45 & US-29-AC-02 & UAT-08)
-      // PM chỉ được xem các sự kiện thuộc dự án được phân công (proj-01)
-      if (isPM && ev.project_id !== 'proj-01') {
+      // 1. Lọc theo dự án đã chọn
+      if (selectedProject !== 'all' && ev.project_id !== selectedProject) {
         return false
       }
 
-      // Supervisor có thể lọc theo dự án được chọn
-      if (isSupervisor && selectedProject !== 'all' && ev.project_id !== selectedProject) {
+      // 2. Lọc theo khoảng thời gian thực tế
+      if (!matchTimeFilter(ev.occurred_at, timeFilter)) {
         return false
       }
 
-      // 2. Lọc theo vai trò tác nhân (Actor Role)
-      if (selectedActorRole !== 'all') {
-        if (ev.actor_role !== selectedActorRole) return false
+      // 3. Lọc theo vai trò tác nhân
+      if (selectedActorRole !== 'all' && ev.actor_role !== selectedActorRole) {
+        return false
       }
 
-      // 3. Lọc theo loại hành động nghiệp vụ (Action Type)
-      if (selectedActionType !== 'all') {
-        if (ev.action_type !== selectedActionType) return false
+      // 4. Lọc theo loại hành động nghiệp vụ
+      if (selectedActionType !== 'all' && ev.action_type !== selectedActionType) {
+        return false
       }
 
-      // 4. Lọc theo loại thực thể tác động (Entity Type)
-      if (selectedEntityType !== 'all') {
-        if (ev.target_entity_type !== selectedEntityType) return false
+      // 5. Lọc theo loại thực thể tác động
+      if (selectedEntityType !== 'all' && ev.target_entity_type !== selectedEntityType) {
+        return false
       }
 
-      // 5. Tìm kiếm từ khóa (Mã sự kiện event_id, Tên người, Tên thực thể, Lý trình, Lý do nghiệp vụ)
+      // 6. Tìm kiếm từ khóa
       if (searchKeyword.trim() !== '') {
         const q = searchKeyword.toLowerCase()
         const matchId = ev.event_id.toLowerCase().includes(q)
@@ -88,19 +141,27 @@ export const AuditTrail: React.FC = () => {
 
       return true
     })
-  }, [events, isPM, isSupervisor, selectedProject, selectedActorRole, selectedActionType, selectedEntityType, searchKeyword])
+  }, [events, selectedProject, timeFilter, selectedActorRole, selectedActionType, selectedEntityType, searchKeyword])
 
-  // Sự kiện đang được chọn để soi chi tiết trong Drawer bên phải
+  // Đồng bộ selectedEventId khi bộ lọc hoặc dự án thay đổi
+  useEffect(() => {
+    if (filteredEvents.length > 0) {
+      const exists = filteredEvents.some((e) => e.id === selectedEventId)
+      if (!exists) {
+        setSelectedEventId(filteredEvents[0].id)
+      }
+    }
+  }, [filteredEvents, selectedEventId])
+
+  // Sự kiện đang được chọn để soi chi tiết
   const selectedEvent = useMemo(() => {
     return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
   }, [filteredEvents, selectedEventId, events])
 
-  // Thống kê số liệu thực tế trong phạm vi dự án hiện hành (Chuẩn v2.2 Phần 11.2 - RPT-10)
+  // Thống kê số liệu tính toán động theo danh sách đang hiển thị
   const calculatedStats = useMemo(() => {
     const totalEventsInScope = filteredEvents.length
-    // Đếm các sự kiện có chuyển đổi trạng thái (from_status -> to_status)
     const stateTransitions = filteredEvents.filter((e) => Boolean(e.from_status && e.to_status)).length
-    // Đếm số quyết định phê duyệt / từ chối / nghiệm thu của Supervisor
     const approvalDecisions = filteredEvents.filter(
       (e) =>
         e.action_type === 'APPROVE_BATCH' ||
@@ -116,29 +177,34 @@ export const AuditTrail: React.FC = () => {
     }
   }, [filteredEvents])
 
-  // Hàm sao chép Event ID
+  // Sao chép Mã sự kiện
   const handleCopyEventId = (eventId: string) => {
     navigator.clipboard.writeText(eventId)
     setCopiedEventId(true)
     setTimeout(() => setCopiedEventId(false), 2000)
   }
 
-  // Thao tác làm mới dữ liệu (Refresh theo v2.2 Điều 11.1)
-  const handleRefresh = () => {
+  // Làm mới dữ liệu
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setTimeout(() => {
-      setEvents([...mockAuditEvents])
+    try {
+      const data = await auditService.getAuditEvents({
+        projectId: selectedProject
+      })
+      setEvents(data)
+    } finally {
       setIsRefreshing(false)
-    }, 500)
+    }
   }
 
-  // Xử lý xuất báo cáo lịch sử hoạt động (FR-35, US-16, Điều 11.5)
-  const handleExport = () => {
+  // Xuất báo cáo nhật ký
+  const handleExport = async () => {
+    await auditService.exportAuditTrail(exportFormat, selectedProject)
     setExportSuccess(true)
     setTimeout(() => {
       setExportSuccess(false)
       setShowExportModal(false)
-    }, 1800)
+    }, 1600)
   }
 
   const handleResetFilters = () => {
@@ -146,11 +212,25 @@ export const AuditTrail: React.FC = () => {
     setSelectedActionType('all')
     setSelectedEntityType('all')
     setSearchKeyword('')
-    setTimeFilter('30d')
+    setTimeFilter('all')
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 max-w-7xl mx-auto w-full pb-16 animate-pulse">
+        <div className="h-20 bg-slate-100 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="h-24 bg-slate-100 rounded-xl" />
+          <div className="h-24 bg-slate-100 rounded-xl" />
+          <div className="h-24 bg-slate-100 rounded-xl" />
+        </div>
+        <div className="h-96 bg-slate-100 rounded-xl" />
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-6 max-w-[1720px] mx-auto w-full pb-16">
+    <div className="flex flex-col gap-5 max-w-7xl mx-auto w-full pb-16">
       <AuditTrailHeader
         isSupervisor={isSupervisor}
         isPM={isPM}
@@ -182,22 +262,45 @@ export const AuditTrail: React.FC = () => {
         isSupervisor={isSupervisor}
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+      {/* 3. BẢNG DÒNG SỰ KIỆN HOẠT ĐỘNG (FULL CHIỀU RỘNG, THOÁNG ĐÃNG) */}
+      <div className="w-full">
         <AuditTrailTable
           filteredEvents={filteredEvents}
           selectedEventId={selectedEvent?.id || selectedEventId}
-          onSelectEventId={setSelectedEventId}
+          onSelectEventId={(id) => {
+            setSelectedEventId(id)
+          }}
+          onOpenDetails={(id) => {
+            setSelectedEventId(id)
+            setIsInspectorOpen(true)
+          }}
         />
-
-        {selectedEvent && (
-          <AuditTrailInspector
-            selectedEvent={selectedEvent}
-            copiedEventId={copiedEventId}
-            onCopyEventId={handleCopyEventId}
-            onSelectImage={setActiveImageModal}
-          />
-        )}
       </div>
+
+      {/* 4. SLIDE-OVER DRAWER: CHI TIẾT SỰ KIỆN (CHỈ HIỂN THỊ KHI BẤM XEM CHI TIẾT) */}
+      {isInspectorOpen && selectedEvent && (
+        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
+          {/* Nền mờ (Backdrop) */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsInspectorOpen(false)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-12">
+            <div className="w-screen max-w-lg md:max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-200">
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+                <AuditTrailInspector
+                  selectedEvent={selectedEvent}
+                  copiedEventId={copiedEventId}
+                  onCopyEventId={handleCopyEventId}
+                  onSelectImage={setActiveImageModal}
+                  onClose={() => setIsInspectorOpen(false)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AuditTrailModals
         activeImageModal={activeImageModal}
@@ -208,7 +311,7 @@ export const AuditTrail: React.FC = () => {
         onChangeExportFormat={setExportFormat}
         isPM={isPM}
         selectedProject={selectedProject}
-        projectList={AUDIT_PROJECT_LIST}
+        projectList={AUDIT_PROJECT_OPTIONS}
         filteredCount={filteredEvents.length}
         exportSuccess={exportSuccess}
         onExport={handleExport}
