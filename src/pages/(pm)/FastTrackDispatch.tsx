@@ -76,6 +76,7 @@ export const FastTrackDispatch: React.FC = () => {
     surveyDistanceM,
     handleToggleSelect,
     handleSelectAll,
+    handleRemoveViolationItems,
     handleChangeWorkMode,
     handleAssignCrew,
     handleDispatchBatch,
@@ -100,6 +101,7 @@ export const FastTrackDispatch: React.FC = () => {
       {/* 1. BREADCRUMB & HEADER SECTION */}
       <FastTrackHeader
         basePath={basePath}
+        isSupervisor={isSupervisor}
         onNavigateDashboard={() => navigate(`${basePath}/dashboard`)}
         onOpenPolicyModal={() => setIsPolicyModalOpen(true)}
         onScrollToDispatch={() => {
@@ -108,10 +110,11 @@ export const FastTrackDispatch: React.FC = () => {
         }}
       />
 
-      {/* 2. SECTION A: QUẢN LÝ PHIÊN BẢN CHÍNH SÁCH FAST TRACK */}
+      {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH FAST TRACK ÁP DỤNG */}
       <PolicySection
         currentPolicy={currentPolicy}
         policyHistory={policyHistory}
+        isSupervisor={isSupervisor}
         onActivateDraft={handleActivateDraft}
         onOpenAuditModal={() => setIsAuditModalOpen(true)}
       />
@@ -152,6 +155,8 @@ export const FastTrackDispatch: React.FC = () => {
         handleDispatchBatch={handleDispatchBatch}
         handleRepairDirect={handleRepairDirect}
         handleEmergencyDispatch={handleEmergencyDispatch}
+        onRemoveViolationItems={handleRemoveViolationItems}
+        onNavigateProposals={() => navigate('/pm/proposals')}
       />
 
       {/* MODALS */}

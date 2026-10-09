@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Users2 } from 'lucide-react'
 import { DefectItem, RouteConfig, PolicyThresholdConfig, WorkMode } from './types'
 import { DispatchModeSelector } from './DispatchModeSelector'
@@ -36,6 +36,8 @@ interface DispatchSectionProps {
   handleDispatchBatch: () => void
   handleRepairDirect: () => void
   handleEmergencyDispatch: () => void
+  onRemoveViolationItems?: () => void
+  onNavigateProposals?: () => void
 }
 
 export const DispatchSection: React.FC<DispatchSectionProps> = ({
@@ -66,7 +68,9 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
   showToast,
   handleDispatchBatch,
   handleRepairDirect,
-  handleEmergencyDispatch
+  handleEmergencyDispatch,
+  onRemoveViolationItems,
+  onNavigateProposals
 }) => {
   return (
     <div id="dispatch-table-section" className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">
@@ -77,16 +81,16 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
             <Users2 className="w-5 h-5 text-brand-gold" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-brand-dark">Äiá»u phá»‘i & Giao viá»‡c Ä‘á»™i ngÅ© ká»¹ thuáº­t hiá»‡n trÆ°á»ng</h2>
+            <h2 className="text-lg font-bold text-brand-dark">Điều phối &amp; Giao việc đội ngũ kỹ thuật hiện trường</h2>
             <p className="text-xs text-slate-500">
-              PhÃª duyá»‡t lá»‡nh xuáº¥t quÃ¢n, lá»±a chá»n phÆ°Æ¡ng thá»©c thi cÃ´ng vÃ  quáº£n lÃ½ trÃ¡ch nhiá»‡m hiá»‡n trÆ°á»ng
+              Phê duyệt lệnh xuất quân, lựa chọn phương thức thi công và quản lý trách nhiệm hiện trường
             </p>
           </div>
         </div>
 
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold shrink-0 border border-slate-200">
           <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
-          <span>{defects.length} khiáº¿m khuyáº¿t Ä‘ang chá» xá»­ lÃ½</span>
+          <span>{defects.length} khiếm khuyết đang chờ xử lý</span>
         </div>
       </div>
 
@@ -119,6 +123,8 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         hasViolationItem={hasViolationItem}
         selectedItems={selectedItems}
         currentPolicy={currentPolicy}
+        onRemoveViolationItems={onRemoveViolationItems}
+        onNavigateProposals={onNavigateProposals}
       />
 
       {/* MapLibre Container */}

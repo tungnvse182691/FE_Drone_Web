@@ -24,6 +24,11 @@ export const ProposalApprovalDetail: React.FC = () => {
   const {
     packageCode,
     packageName,
+    routeDisplay,
+    chainageDisplay,
+    createdByName,
+    createdAt,
+    packageStatus,
     items,
     stats,
     filterTab,
@@ -84,6 +89,11 @@ export const ProposalApprovalDetail: React.FC = () => {
       <ApprovalDetailHeader
         packageCode={packageCode}
         packageName={packageName}
+        routeDisplay={routeDisplay}
+        chainageDisplay={chainageDisplay}
+        createdByName={createdByName}
+        createdAt={createdAt}
+        status={packageStatus}
         basePath={basePath}
         stats={stats}
         isSupervisor={isSupervisor}

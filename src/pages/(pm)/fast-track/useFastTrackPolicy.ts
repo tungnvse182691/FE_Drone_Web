@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   PolicyThresholdConfig,
   PolicyHistoryItem,
@@ -10,6 +10,7 @@ import {
   INITIAL_POLICY_HISTORY,
   INITIAL_AUDIT_LOGS
 } from './mockData'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export function useFastTrackPolicy(
   setDefects: React.Dispatch<React.SetStateAction<DispatchDefectItem[]>>,
@@ -18,6 +19,31 @@ export function useFastTrackPolicy(
   const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig>(INITIAL_POLICY)
   const [policyHistory, setPolicyHistory] = useState<PolicyHistoryItem[]>(INITIAL_POLICY_HISTORY)
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS)
+
+  // Khởi tạo từ async Mock API Service (Zero localStorage)
+  useEffect(() => {
+    let isMounted = true
+    const loadPolicyData = async () => {
+      try {
+        const [pol, hist, logs] = await Promise.all([
+          fastTrackService.getPolicy(),
+          fastTrackService.getPolicyHistory(),
+          fastTrackService.getAuditLogs()
+        ])
+        if (isMounted) {
+          if (pol) setCurrentPolicy(pol)
+          if (hist && hist.length > 0) setPolicyHistory(hist)
+          if (logs && logs.length > 0) setAuditLogs(logs)
+        }
+      } catch (err) {
+        console.warn('Lỗi tải dữ liệu chính sách từ Mock API:', err)
+      }
+    }
+    loadPolicyData()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   // Form states cho Modal Tạo chính sách mới
   const [formVersionName, setFormVersionName] = useState('Policy v2.2')
@@ -31,7 +57,7 @@ export function useFastTrackPolicy(
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false)
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false)
 
-  const handleApplyPolicy = (action: 'ACTIVATE' | 'DRAFT') => {
+  const handleApplyPolicy = async (action: 'ACTIVATE' | 'DRAFT') => {
     const area = parseFloat(formMaxArea) || 0.5
     const depth = parseFloat(formMaxDepth) || 5.0
     const sla = parseInt(formSlaHours, 10) || 24
@@ -54,6 +80,10 @@ export function useFastTrackPolicy(
         appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
         description: `Quy chuẩn kích hoạt tự động ${formVersionName}: Diện tích ≤ ${area}m², Độ sâu ≤ ${depth}cm.`
       }
+
+      // Lưu qua Async Mock Service
+      await fastTrackService.activatePolicy(formVersionName, 'Kỹ sư Nguyễn Văn Hoàng (PM)', updatedPolicy)
+
       setCurrentPolicy(updatedPolicy)
 
       setPolicyHistory((prev) => [
@@ -101,30 +131,31 @@ export function useFastTrackPolicy(
 
       showToast(`ĐÃ KÍCH HOẠT CHÍNH SÁCH ${formVersionName}! Ngưỡng kỹ thuật và bảng khiếm khuyết đã cập nhật.`)
     } else {
-      setPolicyHistory((prev) => [
-        {
-          id: `pol-${Date.now()}`,
-          version: formVersionName,
-          displayName: `${formVersionName} (Dự thảo)`,
-          status: 'DRAFT',
-          activatedBy: 'PM Hoàng (Đang soạn)',
-          activatedAt: timeStr,
-          route: `Ngưỡng diện tích ≤ ${area} m² • Độ sâu ≤ ${depth} cm`,
-          maxArea: area,
-          maxDepth: depth,
-          slaHours: sla,
-          maxPerimeter: perimeter
-        },
-        ...prev
-      ])
+      const draftItem: PolicyHistoryItem = {
+        id: `pol-${Date.now()}`,
+        version: formVersionName,
+        displayName: `${formVersionName} (Dự thảo)`,
+        status: 'DRAFT',
+        activatedBy: 'PM Hoàng (Đang soạn)',
+        activatedAt: timeStr,
+        route: `Ngưỡng diện tích ≤ ${area} m² • Độ sâu ≤ ${depth} cm`,
+        maxArea: area,
+        maxDepth: depth,
+        slaHours: sla,
+        maxPerimeter: perimeter
+      }
+
+      await fastTrackService.createPolicyDraft(draftItem)
+
+      setPolicyHistory((prev) => [draftItem, ...prev])
       showToast(`Đã lưu dự thảo ${formVersionName} vào danh sách lịch sử chính sách!`)
     }
 
     setIsPolicyModalOpen(false)
   }
 
-  const handleActivateDraft = (item: (typeof policyHistory)[0]) => {
-    setCurrentPolicy({
+  const handleActivateDraft = async (item: (typeof policyHistory)[0]) => {
+    const updatedPolicy: PolicyThresholdConfig = {
       version: item.version,
       status: 'ACTIVE',
       maxAreaM2: item.maxArea,
@@ -136,7 +167,11 @@ export function useFastTrackPolicy(
       activatedAt: 'Vừa kích hoạt',
       appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
       description: `Quy chuẩn kích hoạt tự động ${item.version}: Diện tích ≤ ${item.maxArea}m², Độ sâu ≤ ${item.maxDepth}cm.`
-    })
+    }
+
+    await fastTrackService.activatePolicy(item.version, 'Kỹ sư Nguyễn Văn Hoàng (PM)', updatedPolicy)
+
+    setCurrentPolicy(updatedPolicy)
 
     setPolicyHistory((prev) =>
       prev.map((p) => {

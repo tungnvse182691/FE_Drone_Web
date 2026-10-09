@@ -134,18 +134,34 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             })()}
           </div>
 
-          {/* Cảnh báo nghiêm ngặt khi chọn lỗi chưa vượt ngưỡng ở chế độ Khẩn cấp */}
+          {/* Cảnh báo khi chọn lỗi chưa vượt ngưỡng ở chế độ Khẩn cấp */}
           {workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible && (
-            <div className="p-3 bg-amber-50/90 border-2 border-amber-300 rounded-xl space-y-1.5 animate-in fade-in">
+            <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>CẢNH BÁO QUY TRÌNH: HƯ HỎNG CHƯA VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
+                <span>CẢNH BÁO: HƯ HỎNG CHƯA VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
               </div>
               <p className="text-amber-800 leading-relaxed text-[11px]">
                 Khiếm khuyết này có diện tích <strong>{selectedItems[0]?.areaM2} m²</strong> (&le; {currentPolicy.maxAreaM2} m²) và độ sâu <strong>{selectedItems[0]?.depthCm} cm</strong> (&le; {currentPolicy.maxDepthCm} cm). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (Fast Track)</strong> thông thường.
               </p>
               <div className="text-[11px] text-amber-950 font-bold bg-white/80 p-2 rounded-lg border border-amber-200">
-                ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 15 ký tự) để phục vụ thanh tra dự án!
+                ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 10 ký tự) để phục vụ thanh tra dự án!
+              </div>
+            </div>
+          )}
+
+          {/* Ưu tiên khẩn cấp khi chọn lỗi vượt ngưỡng gây ách tắc giao thông */}
+          {workMode === 'EMERGENCY' && !selectedItems[0]?.isFastTrackEligible && (
+            <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
+              </div>
+              <p className="text-rose-800 leading-relaxed text-[11px]">
+                Hư hỏng có diện tích <strong>{selectedItems[0]?.areaM2} m²</strong> / độ sâu <strong>{selectedItems[0]?.depthCm} cm</strong> đang gây nguy cơ tai nạn hoặc ùn tắc giao thông. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy tắc BR-46 / FR-37.
+              </p>
+              <div className="text-[11px] text-rose-950 font-bold bg-white/80 p-2 rounded-lg border border-rose-200">
+                🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Supervisor Hậu kiểm (Post-audit).
               </div>
             </div>
           )}
@@ -156,9 +172,9 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
                 Chỉ đạo của Chỉ huy trưởng (PM Dispatch Notes)
               </label>
-              {workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible && (
+              {workMode === 'EMERGENCY' && (
                 <span className="text-[10px] text-amber-700 font-bold">
-                  * Bắt buộc giải trình ({dispatchNotes.trim().length}/15 ký tự)
+                  * Bắt buộc giải trình/chỉ đạo ({dispatchNotes.trim().length}/10 ký tự)
                 </span>
               )}
             </div>
@@ -167,12 +183,12 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
               value={dispatchNotes}
               onChange={(e) => setDispatchNotes(e.target.value)}
               placeholder={
-                workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible
-                  ? 'BẮT BUỘC: Nhập lý do xuất quân khẩn cấp cho lỗi chưa vượt ngưỡng (VD: Phản ánh từ CSGT, khúc cua nguy hiểm...)'
+                workMode === 'EMERGENCY'
+                  ? 'BẮT BUỘC: Nhập chỉ đạo phân luồng, giải tỏa ách tắc, biện pháp tạm thời (VD: Rào chắn làn 1, rải thảm nguội thông xe tạm...)'
                   : 'Ghi rõ yêu cầu an toàn, rào chắn phân luồng, phương tiện đo...'
               }
               className={`w-full px-3 py-2 bg-white border rounded-xl text-xs focus:outline-none ${
-                workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible && dispatchNotes.trim().length < 15
+                workMode === 'EMERGENCY' && dispatchNotes.trim().length < 10
                   ? 'border-amber-400 focus:ring-2 focus:ring-amber-400'
                   : 'border-slate-300 focus:border-brand-gold'
               }`}

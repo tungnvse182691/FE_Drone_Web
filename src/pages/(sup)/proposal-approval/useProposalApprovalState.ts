@@ -4,27 +4,46 @@ import { mockRepairBatches } from '../../../data/mockData'
 import { ItemApprovalStatus, RepairItemDetail } from './types'
 
 export function useProposalApprovalState(id: string | undefined) {
+  const targetPackage = useMemo(() => {
+    if (!id) return null
+    return repairService.getPackageById(id)
+  }, [id])
+
   const matchedBatch = useMemo(() => {
     if (!id) return null
+    if (targetPackage) {
+      return {
+        id: targetPackage.id,
+        code: targetPackage.code,
+        name: targetPackage.title,
+        status: targetPackage.status
+      }
+    }
     return mockRepairBatches.find(
       (b) => b.id.toLowerCase() === id.toLowerCase() || b.code.toLowerCase() === id.toLowerCase()
     )
-  }, [id])
+  }, [id, targetPackage])
 
   // Package Data State
-  const [packageCode] = useState(
-    matchedBatch?.code || (id?.toUpperCase().startsWith('PKG-') ? id.toUpperCase() : `PKG-2026-${id?.toUpperCase() || '05'}`)
-  )
-  const [packageName] = useState(matchedBatch?.name || 'Gói đề xuất sửa chữa mặt đường BTXM')
-  const [items, setItems] = useState<RepairItemDetail[]>(() => repairService.getItems(packageCode))
+  const packageCode = targetPackage?.code || matchedBatch?.code || (id?.toUpperCase().startsWith('PKG-') ? id.toUpperCase() : `PKG-2026-${id?.toUpperCase() || '05'}`)
+  const packageName = targetPackage?.title || matchedBatch?.name || 'Gói đề xuất sửa chữa mặt đường BTXM'
+  const routeDisplay = targetPackage?.route_name || 'QL1A - Giai đoạn 2'
+  const chainageDisplay = targetPackage?.chainage_display || 'Km 1024 - Km 1045'
+  const createdByName = targetPackage?.created_by_name || 'Đỗ Quốc Hoàng (PM)'
+  const createdAt = targetPackage?.created_at || 'Hôm nay'
+  const packageStatus = targetPackage?.status || 'SUBMITTED'
+
+  const [items, setItems] = useState<RepairItemDetail[]>(() => {
+    return repairService.getItems(id) || repairService.getItems(packageCode)
+  })
 
   useEffect(() => {
     const handleStateChange = () => {
-      setItems(repairService.getItems(packageCode))
+      setItems(repairService.getItems(id) || repairService.getItems(packageCode))
     }
     window.addEventListener('roadguard_state_change', handleStateChange)
     return () => window.removeEventListener('roadguard_state_change', handleStateChange)
-  }, [packageCode])
+  }, [id, packageCode])
 
   // Filter State
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REQUEST_EVIDENCE' | 'REJECTED'>(
@@ -236,6 +255,11 @@ export function useProposalApprovalState(id: string | undefined) {
   return {
     packageCode,
     packageName,
+    routeDisplay,
+    chainageDisplay,
+    createdByName,
+    createdAt,
+    packageStatus,
     items,
     stats,
     filterTab,

@@ -1,18 +1,21 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   DefectItem as DispatchDefectItem,
   WorkMode,
-  RouteConfig
+  RouteConfig,
+  CrewTeam
 } from './types'
 import { CREW_TEAMS, INITIAL_DEFECTS } from './mockData'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export function useFastTrackDispatch(
   currentRouteConfig: RouteConfig,
   showToast: (msg: string) => void
 ) {
-  const crewTeams = CREW_TEAMS
+  const [crewTeams, setCrewTeams] = useState<CrewTeam[]>(CREW_TEAMS)
   const [defects, setDefects] = useState<DispatchDefectItem[]>(INITIAL_DEFECTS)
-  const [selectedDefectIds, setSelectedDefectIds] = useState<string[]>(['DEF-01', 'DEF-02', 'DEF-03'])
+  // Mặc định chỉ chọn các lỗi ĐẠT CHUẨN Fast Track (bỏ lỗi vi phạm ngưỡng)
+  const [selectedDefectIds, setSelectedDefectIds] = useState<string[]>(['DEF-01', 'DEF-02'])
   const [workMode, setWorkMode] = useState<WorkMode>('MEASURE_ONLY')
 
   const [routeFilter, setRouteFilter] = useState('QL1A_PK04')
@@ -26,9 +29,33 @@ export function useFastTrackDispatch(
   )
   const [detailDefect, setDetailDefect] = useState<DispatchDefectItem | null>(null)
 
+  // Khởi tạo từ async Mock API Service (Zero localStorage)
+  useEffect(() => {
+    let isMounted = true
+    const loadDispatchData = async () => {
+      try {
+        const [loadedDefects, loadedCrews] = await Promise.all([
+          fastTrackService.getDefects(),
+          fastTrackService.getCrews()
+        ])
+        if (isMounted) {
+          if (loadedDefects && loadedDefects.length > 0) setDefects(loadedDefects)
+          if (loadedCrews && loadedCrews.length > 0) setCrewTeams(loadedCrews)
+        }
+      } catch (err) {
+        console.warn('Lỗi tải dữ liệu điều phối từ Mock API:', err)
+      }
+    }
+    loadDispatchData()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const handleRouteChange = (newRouteId: string) => {
     setRouteFilter(newRouteId)
-    const newRouteDefects = defects.filter((d) => d.routeId === newRouteId)
+    // Chỉ chọn các defect ĐẠT CHUẨN của tuyến mới
+    const newRouteDefects = defects.filter((d) => d.routeId === newRouteId && d.isFastTrackEligible)
     setSelectedDefectIds(newRouteDefects.slice(0, 2).map((d) => d.id))
   }
 
@@ -59,6 +86,13 @@ export function useFastTrackDispatch(
   }, [selectedItems])
 
   const handleToggleSelect = (id: string) => {
+    const target = defects.find((d) => d.id === id)
+    // Chặn không cho chọn lỗi vi phạm ngưỡng trong luồng Fast Track Đo & Sửa ngay (BR-04)
+    if (target && !target.isFastTrackEligible && workMode === 'INSPECT_AND_REPAIR') {
+      showToast(`Không thể chọn ${target.code}: Chế độ Đo & Sửa ngay chỉ áp dụng cho hư hỏng nhỏ đạt chuẩn Fast Track (BR-04). Với lỗi lớn gây ùn tắc, vui lòng chuyển sang Chế độ Xử lý khẩn cấp!`)
+      return
+    }
+
     if (workMode === 'INSPECT_AND_REPAIR' || workMode === 'EMERGENCY') {
       setSelectedDefectIds([id])
       return
@@ -71,21 +105,44 @@ export function useFastTrackDispatch(
   const handleSelectAll = (checked: boolean) => {
     if (workMode !== 'MEASURE_ONLY') return
     if (checked) {
-      setSelectedDefectIds(filteredDefects.map((d) => d.id))
+      // CHỈ CHỌN CÁC LỖI ĐẠT CHUẨN FAST TRACK
+      const eligibleItems = filteredDefects.filter((d) => d.isFastTrackEligible)
+      setSelectedDefectIds(eligibleItems.map((d) => d.id))
+      const violationCount = filteredDefects.length - eligibleItems.length
+      if (violationCount > 0) {
+        showToast(`Đã tự động lọc bỏ ${violationCount} khiếm khuyết vi phạm ngưỡng. Chỉ chọn các lỗi đạt chuẩn Fast Track!`)
+      }
     } else {
       setSelectedDefectIds([])
     }
   }
 
+  const handleRemoveViolationItems = () => {
+    setSelectedDefectIds((prev) =>
+      prev.filter((id) => {
+        const item = defects.find((d) => d.id === id)
+        return item ? item.isFastTrackEligible : true
+      })
+    )
+    showToast('Đã loại bỏ toàn bộ các khiếm khuyết vượt ngưỡng ra khỏi danh sách giao việc.')
+  }
+
   const handleChangeWorkMode = (mode: WorkMode) => {
     setWorkMode(mode)
-    if (mode === 'INSPECT_AND_REPAIR' || mode === 'EMERGENCY') {
+    if (mode === 'INSPECT_AND_REPAIR') {
       const firstEligible = filteredDefects.find((d) => selectedDefectIds.includes(d.id) && d.isFastTrackEligible)
       if (firstEligible) {
         setSelectedDefectIds([firstEligible.id])
-      } else if (selectedDefectIds.length > 0) {
-        setSelectedDefectIds([selectedDefectIds[0]])
       } else if (filteredDefects.length > 0) {
+        const fallbackEligible = filteredDefects.find((d) => d.isFastTrackEligible)
+        if (fallbackEligible) {
+          setSelectedDefectIds([fallbackEligible.id])
+        }
+      }
+    } else if (mode === 'EMERGENCY') {
+      if (selectedDefectIds.length > 1) {
+        setSelectedDefectIds([selectedDefectIds[0]])
+      } else if (selectedDefectIds.length === 0 && filteredDefects.length > 0) {
         setSelectedDefectIds([filteredDefects[0].id])
       }
     }
@@ -103,12 +160,17 @@ export function useFastTrackDispatch(
       showToast('Vui lòng chọn ít nhất 1 khiếm khuyết để giao việc.')
       return
     }
+    // Chặn giao việc tuyệt đối nếu có lỗi vi phạm ngưỡng
+    if (hasViolationItem) {
+      showToast('CHẶN GIAO VIỆC: Danh sách chứa hạng mục vi phạm ngưỡng chính sách Fast Track! Bắt buộc loại bỏ hoặc gom vào Gói đề xuất sửa chữa lớn.')
+      return
+    }
     setIsDispatchModalOpen(true)
   }
 
   const handleRepairDirect = () => {
     if (hasViolationItem) {
-      showToast('KHÔNG THỂ THỰC HIỆN: Danh sách có hạng mục vi phạm ngưỡng Fast Track!')
+      showToast('KHÔNG THỂ THỰC HIỆN: Hạng mục được chọn vi phạm ngưỡng chính sách Fast Track!')
       return
     }
     if (selectedDefectIds.length !== 1) {
@@ -132,17 +194,33 @@ export function useFastTrackDispatch(
     setIsDispatchModalOpen(true)
   }
 
-  const handleExecuteDispatch = () => {
+  const handleExecuteDispatch = async () => {
     if (selectedDefectIds.length === 0) return
 
-    if (workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible) {
-      if (!dispatchNotes || dispatchNotes.trim().length < 15) {
+    if (hasViolationItem && workMode !== 'EMERGENCY') {
+      showToast('LỖI BẢO MẬT QUY CHUẨN: Không được phép giao việc Fast Track cho hạng mục vi phạm ngưỡng!')
+      return
+    }
+
+    if (workMode === 'EMERGENCY') {
+      if (!dispatchNotes || dispatchNotes.trim().length < 10) {
         showToast(
-          'BẮT BUỘC: Hư hỏng chưa vượt ngưỡng an toàn! Vui lòng nhập lý do giải trình khẩn cấp vào ô Chỉ đạo (tối thiểu 15 ký tự).'
+          'BẮT BUỘC: Lệnh khẩn cấp 24/7 yêu cầu nhập lý do hiện trường / chỉ đạo phân luồng (tối thiểu 10 ký tự) để phục vụ Supervisor hậu kiểm!'
         )
         return
       }
     }
+
+    // Gửi qua Mock API Service
+    const selectedCrewObj = crewTeams.find((c) => c.name === selectedDispatchCrew)
+    const crewId = selectedCrewObj ? selectedCrewObj.id : 'crew-02'
+
+    await fastTrackService.executeDispatch({
+      defectIds: selectedDefectIds,
+      workMode,
+      crewId,
+      notes: dispatchNotes
+    })
 
     setDefects((prev) =>
       prev.map((d) =>
@@ -198,6 +276,7 @@ export function useFastTrackDispatch(
     handleRouteChange,
     handleToggleSelect,
     handleSelectAll,
+    handleRemoveViolationItems,
     handleChangeWorkMode,
     handleAssignCrew,
     handleDispatchBatch,

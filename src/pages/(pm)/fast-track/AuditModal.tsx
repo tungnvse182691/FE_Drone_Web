@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { History as HistoryIcon, X } from 'lucide-react'
 import { AuditLogItem } from './types'
 
@@ -22,8 +22,8 @@ export const AuditModal: React.FC<AuditModalProps> = ({
           <div className="flex items-center gap-2">
             <HistoryIcon className="w-5 h-5 text-brand-gold" />
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Nháº­t KÃ½ Kiá»ƒm ToÃ¡n Thay Äá»•i ChÃ­nh SÃ¡ch (Audit Trail)</h3>
-              <p className="text-[10px] text-slate-500 font-mono">Báº¥t biáº¿n â€¢ Ghi nháº­n xÃ¡c thá»±c báº±ng mÃ£ bÄƒm SHA-256</p>
+              <h3 className="text-base font-bold text-brand-dark">Nhật Ký Kiểm Toán Thay Đổi Chính Sách (Audit Trail)</h3>
+              <p className="text-[10px] text-slate-500 font-mono">Bất biến • Ghi nhận xác thực bằng mã băm SHA-256</p>
             </div>
           </div>
           <button
@@ -42,7 +42,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
                 <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
               </div>
               <p className="text-slate-600">
-                NgÆ°á»i thá»±c hiá»‡n: <strong>{log.user}</strong> â€¢ Hash kiá»ƒm tra:{' '}
+                Người thực hiện: <strong>{log.user}</strong> • Hash kiểm tra:{' '}
                 <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200">
                   {log.hash}
                 </code>
@@ -59,7 +59,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
           >
-            ÄÃ³ng
+            Đóng
           </button>
         </div>
       </div>

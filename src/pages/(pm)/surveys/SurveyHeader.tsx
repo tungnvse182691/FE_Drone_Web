@@ -58,38 +58,6 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
         </div>
       </div>
 
-      {/* Prominent Action Banner for Latest Mission #MS-2026-0924 */}
-      <div className="bg-[#FFFFFF] border border-[#E2E5E9] border-l-4 border-l-[#C9A227] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-[#FEF3E2] text-[#8C6D1F] flex items-center justify-center shrink-0 border border-amber-200">
-            <Icon name="auto_awesome" size={18} className="text-[#C9A227]" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-sm text-[#1A1D20]">
-                Đợt bay mới nhất: #MS-2026-0924 (QL1A Km 1024+000 – Km 1030+000)
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FDECEC] text-[#E5484D] border border-red-200 whitespace-nowrap">
-                8 Khiếm Khuyết AI Chờ Duyệt
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FEF3E2] text-[#F59E0B] border border-amber-200 whitespace-nowrap">
-                Độ phủ 87% (Cần Bay Bổ Sung)
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 mt-1 line-clamp-2 md:line-clamp-1">
-              Mô hình Road-YOLOv9 đã nhận diện xong 1,920 khung hình. Project Manager cần vào Canvas để thẩm định hộp bao (Bounding box), xác nhận vết nứt/ổ gà và duyệt điều kiện khóa Baseline.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => onNavigate(`${basePath}/surveys/srv-01/review`)}
-          type="button"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#2D3748] hover:bg-[#1A1D20] text-white text-xs font-semibold transition-all shadow-xs shrink-0 cursor-pointer whitespace-nowrap"
-        >
-          <span>Mở Canvas Thẩm Định (WF-09)</span>
-          <Icon name="arrow_forward" size={15} className="text-white" />
-        </button>
-      </div>
     </div>
   )
 }

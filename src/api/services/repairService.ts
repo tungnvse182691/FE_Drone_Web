@@ -1,4 +1,3 @@
-import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import {
   ProposalWorkPackage,
   ItemApprovalStatus,
@@ -181,21 +180,40 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
   }
 ]
 
+// IN-MEMORY DATA STORE (Thay thế hoàn toàn localStorage, mô phỏng Backend DB)
+let inMemoryPackages: ProposalWorkPackage[] = [...INITIAL_PACKAGES]
+const inMemoryItemsByPackage: Record<string, RepairItemDetail[]> = {
+  'pkg-08': [...INITIAL_ITEMS],
+  'PKG-2026-08': [...INITIAL_ITEMS]
+}
+
+const notifyStateChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('roadguard_state_change'))
+  }
+}
+
 export const repairService = {
+  // --- SYNC API METHODS (Tương thích trực tiếp với các components hiện tại) ---
   getPackages(): ProposalWorkPackage[] {
-    return getFromStorage<ProposalWorkPackage[]>(STORAGE_KEYS.REPAIR_PROPOSALS, INITIAL_PACKAGES)
+    return [...inMemoryPackages]
   },
 
   getPackageById(id: string): ProposalWorkPackage | undefined {
-    const list = this.getPackages()
-    return list.find((p) => p.id === id || p.code === id)
+    if (!id) return undefined
+    const cleanId = id.trim().toLowerCase()
+    return inMemoryPackages.find(
+      (p) => p.id.toLowerCase() === cleanId || p.code.toLowerCase() === cleanId
+    )
   },
 
-  createPackage(data: Partial<ProposalWorkPackage>): ProposalWorkPackage {
+  createPackage(data: Partial<ProposalWorkPackage>, items?: RepairItemDetail[]): ProposalWorkPackage {
     const list = this.getPackages()
-    const newCode = `PKG-2026-${String(list.length + 10).padStart(2, '0')}`
+    const newCode = data.code || `PKG-2026-${String(list.length + 10).padStart(2, '0')}`
+    const newId = data.id || `pkg-${Date.now()}`
+
     const newPkg: ProposalWorkPackage = {
-      id: `pkg-${Date.now()}`,
+      id: newId,
       code: newCode,
       title: data.title || 'Gói đề xuất sửa chữa kỹ thuật mới',
       route_id: data.route_id || 'QL1A_PK04',
@@ -204,7 +222,7 @@ export const repairService = {
       chainage_end: data.chainage_end || 'Km 1030+000',
       chainage_display: data.chainage_display || `${data.chainage_start} - ${data.chainage_end}`,
       segments_count: data.segments_count || 1,
-      defect_count: data.defect_count || 0,
+      defect_count: data.defect_count || (items ? items.length : 0),
       defect_summary: data.defect_summary || 'Các khiếm khuyết được gom vào gói',
       technical_scope: data.technical_scope || 'Xử lý kỹ thuật mặt đường',
       material_scope: data.material_scope || 'Vật liệu quy chuẩn TCVN',
@@ -212,28 +230,35 @@ export const repairService = {
       duration_days: data.duration_days || 3,
       date_range: data.date_range || 'Trong tuần này',
       created_by_name: data.created_by_name || 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: new Date().toLocaleDateString('vi-VN') + ' - ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'DRAFT',
-      status_label: 'Bản nháp',
-      approved_items: 0,
-      total_items: data.defect_count || 0,
-      contractor_name: 'Chưa phân công',
+      created_by_initials: data.created_by_initials || 'ĐH',
+      created_by_role: data.created_by_role || 'Chỉ huy trưởng dự án',
+      created_at: data.created_at || new Date().toLocaleDateString('vi-VN') + ' - ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      status: data.status || 'DRAFT',
+      status_label: data.status_label || (data.status === 'SUBMITTED' ? 'Chờ duyệt' : 'Bản nháp'),
+      approved_items: data.approved_items || 0,
+      total_items: data.total_items || (items ? items.length : data.defect_count || 0),
+      contractor_name: data.contractor_name || 'Chưa phân công',
       description: data.description
     }
 
-    const updated = [newPkg, ...list]
-    saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, updated)
+    inMemoryPackages = [newPkg, ...inMemoryPackages]
+
+    // Lưu danh sách items chi tiết nếu có
+    if (items && items.length > 0) {
+      inMemoryItemsByPackage[newId] = [...items]
+      inMemoryItemsByPackage[newCode] = [...items]
+    }
+
+    notifyStateChange()
     return newPkg
   },
 
   submitPackage(packageId: string): ProposalWorkPackage | null {
-    const list = this.getPackages()
     let submittedPkg: ProposalWorkPackage | null = null
+    const cleanId = packageId.trim().toLowerCase()
 
-    const updated = list.map((pkg) => {
-      if (pkg.id === packageId || pkg.code === packageId) {
+    inMemoryPackages = inMemoryPackages.map((pkg) => {
+      if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         submittedPkg = {
           ...pkg,
           status: 'SUBMITTED',
@@ -245,14 +270,59 @@ export const repairService = {
     })
 
     if (submittedPkg) {
-      saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, updated)
+      notifyStateChange()
     }
     return submittedPkg
   },
 
+  deletePackage(packageId: string): boolean {
+    const cleanId = packageId.trim().toLowerCase()
+    inMemoryPackages = inMemoryPackages.filter(
+      (p) => p.id.toLowerCase() !== cleanId && p.code.toLowerCase() !== cleanId
+    )
+    delete inMemoryItemsByPackage[packageId]
+    notifyStateChange()
+    return true
+  },
+
   getItems(packageId?: string): RepairItemDetail[] {
-    const key = packageId ? `${STORAGE_KEYS.PROPOSAL_ITEMS}_${packageId}` : STORAGE_KEYS.PROPOSAL_ITEMS
-    return getFromStorage<RepairItemDetail[]>(key, INITIAL_ITEMS)
+    if (!packageId) return [...INITIAL_ITEMS]
+    const cleanId = packageId.trim().toLowerCase()
+
+    // 1. Tìm trong in-memory items store theo id hoặc code
+    for (const [key, storedItems] of Object.entries(inMemoryItemsByPackage)) {
+      if (key.toLowerCase() === cleanId) {
+        return [...storedItems]
+      }
+    }
+
+    // 2. Tra cứu gói trong packages list để tạo items động phù hợp nếu chưa có
+    const targetPkg = this.getPackageById(packageId)
+    if (targetPkg) {
+      // Nếu là gói mẫu có sẵn, fallback về INITIAL_ITEMS
+      if (targetPkg.id === 'pkg-08' || targetPkg.code === 'PKG-2026-08') {
+        return [...INITIAL_ITEMS]
+      }
+      // Nếu gói mới có items nhưng chưa map key
+      if (inMemoryItemsByPackage[targetPkg.id]) {
+        return [...inMemoryItemsByPackage[targetPkg.id]]
+      }
+      if (inMemoryItemsByPackage[targetPkg.code]) {
+        return [...inMemoryItemsByPackage[targetPkg.code]]
+      }
+    }
+
+    return [...INITIAL_ITEMS]
+  },
+
+  setPackageItems(packageId: string, items: RepairItemDetail[]): void {
+    inMemoryItemsByPackage[packageId] = [...items]
+    const targetPkg = this.getPackageById(packageId)
+    if (targetPkg) {
+      inMemoryItemsByPackage[targetPkg.id] = [...items]
+      inMemoryItemsByPackage[targetPkg.code] = [...items]
+    }
+    notifyStateChange()
   },
 
   updateItemDecision(
@@ -261,11 +331,10 @@ export const repairService = {
     decisionOrPatch: ItemApprovalStatus | Partial<RepairItemDetail>,
     notes?: string
   ): RepairItemDetail | null {
-    const key = `${STORAGE_KEYS.PROPOSAL_ITEMS}_${packageId}`
-    const items = this.getItems(packageId)
+    const currentItems = this.getItems(packageId)
     let updatedItem: RepairItemDetail | null = null
 
-    const updatedItems = items.map((it) => {
+    const updatedItems = currentItems.map((it) => {
       if (it.id === itemId || it.item_code === itemId) {
         if (typeof decisionOrPatch === 'string') {
           updatedItem = {
@@ -286,15 +355,13 @@ export const repairService = {
     })
 
     if (updatedItem) {
-      saveToStorage(key, updatedItems)
-      // Cập nhật thống kê trên gói
+      this.setPackageItems(packageId, updatedItems)
       this.recalculatePackageStats(packageId, updatedItems)
     }
     return updatedItem
   },
 
   signPackageApproval(packageId: string, supervisorName = 'Giám sát trưởng (Supervisor)'): ProposalWorkPackage | null {
-    const list = this.getPackages()
     const items = this.getItems(packageId)
 
     // Chuyển toàn bộ item pending sang APPROVED
@@ -309,11 +376,13 @@ export const repairService = {
       }
       return it
     })
-    saveToStorage(`${STORAGE_KEYS.PROPOSAL_ITEMS}_${packageId}`, updatedItems)
+    this.setPackageItems(packageId, updatedItems)
 
     let approvedPkg: ProposalWorkPackage | null = null
-    const updatedList = list.map((pkg) => {
-      if (pkg.id === packageId || pkg.code === packageId) {
+    const cleanId = packageId.trim().toLowerCase()
+
+    inMemoryPackages = inMemoryPackages.map((pkg) => {
+      if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         approvedPkg = {
           ...pkg,
           status: 'DECIDED',
@@ -327,17 +396,17 @@ export const repairService = {
     })
 
     if (approvedPkg) {
-      saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, updatedList)
+      notifyStateChange()
     }
     return approvedPkg
   },
 
-  dispatchPackage(packageId: string, crewName: string, deadline?: string): ProposalWorkPackage | null {
-    const list = this.getPackages()
+  dispatchPackage(packageId: string, crewName: string, _deadline?: string): ProposalWorkPackage | null {
     let dispatchedPkg: ProposalWorkPackage | null = null
+    const cleanId = packageId.trim().toLowerCase()
 
-    const updated = list.map((pkg) => {
-      if (pkg.id === packageId || pkg.code === packageId) {
+    inMemoryPackages = inMemoryPackages.map((pkg) => {
+      if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         dispatchedPkg = {
           ...pkg,
           status: 'DISPATCHED',
@@ -350,16 +419,17 @@ export const repairService = {
     })
 
     if (dispatchedPkg) {
-      saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, updated)
+      notifyStateChange()
     }
     return dispatchedPkg
   },
 
   recalculatePackageStats(packageId: string, items: RepairItemDetail[]): void {
-    const list = this.getPackages()
     const approvedCount = items.filter((i) => i.status === 'APPROVED').length
-    const updated = list.map((pkg) => {
-      if (pkg.id === packageId || pkg.code === packageId) {
+    const cleanId = packageId.trim().toLowerCase()
+
+    inMemoryPackages = inMemoryPackages.map((pkg) => {
+      if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         return {
           ...pkg,
           approved_items: approvedCount,
@@ -368,11 +438,29 @@ export const repairService = {
       }
       return pkg
     })
-    saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, updated)
+    notifyStateChange()
   },
 
   resetRepairData(): void {
-    saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, INITIAL_PACKAGES)
-    saveToStorage(STORAGE_KEYS.PROPOSAL_ITEMS, INITIAL_ITEMS)
+    inMemoryPackages = [...INITIAL_PACKAGES]
+    inMemoryItemsByPackage['pkg-08'] = [...INITIAL_ITEMS]
+    inMemoryItemsByPackage['PKG-2026-08'] = [...INITIAL_ITEMS]
+    notifyStateChange()
+  },
+
+  // --- ASYNC MOCK API METHODS (Chuẩn Mock API mô phỏng Network delay) ---
+  async fetchPackages(): Promise<ProposalWorkPackage[]> {
+    await new Promise((res) => setTimeout(res, 80))
+    return this.getPackages()
+  },
+
+  async fetchPackageById(id: string): Promise<ProposalWorkPackage | undefined> {
+    await new Promise((res) => setTimeout(res, 60))
+    return this.getPackageById(id)
+  },
+
+  async fetchItems(packageId?: string): Promise<RepairItemDetail[]> {
+    await new Promise((res) => setTimeout(res, 60))
+    return this.getItems(packageId)
   }
 }

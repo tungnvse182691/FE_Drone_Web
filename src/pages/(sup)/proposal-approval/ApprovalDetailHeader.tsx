@@ -29,6 +29,11 @@ export interface ApprovalDetailHeaderProps {
     totalProposedArea: number
   }
   isSupervisor: boolean
+  routeDisplay?: string
+  chainageDisplay?: string
+  createdByName?: string
+  createdAt?: string
+  status?: string
   onNavigateHome: () => void
   onNavigateProposals: () => void
   onOpenBatchApprove: () => void
@@ -42,6 +47,11 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
   basePath: _basePath,
   stats,
   isSupervisor,
+  routeDisplay,
+  chainageDisplay,
+  createdByName,
+  createdAt,
+  status,
   onNavigateHome,
   onNavigateProposals,
   onOpenBatchApprove,
@@ -95,10 +105,20 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-sansation">
                 {packageName} ({packageCode})
               </h1>
-              {stats.approved === stats.total ? (
+              {status === 'DRAFT' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs">
+                  <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  <span>DRAFT - Bản nháp (Đang chuẩn bị hồ sơ)</span>
+                </span>
+              ) : status === 'DECIDED' || stats.approved === stats.total ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>DECIDED - Đã phê duyệt 100%</span>
+                  <span>DECIDED - Đã phê duyệt {Math.round(stats.percent)}%</span>
+                </span>
+              ) : status === 'DISPATCHED' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 shadow-2xs">
+                  <Truck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>DISPATCHED - Đang thi công hiện trường</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FEF3C7] text-[#D97706] border border-amber-200 shadow-2xs">
@@ -111,17 +131,17 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
               <span className="inline-flex items-center gap-1.5">
                 <Milestone className="w-4 h-4 text-brand-gold" />
-                <span>Tuyến QL1A • Đoạn Km 1024 - Km 1045</span>
+                <span>{routeDisplay || 'QL1A'} • {chainageDisplay || 'Km 1024 - Km 1045'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1.5">
                 <User className="w-4 h-4 text-slate-500" />
-                <span>Lập bởi PM Lê Tuấn • 25/08/2026</span>
+                <span>Lập bởi: {createdByName || 'PM Đỗ Quốc Hoàng'} • {createdAt || 'Hôm nay'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1.5 text-brand-gold font-semibold">
                 <AlertTriangle className="w-4 h-4" />
-                <span>Mức độ ưu tiên: Khẩn cấp cấp II</span>
+                <span>Quy trình kỹ thuật: WF-07</span>
               </span>
             </div>
           </div>

@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Users2, Send, Wrench, AlertOctagon, AlertTriangle, Flame } from 'lucide-react'
 import { DefectItem, WorkMode } from './types'
 
@@ -33,18 +33,24 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
       <div className="space-y-1 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-brand-dark text-sm">
-            ÄÃ£ chá»n: {selectedDefectIds.length} khiáº¿m khuyáº¿t
+            Đã chọn: {selectedDefectIds.length} khiếm khuyết
           </span>
-          <span className="text-slate-400">â€¢</span>
+          <span className="text-slate-400">•</span>
           <span className="text-slate-600">
-            Tá»•ng chiá»u dÃ i kháº£o sÃ¡t:{' '}
+            Tổng chiều dài khảo sát:{' '}
             <strong className="text-brand-dark font-mono font-bold">{surveyDistanceM} m</strong>
           </span>
+          {hasViolationItem && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+              <AlertOctagon className="w-3 h-3 text-rose-600" />
+              Chặn giao việc: Có lỗi vượt ngưỡng
+            </span>
+          )}
         </div>
         <div className="text-slate-500 flex items-center gap-1.5 flex-wrap text-[11px]">
           <Users2 className="w-3.5 h-3.5 text-brand-gold" />
           <span>
-            PhÃ¢n bá»• sÆ¡ bá»™: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'ChÆ°a chá»‰ Ä‘á»‹nh'}</strong> (Báº¥m nÃºt bÃªn pháº£i Ä‘á»ƒ phÃ¡t lá»‡nh chÃ­nh thá»©c)
+            Phân bổ sơ bộ: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'Chưa chỉ định'}</strong> (Bấm nút bên phải để phát lệnh chính thức)
           </span>
         </div>
       </div>
@@ -56,31 +62,39 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
           type="button"
           className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
         >
-          Há»§y chá»n
+          Hủy chọn
         </button>
         <button
-          onClick={() => showToast('ÄÃ£ lÆ°u nhÃ¡p cáº¥u hÃ¬nh phÃ¢n bá»• nhiá»‡m vá»¥ vÃ o há»“ sÆ¡ dá»± Ã¡n.')}
+          onClick={() => showToast('Đã lưu nháp cấu hình phân bổ nhiệm vụ vào hồ sơ dự án.')}
           type="button"
           className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs transition-colors cursor-pointer"
         >
-          LÆ°u nhÃ¡p phÃ¢n cÃ´ng
+          Lưu nháp phân công
         </button>
 
         {/* Dynamic Buttons based on workMode */}
         {workMode === 'MEASURE_ONLY' && (
-          <button
-            onClick={handleDispatchBatch}
-            disabled={selectedDefectIds.length === 0}
-            type="button"
-            className={`px-5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 ${
-              selectedDefectIds.length === 0
-                ? 'bg-slate-300 cursor-not-allowed'
-                : 'bg-brand-gold hover:bg-[#B38E1F] cursor-pointer'
-            }`}
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Giao viá»‡c gom lÃ´ Ä‘o Ä‘áº¡c ({selectedDefectIds.length} khiáº¿m khuyáº¿t)</span>
-          </button>
+          <div className="relative group">
+            <button
+              onClick={handleDispatchBatch}
+              disabled={selectedDefectIds.length === 0 || hasViolationItem}
+              type="button"
+              className={`px-5 py-2 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 ${
+                selectedDefectIds.length === 0 || hasViolationItem
+                  ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                  : 'bg-brand-gold hover:bg-[#B38E1F] text-white cursor-pointer'
+              }`}
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Giao việc gom lô đo đạc ({selectedDefectIds.length} khiếm khuyết)</span>
+            </button>
+            {hasViolationItem && (
+              <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
+                <AlertOctagon className="w-3.5 h-3.5 text-rose-400 mr-1" />
+                Khóa: Không thể giao việc Fast Track khi có khiếm khuyết vi phạm ngưỡng!
+              </div>
+            )}
+          </div>
         )}
 
         {workMode === 'INSPECT_AND_REPAIR' && (
@@ -96,14 +110,14 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
               }`}
             >
               <Wrench className="w-3.5 h-3.5" />
-              <span>PhÃ¡t lá»‡nh Äo & Sá»­a ngay (1 khiáº¿m khuyáº¿t)</span>
+              <span>Phát lệnh Đo &amp; Sửa ngay (1 khiếm khuyết)</span>
             </button>
             {(hasViolationItem || selectedDefectIds.length !== 1) && (
               <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                 <AlertOctagon className="w-3.5 h-3.5 text-rose-400 mr-1" />
                 {hasViolationItem
-                  ? 'KhÃ³a: Khiáº¿m khuyáº¿t Ä‘Æ°á»£c chá»n vÆ°á»£t ngÆ°á»¡ng chÃ­nh sÃ¡ch Fast Track'
-                  : 'Quy táº¯c BR-08: Cháº¿ Ä‘á»™ Äo & Sá»­a ngay chá»‰ Ã¡p dá»¥ng cho Ä‘Ãºng 1 lá»—i Ä‘áº¡t chuáº©n'}
+                  ? 'Khóa: Khiếm khuyết được chọn vượt ngưỡng chính sách Fast Track'
+                  : 'Quy tắc BR-08: Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
               </div>
             )}
           </div>
@@ -114,7 +128,13 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
             {selectedItems[0]?.isFastTrackEligible && (
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-semibold animate-pulse">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>LÆ°u Ã½: HÆ° há»ng #{selectedItems[0]?.code} chÆ°a vÆ°á»£t ngÆ°á»¡ng an toÃ n!</span>
+                <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} chưa vượt ngưỡng an toàn!</span>
+              </div>
+            )}
+            {!selectedItems[0]?.isFastTrackEligible && selectedItems[0] && (
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-300 rounded-xl text-rose-900 text-xs font-semibold">
+                <Flame className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Hư hỏng #{selectedItems[0]?.code} vượt ngưỡng — Khắc phục tạm thông xe (Hậu kiểm sau)</span>
               </div>
             )}
             <div className="relative group">
@@ -129,12 +149,12 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                 }`}
               >
                 <Flame className="w-3.5 h-3.5" />
-                <span>PhÃ¡t lá»‡nh Xá»­ lÃ½ kháº©n cáº¥p (24/7 Priority)</span>
+                <span>Phát lệnh Xử lý khẩn cấp (24/7 Priority)</span>
               </button>
               {selectedDefectIds.length !== 1 && (
                 <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                   <AlertOctagon className="w-3.5 h-3.5 text-rose-400 mr-1" />
-                  Chá»‰ chá»n Ä‘Ãºng 1 vá»‹ trÃ­ nguy hiá»ƒm Ä‘á»ƒ Ä‘iá»u Ä‘á»™ng xe kháº©n cáº¥p
+                  Chỉ chọn đúng 1 vị trí nguy hiểm để điều động xe khẩn cấp
                 </div>
               )}
             </div>

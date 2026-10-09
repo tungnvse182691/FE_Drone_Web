@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { MapPin, Users2 } from 'lucide-react'
 import { RouteConfig } from './types'
 
@@ -23,7 +23,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-brand-gold" />
           <span className="text-xs font-bold text-brand-dark">
-            Báº£n Äá»“ Hiá»‡n TrÆ°á»ng GIS & Lá»™ TrÃ¬nh Tuyáº¿n: {currentRouteConfig.name}
+            Bản Đồ Hiện Trường GIS &amp; Lộ Trình Tuyến: {currentRouteConfig.name}
           </span>
         </div>
 
@@ -36,7 +36,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
                 mapLayer === 'SATELLITE' ? 'bg-brand-gold text-white font-bold' : 'text-slate-600'
               }`}
             >
-              Vá»‡ tinh
+              Vệ tinh
             </button>
             <button
               type="button"
@@ -59,7 +59,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
             <span>{currentRouteConfig.code}: {currentRouteConfig.stationRange}</span>
           </div>
           <div className="text-slate-300 mt-0.5">
-            {selectedDefectIds.length} Ä‘iá»ƒm Ä‘Ã£ chá»n â€¢ Xanh lÃ¡: Äáº¡t chuáº©n â€¢ Äá» nháº¥p nhÃ¡y: Vi pháº¡m ngÆ°á»¡ng
+            {selectedDefectIds.length} điểm đã chọn • Xanh lá: Đạt chuẩn • Đỏ nhấp nháy: Vi phạm ngưỡng
           </div>
         </div>
       </div>

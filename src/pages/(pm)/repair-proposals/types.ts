@@ -1,6 +1,6 @@
-import { ProposalWorkPackage } from '../../../types/domain'
+import { ProposalWorkPackage, RepairItemDetail } from '../../../types/domain'
 
-export type { ProposalWorkPackage }
+export type { ProposalWorkPackage, RepairItemDetail }
 
 export interface UnassignedDefectItem {
   id: string
@@ -12,6 +12,8 @@ export interface UnassignedDefectItem {
   selected: boolean
   area_m2: number
   depth_cm: number
+  custom_solution?: string
+  standard?: string
 }
 
 export interface RouteSegmentOption {

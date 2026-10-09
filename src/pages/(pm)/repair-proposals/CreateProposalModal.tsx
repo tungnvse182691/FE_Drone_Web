@@ -24,6 +24,7 @@ export interface CreateProposalModalProps {
   setFormTechnicalMethod: (method: string) => void
   unassignedDefects: UnassignedDefectItem[]
   handleToggleDefect: (id: string) => void
+  handleUpdateDefectSolution?: (id: string, solution: string) => void
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
 }
@@ -49,6 +50,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
   setFormTechnicalMethod,
   unassignedDefects,
   handleToggleDefect,
+  handleUpdateDefectSolution = () => {},
   modalCalculations,
   handleSaveDraft,
 }) => {
@@ -122,6 +124,9 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                 onChange={(e) => handleSegmentChange(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
               >
+                <option value="ALL">
+                  Toàn tuyến (Tất cả {currentRouteSegments.length} phân đoạn)
+                </option>
                 {currentRouteSegments.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.code} - {s.name}
@@ -168,6 +173,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
           <ProposalBOQCard
             unassignedDefects={unassignedDefects}
             handleToggleDefect={handleToggleDefect}
+            handleUpdateDefectSolution={handleUpdateDefectSolution}
             modalCalculations={modalCalculations}
           />
 

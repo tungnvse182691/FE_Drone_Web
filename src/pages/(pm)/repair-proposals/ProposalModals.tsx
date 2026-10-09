@@ -26,6 +26,7 @@ export interface ProposalModalsProps {
   setFormTechnicalMethod: (method: string) => void
   unassignedDefects: UnassignedDefectItem[]
   handleToggleDefect: (id: string) => void
+  handleUpdateDefectSolution?: (id: string, solution: string) => void
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
 
@@ -65,6 +66,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
   setFormTechnicalMethod,
   unassignedDefects,
   handleToggleDefect,
+  handleUpdateDefectSolution,
   modalCalculations,
   handleSaveDraft,
   isPDFPreviewModalOpen,
@@ -101,6 +103,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
         setFormTechnicalMethod={setFormTechnicalMethod}
         unassignedDefects={unassignedDefects}
         handleToggleDefect={handleToggleDefect}
+        handleUpdateDefectSolution={handleUpdateDefectSolution}
         modalCalculations={modalCalculations}
         handleSaveDraft={handleSaveDraft}
       />

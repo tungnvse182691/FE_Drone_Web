@@ -69,6 +69,7 @@ export const RepairProposals: React.FC = () => {
     handleSegmentChange,
     modalCalculations,
     handleToggleDefect,
+    handleUpdateDefectSolution,
     handleSaveDraft,
     handleSubmitDraftPackage,
     handleDeleteDraft,
@@ -168,6 +169,7 @@ export const RepairProposals: React.FC = () => {
         setFormTechnicalMethod={setFormTechnicalMethod}
         unassignedDefects={unassignedDefects}
         handleToggleDefect={handleToggleDefect}
+        handleUpdateDefectSolution={handleUpdateDefectSolution}
         modalCalculations={modalCalculations}
         handleSaveDraft={handleSaveDraft}
         isPDFPreviewModalOpen={isPDFPreviewModalOpen}
