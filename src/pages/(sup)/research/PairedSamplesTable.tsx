@@ -17,10 +17,10 @@ export const PairedSamplesTable: React.FC<PairedSamplesTableProps> = ({
 }) => {
   return (
     <Card
-      title="Bảng Ghép Cặp Số Đo Thực Tế vs Số Đo AI (Paired Ground Truth Samples)"
-      subtitle="Căn cứ RS01–RS06: Mỗi mẫu có sample_id duy nhất, ghi rõ dụng cụ đo cơ học và người thực hiện"
+      title="Bảng Đối Soát Cặp Mẫu: Số Đo Thực Địa &amp; Số Đo Mô Hình AI"
+      subtitle="Căn cứ quy chuẩn RS01–RS06: Mỗi mẫu có mã định danh duy nhất, ghi rõ dụng cụ đo cơ học và kỹ sư thực hiện"
     >
-      {/* Bộ lọc trạng thái mẫu */}
+      {/* Bộ lọc trạng thái mẫu (Thuần Việt) */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-200">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-semibold text-slate-500 mr-1">Lọc trạng thái:</span>
@@ -44,23 +44,23 @@ export const PairedSamplesTable: React.FC<PairedSamplesTableProps> = ({
         </div>
 
         <div className="text-xs text-slate-500">
-          Hiển thị <strong>{filteredSamples.length}</strong> / {samples.length} mẫu
+          Hiển thị <strong>{filteredSamples.length}</strong> / {samples.length} mẫu kiểm định
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table (100% Tiếng Việt, Header viết hoa theo DESIGN.md) */}
       <div className="overflow-x-auto">
         <table className="w-full text-xs text-left">
           <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
             <tr>
-              <th className="py-2.5 px-3">Mã Mẫu (Sample ID)</th>
-              <th className="py-2.5 px-3">Loại Hư Hỏng</th>
-              <th className="py-2.5 px-3">Lý Trình</th>
-              <th className="py-2.5 px-3 text-right">Ground Truth (mm)</th>
-              <th className="py-2.5 px-3 text-right">Derived AI (mm)</th>
-              <th className="py-2.5 px-3 text-right">Sai Số (e)</th>
-              <th className="py-2.5 px-3 text-center">Trạng Thái</th>
-              <th className="py-2.5 px-3">Dụng Cụ Đo &amp; Kỹ Sư Đo</th>
+              <th className="py-2.5 px-3">MÃ MẪU</th>
+              <th className="py-2.5 px-3">LOẠI HƯ HỎNG</th>
+              <th className="py-2.5 px-3">LÝ TRÌNH</th>
+              <th className="py-2.5 px-3 text-right">THỰC ĐỊA (MM)</th>
+              <th className="py-2.5 px-3 text-right">TRÍCH XUẤT AI (MM)</th>
+              <th className="py-2.5 px-3 text-right">SAI SỐ (MM)</th>
+              <th className="py-2.5 px-3 text-center">TRẠNG THÁI</th>
+              <th className="py-2.5 px-3">DỤNG CỤ ĐO &amp; KỸ SƯ THỰC HIỆN</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

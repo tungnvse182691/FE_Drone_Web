@@ -7,25 +7,38 @@ interface ValidationRunsTableProps {
 }
 
 export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }) => {
+  const formatMeasurementType = (type: string) => {
+    switch (type) {
+      case 'DEPRESSION_DEPTH':
+        return 'Đo độ sâu lún võng'
+      case 'SLAB_FAULTING_HEIGHT':
+        return 'Đo chênh cốt mép tấm'
+      case 'SHOULDER_EROSION_EXTENT':
+        return 'Đo xói lở lề đường'
+      default:
+        return type
+    }
+  }
+
   return (
     <Card
-      title="Lịch Sử Các Đợt Chạy Kiểm Định Thực Nghiệm (Validation Runs - FR-31 / MET-12)"
-      subtitle="Lưu vết các đợt chạy ghép cặp đối soát số đo hình học theo từng phiên bản thuật toán/mô hình (BR-44)"
+      title="Lịch Sử Các Đợt Kiểm Định Thực Nghiệm (FR-31 / MET-12)"
+      subtitle="Lưu vết đối soát số đo hình học theo từng phiên bản mô hình và đợt khảo sát hiện trường (BR-44)"
     >
       <div className="overflow-x-auto">
         <table className="w-full text-xs text-left">
           <thead className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
             <tr>
-              <th className="py-2.5 px-3">Mã Đợt Chạy (Run Code)</th>
-              <th className="py-2.5 px-3">Thuật Toán &amp; Phương Pháp Đo</th>
-              <th className="py-2.5 px-3">Tập Mẫu Đối Soát</th>
-              <th className="py-2.5 px-3 text-center">Nguồn Dữ Liệu (BR-44)</th>
-              <th className="py-2.5 px-3 text-center">Mẫu Dùng / Loại</th>
-              <th className="py-2.5 px-3 text-right">Bias (mm)</th>
-              <th className="py-2.5 px-3 text-right">MAE (mm)</th>
-              <th className="py-2.5 px-3 text-right">RMSE (mm)</th>
-              <th className="py-2.5 px-3">Người Kích Hoạt &amp; Thời Gian</th>
-              <th className="py-2.5 px-3 text-center">Trạng Thái</th>
+              <th className="py-2.5 px-3">MÃ ĐỢT KIỂM ĐỊNH</th>
+              <th className="py-2.5 px-3">MÔ HÌNH &amp; PHƯƠNG PHÁP ĐO</th>
+              <th className="py-2.5 px-3">TẬP MẪU ĐỐI SOÁT</th>
+              <th className="py-2.5 px-3 text-center">NGUỒN DỮ LIỆU</th>
+              <th className="py-2.5 px-3 text-center">MẪU ĐẠT / LOẠI</th>
+              <th className="py-2.5 px-3 text-right">BIAS (MM)</th>
+              <th className="py-2.5 px-3 text-right">MAE (MM)</th>
+              <th className="py-2.5 px-3 text-right">RMSE (MM)</th>
+              <th className="py-2.5 px-3">NGƯỜI KÍCH HOẠT &amp; THỜI GIAN</th>
+              <th className="py-2.5 px-3 text-center">TRẠNG THÁI</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -36,8 +49,8 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
                     <span className="material-symbols-outlined text-[14px] text-brand-gold">analytics</span>
                     <span>{r.run_code}</span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                    {r.measurement_type}
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {formatMeasurementType(r.measurement_type)}
                   </div>
                 </td>
                 <td className="py-2.5 px-3">
@@ -55,11 +68,11 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
                 <td className="py-2.5 px-3 text-center">
                   {r.is_mock_data ? (
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                      GIẢ LẬP (MOCK)
+                      GIẢ LẬP
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      THỰC ĐỊA (REAL)
+                      THỰC ĐỊA
                     </span>
                   )}
                 </td>
@@ -92,7 +105,7 @@ export const ValidationRunsTable: React.FC<ValidationRunsTableProps> = ({ runs }
                   )}
                   {r.status === 'RUNNING' && (
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                      ĐANG CHẠY 202
+                      ĐANG XỬ LÝ (202)
                     </span>
                   )}
                   {r.status === 'FAILED' && (

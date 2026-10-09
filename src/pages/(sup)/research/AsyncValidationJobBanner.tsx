@@ -17,9 +17,9 @@ export const AsyncValidationJobBanner: React.FC<AsyncValidationJobBannerProps> =
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-900">Tiến trình kiểm nghiệm nền: Job #VAL-2026-09</span>
+            <span className="font-bold text-slate-900">Tiến trình kiểm nghiệm nền: Tác vụ #VAL-2026-09</span>
             <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
-              HTTP 202 ACCEPTED (FR-31)
+              ĐÃ TIẾP NHẬN XỬ LÝ (FR-31)
             </span>
           </div>
           <div className="text-slate-600 mt-0.5">
