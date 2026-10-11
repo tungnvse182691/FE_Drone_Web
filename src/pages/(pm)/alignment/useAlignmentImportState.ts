@@ -31,6 +31,7 @@ export interface UseAlignmentImportStateParams {
   setCurrentKmPoints: (pts: number[]) => void
   importedLengthKm: number
   setImportedLengthKm: (len: number) => void
+  onAutoSave?: (coords: [number, number][], kmPoints: number[], segments: SegmentItem[]) => void
 }
 
 export function useAlignmentImportState({
@@ -51,7 +52,8 @@ export function useAlignmentImportState({
   currentKmPoints,
   setCurrentKmPoints,
   importedLengthKm,
-  setImportedLengthKm
+  setImportedLengthKm,
+  onAutoSave
 }: UseAlignmentImportStateParams) {
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
   const [importTab, setImportTab] = useState<'FILE' | 'MANUAL'>('FILE')
@@ -90,6 +92,9 @@ export function useAlignmentImportState({
 
         const lenText = res.totalLengthKm >= 1 ? `${res.totalLengthKm.toFixed(2)} km` : `${(res.totalLengthKm * 1000).toFixed(0)} m`
         showToast(`Đã nạp tim tuyến [${file.name}]: ${res.coords.length} đỉnh, chiều dài ${lenText}, chia ${validated.length} phân đoạn!`)
+        if (onAutoSave) {
+          onAutoSave(res.coords, res.kmPoints, validated)
+        }
       } catch {
         showToast('Lỗi: Định dạng file GeoJSON không đúng cấu trúc JSON chuẩn!')
       }
@@ -132,6 +137,9 @@ export function useAlignmentImportState({
 
       const lenText = res.totalLengthKm >= 1 ? `${res.totalLengthKm.toFixed(2)} km` : `${(res.totalLengthKm * 1000).toFixed(0)} m`
       showToast(`Đã dựng tim tuyến từ chuỗi tọa độ thủ công: ${res.coords.length} đỉnh, L = ${lenText}, chia ${validated.length} phân đoạn!`)
+      if (onAutoSave) {
+        onAutoSave(res.coords, res.kmPoints, validated)
+      }
     } catch {
       showToast('Lỗi khi phân tích chuỗi tọa độ!')
     }

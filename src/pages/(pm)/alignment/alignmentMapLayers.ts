@@ -18,6 +18,8 @@ export function setupAlignmentSourcesAndLayers(
   selectedSegmentId: string | null,
   branches: any[] = []
 ) {
+  if (!map || !map.isStyleLoaded()) return
+
   // 0. Thêm GeoJSON Source cho bề mặt dải mặt đường (Polygon)
   if (!map.getSource('segments-surface-source')) {
     map.addSource('segments-surface-source', {

@@ -1,157 +1,175 @@
 import React from 'react'
-import { Route as RouteIcon, Check, Map, PlaneTakeoff, Play, Lock } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
+import { HubProject } from '../projects/types'
 
 interface ProjectTimelineStepperProps {
-  projectId: string
+  project: HubProject
   basePath: string
   onNavigate: (path: string) => void
 }
 
 export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
-  projectId,
+  project,
   basePath,
   onNavigate
 }) => {
+  const isAlignmentDone = project.length_km > 0
+  const isSurveyDone = project.open_defects > 0 || isAlignmentDone
+  const isRepairDone = project.repair_packages > 0
+
   return (
-    <div className="bg-white border border-brand-border rounded-xl p-6 shadow-sm flex flex-col gap-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs flex flex-col gap-4 font-body">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2 border-b border-slate-100">
         <div>
-          <h2 className="text-lg font-bold text-brand-dark flex items-center gap-2">
-            <RouteIcon className="w-5 h-5 text-brand-gold" />
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-headline">
+            <Icon name="alt_route" size={20} className="text-brand-gold" />
             <span>Tiến trình bàn giao &amp; Vòng đời bảo hành</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Theo dõi luân chuyển trách nhiệm giữa Supervisor, Project Manager và Đội hiện trường.
+            Luân chuyển trách nhiệm giữa Giám sát (Supervisor) và Chỉ huy trưởng (PM).
           </p>
         </div>
         <span className="font-mono text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
-          Giai đoạn: 04/05
+          {isAlignmentDone ? 'Giai đoạn: 03/05' : 'Giai đoạn: 01/05'}
         </span>
       </div>
 
       {/* Vertical Stepper */}
-      <div className="relative pl-6 sm:pl-8 flex flex-col gap-5 pt-2">
+      <div className="relative pl-6 sm:pl-8 flex flex-col gap-4 pt-2">
         <div className="absolute left-3 sm:left-4 top-3 bottom-4 w-0.5 bg-slate-200 -translate-x-1/2"></div>
 
-        {/* Step 1 */}
+        {/* Step 1: Khởi tạo dự án (SUP - DA01, BR-01) - Đã hoàn thành */}
         <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center ring-4 ring-white shadow-xs border border-emerald-200">
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center ring-4 ring-white shadow-2xs border border-emerald-200">
+            <Icon name="check" size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-xs">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-brand-dark font-bold">
-                Bước 1: Khởi tạo dự án &amp; Gán PM điều hành
+              <span className="text-xs text-slate-900 font-bold">
+                Bước 1: Khởi tạo dự án &amp; Phân quyền PM điều hành (DA01, BR-01)
               </span>
-              <span className="font-mono text-[11px] text-slate-500">15/06/2026 • 09:30</span>
+              <span className="font-mono text-[11px] text-slate-500">
+                {project.handover_date || 'Ngày bàn giao'}
+              </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Thực hiện bởi <strong className="text-brand-dark">Supervisor Nguyễn Văn An</strong>. Bàn giao đầy đủ hồ sơ pháp lý và quyền quản trị tuyến cho <strong className="text-brand-dark">PM Đỗ Quốc Hoàng</strong>.
+              Supervisor đã khởi tạo hồ sơ quản lý và bàn giao quyền quản trị tuyến cho <strong className="text-slate-900">{project.pm_name}</strong> ({project.pm_email}).
             </p>
           </div>
         </div>
 
-        {/* Step 2 */}
+        {/* Step 2: Thiết lập tim tuyến & bề rộng (PM - WF-02, FR-06) */}
         <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center ring-4 ring-white shadow-xs border border-emerald-200">
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
+          <div
+            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
+              isAlignmentDone
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                : 'bg-amber-50 text-brand-gold border-amber-200 animate-pulse'
+            }`}
+          >
+            <Icon name={isAlignmentDone ? 'check' : 'play_arrow'} size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-xs">
+          <div
+            className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
+              isAlignmentDone ? 'bg-slate-50 border-slate-200' : 'bg-amber-50/40 border-amber-200'
+            }`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-brand-dark font-bold">
-                Bước 2: Dựng tim tuyến &amp; Duyệt hình học WGS84 (WF-02)
+              <span className="text-xs text-slate-900 font-bold">
+                Bước 2: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
               </span>
-              <span className="font-mono text-[11px] text-slate-500">20/06/2026 • Ký số SHA-256</span>
+              <span className="font-mono text-[11px] text-brand-gold font-semibold">
+                {isAlignmentDone ? 'Đã duyệt tuyến' : 'Đang chờ PM'}
+              </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Đã nắn 14 đỉnh tọa độ góc, chia 5 phân đoạn lý trình chuẩn. Supervisor đã ký duyệt chứng thư số mã hóa tọa độ WGS84 lên hệ thống bảo an.
+              {isAlignmentDone ? (
+                <>Đã thiết lập tim tuyến chiều dài <strong className="text-slate-900">{project.length_km} km</strong>, hệ quy chiếu WGS84 EPSG:4326.</>
+              ) : (
+                <>PM cần nhập chuỗi tọa độ tim tuyến GPX/KML và bề rộng theo từng đoạn để phân đoạn mặt đường.</>
+              )}
             </p>
-            <div className="mt-2 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => onNavigate(`${basePath}/projects/${projectId}/alignment`)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-dark bg-white hover:bg-slate-100 border border-slate-200 px-2.5 py-1 rounded shadow-2xs transition-colors"
-              >
-                <Map className="w-3 h-3 text-brand-gold" />
-                Xem bản đồ tim tuyến &amp; Slabs (WF-02) →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Step 3 */}
-        <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center ring-4 ring-white shadow-xs border border-emerald-200">
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-xs">
-            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-brand-dark font-bold">
-                Bước 3: Bay Drone lập Baseline dữ liệu ban đầu (WF-09)
-              </span>
-              <span className="font-mono text-[11px] text-slate-500">05/07/2026 • Matrice 300 RTK</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Đội bay hoàn thành quét không ảnh 21.5 km với độ phân giải 1.2 cm/pixel, lập mây điểm 3D và khóa mốc mặt đường làm căn cứ đối soát khiếu nại phát sinh.
-            </p>
-            <div className="mt-2 flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => onNavigate(`${basePath}/surveys/srv-01/review`)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#8F7212] bg-brand-gold/10 hover:bg-brand-gold/20 border border-brand-gold/30 px-2.5 py-1 rounded shadow-2xs transition-colors"
-              >
-                <PlaneTakeoff className="w-3 h-3 text-brand-gold" />
-                Mở Canvas Thẩm định AI (WF-09) →
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Step 4 (ACTIVE) */}
-        <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-brand-gold text-white flex items-center justify-center ring-4 ring-brand-gold/30 shadow-md animate-pulse">
-            <Play className="w-3 h-3 fill-current ml-0.5" />
-          </div>
-          <div className="bg-amber-50/40 border-2 border-brand-gold/50 rounded-xl p-4 flex-1 shadow-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-brand-dark font-bold">
-                  Bước 4: Vận hành bảo hành &amp; Triage khiếm khuyết (WF-04, 05, 07, 08)
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-gold text-white uppercase tracking-wide">
-                  Active Running
-                </span>
+            {!isAlignmentDone && (
+              <div className="mt-2.5">
+                <button
+                  type="button"
+                  onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+                  className="px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <Icon name="alt_route" size={14} />
+                  <span>Vào thiết lập tim tuyến ngay</span>
+                </button>
               </div>
-              <span className="font-mono text-xs font-bold text-[#8F7212]">
-                Đang thực thi liên tục
-              </span>
-            </div>
-            <p className="text-xs text-slate-700 leading-relaxed">
-              Đang theo dõi 12 khiếm khuyết mặt đường. Ban điều hành đang phối hợp với Tổ tuần kiểm hiện trường và xử lý 02 gói sửa chữa bảo trì định kỳ.
-            </p>
-            <div className="mt-2.5 pt-2.5 flex items-center justify-between text-xs bg-white border border-brand-border p-2 rounded-lg">
-              <span className="text-slate-500">Trách nhiệm phê duyệt hiện tại:</span>
-              <span className="font-semibold text-[#8F7212]">
-                Kỹ sư Nguyễn Văn An (Supervisor)
-              </span>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Step 5 (LOCKED) */}
-        <div className="relative flex items-start gap-4 opacity-60">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center ring-4 ring-white">
-            <Lock className="w-3 h-3" />
+        {/* Step 3: Khảo sát Drone AI */}
+        <div className="relative flex items-start gap-4">
+          <div
+            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
+              isSurveyDone
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                : 'bg-slate-100 text-slate-400 border-slate-200'
+            }`}
+          >
+            <Icon name={isSurveyDone ? 'check' : 'lock'} size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-90">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-              <span className="text-xs text-slate-500 font-medium">
-                Bước 5: Nghiệm thu hoàn tất bàn giao &amp; Đóng gói lưu trữ pháp lý (+5 năm)
+              <span className="text-xs text-slate-800 font-semibold">
+                Bước 3: Khảo sát không ảnh Drone AI &amp; Thẩm định lỗi
               </span>
-              <span className="font-mono text-[11px] text-slate-400">Dự kiến: 31/08/2027</span>
+              <span className="font-mono text-[11px] text-slate-400">
+                {isSurveyDone ? 'Đã kích hoạt' : 'Chờ hoàn thành Bước 2'}
+              </span>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Kích hoạt khi hết hạn bảo hành 36 tháng. Đóng băng dữ liệu WGS84, báo cáo IRI/PCI và chuyển vào kho lưu trữ số vĩnh viễn theo Luật Xây dựng.
+            <p className="text-xs text-slate-500">
+              Drone bay chụp ảnh hiện trường, AI phát hiện nứt vỡ, PM thẩm định bounding box &amp; so sánh đa kỳ.
+            </p>
+          </div>
+        </div>
+
+        {/* Step 4: Gom đợt & Lập phương án */}
+        <div className="relative flex items-start gap-4">
+          <div
+            className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
+              isRepairDone
+                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                : 'bg-slate-100 text-slate-400 border-slate-200'
+            }`}
+          >
+            <Icon name={isRepairDone ? 'check' : 'lock'} size={14} />
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-80">
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+              <span className="text-xs text-slate-800 font-semibold">
+                Bước 4: Gom đợt sửa chữa &amp; Trình duyệt phương án kỹ thuật (WF-07)
+              </span>
+              <span className="font-mono text-[11px] text-slate-400">
+                {isRepairDone ? `${project.repair_packages} đợt` : 'Chờ kích hoạt'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Gom khiếm khuyết cùng lý trình, tính khối lượng cào bóc m², trám nứt m, trình Supervisor phê duyệt.
+            </p>
+          </div>
+        </div>
+
+        {/* Step 5: Nghiệm thu & Đóng bảo hành */}
+        <div className="relative flex items-start gap-4">
+          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center ring-4 ring-white shadow-2xs border border-slate-200">
+            <Icon name="lock" size={14} />
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-75">
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+              <span className="text-xs text-slate-800 font-semibold">
+                Bước 5: Nghiệm thu Before/After &amp; Ký số đóng đợt (WF-10)
+              </span>
+              <span className="font-mono text-[11px] text-slate-400">Giai đoạn cuối</span>
+            </div>
+            <p className="text-xs text-slate-500">
+              Supervisor đối soát ảnh trước/sau sửa chữa, kiểm tra đạt 100% và ký số giải ngân tiền bảo hành.
             </p>
           </div>
         </div>

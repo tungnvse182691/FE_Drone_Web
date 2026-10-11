@@ -5,6 +5,8 @@ import {
   interpolateCoordAtKm,
   smoothRoadPolyline
 } from './alignmentGeometryHelpers'
+import { projectService, HubProject } from '../../../api/services/projectService'
+
 
 export const SEGMENT_COLORS = [
   '#0284C7', // Sky Blue
@@ -579,6 +581,9 @@ export function buildPlanningCorridorGeoJSON(
   coords: [number, number][],
   marginM: number = 2.0
 ): GeoJSON.FeatureCollection {
+  if (!coords || coords.length < 2) {
+    return { type: 'FeatureCollection', features: [] }
+  }
   const offset = 0.00015 * (marginM / 2.0)
   const topCoords = coords.map((c) => [c[0] + offset, c[1] + offset] as [number, number])
   const bottomCoords = [...coords].reverse().map((c) => [c[0] - offset, c[1] - offset] as [number, number])
@@ -1435,4 +1440,53 @@ export function buildBranchesGeoJSON(
     features
   }
 }
+
+export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOption {
+  const startKm = p.start_km ?? 0.0
+  const lengthKm = p.length_km || 0.0
+  const endKm = p.end_km || parseFloat((startKm + lengthKm).toFixed(3))
+
+  const stationText = p.stationing_text ? p.stationing_text.split('➔')[0].trim() : `Km ${startKm}+000`
+
+  return {
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    stationOriginText: `${stationText} (${Math.round(startKm * 1000)}m)`,
+    stationOriginKm: startKm,
+    endKm: endKm,
+    crs: 'EPSG:32648 (UTM Zone 48N)',
+    lengthKm: 0.0, // Dự án mới chưa có tọa độ thực tế, chiều dài ban đầu là 0
+    defaultCoords: [], // Dự án mới CHƯA có tọa độ tim tuyến (không sinh tọa độ giả)
+    defaultKmPoints: [], // Chưa có mốc lý trình
+    defaultSegments: [], // Chưa có phân đoạn (PM tự chia bằng nút "Áp dụng chia đoạn tự động" hoặc nạp tệp)
+    defaultBranches: [], // Chưa có nhánh rẽ mặc định
+    defaultManualText: ''
+  }
+}
+
+export function getAvailableAssignedProjects(): AssignedProjectOption[] {
+  const storedProjects = projectService.getProjects()
+  const list: AssignedProjectOption[] = []
+
+  // 1. Duyệt qua tất cả dự án trong projectService
+  for (const p of storedProjects) {
+    const existing = PM_ASSIGNED_PROJECTS.find((op) => op.id === p.id || op.code === p.code)
+    if (existing) {
+      list.push({ ...existing, id: p.id, code: p.code, name: p.name })
+    } else {
+      list.push(buildDynamicProjectAlignment(p))
+    }
+  }
+
+  // 2. Thêm bất kỳ preset nào trong PM_ASSIGNED_PROJECTS chưa có trong list
+  for (const op of PM_ASSIGNED_PROJECTS) {
+    if (!list.some((item) => item.id === op.id)) {
+      list.push(op)
+    }
+  }
+
+  return list
+}
+
 

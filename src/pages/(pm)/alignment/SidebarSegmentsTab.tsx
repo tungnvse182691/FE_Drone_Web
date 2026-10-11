@@ -4,7 +4,8 @@ import {
   Sparkles,
   GitBranch,
   Plus,
-  Trash2
+  Trash2,
+  Upload
 } from 'lucide-react'
 import { SegmentItem, BranchItem } from './types'
 import { SidebarSegmentCard } from './SidebarSegmentCard'
@@ -20,6 +21,7 @@ export interface SidebarSegmentsTabProps {
   onApplyAutoSplit: () => void
   onOpenAddSegmentModal: () => void
   onSelectAllRoute: () => void
+  currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
   slabLengthM: number
@@ -33,6 +35,9 @@ export interface SidebarSegmentsTabProps {
   onSelectTargetType?: (type: 'MAINLINE' | string) => void
   onOpenAddBranchModal?: () => void
   onDeleteBranch?: (branchId: string) => void
+  onClearAllSegments?: () => void
+  onClearMainline?: () => void
+  onOpenImportModal?: () => void
   mainlineLengthKm?: number
 }
 
@@ -47,6 +52,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   onApplyAutoSplit,
   onOpenAddSegmentModal,
   onSelectAllRoute,
+  currentCoords = [],
   currentKmPoints,
   importedLengthKm,
   slabLengthM,
@@ -59,11 +65,15 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   onSelectTargetType,
   onOpenAddBranchModal,
   onDeleteBranch,
+  onClearAllSegments,
+  onClearMainline,
+  onOpenImportModal,
   mainlineLengthKm
 }) => {
   const isAllSelected = selectedSegmentId === 'ALL'
+  const isMain = selectedTargetType === 'MAINLINE'
   const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 25.0)
-  const displayMainlineKm = mainlineLengthKm || importedLengthKm || 25.0
+  const displayMainlineKm = mainlineLengthKm || importedLengthKm || 0.0
   const mainlineLenText = displayMainlineKm >= 1 ? `${displayMainlineKm.toFixed(1)} km` : `${(displayMainlineKm * 1000).toFixed(0)}m`
 
   return (
@@ -92,6 +102,21 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                 <span>Xóa nhánh này</span>
               </button>
             )}
+            {selectedTargetType === 'MAINLINE' && onClearMainline && currentCoords.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Bạn có chắc chắn muốn xóa toàn bộ tim tuyến trục chính và các mốc lý trình của dự án này không? Bản đồ sẽ trở về trạng thái trống để bạn nhập hoặc vẽ lại từ đầu.')) {
+                    onClearMainline()
+                  }
+                }}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1 bg-rose-50 hover:bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200 transition-colors cursor-pointer"
+                title="Xóa toàn bộ tim tuyến chính để nhập hoặc vẽ lại từ đầu"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Xóa tuyến chính</span>
+              </button>
+            )}
             {onOpenAddBranchModal && (
               <button
                 type="button"
@@ -111,7 +136,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           className="w-full h-8.5 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
         >
           <option value="MAINLINE">
-            Trục chính ({mainlineLenText})
+            Trục chính {currentCoords.length === 0 ? '(Chưa có tim tuyến)' : `(${mainlineLenText})`}
           </option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
@@ -201,11 +226,18 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
         {(() => {
           const isMain = selectedTargetType === 'MAINLINE'
           const curBranch = !isMain ? branches.find((b) => b.id === selectedTargetType) : null
+          const hasCoords = isMain ? currentCoords.length > 0 : true
           const title = isMain
-            ? `Toàn tuyến chính (${mainlineLenText})`
+            ? hasCoords
+              ? `Toàn tuyến chính (${mainlineLenText})`
+              : `Toàn tuyến chính (Chưa có tim tuyến)`
             : `Toàn tuyến nhánh: ${curBranch?.name || 'Tuyến nhánh'}`
           const subTitle = isMain
-            ? `Toàn bộ ${segments.length} phân đoạn liên tục • Chuẩn trắc địa WGS84`
+            ? !hasCoords
+              ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ (WF-02)" để nạp`
+              : segments.length > 0
+              ? `Toàn bộ ${segments.length} phân đoạn liên tục • Chuẩn trắc địa WGS84`
+              : `Chưa phân đoạn • Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động"`
             : `Tổng chiều dài ${(curBranch?.lengthKm || 0).toFixed(2)} km • ${segments.length} phân đoạn • Rẽ tại ${curBranch?.branchStationText || ''}`
 
           return (
@@ -221,7 +253,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                 <div className="flex items-center gap-2 min-w-0">
                   <div
                     className={`w-3.5 h-3.5 rounded-full shrink-0 ${
-                      isMain ? 'bg-brand-gold' : 'bg-amber-600'
+                      isMain ? (hasCoords ? 'bg-brand-gold' : 'bg-slate-400') : 'bg-amber-600'
                     }`}
                   />
                   <span className="font-bold text-xs text-slate-900 truncate">
@@ -229,9 +261,19 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    HỢP LỆ
-                  </span>
+                  {isMain && !hasCoords ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+                      CHƯA CÓ TIM TUYẾN
+                    </span>
+                  ) : segments.length > 0 ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      HỢP LỆ
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                      CHƯA CHIA ĐOẠN
+                    </span>
+                  )}
                   {!isMain && curBranch && onDeleteBranch && (
                     <button
                       type="button"
@@ -267,24 +309,68 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
         {/* TIÊU ĐỀ PHÂN ĐOẠN CHI TIẾT */}
         <div className="flex items-center justify-between px-1 pt-1 pb-0.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
           <span>Phân đoạn chi tiết ({segments.length})</span>
-          <span className="text-[10px] lowercase text-slate-400 font-normal">
-            Bấm chọn để xem từng đoạn
-          </span>
+          {segments.length > 0 && onClearAllSegments ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Bạn có chắc muốn xóa toàn bộ phân đoạn để thiết lập lại từ đầu không?')) {
+                  onClearAllSegments()
+                }
+              }}
+              className="text-[10px] lowercase text-rose-500 hover:text-rose-700 font-semibold cursor-pointer hover:underline"
+            >
+              Xóa tất cả
+            </button>
+          ) : (
+            <span className="text-[10px] lowercase text-slate-400 font-normal">
+              {segments.length > 0 ? 'Bấm chọn để xem từng đoạn' : 'Trống'}
+            </span>
+          )}
         </div>
 
         {/* DANH SÁCH CÁC PHÂN ĐOẠN CON BÊN DƯỚI */}
-        {segments.map((seg) => (
-          <SidebarSegmentCard
-            key={seg.id}
-            segment={seg}
-            isSelected={selectedSegmentId === seg.id}
-            onSelect={() => onSelectSegment(seg)}
-            onSnap={() => onSnapSegment(seg.id)}
-            onEdit={() => onEditSegment(seg)}
-            onOpenSplit={() => onOpenSplitModal(seg)}
-            onDelete={() => onDeleteSegment(seg.id)}
-          />
-        ))}
+        {isMain && currentCoords.length === 0 ? (
+          <div className="p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 text-center flex flex-col items-center gap-2 my-2">
+            <span className="text-xs font-bold text-amber-900">
+              Dự án mới chưa có tim tuyến &amp; phân đoạn
+            </span>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Dự án này chưa được thiết lập tim tuyến đường. Bạn có thể bấm nút <strong className="text-amber-800">"Nhập Tuyến / Tọa độ (WF-02)"</strong> để tải lên tệp KML / GeoJSON / CSV hoặc dán chuỗi tọa độ.
+            </p>
+            {onOpenImportModal && (
+              <button
+                type="button"
+                onClick={onOpenImportModal}
+                className="mt-1 px-3 py-1.5 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Nhập Tuyến / Tọa độ ngay</span>
+              </button>
+            )}
+          </div>
+        ) : segments.length === 0 ? (
+          <div className="p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 text-center flex flex-col items-center gap-2 my-2">
+            <span className="text-xs font-bold text-amber-900">
+              Tuyến đường chưa có phân đoạn nào
+            </span>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Dự án mới cần được thiết lập phân đoạn. Vui lòng chọn cự ly (ví dụ: 1km, 2.5km, 5km) ở trên và bấm <strong className="text-amber-800">"Áp dụng chia đoạn tự động"</strong> để hệ thống tự động sinh các phân đoạn phủ kín chiều dài tuyến ({mainlineLenText}).
+            </p>
+          </div>
+        ) : (
+          segments.map((seg) => (
+            <SidebarSegmentCard
+              key={seg.id}
+              segment={seg}
+              isSelected={selectedSegmentId === seg.id}
+              onSelect={() => onSelectSegment(seg)}
+              onSnap={() => onSnapSegment(seg.id)}
+              onEdit={() => onEditSegment(seg)}
+              onOpenSplit={() => onOpenSplitModal(seg)}
+              onDelete={() => onDeleteSegment(seg.id)}
+            />
+          ))
+        )}
       </div>
     </>
   )

@@ -138,9 +138,131 @@ export const INITIAL_HUB_PROJECTS: HubProject[] = [
   }
 ]
 
+export interface ProjectCreatePayload {
+  code: string
+  name: string
+  primaryPmId: string
+  handoverDate: string
+  warrantyEndDate: string
+  handoverFileIds?: string[]
+  region?: string
+}
+
+function calculateLineLengthKm(coords?: [number, number][]): number {
+  if (!coords || coords.length < 2) return 0
+  let totalMeters = 0
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p1 = coords[i]
+    const p2 = coords[i + 1]
+    const lat1 = (p1[1] * Math.PI) / 180
+    const lat2 = (p2[1] * Math.PI) / 180
+    const dLat = ((p2[1] - p1[1]) * Math.PI) / 180
+    const dLng = ((p2[0] - p1[0]) * Math.PI) / 180
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    totalMeters += 6371000 * c
+  }
+  return parseFloat((totalMeters / 1000).toFixed(3))
+}
+
+function enrichProjectWithAlignment(p: HubProject): HubProject {
+  const alignStateKey = `${STORAGE_KEYS.ALIGNMENTS}_${p.id}`
+  const alignDataKey = `${STORAGE_KEYS.ALIGNMENTS}_data_${p.id}`
+
+  const alignState = getFromStorage<{ status?: string }>(alignStateKey, {})
+  const alignData = getFromStorage<{ coords?: [number, number][]; branches?: any[]; segments?: any[] }>(alignDataKey, {})
+
+  const coords = alignData.coords || []
+  const branches = alignData.branches || []
+  const segments = alignData.segments || []
+
+  // Nếu trong alignment có dữ liệu tim tuyến chính hoặc tuyến phụ
+  if (coords.length >= 2 || branches.length > 0 || segments.length > 0) {
+    const mainLen = calculateLineLengthKm(coords)
+    const branchLen = branches.reduce((sum: number, b: any) => {
+      const bLen = (b.coords && b.coords.length >= 2 ? calculateLineLengthKm(b.coords) : b.lengthKm) || 0
+      return sum + bLen
+    }, 0)
+    const computedLen = parseFloat((mainLen + branchLen).toFixed(3))
+    const totalLen = computedLen > 0 ? computedLen : (p.length_km || 0)
+
+    let kmlStatus = p.kml_status
+    let status = p.status
+    let statusLabel = p.status_label
+
+    if (alignState.status === 'CONFIRMED') {
+      kmlStatus = 'Đã phê duyệt'
+      status = 'ACTIVE'
+      statusLabel = 'Đang bảo hành'
+    } else if (alignState.status === 'PENDING_APPROVAL') {
+      kmlStatus = 'Chờ duyệt tim tuyến'
+      status = 'PENDING_ALIGNMENT'
+      statusLabel = 'Chờ duyệt tuyến'
+    } else if (alignState.status === 'DRAFT') {
+      kmlStatus = totalLen > 0 ? 'Bản nháp (DRAFT)' : 'Chưa có tim tuyến'
+    }
+
+    const stationText = totalLen > 0
+      ? `Km 0+000 → Km ${totalLen >= 1 ? totalLen.toFixed(1) : Math.round(totalLen * 1000) + 'm'}`
+      : p.stationing_text
+
+    return {
+      ...p,
+      length_km: totalLen,
+      end_km: totalLen,
+      kml_status: kmlStatus,
+      status: status as any,
+      status_label: statusLabel,
+      stationing_text: stationText
+    }
+  }
+
+  // Nếu alignState có status PENDING_APPROVAL hoặc CONFIRMED mà chưa nạp coords
+  if (alignState.status === 'PENDING_APPROVAL') {
+    return {
+      ...p,
+      kml_status: 'Chờ duyệt tim tuyến',
+      status: 'PENDING_ALIGNMENT' as any,
+      status_label: 'Chờ duyệt tuyến'
+    }
+  } else if (alignState.status === 'CONFIRMED') {
+    return {
+      ...p,
+      kml_status: 'Đã phê duyệt',
+      status: 'ACTIVE' as any,
+      status_label: 'Đang bảo hành'
+    }
+  }
+
+  return p
+}
+
 export const projectService = {
+  /**
+   * Mock API: GET /projects
+   * Giả lập gọi API bất đồng bộ có network latency
+   */
+  async fetchProjects(): Promise<HubProject[]> {
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    return this.getProjects()
+  },
+
+  /**
+   * Sync accessor cho các component/helper nội bộ kế thừa
+   */
   getProjects(): HubProject[] {
-    return getFromStorage<HubProject[]>(STORAGE_KEYS.PROJECTS, INITIAL_HUB_PROJECTS)
+    const raw = getFromStorage<HubProject[]>(STORAGE_KEYS.PROJECTS, INITIAL_HUB_PROJECTS)
+    return raw.map((p) => enrichProjectWithAlignment(p))
+  },
+
+  /**
+   * Mock API: GET /projects/:id
+   */
+  async fetchProjectById(id: string): Promise<HubProject | undefined> {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    return this.getProjectById(id)
   },
 
   getProjectById(id: string): HubProject | undefined {
@@ -148,10 +270,80 @@ export const projectService = {
     return projects.find((p) => p.id === id || p.code === id)
   },
 
-  createProject(newProject: HubProject): HubProject {
-    const projects = this.getProjects()
-    const updated = [newProject, ...projects]
+  /**
+   * Mock API: POST /projects (Chỉ Supervisor có quyền - FR-04, BR-01, DA01)
+   * Header: Idempotency-Key
+   */
+  async createProject(payload: ProjectCreatePayload): Promise<HubProject> {
+    // Giả lập độ trễ truyền thông qua mạng HTTP
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const code = payload.code?.trim().toUpperCase()
+    const name = payload.name?.trim()
+    const handoverDate = payload.handoverDate
+    const warrantyEndDate = payload.warrantyEndDate
+    const pmId = payload.primaryPmId?.trim()
+
+    // 1. Kiểm tra trường bắt buộc
+    if (!code || !name) {
+      throw new Error('[422] Mã dự án (code) và Tên dự án (name) là các trường bắt buộc.')
+    }
+
+    // 2. Quy tắc BR-01: Bắt buộc chỉ định đúng 1 PM chính
+    if (!pmId || pmId === '-- Để trống --') {
+      throw new Error('[422] Bắt buộc chỉ định đúng 1 PM chính (primaryPmId) theo quy tắc BR-01.')
+    }
+
+    // 3. Quy tắc FR-04 / validation: warrantyEndDate >= handoverDate
+    if (new Date(warrantyEndDate).getTime() < new Date(handoverDate).getTime()) {
+      throw new Error('[422] Ngày hết hạn bảo hành (warrantyEndDate) không được nhỏ hơn ngày bàn giao (handoverDate).')
+    }
+
+    // 4. Kiểm tra mã dự án trùng lặp (HTTP 409 Conflict)
+    const existingProjects = this.getProjects()
+    if (existingProjects.some((p) => p.code.toUpperCase() === code)) {
+      throw new Error(`[409] Mã dự án [${code}] đã tồn tại trong hệ thống. Vui lòng chọn mã khác.`)
+    }
+
+    // Trích xuất tên và email của PM
+    const pmName = pmId.includes('(') ? pmId.split(' (')[0].trim() : pmId
+    const pmEmail = pmId.includes('(') ? pmId.split('(')[1].replace(')', '').trim() : 'pmhoang@gmail.com'
+
+    // Khởi tạo hồ sơ dự án theo schema chuẩn v2.2 / DA01
+    const newProject: HubProject = {
+      id: `prj-${Date.now()}`,
+      code,
+      name,
+      region: payload.region?.trim() || 'Miền Nam',
+      location_detail: payload.region?.trim() || 'Khu vực quản lý',
+      start_km: 0.0,
+      end_km: 0.0,
+      stationing_text: 'Chờ thiết lập tim tuyến (PM)',
+      status: 'ACTIVE',
+      status_label: 'Đang bảo hành',
+      status_color: '#1B5E20',
+      pm_name: pmName,
+      pm_email: pmEmail,
+      pm_role_badge: 'PM Chính',
+      warranty_passed_percent: 0,
+      days_remaining: 1095,
+      length_km: 0.0,
+      open_defects: 0,
+      repair_packages: 0,
+      image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
+      is_assigned: true,
+      is_restricted_for_pm: false,
+      kml_status: 'Chưa có tim tuyến',
+      handover_date: handoverDate,
+      warranty_end_date: warrantyEndDate,
+      handover_file_ids: payload.handoverFileIds || []
+    }
+
+    const updated = [newProject, ...existingProjects]
     saveToStorage(STORAGE_KEYS.PROJECTS, updated)
+
+    // Phát sự kiện đồng bộ reactive trên toàn client
+    window.dispatchEvent(new Event('roadguard_state_change'))
     return newProject
   },
 
@@ -167,6 +359,26 @@ export const projectService = {
     })
     if (updatedProj) {
       saveToStorage(STORAGE_KEYS.PROJECTS, updated)
+    }
+    return updatedProj
+  },
+
+  updateProjectAlignment(
+    id: string,
+    data: { length_km?: number; kml_status?: string; stationing_text?: string; status?: HubProject['status'] }
+  ): HubProject | null {
+    const projects = this.getProjects()
+    let updatedProj: HubProject | null = null
+    const updated = projects.map((p) => {
+      if (p.id === id || p.code === id) {
+        updatedProj = { ...p, ...data }
+        return updatedProj
+      }
+      return p
+    })
+    if (updatedProj) {
+      saveToStorage(STORAGE_KEYS.PROJECTS, updated)
+      window.dispatchEvent(new Event('roadguard_state_change'))
     }
     return updatedProj
   },

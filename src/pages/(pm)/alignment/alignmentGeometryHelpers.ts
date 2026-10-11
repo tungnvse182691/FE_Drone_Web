@@ -6,6 +6,8 @@ export function interpolateCoordAtKm(
   coords: [number, number][],
   kmPoints: number[]
 ): [number, number] {
+  if (!coords || coords.length === 0) return [108.0825, 16.2731]
+  if (!kmPoints || kmPoints.length === 0) return coords[0]
   if (km <= kmPoints[0]) return coords[0]
   if (km >= kmPoints[kmPoints.length - 1]) return coords[coords.length - 1]
 
@@ -114,6 +116,7 @@ export function checkAndEnrichSegmentsContinuity(segs: SegmentItem[]): SegmentIt
 
 // Tạo danh sách tấm Slab mẫu
 export function generateMockSlabs(segmentCount: number): SlabItem[] {
+  if (segmentCount <= 0) return []
   const slabs: SlabItem[] = []
   const statuses: ('GOOD' | 'CRACKED' | 'SETTLEMENT')[] = ['GOOD', 'GOOD', 'GOOD', 'GOOD', 'CRACKED', 'GOOD', 'SETTLEMENT']
   for (let i = 1; i <= 24; i++) {

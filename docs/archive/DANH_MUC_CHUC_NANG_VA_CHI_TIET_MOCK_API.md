@@ -2,7 +2,7 @@
 
 > **Tài liệu quy chuẩn dành cho Frontend Web RoadGuard (Nhà thầu Hoàng Hải)**  
 > **Căn cứ gốc:** Trích xuất 100% từ bộ đặc tả chuẩn **`docs/specs/29_9/`** (`operation_catalog.md`, `01_FRD_SRS.md`, `02_Business_Rules.md`, `04_Use_Cases.md`, `01_FE_Scope_Implementation_Guide.md`, `06_Report_Analytics_Requirements.md`, `api.types.ts`) kết hợp **10 Điều bất biến (Invariants) trong `AGENTS.md`**.  
-> **Nguyên tắc kỹ thuật:** Hệ thống quản lý bảo hành đường bộ thuần túy kỹ thuật (diện tích $m^2$, chiều dài trám nứt $m$, chiều sâu $cm$, TCVN 8819:2011). Tuyệt đối **KHÔNG** tính toán giá tiền, đơn giá tài chính hay bảng BOQ tiền tệ.
+> **Nguyên tắc kỹ thuật:** Hệ thống quản lý bảo hành đường bộ thuần túy kỹ thuật hình học (diện tích $m^2$, chiều dài $m$, chiều sâu $cm$, $mm$). Tuyệt đối **KHÔNG** tính toán giá tiền, đơn giá tài chính hay bảng BOQ tiền tệ.
 
 ---
 
@@ -41,7 +41,7 @@ Trên Web Dashboard, Supervisor có **15 nhóm chức năng lớn**, tương ứ
 
 | STT | Nhóm chức năng | Mã Use Case / FR | Hành vi tác nghiệp trên Web Dashboard | Operation ID & Endpoint chuẩn (29_9) | Headers bắt buộc |
 |:---:|---|:---:|---|---|:---:|
-| **01** | **Khởi tạo & Quản lý Dự án** | DA01, FR-04, BR-01 | Tạo dự án bảo hành mới, nhập thời hạn bảo hành (tháng), ngày hết hạn, tiêu chuẩn kiểm định TCVN 8819, hệ quy chiếu UTM SRID (32648), chỉ định duy nhất 1 PM chính. | `createProject`<br>`POST /api/v1/projects`<br>`getProject`<br>`GET /api/v1/projects/{projectId}`<br>`listProjects`<br>`GET /api/v1/projects` | `Idempotency-Key` (cho POST) |
+| **01** | **Khởi tạo & Quản lý Dự án** | DA01, FR-04, BR-01 | Tạo dự án bảo hành mới, nhập thời hạn bảo hành (tháng), ngày hết hạn, ngày bàn giao, mảng tệp bàn giao (tùy chọn), chỉ định duy nhất 1 PM chính. | `createProject`<br>`POST /api/v1/projects`<br>`getProject`<br>`GET /api/v1/projects/{projectId}`<br>`listProjects`<br>`GET /api/v1/projects` | `Idempotency-Key` (cho POST) |
 | **02** | **Cập nhật & Đóng Dự án** | DA05, DA12, FR-04, BR-45 | Chỉnh sửa thông tin dự án; đóng dự án khi hết thời hạn bảo hành chuyển trạng thái sang `CLOSED` (chế độ Read-only). | `updateProject`<br>`PATCH /api/v1/projects/{projectId}`<br>`closeProject`<br>`POST /api/v1/projects/{projectId}/close` | `Idempotency-Key`<br>`If-Match` |
 | **03** | **Phân quyền & Đội thi công** | DA03, FR-02, BR-02 | Phân công PM chính, bổ nhiệm Drone Operator và Repair Crew vào dự án; tạo mới đội thi công công ty. | `setMembership`<br>`POST /api/v1/projects/{projectId}/memberships`<br>`createCrew`<br>`POST /api/v1/projects/{projectId}/crews`<br>`listCrews`<br>`GET /api/v1/projects/{projectId}/crews` | `Idempotency-Key` |
 | **04** | **Xác nhận Tuyến đường** | DA13, FR-06, BR-04 | Xem trước tim đường và bề rộng mặt đường trên MapLibre do PM trình; bấm "Xác nhận phiên bản tuyến" để khóa bất biến `RoadSectionVersion`. | `confirmRoute`<br>`POST /api/v1/route-versions/{routeVersionId}/confirm`<br>`getRouteVersion`<br>`GET /api/v1/route-versions/{routeVersionId}` | `Idempotency-Key`<br>`If-Match` |
@@ -49,7 +49,7 @@ Trên Web Dashboard, Supervisor có **15 nhóm chức năng lớn**, tương ứ
 | **06** | **Nghiệm thu Hạng mục Nhánh duyệt** | HT10, FR-24, BR-26 | Xem chuỗi ảnh đối chứng BEFORE/AFTER và biên bản hoàn công do PM trình; bấm "Chấp thuận nghiệm thu" hoặc "Yêu cầu sửa lại (Rework)". | `acceptApprovalAttempt`<br>`POST /api/v1/repair-attempts/{attemptId}/acceptance`<br>`getRepairAttempt`<br>`GET /api/v1/repair-attempts/{attemptId}` | `Idempotency-Key`<br>`If-Match` |
 | **07** | **Đóng Tổng thể Vụ việc Hỗn hợp (Mixed Case)** | HT12, FR-25, BR-26 | Sau khi 100% hạng mục trong vụ việc đã hoàn thành (Fast Track do PM đóng, Approval Track do Sup nghiệm thu), bấm đóng vụ việc sang `CLOSED`. Chặn đóng nếu còn mục dở dang. | `closeMixedCase`<br>`POST /api/v1/cases/{caseId}/close` | `Idempotency-Key`<br>`If-Match` |
 | **08** | **Quản trị Tài khoản & Lời mời** | QT01, QT02, FR-01, FR-02 | Tạo thư mời nhân sự mới, đình chỉ tài khoản nghỉ việc (thu hồi token ngay), cập nhật thông tin, đặt lại mật khẩu nhân viên. | `createInvitation`<br>`POST /api/v1/invitations`<br>`adminResetPassword`<br>`POST /api/v1/users/{userId}/password-reset`<br>`updateAccount`<br>`PATCH /api/v1/users/{userId}`<br>`getAccount`<br>`GET /api/v1/users/{userId}` | `Idempotency-Key`<br>`If-Match` |
-| **09** | **Quản trị Danh mục Hư hỏng** | QT03, QT04, FR-36 | Xem, thêm mới và cập nhật danh mục loại hư hỏng chuẩn TCVN, đơn vị đo kỹ thuật, quy tắc phân mức nghiêm trọng/khẩn cấp. | `listDefectTypes`<br>`GET /api/v1/catalog/defect-types`<br>`updateDefectType`<br>`PUT /api/v1/catalog/defect-types/{code}` | `Idempotency-Key`<br>`If-Match` |
+| **09** | **Quản trị Danh mục Hư hỏng** | QT03, QT04, FR-36 | Xem, thêm mới và cập nhật danh mục loại hư hỏng, đơn vị đo kỹ thuật, quy tắc phân mức nghiêm trọng/khẩn cấp. | `listDefectTypes`<br>`GET /api/v1/catalog/defect-types`<br>`updateDefectType`<br>`PUT /api/v1/catalog/defect-types/{code}` | `Idempotency-Key`<br>`If-Match` |
 | **10** | **Cấu hình Nhắc việc & Cảnh báo** | QT05, FR-36 | Cài đặt chu kỳ gửi thông báo nhắc việc định kỳ cho PM, số ngày cảnh báo trước khi hết hạn bảo hành công trình. | `getReminderConfig`<br>`GET /api/v1/reminder-configuration`<br>`setReminderConfig`<br>`PUT /api/v1/reminder-configuration` | `Idempotency-Key`<br>`If-Match` |
 | **11** | **Quản lý Phiên bản AI Model** | QT06, QT07, FR-36 | Khai báo phiên bản mô hình AI mới, kích hoạt vận hành (`ACTIVE`), ngừng dùng mô hình cũ; xuất tập nhãn đã duyệt cho đội ngũ AI huấn luyện. | `createModelVersion`<br>`POST /api/v1/model-versions`<br>`activateModelVersion`<br>`POST /api/v1/model-versions/{modelVersionId}/activate`<br>`retireModelVersion`<br>`POST /api/v1/model-versions/{modelVersionId}/retire`<br>`exportApprovedLabels`<br>`POST /api/v1/training-exports`<br>`getModelVersion`<br>`GET /api/v1/model-versions/{modelVersionId}` | `Idempotency-Key`<br>`If-Match` |
 | **12** | **Giám sát Máy chủ & Audit Trail** | QT08, QT09, FR-35, BR-45 | Giám sát danh sách job xử lý AI; tra cứu nhật ký kiểm toán bất biến (Audit Trail) hiển thị thời gian, tác nhân, hành động, giá trị trước/sau. | `listAdminJobs`<br>`GET /api/v1/admin/processing-jobs`<br>`listAuditEvents`<br>`GET /api/v1/audit-events` | — |
@@ -77,7 +77,7 @@ Trên Web Dashboard, PM có **17 nhóm chức năng lớn**, tương ứng các 
 | **09** | **Phân cấp Hư hỏng & Ưu tiên** | SC14, FR-18, BR-05 | Phân cấp độc lập 2 trục: Severity (`LOW`..`CRITICAL`) và Urgency (`NORMAL`..`URGENT`); xác nhận lỗi chính thức (`VERIFIED`); sắp xếp thứ tự ưu tiên xử lý trong dự án. | `assessDefect`<br>`POST /api/v1/defects/{defectId}/assessments`<br>`verifyDefect`<br>`POST /api/v1/defects/{defectId}/verification`<br>`setWorkOrder`<br>`PUT /api/v1/projects/{projectId}/work-order`<br>`getWorkOrder`<br>`GET /api/v1/projects/{projectId}/work-order` | `Idempotency-Key`<br>`If-Match` |
 | **10** | **Chính sách Sửa nhanh (Fast Track)** | SC13, FR-18, BR-08..BR-11 | Thiết lập quy định FastTrackPolicy dự án: danh mục loại lỗi cho phép, ngưỡng kích thước tối đa (dài, rộng, sâu, diện tích), biện pháp thi công và yêu cầu ảnh Before/After; kích hoạt chính sách. | `createPolicyVersion`<br>`POST /api/v1/projects/{projectId}/policy-versions`<br>`getPolicyVersion`<br>`GET /api/v1/policy-versions/{policyVersionId}`<br>`activatePolicyVersion`<br>`POST /api/v1/policy-versions/{policyVersionId}/activate` | `Idempotency-Key`<br>`If-Match` |
 | **11** | **Giao việc Đo đạc Hiện trường** | TN01, TN06, FR-18, BR-24 | Giao đợt đo gom nhiều lỗi (chế độ bắt buộc `MEASURE_ONLY`, cấm sửa tại chỗ); hoặc giao xử lý 1 lỗi nhỏ riêng lẻ (chế độ `INSPECT_AND_REPAIR` kèm snapshot policy). | `createInspectionBatch`<br>`POST /api/v1/projects/{projectId}/inspection-batches`<br>`createInspectionTask`<br>`POST /api/v1/projects/{projectId}/inspection-tasks`<br>`getInspectionTask`<br>`GET /api/v1/inspection-tasks/{taskId}` | `Idempotency-Key` |
-| **12** | **Lập Gói Đề xuất Kỹ thuật (Approval Track)** | SC01..SC04, FR-19, BR-21 | Lập gói hồ sơ `RepairPackage` cho các lỗi `VERIFIED`; bóc tách khối lượng thi công ($m^2$, mét dài, chiều sâu $cm$, định mức vật tư); khóa phiên bản và trình duyệt lên Supervisor. | `createRepairPackage`<br>`POST /api/v1/projects/{projectId}/repair-packages`<br>`getRepairPackage`<br>`GET /api/v1/repair-packages/{packageId}`<br>`submitRepairPackage`<br>`POST /api/v1/repair-packages/{packageId}/submit` | `Idempotency-Key`<br>`If-Match` (Submit) |
+| **12** | **Lập Gói Đề xuất Kỹ thuật (Approval Track)** | SC01..SC04, FR-19, BR-21 | Lập gói hồ sơ `RepairPackage` cho các lỗi `VERIFIED`; bóc tách khối lượng thi công ($m^2$, mét dài, chiều sâu $cm$); khóa phiên bản và trình duyệt lên Supervisor. | `createRepairPackage`<br>`POST /api/v1/projects/{projectId}/repair-packages`<br>`getRepairPackage`<br>`GET /api/v1/repair-packages/{packageId}`<br>`submitRepairPackage`<br>`POST /api/v1/repair-packages/{packageId}/submit` | `Idempotency-Key`<br>`If-Match` (Submit) |
 | **13** | **Chỉnh sửa & Giao việc Thi công** | SC08, SC09, FR-20, BR-23 | Chỉnh sửa các hạng mục bị Supervisor yêu cầu sửa đổi (`REQUEST_EVIDENCE` / `REQUEST_RECONSIDER`); phân công đội thi công cho các hạng mục đã được duyệt (`APPROVED`). | `reviseRepairItem`<br>`POST /api/v1/repair-items/{itemId}/revisions`<br>`assignRepairItem`<br>`POST /api/v1/repair-items/{itemId}/assignments`<br>`reassignRepairItem`<br>`POST /api/v1/repair-items/{itemId}/reassignments` | `Idempotency-Key`<br>`If-Match` |
 | **14** | **Kiểm tra Hiện trường & Đóng Fast Track** | HT09, FR-23, BR-25 | Xem ảnh BEFORE/AFTER và số đo hoàn công; tự kiểm tra và bấm "Đóng lỗi Fast Track" (Defect chuyển `RESOLVED`, phát thông báo cho Sup); hoặc trình Supervisor nghiệm thu với nhánh Approval Track. | `reviewRepairAttempt`<br>`POST /api/v1/repair-attempts/{attemptId}/review`<br>`getRepairAttempt`<br>`GET /api/v1/repair-attempts/{attemptId}` | `Idempotency-Key`<br>`If-Match` |
 | **15** | **Kích hoạt Xử lý Khẩn cấp (Emergency)** | SC10, FR-18, BR-46 | Khi xảy ra sự cố hố sâu/sụt lở nguy hiểm, PM kích hoạt nhiệm vụ Emergency xử lý an toàn tạm thời (rào chắn, biển cảnh báo phản quang 4h, lấp tạm). Tự động cảnh báo Supervisor. | `createEmergencyTask`<br>`POST /api/v1/projects/{projectId}/emergency-tasks` | `Idempotency-Key` |
@@ -217,7 +217,7 @@ src/api/services/
 *Căn cứ FR-19, FR-20, BR-21, BR-23 và `operation_catalog.md`*
 - `getPackages(projectId)`: Lấy danh sách các gói đề xuất phương án kỹ thuật thi công.
 - `getPackageById(packageId)`: Operation `getRepairPackage` (`GET /repair-packages/{packageId}`). Lấy chi tiết gói và danh sách các hạng mục bóc tách khối lượng kỹ thuật.
-- `createPackage(packageData)`: Operation `createRepairPackage` (`POST /projects/{projectId}/repair-packages`). PM gom các lỗi `VERIFIED` thành gói đề xuất, nhập phương án kỹ thuật và bóc tách khối lượng ($m^2$, mét dài, chiều sâu $cm$, định mức vật tư TCVN 8819). Tuyệt đối không chứa trường giá tiền hay đơn giá.
+- `createPackage(packageData)`: Operation `createRepairPackage` (`POST /projects/{projectId}/repair-packages`). PM gom các lỗi `VERIFIED` thành gói đề xuất, nhập phương án kỹ thuật và kích thước hình học ($m^2$, mét dài, chiều sâu $cm$). Tuyệt đối không chứa trường giá tiền hay đơn giá.
 - `submitPackage(packageId)`: Operation `submitRepairPackage` (`POST /repair-packages/{packageId}/submit`). PM bấm khóa phiên bản và trình duyệt lên Supervisor -> Trạng thái chuyển `SUBMITTED`.
 - `decideRepairItem(itemId, decision, reason)`: Operation `decideRepairItem` (`POST /repair-items/{itemId}/decisions`). **Supervisor thẩm duyệt độc lập trên từng dòng:** Bấm `APPROVE`, `REQUEST_EVIDENCE`, `REQUEST_RECONSIDER`, hoặc `REJECT` kèm lý do giải trình.
 - `reviseRepairItem(itemId, revisionData)`: Operation `reviseRepairItem` (`POST /repair-items/{itemId}/revisions`). PM cập nhật bổ sung các hạng mục bị yêu cầu giải trình lại.
@@ -344,7 +344,7 @@ Khi bổ sung chức năng **Tạo & Quản lý Tuyến nhánh (Branch / Ramp / 
 ## 8. HƯỚNG DẪN TEST KỊCH BẢN CHI TIẾT LẦN LƯỢT CHO TỪNG ROLE (PM & SUPERVISOR END-TO-END WALKTHROUGH)
 
 > **Căn cứ chuẩn:** `docs/specs/29_9` (`operation_catalog.md`, `01_FRD_SRS.md`, `02_Business_Rules.md`)  
-> **Quy tắc bất biến:** Quản lý khối lượng kỹ thuật thuần túy ($m^2, m, cm$, TCVN 8819:2011), Zero Money (không có giá tiền / BOQ tài chính).
+> **Quy tắc bất biến:** Quản lý khối lượng kỹ thuật hình học thuần túy ($m^2, m, cm, mm$), Zero Money (không có giá tiền / BOQ tài chính).
 
 ### 🧭 Luồng Tác Nghiệp Liên Vai Trò (Sequence Diagram)
 ```mermaid
@@ -474,18 +474,16 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC PM-08: Gán Phương án Kỹ thuật & Phân luồng Triage (TD05, SC01, SC02)
+#### BƯỚC PM-08: Gán Phương án Kỹ thuật & Phân luồng Triage (TD05, SC01, SC02, FR-15)
 - **Đường dẫn URL:** `/pm/defects/:id` (hoặc modal trong màn hình thẩm định)
-- **Mục tiêu:** Chọn biện pháp sửa chữa theo TCVN 8819 và phân luồng Fast Track / Approval Track.
+- **Mục tiêu:** Nhập phương án sửa chữa kỹ thuật dạng văn bản tổng quát (SC02: không lập dữ liệu tài chính, định mức hay vật liệu chi tiết) và phân luồng Fast Track / Approval Track.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Chọn biện pháp sửa chữa kỹ thuật:
-     - Trám nứt bằng bitum polyme nóng (TCVN 8819) $\rightarrow$ nhập chiều dài ($m$).
-     - Cào bóc & thảm lại BTN C12.5 $\rightarrow$ nhập diện tích cào bóc ($m^2$) và chiều sâu ($cm$).
-  2. [ ] Lựa chọn phân luồng xử lý (`TriageDecision`):
-     - **Fast Track (Sửa chữa nhanh/khẩn cấp):** Dành cho lỗi nhẹ, PM tự quyết, tự giao việc và tự đóng hồ sơ.
-     - **Approval Track (Nhánh cần duyệt):** Hư hỏng kết cấu nặng, bắt buộc lập hồ sơ trình Supervisor duyệt.
+  1. [ ] Nhập phương án xử lý kỹ thuật tổng quát dạng văn bản (SC02): ví dụ *"Trám vết nứt mặt đường"*, *"Cào bóc và bù phụ kết cấu mặt đường"* kèm kích thước hình học ($m^2, m, mm$) nếu có.
+  2. [ ] Lựa chọn phân luồng xử lý (`TriageDecision` - FR-15, SC01):
+     - **Fast Track (Sửa chữa nhanh/khẩn cấp):** Dành cho lỗi nhẹ đủ điều kiện theo FastTrackPolicy, PM tự quyết, tự giao nhiệm vụ đo-và-sửa và tự đóng hồ sơ (BR-25).
+     - **Approval Track (Nhánh cần duyệt):** Hư hỏng kết cấu cần thẩm định, gom vào gói đề xuất trình Supervisor thẩm duyệt từng hạng mục (SC01, SC04, BR-21).
   3. [ ] Bấm **"Lưu phương án kỹ thuật & Phân luồng"**.
-- **Tiêu chuẩn đạt (Expected):** Không có ô nhập giá tiền/đơn giá; phân luồng lưu đúng vào hồ sơ.
+- **Tiêu chuẩn đạt (Expected):** Không có ô nhập giá tiền/đơn giá/vật tư chi tiết; phân luồng lưu đúng vào hồ sơ khiếm khuyết.
 
 ---
 
@@ -554,16 +552,16 @@ sequenceDiagram
          + *Đặc cách duyệt Fast Track:* Cho phép tự sửa nhanh theo chính sách v1.8 (ngưỡng < 30mm).
          + *Từ chối Fast Track (Chuyển duyệt đợt):* Bác bỏ đề xuất theo chính sách v2.2 (ngưỡng ≤ 20mm), chuyển khiếm khuyết sang hồ sơ đợt sửa (Approval Track).
        - **Trùng lặp 2 thiết bị cùng nộp (`DUPLICATE_WORK_ATTEMPT` - DEDUP):** Duy nhất ca này mới có đối soát dữ liệu trùng lặp. PM chọn:
-         + *Chọn bản Máy chính (38mm)* (chuẩn TCVN 8864).
+         + *Chọn bản Máy chính (38mm)* (số đo thước đo thực địa chính xác).
          + *Chọn bản Máy phụ (45mm)* (ước lượng sơ bộ).
          + *Hợp nhất thủ công (Manual Merge):* Đối soát nhặt từng trường dữ liệu hợp lệ giữa 2 thiết bị.
        - **Cứu hộ thiết bị gặp sự cố (`DEVICE_RESCUE_PENDING` - Q17 / Quyết định 42A):** Quy trình thẩm quyền 2 lớp bảo mật:
          + *Phía PM:* Không được tự duyệt gói cứu hộ, chỉ có quyền bấm **"Trình Giám sát duyệt cứu hộ (Q17)"**.
-         + *Phía Supervisor:* Duy nhất Supervisor có thẩm quyền bấm **"Ký số phê duyệt cứu hộ"** hoặc **"Từ chối gói cứu hộ"**.
+         + *Phía Supervisor:* Duy nhất Supervisor có thẩm quyền bấm **"Phê duyệt gói cứu hộ"** hoặc **"Từ chối gói cứu hộ"**.
        - **Hồ sơ đợt đã đóng băng APPROVED (`AGGREGATE_VERSION_CONFLICT` - BR-26 / Invariant #3):** Tuân thủ Điều bất biến #3 cấm ghi đè đợt cũ. PM chọn:
          + *Tạo phụ lục đợt mới (BR-26):* Chuyển khối lượng nộp muộn sang đợt mới.
          + *Từ chối số liệu nộp muộn:* Bác bỏ khối lượng nộp muộn sau khi đợt đã khóa cứng.
-    5. [ ] Xác nhận giải quyết xung đột $\rightarrow$ Ca xung đột chuyển sang trạng thái phân giải tương ứng (`ĐÃ CÔNG NHẬN (TỔ 02)`, `TỪ CHỐI (GIỮ ĐỘI 01)`, `ĐẶC CÁCH FAST TRACK`, `TỪ CHỐI FAST TRACK`, `ĐÃ KÝ SỐ DUYỆT CỨU HỘ`...) và ghi nhận mã băm SHA-256 vào Audit Log.
+    5. [ ] Xác nhận giải quyết xung đột $\rightarrow$ Ca xung đột chuyển sang trạng thái phân giải tương ứng (`ĐÃ CÔNG NHẬN (TỔ 02)`, `TỪ CHỐI (GIỮ ĐỘI 01)`, `ĐẶC CÁCH FAST TRACK`, `TỪ CHỐI FAST TRACK`, `ĐÃ PHÊ DUYỆT CỨU HỘ`...) và ghi nhận mã băm SHA-256 vào Audit Log.
 - **Tiêu chuẩn đạt (Expected):**
   - Quản lý trạng thái phiếu đo đạc mượt mà (`OPEN` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `RESOLVED` / `VERIFIED`).
   - Danh sách xung đột phân giải đúng thẩm quyền PM / Supervisor, phản ánh chuẩn xác bản chất kỹ thuật theo spec 29_9, tuyệt đối không tự động ghi đè hoặc trộn dữ liệu sai quy chuẩn.
@@ -576,9 +574,9 @@ sequenceDiagram
 - **Thao tác kiểm tra trên màn hình:**
   1. [ ] Mở hạng mục thi công đã hoàn tất do đội hiện trường báo cáo.
   2. [ ] Kiểm tra tính toàn vẹn của cặp ảnh đối chứng: Ảnh hư hỏng ban đầu (Before) và Ảnh sau khi thảm nhựa hoàn thiện (After) có tọa độ GPS/EXIF hợp lệ.
-  3. [ ] Kiểm tra các tệp đính kèm: Biên bản lấy mẫu hiện trường, kết quả thí nghiệm độ chặt lu lèn (TCVN 8819:2011).
+  3. [ ] Kiểm tra các tệp đính kèm: Biên bản lấy mẫu hiện trường, kết quả kiểm tra chất lượng thi công.
   4. [ ] **Thực hiện xử lý theo đúng phân luồng nghiệp vụ:**
-     - **Nhánh Duyệt thông thường (APPROVAL_TRACK - HT09, HT11):** Bấm **"Trình Giám sát nghiệm thu (Submit for Inspection)"** (`POST /repair-attempts/{attemptId}/review` với decision `ACCEPT`). Ca sửa chữa chuyển trạng thái sang `PENDING_INSPECTION` (hoặc `PM_CHECKED`), chờ Supervisor nghiệm thu và ký số.
+     - **Nhánh Duyệt thông thường (APPROVAL_TRACK - HT09, HT11):** Bấm **"Trình Giám sát nghiệm thu (Submit for Inspection)"** (`POST /repair-attempts/{attemptId}/review` với decision `ACCEPT`). Ca sửa chữa chuyển trạng thái sang `PENDING_INSPECTION` (hoặc `PM_CHECKED`), chờ Supervisor nghiệm thu (`acceptApprovalAttempt: POST /repair-attempts/{attemptId}/acceptance`).
      - **Nhánh Cấp bách Fast Track (FAST_TRACK - BR-25, HT12):** Đối với các hư hỏng thuộc diện đặc cách khẩn cấp, PM tự kiểm tra bằng chứng đạt yêu cầu và bấm **"Đóng hoàn thành Fast Track (Close Fast Track)"**. Hạng mục chuyển thẳng sang trạng thái `RESOLVED` / `CLOSED`, hệ thống tự phát thông báo hậu kiểm sang Giám sát mà không cần phê duyệt lại.
      - **Trường hợp thi công không đạt (HT10):** PM bấm **"Yêu cầu làm lại (Request Rework)"**, nhập lý do sai sót kỹ thuật để yêu cầu đội hiện trường khắc phục lại.
 - **Tiêu chuẩn đạt (Expected):**
@@ -605,7 +603,7 @@ sequenceDiagram
 - **Đường dẫn URL:** `/pm/research-validation` (hoặc `/pm/rpt-09`)
 - **Mục tiêu:** Thực hiện quy trình đối soát khoa học độc lập (Research Validation Track) giữa số đo mô hình trích xuất từ Drone (Derived) với số đo thực địa đo bằng thước thẳng & thước đo sâu (Ground Truth) để đánh giá độ chính xác thuật toán.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Kiểm tra thông tin phiên bản mô hình AI, tập dữ liệu thực nghiệm và phương pháp đo đối chứng (Thước thẳng 3m TCVN 8864, Thước đo sâu điện tử theo `RS02`, `RS03`).
+  1. [ ] Kiểm tra thông tin phiên bản mô hình AI, tập dữ liệu thực nghiệm và phương pháp đo đối chứng (Thước thẳng và thước đo độ sâu thực địa theo `RS02`, `RS03`).
   2. [ ] Bấm **"Chạy Thẩm định Mới (Run Validation Job)"** (`FR-31`): Kích hoạt tác vụ nền bất đồng bộ (HTTP 202 Accepted) để tính toán ghép cặp mẫu đối soát (`RS04`).
   3. [ ] Kiểm tra bộ 4 thẻ chỉ số sai số kỹ thuật định lượng theo chuẩn `MET-12` (`RS05`):
      - Tỷ lệ mẫu hợp lệ (`used_count / sample_count`) và số lượng mẫu bị loại trừ (`excluded_count`).
@@ -657,106 +655,139 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC SUP-01: Khởi tạo Dự án & Phân bổ Nhân sự (DA01, DA03)
+#### BƯỚC SUP-01: Khởi tạo Dự án & Phân bổ Quyền Nhân sự (DA01, DA03, FR-04, BR-01, BR-02)
 - **Đường dẫn URL:** `/sup/projects` $\rightarrow$ Bấm "Thêm mới dự án"
-- **Mục tiêu:** Tạo mới hợp đồng bảo hành dự án và bổ nhiệm các nhân sự chủ chốt.
+- **Mục tiêu:** Tạo mới hồ sơ quản lý bảo hành công trình và phân quyền nhân sự chủ chốt (chỉ Supervisor mới có quyền tạo dự án theo BR-01, FR-04, `POST /projects`).
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Nhập thông tin dự án: Tên dự án (ví dụ: *Cao tốc Bắc - Nam đoạn QL45 - Nghi Sơn*), Mã hợp đồng, Thời hạn bảo hành (Bắt đầu/Kết thúc).
-  2. [ ] Bổ nhiệm nhân sự: Chọn PM phụ trách dự án, bổ nhiệm Drone Operator và Đội thi công.
-  3. [ ] Bấm **"Lưu & Khởi tạo dự án"**.
-- **Tiêu chuẩn đạt (Expected):** Dự án mới hiển thị trong danh sách ở trạng thái `ACTIVE`; PM được phân quyền thấy dự án trong danh sách của mình.
+  1. [ ] **Nhập thông tin dự án (`ProjectCreate`):** Tên dự án (`name`), Mã hợp đồng/dự án (`code`), Ngày nghiệm thu/bàn giao (`handoverDate`), Ngày hết hạn bảo hành (`warrantyEndDate`). Mảng tệp bàn giao (`handoverFileIds`) để trống hoặc chọn tệp nếu có.
+  2. [ ] **Kiểm tra Validation logic (FR-04, api.types.ts):** Thử chọn ngày kết thúc bảo hành trước ngày bàn giao (`warrantyEndDate < handoverDate`) $\rightarrow$ Hệ thống bắt buộc hiển thị lỗi và chặn lưu (`warrantyEndDate >= handoverDate`).
+  3. [ ] **Chỉ định PM chính (BR-01, DA03):** Bổ nhiệm đúng **1 PM chính** phụ trách dự án (`primaryPmId`). PM có thể quản lý nhiều dự án cùng lúc.
+  4. [ ] Bấm **"Lưu & Khởi tạo dự án"** (`createProject: POST /projects` kèm Header `Idempotency-Key`).
+  5. [ ] **Phân bổ quyền thành viên & Tổ đội (DA03, QT02):** Sau khi dự án khởi tạo thành công:
+     - Phân bổ quyền thành viên cho Drone Operator (`setMembership: POST /projects/{projectId}/memberships`).
+     - Khởi tạo tổ đội thi công cho dự án (`createCrew: POST /projects/{projectId}/crews`).
+- **Tiêu chuẩn đạt (Expected):** Dự án mới hiển thị trong danh mục ở trạng thái `ACTIVE`; PM chính được phân quyền nhìn thấy dự án trong danh sách tác nghiệp; người ngoài dự án bị chặn quyền truy cập (BR-02).
 
 ---
 
-#### BƯỚC SUP-02: Thẩm định & Xác nhận Tuyến đường & Tuyến nhánh (DA13)
+#### BƯỚC SUP-02: Thẩm định & Xác nhận Phiên bản Tuyến (DA13, FR-07, BR-35)
 - **Đường dẫn URL:** `/sup/projects/:id/alignment` (hoặc `/sup/alignment`)
-- **Mục tiêu:** Giám sát kiểm tra tim tuyến chính và toàn bộ tuyến nhánh do PM nạp lên trước khi khóa phiên bản vận hành.
+- **Mục tiêu:** Giám sát kiểm tra hình học tim tuyến, bề rộng và các tuyến nhánh do PM nạp lên trước khi khóa phiên bản vận hành bất biến.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Xem tim tuyến chính và các tuyến nhánh trên bản đồ MapLibre tương tác (kiểm tra điểm rẽ `BranchStationKm`, góc giao cắt).
-  2. [ ] Kiểm tra danh sách các phân đoạn (SegmentSet) của cả trục chính và tuyến nhánh do PM chia.
-  3. [ ] Bấm nút **"Xác nhận phiên bản tuyến (Confirm Route Version)"**.
-- **Tiêu chuẩn đạt (Expected):** Toàn bộ phiên bản tuyến và các nhánh được khóa bất biến `RoadSectionVersion` (Read-only); PM bắt đầu được phép lập khảo sát bay cho từng nhánh.
+  1. [ ] **Kiểm tra tim tuyến & bề rộng:** Xem tim tuyến dạng polyline (`centerline`), các khoảng biến thiên bề rộng mặt đường (`widthIntervals`), và hành lang khảo sát tổng thể (`surveyTotalWidthMeters`) trên bản đồ tương tác MapLibre.
+  2. [ ] **Kiểm tra các tuyến nhánh (Branch):** Xem các tuyến nhánh rẽ, lý trình điểm rẽ, điểm nối và lý do kết nối (`connectionReason`).
+  3. [ ] Bấm nút **"Xác nhận phiên bản tuyến (Confirm Route Version)"** (`confirmRoute: POST /route-versions/{routeVersionId}/confirm` kèm Header `Idempotency-Key, If-Match`).
+- **Tiêu chuẩn đạt (Expected):** Toàn bộ phiên bản tuyến được khóa bất biến `RoadSectionVersion` ở trạng thái `CONFIRMED` (Read-only - FR-07); sau bước xác nhận này của Supervisor, PM mới bắt đầu được phép công bố phân đoạn (`SegmentSet`) và lập kế hoạch bay khảo sát (DA13, FR-08, BR-35).
 
 ---
 
-#### BƯỚC SUP-03: Thẩm duyệt Đợt Sửa chữa (Quy trình 4 Nhánh WF-07) (SC06)
+#### BƯỚC SUP-03: Thẩm duyệt Từng Hạng mục Đợt Sửa chữa (SC05, SC06, SC07, BR-21, BR-22)
 - **Đường dẫn URL:** `/sup/proposals` $\rightarrow$ Bấm mở đợt sửa đang ở trạng thái `PENDING_APPROVAL` (hoặc `/sup/approvals/:id`)
-- **Mục tiêu:** Thẩm duyệt từng hạng mục kỹ thuật trong đợt sửa do PM trình.
+- **Mục tiêu:** Thẩm duyệt từng hạng mục kỹ thuật trong đợt sửa do PM trình (tuân thủ SC02: Hoàn toàn không quản lý giá tiền, BOQ hay định mức tài chính).
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Xem danh sách các hư hỏng trong đợt: Vị trí Km, loại hư hỏng, diện tích cào bóc $m^2$, phương án TCVN.
-  2. [ ] **Thực hiện 4 nhánh thẩm duyệt quyết định độc lập trên từng hạng mục:**
-     - **Nhánh 1: APPROVE (Phê duyệt):** Bấm duyệt nếu phương án kỹ thuật đạt chuẩn.
-     - **Nhánh 2: REQUEST_EVIDENCE (Yêu cầu bổ sung bằng chứng):** Yêu cầu PM chụp thêm ảnh laser/thước đo. Bắt buộc nhập lý do giải trình.
-     - **Nhánh 3: REQUEST_RECONSIDER (Yêu cầu xem xét lại):** Đề nghị giảm bớt hoặc tăng diện tích cào bóc. Bắt buộc nhập lý do.
-     - **Nhánh 4: REJECT (Từ chối):** Bác bỏ hạng mục không thuộc trách nhiệm bảo hành. Bắt buộc nhập lý do.
-  3. [ ] Bấm nút tổng thể: **"Ban hành Quyết định Thẩm duyệt (Issue Decision)"**.
+  1. [ ] **Kiểm tra phương án kỹ thuật:** Xem danh sách hạng mục đề xuất: Vị trí Km, loại hư hỏng, mô tả giải pháp kỹ thuật dạng văn bản (xác nhận giao diện không chứa đơn giá, thành tiền hay dự toán tài chính theo SC02).
+  2. [ ] **Thực hiện quyết định thẩm duyệt độc lập trên từng RepairItem (SC05, BR-21):**
+     - **APPROVE (Phê duyệt):** Phê duyệt hạng mục đạt chuẩn kỹ thuật.
+     - **REQUEST_EVIDENCE (Yêu cầu bổ sung bằng chứng):** Yêu cầu PM bổ sung thêm ảnh/số đo thực địa. *Bắt buộc nhập lý do giải trình.*
+     - **REQUEST_RECONSIDER (Yêu cầu xem xét lại):** Đề nghị điều chỉnh lại phạm vi/phương án sửa. *Bắt buộc nhập lý do.*
+     - **REJECT (Từ chối):** Từ chối phương án sửa đề xuất. *Bắt buộc nhập lý do.* (Theo BR-22: Giữ Defect chưa xử lý để PM lập đề xuất khác, không chuyển thành NO_DEFECT hay RESOLVED).
+  3. [ ] Bấm nút ban hành: **"Ban hành Quyết định Thẩm duyệt"** (`decideRepairItem: POST /repair-items/{itemId}/decisions`).
 - **Tiêu chuẩn đạt (Expected):**
-  - Nếu tất cả được duyệt $\rightarrow$ Đợt chuyển sang `APPROVED`, toàn bộ hồ sơ kỹ thuật bị khóa Read-only (Invariant #3).
-  - Nếu có yêu cầu sửa đổi $\rightarrow$ Đợt chuyển sang `REVISION_REQUIRED`, trả về cho PM sửa lại.
+  - Các hạng mục được `APPROVE` bị khóa Read-only và **được giải phóng để PM giao đội thi công ngay (SC10), không phải chờ đợi các hạng mục bị trả (BR-21)**.
+  - Các hạng mục có yêu cầu sửa đổi/xem xét lại chuyển sang `REVISION_REQUIRED`, trả về cho PM lập phiên bản sửa đổi bổ sung (SC08, SC09).
 
 ---
 
-#### BƯỚC SUP-04: Thẩm định Bằng chứng & Nghiệm thu Chất lượng Hiện trường (HT10)
-- **Đường dẫn URL:** `/sup/acceptance` (hoặc `/sup/acceptance/:batchId`)
-- **Mục tiêu:** Đối chứng ảnh thi công hoàn thành và ra quyết định nghiệm thu chất lượng.
+#### BƯỚC SUP-04: Thẩm định Bằng chứng & Nghiệm thu Kết quả Hiện trường (HT10, HT11, HT12, BR-27)
+- **Đường dẫn URL:** `/sup/acceptance` (hoặc `/sup/acceptance/:batchId`, alias: `/sup/evidence-closeout`)
+- **Mục tiêu:** Đối chứng ảnh thi công hoàn thành của nhánh duyệt `APPROVAL_TRACK` và ra quyết định nghiệm thu chất lượng (phân biệt thiếu bằng chứng với chất lượng chưa đạt theo BR-27).
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Mở hạng mục đang ở trạng thái `PENDING_INSPECTION`.
-  2. [ ] Kiểm tra cặp ảnh đối chứng Before/After: xem độ phẳng mặt đường sau khi thảm nhựa, kiểm tra tọa độ GPS và tem thời gian.
-  3. [ ] Ra quyết định nghiệm thu:
-     - Bấm **"Chấp thuận Nghiệm thu (Accept / Pass)"** $\rightarrow$ Hạng mục đạt yêu cầu chất lượng.
-     - HOẶC Bấm **"Yêu cầu sửa lại (Rework Required)"** $\rightarrow$ Nhập lý do (ví dụ: mặt đường bị gồ ghề, lu lèn chưa đủ độ chặt) để trả về cho PM làm lại.
-- **Tiêu chuẩn đạt (Expected):** Hạng mục chuyển sang trạng thái `PASSED` (hoặc `REWORK`); ghi nhận log nghiệm thu của Supervisor.
+  1. [ ] Mở hạng mục do PM đã kiểm tra và trình lên (chỉ áp dụng cho các hạng mục thuộc nhánh duyệt `APPROVAL_TRACK`; các mục Fast Track do PM tự nghiệm thu và đóng theo BR-25, Supervisor chỉ nhận báo cáo giám sát RPT-04).
+  2. [ ] Kiểm tra cặp ảnh đối chứng Before/After, số đo và kết quả thi công thực tế tại hiện trường (HT10, BR-27).
+  3. [ ] **Ra quyết định nghiệm thu theo chuẩn `ReviewAttempt` (`acceptApprovalAttempt: POST /repair-attempts/{attemptId}/acceptance`):**
+     - **Lựa chọn 1: ACCEPT (Chấp thuận):** Kết quả thi công đạt yêu cầu chất lượng công trình $\rightarrow$ Hạng mục chuyển sang trạng thái `PASSED` (hoặc `ACCEPTED`).
+     - **Lựa chọn 2: REQUEST_EVIDENCE (Yêu cầu bổ sung bằng chứng):** Yêu cầu bổ sung ảnh góc chụp rõ hơn/phiếu đo (chưa bắt cào bóc làm lại). *Bắt buộc nhập lý do.*
+     - **Lựa chọn 3: REWORK_REQUIRED (Yêu cầu sửa lại):** Chất lượng thi công chưa đạt yêu cầu $\rightarrow$ Yêu cầu PM/Crew tổ chức thi công lại (HT10, HT13). *Bắt buộc nhập lý do.*
+- **Tiêu chuẩn đạt (Expected):** Hạng mục chuyển sang trạng thái tương ứng; lưu đầy đủ nhật ký quyết định thẩm định của Supervisor (QT09).
 
 ---
 
-#### BƯỚC SUP-05: Đóng Tổng thể Vụ việc Hỗn hợp (Mixed Case Closeout) (HT12)
-- **Đường dẫn URL:** Chi tiết vụ việc (Case Detail)
+#### BƯỚC SUP-05: Đóng Tổng thể Vụ việc Hỗn hợp (Mixed Case Closeout) (HT12, BR-26, PA06)
+- **Đường dẫn URL:** `/sup/acceptance/:batchId` (hoặc `/cases/{caseId}`)
 - **Mục tiêu:** Đóng vụ việc hư hỏng khi tất cả các nhánh con (Fast Track + Approval Track) đã hoàn thành 100%.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Mở vụ việc hỗn hợp (gồm 1 lỗi Fast Track do PM tự xử lý và 1 lỗi Approval Track do Supervisor nghiệm thu).
-  2. [ ] Kiểm tra điều kiện tiên quyết: Nếu còn 1 hạng mục chưa đạt $\rightarrow$ Nút đóng bị khóa mờ (Disabled).
-  3. [ ] Khi cả 2 hạng mục đều đã hoàn tất $\rightarrow$ Bấm nút **"Đóng Tổng thể Vụ việc (Close Case)"**.
-- **Tiêu chuẩn đạt (Expected):** Vụ việc chuyển sang `CLOSED`; ngăn chặn đóng sai sót khi chưa nghiệm thu hết.
+  1. [ ] Mở hồ sơ vụ việc hỗn hợp gồm cả hạng mục Fast Track (do PM đóng) và hạng mục Approval Track (do Supervisor nghiệm thu).
+  2. [ ] **Kiểm tra Gate điều kiện (BR-26):** Nếu còn dù chỉ 1 hạng mục chưa đạt (đang ở trạng thái `REWORK` hoặc chờ bổ sung) $\rightarrow$ Nút **"Đóng Tổng thể Vụ việc (Close Case)"** bị khóa mờ (`Disabled`).
+  3. [ ] Khi 100% hạng mục trong vụ việc đều đã hoàn tất đạt chuẩn $\rightarrow$ Nút đóng kích hoạt sáng. Nhập lý do đóng vụ việc và bấm **"Đóng Tổng thể Vụ việc (Close Case)"** (`closeMixedCase: POST /cases/{caseId}/close`).
+- **Tiêu chuẩn đạt (Expected):** Vụ việc chuyển sang `CLOSED`; ngăn chặn việc đóng sai sót khi chưa nghiệm thu hết các phần bắt buộc (BR-26).
 
 ---
 
-#### BƯỚC SUP-06: Báo cáo Phân tích Rủi ro & Ký số Đóng Đợt Sửa chữa (BC01, BC07, SC10)
-- **Đường dẫn URL:** `/sup/risk-analytics` (hoặc `/sup/signoff`)
-- **Mục tiêu:** Theo dõi chỉ số suy thoái đường bộ và ký biên bản đóng đợt sửa chữa khi 100% hạng mục đạt nghiệm thu.
+#### BƯỚC SUP-06: Giám sát Rủi ro, Xuất Hồ sơ Bằng chứng & Đóng Dự án (BC01, BC04, BC05, BC07, BC09, DA12, RPT-01, RPT-06, RPT-07)
+- **Đường dẫn URL:** `/sup/risk-analytics` (hoặc `/sup/reports`), `/sup/projects`
+- **Mục tiêu:** Giám sát chỉ số rủi ro suy thoái mặt đường, xuất gói hồ sơ bằng chứng kỹ thuật có mã băm toàn vẹn Checksum SHA-256 và đóng dự án khi hết hạn bảo hành.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] **Phân tích Rủi ro:** Xem biểu đồ suy thoái mặt đường MET-01, MET-04; bản đồ nhiệt mật độ hư hỏng theo lý trình.
-  2. [ ] **Ký số đóng đợt (Sign-off):**
-     - Mở đợt sửa chữa đã nghiệm thu 100% (`PASSED`).
-     - Xem biên bản tổng hợp kỹ thuật.
-     - Nhập mã PIN / Xác nhận chữ ký số $\rightarrow$ Bấm **"Ký số & Đóng đợt sửa chữa (Sign-off Batch Closeout)"**.
-  3. [ ] **Xuất Hồ sơ:** Bấm "Tải Hồ sơ Hoàn công (PDF)" và gói ZIP kèm mã Checksum SHA-256 xác thực.
-- **Tiêu chuẩn đạt (Expected):** Đợt sửa chuyển sang trạng thái cuối cùng `COMPLETED`; tệp tải về có đầy đủ thông tin kỹ thuật và chữ ký điện tử.
+  1. [ ] **Báo cáo Danh mục & Rủi ro Diễn biến (RPT-01, RPT-06, BC01, BC04, BC05):**
+     - Xem tổng quan danh mục dự án bảo hành, số dự án theo trạng thái, dự án sắp đến hạn bảo hành (BC01).
+     - Xem chỉ số hư hỏng theo mức độ nghiêm trọng/khẩn cấp, mức thay đổi so với khảo sát gốc baseline (BC04).
+     - Sử dụng bộ lọc phân tích rủi ro và so sánh giữa các dự án khác nhau trong danh mục (BC05 - tính năng chỉ dành cho Supervisor).
+  2. [ ] **Xuất Hồ sơ Bằng chứng Xác thực (RPT-07, BC07, BC09):**
+     - Bấm nút **"Xuất Hồ sơ Bằng chứng"** (`createExport: POST /exports` kèm `ExportRequest`).
+     - Tải về tệp PDF tổng hợp báo cáo kỹ thuật HOẶC Gói nén ZIP chứa toàn bộ ảnh gốc Before/After kèm mã Checksum SHA-256 xác thực toàn vẹn dữ liệu (BC09).
+  3. [ ] **Đóng / Ngừng sử dụng Dự án khi hết bảo hành (DA12):**
+     - Khi công trình hoàn thành toàn bộ thời gian bảo hành, Supervisor nhập lý do và bấm **"Đóng dự án"** (`closeProject: POST /projects/{projectId}/close`).
+     - Dự án chuyển sang trạng thái `CLOSED`; toàn bộ hồ sơ được lưu trữ tối thiểu thời hạn bảo hành + 5 năm (QT13) và sẵn sàng tra cứu (BC10).
 
 ---
 
-### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (19 BƯỚC CHI TIẾT)
+#### BƯỚC SUP-07: Quản trị Hệ thống, Tài khoản & Kiểm toán (CN10, QT01, QT02, QT09, QT14)
+- **Đường dẫn URL:** `/sup/settings` (hoặc `/sup/admin`, `/sup/audit`)
+- **Mục tiêu:** Thực hiện quyền quản trị hệ thống, tài khoản nhân sự, tra cứu nhật ký kiểm toán và thiết lập giữ hồ sơ tranh chấp pháp lý.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Đặt lại mật khẩu tài khoản người dùng (CN10):**
+     - Mở danh sách người dùng $\rightarrow$ Chọn tài khoản cần cấp lại mật khẩu.
+     - Bấm **"Đặt lại mật khẩu"** (`adminResetPassword: POST /users/{userId}/password-reset`).
+     - Hệ thống cấp mật khẩu tạm thời an toàn, ghi nhận cờ buộc đổi mật khẩu ở lần đăng nhập tiếp theo (`must_change_password: true`).
+  2. [ ] **Khóa / Mở tài khoản nhân sự (QT01, QT02):**
+     - Chuyển trạng thái tài khoản giữa `ACTIVE` và `SUSPENDED` (`updateAccount: PATCH /users/{userId}`).
+     - Kiểm tra quy tắc an toàn: Tài khoản bị khóa sẽ bị thu hồi token ngay lập tức nhưng không làm mất lịch sử tác nghiệp đã lưu.
+  3. [ ] **Tra cứu Nhật ký Kiểm toán (QT09):**
+     - Mở trang tra cứu Audit Events (`listAuditEvents: GET /audit-events`).
+     - Xem danh sách nhật ký chỉ đọc: Người thực hiện, thời điểm, hành động, dữ liệu trước/sau và nguyên nhân. Xác nhận không có chức năng sửa xóa nhật ký.
+  4. [ ] **Thiết lập Giữ hồ sơ tranh chấp (Legal Hold) (QT14):**
+     - Bật/tắt cờ Legal Hold cho dự án (`setLegalHold: PUT /projects/{projectId}/legal-hold`).
+     - Xác nhận cơ chế bảo vệ: Khi dự án có cờ Legal Hold, hệ thống chặn toàn bộ yêu cầu xóa dữ liệu kể cả khi đã hết hạn lưu trữ (QT13, QT14).
 
-| Mã bước | Tên bước kiểm tra | Role | Trạng thái hiển thị | Thao tác tương tác | Không dính giá tiền | Ghi chú kiểm thử |
+---
+
+### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (24 BƯỚC CHI TIẾT)
+
+| Mã bước | Tên bước kiểm tra | Role | Trạng thái hiển thị | Thao tác tương tác | Không dính giá tiền | Ghi chú kiểm thử theo Spec 29_9 |
 |:---:|---|:---:|:---:|:---:|:---:|---|
-| **PM-01** | Dashboard & Lối tắt | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kiểm tra 3 thẻ KPI & danh sách việc cần làm |
-| **PM-02** | Tuyến chính, Tuyến nhánh & Phân đoạn | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kiểm tra dải màu cam nhánh phụ & các chấm mốc lý trình |
-| **PM-03** | Tạo yêu cầu bay (Chọn trục/nhánh) | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tự động zoom theo đối tượng tuyến bay |
-| **PM-04** | Theo dõi tiến độ khảo sát | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Lọc trạng thái khảo sát bay |
-| **PM-05** | Hộp thư AI & Phản ánh (Lọc trục/nhánh) | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Xem nhãn phân biệt `[Trục chính]` / `[Tuyến nhánh]` |
-| **PM-06** | Thẩm định Bounding Box | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kéo thả chỉnh khung nhận diện AI |
-| **PM-07** | So sánh ảnh đa kỳ | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kéo thanh trượt Split-screen đối chiếu vết nứt |
-| **PM-08** | Gán TCVN & Phân luồng | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Chọn Fast Track hoặc Approval Track |
-| **PM-09** | Xử lý Fast Track | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | PM tự duyệt và đóng lỗi nhẹ |
-| **PM-10** | Gom đợt (Theo trục/nhánh) & Trình duyệt | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tách tổng diện tích cào bóc trục chính và nhánh phụ |
-| **PM-11** | Giao việc đội thi công | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Giao việc sau khi đợt sửa được duyệt |
-| **PM-12** | Nhiệm vụ đo đạc bổ sung | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quản lý phiếu đo đạc laser/thước đo |
-| **PM-13** | Trình hồ sơ nghiệm thu | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Nộp cặp ảnh đối chứng Before/After |
-| **SUP-01** | Khởi tạo dự án & Mời người | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Bổ nhiệm PM, Drone Operator, Crew |
-| **SUP-02** | Thẩm định tuyến chính & tuyến nhánh | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Khóa bất biến RoadSectionVersion |
-| **SUP-03** | Thẩm duyệt 4 nhánh WF-07 | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Duyệt/Sửa đổi/Từ chối từng hạng mục |
-| **SUP-04** | Nghiệm thu Before/After | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Chấp thuận hoặc Yêu cầu sửa lại (Rework) |
-| **SUP-05** | Đóng Mixed Case | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Khóa đóng nếu còn hạng mục chưa xong |
-| **SUP-06** | Rủi ro & Ký số đóng đợt | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Ký số hoàn công và xuất gói ZIP |
+| **PM-01** | Dashboard & Lối tắt | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kiểm tra 3 thẻ KPI & danh sách việc cần làm (BC02) |
+| **PM-02** | Tuyến chính, Tuyến nhánh & Phân đoạn | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Nhập tim tuyến, bề rộng và chia segment (DA02, DA13) |
+| **PM-03** | Tạo yêu cầu bay (Chọn trục/nhánh) | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Lập yêu cầu bay khảo sát (DA08, KS01) |
+| **PM-04** | Theo dõi tiến độ khảo sát | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Lọc trạng thái khảo sát bay (KS10) |
+| **PM-05** | Hộp thư AI & Phản ánh (Lọc trục/nhánh) | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Rà soát sơ bộ Preliminary Defect (AI01, AI04) |
+| **PM-06** | Thẩm định Bounding Box | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Hiệu chỉnh loại, khung bao, vị trí hư hỏng (AI05) |
+| **PM-07** | So sánh ảnh đa kỳ | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đối chiếu ảnh với baseline và các kỳ trước (AI10, AI11) |
+| **PM-08** | Gán phương án & Phân luồng | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân loại Fast Track hoặc Approval Track (FR-15, SC01) |
+| **PM-09** | Xử lý Fast Track | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | PM tự nghiệm thu và đóng lỗi nhẹ (BR-25) |
+| **PM-10** | Gom đợt & Trình duyệt | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Lập gói hồ sơ sửa chữa không chứa giá tiền (SC01-SC04) |
+| **PM-11** | Giao việc đội thi công | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Giao item APPROVED cho Crew thực hiện (SC10) |
+| **PM-12** | Nhiệm vụ đo đạc bổ sung | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Giao nhiệm vụ đo thực địa kiểm chứng (TN01, TN06) |
+| **PM-13** | Trình hồ sơ nghiệm thu | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Kiểm tra Before/After và trình Supervisor (HT09, HT11) |
+| **PM-14** | Báo cáo Phân tích & Chỉ số KPI | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Theo dõi KPI vận hành và nguy cơ suy thoái mặt đường (BC02, RPT-01) |
+| **PM-15** | Đối soát Mô hình AI & Ground Truth | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tính toán Bias, MAE, RMSE theo mm và xuất CSV (RS01-RS06, BR-44) |
+| **PM-16** | Tra cứu Nhật ký Kiểm toán | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Truy vết dòng sự kiện Durable Audit Trail (GET /audit-events) |
+| **PM-17** | Vòng đời Dữ liệu & Đề xuất Hủy | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đề xuất hủy hồ sơ hết hạn lưu trữ > 5 năm không có Legal Hold (BR-45) |
+| **SUP-01** | Khởi tạo dự án & Phân bổ nhân sự | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tạo dự án, chỉ định 1 PM chính, cấp quyền Crew (DA01, BR-01) |
+| **SUP-02** | Thẩm định & Xác nhận tuyến | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Khóa bất biến RoadSectionVersion (DA13, FR-07) |
+| **SUP-03** | Thẩm duyệt 4 nhánh từng hạng mục | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Approve/Evidence/Reconsider/Reject (SC05, BR-21) |
+| **SUP-04** | Nghiệm thu Before/After | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Accept/RequestEvidence/ReworkRequired (HT10, BR-27) |
+| **SUP-05** | Đóng Mixed Case tổng thể | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Chặn đóng nếu còn hạng mục chưa đạt (HT12, BR-26) |
+| **SUP-06** | Rủi ro, Xuất hồ sơ & Đóng dự án | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân tích rủi ro, xuất PDF/ZIP SHA-256, đóng dự án (BC01, DA12) |
+| **SUP-07** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
 
 ---
 

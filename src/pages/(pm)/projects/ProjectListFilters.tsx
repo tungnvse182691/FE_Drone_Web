@@ -1,9 +1,5 @@
 import React from 'react'
-import {
-  Search,
-  Grid,
-  Table as TableIcon
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { ProjectFilterTab, ProjectViewMode } from './types'
 
 interface ProjectListFiltersProps {
@@ -32,28 +28,28 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
   onChangeViewMode
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
       {/* State Pills / Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
         <button
           type="button"
           onClick={() => onSelectFilterTab('ALL')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'ALL'
-              ? 'bg-brand-gold text-white shadow-xs'
+              ? 'bg-brand-gold text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
           <span>Tất cả</span>
-          <span className="px-1.5 py-0.2 rounded-full bg-black/10 text-[10px] font-mono">{scopedCount}</span>
+          <span className="px-1.5 py-0.2 rounded bg-black/10 text-[10px] font-mono">{scopedCount}</span>
         </button>
 
         <button
           type="button"
           onClick={() => onSelectFilterTab('ACTIVE')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'ACTIVE'
-              ? 'bg-[#1B5E20] text-white shadow-xs'
+              ? 'bg-[#1B5E20] text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
@@ -65,9 +61,9 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
         <button
           type="button"
           onClick={() => onSelectFilterTab('NEAR_EXPIRY')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'NEAR_EXPIRY'
-              ? 'bg-rose-600 text-white shadow-xs'
+              ? 'bg-rose-600 text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
@@ -79,9 +75,9 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
         <button
           type="button"
           onClick={() => onSelectFilterTab('PENDING_ALIGNMENT')}
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'PENDING_ALIGNMENT'
-              ? 'bg-[#D97706] text-white shadow-xs'
+              ? 'bg-[#D97706] text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
@@ -94,7 +90,9 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
       {/* Quick Search & View Toggle */}
       <div className="flex items-center gap-2 flex-1 md:max-w-md justify-end">
         <div className="relative w-full">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex items-center">
+            <Icon name="search" size={16} />
+          </span>
           <input
             type="text"
             value={searchQuery}
@@ -108,22 +106,22 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           <button
             type="button"
             onClick={() => onChangeViewMode('grid')}
-            className={`p-1.5 rounded-md transition cursor-pointer ${
+            className={`p-1.5 rounded transition cursor-pointer flex items-center justify-center ${
               viewMode === 'grid' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
             title="Dạng lưới"
           >
-            <Grid className="w-4 h-4" />
+            <Icon name="grid_view" size={18} />
           </button>
           <button
             type="button"
             onClick={() => onChangeViewMode('table')}
-            className={`p-1.5 rounded-md transition cursor-pointer ${
+            className={`p-1.5 rounded transition cursor-pointer flex items-center justify-center ${
               viewMode === 'table' ? 'bg-white text-brand-gold shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-800'
             }`}
             title="Dạng bảng"
           >
-            <TableIcon className="w-4 h-4" />
+            <Icon name="table_chart" size={18} />
           </button>
         </div>
       </div>

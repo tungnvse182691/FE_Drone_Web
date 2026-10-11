@@ -59,7 +59,9 @@ export function useAlignmentSegmentsState({
 
   const handleApplyAutoSplit = () => {
     const totalKm = importedLengthKm || (currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0]) || 25.0
-    const startBaseKm = currentKmPoints[0] || 1020.0
+    const startBaseKm = currentKmPoints && currentKmPoints.length > 0 && currentKmPoints[0] !== undefined
+      ? currentKmPoints[0]
+      : 0.0
     const dist = Math.max(0.01, Math.min(splitDistance, totalKm))
 
     const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
@@ -73,6 +75,14 @@ export function useAlignmentSegmentsState({
     const distText = dist >= 1 ? `${dist.toFixed(2)} km` : `${(dist * 1000).toFixed(0)} m`
     showToast(`Đã chia tuyến thành ${validated.length} phân đoạn (${distText}/đoạn). Tuyến đường hiển thị liên tục chuẩn thiết kế!`)
     handleFitBounds()
+  }
+
+  const handleClearAllSegments = () => {
+    setSegments([])
+    setSlabs([])
+    setSelectedSegmentId(null)
+    syncMap([], null)
+    showToast('Đã xóa toàn bộ phân đoạn! Bạn có thể chọn cự ly và bấm "Áp dụng chia đoạn tự động" để chia lại.')
   }
 
   const handleSaveEditedSegment = (e: React.FormEvent) => {
@@ -272,6 +282,7 @@ export function useAlignmentSegmentsState({
     customSplitKm,
     setCustomSplitKm,
     handleApplyAutoSplit,
+    handleClearAllSegments,
     handleSaveEditedSegment,
     handleCreateNewSegment,
     handleSplitSegmentSubmit,

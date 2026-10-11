@@ -1,84 +1,113 @@
 import React from 'react'
-import {
-  Home,
-  ChevronRight,
-  Route as RouteIcon,
-  MapPin,
-  ShieldCheck,
-  Settings,
-  Clock,
-  ArrowRight
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
+import { HubProject } from '../projects/types'
 
 interface ProjectOverviewHeaderProps {
+  project: HubProject
   basePath: string
   isSupervisor: boolean
   onNavigate: (path: string) => void
   onUpdateInfo: () => void
+  mainlineLengthKm?: number
+  branchesLengthKm?: number
+  branchesCount?: number
 }
 
 export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
+  project,
   basePath,
   isSupervisor,
   onNavigate,
-  onUpdateInfo
+  onUpdateInfo,
+  mainlineLengthKm = 0,
+  branchesLengthKm = 0,
+  branchesCount = 0
 }) => {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-          <button
-            onClick={() => onNavigate(`${basePath}/dashboard`)}
-            className="hover:text-brand-gold flex items-center gap-1 cursor-pointer transition-colors"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span>Trang chủ</span>
-          </button>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <button
-            onClick={() => onNavigate(`${basePath}/projects`)}
-            className="hover:text-brand-gold cursor-pointer transition-colors"
-          >
-            Dự án
-          </button>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-brand-dark font-semibold">QL1A - Giai đoạn 2</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-brand-gold font-bold">Tổng quan &amp; Nhân sự</span>
-        </nav>
-      </div>
+  const hasPendingProposals = project.repair_packages > 0
 
-      {/* Main Header Card */}
-      <div className="bg-white border border-brand-border rounded-xl p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+  return (
+    <div className="flex flex-col gap-3 font-body">
+      {/* Breadcrumb */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+        <button
+          onClick={() => onNavigate(`${basePath}/dashboard`)}
+          className="hover:text-brand-gold flex items-center gap-1 cursor-pointer transition-colors"
+        >
+          <Icon name="home" size={16} />
+          <span>Trang chủ</span>
+        </button>
+        <Icon name="chevron_right" size={16} className="text-slate-400" />
+        <button
+          onClick={() => onNavigate(`${basePath}/projects`)}
+          className="hover:text-brand-gold cursor-pointer transition-colors"
+        >
+          Dự án
+        </button>
+        <Icon name="chevron_right" size={16} className="text-slate-400" />
+        <span className="text-slate-800 font-semibold">{project.name}</span>
+        <Icon name="chevron_right" size={16} className="text-slate-400" />
+        <span className="text-brand-gold font-bold">Tổng quan &amp; Nhân sự</span>
+      </nav>
+
+      {/* Main Header Card - Minimalism */}
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl lg:text-3xl font-bold text-brand-dark tracking-tight">
-              Quốc lộ 1A - Giai đoạn 2
+            <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight font-headline">
+              {project.name}
             </h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">
-              PRJ-QL1A-02
+            <span className="text-xs px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">
+              {project.code}
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-gold/10 text-[#8F7212] border border-brand-gold/30 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
-              Đang trong thời hạn bảo hành
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                project.status === 'NEAR_EXPIRY'
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                  : project.status === 'PENDING_ALIGNMENT'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  project.status === 'NEAR_EXPIRY'
+                    ? 'bg-rose-600 animate-ping'
+                    : project.status === 'PENDING_ALIGNMENT'
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-600'
+                }`}
+              ></span>
+              {project.status_label}
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 font-medium">
-            <div className="flex items-center gap-1 font-mono text-brand-dark font-semibold">
-              <RouteIcon className="w-3.5 h-3.5 text-brand-gold" />
-              <span>Km 1024+000 → Km 1045+500</span>
+          <div className="flex flex-wrap items-center gap-y-1.5 gap-x-3 text-xs text-slate-500 font-medium">
+            <div className="flex items-center gap-1 font-mono text-slate-800 font-semibold">
+              <Icon name="alt_route" size={16} className="text-brand-gold" />
+              <span>{project.stationing_text}</span>
+            </div>
+
+            {/* Chi tiết Tuyến chính & Tuyến phụ Badge */}
+            <div className="flex items-center gap-1 font-mono text-[11px] bg-amber-50/90 text-amber-950 border border-amber-200/90 px-2 py-0.5 rounded shadow-2xs">
+              <span className="font-semibold">Trục chính: {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : (project.length_km > 0 ? `${project.length_km}km` : '0km')}</span>
+              {branchesCount > 0 ? (
+                <span className="text-amber-800 font-bold">
+                  • {branchesCount} tuyến phụ ({branchesLengthKm}km)
+                </span>
+              ) : (
+                <span className="text-slate-500 font-normal">• 0 tuyến phụ</span>
+              )}
+            </div>
+
+            <span className="text-slate-300">•</span>
+            <div className="flex items-center gap-1">
+              <Icon name="location_on" size={16} className="text-slate-400" />
+              <span>Khu vực: {project.region} ({project.location_detail})</span>
             </div>
             <span className="text-slate-300">•</span>
             <div className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              <span>Khu vực: Thừa Thiên Huế – TP. Đà Nẵng</span>
-            </div>
-            <span className="text-slate-300">•</span>
-            <div className="flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-              <span>Chủ đầu tư: Ban Quản lý Dự án Đường bộ</span>
+              <Icon name="verified_user" size={16} className="text-slate-400" />
+              <span>PM Chính: {project.pm_name}</span>
             </div>
           </div>
         </div>
@@ -87,48 +116,103 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           <button
             onClick={onUpdateInfo}
             type="button"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
           >
-            <Settings className="w-4 h-4 text-slate-500" />
+            <Icon name="settings" size={16} className="text-slate-500" />
             <span>Cập nhật thông tin</span>
           </button>
         </div>
       </div>
 
-      {/* Workflow Handover Status Banner */}
-      <div className="bg-white border border-brand-border rounded-xl p-4 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-brand-dark">
-                Đang chờ Supervisor duyệt: 02 Đề xuất phương án kỹ thuật sửa chữa (WF-07)
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 uppercase tracking-wide border border-red-200">
-                SLA CẢNH BÁO
-              </span>
+      {/* Workflow Context Banner */}
+      {hasPendingProposals ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
+              <Icon name="schedule" size={20} />
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Trách nhiệm hiện tại:{' '}
-              <strong className="font-semibold text-brand-dark">Supervisor Nguyễn Văn An</strong>. Hạn cam kết phản hồi:{' '}
-              <span className="font-mono font-bold text-red-600">còn 14 giờ</span> trước khi vi phạm chuẩn quy trình O&amp;M.
-            </p>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-slate-900">
+                  Đang chờ Supervisor duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa (WF-07)
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 uppercase tracking-wide">
+                  SLA CẢNH BÁO
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Trách nhiệm hiện tại: <strong className="font-semibold text-slate-900">Giám sát trưởng (Supervisor)</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
+            <button
+              onClick={() => onNavigate(`${basePath}/proposals`)}
+              type="button"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <span>{isSupervisor ? 'Mở nhanh WF-07 để duyệt' : 'Xem các đề xuất đã trình (WF-07)'}</span>
+              <Icon name="arrow_forward" size={16} />
+            </button>
           </div>
         </div>
+      ) : project.length_km === 0 ? (
+        <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 text-[#D97706] flex items-center justify-center shrink-0">
+              <Icon name="alt_route" size={20} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-900">
+                Bước tiếp theo: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
+              </span>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Dự án vừa được khởi tạo bởi Supervisor (DA01). Kỹ sư PM <strong className="text-slate-900">{project.pm_name}</strong> cần nhập chuỗi tọa độ tim tuyến WGS84 và bề rộng để kích hoạt không gian trắc địa.
+              </p>
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
           <button
-            onClick={() => onNavigate(`${basePath}/proposals`)}
+            onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
             type="button"
-            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
           >
-            <span>{isSupervisor ? 'Mở nhanh WF-07 để duyệt' : 'Xem các đề xuất đã trình (WF-07)'}</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Thiết lập tim tuyến (WF-02)</span>
+            <Icon name="arrow_forward" size={16} />
           </button>
         </div>
-      </div>
+      ) : project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT' ? (
+        <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+              <Icon name="pending_actions" size={20} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-slate-900">
+                  Hồ sơ tim tuyến &amp; Phân đoạn lý trình đang chờ thẩm duyệt (WF-02)
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wide">
+                  CHỜ DUYỆT
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {project.length_km} km) và trình duyệt sang Supervisor.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+            type="button"
+            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
+          >
+            <span>{isSupervisor ? 'Thẩm duyệt tim tuyến' : 'Xem chi tiết tim tuyến'}</span>
+            <Icon name="arrow_forward" size={16} />
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

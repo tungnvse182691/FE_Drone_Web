@@ -1,10 +1,5 @@
 import React from 'react'
-import {
-  Route,
-  CheckCircle2,
-  AlertTriangle,
-  Clock
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { ProjectKpiStats } from './types'
 
 interface ProjectListKpisProps {
@@ -13,11 +8,11 @@ interface ProjectListKpisProps {
 
 export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) => {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-body">
       {/* KPI 1: Tổng chiều dài */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-brand-gold shrink-0">
-          <Route className="w-5 h-5 stroke-[2.2]" />
+        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-brand-gold shrink-0">
+          <Icon name="alt_route" size={20} />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Tổng chiều dài quản lý</span>
@@ -29,8 +24,8 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
 
       {/* KPI 2: Đang bảo hành */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-[#EDF7ED] flex items-center justify-center text-[#1B5E20] shrink-0">
-          <CheckCircle2 className="w-5 h-5 stroke-[2.2]" />
+        <div className="w-10 h-10 rounded-lg bg-[#EDF7ED] flex items-center justify-center text-[#1B5E20] shrink-0">
+          <Icon name="check_circle" size={20} />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Đang bảo hành ổn định</span>
@@ -42,8 +37,8 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
 
       {/* KPI 3: Sắp hết hạn */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-[#FEE2E2] flex items-center justify-center text-rose-600 shrink-0">
-          <AlertTriangle className="w-5 h-5 stroke-[2.2]" />
+        <div className="w-10 h-10 rounded-lg bg-[#FEE2E2] flex items-center justify-center text-rose-600 shrink-0">
+          <Icon name="warning" size={20} />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Sắp hết hạn (&lt;30 ngày)</span>
@@ -55,8 +50,8 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
 
       {/* KPI 4: Chờ định vị tim tuyến */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
-        <div className="w-11 h-11 rounded-xl bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0">
-          <Clock className="w-5 h-5 stroke-[2.2]" />
+        <div className="w-10 h-10 rounded-lg bg-[#FEF3C7] flex items-center justify-center text-[#D97706] shrink-0">
+          <Icon name="schedule" size={20} />
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Chờ định vị tim tuyến</span>

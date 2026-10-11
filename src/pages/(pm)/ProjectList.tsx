@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { projectService } from '../../api/services'
+import { Icon } from '../../components/ui/Icon'
 import {
   HubProject,
   ProjectFilterTab,
@@ -25,17 +26,34 @@ export const ProjectList: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
-  // Projects state
-  const [projects, setProjects] = useState<HubProject[]>(() => projectService.getProjects())
+  // Projects state & Async Mock API fetch
+  const [projects, setProjects] = useState<HubProject[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // Đồng bộ real-time giữa Supervisor khởi tạo và PM
+  const loadProjects = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const data = await projectService.fetchProjects()
+      setProjects(data)
+    } catch (err: any) {
+      console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadProjects()
+  }, [loadProjects])
+
+  // Đồng bộ reactive qua Event Bus
   useEffect(() => {
     const handleStateChange = () => {
-      setProjects(projectService.getProjects())
+      loadProjects()
     }
     window.addEventListener('roadguard_state_change', handleStateChange)
     return () => window.removeEventListener('roadguard_state_change', handleStateChange)
-  }, [])
+  }, [loadProjects])
 
   const [filterTab, setFilterTab] = useState<ProjectFilterTab>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -47,10 +65,10 @@ export const ProjectList: React.FC = () => {
     setToastMessage(msg)
     setTimeout(() => {
       setToastMessage(null)
-    }, 3800)
+    }, 4000)
   }
 
-  // Modal Khởi tạo dự án mới
+  // Modal Khởi tạo dự án mới (Bước SUP-01: DA01, BR-01, FR-04)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('Quốc lộ 14 - Đoạn Chơn Thành')
   const [newProjectCode, setNewProjectCode] = useState('PRJ-QL14-01')
@@ -58,57 +76,35 @@ export const ProjectList: React.FC = () => {
   const [newProjectPM, setNewProjectPM] = useState('Đỗ Quốc Hoàng (pmhoang@gmail.com)')
   const [newStartDate, setNewStartDate] = useState('2026-10-01')
   const [newEndDate, setNewEndDate] = useState('2029-10-01')
-  const [newStartKm, setNewStartKm] = useState('Km 0+000')
-  const [newEndKm, setNewEndKm] = useState('Km 28+500')
-  const [newLengthKm, setNewLengthKm] = useState('28.5')
-  const [newInspectionStandard, setNewInspectionStandard] = useState('TCVN 8819:2011 (Mặt đường BTN nóng)')
+  const [handoverFiles, setHandoverFiles] = useState<string[]>(['FILE-BB-BG-01'])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Submit tạo dự án mới (Supervisor quản lý)
-  const handleCreateProjectSubmit = (e: React.FormEvent) => {
+  // Submit tạo dự án mới bất đồng bộ qua Mock API (Chỉ Supervisor mới có quyền - BR-01, FR-04)
+  const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const parsedLength = parseFloat(newLengthKm) || 28.5
-    const isUnassigned = newProjectPM === '-- Để trống --'
-    const pmName = isUnassigned ? 'Chưa phân công' : newProjectPM.split(' (')[0]
-    const pmEmail = isUnassigned
-      ? ''
-      : newProjectPM.includes('(')
-      ? newProjectPM.split('(')[1].replace(')', '')
-      : 'pmhoang@gmail.com'
-
-    const newProject: HubProject = {
-      id: `prj-${Date.now()}`,
-      code: newProjectCode || `PRJ-AUTO-${Math.floor(Math.random() * 900 + 100)}`,
-      name: newProjectName,
-      region: newProjectRegion,
-      location_detail: newProjectRegion,
-      start_km: 0.0,
-      end_km: parsedLength,
-      stationing_text: `${newStartKm} ➔ ${newEndKm}`,
-      status: 'PENDING_ALIGNMENT',
-      status_label: 'Chờ duyệt tuyến',
-      status_color: '#D97706',
-      pm_name: pmName,
-      pm_email: pmEmail,
-      pm_role_badge: isUnassigned ? 'Chưa gán' : 'PM Tuyến',
-      warranty_passed_percent: 0,
-      days_remaining: 1095,
-      length_km: parsedLength,
-      open_defects: 0,
-      repair_packages: 0,
-      image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
-      is_assigned: !isUnassigned,
-      is_restricted_for_pm: false,
-      kml_status: 'Chờ phê duyệt KML',
-      inspection_standard: newInspectionStandard || 'TCVN 8819:2011'
+    setIsSubmitting(true)
+    try {
+      const created = await projectService.createProject({
+        code: newProjectCode,
+        name: newProjectName,
+        primaryPmId: newProjectPM,
+        handoverDate: newStartDate,
+        warrantyEndDate: newEndDate,
+        handoverFileIds: handoverFiles,
+        region: newProjectRegion
+      })
+      const refreshed = await projectService.fetchProjects()
+      setProjects(refreshed)
+      setIsModalOpen(false)
+      showToast(`Khởi tạo thành công dự án [${created.code}] và phân bổ PM [${created.pm_name}] (BR-01, FR-04)!`)
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khởi tạo dự án')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    projectService.createProject(newProject)
-    setProjects(projectService.getProjects())
-    setIsModalOpen(false)
-    showToast(`Khởi tạo thành công dự án [${newProject.code}] và đã chuyển sang trạng thái Chờ phê duyệt tim tuyến (WF-02)!`)
   }
 
-  // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope)
+  // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
   const scopedProjects = useMemo(() => {
     if (isSupervisor) return projects
     return projects.filter((prj) => {
@@ -145,7 +141,7 @@ export const ProjectList: React.FC = () => {
     })
   }, [scopedProjects, filterTab, searchQuery])
 
-  // KPI Metrics Calculation dựa trên phạm vi dự án được phân công
+  // KPI Metrics Calculation
   const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
@@ -194,7 +190,12 @@ export const ProjectList: React.FC = () => {
         onChangeViewMode={setViewMode}
       />
 
-      {viewMode === 'grid' ? (
+      {isLoading ? (
+        <div className="p-12 text-center bg-white rounded-xl border border-slate-200 text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+          <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
+          <span>Đang tải danh mục dự án từ máy chủ API...</span>
+        </div>
+      ) : viewMode === 'grid' ? (
         <ProjectGridView
           filteredProjects={filteredProjects}
           isSupervisor={isSupervisor}
@@ -210,6 +211,7 @@ export const ProjectList: React.FC = () => {
         />
       )}
 
+      {/* MODAL KHỞI TẠO DỰ ÁN (BƯỚC SUP-01: DA01, BR-01, FR-04) */}
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -225,22 +227,17 @@ export const ProjectList: React.FC = () => {
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
-        inspectionStandard={newInspectionStandard}
-        onChangeInspectionStandard={setNewInspectionStandard}
-        startKm={newStartKm}
-        onChangeStartKm={setNewStartKm}
-        endKm={newEndKm}
-        onChangeEndKm={setNewEndKm}
-        lengthKm={newLengthKm}
-        onChangeLengthKm={setNewLengthKm}
+        handoverFiles={handoverFiles}
+        onChangeHandoverFiles={setHandoverFiles}
+        isSubmitting={isSubmitting}
         onSubmit={handleCreateProjectSubmit}
       />
 
       {/* TOAST FEEDBACK FLOATING NOTIFICATION */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300">
-          <div className="px-4 py-3 bg-slate-900 text-white rounded-xl shadow-xl flex items-center gap-3 border border-slate-800 text-xs">
-            <span className="w-2 h-2 rounded-full bg-brand-gold animate-ping shrink-0"></span>
+          <div className="px-4 py-3 bg-slate-900 text-white rounded-lg shadow-xl flex items-center gap-2.5 border border-slate-800 text-xs">
+            <span className="w-2 h-2 rounded-full bg-brand-gold shrink-0"></span>
             <span className="font-medium">{toastMessage}</span>
           </div>
         </div>

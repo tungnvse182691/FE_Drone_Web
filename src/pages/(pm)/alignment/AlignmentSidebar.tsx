@@ -23,6 +23,7 @@ export interface AlignmentSidebarProps {
   onApplyAutoSplit: () => void
   onOpenAddSegmentModal: () => void
   onSelectAllRoute: () => void
+  currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
   slabLengthM: number
@@ -51,6 +52,9 @@ export interface AlignmentSidebarProps {
   onSelectTargetType?: (type: 'MAINLINE' | string) => void
   onOpenAddBranchModal?: () => void
   onDeleteBranch?: (branchId: string) => void
+  onClearAllSegments?: () => void
+  onClearMainline?: () => void
+  onOpenImportModal?: () => void
   mainlineLengthKm?: number
 }
 
@@ -67,6 +71,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onApplyAutoSplit,
   onOpenAddSegmentModal,
   onSelectAllRoute,
+  currentCoords = [],
   currentKmPoints,
   importedLengthKm,
   slabLengthM,
@@ -94,6 +99,9 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onSelectTargetType,
   onOpenAddBranchModal,
   onDeleteBranch,
+  onClearAllSegments,
+  onClearMainline,
+  onOpenImportModal,
   mainlineLengthKm
 }) => {
   return (
@@ -161,6 +169,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onApplyAutoSplit={onApplyAutoSplit}
             onOpenAddSegmentModal={onOpenAddSegmentModal}
             onSelectAllRoute={onSelectAllRoute}
+            currentCoords={currentCoords}
             currentKmPoints={currentKmPoints}
             importedLengthKm={importedLengthKm}
             slabLengthM={slabLengthM}
@@ -173,6 +182,9 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onSelectTargetType={onSelectTargetType}
             onOpenAddBranchModal={onOpenAddBranchModal}
             onDeleteBranch={onDeleteBranch}
+            onClearAllSegments={onClearAllSegments}
+            onClearMainline={onClearMainline}
+            onOpenImportModal={onOpenImportModal}
             mainlineLengthKm={mainlineLengthKm}
           />
         )}

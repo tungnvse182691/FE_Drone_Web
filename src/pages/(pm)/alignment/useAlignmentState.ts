@@ -3,9 +3,9 @@ import { useParams } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
-import { alignmentService } from '../../../api/services'
-import { SegmentItem } from './types'
-import { PM_ASSIGNED_PROJECTS, SEGMENT_COLORS } from './data'
+import { alignmentService, projectService } from '../../../api/services'
+import { SegmentItem, AssignedProjectOption } from './types'
+import { PM_ASSIGNED_PROJECTS, SEGMENT_COLORS, getAvailableAssignedProjects } from './data'
 import {
   checkAndEnrichSegmentsContinuity,
   generateMockSlabs,
@@ -20,18 +20,21 @@ export function useAlignmentState() {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
-  // Lấy dự án từ URL (nếu có: /pm/projects/:id/alignment)
+  const [assignedProjects, setAssignedProjects] = useState<AssignedProjectOption[]>(() => getAvailableAssignedProjects())
+
+  // Lấy dự án từ URL (nếu có: /pm/projects/:id/alignment hoặc /sup/projects/:id/alignment)
   const { id: urlProjectId } = useParams<{ id?: string }>()
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
-    if (urlProjectId && PM_ASSIGNED_PROJECTS.some((p) => p.id === urlProjectId)) {
+    const list = getAvailableAssignedProjects()
+    if (urlProjectId && list.some((p) => p.id === urlProjectId)) {
       return urlProjectId
     }
-    return PM_ASSIGNED_PROJECTS[0].id
+    return list[0]?.id || PM_ASSIGNED_PROJECTS[0].id
   })
 
   const activeProject = useMemo(() => {
-    return PM_ASSIGNED_PROJECTS.find((p) => p.id === selectedProjectId) || PM_ASSIGNED_PROJECTS[0]
-  }, [selectedProjectId])
+    return assignedProjects.find((p) => p.id === selectedProjectId) || assignedProjects[0] || PM_ASSIGNED_PROJECTS[0]
+  }, [assignedProjects, selectedProjectId])
 
   // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
   const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'>(() => {
@@ -45,6 +48,8 @@ export function useAlignmentState() {
 
   useEffect(() => {
     const handleStateChange = () => {
+      const list = getAvailableAssignedProjects()
+      setAssignedProjects(list)
       const state = alignmentService.getAlignmentState(selectedProjectId)
       setAlignmentStatus(state.status)
     }
@@ -64,65 +69,13 @@ export function useAlignmentState() {
   const [syncJointWithSlab, setSyncJointWithSlab] = useState<boolean>(true)
 
   // Quản lý Tuyến nhánh (Branch Alignment)
-  const [branches, setBranches] = useState<any[]>([
-    {
-      id: 'br-01',
-      code: 'BR-01',
-      name: 'Nhánh rẽ Đèo Hải Vân',
-      branchStationKm: 1024.5,
-      branchStationText: 'Km 1024+500',
-      direction: 'RIGHT',
-      directionText: 'Rẽ phải',
-      lengthKm: 1.85,
-      roadWidthM: 8.0,
-      laneCount: 2,
-      surfaceMaterial: 'Mặt BTN C12.5',
-      color: '#D97706',
-      status: 'DRAFT',
-      splitDistance: 0.5,
-      segments: [
-        {
-          id: 'br-seg-01',
-          code: 'BR-01 - Đoạn #01',
-          startKm: 0.0,
-          endKm: 0.9,
-          lengthKm: 0.9,
-          roadWidthM: 8.0,
-          status: 'VALID',
-          statusText: 'HỢP LỆ',
-          laneCount: 2,
-          surfaceMaterial: 'Mặt BTN C12.5',
-          color: '#D97706'
-        },
-        {
-          id: 'br-seg-02',
-          code: 'BR-01 - Đoạn #02',
-          startKm: 0.9,
-          endKm: 1.85,
-          lengthKm: 0.95,
-          roadWidthM: 8.0,
-          status: 'VALID',
-          statusText: 'HỢP LỆ',
-          laneCount: 2,
-          surfaceMaterial: 'Mặt BTN C12.5',
-          color: '#F59E0B'
-        }
-      ]
-    }
-  ])
+  const [branches, setBranches] = useState<any[]>(() => {
+    const saved = alignmentService.getAlignmentData(selectedProjectId)
+    if (saved.branches !== undefined) return saved.branches
+    return activeProject.defaultBranches || []
+  })
   const [selectedTargetType, setSelectedTargetType] = useState<'MAINLINE' | string>('MAINLINE')
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState<boolean>(false)
-
-  const handleAddBranch = (newBranch: any) => {
-    setBranches((prev) => [...prev, newBranch])
-    setSelectedTargetType(newBranch.id)
-    if (newBranch.segments && newBranch.segments.length > 0) {
-      segmentsState.setSelectedSegmentId(newBranch.segments[0].id)
-    } else {
-      segmentsState.setSelectedSegmentId(newBranch.id)
-    }
-    showToast(`Đã tạo thành công tuyến nhánh [${newBranch.code}] ${newBranch.name}`)
-  }
 
   const roadWidthM = 8.0
 
@@ -134,13 +87,78 @@ export function useAlignmentState() {
   }
 
   // State tọa độ tim tuyến và mốc lý trình đồng bộ toàn cục
-  const [currentCoords, setCurrentCoords] = useState<[number, number][]>(activeProject.defaultCoords)
-  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(activeProject.defaultKmPoints)
-  const [importedLengthKm, setImportedLengthKm] = useState<number>(activeProject.lengthKm)
+  const [currentCoords, setCurrentCoords] = useState<[number, number][]>(() => {
+    const saved = alignmentService.getAlignmentData(selectedProjectId)
+    if (saved.coords !== undefined) return saved.coords
+    return activeProject.defaultCoords || []
+  })
+  const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(() => {
+    const saved = alignmentService.getAlignmentData(selectedProjectId)
+    if (saved.kmPoints !== undefined) return saved.kmPoints
+    return activeProject.defaultKmPoints || []
+  })
+  const [importedLengthKm, setImportedLengthKm] = useState<number>(() => {
+    const saved = alignmentService.getAlignmentData(selectedProjectId)
+    if (saved.coords && saved.coords.length >= 2) {
+      return calculateCoordsLengthKm(saved.coords)
+    }
+    if (activeProject.defaultCoords && activeProject.defaultCoords.length >= 2) {
+      return activeProject.lengthKm
+    }
+    return 0.0
+  })
+
+  // Tính tổng quãng đường: Trục chính + Các tuyến nhánh phụ
+  const branchesTotalLengthKm = useMemo(() => {
+    return branches.reduce((sum, b) => {
+      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
+      return sum + len
+    }, 0)
+  }, [branches])
+
+  const totalProjectLengthKm = useMemo(() => {
+    return parseFloat((importedLengthKm + branchesTotalLengthKm).toFixed(3))
+  }, [importedLengthKm, branchesTotalLengthKm])
+
+  const handleAddBranch = (newBranch: any) => {
+    const updatedBranches = [...branches, newBranch]
+    setBranches(updatedBranches)
+    setSelectedTargetType(newBranch.id)
+    if (newBranch.segments && newBranch.segments.length > 0) {
+      segmentsState.setSelectedSegmentId(newBranch.segments[0].id)
+    } else {
+      segmentsState.setSelectedSegmentId(newBranch.id)
+    }
+
+    // Tự động tính tổng quãng đường mới và lưu tức thì
+    const bLen = updatedBranches.reduce((sum, b) => {
+      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
+      return sum + len
+    }, 0)
+    const newTotalKm = parseFloat((importedLengthKm + bLen).toFixed(3))
+
+    alignmentService.saveAlignmentData(selectedProjectId, {
+      coords: currentCoords,
+      kmPoints: currentKmPoints,
+      segments: segmentsState.segments,
+      branches: updatedBranches
+    })
+    projectService.updateProjectAlignment(selectedProjectId, {
+      length_km: newTotalKm,
+      kml_status: 'CONFIRMED'
+    })
+
+    showToast(`Đã tạo thành công tuyến nhánh [${newBranch.code}] ${newBranch.name}`)
+  }
 
   // Hook 1: Segments & Slabs State
+  const initialSegments = useMemo(() => {
+    const saved = alignmentService.getAlignmentData(selectedProjectId)
+    return saved.segments || activeProject.defaultSegments
+  }, [selectedProjectId, activeProject])
+
   const segmentsState = useAlignmentSegmentsState({
-    initialSegments: activeProject.defaultSegments,
+    initialSegments,
     currentKmPoints,
     currentCoords,
     importedLengthKm,
@@ -261,36 +279,77 @@ export function useAlignmentState() {
     currentKmPoints,
     setCurrentKmPoints,
     importedLengthKm,
-    setImportedLengthKm
+    setImportedLengthKm,
+    onAutoSave: (coords, kmPoints, segs) => {
+      const mainLen = calculateCoordsLengthKm(coords)
+      const bLen = branches.reduce((sum, b) => {
+        const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
+        return sum + len
+      }, 0)
+      const totalKm = parseFloat((mainLen + bLen).toFixed(3))
+
+      alignmentService.saveAlignmentData(selectedProjectId, {
+        coords,
+        kmPoints,
+        segments: segs,
+        branches
+      })
+      projectService.updateProjectAlignment(selectedProjectId, {
+        length_km: totalKm,
+        kml_status: 'CONFIRMED',
+        stationing_text: `Km 0+000 ➔ Km ${totalKm.toFixed(3).replace('.', '+')}`
+      })
+    }
   })
 
   // Chuyển đổi dự án PM phụ trách
   const handleSwitchProject = (prjId: string) => {
-    const target = PM_ASSIGNED_PROJECTS.find((p) => p.id === prjId)
+    const list = getAvailableAssignedProjects()
+    setAssignedProjects(list)
+    const target = list.find((p) => p.id === prjId)
     if (!target) return
     setSelectedProjectId(prjId)
-    setCurrentCoords(target.defaultCoords)
-    setCurrentKmPoints(target.defaultKmPoints)
-    setImportedLengthKm(target.lengthKm)
-    importState.setManualCoordsText(target.defaultManualText)
-    const validated = checkAndEnrichSegmentsContinuity(target.defaultSegments)
+
+    const saved = alignmentService.getAlignmentData(prjId)
+    const coords = saved.coords !== undefined ? saved.coords : (target.defaultCoords || [])
+    const kmPoints = saved.kmPoints !== undefined ? saved.kmPoints : (target.defaultKmPoints || [])
+    const branchesData = saved.branches !== undefined ? saved.branches : (target.defaultBranches || [])
+    const segsData = saved.segments !== undefined ? saved.segments : (target.defaultSegments || [])
+    const calcLen = coords.length >= 2 ? calculateCoordsLengthKm(coords) : (target.defaultCoords.length >= 2 ? target.lengthKm : 0)
+
+    setCurrentCoords(coords)
+    setCurrentKmPoints(kmPoints)
+    setBranches(branchesData)
+    setSelectedTargetType('MAINLINE')
+    setImportedLengthKm(calcLen)
+    importState.setManualCoordsText(coords.length > 0 ? coords.map((c) => `${c[0]}, ${c[1]}`).join('\n') : '')
+
+    const validated = checkAndEnrichSegmentsContinuity(segsData)
     segmentsState.setSegments(validated)
     segmentsState.setSlabs(generateMockSlabs(validated.length))
     segmentsState.setSelectedSegmentId(validated[0]?.id || null)
     segmentsState.setNewSegForm({
       code: '',
       startKm: target.stationOriginKm,
-      endKm: target.stationOriginKm + 5.0,
+      endKm: target.stationOriginKm + (calcLen > 0 ? Math.min(5.0, calcLen) : 5.0),
       roadWidthM: 8.0,
       laneCount: 4,
       surfaceMaterial: 'Mặt BTN C12.5',
       color: SEGMENT_COLORS[0]
     })
+
+    const state = alignmentService.getAlignmentState(prjId)
+    setAlignmentStatus(state.status)
+
     showToast(`Đã chuyển sang dự án [${target.code}] ${target.name}`)
-    if (mapState.mapRef.current && target.defaultCoords.length > 0) {
-      const bounds = new maplibregl.LngLatBounds()
-      target.defaultCoords.forEach((c) => bounds.extend(c))
-      mapState.mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
+    if (mapState.mapRef.current) {
+      if (coords.length > 0) {
+        const bounds = new maplibregl.LngLatBounds()
+        coords.forEach((c) => bounds.extend(c))
+        mapState.mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
+      } else {
+        mapState.handleFitBounds([])
+      }
     }
   }
 
@@ -508,28 +567,99 @@ export function useAlignmentState() {
 
   // Xóa toàn bộ tuyến nhánh nếu nhập sai muốn nhập lại
   const handleDeleteBranch = (branchId: string) => {
-    setBranches((prev) => prev.filter((b) => b.id !== branchId))
+    const updatedBranches = branches.filter((b) => b.id !== branchId)
+    setBranches(updatedBranches)
     if (selectedTargetType === branchId) {
       setSelectedTargetType('MAINLINE')
     }
+
+    const bLen = updatedBranches.reduce((sum, b) => {
+      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
+      return sum + len
+    }, 0)
+    const newTotalKm = parseFloat((importedLengthKm + bLen).toFixed(3))
+
+    alignmentService.saveAlignmentData(selectedProjectId, {
+      coords: currentCoords,
+      kmPoints: currentKmPoints,
+      segments: segmentsState.segments,
+      branches: updatedBranches
+    })
+    projectService.updateProjectAlignment(selectedProjectId, {
+      length_km: newTotalKm,
+      kml_status: currentCoords.length > 0 ? 'CONFIRMED' : 'NOT_CONFIGURED'
+    })
+
     showToast('Đã xóa tuyến nhánh thành công! Bạn có thể tạo lại tuyến nhánh mới.')
   }
 
   const handleSubmitAlignment = () => {
+    if (segmentsState.segments.length === 0) {
+      showToast('Cảnh báo v2.2 (WF-02): Tuyến đường chưa có phân đoạn nào! Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động" (hoặc nạp tệp tọa độ) trước khi trình duyệt.')
+      return
+    }
     const hasAnyGap = segmentsState.segments.some((s) => s.hasGap)
     if (hasAnyGap) {
       showToast('Cảnh báo v2.2 (WF-02.F04): Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
       return
     }
-    alignmentService.submitAlignment(selectedProjectId)
+    alignmentService.saveAlignmentData(selectedProjectId, {
+      coords: currentCoords,
+      kmPoints: currentKmPoints,
+      segments: segmentsState.segments,
+      branches
+    })
+    alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
     setAlignmentStatus('PENDING_APPROVAL')
     showToast('Đã gửi hồ sơ thiết lập tim tuyến (WF-02) sang Supervisor để thẩm duyệt & ký số!')
   }
 
   const handleLockAlignment = () => {
-    alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor')
+    alignmentService.saveAlignmentData(selectedProjectId, {
+      coords: currentCoords,
+      kmPoints: currentKmPoints,
+      segments: segmentsState.segments,
+      branches
+    })
+    alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor', totalProjectLengthKm)
     setAlignmentStatus('CONFIRMED')
     showToast('Dự án đã chính thức KHÓA TIM TUYẾN (CONFIRMED)! Chữ ký số SHA-256 đã được gắn bất biến.')
+  }
+
+  // Xóa toàn bộ tim tuyến chính và các phân đoạn để PM nhập hoặc vẽ lại từ đầu
+  const handleClearMainline = () => {
+    setCurrentCoords([])
+    setCurrentKmPoints([])
+    setImportedLengthKm(0)
+    setBranches([])
+    setSelectedTargetType('MAINLINE')
+    importState.setManualCoordsText('')
+
+    segmentsState.setSegments([])
+    segmentsState.setSlabs([])
+    segmentsState.setSelectedSegmentId(null)
+
+    alignmentService.saveAlignmentData(selectedProjectId, {
+      coords: [],
+      kmPoints: [],
+      segments: [],
+      branches: []
+    })
+    projectService.updateProjectAlignment(selectedProjectId, {
+      length_km: 0,
+      kml_status: 'NOT_CONFIGURED',
+      stationing_text: 'Chưa có lý trình'
+    })
+
+    // Đồng bộ ngay với bản đồ MapLibre
+    mapState.syncMap([], null, [], [], [])
+    if (mapState.markersRef.current) {
+      mapState.markersRef.current.forEach((m) => m.remove())
+      mapState.markersRef.current = []
+    }
+    mapState.handleFitBounds([])
+
+    showToast('Đã xóa toàn bộ tim tuyến chính và các mốc lý trình! Bạn có thể bấm "Nhập Tuyến / Tọa độ (WF-02)" để nạp lại.')
   }
 
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -537,12 +667,15 @@ export function useAlignmentState() {
   return {
     isSupervisor,
     basePath,
+    urlProjectId,
     selectedProjectId,
+    assignedProjects,
     activeProject,
     alignmentStatus,
     handleSwitchProject,
     handleSubmitAlignment,
     handleLockAlignment,
+    handleClearMainline,
     toastMessage,
     setToastMessage,
     showToast,
@@ -562,6 +695,9 @@ export function useAlignmentState() {
     setSyncJointWithSlab,
     // Branch Alignment
     branches,
+    branchesTotalLengthKm,
+    totalProjectLengthKm,
+    branchesCount: branches.length,
     selectedTargetType,
     setSelectedTargetType,
     isAddBranchModalOpen,

@@ -78,7 +78,7 @@ export function syncMapDataDirect(
   customCfg?: SlabsCustomConfig,
   branches: any[] = []
 ) {
-  if (!map) return
+  if (!map || !map.isStyleLoaded()) return
 
   // Đảm bảo các nguồn và lớp luôn tồn tại trước khi cập nhật dữ liệu
   if (!map.getSource('segments-source') || !map.getSource('segments-surface-source')) {

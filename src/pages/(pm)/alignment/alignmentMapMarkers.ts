@@ -20,34 +20,34 @@ export function renderAlignmentMarkers(
   }
 
   // 1. Marker các đầu phân đoạn Trục Chính
-  segList.forEach((seg) => {
-    const coord = interpolateCoordAtKm(seg.startKm, coords, kmPts)
-    const floorKm = Math.floor(seg.startKm)
-    const remainderMeters = Math.round((seg.startKm - floorKm) * 1000)
-    const stationText = remainderMeters > 0 ? `Km ${floorKm}+${String(remainderMeters).padStart(3, '0')}` : `Km ${floorKm}`
+  if (coords && coords.length >= 2 && kmPts && kmPts.length >= 2) {
+    segList.forEach((seg) => {
+      const coord = interpolateCoordAtKm(seg.startKm, coords, kmPts)
+      const floorKm = Math.floor(seg.startKm)
+      const remainderMeters = Math.round((seg.startKm - floorKm) * 1000)
+      const stationText = remainderMeters > 0 ? `Km ${floorKm}+${String(remainderMeters).padStart(3, '0')}` : `Km ${floorKm}`
 
-    const el = document.createElement('div')
-    el.className = 'flex flex-col items-center cursor-pointer group'
-    el.innerHTML = `
-      <div style="background-color: ${seg.color}; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.35);" 
-           class="w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white font-bold transition-transform group-hover:scale-125">
-      </div>
-      <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-white text-[10px] font-mono font-bold shadow-md whitespace-nowrap">
-        ${stationText}
-      </div>
-    `
-    el.addEventListener('click', (ev) => {
-      ev.stopPropagation()
-      onSelectSegmentId(seg.id)
-      showToast(`Đã chọn ${seg.code} (${stationText})`)
+      const el = document.createElement('div')
+      el.className = 'flex flex-col items-center cursor-pointer group'
+      el.innerHTML = `
+        <div style="background-color: ${seg.color}; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.35);" 
+             class="w-4 h-4 rounded-full flex items-center justify-center text-[8px] text-white font-bold transition-transform group-hover:scale-125">
+        </div>
+        <div class="mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-white text-[10px] font-mono font-bold shadow-md whitespace-nowrap">
+          ${stationText}
+        </div>
+      `
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        onSelectSegmentId(seg.id)
+        showToast(`Đã chọn ${seg.code} (${stationText})`)
+      })
+
+      const marker = new maplibregl.Marker({ element: el }).setLngLat(coord).addTo(map)
+      markersRef.current?.push(marker)
     })
 
-    const marker = new maplibregl.Marker({ element: el }).setLngLat(coord).addTo(map)
-    markersRef.current?.push(marker)
-  })
-
-  // Marker điểm cuối tuyến chính
-  if (coords && coords.length > 0) {
+    // Marker điểm cuối tuyến chính
     const endCoord = coords[coords.length - 1]
     const endKm = kmPts[kmPts.length - 1] || 1045
     const endKmFloor = Math.floor(endKm)
