@@ -8,12 +8,13 @@ interface AuthState {
   token: string | null
   isAuthenticated: boolean
   login: (role: RoleCode) => void
+  setUserAndToken: (user: User, token: string) => void
   logout: () => void
   updateUser: (data: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // Mặc định đăng nhập với tài khoản Hoàng (Project Manager)
+  // Mặc định đăng nhập với tài khoản Hoàng (Project Manager) trong bộ nhớ
   user: mockUsers[0],
   token: 'mock-jwt-token-hoang-pm',
   isAuthenticated: true,
@@ -23,6 +24,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       user: { ...user },
       token: `mock-jwt-token-${user.id}`,
+      isAuthenticated: true,
+    })
+  },
+
+  setUserAndToken: (user: User, token: string) => {
+    set({
+      user: { ...user },
+      token,
       isAuthenticated: true,
     })
   },

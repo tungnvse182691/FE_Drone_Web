@@ -1,16 +1,16 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { ShieldCheck } from 'lucide-react'
+import { authService } from '../../api/services/authService'
 import { ForcePasswordForm } from './force-change-password/ForcePasswordForm'
 
 export const ForceChangePassword: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, setUserAndToken } = useAuthStore()
 
-  // State cho Form Äá»•i máº­t kháº©u báº¯t buá»™c
-  const [tempPassword, setTempPassword] = useState('TempPass#2026')
+  // State cho Form Đổi mật khẩu bắt buộc
+  const [tempPassword, setTempPassword] = useState('123456')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -18,7 +18,7 @@ export const ForceChangePassword: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isForceSuccess, setIsForceSuccess] = useState(false)
 
-  // Validation quy táº¯c máº­t kháº©u TCVN 11944
+  // Validation quy tắc mật khẩu
   const rules = {
     length: newPassword.length >= 8,
     case: /[a-z]/.test(newPassword) && /[A-Z]/.test(newPassword),
@@ -30,90 +30,65 @@ export const ForceChangePassword: React.FC = () => {
   const isConfirmMatched = confirmPassword.length > 0 && newPassword === confirmPassword
   const isConfirmMismatched = confirmPassword.length > 0 && newPassword !== confirmPassword
 
-  const handleForcePasswordSubmit = (e: React.FormEvent) => {
+  const handleForcePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!allRulesPassed || !isConfirmMatched) return
 
-    setIsForceSuccess(true)
-    setTimeout(() => {
-      if (user) user.must_change_password = false
-      if (user?.role === RoleCode.SUPERVISOR) {
-        navigate('/sup/dashboard')
-      } else {
-        navigate('/pm/dashboard')
-      }
-    }, 1000)
+    try {
+      const res = await authService.changePassword({ tempPassword, newPassword })
+      setIsForceSuccess(true)
+      setTimeout(() => {
+        const updatedUser = res.user
+        setUserAndToken(updatedUser, `mock-jwt-token-${updatedUser.id}`)
+        if (updatedUser.role === RoleCode.SUPERVISOR) {
+          navigate('/sup/dashboard')
+        } else {
+          navigate('/pm/dashboard')
+        }
+      }, 700)
+    } catch {
+      alert('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+    }
   }
 
   return (
-    <div
-      className="min-h-screen text-slate-800 flex flex-col justify-between relative selection:bg-stone-200"
-      style={{
-        backgroundColor: '#F8F9FA',
-        backgroundImage: `
-          radial-gradient(#d1d5db 1px, transparent 1px),
-          linear-gradient(to right, rgba(229, 231, 235, 0.4) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(229, 231, 235, 0.4) 1px, transparent 1px)
-        `,
-        backgroundSize: '32px 32px, 96px 96px, 96px 96px',
-      }}
-    >
-      {/* Top Bar */}
-      <header className="w-full px-6 py-4 flex items-center justify-between z-20">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-200 text-stone-700 font-mono">
-            AUTH-GUARD â€¢ TCVN 11944:2018
-          </span>
-          <span className="text-xs text-slate-500 hidden sm:inline">
-            An ninh truy cáº­p háº¡ táº§ng giao thÃ´ng Ä‘Æ°á»ng bá»™
-          </span>
+    <div className="min-h-screen text-slate-800 flex flex-col justify-between bg-[#F8F9FA]">
+      {/* Thanh tiêu đề tối giản */}
+      <header className="w-full px-6 py-4 flex items-center justify-between z-10 border-b border-[#E2E5E9] bg-white">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227]">
+            <span className="material-symbols-outlined text-[20px]">shield</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-slate-800 tracking-wide uppercase">
+              Hoàng Hải RoadGuard
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Hạ tầng giao thông đường bộ
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Decorative background map lines */}
-      <div className="fixed inset-0 pointer-events-none opacity-25 overflow-hidden z-0">
-        <svg className="absolute w-full h-full text-slate-300" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M-100,200 C300,100 400,600 800,400 C1200,200 1400,800 2000,500"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeDasharray="8 8"
-          />
-          <path
-            d="M-50,450 C350,350 650,850 1100,650 C1550,450 1650,900 2100,750"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            opacity="0.6"
-          />
-          <circle cx="800" cy="400" r="6" fill="#C9A227" opacity="0.4" />
-          <circle cx="1100" cy="650" r="5" fill="#C9A227" opacity="0.4" />
-        </svg>
-      </div>
-
-      {/* Central Card */}
+      {/* Thẻ đổi mật khẩu trung tâm */}
       <main className="w-full flex-1 flex items-center justify-center p-4 z-10 my-4">
-        <div
-          className="w-full max-w-[480px] bg-white p-8 sm:p-10 border border-slate-200/80 rounded-xl shadow-xl transition-all duration-200"
-          style={{ border: '1px solid #E2E5E9', borderRadius: '12px' }}
-        >
+        <div className="w-full max-w-[460px] bg-white p-7 sm:p-9 border border-[#E2E5E9] rounded-xl shadow-xs transition-all">
           {/* Brand Header */}
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-11 h-11 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center text-brand-gold shadow-xs">
-              <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
+          <div className="flex items-center gap-3 mb-6 pb-5 border-b border-[#E2E5E9]">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227] shrink-0">
+              <span className="material-symbols-outlined text-[28px]">lock_reset</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-slate-900 font-headline">
-                  HoÃ ng Háº£i
+                <span className="text-xl font-bold tracking-tight text-[#1A1D20]">
+                  Hoàng Hải
                 </span>
-                <span className="text-xs px-2 py-0.5 font-mono font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded-full">
+                <span className="text-[11px] px-2 py-0.5 font-semibold bg-amber-50 text-[#8C6D1F] border border-amber-200/60 rounded">
                   ROADGUARD
                 </span>
               </div>
-              <p className="text-xs font-medium text-slate-500 tracking-wide uppercase">
-                Quáº£n lÃ½ Báº£o hÃ nh &amp; Sá»­a chá»¯a Háº¡ táº§ng
+              <p className="text-xs text-slate-500 mt-0.5 font-normal truncate">
+                Quản lý Bảo hành &amp; Sửa chữa Hạ tầng
               </p>
             </div>
           </div>
@@ -143,23 +118,21 @@ export const ForceChangePassword: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="w-full px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 z-10 gap-2 border-t border-slate-200/50 bg-white/40 backdrop-blur-sm">
-        <div className="flex items-center gap-2">
+      <footer className="w-full px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 z-10 gap-2 border-t border-[#E2E5E9] bg-white">
+        <div className="flex items-center gap-2 text-slate-500">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>
-            Há»‡ thá»‘ng mÃ¡y chá»§ giÃ¡m sÃ¡t váº­n hÃ nh:{' '}
-            <strong className="text-slate-700 font-semibold font-mono">ONLINE (HÃ  Ná»™i - ÄN Node)</strong>
-          </span>
+          <span>Bảo mật hệ thống thông tin hạ tầng</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span>ChÃ­nh sÃ¡ch báº£o máº­t dá»¯ liá»‡u</span>
-          <span>â€¢</span>
-          <span>Quy chuáº©n TCVN 8819:2011</span>
-          <span>â€¢</span>
-          <span className="font-mono text-slate-400">v2.4.1-prod</span>
+        <div className="flex items-center gap-3 text-slate-400">
+          <span>TCVN 10380:2014</span>
+          <span>•</span>
+          <span>TCVN 8819:2011</span>
+          <span>•</span>
+          <span>© 2026 Hoàng Hải RoadGuard</span>
         </div>
       </footer>
     </div>
   )
 }
+
 export default ForceChangePassword

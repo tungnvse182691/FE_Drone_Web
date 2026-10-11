@@ -1,9 +1,4 @@
-﻿import React from 'react'
-import {
-  LogIn,
-  ShieldAlert,
-  ShieldCheck
-} from 'lucide-react'
+import React from 'react'
 import { LoginViewMode } from './types'
 
 export interface LoginHeaderProps {
@@ -13,97 +8,69 @@ export interface LoginHeaderProps {
 
 export const LoginHeader: React.FC<LoginHeaderProps> = ({ viewMode, setViewMode }) => {
   return (
-    <>
-      {/* Top Bar Switcher */}
-      <header className="w-full px-6 py-4 flex items-center justify-between z-20">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-200 text-stone-700 font-mono">
-            AUTH-GUARD â€¢ TCVN 11944:2018
+    <header className="w-full px-6 py-4 flex items-center justify-between z-10">
+      <div className="flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227]">
+          <span className="material-symbols-outlined text-[20px]">shield</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold text-slate-800 tracking-wide uppercase">
+            Hoàng Hải RoadGuard
           </span>
-          <span className="text-xs text-slate-500 hidden sm:inline">
-            An ninh truy cáº­p háº¡ táº§ng giao thÃ´ng Ä‘Æ°á»ng bá»™
+          <span className="text-[11px] text-slate-400">
+            Hạ tầng giao thông đường bộ
           </span>
         </div>
-
-        {/* Toggle Demo Mode Buttons */}
-        <div className="flex items-center bg-white border border-slate-200 p-1 rounded-full shadow-xs">
-          <button
-            type="button"
-            onClick={() => setViewMode('login')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'login'
-                ? 'bg-brand-gold text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Form ÄÄƒng nháº­p chÃ­nh (WF-01)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('force')}
-            className={`px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
-              viewMode === 'force'
-                ? 'bg-brand-gold text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-            <span>Cháº·n Ä‘á»•i máº­t kháº©u láº§n Ä‘áº§u</span>
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-          </button>
-        </div>
-      </header>
-
-      {/* Decorative subtle background map lines */}
-      <div className="fixed inset-0 pointer-events-none opacity-25 overflow-hidden z-0">
-        <svg className="absolute w-full h-full text-slate-300" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M-100,200 C300,100 400,600 800,400 C1200,200 1400,800 2000,500"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeDasharray="8 8"
-          />
-          <path
-            d="M-50,450 C350,350 650,850 1100,650 C1550,450 1650,900 2100,750"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            opacity="0.6"
-          />
-          <path
-            d="M100,-100 C200,300 50,600 250,1000"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
-          <circle cx="800" cy="400" r="6" fill="#C9A227" opacity="0.4" />
-          <circle cx="1100" cy="650" r="5" fill="#C9A227" opacity="0.4" />
-        </svg>
       </div>
-    </>
+
+      {/* Chuyển đổi trạng thái kiểm tra (Tối giản - Không nhãn mã rác) */}
+      <div className="flex items-center bg-white border border-[#E2E5E9] p-0.5 rounded-lg shadow-xs text-xs">
+        <button
+          type="button"
+          onClick={() => setViewMode('login')}
+          className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+            viewMode === 'login'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">login</span>
+          <span>Đăng nhập</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('force')}
+          className={`px-3 py-1 rounded-md font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+            viewMode === 'force'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">lock_reset</span>
+          <span>Đổi mật khẩu lần đầu</span>
+        </button>
+      </div>
+    </header>
   )
 }
 
 export const LoginBrandCardHeader: React.FC = () => {
   return (
-    <div className="flex items-center gap-3 mb-6">
-      <div className="w-11 h-11 rounded-2xl bg-brand-gold/10 border border-brand-gold/20 flex items-center justify-center text-brand-gold shadow-xs">
-        <ShieldCheck className="w-6 h-6 stroke-[2.2]" />
+    <div className="flex items-center gap-3 mb-6 pb-5 border-b border-[#E2E5E9]">
+      <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227] shrink-0">
+        <span className="material-symbols-outlined text-[28px]">verified_user</span>
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight text-slate-900 font-headline">
-            HoÃ ng Háº£i
+          <span className="text-xl font-bold tracking-tight text-[#1A1D20]">
+            Hoàng Hải
           </span>
-          <span className="text-xs px-2 py-0.5 font-mono font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/30 rounded-full">
+          <span className="text-[11px] px-2 py-0.5 font-semibold bg-amber-50 text-[#8C6D1F] border border-amber-200/60 rounded">
             ROADGUARD
           </span>
         </div>
-        <p className="text-xs font-medium text-slate-500 tracking-wide uppercase">
-          Quáº£n lÃ½ Báº£o hÃ nh &amp; Sá»­a chá»¯a Háº¡ táº§ng
+        <p className="text-xs text-slate-500 mt-0.5 font-normal truncate">
+          Quản lý Bảo hành &amp; Sửa chữa Hạ tầng
         </p>
       </div>
     </div>
@@ -112,20 +79,17 @@ export const LoginBrandCardHeader: React.FC = () => {
 
 export const LoginFooter: React.FC = () => {
   return (
-    <footer className="w-full px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 z-10 gap-2 border-t border-slate-200/50 bg-white/40 backdrop-blur-sm">
-      <div className="flex items-center gap-2">
+    <footer className="w-full px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 z-10 gap-2 border-t border-[#E2E5E9] bg-white">
+      <div className="flex items-center gap-2 text-slate-500">
         <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-        <span>
-          Há»‡ thá»‘ng mÃ¡y chá»§ giÃ¡m sÃ¡t váº­n hÃ nh:{' '}
-          <strong className="text-slate-700 font-semibold font-mono">ONLINE (HÃ  Ná»™i - ÄN Node)</strong>
-        </span>
+        <span>Hệ thống giám sát vận hành trực tuyến</span>
       </div>
-      <div className="flex items-center gap-4">
-        <span>ChÃ­nh sÃ¡ch báº£o máº­t dá»¯ liá»‡u</span>
-        <span>â€¢</span>
-        <span>Quy chuáº©n TCVN 8819:2011</span>
-        <span>â€¢</span>
-        <span className="font-mono text-slate-400">v2.4.1-prod</span>
+      <div className="flex items-center gap-3 text-slate-400">
+        <span>TCVN 10380:2014</span>
+        <span>•</span>
+        <span>TCVN 8819:2011</span>
+        <span>•</span>
+        <span>© 2026 Hoàng Hải RoadGuard</span>
       </div>
     </footer>
   )

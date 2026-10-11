@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { authService } from '../../api/services/authService'
 import { LoginViewMode } from './login/types'
 import { LoginForm } from './login/LoginForm'
 import { ForcePasswordSection } from './login/ForcePasswordSection'
@@ -9,9 +10,9 @@ import { LoginHeader, LoginBrandCardHeader, LoginFooter } from './login/LoginHea
 
 export const Login: React.FC = () => {
   const navigate = useNavigate()
-  const { login } = useAuthStore()
+  const { setUserAndToken } = useAuthStore()
 
-  // Chế độ xem: 'login' (Form Đăng nhập chính WF-01) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
+  // Chế độ xem: 'login' (Form Đăng nhập chính) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
   const [viewMode, setViewMode] = useState<LoginViewMode>('login')
 
   // State cho Form Đăng nhập
@@ -31,7 +32,7 @@ export const Login: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isForceSuccess, setIsForceSuccess] = useState(false)
 
-  // Validation quy tắc mật khẩu TCVN 11944
+  // Validation quy tắc mật khẩu
   const rules = {
     length: newPassword.length >= 8,
     case: /[a-z]/.test(newPassword) && /[A-Z]/.test(newPassword),
@@ -43,70 +44,54 @@ export const Login: React.FC = () => {
   const isConfirmMatched = confirmPassword.length > 0 && newPassword === confirmPassword
   const isConfirmMismatched = confirmPassword.length > 0 && newPassword !== confirmPassword
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setLoginError(false)
 
-    setTimeout(() => {
+    try {
+      // Gọi qua Mock API Service bất đồng bộ (In-memory, KHÔNG dùng localStorage)
+      const res = await authService.login({ email, password })
+      setUserAndToken(res.user, res.token)
+
+      if (res.user.must_change_password) {
+        setViewMode('force')
+      } else {
+        const dest = res.user.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
+        navigate(dest)
+      }
+    } catch {
+      setLoginError(true)
+    } finally {
       setIsLoading(false)
-      const trimmedEmail = email.trim().toLowerCase()
-      let matchedRole: RoleCode | null = null
-
-      if (trimmedEmail === 'pmhoang@gmail.com' && password === '123456') {
-        matchedRole = RoleCode.PROJECT_MANAGER
-      } else if (
-        (trimmedEmail === 'suphoang@gmail.com' || trimmedEmail === 'suphoang@gamail.com') &&
-        password === '123456'
-      ) {
-        matchedRole = RoleCode.SUPERVISOR
-      }
-
-      if (!matchedRole) {
-        setLoginError(true)
-        return
-      }
-
-      login(matchedRole)
-      navigate(matchedRole === RoleCode.PROJECT_MANAGER ? '/pm/dashboard' : '/sup/dashboard')
-    }, 600)
+    }
   }
 
-  const handleForcePasswordSubmit = (e: React.FormEvent) => {
+  const handleForcePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!allRulesPassed || !isConfirmMatched) return
 
-    setIsForceSuccess(true)
-    setTimeout(() => {
-      const currentUser = useAuthStore.getState().user
-      if (currentUser) {
-        currentUser.must_change_password = false
-      }
-      navigate(currentUser?.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard')
-    }, 1000)
+    try {
+      const res = await authService.changePassword({ tempPassword, newPassword })
+      setIsForceSuccess(true)
+      setTimeout(() => {
+        const currentUser = res.user
+        setUserAndToken(currentUser, `mock-jwt-token-${currentUser.id}`)
+        const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
+        navigate(dest)
+      }, 700)
+    } catch {
+      alert('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+    }
   }
 
   return (
-    <div
-      className="min-h-screen text-slate-800 flex flex-col justify-between relative selection:bg-stone-200"
-      style={{
-        backgroundColor: '#F8F9FA',
-        backgroundImage: `
-          radial-gradient(#d1d5db 1px, transparent 1px),
-          linear-gradient(to right, rgba(229, 231, 235, 0.4) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(229, 231, 235, 0.4) 1px, transparent 1px)
-        `,
-        backgroundSize: '32px 32px, 96px 96px, 96px 96px',
-      }}
-    >
+    <div className="min-h-screen text-slate-800 flex flex-col justify-between bg-[#F8F9FA]">
       <LoginHeader viewMode={viewMode} setViewMode={setViewMode} />
 
-      {/* Central Authentication Card */}
+      {/* Thẻ đăng nhập trung tâm */}
       <main className="w-full flex-1 flex items-center justify-center p-4 z-10 my-4">
-        <div
-          className="w-full max-w-[480px] bg-white p-8 sm:p-10 border border-slate-200/80 rounded-xl shadow-xl transition-all duration-200"
-          style={{ border: '1px solid #E2E5E9', borderRadius: '12px' }}
-        >
+        <div className="w-full max-w-[460px] bg-white p-7 sm:p-9 border border-[#E2E5E9] rounded-xl shadow-xs transition-all">
           <LoginBrandCardHeader />
 
           {viewMode === 'login' ? (
@@ -155,4 +140,5 @@ export const Login: React.FC = () => {
     </div>
   )
 }
+
 export default Login
