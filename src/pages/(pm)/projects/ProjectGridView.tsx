@@ -8,6 +8,7 @@ interface ProjectGridViewProps {
   onOpenCreateModal: () => void
   onNavigateAlignment: (projectId: string) => void
   onNavigateDetail: (projectId: string) => void
+  onOpenCloseModal?: (prj: HubProject) => void
 }
 
 export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
@@ -15,7 +16,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
   isSupervisor,
   onOpenCreateModal,
   onNavigateAlignment,
-  onNavigateDetail
+  onNavigateDetail,
+  onOpenCloseModal
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 font-body">
@@ -69,7 +71,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
               <div className="absolute top-3 right-3">
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-2xs flex items-center gap-1 ${
-                    prj.status === 'NEAR_EXPIRY'
+                    prj.status === 'CLOSED'
+                      ? 'bg-slate-200 text-slate-800'
+                      : prj.status === 'NEAR_EXPIRY'
                       ? 'bg-[#FEE2E2] text-rose-700 font-bold'
                       : prj.status === 'PENDING_ALIGNMENT'
                       ? 'bg-[#FEF3C7] text-[#D97706]'
@@ -78,7 +82,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
-                      prj.status === 'NEAR_EXPIRY'
+                      prj.status === 'CLOSED'
+                        ? 'bg-slate-600'
+                        : prj.status === 'NEAR_EXPIRY'
                         ? 'bg-rose-600 animate-ping'
                         : prj.status === 'PENDING_ALIGNMENT'
                         ? 'bg-[#D97706]'
@@ -201,24 +207,51 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
 
               {/* Card Footer Action */}
               <div className="pt-2 border-t border-slate-100">
-                {prj.status === 'PENDING_ALIGNMENT' ? (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateAlignment(prj.id)}
-                    className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Icon name="alt_route" size={16} className="text-brand-gold" />
-                    <span>Xem thiết lập tuyến</span>
-                  </button>
-                ) : (
+                {prj.status === 'CLOSED' ? (
                   <button
                     type="button"
                     onClick={() => onNavigateDetail(prj.id)}
-                    className="w-full py-2 px-3 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                   >
-                    <span>Vào quản lý dự án</span>
-                    <Icon name="arrow_forward" size={16} />
+                    <Icon name="inventory_2" size={16} />
+                    <span>Tra cứu hồ sơ lưu trữ (BC10)</span>
                   </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {prj.status === 'PENDING_ALIGNMENT' ? (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateAlignment(prj.id)}
+                        className="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Icon name="alt_route" size={16} className="text-brand-gold" />
+                        <span>Xem thiết lập tuyến</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateDetail(prj.id)}
+                        className="flex-1 py-2 px-3 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                      >
+                        <span>Vào quản lý dự án</span>
+                        <Icon name="arrow_forward" size={16} />
+                      </button>
+                    )}
+
+                    {isSupervisor && onOpenCloseModal && (
+                      <button
+                        type="button"
+                        title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onOpenCloseModal(prj)
+                        }}
+                        className="p-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 rounded-lg text-xs font-semibold transition border border-slate-200 hover:border-rose-200 cursor-pointer shrink-0"
+                      >
+                        <Icon name="lock" size={16} />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

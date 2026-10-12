@@ -554,7 +554,7 @@ export interface HubProject {
   start_km: number
   end_km: number
   stationing_text: string
-  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED'
+  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED' | 'CLOSED'
   status_label: string
   status_color: string
   pm_name: string
@@ -572,6 +572,13 @@ export interface HubProject {
   kml_status?: string
   inspection_standard?: string
   retention_amount?: string
+  closed_at?: string
+  closed_reason?: string
+  closed_by?: string
+  retention_until?: string
+  handover_date?: string
+  warranty_end_date?: string
+  handover_file_ids?: string[]
 }
 
 export interface PolicyThresholdConfig {

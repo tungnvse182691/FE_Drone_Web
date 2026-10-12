@@ -9,6 +9,7 @@ interface ProjectListFiltersProps {
   activeCount: number
   nearExpiryCount: number
   pendingAlignmentCount: number
+  closedCount: number
   searchQuery: string
   onChangeSearchQuery: (query: string) => void
   viewMode: ProjectViewMode
@@ -22,6 +23,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
   activeCount,
   nearExpiryCount,
   pendingAlignmentCount,
+  closedCount,
   searchQuery,
   onChangeSearchQuery,
   viewMode,
@@ -84,6 +86,20 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
           <span>Chờ duyệt tuyến</span>
           <span className="text-[11px] font-mono text-slate-500">{pendingAlignmentCount}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onSelectFilterTab('CLOSED')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+            filterTab === 'CLOSED'
+              ? 'bg-slate-800 text-white shadow-2xs'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+          <span>Đã đóng hồ sơ</span>
+          <span className="text-[11px] font-mono text-slate-500">{closedCount}</span>
         </button>
       </div>
 

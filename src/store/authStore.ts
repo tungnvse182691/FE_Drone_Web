@@ -14,9 +14,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // Mặc định đăng nhập với tài khoản Hoàng (Project Manager) trong bộ nhớ
-  user: mockUsers[0],
-  token: 'mock-jwt-token-hoang-pm',
+  // Mặc định đăng nhập với tài khoản Kỹ sư Nguyễn Văn An (SUPERVISOR) trong bộ nhớ để kiểm thử các bước SUP
+  user: mockUsers[1],
+  token: 'mock-jwt-token-an-sup',
   isAuthenticated: true,
 
   login: (role: RoleCode) => {

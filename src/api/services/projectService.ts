@@ -1,4 +1,5 @@
-import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
+import { apiClient } from '../client'
+import { getFromStorage, STORAGE_KEYS } from './storageHelper'
 import { HubProject } from '../../types/domain'
 
 export type { HubProject }
@@ -135,6 +136,37 @@ export const INITIAL_HUB_PROJECTS: HubProject[] = [
     is_restricted_for_pm: false,
     kml_status: 'Đã phê duyệt',
     retention_amount: '11.0 tỷ ₫ (5% HĐ)'
+  },
+  {
+    id: 'prj-ql1a-p1',
+    code: 'PRJ-QL1A-P1',
+    name: 'QL1A - Giai đoạn 1 (Km 990 - Km 1020)',
+    region: 'Miền Trung',
+    location_detail: 'Quảng Nam',
+    start_km: 990.0,
+    end_km: 1020.0,
+    stationing_text: 'Km 990+000 → Km 1020+000',
+    status: 'CLOSED',
+    status_label: 'Đã đóng hồ sơ',
+    status_color: '#475569',
+    pm_name: 'Đỗ Quốc Hoàng',
+    pm_email: 'pmhoang@gmail.com',
+    pm_role_badge: 'PM Phụ trách',
+    pm_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    warranty_passed_percent: 100,
+    days_remaining: 0,
+    length_km: 30.0,
+    open_defects: 0,
+    repair_packages: 0,
+    image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
+    is_assigned: true,
+    is_restricted_for_pm: false,
+    kml_status: 'Đã hoàn công',
+    retention_amount: '9.8 tỷ ₫ (Đã quyết toán)',
+    closed_at: '2026-01-15T09:30:00Z',
+    closed_reason: 'Hoàn thành 100% trách nhiệm bảo hành công trình theo HĐ-BH-2023. Nghiệm thu đợt cuối đạt chuẩn TCVN 8819:2011 và giải tỏa bảo lãnh.',
+    closed_by: 'Nguyễn Văn An (Supervisor)',
+    retention_until: '15/01/2031 (Tối thiểu 5 năm - QT13, BR-45)'
   }
 ]
 
@@ -239,28 +271,42 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
   return p
 }
 
+// In-Memory Mock Store (KHÔNG dùng localStorage / local tĩnh theo kiến trúc Mock API)
+let projectStore: HubProject[] = JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
+
 export const projectService = {
   /**
    * Mock API: GET /projects
    * Giả lập gọi API bất đồng bộ có network latency
    */
   async fetchProjects(): Promise<HubProject[]> {
+    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    if (!isMock) {
+      const res = await apiClient.get<HubProject[]>('/projects')
+      return res.data
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 200))
     return this.getProjects()
   },
 
   /**
-   * Sync accessor cho các component/helper nội bộ kế thừa
+   * Accessor đồng bộ lấy danh sách dự án kèm thông tin tim tuyến
    */
   getProjects(): HubProject[] {
-    const raw = getFromStorage<HubProject[]>(STORAGE_KEYS.PROJECTS, INITIAL_HUB_PROJECTS)
-    return raw.map((p) => enrichProjectWithAlignment(p))
+    return JSON.parse(JSON.stringify(projectStore.map((p) => enrichProjectWithAlignment(p))))
   },
 
   /**
    * Mock API: GET /projects/:id
    */
   async fetchProjectById(id: string): Promise<HubProject | undefined> {
+    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    if (!isMock) {
+      const res = await apiClient.get<HubProject>(`/projects/${id}`)
+      return res.data
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 150))
     return this.getProjectById(id)
   },
@@ -275,6 +321,12 @@ export const projectService = {
    * Header: Idempotency-Key
    */
   async createProject(payload: ProjectCreatePayload): Promise<HubProject> {
+    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    if (!isMock) {
+      const res = await apiClient.post<HubProject>('/projects', payload)
+      return res.data
+    }
+
     // Giả lập độ trễ truyền thông qua mạng HTTP
     await new Promise((resolve) => setTimeout(resolve, 300))
 
@@ -300,8 +352,7 @@ export const projectService = {
     }
 
     // 4. Kiểm tra mã dự án trùng lặp (HTTP 409 Conflict)
-    const existingProjects = this.getProjects()
-    if (existingProjects.some((p) => p.code.toUpperCase() === code)) {
+    if (projectStore.some((p) => p.code.toUpperCase() === code)) {
       throw new Error(`[409] Mã dự án [${code}] đã tồn tại trong hệ thống. Vui lòng chọn mã khác.`)
     }
 
@@ -339,18 +390,83 @@ export const projectService = {
       handover_file_ids: payload.handoverFileIds || []
     }
 
-    const updated = [newProject, ...existingProjects]
-    saveToStorage(STORAGE_KEYS.PROJECTS, updated)
+    projectStore = [newProject, ...projectStore]
 
     // Phát sự kiện đồng bộ reactive trên toàn client
     window.dispatchEvent(new Event('roadguard_state_change'))
-    return newProject
+    return JSON.parse(JSON.stringify(newProject))
+  },
+
+  /**
+   * Mock API: POST /projects/{projectId}/close (Duy nhất Supervisor có quyền - DA12, QT13, BC10)
+   * Payload: Reason { reason: string }
+   * Header: Idempotency-Key, If-Match
+   */
+  async closeProject(
+    projectId: string,
+    payload: { reason: string }
+  ): Promise<HubProject> {
+    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    if (!isMock) {
+      const res = await apiClient.post<HubProject>(`/projects/${projectId}/close`, payload)
+      return res.data
+    }
+
+    // Giả lập độ trễ mạng HTTP
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const reason = payload.reason?.trim()
+    if (!reason) {
+      throw new Error('[422] Lý do / kết luận đóng dự án (reason) là bắt buộc theo quy tắc DA12.')
+    }
+
+    const targetIndex = projectStore.findIndex((p) => p.id === projectId || p.code === projectId)
+    if (targetIndex === -1) {
+      throw new Error(`[404] Không tìm thấy dự án với mã [${projectId}].`)
+    }
+
+    const currentProject = projectStore[targetIndex]
+    if (currentProject.status === 'CLOSED') {
+      throw new Error(`[409] Dự án [${currentProject.code}] đã được đóng bảo hành trước đó.`)
+    }
+
+    if (currentProject.open_defects > 0) {
+      throw new Error(`[422] Không thể đóng dự án [${currentProject.code}]. Dự án vẫn còn ${currentProject.open_defects} điểm hư hỏng chưa được nghiệm thu khắc phục (PASSED).`)
+    }
+
+    // Tính hạn lưu trữ tối thiểu hết bảo hành + 5 năm theo quy chuẩn QT13 & BR-45
+    const now = new Date()
+    const retentionDate = new Date(now)
+    retentionDate.setFullYear(retentionDate.getFullYear() + 5)
+    const retentionFormatted = `${String(retentionDate.getDate()).padStart(2, '0')}/${String(retentionDate.getMonth() + 1).padStart(2, '0')}/${retentionDate.getFullYear()}`
+    const retentionUntilStr = `${retentionFormatted} (Tối thiểu 5 năm - QT13, BR-45)`
+
+    // Cập nhật trạng thái dự án sang CLOSED
+    const closedProject: HubProject = {
+      ...currentProject,
+      status: 'CLOSED',
+      status_label: 'Đã đóng hồ sơ',
+      status_color: '#475569',
+      days_remaining: 0,
+      warranty_passed_percent: 100,
+      open_defects: 0,
+      closed_at: now.toISOString(),
+      closed_reason: reason,
+      closed_by: 'Nguyễn Văn An (Supervisor)',
+      retention_until: retentionUntilStr
+    }
+
+    projectStore[targetIndex] = closedProject
+
+    // Phát sự kiện đồng bộ reactive trên toàn client
+    window.dispatchEvent(new CustomEvent('roadguard_state_change', { detail: { projectId, status: 'CLOSED' } }))
+
+    return JSON.parse(JSON.stringify(closedProject))
   },
 
   updateProjectStatus(id: string, status: HubProject['status']): HubProject | null {
-    const projects = this.getProjects()
     let updatedProj: HubProject | null = null
-    const updated = projects.map((p) => {
+    projectStore = projectStore.map((p) => {
       if (p.id === id || p.code === id) {
         updatedProj = { ...p, status }
         return updatedProj
@@ -358,7 +474,7 @@ export const projectService = {
       return p
     })
     if (updatedProj) {
-      saveToStorage(STORAGE_KEYS.PROJECTS, updated)
+      window.dispatchEvent(new Event('roadguard_state_change'))
     }
     return updatedProj
   },
@@ -367,9 +483,8 @@ export const projectService = {
     id: string,
     data: { length_km?: number; kml_status?: string; stationing_text?: string; status?: HubProject['status'] }
   ): HubProject | null {
-    const projects = this.getProjects()
     let updatedProj: HubProject | null = null
-    const updated = projects.map((p) => {
+    projectStore = projectStore.map((p) => {
       if (p.id === id || p.code === id) {
         updatedProj = { ...p, ...data }
         return updatedProj
@@ -377,13 +492,14 @@ export const projectService = {
       return p
     })
     if (updatedProj) {
-      saveToStorage(STORAGE_KEYS.PROJECTS, updated)
       window.dispatchEvent(new Event('roadguard_state_change'))
     }
     return updatedProj
   },
 
   resetProjects(): void {
-    saveToStorage(STORAGE_KEYS.PROJECTS, INITIAL_HUB_PROJECTS)
+    projectStore = JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
+    window.dispatchEvent(new Event('roadguard_state_change'))
   }
 }
+

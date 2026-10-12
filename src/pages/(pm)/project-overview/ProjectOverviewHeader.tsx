@@ -8,6 +8,7 @@ interface ProjectOverviewHeaderProps {
   isSupervisor: boolean
   onNavigate: (path: string) => void
   onUpdateInfo: () => void
+  onCloseProject?: () => void
   mainlineLengthKm?: number
   branchesLengthKm?: number
   branchesCount?: number
@@ -19,6 +20,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
   isSupervisor,
   onNavigate,
   onUpdateInfo,
+  onCloseProject,
   mainlineLengthKm = 0,
   branchesLengthKm = 0,
   branchesCount = 0
@@ -61,7 +63,9 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </span>
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                project.status === 'NEAR_EXPIRY'
+                project.status === 'CLOSED'
+                  ? 'bg-slate-100 text-slate-800 border border-slate-300'
+                  : project.status === 'NEAR_EXPIRY'
                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
                   : project.status === 'PENDING_ALIGNMENT'
                   ? 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -70,7 +74,9 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  project.status === 'NEAR_EXPIRY'
+                  project.status === 'CLOSED'
+                    ? 'bg-slate-600'
+                    : project.status === 'NEAR_EXPIRY'
                     ? 'bg-rose-600 animate-ping'
                     : project.status === 'PENDING_ALIGNMENT'
                     ? 'bg-amber-500'
@@ -112,20 +118,59 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={onUpdateInfo}
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
-          >
-            <Icon name="settings" size={16} className="text-slate-500" />
-            <span>Cập nhật thông tin</span>
-          </button>
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {isSupervisor && project.status !== 'CLOSED' && onCloseProject && (
+            <button
+              onClick={onCloseProject}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+            >
+              <Icon name="lock" size={16} />
+              <span>Đóng dự án (DA12)</span>
+            </button>
+          )}
+
+          {project.status !== 'CLOSED' && (
+            <button
+              onClick={onUpdateInfo}
+              type="button"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
+            >
+              <Icon name="settings" size={16} className="text-slate-500" />
+              <span>Cập nhật thông tin</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Workflow Context Banner */}
-      {hasPendingProposals ? (
+      {project.status === 'CLOSED' ? (
+        <div className="bg-slate-100 border border-slate-300 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center shrink-0">
+              <Icon name="inventory_2" size={20} />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-slate-900">
+                  Hồ sơ công trình đã đóng bảo hành (DA12) • Trạng thái chỉ đọc (Read-only)
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 uppercase tracking-wide">
+                  LƯU TRỮ HỒ SƠ (QT13)
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Dự án được đóng bởi <strong className="text-slate-900">{project.closed_by || 'Supervisor'}</strong> ngày{' '}
+                {project.closed_at ? new Date(project.closed_at).toLocaleDateString('vi-VN') : '15/01/2026'}.
+                {project.closed_reason && ` Kết luận: "${project.closed_reason}"`}
+              </p>
+            </div>
+          </div>
+          <div className="text-xs text-slate-600 font-mono shrink-0 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+            Hạn lưu trữ: <span className="font-semibold text-slate-900">{project.retention_until || 'Tối thiểu 5 năm (QT13)'}</span>
+          </div>
+        </div>
+      ) : hasPendingProposals ? (
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">

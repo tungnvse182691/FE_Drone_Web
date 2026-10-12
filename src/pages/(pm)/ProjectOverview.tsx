@@ -15,6 +15,7 @@ import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
 import { calculateCoordsLengthKm } from './alignment/alignmentGeometryHelpers'
+import { CloseProjectModal } from './projects/CloseProjectModal'
 
 export type { Segment, ProjectMember }
 
@@ -32,6 +33,7 @@ export const ProjectOverview: React.FC = () => {
   const [segments, setSegments] = useState<Segment[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
 
   // Chi tiết phân định Tuyến chính & Tuyến phụ
   const [activeAlignmentTab, setActiveAlignmentTab] = useState<'MAINLINE' | 'BRANCHES'>('MAINLINE')
@@ -50,6 +52,19 @@ export const ProjectOverview: React.FC = () => {
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3800)
+  }
+
+  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10)
+  const handleCloseProjectConfirm = async (reason: string) => {
+    if (!project) return
+    try {
+      const closed = await projectService.closeProject(project.id, { reason })
+      setProject(closed)
+      showToast(`Đã đóng thành công dự án [${closed.code}] và lưu trữ hồ sơ theo quy chuẩn (DA12, QT13)!`)
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi đóng dự án')
+      throw err
+    }
   }
 
   // Fetch Project Data bất đồng bộ qua Mock API
@@ -181,6 +196,7 @@ export const ProjectOverview: React.FC = () => {
         isSupervisor={isSupervisor}
         onNavigate={navigate}
         onUpdateInfo={() => showToast('Mở màn hình cập nhật thông tin dự án...')}
+        onCloseProject={() => setIsCloseModalOpen(true)}
         mainlineLengthKm={alignmentDetail.mainlineLengthKm}
         branchesLengthKm={alignmentDetail.branchesLengthKm}
         branchesCount={alignmentDetail.branchesCount}
@@ -230,6 +246,14 @@ export const ProjectOverview: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (DA12, QT13, BC10) */}
+      <CloseProjectModal
+        isOpen={isCloseModalOpen}
+        project={project}
+        onClose={() => setIsCloseModalOpen(false)}
+        onConfirm={handleCloseProjectConfirm}
+      />
     </div>
   )
 }

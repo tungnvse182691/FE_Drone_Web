@@ -13,7 +13,7 @@ export const ProposalPDFPreviewModal: React.FC<ProposalPDFPreviewModalProps> = (
   isPDFPreviewModalOpen,
   setIsPDFPreviewModalOpen,
   packages,
-  showToast: _showToast,
+  showToast,
 }) => {
   if (!isPDFPreviewModalOpen) return null
 
@@ -67,7 +67,7 @@ export const ProposalPDFPreviewModal: React.FC<ProposalPDFPreviewModalProps> = (
             type="button"
             className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-xs"
           >
-            <FileText className="w-4 h-4" />
+            <Icon name="download" size={16} />
             <span>Tải xuống file PDF</span>
           </button>
         </div>

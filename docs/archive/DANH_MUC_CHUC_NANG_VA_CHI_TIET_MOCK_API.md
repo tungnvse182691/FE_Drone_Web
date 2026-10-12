@@ -754,14 +754,14 @@ sequenceDiagram
 - **Thẩm quyền:** Duy nhất Giám sát trưởng (Supervisor / Chủ đầu tư).
 - **Mục tiêu:** Theo dõi danh mục dự án bảo hành, kiểm tra đếm ngược ngày bảo hành và thực hiện thủ tục đóng dự án khi hoàn thành toàn bộ trách nhiệm bảo hành công trình.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] **Theo dõi Danh mục Dự án & Hạn Bảo hành (BC01, RPT-01):**
+  1. [x] **Theo dõi Danh mục Dự án & Hạn Bảo hành (BC01, RPT-01):**
      - Xem danh sách tổng quan các dự án bảo hành, trạng thái (`ACTIVE`, `NEAR_EXPIRY`, `PENDING_ALIGNMENT`, `CLOSED`).
      - Theo dõi thời gian bảo hành đã qua (%), số ngày còn lại (ví dụ: cảnh báo màu đỏ với dự án `[Sắp hết hạn]`).
-  2. [ ] **Đóng / Ngừng sử dụng Dự án khi Hết hạn Bảo hành (DA12):**
+  2. [x] **Đóng / Ngừng sử dụng Dự án khi Hết hạn Bảo hành (DA12):**
      - Chọn dự án đã hoàn thành thời hạn bảo hành và 100% khiếm khuyết/đợt sửa chữa đã nghiệm thu hoàn tất.
      - Supervisor nhập lý do/kết luận và bấm **"Đóng dự án"** (`closeProject: POST /projects/{projectId}/close`).
      - Dự án chuyển sang trạng thái `CLOSED` (Đóng băng hồ sơ, Read-only); toàn bộ hồ sơ được lưu trữ tối thiểu thời hạn bảo hành + 5 năm (QT13) và sẵn sàng tra cứu (BC10).
-- **Tiêu chuẩn đạt (Expected):** Trạng thái dự án chuyển thành `CLOSED`; hệ thống khóa toàn bộ chức năng tạo mới đợt sửa chữa trên dự án đã đóng.
+- **Tiêu chuẩn đạt (Expected):** Trạng thái dự án chuyển thành `CLOSED`; hệ thống khóa toàn bộ chức năng tạo mới đợt sửa chữa trên dự án đã đóng. (ĐÃ NGHIỆM THU ĐẠT 100%)
 
 ---
 
@@ -812,7 +812,7 @@ sequenceDiagram
 | **SUP-04** | Nghiệm thu Before/After | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Accept/RequestEvidence/ReworkRequired (HT10, BR-27) |
 | **SUP-05** | Đóng Mixed Case tổng thể | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Chặn đóng nếu còn hạng mục chưa đạt (HT12, BR-26) |
 | **SUP-06** | Giám sát rủi ro & Xuất hồ sơ SHA-256 | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân tích rủi ro đa kỳ, xuất PDF/ZIP SHA-256 (BC04, RPT-06, RPT-07) |
-| **SUP-07** | Danh mục & Đóng dự án hết bảo hành | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Xem hạn bảo hành, đóng dự án CLOSED khi hết hạn (BC01, DA12) |
+| **SUP-07** | Danh mục & Đóng dự án hết bảo hành | SUP | [x] Đạt | [x] Đạt | [x] Đạt | Xem hạn bảo hành, đóng dự án CLOSED khi hết hạn (BC01, DA12) |
 | **SUP-08** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
 
 ---

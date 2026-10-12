@@ -16,6 +16,7 @@ import { ProjectListFilters } from './projects/ProjectListFilters'
 import { ProjectGridView } from './projects/ProjectGridView'
 import { ProjectTableView } from './projects/ProjectTableView'
 import { CreateProjectModal } from './projects/CreateProjectModal'
+import { CloseProjectModal } from './projects/CloseProjectModal'
 
 export type { HubProject }
 
@@ -104,6 +105,22 @@ export const ProjectList: React.FC = () => {
     }
   }
 
+  // Modal Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10)
+  const [closingProject, setClosingProject] = useState<HubProject | null>(null)
+
+  const handleCloseProjectSubmit = async (reason: string) => {
+    if (!closingProject) return
+    try {
+      const closed = await projectService.closeProject(closingProject.id, { reason })
+      const refreshed = await projectService.fetchProjects()
+      setProjects(refreshed)
+      showToast(`Đã đóng thành công dự án [${closed.code}] và lưu trữ hồ sơ 5 năm (DA12, QT13)!`)
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi đóng dự án')
+      throw err
+    }
+  }
+
   // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
   const scopedProjects = useMemo(() => {
     if (isSupervisor) return projects
@@ -113,7 +130,8 @@ export const ProjectList: React.FC = () => {
         prj.pm_name === user?.full_name ||
         prj.pm_name === 'Đỗ Quốc Hoàng' ||
         prj.id === 'prj-ql1a-02' ||
-        prj.id === 'prj-lstl-05'
+        prj.id === 'prj-lstl-05' ||
+        prj.id === 'prj-ql1a-p1'
 
       return isAssigned && !prj.is_restricted_for_pm
     })
@@ -126,6 +144,7 @@ export const ProjectList: React.FC = () => {
       if (filterTab === 'ACTIVE' && prj.status !== 'ACTIVE') return false
       if (filterTab === 'NEAR_EXPIRY' && prj.status !== 'NEAR_EXPIRY') return false
       if (filterTab === 'PENDING_ALIGNMENT' && prj.status !== 'PENDING_ALIGNMENT') return false
+      if (filterTab === 'CLOSED' && prj.status !== 'CLOSED') return false
 
       // Search query
       if (searchQuery.trim()) {
@@ -146,12 +165,14 @@ export const ProjectList: React.FC = () => {
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
   const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
+  const closedCount = useMemo(() => scopedProjects.filter((p) => p.status === 'CLOSED').length, [scopedProjects])
 
   const kpiStats: ProjectKpiStats = {
     totalLength,
     activeCount,
     nearExpiryCount,
-    pendingAlignmentCount
+    pendingAlignmentCount,
+    closedCount
   }
 
   const handleNavigateHome = () => {
@@ -183,6 +204,7 @@ export const ProjectList: React.FC = () => {
         activeCount={activeCount}
         nearExpiryCount={nearExpiryCount}
         pendingAlignmentCount={pendingAlignmentCount}
+        closedCount={closedCount}
         searchQuery={searchQuery}
         onChangeSearchQuery={setSearchQuery}
         viewMode={viewMode}
@@ -201,12 +223,15 @@ export const ProjectList: React.FC = () => {
           onOpenCreateModal={() => setIsModalOpen(true)}
           onNavigateAlignment={handleNavigateAlignment}
           onNavigateDetail={handleNavigateDetail}
+          onOpenCloseModal={(prj) => setClosingProject(prj)}
         />
       ) : (
         <ProjectTableView
           filteredProjects={filteredProjects}
           totalProjectsCount={projects.length}
+          isSupervisor={isSupervisor}
           onNavigateDetail={handleNavigateDetail}
+          onOpenCloseModal={(prj) => setClosingProject(prj)}
         />
       )}
 
@@ -230,6 +255,14 @@ export const ProjectList: React.FC = () => {
         onChangeHandoverFiles={setHandoverFiles}
         isSubmitting={isSubmitting}
         onSubmit={handleCreateProjectSubmit}
+      />
+
+      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (BƯỚC SUP-07: DA12, QT13, BC10) */}
+      <CloseProjectModal
+        isOpen={!!closingProject}
+        project={closingProject}
+        onClose={() => setClosingProject(null)}
+        onConfirm={handleCloseProjectSubmit}
       />
 
       {/* TOAST FEEDBACK FLOATING NOTIFICATION */}

@@ -5,13 +5,17 @@ import { HubProject } from './types'
 interface ProjectTableViewProps {
   filteredProjects: HubProject[]
   totalProjectsCount: number
+  isSupervisor?: boolean
   onNavigateDetail: (projectId: string) => void
+  onOpenCloseModal?: (prj: HubProject) => void
 }
 
 export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   filteredProjects,
   totalProjectsCount,
-  onNavigateDetail
+  isSupervisor,
+  onNavigateDetail,
+  onOpenCloseModal
 }) => {
   return (
     <>
@@ -53,7 +57,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                   </td>
                   <td className="py-3 px-4 text-center">
                     <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Còn {prj.days_remaining} ngày</div>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      {prj.status === 'CLOSED' ? 'Đã hoàn tất' : `Còn ${prj.days_remaining} ngày`}
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span
@@ -67,7 +73,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                   <td className="py-3 px-4">
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                        prj.status === 'NEAR_EXPIRY'
+                        prj.status === 'CLOSED'
+                          ? 'bg-slate-200 text-slate-800'
+                          : prj.status === 'NEAR_EXPIRY'
                           ? 'bg-rose-100 text-rose-700'
                           : prj.status === 'PENDING_ALIGNMENT'
                           ? 'bg-amber-100 text-amber-700'
@@ -78,13 +86,38 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onNavigateDetail(prj.id)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs"
-                    >
-                      Chi tiết
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      {prj.status === 'CLOSED' ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateDetail(prj.id)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-semibold transition cursor-pointer text-xs flex items-center gap-1 shadow-2xs"
+                        >
+                          <Icon name="inventory_2" size={14} />
+                          <span>Tra cứu (BC10)</span>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onNavigateDetail(prj.id)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs"
+                          >
+                            Chi tiết
+                          </button>
+                          {isSupervisor && onOpenCloseModal && (
+                            <button
+                              type="button"
+                              title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                              onClick={() => onOpenCloseModal(prj)}
+                              className="p-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 rounded-lg text-xs font-semibold transition border border-slate-200 hover:border-rose-200 cursor-pointer"
+                            >
+                              <Icon name="lock" size={14} />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
