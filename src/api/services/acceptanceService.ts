@@ -340,7 +340,7 @@ export const acceptanceService = {
       rework_reason: payload.notes,
       rework_directives: payload.directives
     }
-    if (inMemoryClosedPackageIds.has(current.package_id)) {
+    if (current.package_id && inMemoryClosedPackageIds.has(current.package_id)) {
       inMemoryClosedPackageIds.delete(current.package_id)
     }
     syncPackageStats(current.package_id)
