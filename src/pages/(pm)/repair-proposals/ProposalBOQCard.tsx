@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileCheck2, Wrench } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { UnassignedDefectItem } from './types'
 
 export interface ProposalBOQCardProps {
@@ -86,7 +86,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                     <div className="mt-2.5 ml-7 p-2.5 bg-amber-50/70 border border-amber-200/90 rounded-xl space-y-2 animate-in fade-in duration-100">
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1">
-                          <Wrench className="w-3 h-3 text-brand-gold" />
+                          <Icon name="build" className="text-xs text-brand-gold" />
                           <span>Phương án kỹ thuật xử lý (PM tự gõ hoặc chọn gợi ý)</span>
                         </label>
                         <span className="text-[9px] text-amber-800 font-medium">
@@ -130,7 +130,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       <div className="rounded-xl bg-amber-50/70 border border-amber-200 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-brand-gold text-white flex items-center justify-center shrink-0">
-            <FileCheck2 className="w-4 h-4" />
+            <Icon name="fact_check" className="text-base" />
           </div>
           <div className="flex flex-col">
             <span className="font-bold text-xs text-amber-950">Tổng kết kỹ thuật tự động</span>

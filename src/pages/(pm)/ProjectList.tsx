@@ -171,7 +171,6 @@ export const ProjectList: React.FC = () => {
       <ProjectListHeader
         isSupervisor={isSupervisor}
         onNavigateHome={handleNavigateHome}
-        onExportGis={() => showToast('Đang kết xuất tệp GIS GeoJSON & KML toàn tuyến mạng lưới đường bộ...')}
         onOpenCreateModal={() => setIsModalOpen(true)}
       />
 

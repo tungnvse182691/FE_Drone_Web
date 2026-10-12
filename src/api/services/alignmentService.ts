@@ -13,6 +13,59 @@ export interface AlignmentState {
   branches?: any[]
 }
 
+const DEFAULT_QL1A_COORDS: [number, number][] = [
+  [108.0825, 16.2731],
+  [108.1054, 16.2589],
+  [108.1287, 16.2415],
+  [108.1492, 16.2238],
+  [108.1695, 16.2085],
+  [108.1884, 16.1843],
+  [108.2152, 16.1521],
+  [108.2418, 16.1215]
+]
+const DEFAULT_QL1A_KM_POINTS = [1020, 1022.5, 1025, 1027.5, 1030, 1035, 1040, 1045]
+const DEFAULT_QL1A_SEGMENTS = [
+  {
+    id: 'seg-1',
+    code: 'Phân đoạn #01',
+    startKm: 1020.0,
+    endKm: 1025.0,
+    lengthKm: 5.0,
+    roadWidthM: 8.0,
+    status: 'VALID',
+    statusText: 'HỢP LỆ',
+    laneCount: 4,
+    surfaceMaterial: 'Mặt BTN C12.5',
+    color: '#0284C7'
+  },
+  {
+    id: 'seg-2',
+    code: 'Phân đoạn #02',
+    startKm: 1025.0,
+    endKm: 1030.0,
+    lengthKm: 5.0,
+    roadWidthM: 10.0,
+    status: 'VALID',
+    statusText: 'HỢP LỆ',
+    laneCount: 4,
+    surfaceMaterial: 'Mặt BTN C12.5',
+    color: '#D97706'
+  },
+  {
+    id: 'seg-3',
+    code: 'Phân đoạn #03',
+    startKm: 1030.0,
+    endKm: 1045.0,
+    lengthKm: 15.0,
+    roadWidthM: 8.0,
+    status: 'VALID',
+    statusText: 'HỢP LỆ',
+    laneCount: 4,
+    surfaceMaterial: 'Mặt BTN C12.5',
+    color: '#059669'
+  }
+]
+
 export const alignmentService = {
   getAlignmentState(projectId: string): AlignmentState {
     const key = `${STORAGE_KEYS.ALIGNMENTS}_${projectId}`
@@ -50,6 +103,17 @@ export const alignmentService = {
         this.saveAlignmentData(projectId, { coords: [], kmPoints: [] })
       }
     }
+
+    // Dự án chuẩn 'prj-ql1a-02': Cung cấp dữ liệu tim tuyến mẫu 25km và 3 phân đoạn
+    if (projectId === 'prj-ql1a-02') {
+      if (!data.coords || data.coords.length === 0) {
+        data.coords = DEFAULT_QL1A_COORDS
+        data.kmPoints = DEFAULT_QL1A_KM_POINTS
+        data.segments = DEFAULT_QL1A_SEGMENTS
+        data.branches = []
+      }
+    }
+
     return data
   },
 

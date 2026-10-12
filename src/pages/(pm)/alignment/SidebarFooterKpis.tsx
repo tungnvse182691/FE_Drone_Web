@@ -1,5 +1,5 @@
 import React from 'react'
-import { ShieldCheck } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { SegmentItem } from './types'
 
 export interface SidebarFooterKpisProps {
@@ -40,7 +40,7 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
       </div>
 
       <div className="flex items-start gap-1.5 text-slate-500 text-[11px] leading-relaxed">
-        <ShieldCheck className="w-3.5 h-3.5 text-brand-gold shrink-0 mt-0.5" />
+        <Icon name="verified_user" size={14} className="text-brand-gold shrink-0 mt-0.5" />
         <span>
           Trạng thái <strong>CONFIRMED</strong> sẽ gắn hàm băm SHA-256 bất biến phục vụ nghiệm thu bảo hành.
         </span>

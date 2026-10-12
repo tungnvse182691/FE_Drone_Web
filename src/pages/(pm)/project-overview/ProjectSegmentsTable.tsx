@@ -11,6 +11,8 @@ interface ProjectSegmentsTableProps {
   basePath: string
   onNavigate: (path: string) => void
   onViewSegment: (code: string) => void
+  activeTab?: 'MAINLINE' | 'BRANCHES'
+  onTabChange?: (tab: 'MAINLINE' | 'BRANCHES') => void
 }
 
 export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
@@ -21,9 +23,20 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
   branchesLengthKm = 0,
   basePath,
   onNavigate,
-  onViewSegment
+  onViewSegment,
+  activeTab: controlledTab,
+  onTabChange
 }) => {
-  const [activeTab, setActiveTab] = useState<'MAINLINE' | 'BRANCHES'>('MAINLINE')
+  const [internalTab, setInternalTab] = useState<'MAINLINE' | 'BRANCHES'>('MAINLINE')
+  const currentTab = controlledTab !== undefined ? controlledTab : internalTab
+
+  const handleTabSwitch = (tab: 'MAINLINE' | 'BRANCHES') => {
+    if (onTabChange) {
+      onTabChange(tab)
+    } else {
+      setInternalTab(tab)
+    }
+  }
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs flex flex-col gap-4 font-body">
@@ -52,9 +65,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
       <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
         <button
           type="button"
-          onClick={() => setActiveTab('MAINLINE')}
+          onClick={() => handleTabSwitch('MAINLINE')}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === 'MAINLINE'
+            currentTab === 'MAINLINE'
               ? 'bg-amber-100/80 text-amber-900 border border-amber-300'
               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
@@ -68,9 +81,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
 
         <button
           type="button"
-          onClick={() => setActiveTab('BRANCHES')}
+          onClick={() => handleTabSwitch('BRANCHES')}
           className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeTab === 'BRANCHES'
+            currentTab === 'BRANCHES'
               ? 'bg-amber-100/80 text-amber-900 border border-amber-300'
               : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
@@ -78,13 +91,18 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           <span className="w-2 h-2 rounded-full bg-amber-500"></span>
           <span>Tuyến phụ (Branches)</span>
           <span className="text-[11px] font-mono px-1.5 py-0.2 bg-white rounded border border-slate-200 text-slate-700">
-            {branches.length} nhánh {branches.length > 0 ? `• ${branchesLengthKm}km` : ''}
+            {(() => {
+              const branchesSegmentsCount = branches.reduce((acc, b) => acc + (b.segments && Array.isArray(b.segments) && b.segments.length > 0 ? b.segments.length : 1), 0)
+              return branches.length > 0
+                ? `${branches.length} nhánh (${branchesSegmentsCount} đoạn) • ${branchesLengthKm}km`
+                : '0 nhánh'
+            })()}
           </span>
         </button>
       </div>
 
       {/* CONTENT TAB 1: TUYẾN CHÍNH */}
-      {activeTab === 'MAINLINE' && (
+      {currentTab === 'MAINLINE' && (
         <>
           {segments.length === 0 ? (
             <div className="p-8 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center flex flex-col items-center justify-center gap-2.5">
@@ -174,7 +192,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
       )}
 
       {/* CONTENT TAB 2: TUYẾN PHỤ (BRANCHES) */}
-      {activeTab === 'BRANCHES' && (
+      {currentTab === 'BRANCHES' && (
         <>
           {branches.length === 0 ? (
             <div className="p-8 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center flex flex-col items-center justify-center gap-2.5">

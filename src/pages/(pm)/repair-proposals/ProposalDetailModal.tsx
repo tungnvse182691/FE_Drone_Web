@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, Wrench, Check, Send } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { ProposalWorkPackage } from './types'
 
 export interface ProposalDetailModalProps {
@@ -79,7 +79,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
             onClick={() => setSelectedPackageForDetail(null)}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" className="text-xl" />
           </button>
         </div>
 
@@ -115,7 +115,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
           <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200/80 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
-                <Wrench className="w-3.5 h-3.5 text-brand-gold" />
+                <Icon name="build" className="text-sm text-brand-gold" />
                 <span>Phương án kỹ thuật sửa chữa tổng quát (PM đề xuất):</span>
               </span>
               <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded font-mono border border-slate-200">
@@ -220,7 +220,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                 type="button"
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
               >
-                <Check className="w-4 h-4" />
+                <Icon name="check" className="text-base" />
                 <span>Phê duyệt chính thức gói</span>
               </button>
             )}
@@ -237,7 +237,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                 type="button"
                 className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1.5"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Icon name="send" className="text-sm" />
                 <span>Khóa &amp; Trình duyệt gói</span>
               </button>
             )}

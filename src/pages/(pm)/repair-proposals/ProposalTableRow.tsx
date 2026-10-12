@@ -1,17 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Eye,
-  Send,
-  Trash2,
-  CheckCircle2,
-  Clock,
-  Construction,
-  Truck,
-  ShieldCheck,
-  UserCheck,
-  MoreVertical,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { ProposalWorkPackage } from './types'
 import { Tooltip } from '../../../components/ui/Tooltip'
 import { TruncatedText } from '../../../components/ui/TruncatedText'
@@ -45,26 +34,24 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
   const approvalRatio = pkg.total_items > 0 ? (pkg.approved_items / pkg.total_items) * 100 : 0
 
   return (
-    <tr key={pkg.id} className="hover:bg-amber-50/20 transition-colors group">
+    <tr key={pkg.id} className="hover:bg-slate-50 transition-colors group border-b border-slate-100 font-body">
       {/* Sticky Column: Mã gói */}
-      <td className="py-3.5 px-4 font-mono font-bold text-slate-900 whitespace-nowrap sticky left-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-800">{pkg.code}</span>
-        </div>
+      <td className="py-3 px-3 font-mono font-bold text-slate-900 whitespace-nowrap sticky left-0 bg-white group-hover:bg-slate-50 z-10">
+        <span className="text-xs">{pkg.code}</span>
       </td>
 
       {/* Tên gói công việc & Lý trình */}
-      <td className="py-3.5 px-4 max-w-[340px]">
+      <td className="py-3 px-3 max-w-[340px]">
         <div className="flex flex-col gap-0.5">
           <TruncatedText
             text={pkg.title}
             lines={1}
-            className="font-bold text-brand-dark hover:text-brand-gold cursor-pointer transition-colors text-xs"
+            className="font-bold text-slate-900 hover:text-brand-gold cursor-pointer transition-colors text-xs"
           />
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <span className="font-medium text-slate-700">{pkg.route_name}</span>
             <span>•</span>
-            <span className="font-mono text-[#8F7212] font-semibold">{pkg.chainage_display}</span>
+            <span className="font-mono text-brand-gold font-semibold">{pkg.chainage_display}</span>
             <span>•</span>
             <span>{pkg.segments_count} phân đoạn</span>
           </div>
@@ -72,31 +59,31 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       </td>
 
       {/* Hạng mục lỗi */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      <td className="py-3 px-3 whitespace-nowrap">
         <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{pkg.defect_count} điểm lỗi</span>
+          <span className="font-semibold text-slate-800 text-xs">{pkg.defect_count} điểm lỗi</span>
           <span className="text-[11px] text-slate-500">{pkg.defect_summary}</span>
         </div>
       </td>
 
       {/* Khối lượng kỹ thuật dự kiến */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      <td className="py-3 px-3 whitespace-nowrap">
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-800">{pkg.technical_scope}</span>
+          <span className="font-medium text-slate-800 text-xs">{pkg.technical_scope}</span>
           <span className="text-[11px] text-slate-500">{pkg.material_scope}</span>
         </div>
       </td>
 
       {/* Thời gian thi công */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      <td className="py-3 px-3 whitespace-nowrap">
         <div className="flex flex-col">
-          <span className="font-bold text-slate-800">{pkg.duration_days} ngày</span>
+          <span className="font-semibold text-slate-800 text-xs">{pkg.duration_days} ngày</span>
           <span className="text-[11px] text-slate-500">{pkg.date_range}</span>
         </div>
       </td>
 
       {/* Người lập / Ngày trình */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      <td className="py-3 px-3 whitespace-nowrap">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0">
             {pkg.created_by_initials}
@@ -108,28 +95,28 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         </div>
       </td>
 
-      {/* Trạng thái */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
+      {/* Trạng thái theo DESIGN.md */}
+      <td className="py-3 px-3 whitespace-nowrap">
         {pkg.status === 'SUBMITTED' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FEF3E2] text-[#F59E0B] border border-amber-200">
+            <Icon name="schedule" size={13} />
             <span>Chờ phê duyệt</span>
           </span>
         )}
         {pkg.status === 'DECIDED' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-emerald-200">
+            <Icon name="check_circle" size={13} />
             <span>Đã phê duyệt</span>
           </span>
         )}
         {pkg.status === 'DISPATCHED' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
-            <Truck className="w-3 h-3 text-blue-600" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-800 border border-blue-200">
+            <Icon name="local_shipping" size={13} />
             <span>Đã giao việc</span>
           </span>
         )}
         {pkg.status === 'DRAFT' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#F8F9FA] text-[#2D3748] border border-slate-200">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
             <span>Bản nháp</span>
           </span>
@@ -137,10 +124,10 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       </td>
 
       {/* Tiến độ phê duyệt */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
-        <div className="flex flex-col gap-1 w-32">
+      <td className="py-3 px-3 whitespace-nowrap">
+        <div className="flex flex-col gap-1 w-28">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-slate-700">
+            <span className="font-medium text-slate-700">
               {pkg.approved_items}/{pkg.total_items} điểm
             </span>
             <span className="font-mono text-slate-500 font-bold">{Math.round(approvalRatio)}%</span>
@@ -149,7 +136,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 approvalRatio === 100
-                  ? 'bg-emerald-500'
+                  ? 'bg-[#2F9E44]'
                   : approvalRatio > 0
                   ? 'bg-brand-gold'
                   : 'bg-slate-300'
@@ -161,7 +148,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       </td>
 
       {/* Sticky Column: Thao tác */}
-      <td className="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-amber-50/40 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10">
         <div className="flex items-center justify-end gap-1.5 relative">
           {/* Vai trò Supervisor */}
           {isSupervisor && pkg.status === 'SUBMITTED' && (
@@ -169,9 +156,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
               <button
                 onClick={() => onQuickApprove(pkg.id, pkg.code)}
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2F9E44] hover:bg-emerald-700 text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
+                <Icon name="shield" size={13} />
                 <span>Phê duyệt</span>
               </button>
             </Tooltip>
@@ -181,14 +168,14 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <Tooltip content="Theo dõi tiến độ tổ thi công ngoài hiện trường">
               <button
                 onClick={() => {
-                  showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ. Đang chuyển hướng kiểm tra hiện trường.`)
+                  showToast(`Gói [${pkg.code}] đã được phê duyệt hợp lệ.`)
                   navigate(`${basePath}/proposals/${pkg.id}`)
                 }}
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
               >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Theo dõi thi công</span>
+                <Icon name="person" size={13} />
+                <span>Theo dõi</span>
               </button>
             </Tooltip>
           )}
@@ -200,9 +187,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                 <button
                   onClick={() => onSubmitDraft(pkg.id, pkg.code)}
                   type="button"
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-brand-gold hover:bg-[#B38E1F] text-white font-bold text-xs shadow-2xs transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5" />
+                  <Icon name="send" size={13} />
                   <span>Trình duyệt</span>
                 </button>
               </Tooltip>
@@ -210,9 +197,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                 <button
                   onClick={() => onDeleteDraft(pkg.id, pkg.code)}
                   type="button"
-                  className="p-1.5 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Icon name="delete" size={15} />
                 </button>
               </Tooltip>
             </>
@@ -223,9 +210,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <button
               onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
               type="button"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs shadow-2xs transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
             >
-              <Eye className="w-3.5 h-3.5 text-slate-600" />
+              <Icon name="visibility" size={14} className="text-slate-600" />
               <span>{isSupervisor ? 'Thẩm định' : 'Xem hồ sơ'}</span>
             </button>
           </Tooltip>
@@ -235,13 +222,13 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <button
               onClick={(e) => onToggleMenu(pkg, e)}
               type="button"
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                 isMenuActive
                   ? 'bg-slate-200 text-slate-800'
                   : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
               }`}
             >
-              <MoreVertical className="w-3.5 h-3.5" />
+              <Icon name="more_vert" size={16} />
             </button>
           </Tooltip>
         </div>

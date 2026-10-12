@@ -1,9 +1,5 @@
 import React from 'react'
-import {
-  Camera,
-  X,
-  Send
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { RepairItemDetail } from './types'
 
 export interface DecisionModalProps {
@@ -34,39 +30,39 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   if (!activeModalItem) return null
 
   return (
-    <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+    <div aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4 font-body" role="dialog">
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
       ></div>
 
-      <div className="relative bg-white border border-brand-border rounded-2xl text-left shadow-2xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
+      <div className="relative bg-white border border-slate-200 rounded-xl text-left shadow-xl transition-all sm:w-full sm:max-w-2xl overflow-hidden z-10 max-h-[90vh] flex flex-col">
         {/* Modal Top Header */}
-        <div className="bg-brand-surfaceAlt border-b border-brand-border p-5 flex items-start justify-between">
+        <div className="bg-[#F8F9FA] border-b border-slate-200 p-4 flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FEF3C7] text-[#92700C] flex items-center justify-center shrink-0 shadow-2xs">
-              <Camera className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-brand-gold/15 text-brand-gold flex items-center justify-center shrink-0">
+              <Icon name="photo_camera" size={18} />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900 font-sansation">
+              <h3 className="font-bold text-sm text-slate-900 font-headline">
                 Yêu cầu bổ sung bằng chứng / Từ chối duyệt phương án
               </h3>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">
+              <p className="text-[11px] text-slate-500 font-mono mt-0.5">
                 Mã hạng mục: {activeModalItem.item_code} ({activeModalItem.defect_code})
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition flex items-center justify-center cursor-pointer"
+            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition flex items-center justify-center cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <Icon name="close" size={16} />
           </button>
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <div className="bg-brand-surfaceAlt border border-brand-border p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+          <div className="bg-[#F8F9FA] border border-slate-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <span className="font-mono font-bold text-slate-900">
                 {activeModalItem.chainage} ({activeModalItem.lane_info})
@@ -74,22 +70,22 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               <span className="text-slate-300">•</span>
               <span className="text-slate-600 font-medium">{activeModalItem.solution_title}</span>
             </div>
-            <span className="font-mono font-bold text-[#92700C]">
-              Diện tích: {activeModalItem.volume_display} • Sâu: {activeModalItem.volume_sub}
+            <span className="font-mono font-bold text-brand-gold">
+              Khối lượng: {activeModalItem.volume_display} • Sâu: {activeModalItem.volume_sub}
             </span>
           </div>
 
           {/* Radio Switch for Technical Action Type */}
-          <div className="space-y-2">
-            <label className="font-bold text-xs text-slate-900 block font-sansation">
+          <div className="space-y-1.5">
+            <label className="font-bold text-xs text-slate-900 block font-headline">
               Loại phản hồi kỹ thuật của Supervisor:
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <label
                 onClick={() => setModalFeedbackType('EVIDENCE')}
-                className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
+                className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition ${
                   modalFeedbackType === 'EVIDENCE'
-                    ? 'bg-[#FEF9E7] border-brand-gold ring-1 ring-brand-gold'
+                    ? 'bg-[#E0F2FE] border-[#0284C7] ring-1 ring-[#0284C7]'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 }`}
               >
@@ -98,10 +94,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   name="feedback-type"
                   checked={modalFeedbackType === 'EVIDENCE'}
                   onChange={() => setModalFeedbackType('EVIDENCE')}
-                  className="mt-0.5 accent-brand-gold"
+                  className="mt-0.5 accent-[#0284C7]"
                 />
-                <div className="text-xs">
-                  <span className="font-bold text-[#92700C] block">Cần bằng chứng</span>
+                <div>
+                  <span className="font-bold text-[#0284C7] block">Cần bằng chứng</span>
                   <span className="text-slate-500 text-[11px] block mt-0.5">
                     Thước đo độ sâu, ảnh lún nứt chi tiết
                   </span>
@@ -110,9 +106,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
 
               <label
                 onClick={() => setModalFeedbackType('RECONSIDER')}
-                className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
+                className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition ${
                   modalFeedbackType === 'RECONSIDER'
-                    ? 'bg-amber-50 border-amber-500 ring-1 ring-amber-500'
+                    ? 'bg-[#FEF3E2] border-[#F59E0B] ring-1 ring-[#F59E0B]'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 }`}
               >
@@ -121,10 +117,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   name="feedback-type"
                   checked={modalFeedbackType === 'RECONSIDER'}
                   onChange={() => setModalFeedbackType('RECONSIDER')}
-                  className="mt-0.5 accent-amber-600"
+                  className="mt-0.5 accent-[#F59E0B]"
                 />
-                <div className="text-xs">
-                  <span className="font-bold text-amber-800 block">Xem lại giải pháp</span>
+                <div>
+                  <span className="font-bold text-[#F59E0B] block">Xem lại giải pháp</span>
                   <span className="text-slate-500 text-[11px] block mt-0.5">
                     Điều chỉnh chiều dày hoặc vật liệu móng
                   </span>
@@ -133,9 +129,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
 
               <label
                 onClick={() => setModalFeedbackType('REJECT')}
-                className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition ${
+                className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer transition ${
                   modalFeedbackType === 'REJECT'
-                    ? 'bg-rose-50 border-rose-500 ring-1 ring-rose-500'
+                    ? 'bg-[#FDECEC] border-[#E5484D] ring-1 ring-[#E5484D]'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
                 }`}
               >
@@ -144,10 +140,10 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
                   name="feedback-type"
                   checked={modalFeedbackType === 'REJECT'}
                   onChange={() => setModalFeedbackType('REJECT')}
-                  className="mt-0.5 text-rose-600 accent-rose-600"
+                  className="mt-0.5 accent-[#E5484D]"
                 />
-                <div className="text-xs">
-                  <span className="font-bold text-rose-700 block">Từ chối phương án</span>
+                <div>
+                  <span className="font-bold text-[#E5484D] block">Từ chối phương án</span>
                   <span className="text-slate-500 text-[11px] block mt-0.5">
                     Sai quy chuẩn hoặc trùng lặp gói khác
                   </span>
@@ -157,7 +153,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </div>
 
           {/* Technical Explanation Textarea */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label htmlFor="modal-supervisor-notes" className="font-bold text-xs text-slate-900 flex items-center justify-between">
               <span>
                 Nội dung giải trình kỹ thuật của Supervisor <span className="text-rose-600">*</span>
@@ -166,20 +162,20 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             </label>
             <textarea
               id="modal-supervisor-notes"
-              rows={4}
+              rows={3}
               value={modalNotes}
               onChange={(e) => setModalNotes(e.target.value)}
-              className="w-full rounded-xl bg-white border border-brand-border text-slate-800 p-3 text-xs focus:outline-none focus:ring-2 focus:ring-brand-gold transition-all resize-none shadow-2xs font-medium"
+              className="w-full rounded-lg bg-white border border-slate-200 text-slate-800 p-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-gold transition-all resize-none shadow-2xs font-normal"
               placeholder="Nhập lý do cụ thể và yêu cầu kỹ thuật chi tiết đối với hạng mục này..."
             />
           </div>
 
           {/* Specific Field Directives */}
-          <div className="space-y-2 bg-brand-surfaceAlt border border-brand-border p-3.5 rounded-xl text-xs">
+          <div className="space-y-1.5 bg-[#F8F9FA] border border-slate-200 p-3 rounded-lg text-xs">
             <span className="text-[11px] text-slate-500 uppercase tracking-wider font-bold block mb-1">
               Chỉ thị bổ sung hiện trường:
             </span>
-            <label className="flex items-center gap-2.5 text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={modalDirectives.laser}
@@ -188,7 +184,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               />
               <span>Yêu cầu đo đạc lại hiện trường bằng máy laser thủy bình hoặc thước 3m</span>
             </label>
-            <label className="flex items-center gap-2.5 text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={modalDirectives.height}
@@ -197,7 +193,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               />
               <span>Yêu cầu đo đạc lại cao độ trắc dọc và bề dày lớp móng cấp phối đá dăm</span>
             </label>
-            <label className="flex items-center gap-2.5 text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={modalDirectives.close_photo}
@@ -206,7 +202,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               />
               <span>Chụp lại ảnh cận cảnh có đặt thước tỷ lệ chuẩn 50cm</span>
             </label>
-            <label className="flex items-center gap-2.5 text-slate-700 cursor-pointer">
+            <label className="flex items-center gap-2 text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={modalDirectives.core_sample}
@@ -218,11 +214,11 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
           </div>
 
           {/* Visual Evidence Preview Thumbnail */}
-          <div className="flex items-center gap-3 bg-brand-surfaceAlt border border-brand-border p-2.5 rounded-xl">
+          <div className="flex items-center gap-3 bg-[#F8F9FA] border border-slate-200 p-2.5 rounded-lg">
             <img
               src={activeModalItem.image_url}
               alt={activeModalItem.defect_title}
-              className="w-14 h-14 rounded-lg object-cover border border-slate-200"
+              className="w-12 h-12 rounded-lg object-cover border border-slate-200"
             />
             <div className="flex-1 min-w-0 text-xs">
               <span className="font-semibold text-slate-900 block truncate font-mono">
@@ -235,7 +231,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <button
               onClick={() => onViewPhoto(activeModalItem)}
               type="button"
-              className="px-3 py-1.5 bg-white border border-brand-border text-[#92700C] rounded-lg text-xs font-bold font-sansation hover:bg-slate-50 transition shrink-0 cursor-pointer"
+              className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 rounded-md text-xs font-medium hover:bg-slate-50 transition shrink-0 cursor-pointer"
             >
               Xem ảnh gốc
             </button>
@@ -243,24 +239,24 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-brand-surfaceAlt border-t border-brand-border px-6 py-3.5 flex items-center justify-end gap-2.5 shrink-0">
+        <div className="bg-[#F8F9FA] border-t border-slate-200 px-4 py-3 flex items-center justify-end gap-2 shrink-0">
           <button
             onClick={onClose}
             type="button"
-            className="px-4 h-9 bg-white border border-brand-border text-slate-700 hover:bg-slate-100 transition rounded-xl font-bold text-xs shadow-2xs cursor-pointer"
+            className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition rounded-lg font-medium text-xs shadow-2xs cursor-pointer"
           >
             Hủy bỏ
           </button>
           <button
             onClick={onSubmit}
             type="button"
-            className={`px-5 h-9 text-white transition rounded-xl font-bold text-xs shadow-sm inline-flex items-center gap-1.5 cursor-pointer ${
+            className={`px-4 py-1.5 text-white transition rounded-lg font-medium text-xs shadow-xs inline-flex items-center gap-1.5 cursor-pointer ${
               modalFeedbackType === 'REJECT'
-                ? 'bg-rose-600 hover:bg-rose-700'
-                : 'bg-brand-gold hover:bg-[#B38E1F]'
+                ? 'bg-[#E5484D] hover:bg-rose-700'
+                : 'bg-brand-gold hover:bg-brand-goldMuted'
             }`}
           >
-            <Send className="w-3.5 h-3.5" />
+            <Icon name="send" size={14} />
             <span>Xác nhận gửi quyết định</span>
           </button>
         </div>
@@ -268,4 +264,5 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
     </div>
   )
 }
+
 export default DecisionModal

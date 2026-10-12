@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  ChevronRight,
-  ChevronLeft,
-  Info,
-  FileText,
-  FileCheck2,
-} from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { ProposalWorkPackage } from './types'
 import { ProposalFilterBar } from './ProposalFilterBar'
 import { ProposalTableRow } from './ProposalTableRow'
@@ -117,7 +111,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-2xs border border-brand-border space-y-4">
+    <div className="bg-white rounded-xl p-5 shadow-2xs border border-slate-200 space-y-4 font-body">
       {/* Search & Filter Component */}
       <ProposalFilterBar
         searchTerm={searchTerm}
@@ -136,21 +130,21 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
       />
 
       {/* Responsive Table với Sticky Cột Đầu & Cột Cuối */}
-      <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs custom-scrollbar">
+      <div className="overflow-x-auto w-full rounded-lg border border-slate-200 bg-white shadow-2xs">
         <table className="w-full text-left border-collapse text-xs min-w-[1240px]">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-              <th className="py-3.5 px-4 whitespace-nowrap sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+            <tr className="bg-[#F8F9FA] border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+              <th className="py-2.5 px-3 whitespace-nowrap sticky left-0 bg-[#F8F9FA] z-20">
                 Mã gói
               </th>
-              <th className="py-3.5 px-4 min-w-[280px] max-w-[340px]">Tên gói công việc &amp; Phạm vi lý trình</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Hạng mục lỗi</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Khối lượng dự kiến</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Thời gian thi công</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Người lập / Ngày trình</th>
-              <th className="py-3.5 px-4 whitespace-nowrap">Trạng thái</th>
-              <th className="py-3.5 px-4 min-w-[150px] whitespace-nowrap">Tiến độ phê duyệt</th>
-              <th className="py-3.5 px-4 text-right whitespace-nowrap sticky right-0 bg-slate-50 z-20 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.08)]">
+              <th className="py-2.5 px-3 min-w-[280px] max-w-[340px]">Tên gói công việc &amp; Phạm vi lý trình</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Hạng mục lỗi</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Khối lượng dự kiến</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Thời gian thi công</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Người lập / Ngày trình</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Trạng thái</th>
+              <th className="py-2.5 px-3 min-w-[140px] whitespace-nowrap">Tiến độ phê duyệt</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20">
                 Thao tác
               </th>
             </tr>
@@ -191,8 +185,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
             {filteredPackages.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} -{' '}
             {Math.min(currentPage * pageSize, filteredPackages.length)}
           </strong>{' '}
-          trên tổng số <strong className="text-slate-800">{filteredPackages.length}</strong> gói đề xuất (tổng kho:{' '}
-          {packages.length})
+          trên tổng số <strong className="text-slate-800">{filteredPackages.length}</strong> gói đề xuất
         </span>
 
         <div className="flex items-center gap-1">
@@ -200,10 +193,10 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
             onClick={() => onSetPage(Math.max(1, currentPage - 1))}
             disabled={currentPage <= 1}
             type="button"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            className="w-7 h-7 rounded flex items-center justify-center text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
             title="Trang trước"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <Icon name="chevron_left" size={16} />
           </button>
 
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
@@ -211,10 +204,10 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
               key={pageNum}
               onClick={() => onSetPage(pageNum)}
               type="button"
-              className={`w-8 h-8 rounded-full font-bold flex items-center justify-center transition-colors cursor-pointer text-xs ${
+              className={`w-7 h-7 rounded font-medium flex items-center justify-center transition-colors cursor-pointer text-xs ${
                 currentPage === pageNum
-                  ? 'bg-brand-gold text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-brand-gold text-white font-bold'
+                  : 'text-slate-700 hover:bg-slate-100'
               }`}
             >
               {pageNum}
@@ -225,10 +218,10 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
             onClick={() => onSetPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage >= totalPages}
             type="button"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+            className="w-7 h-7 rounded flex items-center justify-center text-slate-600 hover:bg-slate-100 border border-slate-200 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
             title="Trang kế tiếp"
           >
-            <ChevronRight className="w-4 h-4" />
+            <Icon name="chevron_right" size={16} />
           </button>
         </div>
       </div>
@@ -247,27 +240,24 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
                 : { top: `${activeMenu.top}px` }),
               right: `${activeMenu.right}px`
             }}
-            className={`fixed z-50 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 text-left text-xs animate-in fade-in zoom-in-95 duration-150 max-h-[calc(100vh-32px)] overflow-y-auto ${
+            className={`fixed z-50 w-52 bg-white rounded-lg shadow-xl border border-slate-200 py-1 text-left text-xs ${
               activeMenu.openUpwards ? 'slide-in-from-bottom-2' : 'slide-in-from-top-2'
             }`}
           >
-            <div className="px-3.5 py-1 mb-1 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-3 py-1 mb-1 border-b border-slate-100 flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider font-mono">
                 {activeMenu.pkg.code}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[100px]">
-                {activeMenu.pkg.route_name.split('•')[0]}
               </span>
             </div>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(activeMenu.pkg.code)
-                showToast(`Đã sao chép mã gói [${activeMenu.pkg.code}] vào bộ nhớ tạm!`)
+                showToast(`Đã sao chép mã gói [${activeMenu.pkg.code}]!`)
                 setActiveMenu(null)
               }}
-              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
+              className="w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-normal transition cursor-pointer"
             >
-              <Info className="w-4 h-4 text-brand-gold" />
+              <Icon name="content_copy" size={14} className="text-slate-500" />
               <span>Sao chép mã gói</span>
             </button>
             <button
@@ -275,20 +265,10 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
                 navigate(`${basePath}/proposals/${activeMenu.pkg.id}`)
                 setActiveMenu(null)
               }}
-              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
+              className="w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-normal transition cursor-pointer"
             >
-              <FileText className="w-4 h-4 text-slate-500" />
+              <Icon name="visibility" size={14} className="text-slate-500" />
               <span>Thẩm định chi tiết</span>
-            </button>
-            <button
-              onClick={() => {
-                showToast(`Đang kết xuất bảng kỹ thuật chi tiết gói ${activeMenu.pkg.code}...`)
-                setActiveMenu(null)
-              }}
-              className="w-full px-3.5 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 font-medium transition cursor-pointer"
-            >
-              <FileCheck2 className="w-4 h-4 text-emerald-600" />
-              <span>Tải bảng danh mục kỹ thuật</span>
             </button>
           </div>
         </>
@@ -296,3 +276,4 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
     </div>
   )
 }
+export default ProposalTable

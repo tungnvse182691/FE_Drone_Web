@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
+import { Icon } from '../../components/ui/Icon'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { ItemApprovalStatus, RepairItemDetail } from './proposal-approval/types'
@@ -70,17 +70,17 @@ export const ProposalApprovalDetail: React.FC = () => {
   } = useProposalApprovalState(id)
 
   return (
-    <div className="space-y-6 pb-20 text-[#1F2937]">
+    <div className="space-y-6 pb-20 text-[#1F2937] font-body">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <Sparkles className="w-5 h-5 text-brand-gold shrink-0" />
-          <span className="text-sm font-medium">{toastMessage}</span>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <Icon name="check_circle" size={18} className="text-brand-gold shrink-0" />
+          <span className="text-xs font-medium">{toastMessage}</span>
           <button
             onClick={() => setToastMessage(null)}
-            className="text-slate-400 hover:text-white ml-2 text-xs font-bold"
+            className="text-slate-400 hover:text-white ml-2 text-xs font-bold cursor-pointer"
           >
-            ✕
+            <Icon name="close" size={16} />
           </button>
         </div>
       )}
@@ -161,4 +161,5 @@ export const ProposalApprovalDetail: React.FC = () => {
     </div>
   )
 }
+
 export default ProposalApprovalDetail

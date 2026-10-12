@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileText, X } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import type { ProposalWorkPackage } from './types'
 
 export interface ProposalPDFPreviewModalProps {
@@ -13,7 +13,7 @@ export const ProposalPDFPreviewModal: React.FC<ProposalPDFPreviewModalProps> = (
   isPDFPreviewModalOpen,
   setIsPDFPreviewModalOpen,
   packages,
-  showToast,
+  showToast: _showToast,
 }) => {
   if (!isPDFPreviewModalOpen) return null
 
@@ -22,14 +22,14 @@ export const ProposalPDFPreviewModal: React.FC<ProposalPDFPreviewModalProps> = (
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-brand-gold" />
+            <Icon name="description" className="text-xl text-brand-gold" />
             <h3 className="font-bold text-base text-brand-dark">Kế Hoạch Sửa Chữa Kỹ Thuật (PDF)</h3>
           </div>
           <button
             onClick={() => setIsPDFPreviewModalOpen(false)}
             className="text-slate-400 hover:text-slate-700 cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" className="text-xl" />
           </button>
         </div>
 

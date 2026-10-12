@@ -11,12 +11,14 @@ interface ProjectMapPreviewCardProps {
   project: HubProject
   basePath: string
   onNavigate: (path: string) => void
+  activeTab?: 'MAINLINE' | 'BRANCHES'
 }
 
 export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
   project,
   basePath,
-  onNavigate
+  onNavigate,
+  activeTab = 'MAINLINE'
 }) => {
   const previewMapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapInstanceRef = useRef<maplibregl.Map | null>(null)
@@ -42,6 +44,10 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
             [108.2418, 16.2690]
           ]
 
+    const branchesList = (alignData.branches || []).filter(
+      (b: any) => b.coords && Array.isArray(b.coords) && b.coords.length >= 2
+    )
+
     const centerPoint = corridorCoords[Math.floor(corridorCoords.length / 2)] || [108.1651, 16.2052]
 
     const map = new maplibregl.Map({
@@ -57,6 +63,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
 
     map.on('load', () => {
+      // 1. Tuyến chính (Mainline)
       map.addSource('corridor-line', {
         type: 'geojson',
         data: {
@@ -73,7 +80,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
         paint: {
           'line-color': '#C9A227',
           'line-width': 8,
-          'line-opacity': 0.4,
+          'line-opacity': activeTab === 'MAINLINE' ? 0.6 : 0.25,
           'line-blur': 3
         }
       })
@@ -84,12 +91,66 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
         source: 'corridor-line',
         paint: {
           'line-color': '#FFFFFF',
-          'line-width': 3
+          'line-width': activeTab === 'MAINLINE' ? 3.5 : 2,
+          'line-opacity': activeTab === 'MAINLINE' ? 1.0 : 0.45
         }
       })
 
-      if (corridorCoords.length >= 2) {
-        const bounds = new maplibregl.LngLatBounds()
+      // 2. Tuyến phụ (Branches)
+      if (branchesList.length > 0) {
+        const branchFeatures = branchesList.map((b: any) => ({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'LineString' as const,
+            coordinates: b.coords
+          },
+          properties: {
+            id: b.id,
+            code: b.code,
+            name: b.name
+          }
+        }))
+
+        map.addSource('branches-line', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: branchFeatures
+          }
+        })
+
+        map.addLayer({
+          id: 'branches-glow',
+          type: 'line',
+          source: 'branches-line',
+          paint: {
+            'line-color': '#D97706',
+            'line-width': 8,
+            'line-opacity': activeTab === 'BRANCHES' ? 0.65 : 0.25,
+            'line-blur': 3
+          }
+        })
+
+        map.addLayer({
+          id: 'branches-core',
+          type: 'line',
+          source: 'branches-line',
+          paint: {
+            'line-color': '#F59E0B',
+            'line-width': activeTab === 'BRANCHES' ? 4.0 : 2.5,
+            'line-opacity': activeTab === 'BRANCHES' ? 1.0 : 0.45
+          }
+        })
+      }
+
+      // 3. Fit bounds theo activeTab
+      const bounds = new maplibregl.LngLatBounds()
+      if (activeTab === 'BRANCHES' && branchesList.length > 0) {
+        branchesList.forEach((b: any) => {
+          b.coords.forEach((c: [number, number]) => bounds.extend(c))
+        })
+        map.fitBounds(bounds, { padding: 35, duration: 800 })
+      } else if (corridorCoords.length >= 2) {
         corridorCoords.forEach((c) => bounds.extend(c))
         map.fitBounds(bounds, { padding: 30, duration: 800 })
       }
@@ -101,7 +162,11 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
       map.remove()
       previewMapInstanceRef.current = null
     }
-  }, [hasAlignment, project.id])
+  }, [hasAlignment, project.id, activeTab])
+
+  // Lấy số lượng nhánh thực tế để hiển thị Legend
+  const alignData = alignmentService.getAlignmentData(project.id)
+  const branchesCount = (alignData.branches || []).length
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs flex flex-col gap-3 font-body">
@@ -121,6 +186,24 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
         <>
           <div className="relative w-full h-44 rounded-xl overflow-hidden border border-slate-200">
             <div ref={previewMapContainerRef} className="w-full h-full" />
+
+            {/* Map Legend: Phân biệt Tuyến chính vs Tuyến phụ */}
+            <div className="absolute top-2 left-2 flex items-center gap-2 bg-slate-900/85 backdrop-blur-xs px-2.5 py-1 rounded-lg text-white text-[10px] font-mono border border-slate-700/60 shadow-xs">
+              <span className="flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${activeTab === 'MAINLINE' ? 'bg-brand-gold ring-1 ring-white' : 'bg-brand-gold/70'}`} />
+                <span className={activeTab === 'MAINLINE' ? 'font-bold text-white' : 'text-slate-300'}>Trục chính</span>
+              </span>
+              {branchesCount > 0 && (
+                <>
+                  <span className="text-slate-500">•</span>
+                  <span className="flex items-center gap-1">
+                    <span className={`w-2 h-2 rounded-full ${activeTab === 'BRANCHES' ? 'bg-amber-400 ring-1 ring-white' : 'bg-amber-500/70'}`} />
+                    <span className={activeTab === 'BRANCHES' ? 'font-bold text-amber-300' : 'text-slate-300'}>Tuyến phụ ({branchesCount})</span>
+                  </span>
+                </>
+              )}
+            </div>
+
             <div className="absolute bottom-2 left-2 px-2 py-1 bg-slate-900/80 backdrop-blur-xs text-white rounded text-[10px] font-mono">
               GPS: WGS84 • UTM 48N
             </div>

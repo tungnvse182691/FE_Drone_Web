@@ -229,18 +229,8 @@ export function useRepairProposalsState() {
   }
 
   const handleQuickApprove = (id: string, code: string) => {
-    setPackages((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              status: 'DECIDED',
-              status_label: 'Đã phê duyệt',
-              approved_items: p.total_items
-            }
-          : p
-      )
-    )
+    repairService.signPackageApproval(id)
+    setPackages(repairService.getPackages())
     showToast(`[GIÁM SÁT]: Đã phê duyệt chính thức gói [${code}] và ban hành lệnh công tác!`)
   }
 

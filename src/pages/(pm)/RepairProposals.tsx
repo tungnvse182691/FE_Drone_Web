@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle2, X } from 'lucide-react'
+import { Icon } from '../../components/ui/Icon'
 import { ProposalHeader } from './repair-proposals/ProposalHeader'
 import { ProposalStats } from './repair-proposals/ProposalStats'
 import { ProposalTable } from './repair-proposals/ProposalTable'
@@ -84,10 +84,10 @@ export const RepairProposals: React.FC = () => {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
           <span className="text-xs font-medium">{toastMessage}</span>
           <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white cursor-pointer ml-2">
-            <X className="w-4 h-4" />
+            <Icon name="close" size={16} />
           </button>
         </div>
       )}
@@ -97,7 +97,6 @@ export const RepairProposals: React.FC = () => {
         basePath={basePath}
         totalPackagesCount={packages.length}
         isPM={isPM}
-        onOpenPDFPreviewModal={() => setIsPDFPreviewModalOpen(true)}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
       />
 

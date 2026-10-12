@@ -1,7 +1,6 @@
 import React from 'react'
 import type { ProposalWorkPackage, UnassignedDefectItem, RouteSegmentOption } from './types'
 import { CreateProposalModal } from './CreateProposalModal'
-import { ProposalPDFPreviewModal } from './ProposalPDFPreviewModal'
 import { ProposalDetailModal } from './ProposalDetailModal'
 
 export interface ProposalModalsProps {
@@ -30,11 +29,11 @@ export interface ProposalModalsProps {
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
 
-  // PDF Preview Modal
-  isPDFPreviewModalOpen: boolean
-  setIsPDFPreviewModalOpen: (open: boolean) => void
-  packages: ProposalWorkPackage[]
-  showToast: (msg: string) => void
+  // PDF Preview Modal (Deprecated, kept for props compatibility)
+  isPDFPreviewModalOpen?: boolean
+  setIsPDFPreviewModalOpen?: (open: boolean) => void
+  packages?: ProposalWorkPackage[]
+  showToast?: (msg: string) => void
 
   // Detail Modal
   selectedPackageForDetail: ProposalWorkPackage | null
@@ -69,10 +68,6 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
   handleUpdateDefectSolution,
   modalCalculations,
   handleSaveDraft,
-  isPDFPreviewModalOpen,
-  setIsPDFPreviewModalOpen,
-  packages,
-  showToast,
   selectedPackageForDetail,
   setSelectedPackageForDetail,
   isSupervisor,
@@ -108,13 +103,6 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
         handleSaveDraft={handleSaveDraft}
       />
 
-      <ProposalPDFPreviewModal
-        isPDFPreviewModalOpen={isPDFPreviewModalOpen}
-        setIsPDFPreviewModalOpen={setIsPDFPreviewModalOpen}
-        packages={packages}
-        showToast={showToast}
-      />
-
       <ProposalDetailModal
         selectedPackageForDetail={selectedPackageForDetail}
         setSelectedPackageForDetail={setSelectedPackageForDetail}
@@ -126,3 +114,4 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
     </>
   )
 }
+

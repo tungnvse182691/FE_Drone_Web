@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertCircle } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { RepairItemDetail } from './types'
 import { ItemsFilterBar } from './ItemsFilterBar'
 import { ItemsTableRow } from './ItemsTableRow'
@@ -51,7 +51,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
   isSupervisor = true
 }) => {
   return (
-    <section className="bg-white border border-brand-border rounded-2xl shadow-sm p-6 space-y-4">
+    <section className="bg-white border border-slate-200 rounded-xl shadow-2xs p-5 space-y-4 font-body">
       {/* Table Header & Search Filter Bar */}
       <ItemsFilterBar
         isSupervisor={isSupervisor}
@@ -66,27 +66,25 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       />
 
       {/* Responsive Table Container */}
-      <div className="overflow-x-auto w-full rounded-xl border border-slate-200 bg-white shadow-2xs custom-scrollbar">
+      <div className="overflow-x-auto w-full rounded-lg border border-slate-200 bg-white shadow-2xs">
         <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
-          <thead className="bg-brand-surfaceAlt border-y border-brand-border text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+          <thead className="bg-[#F8F9FA] border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-3 px-3.5 rounded-l-lg min-w-[150px]">
-                Mã &amp; Hư hỏng
-              </th>
-              <th className="py-3 px-3.5 whitespace-nowrap min-w-[130px]">Vị trí &amp; Lý trình</th>
-              <th className="py-3 px-3.5 min-w-[180px]">Hư hại &amp; Đo đạc</th>
-              <th className="py-3 px-3.5 min-w-[200px]">Phương án kỹ thuật</th>
-              <th className="py-3 px-3.5 text-right whitespace-nowrap min-w-[110px]">Khối lượng</th>
-              <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[120px]">Trạng thái duyệt</th>
-              <th className="py-3 px-3.5 text-center whitespace-nowrap min-w-[140px]">
+              <th className="py-2.5 px-3 min-w-[150px]">Mã &amp; Hư hỏng</th>
+              <th className="py-2.5 px-3 whitespace-nowrap min-w-[130px]">Vị trí &amp; Lý trình</th>
+              <th className="py-2.5 px-3 min-w-[170px]">Hư hại &amp; Đo đạc</th>
+              <th className="py-2.5 px-3 min-w-[200px]">Phương án kỹ thuật</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap min-w-[110px]">Khối lượng</th>
+              <th className="py-2.5 px-3 text-center whitespace-nowrap min-w-[120px]">Trạng thái duyệt</th>
+              <th className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px]">
                 {isSupervisor ? 'Thao tác Thẩm định' : 'Thẩm định'}
               </th>
-              <th className="py-3 px-3.5 rounded-r-lg whitespace-nowrap min-w-[180px]">
-                {isSupervisor ? 'Đội thi công (Dự kiến / Đã giao)' : 'Phân công tổ thi công'}
+              <th className="py-2.5 px-3 whitespace-nowrap min-w-[180px]">
+                {isSupervisor ? 'Đội thi công (Dự kiến)' : 'Phân công tổ thi công'}
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-brand-border">
+          <tbody className="divide-y divide-slate-100">
             {displayedItems.map((item) => (
               <ItemsTableRow
                 key={item.id}
@@ -101,10 +99,10 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
 
             {displayedItems.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400">
-                  <AlertCircle className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                  <p className="font-semibold text-slate-600">Không có hạng mục nào phù hợp với bộ lọc!</p>
-                  <p className="text-xs text-slate-400 mt-1">Vui lòng thay đổi từ khóa hoặc chọn tab khác.</p>
+                <td colSpan={8} className="py-10 text-center text-slate-400">
+                  <Icon name="error" size={32} className="mx-auto mb-1 text-slate-300" />
+                  <p className="font-semibold text-slate-600">Không có hạng mục nào phù hợp!</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Vui lòng thay đổi từ khóa hoặc chọn tab khác.</p>
                 </td>
               </tr>
             )}
@@ -113,18 +111,18 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       </div>
 
       {/* Table Pagination / Summary Footer */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-brand-border text-xs text-slate-600">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-600">
         <div>
           Hiển thị <span className="font-bold text-slate-900">{displayedItems.length}</span> trên{' '}
-          <span className="font-bold text-slate-900">{filteredItems.length}</span> hạng mục được lập kế hoạch
+          <span className="font-bold text-slate-900">{filteredItems.length}</span> hạng mục
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             type="button"
-            className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
+            className="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs cursor-pointer"
           >
             Trước
           </button>
@@ -135,9 +133,9 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
                 key={p}
                 onClick={() => setCurrentPage(p)}
                 type="button"
-                className={`w-8 h-8 rounded-full font-bold text-xs transition cursor-pointer ${
+                className={`w-7 h-7 rounded text-xs transition cursor-pointer font-medium ${
                   currentPage === p
-                    ? 'bg-brand-gold text-white shadow-2xs'
+                    ? 'bg-brand-gold text-white font-bold'
                     : 'hover:bg-slate-100 text-slate-600'
                 }`}
               >
@@ -149,7 +147,7 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             type="button"
-            className="px-2.5 py-1.5 rounded-lg border border-brand-border bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition font-medium cursor-pointer"
+            className="px-2.5 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs cursor-pointer"
           >
             Sau
           </button>

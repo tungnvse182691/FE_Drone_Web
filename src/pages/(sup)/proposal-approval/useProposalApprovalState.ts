@@ -34,22 +34,37 @@ export function useProposalApprovalState(id: string | undefined) {
   const createdByName = targetPackage?.created_by_name || 'Đỗ Quốc Hoàng (PM)'
   const createdAt = targetPackage?.created_at || 'Hôm nay'
   const packageStatus = targetPackage?.status || 'SUBMITTED'
+  const activeKey = id || packageCode
 
   const [items, setItems] = useState<RepairItemDetail[]>(() => {
-    return repairService.getItems(id) || repairService.getItems(packageCode)
+    return repairService.getItems(activeKey)
   })
 
+  // Cập nhật khi id hoặc packageCode thay đổi
+  useEffect(() => {
+    if (activeKey) {
+      const pkg = repairService.getPackageById(activeKey)
+      if (pkg) setCurrentPkg(pkg)
+      setItems(repairService.getItems(activeKey))
+    }
+  }, [id, packageCode, activeKey])
+
+  // Lắng nghe sự kiện từ mock API
   useEffect(() => {
     const handleStateChange = () => {
-      setItems(repairService.getItems(id) || repairService.getItems(packageCode))
-      if (id) {
-        const pkg = repairService.getPackageById(id)
+      setItems(repairService.getItems(activeKey))
+      if (activeKey) {
+        const pkg = repairService.getPackageById(activeKey)
         if (pkg) setCurrentPkg(pkg)
       }
     }
+    window.addEventListener('roadguard_repair_api_change', handleStateChange)
     window.addEventListener('roadguard_state_change', handleStateChange)
-    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
-  }, [id, packageCode])
+    return () => {
+      window.removeEventListener('roadguard_repair_api_change', handleStateChange)
+      window.removeEventListener('roadguard_state_change', handleStateChange)
+    }
+  }, [activeKey])
 
   // Filter State
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REQUEST_EVIDENCE' | 'REJECTED'>(
@@ -153,13 +168,13 @@ export function useProposalApprovalState(id: string | undefined) {
   // Supervisor Decision Handlers
   const handleQuickApproveItem = (itemId: string) => {
     const autoCrew = 'Tổ thi công Asphalt 01'
-    repairService.updateItemDecision(packageCode, itemId, {
+    repairService.updateItemDecision(activeKey, itemId, {
       status: 'APPROVED',
       status_label: 'APPROVED',
       assigned_crew: autoCrew,
       supervisor_notes: 'Đã phê duyệt thông qua phương án kỹ thuật và khối lượng bóc tách.'
     })
-    setItems(repairService.getItems(packageCode))
+    setItems(repairService.getItems(activeKey))
     showToast(`Hạng mục ${itemId.toUpperCase()} đã được Supervisor phê duyệt (APPROVED)!`)
   }
 
@@ -205,7 +220,7 @@ export function useProposalApprovalState(id: string | undefined) {
     if (modalFeedbackType === 'RECONSIDER') nextStatus = 'REQUEST_RECONSIDER'
     if (modalFeedbackType === 'REJECT') nextStatus = 'REJECTED'
 
-    repairService.updateItemDecision(packageCode, activeModalItem.id, {
+    repairService.updateItemDecision(activeKey, activeModalItem.id, {
       status: nextStatus,
       status_label: nextStatus,
       assigned_crew: nextStatus === 'REJECTED' ? '' : activeModalItem.assigned_crew,
@@ -213,7 +228,7 @@ export function useProposalApprovalState(id: string | undefined) {
       evidence_directives: selectedDirectivesList,
       feedback_type: modalFeedbackType
     })
-    setItems(repairService.getItems(packageCode))
+    setItems(repairService.getItems(activeKey))
 
     const labelMap = {
       EVIDENCE: 'yêu cầu bổ sung bằng chứng (REQUEST_EVIDENCE)',
@@ -227,25 +242,18 @@ export function useProposalApprovalState(id: string | undefined) {
 
   // Batch Approve All
   const handleBatchApproveAll = () => {
-    items.forEach((it) => {
-      if (it.status !== 'APPROVED') {
-        repairService.updateItemDecision(packageCode, it.id, {
-          status: 'APPROVED',
-          status_label: 'APPROVED',
-          assigned_crew: it.assigned_crew || 'Tổ thi công Asphalt 01',
-          supervisor_notes: 'Đã thẩm duyệt phê duyệt hàng loạt thông qua.'
-        })
-      }
-    })
-    setItems(repairService.getItems(packageCode))
+    repairService.signPackageApproval(activeKey)
+    setItems(repairService.getItems(activeKey))
+    const pkg = repairService.getPackageById(activeKey)
+    if (pkg) setCurrentPkg(pkg)
     setIsBatchApproveConfirmOpen(false)
     showToast('Đã phê duyệt nhanh toàn bộ các hạng mục hợp lệ trong gói đề xuất!')
   }
 
   // PM Assign Crew handler
   const handleCrewChange = (itemId: string, newCrew: string) => {
-    repairService.updateItemDecision(packageCode, itemId, { assigned_crew: newCrew })
-    setItems(repairService.getItems(packageCode))
+    repairService.updateItemDecision(activeKey, itemId, { assigned_crew: newCrew })
+    setItems(repairService.getItems(activeKey))
     showToast(`Đã cập nhật phân công đội thi công: [${newCrew}] cho hạng mục!`)
   }
 
@@ -257,7 +265,7 @@ export function useProposalApprovalState(id: string | undefined) {
       updatedItems = items.map((it) =>
         it.status === 'APPROVED' ? { ...it, assigned_crew: crewName } : it
       )
-      repairService.setPackageItems(packageCode, updatedItems)
+      repairService.setPackageItems(activeKey, updatedItems)
       setItems(updatedItems)
     }
 

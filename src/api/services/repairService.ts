@@ -3,24 +3,76 @@ import {
   ItemApprovalStatus,
   RepairItemDetail,
 } from '../../types/domain'
-import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 
 export type { ProposalWorkPackage, ItemApprovalStatus, RepairItemDetail }
 
+// Dữ liệu gói khởi tạo mô phỏng API
 export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
+  {
+    id: 'pkg-19',
+    code: 'PKG-2026-19',
+    title: 'Gói khắc phục hư hỏng khẩn cấp phân đoạn 14',
+    route_id: 'ROUTE_EXP_01',
+    route_name: 'Đường nối Cao tốc Bắc - Nam',
+    chainage_start: 'Km 0+000',
+    chainage_end: 'Km 15+500',
+    chainage_display: 'Km 0+000 - Km 15+500',
+    segments_count: 1,
+    defect_count: 2,
+    defect_summary: '2 điểm hư hỏng gom mới (SEG-EXP1)',
+    technical_scope: 'Cào bóc thảm: 2.00 m²',
+    material_scope: 'Vật tư theo phương án kỹ thuật',
+    duration_days: 2,
+    date_range: 'Dự kiến 2 ngày',
+    created_by_name: 'Đỗ Quốc Hoàng (PM)',
+    created_by_initials: 'ĐH',
+    created_by_role: 'Chỉ huy trưởng dự án',
+    created_at: '25/08/2026 - 10:15',
+    status: 'SUBMITTED',
+    status_label: 'Chờ duyệt',
+    approved_items: 0,
+    total_items: 2,
+    contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
+  },
+  {
+    id: 'pkg-18',
+    code: 'PKG-2026-18',
+    title: 'Xử lý nứt rạn & lún cục bộ đoạn Km 1028 - 1033',
+    route_id: 'QL1A_PK04',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1024 - Km 1045)',
+    chainage_start: 'Km 1028+000',
+    chainage_end: 'Km 1033+500',
+    chainage_display: 'Km 1028+000 - Km 1033+500',
+    segments_count: 1,
+    defect_count: 3,
+    defect_summary: '3 điểm hư hỏng gom mới (SEG-02)',
+    technical_scope: 'Cào bóc thảm: 2.55 m²',
+    material_scope: 'Vật tư theo phương án kỹ thuật',
+    duration_days: 3,
+    date_range: 'Dự kiến 3 ngày',
+    created_by_name: 'Đỗ Quốc Hoàng (PM)',
+    created_by_initials: 'ĐH',
+    created_by_role: 'Chỉ huy trưởng dự án',
+    created_at: '24/08/2026 - 16:40',
+    status: 'SUBMITTED',
+    status_label: 'Chờ duyệt',
+    approved_items: 1,
+    total_items: 3,
+    contractor_name: 'Tổ cơ động sửa chữa BTXM 02'
+  },
   {
     id: 'pkg-08',
     code: 'PKG-2026-08',
     title: 'Khắc phục ổ gà & lún nứt đợt 3',
     route_id: 'QL1A_PK04',
-    route_name: 'QL1A - Giai đoạn 2',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1024 - Km 1045)',
     chainage_start: 'Km 1024+000',
     chainage_end: 'Km 1030+000',
     chainage_display: 'Km 1024+000 - Km 1030+000',
     segments_count: 5,
-    defect_count: 12,
-    defect_summary: '4 ổ gà, 6 nứt dọc, 2 lún bánh',
-    technical_scope: 'Cào bóc & thảm: 180 m²',
+    defect_count: 4,
+    defect_summary: '4 điểm hư hỏng gom mới (SEG-01)',
+    technical_scope: 'Cào bóc thảm: 70.7 m²',
     material_scope: 'Bê tông nhựa C19: 14 m³',
     duration_days: 3,
     date_range: '18/08 - 21/08/2026',
@@ -30,8 +82,8 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     created_at: '18/08/2026 - 09:30',
     status: 'SUBMITTED',
     status_label: 'Chờ duyệt',
-    approved_items: 8,
-    total_items: 12,
+    approved_items: 2,
+    total_items: 4,
     contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
   },
   {
@@ -39,14 +91,14 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     code: 'PKG-2026-07',
     title: 'Vá cào bóc thảm nhựa polime',
     route_id: 'QL1A_PK04',
-    route_name: 'QL1A - Giai đoạn 2',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1024 - Km 1045)',
     chainage_start: 'Km 1033+500',
     chainage_end: 'Km 1038+000',
     chainage_display: 'Km 1033+500 - Km 1038+000',
     segments_count: 3,
-    defect_count: 10,
-    defect_summary: '10 điểm hư hỏng mặt lớp trên',
-    technical_scope: 'Cào bóc thảm: 320 m²',
+    defect_count: 5,
+    defect_summary: '5 điểm hư hỏng mặt lớp trên',
+    technical_scope: 'Cào bóc thảm: 144.5 m²',
     material_scope: 'Bù vênh lu lèn: 22 tấn',
     duration_days: 2,
     date_range: '16/08 - 18/08/2026',
@@ -56,8 +108,8 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     created_at: '16/08/2026 - 15:45',
     status: 'DECIDED',
     status_label: 'Đã phê duyệt',
-    approved_items: 10,
-    total_items: 10,
+    approved_items: 5,
+    total_items: 5,
     contractor_name: 'Tổ thi công Asphalt 01'
   },
   {
@@ -65,13 +117,13 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     code: 'PKG-2026-09',
     title: 'Xử lý nứt rạn mai rùa phân đoạn đèo',
     route_id: 'QL1A_PK04',
-    route_name: 'QL1A - Giai đoạn 2',
+    route_name: 'QL1A - Giai đoạn 2 (Km 1024 - Km 1045)',
     chainage_start: 'Km 1042+000',
     chainage_end: 'Km 1045+500',
     chainage_display: 'Km 1042+000 - Km 1045+500',
     segments_count: 2,
-    defect_count: 8,
-    defect_summary: '5 nứt lưới, 3 lún mép đường',
+    defect_count: 3,
+    defect_summary: '3 điểm hư hỏng nứt lưới',
     technical_scope: 'Xử lý móng CPĐD: 95 m²',
     material_scope: 'Lưới địa kỹ thuật: 150 m²',
     duration_days: 4,
@@ -83,14 +135,136 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
     status: 'DRAFT',
     status_label: 'Bản nháp',
     approved_items: 0,
-    total_items: 8,
+    total_items: 3,
     contractor_name: 'Chưa phân công'
   }
 ]
 
-export const INITIAL_ITEMS: RepairItemDetail[] = [
+// Dữ liệu items ban đầu của từng gói
+export const PKG_19_ITEMS: RepairItemDetail[] = [
   {
-    id: 'item-01',
+    id: 'item-19-01',
+    item_code: '#ITEM-01',
+    defect_code: 'DEF-EXP-0012',
+    chainage: 'Km 2+450',
+    lane_info: 'Làn phải R1 • Tuyến nối cao tốc',
+    defect_title: 'Ổ gà mặt đường sâu 4.5cm',
+    defect_measurements: 'Sâu 4.5cm • S = 0.85 m²',
+    solution_title: 'Trám vá nhựa nguội khẩn cấp',
+    solution_standard: 'Tiêu chuẩn vá nhanh TCVN 8819',
+    volume_display: '0.85 m²',
+    volume_sub: 'Sâu 4.5 cm',
+    area_m2: 0.85,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Đội thi công sửa chữa Hoàng Hải 01',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_EXP_0012_ORTHO.JPG',
+    gps_coords: '16.1420, 108.0825',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  },
+  {
+    id: 'item-19-02',
+    item_code: '#ITEM-02',
+    defect_code: 'DEF-EXP-0015',
+    chainage: 'Km 5+120',
+    lane_info: 'Làn trái L1 • Tuyến nối cao tốc',
+    defect_title: 'Nứt dọc mép bó vỉa 3.8m',
+    defect_measurements: 'Rộng 6mm • Dài 3.8m • S = 1.15 m²',
+    solution_title: 'Cắt rãnh & rót mastic chèn khe co giãn',
+    solution_standard: 'Quy trình xử lý nứt AASHTO',
+    volume_display: '1.15 m²',
+    volume_sub: 'Dài 3.8 m',
+    area_m2: 1.15,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Đội thi công sửa chữa Hoàng Hải 01',
+    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_EXP_0015_CRACK.JPG',
+    gps_coords: '16.1650, 108.1120',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  }
+]
+
+export const PKG_18_ITEMS: RepairItemDetail[] = [
+  {
+    id: 'item-18-01',
+    item_code: '#ITEM-01',
+    defect_code: 'DEF-2026-0071',
+    chainage: 'Km 1028+350',
+    lane_info: 'Làn phải R1 • Tấm #22',
+    defect_title: 'Lún vệt bánh xe sâu 22mm',
+    defect_measurements: 'Dài 8.5m • S = 0.95 m²',
+    solution_title: 'Cào bóc 5cm & thảm lại BTN C12.5',
+    solution_standard: 'Tiêu chuẩn cào bóc TCVN 8819',
+    volume_display: '0.95 m²',
+    volume_sub: 'Sâu 5.0 cm',
+    area_m2: 0.95,
+    status: 'APPROVED',
+    status_label: 'APPROVED',
+    assigned_crew: 'Tổ cơ động sửa chữa BTXM 02',
+    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1028_R1_RUT.JPG',
+    gps_coords: '16.2215, 108.1512',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  },
+  {
+    id: 'item-18-02',
+    item_code: '#ITEM-02',
+    defect_code: 'DEF-2026-0074',
+    chainage: 'Km 1030+100',
+    lane_info: 'Làn giữa M1 • Tấm #38',
+    defect_title: 'Vỡ mép góc tấm bê tông',
+    defect_measurements: 'Sâu 6.0cm • S = 0.80 m²',
+    solution_title: 'Trám vá nhựa nguội khẩn cấp',
+    solution_standard: 'Tiêu chuẩn vá nhanh TCVN 8819',
+    volume_display: '0.80 m²',
+    volume_sub: 'Sâu 6.0 cm',
+    area_m2: 0.80,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Tổ cơ động sửa chữa BTXM 02',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1030_M1_SPALL.JPG',
+    gps_coords: '16.2280, 108.1590',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  },
+  {
+    id: 'item-18-03',
+    item_code: '#ITEM-03',
+    defect_code: 'DEF-2026-0078',
+    chainage: 'Km 1032+240',
+    lane_info: 'Làn trái L2 • Tấm #54',
+    defect_title: 'Nứt chân chim mai rùa cục bộ',
+    defect_measurements: 'Rộng 4mm • S = 0.80 m²',
+    solution_title: 'Xử lý móng CPĐD + thảm 2 lớp',
+    solution_standard: 'Gia cố móng TCVN 8859',
+    volume_display: '0.80 m²',
+    volume_sub: 'Sâu 8.0 cm',
+    area_m2: 0.80,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Tổ cơ động sửa chữa BTXM 02',
+    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1032_L2_ALLIG.JPG',
+    gps_coords: '16.2345, 108.1680',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  }
+]
+
+export const PKG_08_ITEMS: RepairItemDetail[] = [
+  {
+    id: 'item-08-01',
     item_code: '#ITEM-01',
     defect_code: 'DEF-2026-0089',
     chainage: 'Km 1024+350',
@@ -105,14 +279,15 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     status: 'APPROVED',
     status_label: 'APPROVED',
     assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url:
-      'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1024_R1_ORTHO.JPG',
     gps_coords: '15.8245, 108.2140',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
   },
   {
-    id: 'item-02',
+    id: 'item-08-02',
     item_code: '#ITEM-02',
     defect_code: 'DEF-2026-0092',
     chainage: 'Km 1024+500',
@@ -127,14 +302,15 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     status: 'APPROVED',
     status_label: 'APPROVED',
     assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url:
-      'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1024_L2_CRACK.JPG',
     gps_coords: '15.8260, 108.2155',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
   },
   {
-    id: 'item-03',
+    id: 'item-08-03',
     item_code: '#ITEM-03',
     defect_code: 'DEF-2026-0095',
     chainage: 'Km 1025+120',
@@ -149,16 +325,16 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     status: 'REQUEST_EVIDENCE',
     status_label: 'YÊU CẦU BẰNG CHỨNG',
     assigned_crew: 'Chưa giao việc',
-    supervisor_notes:
-      'Hình ảnh Drone chưa rõ độ sâu đáy lún. Đề nghị Tổ đo đạc bổ sung ảnh chụp thước đo cốt đáy.',
-    image_url:
-      'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    supervisor_notes: 'Hình ảnh Drone chưa rõ độ sâu đáy lún. Đề nghị Tổ đo đạc bổ sung ảnh chụp thước đo cốt đáy.',
+    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1025_M1_RUT.JPG',
     gps_coords: '15.8290, 108.2180',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
   },
   {
-    id: 'item-04',
+    id: 'item-08-04',
     item_code: '#ITEM-04',
     defect_code: 'DEF-2026-0098',
     chainage: 'Km 1025+400',
@@ -173,11 +349,12 @@ export const INITIAL_ITEMS: RepairItemDetail[] = [
     status: 'PENDING',
     status_label: 'CHỜ DUYỆT',
     assigned_crew: 'Chưa giao việc',
-    image_url:
-      'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
+    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1025_R1_ALLIG.JPG',
     gps_coords: '15.8310, 108.2200',
-    resolution: '4K • 3840x2160'
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
   }
 ]
 
@@ -281,149 +458,90 @@ export const PKG_07_ITEMS: RepairItemDetail[] = [
     area_m2: 16.5,
     status: 'APPROVED',
     status_label: 'APPROVED',
-    assigned_crew: 'Đội bảo dưỡng Thường xuyên',
+    assigned_crew: 'Tổ thi công Asphalt 01',
     image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
     ortho_code: 'IMG_1035_L1_POTHOLE.JPG',
-    gps_coords: '15.8335, 108.2225',
-    resolution: '4K • 3840x2160'
-  },
-  {
-    id: 'item-07-06',
-    item_code: '#ITEM-06',
-    defect_code: 'DEF-2026-0033',
-    chainage: 'Km 1036+150',
-    lane_info: 'Làn giữa M1 • Tấm #75',
-    defect_title: 'Nứt mạng lưới rạn mai rùa',
-    defect_measurements: 'Diện tích 48 m² • Rạn nứt sâu',
-    solution_title: 'Cào bóc xử lý móng CPĐD + thảm 2 lớp',
-    solution_standard: 'Gia cố móng TCVN 8859',
-    volume_display: '48.0 m²',
-    volume_sub: 'Cào bóc sâu 8cm',
-    area_m2: 48.0,
-    status: 'APPROVED',
-    status_label: 'APPROVED',
-    assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-    ortho_code: 'IMG_1036_M1_ALLIG.JPG',
-    gps_coords: '15.8360, 108.2250',
-    resolution: '4K • 3840x2160'
-  },
-  {
-    id: 'item-07-07',
-    item_code: '#ITEM-07',
-    defect_code: 'DEF-2026-0036',
-    chainage: 'Km 1036+700',
-    lane_info: 'Làn phải R2 • Tấm #84',
-    defect_title: 'Trám mastic khe nối bị bong bật',
-    defect_measurements: 'Dài 22m dọc khe co giãn',
-    solution_title: 'Làm sạch và bơm mastic polymer chịu nhiệt',
-    solution_standard: 'Tiêu chuẩn AASHTO M324',
-    volume_display: '22.0 m',
-    volume_sub: 'Chèn kín khe',
-    area_m2: 2.0,
-    status: 'APPROVED',
-    status_label: 'APPROVED',
-    assigned_crew: 'Đội cơ giới Sửa chữa 02',
-    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
-    ortho_code: 'IMG_1036_R2_JOINT.JPG',
-    gps_coords: '15.8385, 108.2275',
-    resolution: '4K • 3840x2160'
-  },
-  {
-    id: 'item-07-08',
-    item_code: '#ITEM-08',
-    defect_code: 'DEF-2026-0039',
-    chainage: 'Km 1037+120',
-    lane_info: 'Làn trái L1 • Tấm #92',
-    defect_title: 'Lún võng cục bộ vệt bánh xe',
-    defect_measurements: 'Diện tích 42 m² • Sâu 3.0cm',
-    solution_title: 'Cào bóc bù vênh bê tông nhựa polime',
-    solution_standard: 'Độ chặt lu lèn K98',
-    volume_display: '42.0 m²',
-    volume_sub: 'Dày 4.5 cm',
-    area_m2: 42.0,
-    status: 'APPROVED',
-    status_label: 'APPROVED',
-    assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
-    ortho_code: 'IMG_1037_L1_RUT.JPG',
-    gps_coords: '15.8410, 108.2300',
-    resolution: '4K • 3840x2160'
-  },
-  {
-    id: 'item-07-09',
-    item_code: '#ITEM-09',
-    defect_code: 'DEF-2026-0042',
-    chainage: 'Km 1037+550',
-    lane_info: 'Làn giữa M1 • Tấm #101',
-    defect_title: 'Nứt chân chim diện rộng',
-    defect_measurements: 'Diện tích 45 m²',
-    solution_title: 'Tưới nhựa dính bám & thảm phủ bảo vệ',
-    solution_standard: 'Quy chuẩn TCVN 8819',
-    volume_display: '45.0 m²',
-    volume_sub: 'Lớp phủ 3.0 cm',
-    area_m2: 45.0,
-    status: 'APPROVED',
-    status_label: 'APPROVED',
-    assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80',
-    ortho_code: 'IMG_1037_M1_CRACK.JPG',
-    gps_coords: '15.8435, 108.2325',
-    resolution: '4K • 3840x2160'
-  },
-  {
-    id: 'item-07-10',
-    item_code: '#ITEM-10',
-    defect_code: 'DEF-2026-0045',
-    chainage: 'Km 1037+900',
-    lane_info: 'Làn phải R1 • Tấm #110',
-    defect_title: 'Ổ gà sâu mép lề đường',
-    defect_measurements: 'Diện tích 53 m² • Sâu 6.0cm',
-    solution_title: 'Đục tẩy vuông thành vá dặm thảm BTN C12.5',
-    solution_standard: 'Định mức TCVN 8819',
-    volume_display: '53.0 m²',
-    volume_sub: 'Sâu 6.0 cm',
-    area_m2: 53.0,
-    status: 'APPROVED',
-    status_label: 'APPROVED',
-    assigned_crew: 'Tổ thi công Asphalt 01',
-    image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
-    ortho_code: 'IMG_1037_R1_POTHOLE.JPG',
-    gps_coords: '15.8460, 108.2350',
+    gps_coords: '15.8350, 108.2240',
     resolution: '4K • 3840x2160'
   }
 ]
 
-// PERSISTENT LOCAL STORAGE STORE (Mô phỏng DB đồng bộ giữa các màn hình và giữ trạng thái khi F5)
-let inMemoryPackages: ProposalWorkPackage[] = getFromStorage(
-  STORAGE_KEYS.REPAIR_PROPOSALS,
-  [...INITIAL_PACKAGES]
-)
-const inMemoryItemsByPackage: Record<string, RepairItemDetail[]> = getFromStorage(
-  STORAGE_KEYS.PROPOSAL_ITEMS,
-  {
-    'pkg-08': [...INITIAL_ITEMS],
-    'PKG-2026-08': [...INITIAL_ITEMS],
-    'pkg-07': [...PKG_07_ITEMS],
-    'PKG-2026-07': [...PKG_07_ITEMS]
-  }
-)
+// =============================================================================
+// MOCK API STORE SINGLETON (Độc lập trong bộ nhớ, không dùng localStorage)
+// =============================================================================
+let apiPackages: ProposalWorkPackage[] = [...INITIAL_PACKAGES]
+const apiItemsByPackage: Record<string, RepairItemDetail[]> = {
+  'pkg-19': [...PKG_19_ITEMS],
+  'PKG-2026-19': [...PKG_19_ITEMS],
+  'pkg-18': [...PKG_18_ITEMS],
+  'PKG-2026-18': [...PKG_18_ITEMS],
+  'pkg-08': [...PKG_08_ITEMS],
+  'PKG-2026-08': [...PKG_08_ITEMS],
+  'pkg-07': [...PKG_07_ITEMS],
+  'PKG-2026-07': [...PKG_07_ITEMS]
+}
 
-const notifyStateChange = () => {
-  saveToStorage(STORAGE_KEYS.REPAIR_PROPOSALS, inMemoryPackages)
-  saveToStorage(STORAGE_KEYS.PROPOSAL_ITEMS, inMemoryItemsByPackage)
+const dispatchMockChangeEvent = () => {
+  window.dispatchEvent(new CustomEvent('roadguard_repair_api_change'))
+}
+
+// Hàm sinh items động tương thích chính xác với thông tin của một gói
+function generateDynamicItemsForPackage(pkg: ProposalWorkPackage): RepairItemDetail[] {
+  const count = Math.max(1, pkg.defect_count || pkg.total_items || 2)
+  const results: RepairItemDetail[] = []
+  
+  const sampleDefectTypes = [
+    { title: 'Ổ gà mặt đường sâu cấp 3', standard: 'Tiêu chuẩn vá nhanh TCVN 8819', solution: 'Trám vá nhựa nguội khẩn cấp', depth: '4.5 cm' },
+    { title: 'Nứt dọc kéo dài mép làn', standard: 'Quy trình xử lý nứt AASHTO', solution: 'Cắt rãnh & rót mastic chèn khe', depth: '3.0 cm' },
+    { title: 'Lún vệt bánh xe sâu', standard: 'Tiêu chuẩn cào bóc TCVN 8819', solution: 'Cào bóc 5cm & thảm lại BTN C12.5', depth: '5.0 cm' },
+    { title: 'Nứt rạn mai rùa diện rộng', standard: 'Gia cố móng TCVN 8859', solution: 'Xử lý móng CPĐD + thảm 2 lớp', depth: '7.5 cm' }
+  ]
+
+  for (let i = 0; i < count; i++) {
+    const tIdx = i % sampleDefectTypes.length
+    const t = sampleDefectTypes[tIdx]
+    const itemCode = `#ITEM-${String(i + 1).padStart(2, '0')}`
+    const defectCode = `DEF-${pkg.code.replace('PKG-', '')}-${String(i + 1).padStart(2, '0')}`
+    const area = +(1.2 + i * 0.85).toFixed(2)
+
+    results.push({
+      id: `item-${pkg.id}-${i + 1}`,
+      item_code: itemCode,
+      defect_code: defectCode,
+      chainage: `${pkg.chainage_start || 'Km 0+000'} + ${i * 450}m`,
+      lane_info: `Làn phải R1 • Phân đoạn ${i + 1}`,
+      defect_title: t.title,
+      defect_measurements: `Diện tích ${area} m² • Sâu ${t.depth}`,
+      solution_title: t.solution,
+      solution_standard: t.standard,
+      volume_display: `${area} m²`,
+      volume_sub: `Sâu ${t.depth}`,
+      area_m2: area,
+      status: pkg.status === 'DECIDED' ? 'APPROVED' : 'PENDING',
+      status_label: pkg.status === 'DECIDED' ? 'APPROVED' : 'CHỜ DUYỆT',
+      assigned_crew: pkg.contractor_name || 'Chưa phân công',
+      image_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+      ortho_code: `ORTHO_${defectCode}.JPG`,
+      gps_coords: '16.1520, 108.0950',
+      resolution: '4K • 3840x2160',
+      pilot_name: 'Kỹ sư UAV Trần Hùng',
+      drone_model: 'DJI Matrice 350 RTK'
+    })
+  }
+
+  return results
 }
 
 export const repairService = {
-  // --- SYNC API METHODS (Tương thích trực tiếp với các components hiện tại) ---
+  // --- SYNC API METHODS ---
   getPackages(): ProposalWorkPackage[] {
-    return [...inMemoryPackages]
+    return [...apiPackages]
   },
 
   getPackageById(id: string): ProposalWorkPackage | undefined {
     if (!id) return undefined
     const cleanId = id.trim().toLowerCase()
-    return inMemoryPackages.find(
+    return apiPackages.find(
       (p) => p.id.toLowerCase() === cleanId || p.code.toLowerCase() === cleanId
     )
   },
@@ -462,15 +580,14 @@ export const repairService = {
       description: data.description
     }
 
-    inMemoryPackages = [newPkg, ...inMemoryPackages]
+    apiPackages = [newPkg, ...apiPackages]
 
-    // Lưu danh sách items chi tiết nếu có
-    if (items && items.length > 0) {
-      inMemoryItemsByPackage[newId] = [...items]
-      inMemoryItemsByPackage[newCode] = [...items]
-    }
+    // Lưu danh sách items thật nếu có, hoặc tạo động gắn liền với gói này
+    const finalItems = items && items.length > 0 ? [...items] : generateDynamicItemsForPackage(newPkg)
+    apiItemsByPackage[newId] = finalItems
+    apiItemsByPackage[newCode] = finalItems
 
-    notifyStateChange()
+    dispatchMockChangeEvent()
     return newPkg
   },
 
@@ -478,7 +595,7 @@ export const repairService = {
     let submittedPkg: ProposalWorkPackage | null = null
     const cleanId = packageId.trim().toLowerCase()
 
-    inMemoryPackages = inMemoryPackages.map((pkg) => {
+    apiPackages = apiPackages.map((pkg) => {
       if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         submittedPkg = {
           ...pkg,
@@ -491,59 +608,111 @@ export const repairService = {
     })
 
     if (submittedPkg) {
-      notifyStateChange()
+      dispatchMockChangeEvent()
     }
     return submittedPkg
   },
 
   deletePackage(packageId: string): boolean {
     const cleanId = packageId.trim().toLowerCase()
-    inMemoryPackages = inMemoryPackages.filter(
+    apiPackages = apiPackages.filter(
       (p) => p.id.toLowerCase() !== cleanId && p.code.toLowerCase() !== cleanId
     )
-    delete inMemoryItemsByPackage[packageId]
-    notifyStateChange()
+    delete apiItemsByPackage[packageId]
+    dispatchMockChangeEvent()
     return true
   },
 
   getItems(packageId?: string): RepairItemDetail[] {
-    if (!packageId) return [...INITIAL_ITEMS]
+    if (!packageId) return [...PKG_19_ITEMS]
     const cleanId = packageId.trim().toLowerCase()
+    const targetPkg = this.getPackageById(packageId)
 
-    // 1. Tìm trong in-memory items store theo id hoặc code
-    for (const [key, storedItems] of Object.entries(inMemoryItemsByPackage)) {
-      if (key.toLowerCase() === cleanId) {
+    // 1. Tìm trong store theo id hoặc code
+    for (const [key, storedItems] of Object.entries(apiItemsByPackage)) {
+      if (key.toLowerCase() === cleanId && storedItems && storedItems.length > 0) {
+        if (targetPkg && targetPkg.status === 'DECIDED') {
+          return storedItems.map((it) => ({
+            ...it,
+            status: 'APPROVED',
+            status_label: 'APPROVED'
+          }))
+        }
         return [...storedItems]
       }
     }
 
-    // 2. Tra cứu gói trong packages list để tạo items động phù hợp nếu chưa có
-    const targetPkg = this.getPackageById(packageId)
+    // 2. Tra cứu package tương ứng trong API packages
     if (targetPkg) {
-      // Nếu là gói mẫu có sẵn, fallback về INITIAL_ITEMS
-      if (targetPkg.id === 'pkg-08' || targetPkg.code === 'PKG-2026-08') {
-        return [...INITIAL_ITEMS]
+      for (const [key, storedItems] of Object.entries(apiItemsByPackage)) {
+        if (
+          (key.toLowerCase() === targetPkg.id.toLowerCase() ||
+            key.toLowerCase() === targetPkg.code.toLowerCase()) &&
+          storedItems &&
+          storedItems.length > 0
+        ) {
+          if (targetPkg.status === 'DECIDED') {
+            return storedItems.map((it) => ({
+              ...it,
+              status: 'APPROVED',
+              status_label: 'APPROVED'
+            }))
+          }
+          return [...storedItems]
+        }
       }
-      // Nếu gói mới có items nhưng chưa map key
-      if (inMemoryItemsByPackage[targetPkg.id]) {
-        return [...inMemoryItemsByPackage[targetPkg.id]]
-      }
-      if (inMemoryItemsByPackage[targetPkg.code]) {
-        return [...inMemoryItemsByPackage[targetPkg.code]]
-      }
+
+      // Chưa có items -> Sinh động đúng số lượng defect_count và thông tin của gói đó
+      const generated = generateDynamicItemsForPackage(targetPkg)
+      apiItemsByPackage[targetPkg.id] = generated
+      apiItemsByPackage[targetPkg.code] = generated
+      return [...generated]
     }
 
-    return [...INITIAL_ITEMS]
+    // 3. Fallback an toàn: Tạo 2 items động dựa trên ID được gọi
+    const tempPkg: ProposalWorkPackage = {
+      id: packageId,
+      code: packageId.toUpperCase().startsWith('PKG-') ? packageId.toUpperCase() : `PKG-2026-${packageId.slice(-4)}`,
+      title: 'Gói đề xuất sửa chữa kỹ thuật',
+      route_id: 'QL1A_PK04',
+      route_name: 'QL1A - Giai đoạn 2',
+      chainage_start: 'Km 1024+000',
+      chainage_end: 'Km 1030+000',
+      chainage_display: 'Km 1024+000 - Km 1030+000',
+      segments_count: 1,
+      defect_count: 2,
+      defect_summary: '2 điểm hư hỏng mặt đường',
+      technical_scope: 'Cào bóc thảm: 2.0 m²',
+      material_scope: 'Vật tư TCVN 8819',
+      duration_days: 3,
+      date_range: 'Dự kiến 3 ngày',
+      created_by_name: 'Đỗ Quốc Hoàng (PM)',
+      created_by_initials: 'ĐH',
+      created_by_role: 'Chỉ huy trưởng dự án',
+      created_at: 'Hôm nay',
+      status: 'SUBMITTED',
+      status_label: 'Chờ duyệt',
+      approved_items: 0,
+      total_items: 2,
+      contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
+    }
+    const fallbackGenerated = generateDynamicItemsForPackage(tempPkg)
+    apiItemsByPackage[packageId] = fallbackGenerated
+    return [...fallbackGenerated]
   },
 
   setPackageItems(packageId: string, items: RepairItemDetail[]): void {
-    inMemoryItemsByPackage[packageId] = [...items]
+    const cleanId = packageId.trim().toLowerCase()
+    apiItemsByPackage[packageId] = [...items]
+    apiItemsByPackage[cleanId] = [...items]
     const targetPkg = this.getPackageById(packageId)
     if (targetPkg) {
-      inMemoryItemsByPackage[targetPkg.id] = [...items]
-      inMemoryItemsByPackage[targetPkg.code] = [...items]
+      apiItemsByPackage[targetPkg.id] = [...items]
+      apiItemsByPackage[targetPkg.id.toLowerCase()] = [...items]
+      apiItemsByPackage[targetPkg.code] = [...items]
+      apiItemsByPackage[targetPkg.code.toLowerCase()] = [...items]
     }
-    notifyStateChange()
+    dispatchMockChangeEvent()
   },
 
   updateItemDecision(
@@ -583,32 +752,36 @@ export const repairService = {
   },
 
   signPackageApproval(packageId: string, supervisorName = 'Giám sát trưởng (Supervisor)'): ProposalWorkPackage | null {
+    const targetPkg = this.getPackageById(packageId)
     const items = this.getItems(packageId)
 
-    // Chuyển toàn bộ item pending sang APPROVED
-    const updatedItems = items.map((it) => {
-      if (it.status === 'PENDING') {
-        return {
-          ...it,
-          status: 'APPROVED' as ItemApprovalStatus,
-          status_label: 'APPROVED',
-          supervisor_notes: `Phê duyệt ký số bởi ${supervisorName}`
-        }
-      }
-      return it
-    })
+    const updatedItems = items.map((it) => ({
+      ...it,
+      status: 'APPROVED' as ItemApprovalStatus,
+      status_label: 'APPROVED',
+      supervisor_notes: it.supervisor_notes || `Phê duyệt kỹ thuật bởi ${supervisorName}`
+    }))
+
     this.setPackageItems(packageId, updatedItems)
+    if (targetPkg) {
+      this.setPackageItems(targetPkg.id, updatedItems)
+      this.setPackageItems(targetPkg.code, updatedItems)
+    }
 
     let approvedPkg: ProposalWorkPackage | null = null
     const cleanId = packageId.trim().toLowerCase()
 
-    inMemoryPackages = inMemoryPackages.map((pkg) => {
-      if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
+    apiPackages = apiPackages.map((pkg) => {
+      if (
+        pkg.id.toLowerCase() === cleanId ||
+        pkg.code.toLowerCase() === cleanId ||
+        (targetPkg && (pkg.id === targetPkg.id || pkg.code === targetPkg.code))
+      ) {
         approvedPkg = {
           ...pkg,
           status: 'DECIDED',
           status_label: 'Đã phê duyệt',
-          approved_items: updatedItems.filter((i) => i.status === 'APPROVED').length,
+          approved_items: updatedItems.length,
           total_items: updatedItems.length
         }
         return approvedPkg
@@ -617,16 +790,20 @@ export const repairService = {
     })
 
     if (approvedPkg) {
-      notifyStateChange()
+      dispatchMockChangeEvent()
     }
     return approvedPkg
+  },
+
+  approvePackage(packageId: string): ProposalWorkPackage | null {
+    return this.signPackageApproval(packageId)
   },
 
   dispatchPackage(packageId: string, crewName: string, _deadline?: string): ProposalWorkPackage | null {
     let dispatchedPkg: ProposalWorkPackage | null = null
     const cleanId = packageId.trim().toLowerCase()
 
-    inMemoryPackages = inMemoryPackages.map((pkg) => {
+    apiPackages = apiPackages.map((pkg) => {
       if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         dispatchedPkg = {
           ...pkg,
@@ -640,7 +817,7 @@ export const repairService = {
     })
 
     if (dispatchedPkg) {
-      notifyStateChange()
+      dispatchMockChangeEvent()
     }
     return dispatchedPkg
   },
@@ -649,7 +826,7 @@ export const repairService = {
     const approvedCount = items.filter((i) => i.status === 'APPROVED').length
     const cleanId = packageId.trim().toLowerCase()
 
-    inMemoryPackages = inMemoryPackages.map((pkg) => {
+    apiPackages = apiPackages.map((pkg) => {
       if (pkg.id.toLowerCase() === cleanId || pkg.code.toLowerCase() === cleanId) {
         return {
           ...pkg,
@@ -659,29 +836,22 @@ export const repairService = {
       }
       return pkg
     })
-    notifyStateChange()
+    dispatchMockChangeEvent()
   },
 
-  resetRepairData(): void {
-    inMemoryPackages = [...INITIAL_PACKAGES]
-    inMemoryItemsByPackage['pkg-08'] = [...INITIAL_ITEMS]
-    inMemoryItemsByPackage['PKG-2026-08'] = [...INITIAL_ITEMS]
-    notifyStateChange()
-  },
-
-  // --- ASYNC MOCK API METHODS (Chuẩn Mock API mô phỏng Network delay) ---
+  // --- ASYNC MOCK API PROMISES ---
   async fetchPackages(): Promise<ProposalWorkPackage[]> {
-    await new Promise((res) => setTimeout(res, 80))
+    await new Promise((res) => setTimeout(res, 60))
     return this.getPackages()
   },
 
   async fetchPackageById(id: string): Promise<ProposalWorkPackage | undefined> {
-    await new Promise((res) => setTimeout(res, 60))
+    await new Promise((res) => setTimeout(res, 40))
     return this.getPackageById(id)
   },
 
   async fetchItems(packageId?: string): Promise<RepairItemDetail[]> {
-    await new Promise((res) => setTimeout(res, 60))
+    await new Promise((res) => setTimeout(res, 50))
     return this.getItems(packageId)
   }
 }

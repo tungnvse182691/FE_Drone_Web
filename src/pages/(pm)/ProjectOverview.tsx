@@ -34,6 +34,7 @@ export const ProjectOverview: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   // Chi tiết phân định Tuyến chính & Tuyến phụ
+  const [activeAlignmentTab, setActiveAlignmentTab] = useState<'MAINLINE' | 'BRANCHES'>('MAINLINE')
   const [alignmentDetail, setAlignmentDetail] = useState<{
     mainlineLengthKm: number
     branchesLengthKm: number
@@ -212,6 +213,8 @@ export const ProjectOverview: React.FC = () => {
             basePath={basePath}
             onNavigate={navigate}
             onViewSegment={(code) => showToast(`Xem chi tiết phân đoạn ${code}`)}
+            activeTab={activeAlignmentTab}
+            onTabChange={setActiveAlignmentTab}
           />
         </div>
 
@@ -223,6 +226,7 @@ export const ProjectOverview: React.FC = () => {
             project={project}
             basePath={basePath}
             onNavigate={navigate}
+            activeTab={activeAlignmentTab}
           />
         </div>
       </div>

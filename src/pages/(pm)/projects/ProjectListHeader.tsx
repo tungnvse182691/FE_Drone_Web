@@ -4,14 +4,12 @@ import { Icon } from '../../../components/ui/Icon'
 interface ProjectListHeaderProps {
   isSupervisor: boolean
   onNavigateHome: () => void
-  onExportGis: () => void
   onOpenCreateModal: () => void
 }
 
 export const ProjectListHeader: React.FC<ProjectListHeaderProps> = ({
   isSupervisor,
   onNavigateHome,
-  onExportGis,
   onOpenCreateModal
 }) => {
   return (
@@ -48,15 +46,6 @@ export const ProjectListHeader: React.FC<ProjectListHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <button
-            type="button"
-            onClick={onExportGis}
-            className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <Icon name="download" size={16} className="text-slate-500" />
-            <span>Xuất GeoJSON</span>
-          </button>
-
           {/* Supervisor Only Button (BR-01 / FR-04) */}
           {isSupervisor && (
             <button
