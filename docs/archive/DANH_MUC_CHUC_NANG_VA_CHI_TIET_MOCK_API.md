@@ -733,29 +733,44 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC SUP-06: Giám sát Rủi ro, Xuất Hồ sơ Bằng chứng & Đóng Dự án (BC01, BC04, BC05, BC07, BC09, DA12, RPT-01, RPT-06, RPT-07)
-- **Đường dẫn URL:** `/sup/risk-analytics` (hoặc `/sup/reports`), `/sup/projects`
-- **Mục tiêu:** Giám sát chỉ số rủi ro suy thoái mặt đường, xuất gói hồ sơ bằng chứng kỹ thuật có mã băm toàn vẹn Checksum SHA-256 và đóng dự án khi hết hạn bảo hành.
+#### BƯỚC SUP-06: Giám sát Rủi ro Suy thoái & Xuất Hồ sơ Bằng chứng Kỹ thuật (BC04, BC05, BC07, BC09, RPT-06, RPT-07, FR-34, FR-35)
+- **Đường dẫn URL:** `/sup/risk-analytics` (Menu: *Báo cáo & Quản trị* → *Phân tích rủi ro*)
+- **Thẩm quyền:** Duy nhất Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Giám sát chỉ số KPI vận hành, phân tích nguy cơ suy thoái mặt đường theo lý trình Km, so sánh đa kỳ Baseline/Hiện tại và xuất gói hồ sơ bằng chứng số có mã băm toàn vẹn Checksum SHA-256.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] **Báo cáo Danh mục & Rủi ro Diễn biến (RPT-01, RPT-06, BC01, BC04, BC05):**
-     - Xem tổng quan danh mục dự án bảo hành, số dự án theo trạng thái, dự án sắp đến hạn bảo hành (BC01).
-     - Xem chỉ số hư hỏng theo mức độ nghiêm trọng/khẩn cấp, mức thay đổi so với khảo sát gốc baseline (BC04).
-     - Sử dụng bộ lọc phân tích rủi ro và so sánh giữa các dự án khác nhau trong danh mục (BC05 - tính năng chỉ dành cho Supervisor).
-  2. [ ] **Xuất Hồ sơ Bằng chứng Xác thực (RPT-07, BC07, BC09):**
-     - Bấm nút **"Xuất Hồ sơ Bằng chứng"** (`createExport: POST /exports` kèm `ExportRequest`).
-     - Tải về tệp PDF tổng hợp báo cáo kỹ thuật HOẶC Gói nén ZIP chứa toàn bộ ảnh gốc Before/After kèm mã Checksum SHA-256 xác thực toàn vẹn dữ liệu (BC09).
-  3. [ ] **Đóng / Ngừng sử dụng Dự án khi hết bảo hành (DA12):**
-     - Khi công trình hoàn thành toàn bộ thời gian bảo hành, Supervisor nhập lý do và bấm **"Đóng dự án"** (`closeProject: POST /projects/{projectId}/close`).
-     - Dự án chuyển sang trạng thái `CLOSED`; toàn bộ hồ sơ được lưu trữ tối thiểu thời hạn bảo hành + 5 năm (QT13) và sẵn sàng tra cứu (BC10).
+  1. [ ] **Chỉ số KPI & Phân tích Diễn biến Suy thoái (RPT-06, BC04, BC05, FR-34):**
+     - Xem 4 thẻ KPI cốt lõi: Hiệu quả xử lý hư hỏng (SLA), Tốc độ thẩm duyệt MTTA, Kiểm soát lún nứt TCVN 8819 và Tính toàn vẹn hồ sơ số (SHA-256).
+     - Sử dụng bộ chọn dự án trên dropdown để đối chiếu và so sánh mức độ suy thoái giữa các công trình khác nhau trong danh mục (BC05).
+     - Xem bản đồ GIS trắc dọc phân đoạn nguy cơ suy thoái và danh sách phân đoạn theo mức độ nghiêm trọng/khẩn cấp, diễn biến đa kỳ MET-13 và hạn cam kết xử lý SLA; bấm nút định vị để di chuyển camera trên bản đồ số.
+  2. [ ] **Xuất Hồ sơ Bằng chứng Xác thực (RPT-07, BC07, BC09, FR-35):**
+     - Bấm nút **"Xuất báo cáo tổng hợp"** (`createExport: POST /exports` kèm `ExportRequest` → Worker chạy nền bất đồng bộ).
+     - Bấm nút **"Tải gói ZIP"** (`GET /exports/{id}/download`) để nhận gói hồ sơ kỹ thuật chứa tệp báo cáo và ảnh Before/After kèm mã Checksum SHA-256 xác thực toàn vẹn dữ liệu.
+- **Tiêu chuẩn đạt (Expected):** Số liệu tính toán chính xác theo chuẩn kỹ thuật và số đo đa kỳ MET-13; gói xuất có mã băm SHA-256 hợp lệ.
 
 ---
 
-#### BƯỚC SUP-07: Quản trị Hệ thống, Tài khoản & Kiểm toán (CN10, QT01, QT02, QT09, QT14)
+#### BƯỚC SUP-07: Quản lý Danh mục & Đóng Dự án khi Hết hạn Bảo hành (BC01, RPT-01, DA12, QT13, BC10)
+- **Đường dẫn URL:** `/sup/projects` (Menu: *Dự án*)
+- **Thẩm quyền:** Duy nhất Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Theo dõi danh mục dự án bảo hành, kiểm tra đếm ngược ngày bảo hành và thực hiện thủ tục đóng dự án khi hoàn thành toàn bộ trách nhiệm bảo hành công trình.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Theo dõi Danh mục Dự án & Hạn Bảo hành (BC01, RPT-01):**
+     - Xem danh sách tổng quan các dự án bảo hành, trạng thái (`ACTIVE`, `NEAR_EXPIRY`, `PENDING_ALIGNMENT`, `CLOSED`).
+     - Theo dõi thời gian bảo hành đã qua (%), số ngày còn lại (ví dụ: cảnh báo màu đỏ với dự án `[Sắp hết hạn]`).
+  2. [ ] **Đóng / Ngừng sử dụng Dự án khi Hết hạn Bảo hành (DA12):**
+     - Chọn dự án đã hoàn thành thời hạn bảo hành và 100% khiếm khuyết/đợt sửa chữa đã nghiệm thu hoàn tất.
+     - Supervisor nhập lý do/kết luận và bấm **"Đóng dự án"** (`closeProject: POST /projects/{projectId}/close`).
+     - Dự án chuyển sang trạng thái `CLOSED` (Đóng băng hồ sơ, Read-only); toàn bộ hồ sơ được lưu trữ tối thiểu thời hạn bảo hành + 5 năm (QT13) và sẵn sàng tra cứu (BC10).
+- **Tiêu chuẩn đạt (Expected):** Trạng thái dự án chuyển thành `CLOSED`; hệ thống khóa toàn bộ chức năng tạo mới đợt sửa chữa trên dự án đã đóng.
+
+---
+
+#### BƯỚC SUP-08: Quản trị Hệ thống, Tài khoản & Kiểm toán (CN10, QT01, QT02, QT09, QT14)
 - **Đường dẫn URL:** `/sup/settings` (hoặc `/sup/admin`, `/sup/audit`)
 - **Mục tiêu:** Thực hiện quyền quản trị hệ thống, tài khoản nhân sự, tra cứu nhật ký kiểm toán và thiết lập giữ hồ sơ tranh chấp pháp lý.
 - **Thao tác kiểm tra trên màn hình:**
   1. [ ] **Đặt lại mật khẩu tài khoản người dùng (CN10):**
-     - Mở danh sách người dùng $\rightarrow$ Chọn tài khoản cần cấp lại mật khẩu.
+     - Mở danh sách người dùng → Chọn tài khoản cần cấp lại mật khẩu.
      - Bấm **"Đặt lại mật khẩu"** (`adminResetPassword: POST /users/{userId}/password-reset`).
      - Hệ thống cấp mật khẩu tạm thời an toàn, ghi nhận cờ buộc đổi mật khẩu ở lần đăng nhập tiếp theo (`must_change_password: true`).
   2. [ ] **Khóa / Mở tài khoản nhân sự (QT01, QT02):**
@@ -770,7 +785,7 @@ sequenceDiagram
 
 ---
 
-### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (24 BƯỚC CHI TIẾT)
+### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (25 BƯỚC CHI TIẾT)
 
 | Mã bước | Tên bước kiểm tra | Role | Trạng thái hiển thị | Thao tác tương tác | Không dính giá tiền | Ghi chú kiểm thử theo Spec 29_9 |
 |:---:|---|:---:|:---:|:---:|:---:|---|
@@ -796,8 +811,9 @@ sequenceDiagram
 | **SUP-03** | Thẩm duyệt 4 nhánh từng hạng mục | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Approve/Evidence/Reconsider/Reject (SC05, BR-21) |
 | **SUP-04** | Nghiệm thu Before/After | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Accept/RequestEvidence/ReworkRequired (HT10, BR-27) |
 | **SUP-05** | Đóng Mixed Case tổng thể | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Chặn đóng nếu còn hạng mục chưa đạt (HT12, BR-26) |
-| **SUP-06** | Rủi ro, Xuất hồ sơ & Đóng dự án | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân tích rủi ro, xuất PDF/ZIP SHA-256, đóng dự án (BC01, DA12) |
-| **SUP-07** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
+| **SUP-06** | Giám sát rủi ro & Xuất hồ sơ SHA-256 | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân tích rủi ro đa kỳ, xuất PDF/ZIP SHA-256 (BC04, RPT-06, RPT-07) |
+| **SUP-07** | Danh mục & Đóng dự án hết bảo hành | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Xem hạn bảo hành, đóng dự án CLOSED khi hết hạn (BC01, DA12) |
+| **SUP-08** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
 
 ---
 

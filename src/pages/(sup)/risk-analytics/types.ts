@@ -87,14 +87,13 @@ export interface Rpt06RiskSegment {
     baseline_epoch: string
     current_epoch: string
     growth_pct: number
-    severity_progression: string
+    baseline_area_m2?: number
+    delta_area_m2?: number
   }
   sla_remaining: string
   sla_status: 'urgent' | 'warning' | 'normal'
   gps_lat: number
   gps_lng: number
-  recommended_action: string
-  survey_plan_suggested: boolean
   start_km_num: number
   end_km_num: number
   coordinates: [number, number][]

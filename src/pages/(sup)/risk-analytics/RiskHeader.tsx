@@ -1,5 +1,6 @@
 import React from 'react'
 import { ProjectConfig } from './types'
+import { HubProject } from '../../../api/services/projectService'
 
 interface RiskHeaderProps {
   currentProject: ProjectConfig
@@ -23,6 +24,7 @@ interface RiskHeaderProps {
   setSearchQuery: (val: string) => void
   resetFilters: () => void
   showToast: (msg: string) => void
+  projects: HubProject[]
   projectsConfig: Record<string, ProjectConfig>
 }
 
@@ -48,19 +50,20 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
   setSearchQuery,
   resetFilters,
   showToast,
+  projects,
   projectsConfig
 }) => {
   return (
     <div className="space-y-4">
       {/* 1. BREADCRUMB */}
       <nav aria-label="Đường dẫn điều hướng" className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-        <a href="#/pm/dashboard" className="hover:text-slate-900 transition-colors">
+        <a href="#/sup/dashboard" className="hover:text-slate-900 transition-colors">
           Trang chủ
         </a>
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
         <span>Báo cáo & Hồ sơ</span>
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
-        <span className="text-[#8C6D1F] font-semibold">Chỉ số KPI & Hồ sơ giải trình</span>
+        <span className="text-[#8C6D1F] font-semibold">Phân tích rủi ro suy thoái & Bằng chứng số (RPT-06)</span>
       </nav>
 
       {/* 2. PAGE HEADER & PRIMARY ACTION CONTROLS */}
@@ -69,8 +72,11 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="font-sansation text-2xl font-bold tracking-tight text-slate-900">
-                Chỉ số vận hành & Hồ sơ giải trình ({currentProject.shortName})
+                Báo cáo phân tích rủi ro & Diễn biến suy thoái (RPT-06)
               </h1>
+              <span className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-mono text-xs font-semibold border border-amber-200">
+                {currentProject.code}
+              </span>
               <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-xs font-semibold border border-slate-200">
                 {currentProject.chainage}
               </span>
@@ -86,7 +92,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                   Cập nhật lúc: <strong className="text-slate-800 font-semibold font-mono">21:45, 25/08/2026</strong>
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="text-slate-600">Tự động cập nhật: 60 giây</span>
+                <span className="text-slate-600">Đồng bộ tự động theo thời gian thực</span>
               </div>
             </div>
           </div>
@@ -130,21 +136,23 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
         {/* Row 1: Primary Filters */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5 flex-1">
-            {/* Project Selector */}
-            <div className="relative min-w-[220px]">
+            {/* Project Selector (Nạp động từ API) */}
+            <div className="relative min-w-[260px]">
               <select
                 value={selectedProject}
                 onChange={(e) => {
                   setSelectedProject(e.target.value)
-                  showToast(`Đã chuyển bộ số liệu sang: ${projectsConfig[e.target.value]?.name || 'Dự án'}`)
+                  const pName = projectsConfig[e.target.value]?.name || projects.find((p) => p.id === e.target.value)?.name || 'Dự án'
+                  showToast(`Đã chuyển bộ số liệu sang: ${pName}`)
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >
-                <option value="prj-ql1a-02">QL1A - Giai đoạn 2 (Km 1024 - Km 1045)</option>
-                <option value="prj-ctbn-01">Cao tốc Bắc Nam (Diễn Châu - Bãi Vọt)</option>
-                <option value="prj-lstl-05">Cao tốc La Sơn - Túy Loan (QL14B)</option>
-                <option value="prj-ptdg-03">Tuyến tránh TP. Huế (QL1A-BP)</option>
-                <option value="ALL">Toàn bộ danh mục (4 Dự án)</option>
+                <option value="ALL">Toàn bộ danh mục ({projects.length} Dự án)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} - {p.name} ({p.stationing_text || (p.length_km ? `${p.length_km} km` : 'Chưa có tim tuyến')})
+                  </option>
+                ))}
               </select>
               <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                 expand_more
@@ -234,10 +242,13 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
               <button
                 onClick={() => setSortAsc(!sortAsc)}
                 type="button"
-                className="px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 hover:bg-slate-200 rounded text-slate-700 transition cursor-pointer"
                 title={sortAsc ? 'Sắp xếp: Tăng dần (Bấm để đổi Giảm dần)' : 'Sắp xếp: Giảm dần (Bấm để đổi Tăng dần)'}
               >
-                <span className="font-semibold text-[11px]">{sortAsc ? '▲ Tăng dần' : '▼ Giảm dần'}</span>
+                <span className="material-symbols-outlined text-[14px] text-slate-600">
+                  {sortAsc ? 'arrow_upward' : 'arrow_downward'}
+                </span>
+                <span className="font-medium text-[11px]">{sortAsc ? 'Tăng dần' : 'Giảm dần'}</span>
               </button>
             </div>
 

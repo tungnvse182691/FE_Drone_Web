@@ -7,6 +7,8 @@
  * - 100% thuật ngữ tiếng Việt chuẩn
  */
 
+import { projectService } from './projectService'
+
 export interface ProjectKpiMetrics {
   project_id: string
   project_code: string
@@ -755,23 +757,58 @@ export const reportService = {
     await new Promise((resolve) => setTimeout(resolve, 150))
     let items = [...inMemoryRpt06Segments]
     if (projectId && projectId !== 'ALL') {
-      items = items.filter((item) => item.project_id === projectId)
+      const filtered = items.filter((item) => item.project_id === projectId)
+      if (filtered.length > 0) {
+        return JSON.parse(JSON.stringify(filtered))
+      }
+      // Tự động sinh phân tích rủi ro suy thoái phù hợp với thông tin dự án mới
+      const proj = projectService.getProjectById(projectId)
+      const pName = proj ? proj.name : projectId.toUpperCase()
+      const startKm = proj?.start_km ?? 0
+      const endKm = proj?.end_km && proj.end_km > startKm ? proj.end_km : startKm + 12.0
+      const midKm = +(startKm + (endKm - startKm) * 0.45).toFixed(1)
+      const dynamicSegments: Rpt06RiskSegment[] = [
+        {
+          id: `rpt06-${projectId}-01`,
+          project_id: projectId,
+          project_name: pName,
+          section_name: `Đoạn kiểm soát mặt đường (${pName})`,
+          chainage_start: `Km ${startKm}+000`,
+          chainage_end: `Km ${midKm}+000`,
+          chainage_display: `Km ${startKm}+000 - Km ${midKm}+000`,
+          start_km_num: startKm,
+          end_km_num: midKm,
+          risk_level: 'WATCH',
+          risk_level_label: 'Cần theo dõi (Nứt ngang & lún nhẹ)',
+          risk_score: 62,
+          open_defects_count: 3,
+          defect_summary: '2 Vết nứt ngang mặt đường, 1 Bong bật cốt liệu nhẹ',
+          damaged_area_m2: 36.5,
+          crack_length_m: 28.0,
+          avg_depth_cm: 1.8,
+          deterioration_rate_pct: 7.2,
+          temporal_comparison: {
+            baseline_epoch: 'Kỳ 01 (Baseline): 22.0 m²',
+            current_epoch: 'Kỳ 02: 36.5 m²',
+            growth_pct: 65.9,
+            baseline_area_m2: 22.0,
+            delta_area_m2: 14.5
+          },
+          sla_remaining: 'Còn 3 ngày',
+          sla_status: 'warning',
+          gps_lat: 16.2415,
+          gps_lng: 108.1287,
+          pci_score: 73.0,
+          coordinates: [
+            [108.1215, 16.2472],
+            [108.1287, 16.2415],
+            [108.134, 16.2368]
+          ]
+        }
+      ]
+      return JSON.parse(JSON.stringify(dynamicSegments))
     }
     return JSON.parse(JSON.stringify(items))
-  },
-
-  /**
-   * Đưa đoạn tuyến vào kế hoạch bay khảo sát định kỳ tiếp theo hoặc hủy đề xuất
-   * (POST /api/v1/reports/rpt-06/segments/:id/toggle-survey-plan)
-   */
-  async toggleSurveyPlan(segmentId: string): Promise<Rpt06RiskSegment> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const index = inMemoryRpt06Segments.findIndex((s) => s.id === segmentId)
-    if (index === -1) {
-      throw new Error(`Segment ${segmentId} not found`)
-    }
-    inMemoryRpt06Segments[index].survey_plan_suggested = !inMemoryRpt06Segments[index].survey_plan_suggested
-    return JSON.parse(JSON.stringify(inMemoryRpt06Segments[index]))
   },
 
   /**
@@ -839,15 +876,14 @@ export interface Rpt06RiskSegment {
     baseline_epoch: string
     current_epoch: string
     growth_pct: number
-    severity_progression: string
+    baseline_area_m2?: number
+    delta_area_m2?: number
   }
   sla_remaining: string
   sla_status: 'urgent' | 'warning' | 'normal'
   gps_lat: number
   gps_lng: number
   pci_score: number
-  recommended_action: string
-  survey_plan_suggested: boolean
   start_km_num: number
   end_km_num: number
   coordinates: [number, number][]
@@ -877,15 +913,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (15/06/2026): 62.0 m²',
       current_epoch: 'Kỳ 03 (20/09/2026): 145.2 m²',
       growth_pct: 134.2,
-      severity_progression: 'Nứt dọc đơn lẻ phát triển lan rộng thành nứt mai rùa đan xen lún bánh xe'
+      baseline_area_m2: 62.0,
+      delta_area_m2: 83.2
     },
     sla_remaining: 'Còn 14 giờ',
     sla_status: 'urgent',
     gps_lat: 16.2415,
     gps_lng: 108.1287,
     pci_score: 58.2,
-    recommended_action: 'Ưu tiên đưa vào kế hoạch bay Drone kỳ 4 & lập đợt sửa chữa cào bóc cấp bách',
-    survey_plan_suggested: true,
     coordinates: [
       [108.1215, 16.2472],
       [108.1287, 16.2415],
@@ -916,15 +951,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (15/06/2026): 35.0 m²',
       current_epoch: 'Kỳ 03 (20/09/2026): 48.0 m²',
       growth_pct: 37.1,
-      severity_progression: 'Vết nứt bề rộng tăng từ 2mm lên 4.5mm, chưa có biến dạng lún'
+      baseline_area_m2: 35.0,
+      delta_area_m2: 13.0
     },
     sla_remaining: 'Còn 4 ngày',
     sla_status: 'warning',
     gps_lat: 16.198,
     gps_lng: 108.177,
     pci_score: 72.0,
-    recommended_action: 'Theo dõi lún nứt định kỳ, chuẩn bị vật tư trám khe nứt nhựa theo TCVN 8819',
-    survey_plan_suggested: false,
     coordinates: [
       [108.172, 16.204],
       [108.177, 16.198],
@@ -954,15 +988,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (15/06/2026): 16.0 m²',
       current_epoch: 'Kỳ 03 (20/09/2026): 18.5 m²',
       growth_pct: 15.6,
-      severity_progression: 'Tốc độ mở rộng thấp, mặt đường ổn định'
+      baseline_area_m2: 16.0,
+      delta_area_m2: 2.5
     },
     sla_remaining: 'Còn 12 ngày',
     sla_status: 'normal',
     gps_lat: 16.1265,
     gps_lng: 108.2205,
     pci_score: 84.5,
-    recommended_action: 'Bảo dưỡng lề đường, phát quang rãnh thoát nước mặt',
-    survey_plan_suggested: false,
     coordinates: [
       [108.216, 16.131],
       [108.2205, 16.1265],
@@ -992,15 +1025,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (20/05/2026): 40.0 m²',
       current_epoch: 'Kỳ 03 (18/09/2026): 92.4 m²',
       growth_pct: 131.0,
-      severity_progression: 'Hư hỏng khe co giãn tăng nhanh do lưu lượng xe tải trọng nặng'
+      baseline_area_m2: 40.0,
+      delta_area_m2: 52.4
     },
     sla_remaining: 'Còn 5 ngày',
     sla_status: 'urgent',
     gps_lat: 15.9324,
     gps_lng: 108.1211,
     pci_score: 64.0,
-    recommended_action: 'Lập phương án sửa chữa kỹ thuật thay thế khe co giãn thép ray',
-    survey_plan_suggested: true,
     coordinates: [
       [108.105, 15.955],
       [108.115, 15.942],
@@ -1030,15 +1062,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (20/05/2026): 26.0 m²',
       current_epoch: 'Kỳ 03 (18/09/2026): 36.0 m²',
       growth_pct: 38.5,
-      severity_progression: 'Nứt theo vệt lu bánh xe trong quá trình thi công hoàn thiện'
+      baseline_area_m2: 26.0,
+      delta_area_m2: 10.0
     },
     sla_remaining: 'Còn 8 ngày',
     sla_status: 'warning',
     gps_lat: 15.985,
     gps_lng: 108.082,
     pci_score: 76.2,
-    recommended_action: 'Trám bitum nhũ tương polymer bảo vệ lớp áo đường',
-    survey_plan_suggested: false,
     coordinates: [
       [108.072, 15.998],
       [108.082, 15.985],
@@ -1068,15 +1099,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (10/04/2026): 55.0 m²',
       current_epoch: 'Kỳ 03 (15/09/2026): 85.0 m²',
       growth_pct: 54.5,
-      severity_progression: 'Mặt đường chịu lực tốt, nứt co ngót nhiệt mùa hè'
+      baseline_area_m2: 55.0,
+      delta_area_m2: 30.0
     },
     sla_remaining: 'Còn 25 ngày',
     sla_status: 'warning',
     gps_lat: 18.7231,
     gps_lng: 105.6542,
     pci_score: 64.5,
-    recommended_action: 'Khảo sát Drone kiểm tra toàn diện trước khi hết hạn bảo hành công trình',
-    survey_plan_suggested: true,
     coordinates: [
       [105.645, 18.739],
       [105.6542, 18.7231],
@@ -1106,15 +1136,14 @@ let inMemoryRpt06Segments: Rpt06RiskSegment[] = [
       baseline_epoch: 'Kỳ 01 (05/05/2026): 80.0 m²',
       current_epoch: 'Kỳ 03 (25/09/2026): 220.0 m²',
       growth_pct: 175.0,
-      severity_progression: 'Lún tăng từ 2cm lên 4.5cm kèm nứt vỡ khối nhựa'
+      baseline_area_m2: 80.0,
+      delta_area_m2: 140.0
     },
     sla_remaining: 'Còn 18 giờ',
     sla_status: 'urgent',
     gps_lat: 16.4637,
     gps_lng: 107.5908,
     pci_score: 52.8,
-    recommended_action: 'Cào bóc và thảm lại bê tông nhựa chặt C19 dày 7cm theo TCVN 8819',
-    survey_plan_suggested: true,
     coordinates: [
       [107.581, 16.47],
       [107.5908, 16.4637],

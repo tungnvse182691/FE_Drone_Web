@@ -1,6 +1,5 @@
 import React from 'react'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { PROJECTS_CONFIG } from './risk-analytics/data'
 import { useRiskAnalyticsState } from './risk-analytics/useRiskAnalyticsState'
 import { RiskHeader } from './risk-analytics/RiskHeader'
 import { RiskMetricsGrid } from './risk-analytics/RiskMetricsGrid'
@@ -10,6 +9,8 @@ import { RiskModals } from './risk-analytics/RiskModals'
 
 export const RiskAnalytics: React.FC = () => {
   const {
+    projects,
+    projectsConfig,
     selectedProject,
     setSelectedProject,
     selectedTimeRange,
@@ -48,7 +49,6 @@ export const RiskAnalytics: React.FC = () => {
     mapLayer,
     setMapLayer,
     handleFocusSegment,
-    handleToggleSurveyPlan,
     handleZoomIn,
     handleZoomOut,
     handleFitBounds,
@@ -95,7 +95,8 @@ export const RiskAnalytics: React.FC = () => {
         setSearchQuery={setSearchQuery}
         resetFilters={resetFilters}
         showToast={showToast}
-        projectsConfig={PROJECTS_CONFIG}
+        projects={projects}
+        projectsConfig={projectsConfig}
       />
 
       {/* KPI Metrics & Async Export Queue */}
@@ -119,7 +120,6 @@ export const RiskAnalytics: React.FC = () => {
         mapLayer={mapLayer}
         setMapLayer={setMapLayer}
         onFocusSegment={handleFocusSegment}
-        onToggleSurveyPlan={handleToggleSurveyPlan}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onFitBounds={handleFitBounds}

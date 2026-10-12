@@ -1,5 +1,4 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Rpt06RiskSegment } from './types'
 
 export interface RiskDeteriorationSectionProps {
@@ -10,7 +9,6 @@ export interface RiskDeteriorationSectionProps {
   mapLayer: 'satellite' | 'vector'
   setMapLayer: (l: 'satellite' | 'vector') => void
   onFocusSegment: (segment: Rpt06RiskSegment) => void
-  onToggleSurveyPlan: (segmentId: string) => void
   onZoomIn: () => void
   onZoomOut: () => void
   onFitBounds: () => void
@@ -25,14 +23,12 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
   mapLayer,
   setMapLayer,
   onFocusSegment,
-  onToggleSurveyPlan,
   onZoomIn,
   onZoomOut,
   onFitBounds,
   projectName
 }) => {
-  const navigate = useNavigate()
-
+  const [isHudMinimized, setIsHudMinimized] = React.useState(false)
   const criticalCount = segments.filter((s) => s.risk_level === 'CRITICAL').length
   const watchCount = segments.filter((s) => s.risk_level === 'WATCH').length
   const moderateCount = segments.filter((s) => s.risk_level === 'MODERATE').length
@@ -55,7 +51,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              So sánh đa kỳ (Temporal Epoch) giữa đợt bay gốc Baseline và hiện tại • Đánh giá các đoạn nguy cơ cao để lập kế hoạch bay khảo sát
+              So sánh đa kỳ (Temporal Epoch) giữa đợt bay gốc Baseline và hiện tại • Đánh giá các đoạn nguy cơ suy thoái kỹ thuật
             </p>
             <div className="flex items-center gap-3 text-[11px] text-slate-500 pt-1">
               <div className="flex items-center gap-1">
@@ -128,67 +124,70 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
 
           {/* Floating Map HUD Card */}
           {activeSegment && (
-            <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md p-4 rounded-xl border border-slate-700 text-white text-xs space-y-2 max-w-sm shadow-xl">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2">
-                <div>
-                  <span className="font-bold text-amber-400 text-sm block">
+            <div className="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur-md p-3.5 rounded-xl border border-slate-700 text-white text-xs max-w-sm shadow-xl transition-all duration-200">
+              <div className={`flex items-center justify-between gap-3 ${isHudMinimized ? '' : 'border-b border-slate-800 pb-2'}`}>
+                <div className="min-w-0">
+                  <span className="font-bold text-amber-400 text-sm block truncate">
                     {activeSegment.chainage_display}
                   </span>
-                  <span className="text-slate-300 text-[11px]">{activeSegment.section_name}</span>
+                  <span className="text-slate-300 text-[11px] block truncate">{activeSegment.section_name}</span>
                 </div>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    activeSegment.risk_level === 'CRITICAL'
-                      ? 'bg-rose-600 text-white'
-                      : activeSegment.risk_level === 'WATCH'
-                      ? 'bg-amber-600 text-white'
-                      : 'bg-blue-600 text-white'
-                  }`}
-                >
-                  {activeSegment.risk_level_label}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                <div className="bg-slate-800/60 p-2 rounded-lg">
-                  <span className="text-slate-400 block text-[10px]">Diện tích hư hỏng</span>
-                  <span className="font-bold font-mono text-rose-300">{activeSegment.damaged_area_m2} m²</span>
-                </div>
-                <div className="bg-slate-800/60 p-2 rounded-lg">
-                  <span className="text-slate-400 block text-[10px]">Tốc độ suy thoái</span>
-                  <span className="font-bold font-mono text-amber-300">+{activeSegment.deterioration_rate_pct}% / kỳ</span>
-                </div>
-              </div>
-
-              <div className="text-[11px] text-slate-300 space-y-1">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Mức độ khẩn cấp (Urgency):</span>
-                  <span className="font-semibold text-rose-400">
-                    {activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      activeSegment.risk_level === 'CRITICAL'
+                        ? 'bg-rose-600 text-white'
+                        : activeSegment.risk_level === 'WATCH'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-blue-600 text-white'
+                    }`}
+                  >
+                    {activeSegment.risk_level_label}
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Hạn cam kết xử lý (SLA):</span>
-                  <span className="font-semibold text-rose-400">{activeSegment.sla_remaining}</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsHudMinimized(!isHudMinimized)}
+                    className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    title={isHudMinimized ? "Mở rộng bảng chi tiết" : "Thu nhỏ bảng chi tiết"}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {isHudMinimized ? 'unfold_more' : 'unfold_less'}
+                    </span>
+                  </button>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-400 truncate">{activeSegment.defect_summary}</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate(
-                      `/pm/surveys/create?project=${activeSegment.project_id}&startKm=${activeSegment.start_km_num}&endKm=${activeSegment.end_km_num}`
-                    )
-                  }
-                  className="px-2.5 py-1 rounded bg-brand-gold text-slate-900 font-bold hover:bg-amber-400 transition text-[11px] shrink-0 cursor-pointer flex items-center gap-1 shadow-xs"
-                  title="Chuyển sang trang Lập yêu cầu bay với phân đoạn này"
-                >
-                  <span className="material-symbols-outlined text-[13px]">flight_takeoff</span>
-                  <span>Lập đợt bay</span>
-                </button>
-              </div>
+              {!isHudMinimized && (
+                <div className="space-y-2 pt-2">
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-slate-400 block text-[10px]">Diện tích hư hỏng</span>
+                      <span className="font-bold font-mono text-rose-300">{activeSegment.damaged_area_m2} m²</span>
+                    </div>
+                    <div className="bg-slate-800/60 p-2 rounded-lg">
+                      <span className="text-slate-400 block text-[10px]">Tốc độ suy thoái</span>
+                      <span className="font-bold font-mono text-amber-300">+{activeSegment.deterioration_rate_pct}% / kỳ</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-slate-300 space-y-1">
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Mức độ khẩn cấp (Urgency):</span>
+                      <span className="font-semibold text-rose-400">
+                        {activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400">
+                      <span>Hạn cam kết xử lý (SLA):</span>
+                      <span className="font-semibold text-rose-400">{activeSegment.sla_remaining}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800">
+                    <span className="text-[11px] text-slate-400 block truncate">{activeSegment.defect_summary}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -231,9 +230,6 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
               Danh sách phân đoạn rủi ro suy thoái kỹ thuật theo lý trình Km ({segments.length} đoạn)
             </h3>
           </div>
-          <span className="text-xs text-slate-500 font-medium">
-            Định mức kỹ thuật: TCVN 8819:2011 • TCVN 8864
-          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -243,16 +239,15 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                 <th className="py-3 px-4">Lý trình &amp; Phân đoạn</th>
                 <th className="py-3 px-4">Mức độ rủi ro</th>
                 <th className="py-3 px-4">Khối lượng hư hỏng</th>
-                <th className="py-3 px-4">Diễn biến đa kỳ (So sánh Baseline)</th>
-                <th className="py-3 px-4">Đánh giá kỹ thuật &amp; SLA</th>
-                <th className="py-3 px-4 text-center">Đưa vào kế hoạch bay</th>
+                <th className="py-3 px-4">Diễn biến đa kỳ (MET-13)</th>
+                <th className="py-3 px-4">Hạn cam kết xử lý (SLA)</th>
                 <th className="py-3 px-4 text-right">Định vị</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {segments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
                     Không có phân đoạn nguy cơ nào được ghi nhận cho dự án này.
                   </td>
                 </tr>
@@ -309,67 +304,33 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                         </div>
                       </td>
 
-                      {/* Cột 4: Diễn biến đa kỳ (So sánh Baseline) */}
+                      {/* Cột 4: Diễn biến đa kỳ (MET-13: So sánh Baseline) */}
                       <td className="py-3 px-4 max-w-xs">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                          <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 font-mono">
                             +{seg.deterioration_rate_pct}% / kỳ
                           </span>
                           <span className="text-[11px] text-slate-500 font-medium">
                             (Tăng {seg.temporal_comparison.growth_pct.toFixed(0)}% so với gốc)
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-1 leading-snug">
-                          {seg.temporal_comparison.severity_progression}
+                        <div className="text-[11px] text-slate-600 mt-1 font-mono">
+                          {seg.temporal_comparison.baseline_epoch}
                         </div>
                       </td>
 
-                      {/* Cột 5: Đánh giá kỹ thuật & SLA */}
+                      {/* Cột 5: Hạn cam kết xử lý (SLA) */}
                       <td className="py-3 px-4 max-w-xs">
-                        <div className="text-[11px] text-slate-800 leading-snug">
-                          {seg.recommended_action}
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[15px] text-rose-600">alarm</span>
+                          <span className="font-semibold text-rose-600 text-xs font-mono">{seg.sla_remaining}</span>
                         </div>
-                        <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-                          <span className="material-symbols-outlined text-[13px]">alarm</span>
-                          <span>Hạn xử lý: {seg.sla_remaining}</span>
-                        </div>
-                      </td>
-
-                      {/* Cột 6: Đưa vào kế hoạch bay khảo sát định kỳ */}
-                      <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => onToggleSurveyPlan(seg.id)}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
-                              seg.survey_plan_suggested
-                                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold hover:bg-amber-200'
-                                : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-300'
-                            }`}
-                            title="Đánh dấu phân đoạn này để đưa vào kế hoạch bay khảo sát định kỳ tiếp theo"
-                          >
-                            <span className="material-symbols-outlined text-[15px] text-brand-gold">
-                              {seg.survey_plan_suggested ? 'check_box' : 'add_task'}
-                            </span>
-                            <span>{seg.survey_plan_suggested ? 'Đã đề xuất' : 'Đề xuất'}</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/pm/surveys/create?project=${seg.project_id}&startKm=${seg.start_km_num}&endKm=${seg.end_km_num}`
-                              )
-                            }
-                            className="p-1.5 rounded-lg bg-slate-50 hover:bg-amber-50 text-slate-600 hover:text-amber-800 border border-slate-200 hover:border-amber-300 transition cursor-pointer flex items-center"
-                            title="Chuyển ngay sang trang Tạo yêu cầu bay khảo sát với lý trình đoạn này"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">flight_takeoff</span>
-                          </button>
+                        <div className="text-[11px] text-slate-500 mt-1">
+                          {seg.risk_level === 'CRITICAL' ? 'Ưu tiên khẩn cấp (< 24h)' : seg.risk_level === 'WATCH' ? 'Ưu tiên cảnh báo (< 7 ngày)' : 'Theo dõi định kỳ'}
                         </div>
                       </td>
 
-                      {/* Cột 7: Thao tác định vị */}
+                      {/* Cột 6: Thao tác định vị */}
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"

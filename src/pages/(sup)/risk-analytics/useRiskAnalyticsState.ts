@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
-import { ExportRecord, AsyncExportJob, Rpt06RiskSegment } from './types'
+import { ExportRecord, AsyncExportJob, Rpt06RiskSegment, ProjectConfig } from './types'
 import { PROJECTS_CONFIG } from './data'
 import { computeProjectMetrics, filterAndSortRecords } from './riskAnalyticsCalculations'
 import { reportService } from '../../../api/services/reportService'
+import { projectService, HubProject } from '../../../api/services/projectService'
 
 export function useRiskAnalyticsState() {
+  const [projects, setProjects] = useState<HubProject[]>([])
+  const [projectsConfig, setProjectsConfig] = useState<Record<string, ProjectConfig>>(PROJECTS_CONFIG)
   const [selectedProject, setSelectedProject] = useState('prj-ql1a-02')
   const [selectedTimeRange, setSelectedTimeRange] = useState('Q3_2026')
   const [selectedTrack, setSelectedTrack] = useState('ALL')
@@ -22,9 +25,9 @@ export function useRiskAnalyticsState() {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const currentProject = useMemo(() => {
-    const base = PROJECTS_CONFIG[selectedProject] || PROJECTS_CONFIG['prj-ql1a-02']
+    const base = projectsConfig[selectedProject] || PROJECTS_CONFIG[selectedProject] || PROJECTS_CONFIG['prj-ql1a-02']
     return computeProjectMetrics(base, selectedTrack, selectedTimeRange)
-  }, [selectedProject, selectedTrack, selectedTimeRange])
+  }, [projectsConfig, selectedProject, selectedTrack, selectedTimeRange])
 
   const [activeJob, setActiveJob] = useState<AsyncExportJob | null>(null)
   const [exportRecords, setExportRecords] = useState<ExportRecord[]>([])
@@ -62,12 +65,14 @@ export function useRiskAnalyticsState() {
   // Load initial data from async Mock API (No localStorage!)
   const loadData = useCallback(async () => {
     try {
-      const [records, job, segments, mainline] = await Promise.all([
+      const [records, job, segments, mainline, projectList] = await Promise.all([
         reportService.getExportRecords(),
         reportService.getActiveJob(),
         reportService.getRpt06DeteriorationRisks(selectedProject),
-        reportService.getProjectMainline(selectedProject)
+        reportService.getProjectMainline(selectedProject),
+        projectService.fetchProjects()
       ])
+      setProjects(projectList)
       setExportRecords(records as ExportRecord[])
       if (job) {
         setActiveJob(job as AsyncExportJob)
@@ -77,6 +82,36 @@ export function useRiskAnalyticsState() {
       if (segments.length > 0) {
         setActiveSegmentId(segments[0].id)
       }
+
+      // Xây dựng cấu hình động cho toàn bộ dự án từ projectService
+      const configMap: Record<string, ProjectConfig> = { ...PROJECTS_CONFIG }
+      projectList.forEach((p) => {
+        if (!configMap[p.id]) {
+          configMap[p.id] = {
+            id: p.id,
+            code: p.code,
+            name: p.name,
+            shortName: p.name.length > 25 ? p.code : p.name,
+            route: p.code,
+            chainage: p.stationing_text || `Km 0+000 → Km ${(p.length_km || 10).toFixed(1)}`,
+            serverNode: `Trạm giám sát ${p.code}`,
+            met01_ratio: p.warranty_passed_percent ? Math.min(95, Math.max(60, p.warranty_passed_percent)) : 78.4,
+            met01_change: '+2.5% so với kỳ trước',
+            met01_completed_text: `${Math.max(1, (p.open_defects || 0) * 3)}/${Math.max(2, (p.open_defects || 0) * 4)} khiếm khuyết xử lý đúng hạn cam kết`,
+            met01_target: 75.0,
+            met04_mtta: 3.2,
+            met04_change: '-0.8 ngày',
+            met04_sup_days: 2.1,
+            met04_pm_days: 1.1,
+            met08_recurrence: 3.8,
+            met08_status: 'ĐẠT CHUẨN',
+            met08_note: 'Mặt đường ổn định, tuân thủ TCVN 8819:2011',
+            met11_integrity: 99.8,
+            met11_items_text: '100% hồ sơ & ảnh đối soát hợp lệ'
+          }
+        }
+      })
+      setProjectsConfig(configMap)
     } catch {
       // Fallback
     }
@@ -85,6 +120,25 @@ export function useRiskAnalyticsState() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Lắng nghe sự kiện toàn hệ thống để cập nhật danh sách dự án tức thì
+  useEffect(() => {
+    const handleStateChange = () => {
+      loadData()
+    }
+    window.addEventListener('roadguard_state_change', handleStateChange)
+    return () => {
+      window.removeEventListener('roadguard_state_change', handleStateChange)
+    }
+  }, [loadData])
+
+  // Cập nhật scope khi chọn dự án
+  useEffect(() => {
+    if (selectedProject && selectedProject !== 'ALL') {
+      const code = projectsConfig[selectedProject]?.code || selectedProject.toUpperCase()
+      setExportForm((prev) => ({ ...prev, scope: code }))
+    }
+  }, [selectedProject, projectsConfig])
 
   // Background worker progress simulation
   useEffect(() => {
@@ -135,10 +189,14 @@ export function useRiskAnalyticsState() {
   // Đồng bộ nguồn dữ liệu GeoJSON đường tim tuyến và các dải phân đoạn nứt lún lên MapLibre
   const syncMapGeometry = useCallback(() => {
     const map = mapInstanceRef.current
-    if (!map || !map.isStyleLoaded()) return
+    if (!map) return
+    if (!map.isStyleLoaded()) {
+      map.once('load', () => syncMapGeometry())
+      return
+    }
 
     // 1. Tuyến đường tim tuyến toàn dự án (LineString chính)
-    if (mainlineCoords.length > 1) {
+    if (mainlineCoords && mainlineCoords.length > 1) {
       const mainlineGeoJson: GeoJSON.Feature = {
         type: 'Feature',
         properties: {},
@@ -155,26 +213,39 @@ export function useRiskAnalyticsState() {
           type: 'geojson',
           data: mainlineGeoJson
         })
+      }
 
+      if (!map.getLayer('project-mainline-casing')) {
         map.addLayer({
           id: 'project-mainline-casing',
           type: 'line',
           source: 'project-mainline',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
           paint: {
             'line-color': '#0F172A',
-            'line-width': 7,
-            'line-opacity': 0.65
+            'line-width': 8,
+            'line-opacity': 0.8
           }
         })
+      }
 
+      if (!map.getLayer('project-mainline-layer')) {
         map.addLayer({
           id: 'project-mainline-layer',
           type: 'line',
           source: 'project-mainline',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
           paint: {
             'line-color': '#94A3B8',
-            'line-width': 4,
-            'line-opacity': 0.85
+            'line-width': 4.5,
+            'line-opacity': 0.95,
+            'line-dasharray': [3, 1.5]
           }
         })
       }
@@ -182,125 +253,165 @@ export function useRiskAnalyticsState() {
 
     // 2. Các phân đoạn suy thoái mặt đường rủi ro cao (RPT-06)
     const validSegments = rpt06Segments.filter((s) => s.coordinates && s.coordinates.length > 1)
-    const features: GeoJSON.Feature[] = validSegments.map((s) => ({
-      type: 'Feature',
-      properties: {
-        id: s.id,
-        color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#3B82F6',
-        chainage: s.chainage_display
-      },
-      geometry: {
-        type: 'LineString',
-        coordinates: s.coordinates
+    if (validSegments.length > 0) {
+      const features: GeoJSON.Feature[] = validSegments.map((s) => ({
+        type: 'Feature',
+        properties: {
+          id: s.id,
+          color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#3B82F6',
+          chainage: s.chainage_display
+        },
+        geometry: {
+          type: 'LineString',
+          coordinates: s.coordinates
+        }
+      }))
+
+      const segmentsGeoJson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features
       }
-    }))
 
-    const segmentsGeoJson: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features
-    }
-
-    if (map.getSource('risk-segments')) {
-      ;(map.getSource('risk-segments') as maplibregl.GeoJSONSource).setData(segmentsGeoJson)
-    } else {
-      map.addSource('risk-segments', {
-        type: 'geojson',
-        data: segmentsGeoJson
-      })
+      if (map.getSource('risk-segments')) {
+        ;(map.getSource('risk-segments') as maplibregl.GeoJSONSource).setData(segmentsGeoJson)
+      } else {
+        map.addSource('risk-segments', {
+          type: 'geojson',
+          data: segmentsGeoJson
+        })
+      }
 
       // Viền phát quang (glow halo)
-      map.addLayer({
-        id: 'risk-segments-halo',
-        type: 'line',
-        source: 'risk-segments',
-        paint: {
-          'line-color': ['get', 'color'],
-          'line-width': 12,
-          'line-opacity': 0.45,
-          'line-blur': 4
-        }
-      })
+      if (!map.getLayer('risk-segments-halo')) {
+        map.addLayer({
+          id: 'risk-segments-halo',
+          type: 'line',
+          source: 'risk-segments',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 14,
+            'line-opacity': 0.55,
+            'line-blur': 4
+          }
+        })
+      }
 
       // Nét vẽ chính của phân đoạn hư hỏng
-      map.addLayer({
-        id: 'risk-segments-line',
-        type: 'line',
-        source: 'risk-segments',
-        paint: {
-          'line-color': ['get', 'color'],
-          'line-width': 6
-        }
-      })
+      if (!map.getLayer('risk-segments-line')) {
+        map.addLayer({
+          id: 'risk-segments-line',
+          type: 'line',
+          source: 'risk-segments',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 6.5
+          }
+        })
+
+        // Bắt sự kiện click vào đường phân đoạn để chọn
+        map.on('click', 'risk-segments-line', (e) => {
+          if (e.features && e.features[0]) {
+            const clickedId = e.features[0].properties?.id
+            if (clickedId) {
+              setActiveSegmentId(clickedId)
+            }
+          }
+        })
+
+        map.on('mouseenter', 'risk-segments-line', () => {
+          map.getCanvas().style.cursor = 'pointer'
+        })
+        map.on('mouseleave', 'risk-segments-line', () => {
+          map.getCanvas().style.cursor = ''
+        })
+      }
 
       // Viền đứt nét màu trắng cho phân đoạn đang chọn
-      map.addLayer({
-        id: 'risk-segments-selected',
-        type: 'line',
-        source: 'risk-segments',
-        filter: ['==', ['get', 'id'], activeSegmentId],
-        paint: {
-          'line-color': '#FFFFFF',
-          'line-width': 8,
-          'line-opacity': 0.9,
-          'line-dasharray': [2, 1]
-        }
-      })
-
-      // Bắt sự kiện click vào đường phân đoạn để chọn
-      map.on('click', 'risk-segments-line', (e) => {
-        if (e.features && e.features[0]) {
-          const clickedId = e.features[0].properties?.id
-          if (clickedId) {
-            setActiveSegmentId(clickedId)
+      if (!map.getLayer('risk-segments-selected')) {
+        map.addLayer({
+          id: 'risk-segments-selected',
+          type: 'line',
+          source: 'risk-segments',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          filter: ['==', ['get', 'id'], activeSegmentId],
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': 8.5,
+            'line-opacity': 0.95,
+            'line-dasharray': [2, 1]
           }
-        }
-      })
-
-      map.on('mouseenter', 'risk-segments-line', () => {
-        map.getCanvas().style.cursor = 'pointer'
-      })
-      map.on('mouseleave', 'risk-segments-line', () => {
-        map.getCanvas().style.cursor = ''
-      })
-    }
-
-    if (map.getLayer('risk-segments-selected')) {
-      map.setFilter('risk-segments-selected', ['==', ['get', 'id'], activeSegmentId])
+        })
+      } else {
+        map.setFilter('risk-segments-selected', ['==', ['get', 'id'], activeSegmentId])
+      }
     }
   }, [mainlineCoords, rpt06Segments, activeSegmentId])
 
-  // MapLibre Initialization
+  // 1. Khởi tạo bản đồ MapLibre duy nhất 1 lần khi component mount
   useEffect(() => {
-    if (!mapContainerRef.current) return
+    if (!mapContainerRef.current || mapInstanceRef.current) return
 
-    if (!mapInstanceRef.current) {
-      const defaultCenter: [number, number] = [108.1492, 16.2238]
-      const map = new maplibregl.Map({
-        container: mapContainerRef.current,
-        style: getMapLibreStyle('SATELLITE'),
-        center: defaultCenter,
-        zoom: 12,
-        minZoom: 5,
-        maxZoom: 18,
-        pitch: 25
-      })
+    const defaultCenter: [number, number] = [108.1492, 16.2238]
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: getMapLibreStyle('SATELLITE'),
+      center: defaultCenter,
+      zoom: 12,
+      minZoom: 5,
+      maxZoom: 18,
+      pitch: 25
+    })
 
-      map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
+    // Đã xóa NavigationControl top-right bị trùng với nút zoom custom ở góc dưới phải (bottom-right)
 
-      map.on('style.load', () => {
-        syncMapGeometry()
-      })
+    map.on('load', () => {
+      syncMapGeometry()
+    })
 
-      mapInstanceRef.current = map
-    } else {
-      const styleUrl = getMapLibreStyle(mapLayer === 'satellite' ? 'SATELLITE' : 'STREETS')
-      mapInstanceRef.current.setStyle(styleUrl)
+    mapInstanceRef.current = map
+
+    return () => {
+      map.remove()
+      mapInstanceRef.current = null
     }
-  }, [mapLayer, syncMapGeometry])
+  }, [])
 
-  // Kích hoạt vẽ đường hình học khi dữ liệu hoặc phân đoạn chọn thay đổi
+  // 2. Chuyển đổi lớp vệ tinh / bản đồ số tức thì mà không làm mất các nguồn dữ liệu GeoJSON
   useEffect(() => {
-    syncMapGeometry()
+    const map = mapInstanceRef.current
+    if (!map || !map.isStyleLoaded()) return
+    const isSat = mapLayer === 'satellite'
+    if (map.getLayer('satellite-layer')) {
+      map.setLayoutProperty('satellite-layer', 'visibility', isSat ? 'visible' : 'none')
+    }
+    if (map.getLayer('osm-layer')) {
+      map.setLayoutProperty('osm-layer', 'visibility', !isSat ? 'visible' : 'none')
+    }
+  }, [mapLayer])
+
+  // 3. Kích hoạt vẽ đường hình học khi dữ liệu hoặc phân đoạn chọn thay đổi
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (map) {
+      if (map.isStyleLoaded()) {
+        syncMapGeometry()
+      } else {
+        map.once('load', () => {
+          syncMapGeometry()
+        })
+      }
+    }
   }, [syncMapGeometry])
 
   // Render Markers on Map
@@ -367,22 +478,6 @@ export function useRiskAnalyticsState() {
       })
     }
   }, [])
-
-  const handleToggleSurveyPlan = useCallback(async (segmentId: string) => {
-    try {
-      const updated = await reportService.toggleSurveyPlan(segmentId)
-      setRpt06Segments((prev) =>
-        prev.map((s) => (s.id === segmentId ? (updated as Rpt06RiskSegment) : s))
-      )
-      showToast(
-        updated.survey_plan_suggested
-          ? `Đã đánh dấu phân đoạn ${updated.chainage_display} vào kế hoạch bay khảo sát định kỳ tiếp theo!`
-          : `Đã hủy đánh dấu phân đoạn ${updated.chainage_display} khỏi kế hoạch bay!`
-      )
-    } catch {
-      showToast('Có lỗi khi cập nhật kế hoạch bay khảo sát.')
-    }
-  }, [showToast])
 
   const handleZoomIn = useCallback(() => {
     if (mapInstanceRef.current) mapInstanceRef.current.zoomIn({ duration: 300 })
@@ -469,6 +564,8 @@ export function useRiskAnalyticsState() {
   }
 
   return {
+    projects,
+    projectsConfig,
     selectedProject,
     setSelectedProject,
     selectedTimeRange,
@@ -507,7 +604,6 @@ export function useRiskAnalyticsState() {
     mapLayer,
     setMapLayer,
     handleFocusSegment,
-    handleToggleSurveyPlan,
     handleZoomIn,
     handleZoomOut,
     handleFitBounds,
