@@ -712,14 +712,24 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC SUP-05: Đóng Tổng thể Vụ việc Hỗn hợp (Mixed Case Closeout) (HT12, BR-26, PA06)
-- **Đường dẫn URL:** `/sup/acceptance/:batchId` (hoặc `/cases/{caseId}`)
-- **Mục tiêu:** Đóng vụ việc hư hỏng khi tất cả các nhánh con (Fast Track + Approval Track) đã hoàn thành 100%.
+#### BƯỚC SUP-05: Đóng Tổng thể Vụ việc Hỗn hợp (Mixed Case Closeout) (HT12, BR-26, PA06, FR-23)
+- **Đường dẫn URL:** `/sup/acceptance/:batchId` (nghiệm thu đợt) hoặc `/sup/cases/:caseId` (chi tiết vụ việc)
+- **Thẩm quyền:** Duy nhất Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Đóng tổng thể hồ sơ vụ việc hỗn hợp khi 100% các nhánh xử lý con (Fast Track + Approval Track) đã hoàn tất nghiệm thu hợp lệ.
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] Mở hồ sơ vụ việc hỗn hợp gồm cả hạng mục Fast Track (do PM đóng) và hạng mục Approval Track (do Supervisor nghiệm thu).
-  2. [ ] **Kiểm tra Gate điều kiện (BR-26):** Nếu còn dù chỉ 1 hạng mục chưa đạt (đang ở trạng thái `REWORK` hoặc chờ bổ sung) $\rightarrow$ Nút **"Đóng Tổng thể Vụ việc (Close Case)"** bị khóa mờ (`Disabled`).
-  3. [ ] Khi 100% hạng mục trong vụ việc đều đã hoàn tất đạt chuẩn $\rightarrow$ Nút đóng kích hoạt sáng. Nhập lý do đóng vụ việc và bấm **"Đóng Tổng thể Vụ việc (Close Case)"** (`closeMixedCase: POST /cases/{caseId}/close`).
-- **Tiêu chuẩn đạt (Expected):** Vụ việc chuyển sang `CLOSED`; ngăn chặn việc đóng sai sót khi chưa nghiệm thu hết các phần bắt buộc (BR-26).
+  1. [ ] Mở hồ sơ vụ việc hỗn hợp gồm đồng thời:
+         - Các hạng mục nhánh Fast Track (do PM tự kiểm tra và đóng theo BR-25).
+         - Các hạng mục nhánh Approval Track (do Supervisor thẩm định đối chứng ảnh Before/After theo BR-27).
+  2. [ ] **Kiểm tra Gate điều kiện (BR-26, HT12):**
+         - Nếu còn dù chỉ 1 hạng mục chưa đạt (đang ở trạng thái `REWORK_REQUIRED` phải thi công lại, hoặc `REQUEST_EVIDENCE` đang chờ bổ sung đo đạc) $\rightarrow$ Nút **"Đóng Tổng thể Vụ việc (Close Case)"** bị khóa mờ (`Disabled`).
+         - Việc nhánh Fast Track đã xong không được làm đóng sớm toàn bộ vụ việc khi nhánh Approval Track chưa hoàn thành.
+  3. [ ] **Thực hiện đóng tổng thể khi đủ điều kiện:**
+         - Khi 100% hạng mục đều đạt chuẩn (`Fast Track = PASSED`, `Approval Track = ACCEPTED/PASSED`) $\rightarrow$ Nút đóng kích hoạt sáng.
+         - Supervisor nhập ý kiến kết luận/lý do đóng và bấm **"Đóng Tổng thể Vụ việc (Close Case)"** (`closeMixedCase: POST /api/v1/cases/{caseId}/close`).
+- **Tiêu chuẩn đạt (Expected):**
+  - Trạng thái vụ việc chuyển sang `CLOSED` (Đóng băng hồ sơ, Read-only).
+  - Tự động kích hoạt luồng công bố kết quả: PM chọn ảnh AFTER đạt chuẩn để công bố cho người dân/chủ phản ánh (`IncidentReport` $\rightarrow$ `REPAIRED` theo PA07, FR-25).
+  - Ngăn chặn triệt để việc đóng sai sót khi chưa nghiệm thu hết các phần việc bắt buộc (BR-26).
 
 ---
 
