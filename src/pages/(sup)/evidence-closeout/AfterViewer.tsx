@@ -9,14 +9,14 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({ currentItem }) => {
   return (
     <div className="flex flex-col bg-white rounded-xl overflow-hidden border border-slate-200 shadow-2xs">
       {/* Tiêu đề cột */}
-      <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+      <div className="px-4 py-3 bg-[#F8F9FA] border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-          <span className="text-xs text-slate-800 font-semibold uppercase tracking-wider">
+          <span className="w-2 h-2 rounded-full bg-[#2F9E44]"></span>
+          <span className="text-xs text-slate-900 font-semibold uppercase tracking-wider">
             Ảnh sau khi sửa
           </span>
         </div>
-        <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
+        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
           Đã hoàn thành • Đạt K98 ({currentItem.compaction_k98})
         </span>
       </div>
@@ -26,41 +26,43 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({ currentItem }) => {
         <img
           src={currentItem.after_image}
           alt="Mặt đường bê tông nhựa sau khi vá hoàn thiện"
-          className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-101 transition-transform duration-300"
         />
 
         {/* HUD Định vị trên ảnh */}
-        <div className="absolute top-2.5 left-2.5 bg-white/95 backdrop-blur-md px-2.5 py-0.5 rounded-md text-xs text-slate-800 shadow-xs flex items-center gap-1 border border-slate-200 font-medium">
-          <span className="material-symbols-outlined text-[15px] text-[#C9A227]">build</span>
+        <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-md text-xs text-slate-800 shadow-2xs flex items-center gap-1.5 border border-slate-200/80 font-medium">
+          <span className="material-symbols-outlined text-[15px] text-[#C9A227]">engineering</span>
           <span>{currentItem.after_crew.split(' - ')[0]}</span>
         </div>
-        <div className="absolute bottom-2.5 right-2.5 bg-black/75 backdrop-blur-md px-2.5 py-0.5 rounded-md text-white text-[11px] flex items-center gap-1">
-          <span className="material-symbols-outlined text-[14px] text-emerald-400">check</span>
+        <div className="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur-xs px-2 py-1 rounded-md text-white text-[11px] flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px] text-[#2F9E44]">verified</span>
           <span>Tọa độ EXIF hợp lệ</span>
         </div>
       </div>
 
-      {/* Thông tin đối chứng */}
-      <div className="p-3.5 space-y-2 text-xs">
+      {/* Thông tin đối chứng phẳng (Minimalist Grid) */}
+      <div className="p-4 space-y-3 text-xs bg-white">
         <div className="flex items-center gap-1.5 text-slate-600">
-          <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">engineering</span>
+          <span className="material-symbols-outlined text-[16px] text-slate-400 shrink-0">groups</span>
           <span>
-            Đơn vị thực hiện: <strong className="text-slate-800 font-medium">{currentItem.after_crew}</strong>
+            Đơn vị thực hiện: <strong className="text-slate-900 font-medium">{currentItem.after_crew}</strong>
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5">
-          <div className="bg-slate-50 p-2 rounded-md border border-slate-200">
-            <span className="text-slate-500 block text-[11px]">Thời gian hoàn thành:</span>
-            <span className="font-medium text-slate-800 text-xs">{currentItem.after_time}</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100 text-xs">
+          <div>
+            <span className="text-slate-400 block text-[11px] uppercase tracking-wider font-medium">Thời gian hoàn thành</span>
+            <span className="font-medium text-slate-800 mt-0.5 block">{currentItem.after_time}</span>
           </div>
-          <div className="bg-slate-50 p-2 rounded-md border border-slate-200">
-            <span className="text-slate-500 block text-[11px]">Tọa độ GPS:</span>
-            <span className="font-mono font-medium text-slate-800 text-xs">{currentItem.after_gps.split(' (')[0]}</span>
+          <div>
+            <span className="text-slate-400 block text-[11px] uppercase tracking-wider font-medium">Tọa độ GPS</span>
+            <span className="font-mono font-medium text-slate-800 mt-0.5 block truncate" title={currentItem.after_gps}>
+              {currentItem.after_gps.split(' (')[0]}
+            </span>
           </div>
-          <div className="bg-slate-50 p-2 rounded-md border border-slate-200">
-            <span className="text-slate-500 block text-[11px]">Thiết bị thi công:</span>
-            <span className="font-medium text-slate-800 text-xs truncate block" title={currentItem.after_equipment}>
+          <div>
+            <span className="text-slate-400 block text-[11px] uppercase tracking-wider font-medium">Thiết bị thi công</span>
+            <span className="font-medium text-slate-800 mt-0.5 block truncate" title={currentItem.after_equipment}>
               {currentItem.after_equipment}
             </span>
           </div>

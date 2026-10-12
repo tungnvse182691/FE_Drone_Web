@@ -126,6 +126,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         directives: selectedIssues
       })
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      if (currentPackage) {
+        const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
+        if (refreshedPkg) setCurrentPackage(refreshedPkg)
+      }
       setIsReworkModalOpen(false)
       showToast(`Đã phát lệnh yêu cầu sửa lại (REWORK) cho hạng mục ${currentItem.item_code}!`)
     } catch (err) {
@@ -138,6 +142,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     try {
       const updated = await acceptanceService.acceptCloseoutItem(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      if (currentPackage) {
+        const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
+        if (refreshedPkg) setCurrentPackage(refreshedPkg)
+      }
       showToast(`Giám sát đã chấp thuận nghiệm thu đạt hạng mục ${currentItem.item_code}!`)
     } catch (err) {
       showToast('Có lỗi xảy ra khi phê duyệt nghiệm thu.')
@@ -149,6 +157,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     try {
       const updated = await acceptanceService.closeFastTrackItem(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      if (currentPackage) {
+        const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
+        if (refreshedPkg) setCurrentPackage(refreshedPkg)
+      }
       showToast(`PM đã chấp thuận và đóng lỗi Fast Track ${currentItem.item_code} (BR-25)!`)
     } catch (err) {
       showToast('Có lỗi khi đóng lỗi Fast Track.')
@@ -160,6 +172,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     try {
       const updated = await acceptanceService.submitItemToSupervisor(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
+      if (currentPackage) {
+        const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
+        if (refreshedPkg) setCurrentPackage(refreshedPkg)
+      }
       showToast(`PM đã trình hồ sơ ${currentItem.item_code} lên Giám sát nghiệm thu!`)
     } catch (err) {
       showToast('Có lỗi khi trình hồ sơ.')

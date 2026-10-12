@@ -21,9 +21,9 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
   isPMView: _isPMView
 }) => {
   return (
-    <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
+    <section className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs space-y-4">
       {/* Section Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <h2 className="font-bold text-base text-slate-900 flex items-center gap-2 font-sansation">
             <span className="material-symbols-outlined text-[20px] text-[#C9A227]">photo_camera</span>
@@ -35,14 +35,14 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
         </div>
 
         {/* Chế độ xem: Song song hoặc Vuốt trượt */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-lg self-start sm:self-auto border border-slate-200">
+        <div className="inline-flex items-center p-0.5 rounded-lg bg-[#F8F9FA] border border-slate-200 gap-1 self-start sm:self-auto">
           <button
             onClick={() => setViewMode('side')}
             type="button"
             className={`px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
               viewMode === 'side'
-                ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-2xs font-semibold border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 border border-transparent'
             }`}
           >
             <span className="material-symbols-outlined text-[15px]">view_column</span>
@@ -54,8 +54,8 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
             type="button"
             className={`px-3 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition cursor-pointer ${
               viewMode === 'slider'
-                ? 'bg-white text-slate-900 shadow-2xs font-semibold'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-2xs font-semibold border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 border border-transparent'
             }`}
           >
             <span className="material-symbols-outlined text-[15px] text-[#C9A227]">tune</span>

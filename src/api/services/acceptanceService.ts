@@ -36,6 +36,7 @@ export interface AcceptancePackage {
   rework_items: number
   technical_scope: string
   status: 'PENDING_INSPECTION' | 'PASSED' | 'REWORK_REQUIRED'
+  is_closed?: boolean
   status_label: string
   sla_display: string
   completion_date: string
@@ -163,7 +164,8 @@ export const INITIAL_ACCEPTANCE_RECORDS: AcceptanceRecord[] = [
 let inMemoryPackages: AcceptancePackage[] = JSON.parse(JSON.stringify(INITIAL_ACCEPTANCE_PACKAGES))
 let inMemoryCaseItems: CaseItem[] = JSON.parse(JSON.stringify(INITIAL_CASE_ITEMS))
 let inMemoryAcceptanceRecords: AcceptanceRecord[] = JSON.parse(JSON.stringify(INITIAL_ACCEPTANCE_RECORDS))
-let inMemoryIsCaseClosed: boolean = false
+// Danh sách các gói đã được Supervisor chủ động xác nhận đóng đợt (Tuyệt đối không tự động đóng gói)
+const inMemoryClosedPackageIds = new Set<string>()
 
 // Helper to re-sync package aggregate stats based on its items
 function syncPackageStats(packageId?: string) {
@@ -207,8 +209,23 @@ export const acceptanceService = {
   }): Promise<AcceptancePackage[]> {
     await new Promise((resolve) => setTimeout(resolve, 80))
     let result = JSON.parse(JSON.stringify(inMemoryPackages)) as AcceptancePackage[]
+    result = result.map((pkg) => {
+      syncPackageStats(pkg.id)
+      const isClosed = inMemoryClosedPackageIds.has(pkg.id) || inMemoryClosedPackageIds.has(pkg.code)
+      return {
+        ...pkg,
+        is_closed: isClosed
+      }
+    })
+
     if (filter?.status && filter.status !== 'ALL') {
-      result = result.filter((p) => p.status === filter.status)
+      if (filter.status === 'CLOSED') {
+        result = result.filter((p) => p.is_closed)
+      } else if (filter.status === 'PASSED') {
+        result = result.filter((p) => p.status === 'PASSED')
+      } else {
+        result = result.filter((p) => p.status === filter.status)
+      }
     }
     if (filter?.projectId && filter.projectId !== 'ALL') {
       result = result.filter((p) => p.project_id === filter.projectId)
@@ -236,7 +253,11 @@ export const acceptanceService = {
     )
     if (found) {
       syncPackageStats(found.id)
-      return JSON.parse(JSON.stringify(found))
+      const isClosed = inMemoryClosedPackageIds.has(found.id) || inMemoryClosedPackageIds.has(found.code)
+      return {
+        ...JSON.parse(JSON.stringify(found)),
+        is_closed: isClosed
+      }
     }
     return null
   },
@@ -263,12 +284,16 @@ export const acceptanceService = {
   /**
    * Lấy trạng thái đóng tổng thể vụ việc
    * (GET /api/v1/evidence-closeout/case-status)
+   * Không tự động đóng: Chỉ đóng khi Supervisor đã chủ động bấm nút xác nhận đóng đợt
    */
   async getCaseCloseoutStatus(packageId?: string): Promise<{ isCaseClosed: boolean; caseCode: string }> {
     await new Promise((resolve) => setTimeout(resolve, 60))
     const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
+    const isClosed = packageId
+      ? inMemoryClosedPackageIds.has(packageId) || (pkg ? inMemoryClosedPackageIds.has(pkg.id) : false)
+      : false
     return {
-      isCaseClosed: inMemoryIsCaseClosed && (!pkg || pkg.status === 'PASSED'),
+      isCaseClosed: isClosed,
       caseCode: pkg ? pkg.case_code : '#CASE-2026-0842'
     }
   },
@@ -314,6 +339,9 @@ export const acceptanceService = {
       attempt_number: nextAttempt,
       rework_reason: payload.notes,
       rework_directives: payload.directives
+    }
+    if (inMemoryClosedPackageIds.has(current.package_id)) {
+      inMemoryClosedPackageIds.delete(current.package_id)
     }
     syncPackageStats(current.package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
@@ -370,13 +398,18 @@ export const acceptanceService = {
     if (hasPending) {
       throw new Error('CASE_HAS_OPEN_REQUIRED_ITEMS: Chưa thể đóng vụ việc khi còn hạng mục dở dang')
     }
-    inMemoryIsCaseClosed = true
     if (packageId) {
-      const pkg = inMemoryPackages.find((p) => p.id === packageId)
+      inMemoryClosedPackageIds.add(packageId)
+      const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
       if (pkg) {
+        inMemoryClosedPackageIds.add(pkg.id)
+        inMemoryClosedPackageIds.add(pkg.code)
         pkg.status = 'PASSED'
         pkg.status_label = `Đã nghiệm thu đạt (${pkg.total_items}/${pkg.total_items})`
       }
+    }
+    if (caseCode) {
+      inMemoryClosedPackageIds.add(caseCode)
     }
     return {
       success: true,
