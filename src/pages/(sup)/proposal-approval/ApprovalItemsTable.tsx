@@ -66,21 +66,21 @@ export const ApprovalItemsTable: React.FC<ApprovalItemsTableProps> = ({
       />
 
       {/* Responsive Table Container */}
-      <div className="overflow-x-auto w-full rounded-lg border border-slate-200 bg-white shadow-2xs">
-        <table className="w-full text-left text-xs border-collapse min-w-[1050px]">
+      <div className="w-full rounded-lg border border-slate-200 bg-white shadow-2xs overflow-hidden">
+        <table className="w-full text-left text-xs border-collapse table-fixed">
           <thead className="bg-[#F8F9FA] border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="py-2.5 px-3 min-w-[150px]">Mã &amp; Hư hỏng</th>
-              <th className="py-2.5 px-3 whitespace-nowrap min-w-[130px]">Vị trí &amp; Lý trình</th>
-              <th className="py-2.5 px-3 min-w-[170px]">Hư hại &amp; Đo đạc</th>
-              <th className="py-2.5 px-3 min-w-[200px]">Phương án kỹ thuật</th>
-              <th className="py-2.5 px-3 text-right whitespace-nowrap min-w-[110px]">Khối lượng</th>
-              <th className="py-2.5 px-3 text-center whitespace-nowrap min-w-[120px]">Trạng thái duyệt</th>
-              <th className="py-2.5 px-3 text-center whitespace-nowrap min-w-[130px]">
-                {isSupervisor ? 'Thao tác Thẩm định' : 'Thẩm định'}
+              <th className="py-2.5 px-2.5 w-[14%]">Mã &amp; Hư hỏng</th>
+              <th className="py-2.5 px-2 w-[11%]">Vị trí &amp; Lý trình</th>
+              <th className="py-2.5 px-2.5 w-[16%]">Hư hại &amp; Đo đạc</th>
+              <th className="py-2.5 px-2.5 w-[18%]">Phương án kỹ thuật</th>
+              <th className="py-2.5 px-2 text-right w-[9%]">Khối lượng</th>
+              <th className="py-2.5 px-2 text-center w-[10%]">Trạng thái</th>
+              <th className="py-2.5 px-2 text-center w-[10%]">
+                {isSupervisor ? 'Thao tác' : 'Thẩm định'}
               </th>
-              <th className="py-2.5 px-3 whitespace-nowrap min-w-[180px]">
-                {isSupervisor ? 'Đội thi công (Dự kiến)' : 'Phân công tổ thi công'}
+              <th className="py-2.5 px-2 w-[12%]">
+                {isSupervisor ? 'Đội thi công' : 'Phân công'}
               </th>
             </tr>
           </thead>

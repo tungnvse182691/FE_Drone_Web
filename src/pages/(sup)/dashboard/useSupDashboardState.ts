@@ -139,10 +139,12 @@ export function useSupDashboardState() {
         minZoom: 5,
         maxZoom: 18,
         pitch: 25,
-        bearing: -10
+        bearing: -10,
+        attributionControl: false
       })
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right')
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left')
       mapInstanceRef.current = map
     } else {
       const styleUrl = getMapLibreStyle(mapLayer === 'satellite' ? 'SATELLITE' : 'STREETS')

@@ -80,7 +80,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
 
           <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
             <Icon name="shield" size={16} className="text-brand-gold" />
-            <span>Quy trình kỹ thuật: WF-07 (Thẩm duyệt &amp; Điều phối)</span>
+            <span>Quy trình: Thẩm duyệt &amp; Điều phối</span>
           </div>
         </div>
       </div>
@@ -128,8 +128,8 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1 text-brand-gold font-medium">
-                <Icon name="warning" size={14} />
-                <span>WF-07</span>
+                <Icon name="verified" size={14} />
+                <span>Hồ sơ thẩm định</span>
               </span>
             </div>
           </div>

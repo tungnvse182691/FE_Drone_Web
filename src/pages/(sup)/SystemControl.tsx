@@ -8,6 +8,7 @@ import { SystemControlHeader } from './system-control/SystemControlHeader'
 import { CreateDeletionRequestModal } from './system-control/CreateDeletionRequestModal'
 import { DeletionRequestDetailModal } from './system-control/DeletionRequestDetailModal'
 import { ProjectRetentionDetailModal } from './system-control/ProjectRetentionDetailModal'
+import { LegalHoldModal } from './system-control/LegalHoldModal'
 import { useSystemControlState } from './system-control/useSystemControlState'
 
 export const SystemControl: React.FC = () => {
@@ -135,6 +136,7 @@ export const SystemControl: React.FC = () => {
             deletionRequests={s.deletionRequests}
             isSupervisor={isSupervisor}
             handleToggleLegalHold={s.handleToggleLegalHold}
+            onOpenLegalHoldModal={s.handleOpenLegalHoldModal}
             handleRejectDeletion={s.handleRejectDeletion}
             handleApprovePurge={s.handleApprovePurge}
             onViewDetail={s.handleViewDetail}
@@ -186,6 +188,14 @@ export const SystemControl: React.FC = () => {
         isOpen={s.showProjectDetailModal}
         onClose={() => s.setShowProjectDetailModal(false)}
         onOpenCreateDeletionForProject={s.handleOpenCreateDeletionForProject}
+      />
+
+      {/* 7. Modal thiết lập / gỡ bỏ phong tỏa pháp lý (Legal Hold - QT14, BR-45) */}
+      <LegalHoldModal
+        isOpen={s.showLegalHoldModal}
+        project={s.projectToSetLegalHold}
+        onClose={() => s.setShowLegalHoldModal(false)}
+        onConfirm={s.handleConfirmLegalHold}
       />
     </div>
   )

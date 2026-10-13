@@ -198,9 +198,18 @@ export const retentionService = {
   },
 
   /**
-   * Supervisor bật / tắt lệnh phong tỏa pháp lý (Legal Hold) cho dự án
+   * Supervisor thiết lập lệnh phong tỏa pháp lý (Legal Hold) cho dự án (PUT /projects/{projectId}/legal-hold)
+   * Ánh xạ theo operation_catalog.md dòng 120 (LegalHoldRequest: { enabled, reason })
    */
-  async toggleLegalHold(projectId: string): Promise<LegalHoldProject> {
+  async setLegalHold(
+    projectId: string,
+    payload: {
+      enabled: boolean
+      reason?: string
+      authority?: string
+      reference?: string
+    }
+  ): Promise<LegalHoldProject> {
     await new Promise((resolve) => setTimeout(resolve, 80))
     const index = inMemoryProjects.findIndex((p) => p.project_id === projectId)
     if (index === -1) {
@@ -208,13 +217,12 @@ export const retentionService = {
     }
 
     const current = inMemoryProjects[index]
-    const nextHoldState = !current.is_legal_hold
+    current.is_legal_hold = payload.enabled
 
-    current.is_legal_hold = nextHoldState
-    if (nextHoldState) {
-      current.hold_reason = 'Thanh tra đột xuất hồ sơ hoàn công và kiểm tra chất lượng kết cấu'
-      current.hold_authority = 'Thanh tra Bộ GTVT'
-      current.hold_reference = 'Công văn số 8492/BGTVT-TTr'
+    if (payload.enabled) {
+      current.hold_reason = payload.reason || 'Yêu cầu phong tỏa phục vụ thanh tra, kiểm toán công trình'
+      current.hold_authority = payload.authority || 'Cơ quan có thẩm quyền'
+      current.hold_reference = payload.reference || 'Văn bản / Quyết định thanh tra'
       current.hold_since = new Date().toLocaleString('vi-VN')
     } else {
       current.hold_reason = undefined
@@ -226,12 +234,21 @@ export const retentionService = {
     // Cập nhật cờ blocked_by_legal_hold cho các yêu cầu xóa tương ứng
     inMemoryRequests = inMemoryRequests.map((req) => {
       if (req.project_id === projectId) {
-        return { ...req, blocked_by_legal_hold: nextHoldState }
+        return { ...req, blocked_by_legal_hold: payload.enabled }
       }
       return req
     })
 
     inMemoryProjects[index] = { ...current }
     return { ...current }
+  },
+
+  /**
+   * Supervisor bật / tắt nhanh lệnh phong tỏa pháp lý (Legal Hold)
+   */
+  async toggleLegalHold(projectId: string): Promise<LegalHoldProject> {
+    const found = inMemoryProjects.find((p) => p.project_id === projectId)
+    const nextState = !found?.is_legal_hold
+    return this.setLegalHold(projectId, { enabled: nextState })
   }
 }

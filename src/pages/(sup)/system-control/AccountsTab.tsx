@@ -17,6 +17,8 @@ interface AccountsTabProps {
   handleRestoreUser: (id: string) => void
   setUserToSuspend: (u: SystemUserAccount | null) => void
   setShowSuspendModal: (show: boolean) => void
+  setUserToResetPassword: (u: SystemUserAccount | null) => void
+  setShowResetPasswordModal: (show: boolean) => void
 }
 
 export const AccountsTab: React.FC<AccountsTabProps> = ({
@@ -33,7 +35,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   handleOpenEdit,
   handleRestoreUser,
   setUserToSuspend,
-  setShowSuspendModal
+  setShowSuspendModal,
+  setUserToResetPassword,
+  setShowResetPasswordModal
 }) => {
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-xs p-5 flex flex-col gap-4 w-full">
@@ -96,8 +100,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
           <thead>
             <tr className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 text-[11px]">
               <th className="py-3 px-4">Thành viên &amp; Liên hệ</th>
-              <th className="py-3 px-3">Vai trò phân quyền</th>
-              <th className="py-3 px-3">Phạm vi phụ trách</th>
+              <th className="py-3 px-3">Vai trò &amp; Dự án phụ trách</th>
               <th className="py-3 px-3">Phiên &amp; Thiết bị</th>
               <th className="py-3 px-3">Trạng thái</th>
               <th className="py-3 px-4 text-right">Hành động</th>
@@ -120,10 +123,10 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                   }`}
                 >
                   {/* Thành viên */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
+                  <td className="py-3 px-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2.5">
                       <div
-                        className={`w-9 h-9 rounded-full font-bold flex items-center justify-center text-xs shadow-xs text-white ${
+                        className={`w-8 h-8 rounded-full font-bold flex items-center justify-center text-[11px] shadow-xs text-white shrink-0 ${
                           isSuspended
                             ? 'bg-slate-400'
                             : u.role === RoleCode.SUPERVISOR
@@ -135,13 +138,13 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                       >
                         {u.full_name.substring(0, 2).toUpperCase()}
                       </div>
-                      <div>
-                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5 leading-tight">
                           <span className={isSuspended ? 'line-through text-slate-400' : ''}>
                             {u.full_name}
                           </span>
                           {isCurrent && (
-                            <span className="text-[10px] text-brand-goldDark font-bold font-mono">
+                            <span className="text-[10px] text-brand-goldDark font-bold font-mono shrink-0">
                               (Chính bạn)
                             </span>
                           )}
@@ -151,51 +154,59 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     </div>
                   </td>
 
-                  {/* Vai trò */}
-                  <td className="py-3.5 px-3 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold ${
-                        u.role === RoleCode.SUPERVISOR
-                          ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                  {/* Vai trò & Dự án phụ trách (Gộp tinh gọn) */}
+                  <td className="py-3 px-3">
+                    <div className="flex flex-col gap-1 items-start">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
+                          u.role === RoleCode.SUPERVISOR
+                            ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                            : u.role === RoleCode.PROJECT_MANAGER
+                            ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                            : u.role === RoleCode.DRONE_OPERATOR
+                            ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        {u.role === RoleCode.SUPERVISOR
+                          ? 'Giám sát (CĐT)'
                           : u.role === RoleCode.PROJECT_MANAGER
-                          ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                          ? 'Chỉ huy trưởng (PM)'
                           : u.role === RoleCode.DRONE_OPERATOR
-                          ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                      }`}
-                    >
-                      {u.role === RoleCode.SUPERVISOR
-                        ? 'Giám sát (CĐT)'
-                        : u.role === RoleCode.PROJECT_MANAGER
-                        ? 'Chỉ huy trưởng (PM)'
-                        : u.role === RoleCode.DRONE_OPERATOR
-                        ? 'Phi công UAV'
-                        : 'Tổ thi công'}
-                    </span>
-                  </td>
-
-                  {/* Phạm vi phụ trách */}
-                  <td className="py-3.5 px-3 whitespace-nowrap font-mono text-slate-800">
-                    <span className="font-medium">{u.project_scope}</span>
+                          ? 'Phi công UAV'
+                          : 'Tổ thi công'}
+                      </span>
+                      <span
+                        className="text-[11px] text-slate-600 font-medium truncate max-w-[240px] block"
+                        title={u.project_scope}
+                      >
+                        {u.project_scope}
+                      </span>
+                    </div>
                   </td>
 
                   {/* Phiên & Thiết bị */}
-                  <td className="py-3.5 px-3 whitespace-nowrap">
-                    <div className="text-slate-800 font-medium flex items-center gap-1.5">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          isSuspended ? 'bg-slate-400' : 'bg-brand-gold'
-                        }`}
-                      ></span>
-                      <span>{u.device_info}</span>
-                    </div>
-                    <div className="text-[10px] font-mono text-slate-500">
-                      {u.last_active} • IP: {u.ip_address}
+                  <td className="py-3 px-3">
+                    <div className="flex flex-col gap-0.5">
+                      <div
+                        className="text-slate-800 font-medium flex items-center gap-1.5 text-xs truncate max-w-[200px]"
+                        title={u.device_info}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            isSuspended ? 'bg-slate-400' : 'bg-emerald-500'
+                          }`}
+                        ></span>
+                        <span className="truncate">{u.device_info}</span>
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">
+                        {u.last_active} • {u.ip_address}
+                      </div>
                     </div>
                   </td>
 
-                  {/* Trạng thái 100% Tiếng Việt */}
-                  <td className="py-3.5 px-3 whitespace-nowrap">
+                  {/* Trạng thái */}
+                  <td className="py-3 px-3 whitespace-nowrap">
                     {isSuspended ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold text-[10px] border border-slate-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
@@ -214,19 +225,18 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     )}
                   </td>
 
-                  {/* Hành động */}
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                  {/* Hành động (Gọn gàng với Icon Buttons + Tooltips) */}
+                  <td className="py-3 px-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
                         onClick={() => setSelectedUserDetail(u)}
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-brand-gold hover:text-brand-goldDark text-slate-700 font-semibold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:border-brand-gold hover:text-brand-goldDark text-slate-600 transition-all cursor-pointer shadow-2xs"
                         title="Xem chi tiết hồ sơ nhân sự, dự án và thiết bị"
                       >
-                        <span className="material-symbols-outlined text-[15px] text-slate-500">
+                        <span className="material-symbols-outlined text-[17px] block">
                           visibility
                         </span>
-                        <span>Chi tiết</span>
                       </button>
 
                       {isSupervisor && (
@@ -234,13 +244,26 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(u)}
-                            className="px-2.5 py-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 font-semibold text-xs shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            className="p-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 transition-all cursor-pointer shadow-2xs"
                             title="Chỉnh sửa thông tin nhân sự và dự án phụ trách"
                           >
-                            <span className="material-symbols-outlined text-[15px] text-brand-gold">
+                            <span className="material-symbols-outlined text-[17px] text-brand-gold block">
                               edit
                             </span>
-                            <span>Sửa</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserToResetPassword(u)
+                              setShowResetPasswordModal(true)
+                            }}
+                            className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-800 transition-all cursor-pointer shadow-2xs"
+                            title="Đặt lại mật khẩu tạm thời & kích hoạt buộc đổi mật khẩu (CN10)"
+                          >
+                            <span className="material-symbols-outlined text-[17px] block">
+                              lock_reset
+                            </span>
                           </button>
 
                           {isCurrent ? (
@@ -251,13 +274,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRestoreUser(u.id)}
-                              className="px-2 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-xs transition-all flex items-center gap-1 cursor-pointer"
-                              title="Khôi phục quyền truy cập"
+                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-2xs"
+                              title="Khôi phục quyền truy cập tài khoản (QT01)"
                             >
-                              <span className="material-symbols-outlined text-[15px] text-emerald-600">
+                              <span className="material-symbols-outlined text-[17px] block">
                                 restore
                               </span>
-                              <span>Khôi phục</span>
                             </button>
                           ) : (
                             <button
@@ -266,10 +288,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                                 setUserToSuspend(u)
                                 setShowSuspendModal(true)
                               }}
-                              className="px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors border border-rose-200 cursor-pointer"
-                              title="Đình chỉ nhân sự và bàn giao công việc"
+                              className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-all cursor-pointer shadow-2xs"
+                              title="Đình chỉ nhân sự và bàn giao công việc (QT01, QT02)"
                             >
-                              Đình chỉ
+                              <span className="material-symbols-outlined text-[17px] block">
+                                block
+                              </span>
                             </button>
                           )}
                         </>

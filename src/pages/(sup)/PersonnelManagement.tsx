@@ -6,6 +6,7 @@ import { SuspendUserModal } from './system-control/SuspendUserModal'
 import { UserDetailModal } from './system-control/UserDetailModal'
 import { EditUserModal } from './system-control/EditUserModal'
 import { AddPersonnelModal } from './system-control/AddPersonnelModal'
+import { ResetPasswordModal } from './system-control/ResetPasswordModal'
 import { usePersonnelState } from './system-control/usePersonnelState'
 
 export const PersonnelManagement: React.FC = () => {
@@ -113,6 +114,8 @@ export const PersonnelManagement: React.FC = () => {
           handleRestoreUser={p.handleRestoreUser}
           setUserToSuspend={p.setUserToSuspend}
           setShowSuspendModal={p.setShowSuspendModal}
+          setUserToResetPassword={p.setUserToResetPassword}
+          setShowResetPasswordModal={p.setShowResetPasswordModal}
         />
       </div>
 
@@ -176,6 +179,13 @@ export const PersonnelManagement: React.FC = () => {
         setAssignExistingProject={p.setAssignExistingProject}
         usersList={p.usersList}
         handleAddPersonnelSubmit={p.handleAddPersonnelSubmit}
+      />
+
+      <ResetPasswordModal
+        isOpen={p.showResetPasswordModal}
+        user={p.userToResetPassword}
+        onClose={() => p.setShowResetPasswordModal(false)}
+        onConfirm={p.handleConfirmResetPassword}
       />
     </div>
   )

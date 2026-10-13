@@ -655,6 +655,36 @@ sequenceDiagram
 
 ---
 
+#### BƯỚC SUP-00: Dashboard KPI & Lối tắt Điều hành Giám sát (BC01, BC03, BC04, RPT-01, RPT-06, RPT-07, RPT-10, FR-33)
+- **Đường dẫn URL:** `/sup/dashboard` (Menu: *Tổng quan*)
+- **Thẩm quyền:** Duy nhất Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Màn hình trung tâm chỉ huy sau khi đăng nhập: Nắm bắt toàn diện các chỉ số KPI danh mục bảo hành (RPT-01), ma trận đoạn tuyến rủi ro cao trên bản đồ GIS tương tác (RPT-06), theo dõi hiệu suất SLA (MET-05), nhật ký kiểm toán gần đây (RPT-10), và xuất hồ sơ bằng chứng số (RPT-07).
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Thanh Tiêu đề & Bộ lọc 3 cấp (RPT-01, §11.2, §11.4):**
+     - Kiểm tra mốc dữ liệu cập nhật As-Of thời gian thực.
+     - Kiểm tra bộ lọc liên kết 3 cấp: Tháng đánh giá (`2026-08`), Khu vực (*Toàn quốc*, *Miền Trung*, *Miền Bắc*) và Dự án bảo hành liên kết tự động. Thử nút *Đặt lại* và *Áp dụng*.
+     - Kiểm tra nút lối tắt trên Header: *Khởi tạo dự án* (`/sup/projects`), *Thẩm duyệt đợt sửa (WF-07)* (`/sup/proposals/PKG-2026-08`), và *Tải lại dữ liệu*.
+  2. [ ] **3 Thẻ KPI Danh mục Bảo hành Toàn hệ thống (RPT-01, BC01, MET-09):**
+     - Thẻ 1: *Dự án đang bảo hành* (5 dự án, 293.8 km, 156 đoạn).
+     - Thẻ 2: *Dự án sắp hết hạn* (1 dự án cảnh báo < 30 ngày: Cao tốc Diễn Châu - Bãi Vọt còn 25 ngày).
+     - Thẻ 3: *Đoạn đường chưa baseline (MET-09)* (12 đoạn thuộc 4 dự án cần bay khảo sát gốc).
+  3. [ ] **Bản đồ GIS & Bảng Đoạn tuyến Rủi ro Cao (RPT-06, BC04, FR-33, MET-02, MET-08):**
+     - Bản đồ MapLibre: Chuyển đổi lớp vệ tinh / vector, thao tác phóng to/thu nhỏ, Fit bounds, click Marker hoặc click dòng trong bảng để Fly-to-Pin.
+     - Bảng rủi ro: Sắp xếp theo 5 cột (*Mức rủi ro*, *Tên dự án*, *Lý trình*, *Số lỗi mở*, *Thời hạn SLA*).
+     - Kiểm tra khối lượng hư hỏng kỹ thuật: Chuẩn **Zero Money** 100% ($m^2$, mét nứt, vị trí khe co giãn, không dính giá tiền/BOQ).
+     - Kiểm tra nút *Duyệt WF-07* trên từng dòng: Chuyển hướng chính xác theo mã đợt sửa chữa động (`/sup/proposals/:proposalId`).
+  4. [ ] **Cột Phải: Hiệu suất SLA, Nhật ký RPT-10 & Chỉ số PCI (MET-05, BC03, QT09):**
+     - Thẻ *Hiệu suất xử lý khiếm khuyết (MET-05)*: Tỷ lệ hoàn thành đúng hạn SLA đạt 88.5%, 156 điểm đã đóng, 24 điểm chờ nghiệm thu.
+     - Thẻ *Hoạt động gần đây (RPT-10)*: Liệt kê các sự kiện kiểm toán mới nhất, bấm nút *Xem toàn bộ nhật ký kiểm toán (RPT-10)* chuyển sang `/sup/audit-trail`.
+     - Thẻ *Chỉ số chất lượng mặt đường (PCI)*: Xem thanh tiến độ PCI theo tuyến đường (QL1A: 78.5, Cao tốc: 64.2) và bấm nút chuyển sang `/sup/risk-analytics`.
+  5. [ ] **Xuất Hồ sơ Điều hành & Rủi ro Bảo hành (RPT-01, RPT-07, BC06–BC10):**
+     - Bấm nút *Xuất báo cáo (RPT-01)* trên Header để mở Modal xuất dữ liệu.
+     - Chọn định dạng: **Báo cáo điều hành tổng hợp (PDF/A)** hoặc **Gói hồ sơ bằng chứng số nén (ZIP Dossier)** chứa mã băm chống chối bỏ SHA-256.
+     - Bấm *Tải xuống hồ sơ* và xác nhận toast thông báo hoàn tất kết xuất.
+- **Tiêu chuẩn đạt (Expected):** Số liệu KPI hiển thị tức thời theo mốc lọc, không có trường giá tiền/BOQ, các nút lối tắt điều hướng chính xác đến từng màn hình chuyên biệt.
+
+---
+
 #### BƯỚC SUP-01: Khởi tạo Dự án & Phân bổ Quyền Nhân sự (DA01, DA03, FR-04, BR-01, BR-02)
 - **Đường dẫn URL:** `/sup/projects` $\rightarrow$ Bấm "Thêm mới dự án"
 - **Mục tiêu:** Tạo mới hồ sơ quản lý bảo hành công trình và phân quyền nhân sự chủ chốt (chỉ Supervisor mới có quyền tạo dự án theo BR-01, FR-04, `POST /projects`).
@@ -785,7 +815,61 @@ sequenceDiagram
 
 ---
 
-### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (25 BƯỚC CHI TIẾT)
+
+
+---
+
+#### BƯỚC SUP-09: Giám sát Kế hoạch bay Drone & Rà soát Lỗi AI phát hiện (KS10, AI01, AI04, FR-10, FR-12)
+- **Đường dẫn URL:** `/sup/surveys` (Menu: *Giám sát Drone*) & `/sup/ai-inbox` (Menu: *Hộp thư tiếp nhận lỗi*)
+- **Thẩm quyền:** Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Giám sát tiến độ bay chụp ảnh của nhà thầu và rà soát các khiếm khuyết mặt đường do thuật toán AI phát hiện tự động trước khi PM lập phương án kỹ thuật.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Giám sát Kế hoạch bay Drone (`/sup/surveys` - KS10, FR-10):**
+     - Xem danh mục đợt bay khảo sát theo từng dự án/tuyến đường.
+     - Kiểm tra các mốc trạng thái đợt bay: `DRAFT` $\rightarrow$ `SCHEDULED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `COMPLETED` $\rightarrow$ `PROCESSED`.
+     - Xem thông số bay kỹ thuật: Độ phân giải GSD, diện tích quét ($km^2$, $km$ tuyến), số lượng ảnh chụp thô và trạng thái mô hình trực giao Orthomosaic.
+  2. [ ] **Hộp thư Rà soát Lỗi do AI phát hiện (`/sup/ai-inbox` - AI01, AI04, FR-12):**
+     - Xem danh sách sơ bộ các hư hỏng (Preliminary Defects): Nứt dọc/ngang, ổ gà, lún vệt bánh xe, bong tróc bê tông nhựa.
+     - Kiểm tra chỉ số độ tin cậy của thuật toán AI (AI Confidence Score - ví dụ: 94.2%, 88.5%).
+     - Xem hình ảnh gắn khung nhận diện Bounding Box và vị trí GPS trên lý trình Km.
+- **Tiêu chuẩn đạt (Expected):** Supervisor nắm bắt đầy đủ hiện trạng khảo sát và chất lượng phát hiện hư hỏng của AI trên mạng lưới đường mà không cần can thiệp trực tiếp vào khâu phân luồng của PM.
+
+---
+
+#### BƯỚC SUP-10: Theo dõi Nhiệm vụ Đo đạc Hiện trường & Ca Xử lý Cấp bách (FR-18, FR-20, FR-24, BR-25, PA01-PA07)
+- **Đường dẫn URL:** `/sup/field-tasks` (Menu: *Nhiệm vụ hiện trường*) & `/sup/fast-track` (Menu: *Xử lý cấp bách*)
+- **Thẩm quyền:** Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Giám sát các nhiệm vụ đo đạc bổ sung thực địa (do Supervisor yêu cầu khi bấm `REQUEST_EVIDENCE`) và theo dõi tiến độ giải quyết các sự cố hư hỏng nguy hiểm thuộc diện cấp bách.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Theo dõi Nhiệm vụ Đo đạc Bổ sung Hiện trường (`/sup/field-tasks` - FR-18, FR-20):**
+     - Xem danh sách các phiếu giao việc đo đạc bổ sung phát sinh từ các quyết định thẩm duyệt (`REQUEST_EVIDENCE`).
+     - Theo dõi trạng thái thực hiện của Kỹ sư hiện trường/Tổ thi công: `ASSIGNED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `SUBMITTED`.
+     - Kiểm tra số liệu đo đạc thực tế gửi về: Chiều rộng vết nứt ($mm$), chiều sâu ổ gà ($cm$), ảnh chụp kèm thước đo cơ học và tọa độ GPS xác thực.
+  2. [ ] **Giám sát Ca Xử lý Cấp bách (`/sup/fast-track` - BR-25, FR-24, PA01-PA07):**
+     - Xem danh mục các sự cố giao thông khẩn cấp được kích hoạt nhánh Fast Track (sụt trượt, ổ gà sâu nguy hiểm đe dọa an toàn).
+     - Kiểm tra quy tắc BR-25: PM được quyền tổ chức thi công sửa chữa ngay lập tức; sau khi hoàn thành, PM tự nghiệm thu nội bộ và gửi hồ sơ báo cáo hoàn công RPT-04 sang cho Supervisor theo dõi.
+- **Tiêu chuẩn đạt (Expected):** Supervisor kiểm soát chặt chẽ các nhiệm vụ đo kiểm tra chéo và theo dõi toàn bộ các ca cấp bách trên tuyến mà không gây ách tắc giao thông.
+
+---
+
+#### BƯỚC SUP-11: Đối chứng Thực nghiệm Khoa học Mô hình AI (RS01 - RS06, RPT-09, FR-31, MET-12, BR-44)
+- **Đường dẫn URL:** `/sup/research-validation` (Menu: *Kiểm định mô hình*)
+- **Thẩm quyền:** Giám sát trưởng (Supervisor / Chủ đầu tư).
+- **Mục tiêu:** Kiểm chứng tính chính xác khoa học của mô hình AI: So sánh số đo hình học do Drone trích xuất (Derived) với số đo thực địa bằng thước thẳng và thước đo sâu (Ground Truth) để đánh giá độ tin cậy trước khi nghiệm thu.
+- **Thao tác kiểm tra trên màn hình:**
+  1. [ ] **Chạy đợt thẩm định đối soát mới (`FR-31`):** Bấm **"Chạy Thẩm định Mới (Run Validation Job)"** kích hoạt xử lý nền bất đồng bộ để ghép cặp dữ liệu thực nghiệm (`RS04`).
+  2. [ ] **Kiểm tra 4 thẻ chỉ số sai số kỹ thuật theo chuẩn `MET-12` (`RS05`):**
+     - Tỷ lệ mẫu hợp lệ (`used_count / sample_count`) và số lượng mẫu loại trừ (`excluded_count` theo `BR-44`).
+     - Độ lệch hệ thống có dấu ($\text{Bias} = \sum e / N$ theo đơn vị $mm$).
+     - Sai số tuyệt đối trung bình ($\text{MAE} = \sum |e| / N$ theo đơn vị $mm$).
+     - Căn bậc hai sai số toàn phương ($\text{RMSE} = \sqrt{\sum e^2 / N}$ theo đơn vị $mm$).
+  3. [ ] **Kiểm tra Bảng Cặp mẫu Đối soát (`Paired Samples` - `RS04`):** Lọc mẫu `INCLUDED`, `EXCLUDED`, `OUTLIER`; xem chi tiết từng mẫu gồm loại hư hỏng, lý trình Km, số đo Ground Truth ($mm$), số đo Drone AI Derived ($mm$), sai số $e$, dụng cụ đo và kỹ sư thực hiện.
+  4. [ ] **Xuất tệp CSV Dữ liệu Đối soát (`RS06` / `RPT-09`):** Bấm **"Xuất CSV Dữ Liệu Đối Soát"** để nhận tệp chuẩn hóa `RPT-09-Research-Validation-Paired-Data-v2.2.csv`.
+- **Tiêu chuẩn đạt (Expected):** Khởi tạo tác vụ thẩm định thành công, các chỉ số sai số hình học ($Bias$, $MAE$, $RMSE$) hiển thị chính xác theo đơn vị $mm$, phân biệt rõ ràng mẫu hợp lệ/bị loại theo `BR-44`, hỗ trợ tải về tệp CSV đối soát nguyên vẹn.
+
+---
+
+### 8.3 BẢNG TỔNG HỢP CHECKLIST KIỂM TRA NGHIỆM THU (29 BƯỚC CHI TIẾT - PHỦ 100% MENU)
 
 | Mã bước | Tên bước kiểm tra | Role | Trạng thái hiển thị | Thao tác tương tác | Không dính giá tiền | Ghi chú kiểm thử theo Spec 29_9 |
 |:---:|---|:---:|:---:|:---:|:---:|---|
@@ -806,6 +890,7 @@ sequenceDiagram
 | **PM-15** | Đối soát Mô hình AI & Ground Truth | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tính toán Bias, MAE, RMSE theo mm và xuất CSV (RS01-RS06, BR-44) |
 | **PM-16** | Tra cứu Nhật ký Kiểm toán | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Truy vết dòng sự kiện Durable Audit Trail (GET /audit-events) |
 | **PM-17** | Vòng đời Dữ liệu & Đề xuất Hủy | PM | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đề xuất hủy hồ sơ hết hạn lưu trữ > 5 năm không có Legal Hold (BR-45) |
+| **SUP-00** | Dashboard KPI & Lối tắt điều hành | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Thẻ KPI mạng lưới, hàng đợi duyệt, lối tắt tác nghiệp (BC02, BC03) |
 | **SUP-01** | Khởi tạo dự án & Phân bổ nhân sự | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Tạo dự án, chỉ định 1 PM chính, cấp quyền Crew (DA01, BR-01) |
 | **SUP-02** | Thẩm định & Xác nhận tuyến | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Khóa bất biến RoadSectionVersion (DA13, FR-07) |
 | **SUP-03** | Thẩm duyệt 4 nhánh từng hạng mục | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Quyết định Approve/Evidence/Reconsider/Reject (SC05, BR-21) |
@@ -814,6 +899,10 @@ sequenceDiagram
 | **SUP-06** | Giám sát rủi ro & Xuất hồ sơ SHA-256 | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Phân tích rủi ro đa kỳ, xuất PDF/ZIP SHA-256 (BC04, RPT-06, RPT-07) |
 | **SUP-07** | Danh mục & Đóng dự án hết bảo hành | SUP | [x] Đạt | [x] Đạt | [x] Đạt | Xem hạn bảo hành, đóng dự án CLOSED khi hết hạn (BC01, DA12) |
 | **SUP-08** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
+| **SUP-09** | Giám sát bay Drone & Hộp thư lỗi AI | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Xem tiến độ bay (KS10) và rà soát phát hiện AI sơ bộ (AI01, AI04) |
+| **SUP-10** | Nhiệm vụ hiện trường & Ca cấp bách | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Theo dõi đo bổ sung (FR-18) và giám sát sự cố Fast Track (BR-25) |
+| **SUP-11** | Đối chứng thực nghiệm Mô hình AI | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Thẩm định khoa học Bias/MAE/RMSE mm và xuất CSV đối soát (RS01-RS06) |
+
 
 ---
 

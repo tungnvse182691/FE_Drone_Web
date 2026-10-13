@@ -107,6 +107,17 @@ export const DashboardRightCards: React.FC<DashboardRightCardsProps> = ({
                   </div>
                 ))}
               </div>
+
+              <div className="pt-3 mt-3 border-t border-slate-100">
+                <button
+                  onClick={onNavigateAuditTrail}
+                  type="button"
+                  className="w-full text-center text-xs font-semibold text-brand-gold hover:underline cursor-pointer flex items-center justify-center gap-1 py-1"
+                >
+                  <span>Xem toàn bộ nhật ký kiểm toán (RPT-10)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Card: Chỉ số suy thoái mặt đường PCI theo đoạn tuyến */}

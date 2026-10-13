@@ -69,7 +69,7 @@ const IN_MEMORY_USERS: MockUser[] = [
   }
 ]
 
-let currentSessionUser: User | null = { ...IN_MEMORY_USERS[0] }
+let currentSessionUser: User | null = null
 
 export interface AuthResponse {
   user: User
@@ -139,6 +139,30 @@ export const authService = {
     return {
       success: true,
       user: safeUser
+    }
+  },
+
+  /**
+   * Quản trị viên đặt lại mật khẩu cho nhân sự (CN10 / operation_catalog.md L19)
+   * POST /users/{userId}/password-reset
+   * Cấp mật khẩu tạm thời và bật cờ must_change_password: true
+   */
+  async adminResetPassword(
+    userId: string,
+    tempPassword: string = 'RoadGuard@2026'
+  ): Promise<{ success: boolean; tempPassword: string; mustChangePassword: boolean }> {
+    await new Promise((resolve) => setTimeout(resolve, 350))
+
+    const targetUser = IN_MEMORY_USERS.find((u) => u.id === userId || u.email === userId)
+    if (targetUser) {
+      targetUser.password_hash = tempPassword
+      targetUser.must_change_password = true
+    }
+
+    return {
+      success: true,
+      tempPassword,
+      mustChangePassword: true
     }
   },
 

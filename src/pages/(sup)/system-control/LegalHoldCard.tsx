@@ -5,6 +5,7 @@ export interface LegalHoldCardProps {
   legalHoldProjects: LegalHoldProject[]
   isSupervisor: boolean
   handleToggleLegalHold: (projectId: string) => void
+  onOpenLegalHoldModal?: (project: LegalHoldProject) => void
   onViewProjectDetail?: (project: LegalHoldProject) => void
 }
 
@@ -12,6 +13,7 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
   legalHoldProjects,
   isSupervisor,
   handleToggleLegalHold,
+  onOpenLegalHoldModal,
   onViewProjectDetail
 }) => {
   return (
@@ -79,15 +81,32 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
               >
                 {isSupervisor ? (
                   <>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={proj.is_legal_hold}
-                        onChange={() => handleToggleLegalHold(proj.project_id)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
-                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenLegalHoldModal
+                          ? onOpenLegalHoldModal(proj)
+                          : handleToggleLegalHold(proj.project_id)
+                      }
+                      className="relative inline-flex items-center cursor-pointer focus:outline-none"
+                      title={
+                        proj.is_legal_hold
+                          ? 'Nhấp để gỡ bỏ lệnh phong tỏa pháp lý (QT14)'
+                          : 'Nhấp để thiết lập lệnh phong tỏa pháp lý & nhập căn cứ thanh tra (QT14)'
+                      }
+                    >
+                      <div
+                        className={`w-9 h-5 rounded-full transition-colors relative ${
+                          proj.is_legal_hold ? 'bg-rose-600' : 'bg-slate-300'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-[2px] shadow-xs ${
+                            proj.is_legal_hold ? 'translate-x-[18px]' : 'translate-x-[2px]'
+                          }`}
+                        />
+                      </div>
+                    </button>
                     <span
                       className={`text-[10px] font-bold ${
                         proj.is_legal_hold ? 'text-rose-700' : 'text-slate-500'

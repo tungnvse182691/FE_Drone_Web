@@ -14,10 +14,10 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // Mặc định đăng nhập với tài khoản Kỹ sư Nguyễn Văn An (SUPERVISOR) trong bộ nhớ để kiểm thử các bước SUP
-  user: mockUsers[1],
-  token: 'mock-jwt-token-an-sup',
-  isAuthenticated: true,
+  // Không hardcode: Khi mới mở trang chưa đăng nhập thì phiên là null
+  user: null,
+  token: null,
+  isAuthenticated: false,
 
   login: (role: RoleCode) => {
     const user = mockUsers.find((u) => u.role === role) || mockUsers[0]

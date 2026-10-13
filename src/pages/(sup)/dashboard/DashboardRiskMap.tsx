@@ -87,23 +87,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
         )}
 
         {/* Map Control Buttons */}
-        <div className="absolute bottom-4 right-4 flex flex-col gap-1.5 shadow-md pointer-events-auto">
-          <button
-            onClick={() => onZoomIn()}
-            type="button"
-            className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-sm font-bold transition shadow-xs cursor-pointer border border-slate-200"
-            title="Phóng to"
-          >
-            +
-          </button>
-          <button
-            onClick={() => onZoomOut()}
-            type="button"
-            className="w-8 h-8 bg-white hover:bg-slate-100 text-slate-800 rounded-lg flex items-center justify-center text-sm font-bold transition shadow-xs cursor-pointer border border-slate-200"
-            title="Thu nhỏ"
-          >
-            -
-          </button>
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-1.5 shadow-md pointer-events-auto">
           <button
             onClick={() => setMapLayer(mapLayer === 'satellite' ? 'vector' : 'satellite')}
             type="button"

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 import { mockSystemUserAccounts } from '../../../api/mock/data'
+import { authService } from '../../../api/services'
 
 export function usePersonnelState(triggerNotice: (msg: string) => void) {
   const [usersList, setUsersList] = useState<SystemUserAccount[]>(mockSystemUserAccounts)
@@ -12,6 +13,10 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
   const [showSuspendModal, setShowSuspendModal] = useState<boolean>(false)
   const [userToSuspend, setUserToSuspend] = useState<SystemUserAccount | null>(null)
   const [handoffAssignee, setHandoffAssignee] = useState<string>('usr-01')
+
+  // Modal Đặt lại mật khẩu (CN10 / operation_catalog.md L19)
+  const [userToResetPassword, setUserToResetPassword] = useState<SystemUserAccount | null>(null)
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState<boolean>(false)
 
   // Modal Chi tiết
   const [selectedUserDetail, setSelectedUserDetail] = useState<SystemUserAccount | null>(null)
@@ -187,6 +192,12 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     }
   }
 
+  const handleConfirmResetPassword = async (userId: string, tempPassword: string) => {
+    // Gọi mock API Service bất đồng bộ (CN10 / operation_catalog.md L19)
+    await authService.adminResetPassword(userId, tempPassword)
+    triggerNotice(`Đã đặt lại mật khẩu tạm thành công cho nhân sự! Đã kích hoạt buộc đổi mật khẩu ở lần đăng nhập tiếp theo.`)
+  }
+
   return {
     usersList,
     setUsersList,
@@ -201,6 +212,11 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setUserToSuspend,
     handoffAssignee,
     setHandoffAssignee,
+    userToResetPassword,
+    setUserToResetPassword,
+    showResetPasswordModal,
+    setShowResetPasswordModal,
+    handleConfirmResetPassword,
     selectedUserDetail,
     setSelectedUserDetail,
     userToEdit,

@@ -15,9 +15,9 @@ export const Login: React.FC = () => {
   // Chế độ xem: 'login' (Form Đăng nhập chính) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
   const [viewMode, setViewMode] = useState<LoginViewMode>('login')
 
-  // State cho Form Đăng nhập
-  const [email, setEmail] = useState('pmhoang@gmail.com')
-  const [password, setPassword] = useState('123456')
+  // State cho Form Đăng nhập (Không điền sẵn - Người dùng nhập hoặc bấm thẻ mẫu)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loginError, setLoginError] = useState(false)

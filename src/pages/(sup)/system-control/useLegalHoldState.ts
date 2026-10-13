@@ -50,18 +50,44 @@ export function useLegalHoldState(
     return legalHoldProjects.find((p) => p.is_legal_hold)
   }, [legalHoldProjects])
 
-  const handleToggleLegalHold = async (projectId: string) => {
+  // Modal Thiết lập Phong tỏa Pháp lý (Legal Hold - QT14, BR-45)
+  const [projectToSetLegalHold, setProjectToSetLegalHold] = useState<LegalHoldProject | null>(null)
+  const [showLegalHoldModal, setShowLegalHoldModal] = useState<boolean>(false)
+
+  const handleOpenLegalHoldModal = (project: LegalHoldProject) => {
     if (!isSupervisor) {
       alert('Chỉ tài khoản Giám sát / Chủ đầu tư mới có thẩm quyền bật/tắt Phong tỏa pháp lý (Legal Hold).')
       return
     }
+    setProjectToSetLegalHold(project)
+    setShowLegalHoldModal(true)
+  }
+
+  const handleConfirmLegalHold = async (payload: {
+    enabled: boolean
+    reason?: string
+    authority?: string
+    reference?: string
+  }) => {
+    if (!projectToSetLegalHold) return
 
     try {
-      await retentionService.toggleLegalHold(projectId)
+      await retentionService.setLegalHold(projectToSetLegalHold.project_id, payload)
       await reloadData()
-      triggerNotice('Đã cập nhật trạng thái Phong tỏa pháp lý cho dự án thành công!')
+      triggerNotice(
+        payload.enabled
+          ? `Đã kích hoạt chế độ Phong tỏa pháp lý cho dự án [${projectToSetLegalHold.project_name}] thành công!`
+          : `Đã gỡ bỏ lệnh Phong tỏa pháp lý cho dự án [${projectToSetLegalHold.project_name}]!`
+      )
     } catch (err: unknown) {
       alert((err as Error).message || 'Có lỗi xảy ra khi cập nhật phong tỏa pháp lý')
+    }
+  }
+
+  const handleToggleLegalHold = async (projectId: string) => {
+    const proj = legalHoldProjects.find((p) => p.project_id === projectId)
+    if (proj) {
+      handleOpenLegalHoldModal(proj)
     }
   }
 
@@ -176,6 +202,12 @@ export function useLegalHoldState(
     handleViewDetail,
     handleViewProjectDetail,
     handleOpenCreateDeletionForProject,
+    projectToSetLegalHold,
+    setProjectToSetLegalHold,
+    showLegalHoldModal,
+    setShowLegalHoldModal,
+    handleOpenLegalHoldModal,
+    handleConfirmLegalHold,
     handleToggleLegalHold,
     handleApprovePurge,
     handleRejectDeletion,

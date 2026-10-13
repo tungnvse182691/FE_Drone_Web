@@ -153,7 +153,6 @@ export const Sidebar: React.FC = () => {
         { label: 'Phân tích rủi ro', path: '/sup/risk-analytics', icon: BarChart3 },
         { label: 'Kiểm định mô hình', path: '/sup/research-validation', icon: Sparkles },
         { label: 'Nhật ký hoạt động', path: '/sup/audit-trail', icon: History },
-        { label: 'Lưu trữ hồ sơ', path: '/sup/retention', icon: Sliders },
         { label: 'Nhân sự & Phân quyền', path: '/sup/personnel', icon: Users },
         { label: 'Cấu hình hệ thống', path: '/sup/system-control', icon: Sliders }
       ]

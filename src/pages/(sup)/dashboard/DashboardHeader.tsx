@@ -106,7 +106,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 style={{ boxShadow: 'rgba(201, 162, 39, 0.28) 0px 2px 8px' }}
               >
                 <CheckSquare className="w-3.5 h-3.5" />
-                <span>Thẩm duyệt đợt sửa (WF-07)</span>
+                <span>Thẩm duyệt đợt sửa</span>
               </button>
             </div>
           </div>
