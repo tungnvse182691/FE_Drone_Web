@@ -1845,6 +1845,22 @@ export const mockDefectSafetyCatalog: DefectCatalogItem[] = [
     standard_ref: 'TCVN 8864:2011',
     default_severity: Severity.HIGH,
     is_active: true
+  },
+  {
+    code: 'ALLIGATOR_CRACK',
+    name: 'Nứt da cá sấu / Nứt mai rùa',
+    description: 'Mạng lưới vết nứt đan xen hình đa giác nhiều cạnh do mỏi kết cấu mặt đường dưới tải trọng trục xe nặng.',
+    standard_ref: 'TCVN 8819:2011',
+    default_severity: Severity.CRITICAL,
+    is_active: true
+  },
+  {
+    code: 'RAVELING',
+    name: 'Bong bật cốt liệu mặt đường',
+    description: 'Sự vỡ vụn và mất mát dần các hạt cốt liệu khoáng khỏi lớp màng nhựa đường trên bề mặt phần xe chạy.',
+    standard_ref: 'TCVN 8819:2011',
+    default_severity: Severity.MEDIUM,
+    is_active: true
   }
 ]
 

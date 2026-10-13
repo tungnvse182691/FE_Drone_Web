@@ -9,6 +9,7 @@ import { CreateDeletionRequestModal } from './system-control/CreateDeletionReque
 import { DeletionRequestDetailModal } from './system-control/DeletionRequestDetailModal'
 import { ProjectRetentionDetailModal } from './system-control/ProjectRetentionDetailModal'
 import { LegalHoldModal } from './system-control/LegalHoldModal'
+import { DefectCatalogModal } from './system-control/DefectCatalogModal'
 import { useSystemControlState } from './system-control/useSystemControlState'
 
 export const SystemControl: React.FC = () => {
@@ -145,12 +146,20 @@ export const SystemControl: React.FC = () => {
         )}
 
         {isSupervisor && s.activeTab === 'ai-models' && (
-          <AIModelsTab />
+          <AIModelsTab
+            aiModels={s.aiModels}
+            onExportLabels={s.handleExportLabels}
+            onToggleFastTrack={s.handleToggleFastTrack}
+            isSupervisor={isSupervisor}
+          />
         )}
 
         {isSupervisor && s.activeTab === 'defect-catalog' && (
           <DefectCatalogTab
             defectCatalog={s.defectCatalog}
+            onToggleActive={s.handleToggleDefectActive}
+            onOpenCreate={s.handleOpenCreateDefect}
+            onOpenEdit={s.handleOpenEditDefect}
             isSupervisor={isSupervisor}
           />
         )}
@@ -196,6 +205,15 @@ export const SystemControl: React.FC = () => {
         project={s.projectToSetLegalHold}
         onClose={() => s.setShowLegalHoldModal(false)}
         onConfirm={s.handleConfirmLegalHold}
+      />
+
+      {/* 8. Modal Thêm mới / Chỉnh sửa danh mục khiếm khuyết TCVN (QT03, QT04) */}
+      <DefectCatalogModal
+        isOpen={s.showDefectModal}
+        mode={s.defectModalMode}
+        initialData={s.selectedDefectForEdit}
+        onClose={() => s.setShowDefectModal(false)}
+        onSave={s.handleSaveDefect}
       />
     </div>
   )

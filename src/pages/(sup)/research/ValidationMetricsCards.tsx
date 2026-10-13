@@ -73,9 +73,6 @@ export const ValidationMetricsCards: React.FC<ValidationMetricsCardsProps> = ({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span className="font-semibold text-slate-700">Độ lệch trung bình (Bias)</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
-              Công thức: Σe / N
-            </span>
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-slate-900 font-sansation">
@@ -96,9 +93,6 @@ export const ValidationMetricsCards: React.FC<ValidationMetricsCardsProps> = ({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span className="font-semibold text-slate-700">Sai số tuyệt đối trung bình (MAE)</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200">
-              Công thức: Σ|e| / N
-            </span>
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-slate-900 font-sansation">
@@ -116,9 +110,6 @@ export const ValidationMetricsCards: React.FC<ValidationMetricsCardsProps> = ({
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
             <span className="font-semibold text-slate-700">Căn sai số toàn phương (RMSE)</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">
-              Công thức: √(Σe²/N)
-            </span>
           </div>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-slate-900 font-sansation">

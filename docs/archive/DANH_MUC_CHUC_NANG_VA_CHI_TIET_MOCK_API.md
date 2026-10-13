@@ -860,12 +860,12 @@ sequenceDiagram
   1. [ ] **Chạy đợt thẩm định đối soát mới (`FR-31`):** Bấm **"Chạy Thẩm định Mới (Run Validation Job)"** kích hoạt xử lý nền bất đồng bộ để ghép cặp dữ liệu thực nghiệm (`RS04`).
   2. [ ] **Kiểm tra 4 thẻ chỉ số sai số kỹ thuật theo chuẩn `MET-12` (`RS05`):**
      - Tỷ lệ mẫu hợp lệ (`used_count / sample_count`) và số lượng mẫu loại trừ (`excluded_count` theo `BR-44`).
-     - Độ lệch hệ thống có dấu ($\text{Bias} = \sum e / N$ theo đơn vị $mm$).
-     - Sai số tuyệt đối trung bình ($\text{MAE} = \sum |e| / N$ theo đơn vị $mm$).
-     - Căn bậc hai sai số toàn phương ($\text{RMSE} = \sqrt{\sum e^2 / N}$ theo đơn vị $mm$).
+     - Độ lệch hệ thống có dấu (Bias theo đơn vị $mm$).
+     - Sai số tuyệt đối trung bình (MAE theo đơn vị $mm$, đối chiếu ngưỡng nghiệm thu $< 5.0 mm$).
+     - Căn bậc hai sai số toàn phương (RMSE theo đơn vị $mm$) và độ không đảm bảo đo.
   3. [ ] **Kiểm tra Bảng Cặp mẫu Đối soát (`Paired Samples` - `RS04`):** Lọc mẫu `INCLUDED`, `EXCLUDED`, `OUTLIER`; xem chi tiết từng mẫu gồm loại hư hỏng, lý trình Km, số đo Ground Truth ($mm$), số đo Drone AI Derived ($mm$), sai số $e$, dụng cụ đo và kỹ sư thực hiện.
   4. [ ] **Xuất tệp CSV Dữ liệu Đối soát (`RS06` / `RPT-09`):** Bấm **"Xuất CSV Dữ Liệu Đối Soát"** để nhận tệp chuẩn hóa `RPT-09-Research-Validation-Paired-Data-v2.2.csv`.
-- **Tiêu chuẩn đạt (Expected):** Khởi tạo tác vụ thẩm định thành công, các chỉ số sai số hình học ($Bias$, $MAE$, $RMSE$) hiển thị chính xác theo đơn vị $mm$, phân biệt rõ ràng mẫu hợp lệ/bị loại theo `BR-44`, hỗ trợ tải về tệp CSV đối soát nguyên vẹn.
+- **Tiêu chuẩn đạt (Expected):** Khởi tạo tác vụ thẩm định thành công, các chỉ số sai số hình học (Bias, MAE, RMSE) hiển thị chính xác theo đơn vị $mm$, phân biệt rõ ràng mẫu hợp lệ/bị loại theo `BR-44`, hỗ trợ tải về tệp CSV đối soát nguyên vẹn.
 
 ---
 
