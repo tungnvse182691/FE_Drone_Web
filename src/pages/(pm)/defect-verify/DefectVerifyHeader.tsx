@@ -13,6 +13,7 @@ interface DefectVerifyHeaderProps {
   setViewMode: (mode: 'SINGLE' | 'TEMPORAL' | 'GIS_MAP') => void
   onBack: () => void
   availableItems?: Array<{ id: string; label: string }>
+  basePath?: string
 }
 
 export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
@@ -21,7 +22,8 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
   viewMode,
   setViewMode,
   onBack,
-  availableItems
+  availableItems,
+  basePath = '/pm'
 }) => {
   const navigate = useNavigate()
 
@@ -51,7 +53,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
               <span className="text-slate-500 font-medium">Hồ sơ:</span>
               <select
                 value={defect.id}
-                onChange={(e) => navigate(`/pm/defects/${e.target.value}/${viewMode === 'TEMPORAL' ? 'verify-b' : 'verify-a'}`)}
+                onChange={(e) => navigate(`${basePath}/defects/${e.target.value}/${viewMode === 'TEMPORAL' ? 'verify-b' : 'verify-a'}`)}
                 className="bg-transparent font-semibold text-[#1A1D20] cursor-pointer focus:outline-none"
                 title="Chuyển sang xem hư hỏng khác trong đợt bay"
               >
@@ -81,7 +83,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
           type="button"
           onClick={() => {
             setViewMode('SINGLE')
-            navigate(`/pm/defects/${defect.id}/verify-a`, { replace: true })
+            navigate(`${basePath}/defects/${defect.id}/verify-a`, { replace: true })
           }}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             viewMode === 'SINGLE'
@@ -97,7 +99,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
           type="button"
           onClick={() => {
             setViewMode('TEMPORAL')
-            navigate(`/pm/defects/${defect.id}/verify-b`, { replace: true })
+            navigate(`${basePath}/defects/${defect.id}/verify-b`, { replace: true })
           }}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
             viewMode === 'TEMPORAL'

@@ -1,22 +1,24 @@
 import React from 'react'
-import { Layers, Wrench, Flame } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { WorkMode } from './types'
 
 export interface DispatchModeSelectorProps {
   workMode: WorkMode
   selectedDefectIds: string[]
   handleChangeWorkMode: (mode: WorkMode) => void
+  isSupervisor?: boolean
 }
 
 export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
   workMode,
   selectedDefectIds,
-  handleChangeWorkMode
+  handleChangeWorkMode,
+  isSupervisor = false
 }) => {
   return (
     <div>
       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-        Chế độ giao việc (Work Dispatch Mode)
+        {isSupervisor ? 'Phân loại luồng xử lý hiện trường (Chế độ giám sát)' : 'Chế độ giao việc (Work Dispatch Mode)'}
       </label>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tab 1: Gom lô đo đạc (MEASURE_ONLY) */}
@@ -31,12 +33,12 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-brand-gold">
-                <Layers className="w-5 h-5 text-brand-gold" />
+                <Icon name="layers" size={20} className="text-brand-gold" />
               </span>
               <span className="font-bold text-sm text-brand-dark">Gom lô đo đạc</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-gold text-white">
-              Đã chọn {selectedDefectIds.length} lỗi
+              {isSupervisor ? 'Luồng tiêu chuẩn' : `Đã chọn ${selectedDefectIds.length} lỗi`}
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
@@ -63,7 +65,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
         >
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-emerald-600" />
+              <Icon name="build" size={20} className="text-emerald-600" />
               <span className="font-bold text-sm text-brand-dark">Đo và Sửa ngay</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -94,7 +96,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
         >
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-rose-600" />
+              <Icon name="local_fire_department" size={20} className="text-rose-600" />
               <span className="font-bold text-sm text-brand-dark">Xử lý khẩn cấp</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">

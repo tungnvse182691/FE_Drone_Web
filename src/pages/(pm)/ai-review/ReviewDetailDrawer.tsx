@@ -26,6 +26,7 @@ export interface ReviewDetailDrawerProps {
   setCurrentDepth: (d: number) => void
   currentNotes: string
   setCurrentNotes: (n: string) => void
+  isSupervisor?: boolean
   onVerifyDefect: (c?: TriageCase) => void
   onOpenNoDefectModal: (c?: TriageCase) => void
   onConclusionOutOfScope: (c?: TriageCase) => void
@@ -60,6 +61,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   setCurrentDepth,
   currentNotes,
   setCurrentNotes,
+  isSupervisor = false,
   onVerifyDefect,
   onOpenNoDefectModal,
   onConclusionOutOfScope,
@@ -97,6 +99,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               setSelectedCaseId={setSelectedCaseId}
               onUnlinkReport={onUnlinkReport}
               onResetConclusion={onResetConclusion}
+              isSupervisor={isSupervisor}
             />
 
             <DrawerMediaViewer
@@ -112,16 +115,19 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               selectedCase={selectedCase}
               onToggleClusterItem={onToggleClusterItem}
               onOpenMergeModal={onOpenMergeModal}
+              isSupervisor={isSupervisor}
             />
 
             <DrawerReporterInfo
               selectedCase={selectedCase}
               onOpenTriageProject={onOpenTriageProject}
+              isSupervisor={isSupervisor}
             />
 
             <DrawerMergedReportsList
               selectedCase={selectedCase}
               cases={cases}
+              isSupervisor={isSupervisor}
               onUnlinkReport={onUnlinkReport}
             />
           </div>
@@ -140,6 +146,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               setCurrentDepth={setCurrentDepth}
               currentNotes={currentNotes}
               setCurrentNotes={setCurrentNotes}
+              isSupervisor={isSupervisor}
               onVerifyDefect={onVerifyDefect}
               onOpenNoDefectModal={onOpenNoDefectModal}
               onConclusionOutOfScope={onConclusionOutOfScope}

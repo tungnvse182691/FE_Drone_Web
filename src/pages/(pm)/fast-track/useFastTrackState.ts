@@ -6,7 +6,7 @@ import { initFastTrackMap } from './fastTrackMapSetup'
 import { useFastTrackPolicy } from './useFastTrackPolicy'
 import { useFastTrackDispatch } from './useFastTrackDispatch'
 
-export const useFastTrackState = () => {
+export const useFastTrackState = (isSupervisor = false) => {
   const [searchParams] = useSearchParams()
   const location = useLocation()
 
@@ -16,7 +16,7 @@ export const useFastTrackState = () => {
     setTimeout(() => setToastMessage(null), 3800)
   }
 
-  // Tự động điều phối từ Triage Inbox
+  // Tự động điều phối từ Triage Inbox (Chỉ áp dụng cho PM)
   const [autoDispatchedSourceCase, setAutoDispatchedSourceCase] = useState<{
     code: string
     title: string
@@ -58,8 +58,10 @@ export const useFastTrackState = () => {
     return () => cleanup()
   }, [dispatch.defects, dispatch.selectedDefectIds, mapLayer, dispatch.routeFilter, currentRouteConfig])
 
-  // Tự động nhận diện hồ sơ từ Triage Inbox
+  // Tự động nhận diện hồ sơ từ Triage Inbox (Chỉ dành cho PM - Thẩm quyền giao việc điều phối)
   useEffect(() => {
+    if (isSupervisor) return
+
     const paramDefectCode = searchParams.get('defectCode')
     const incomingTargetDefect = location.state?.targetDefect
 

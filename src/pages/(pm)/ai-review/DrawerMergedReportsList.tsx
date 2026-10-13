@@ -5,12 +5,14 @@ import type { TriageCase } from './types'
 export interface DrawerMergedReportsListProps {
   selectedCase: TriageCase
   cases: TriageCase[]
+  isSupervisor?: boolean
   onUnlinkReport: (childId: string) => void
 }
 
 export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = ({
   selectedCase,
   cases,
+  isSupervisor = false,
   onUnlinkReport,
 }) => {
   if (!selectedCase.linked_report_ids || selectedCase.linked_report_ids.length === 0) {
@@ -18,13 +20,13 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
   }
 
   return (
-    <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-xl space-y-2.5">
+    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-          <Icon name="link" size={16} className="text-purple-600" />
-          <span>Các Phản Ánh Trùng Đã Gộp ({selectedCase.linked_report_ids.length})</span>
+        <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+          <Icon name="link" size={16} className="text-slate-500" />
+          <span>Báo cáo đã gộp ({selectedCase.linked_report_ids.length})</span>
         </span>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 border border-purple-300">
+        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
           Master Case
         </span>
       </div>
@@ -47,24 +49,24 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
           return (
             <div
               key={code}
-              className="p-3 bg-white border border-purple-200 rounded-xl flex items-center justify-between gap-3 text-xs shadow-2xs hover:border-purple-300 transition-colors"
+              className="p-3 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 text-xs shadow-2xs hover:border-slate-300 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 {secondary?.image_url ? (
                   <img
                     src={secondary.image_url}
                     alt={code}
-                    className="w-12 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                    className="w-12 h-10 object-cover rounded-md border border-slate-200 shrink-0"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0 text-purple-600">
-                    <Icon name="link" size={20} />
+                  <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-500">
+                    <Icon name="link" size={18} />
                   </div>
                 )}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-purple-950 text-xs">{code}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-800 font-semibold border border-purple-200">
+                    <span className="font-mono font-semibold text-slate-900 text-xs">{code}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium border border-slate-200">
                       {displayChannel}
                     </span>
                   </div>
@@ -77,16 +79,23 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                 </div>
               </div>
 
-              {/* Nút Tách hồ sơ nổi bật, rõ ràng */}
-              <button
-                type="button"
-                onClick={() => onUnlinkReport(secondary?.id || code)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 hover:border-red-300 text-xs font-bold transition-all cursor-pointer shrink-0 shadow-2xs"
-                title="Tách phản ánh này khỏi hồ sơ gốc để xử lý độc lập"
-              >
-                <Icon name="link_off" size={14} />
-                <span>Tách hồ sơ</span>
-              </button>
+              {/* Nút Tách hồ sơ chỉ dành cho PM điều phối nội bộ, Supervisor chỉ giám sát */}
+              {!isSupervisor ? (
+                <button
+                  type="button"
+                  onClick={() => onUnlinkReport(secondary?.id || code)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-semibold transition-all cursor-pointer shrink-0"
+                  title="Tách phản ánh này khỏi hồ sơ gốc để xử lý độc lập"
+                >
+                  <Icon name="link_off" size={14} />
+                  <span>Tách hồ sơ</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-medium shrink-0">
+                  <Icon name="link" size={13} className="text-slate-500" />
+                  <span>Đã gộp bằng chứng</span>
+                </span>
+              )}
             </div>
           )
         })}

@@ -36,9 +36,9 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
               <Icon name="link" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Liên Kết Báo Trùng Phản Ánh (PA04)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Liên Kết Báo Trùng Phản Ánh</h3>
               <p className="text-xs text-slate-500">
-                Quy chuẩn BR-30, BR-31: Hợp nhất nhiều báo cáo thành 1 Master Case
+                Hợp nhất các báo cáo trùng lặp thành một hồ sơ chính
               </p>
             </div>
           </div>

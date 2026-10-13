@@ -21,6 +21,7 @@ export interface ReviewDetailModalProps {
   setCurrentDepth: (d: number) => void
   currentNotes: string
   setCurrentNotes: (n: string) => void
+  isSupervisor?: boolean
   onVerifyDefect: (c?: TriageCase) => void
   onOpenNoDefectModal: (c?: TriageCase) => void
   onConclusionOutOfScope: (c?: TriageCase) => void

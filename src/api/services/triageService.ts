@@ -8,6 +8,14 @@ let inMemoryTriageCases: TriageCase[] = getFromStorage(
   JSON.parse(JSON.stringify(mockTriageCases))
 )
 
+// Đảm bảo các ca Drone AI chưa qua đo đạc thực địa trong Hộp thư tiếp nhận không bị gán khống số đo độ sâu
+inMemoryTriageCases = inMemoryTriageCases.map((c) => {
+  if (c.source === 'DRONE_AI' && !c.survey_assignment && c.max_depth_cm > 0) {
+    return { ...c, max_depth_cm: 0, ai_depth_cm: 0 }
+  }
+  return c
+})
+
 export interface TriageFilterParams {
   source?: string
   status?: string

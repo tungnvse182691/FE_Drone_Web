@@ -1,5 +1,5 @@
 import React from 'react'
-import { X } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { DefectItem } from './types'
 
 export interface DefectDetailModalProps {
@@ -32,8 +32,8 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
             </div>
             <p className="text-xs text-slate-500">{detailDefect.stationing} • {detailDefect.lane}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 cursor-pointer">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg hover:bg-slate-100 transition-colors">
+            <Icon name="close" size={20} />
           </button>
         </div>
 

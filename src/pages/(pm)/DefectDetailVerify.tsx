@@ -4,8 +4,9 @@ import { Card } from '../../components/ui/Card'
 import { mockDefects } from '../../api/mock/data'
 import { surveyService } from '../../api/services'
 import { triageService } from '../../api/services/triageService'
-import { DefectStatus, Severity, DefectType } from '../../types/enums'
+import { DefectStatus, Severity, DefectType, RoleCode } from '../../types/enums'
 import { Defect } from '../../types/domain'
+import { useAuthStore } from '../../store/authStore'
 import { AIDetectionItem } from './drone-review/types'
 import { INITIAL_DETECTIONS } from './drone-review/mockData'
 import { Icon } from '../../components/ui/Icon'
@@ -129,7 +130,11 @@ export const DefectDetailVerify: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const returnUrl = (location.state as any)?.from || '/pm/surveys/srv-01/review'
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
+  const fallbackReturnUrl = isSupervisor ? '/sup/ai-inbox' : '/pm/surveys/srv-01/review'
+  const returnUrl = (location.state as any)?.from || fallbackReturnUrl
 
   const [detections, setDetections] = useState<AIDetectionItem[]>(INITIAL_DETECTIONS)
   const [localStatusOverride, setLocalStatusOverride] = useState<DefectStatus | null>(null)
@@ -364,6 +369,7 @@ export const DefectDetailVerify: React.FC = () => {
         setViewMode={setViewMode}
         onBack={() => navigate(returnUrl)}
         availableItems={availableItems}
+        basePath={basePath}
       />
 
       {/* 2. Main Grid: Left is Photo Viewer / GIS Map, Right is Verification Form */}
@@ -406,6 +412,7 @@ export const DefectDetailVerify: React.FC = () => {
             setNotes={setNotes}
             onVerify={handleVerify}
             onRequestSurvey={handleRequestSurvey}
+            isSupervisor={isSupervisor}
           />
         </div>
       </div>

@@ -62,11 +62,11 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           title={
             selectedReportIds.length < 2
               ? 'Chọn từ 2 phản ánh trở lên để liên kết báo trùng'
-              : 'Liên kết báo trùng (PA04)'
+              : 'Liên kết báo trùng'
           }
         >
           <Icon name="link" size={14} className="text-brand-gold" />
-          <span>Liên kết báo trùng (PA04)</span>
+          <span>Liên kết báo trùng</span>
         </button>
         <button
           type="button"
@@ -77,7 +77,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           className="px-3 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors border border-amber-300"
         >
           <Icon name="domain" size={14} className="text-amber-700" />
-          <span>Điều phối dự án (PA03)</span>
+          <span>Gán vào dự án</span>
         </button>
         <button
           type="button"

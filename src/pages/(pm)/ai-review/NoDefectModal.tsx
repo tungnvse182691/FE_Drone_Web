@@ -22,7 +22,7 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
   if (!isOpen || !targetTriageCase) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -30,9 +30,9 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
               <Icon name="cancel" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Kết Luận: Không Có Khiếm Khuyết (NO_DEFECT)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Kết Luận: Không Có Khiếm Khuyết</h3>
               <p className="text-xs text-red-600 font-semibold">
-                Quy chuẩn bất biến BR-39: Bắt buộc giải trình kỹ thuật
+                Yêu cầu bắt buộc giải trình kỹ thuật rõ ràng
               </p>
             </div>
           </div>
@@ -56,7 +56,7 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
 
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1">
-              Lý do giải trình kỹ thuật từ chối: <span className="text-red-500">* (Bắt buộc theo BR-39)</span>
+              Lý do giải trình kỹ thuật từ chối: <span className="text-red-500">* (Bắt buộc)</span>
             </label>
             <textarea
               rows={3}

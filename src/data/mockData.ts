@@ -534,8 +534,8 @@ export const mockTriageCases: TriageCase[] = [
     ai_confidence: 94.0,
     area_sqm: 0.85,
     ai_area_sqm: 0.82,
-    max_depth_cm: 6.2,
-    ai_depth_cm: 6.0,
+    max_depth_cm: 0,
+    ai_depth_cm: 0,
     pm_notes: 'Đã kiểm tra góc bản vỡ tại khe co giãn tấm SLAB-1025-08. Yêu cầu đục tẩy cấy thép dowel phi 28 và đổ bê tông ninh kết nhanh M350.',
     cluster_duplicates: [
       {
@@ -545,7 +545,8 @@ export const mockTriageCases: TriageCase[] = [
         reporter: 'Nguyễn Văn A (0905.123.456)',
         selected: true
       }
-    ]
+    ],
+    linked_report_ids: ['#CAS-2026-0839']
   },
   {
     id: 'cas-0839',
@@ -567,8 +568,9 @@ export const mockTriageCases: TriageCase[] = [
     urgency: 'URGENT',
     time_ago: '19:40, 25/08/2026',
     created_at: '19:40, 25/08/2026',
-    status: 'PENDING',
-    status_label: 'Chờ xử lý',
+    status: 'MERGED',
+    status_label: 'Đã gộp trùng',
+    master_case_id: 'cas-01',
     image_url: 'https://images.unsplash.com/photo-1578955259839-8f8f5f21b335?w=800&auto=format&fit=crop&q=80',
     gps: {
       lat: 16.24052,
@@ -611,8 +613,8 @@ export const mockTriageCases: TriageCase[] = [
     ai_confidence: 89.0,
     area_sqm: 0.25,
     ai_area_sqm: 0.24,
-    max_depth_cm: 2.5,
-    ai_depth_cm: 2.4,
+    max_depth_cm: 0,
+    ai_depth_cm: 0,
     pm_notes: 'Vết nứt dọc dài 3.2m trên tấm SLAB-1028-03. Cắt mở rộng và trám mastic bitum-polyme theo TCVN 8864.'
   },
   {
@@ -643,8 +645,8 @@ export const mockTriageCases: TriageCase[] = [
     ai_confidence: 96.0,
     area_sqm: 5.76,
     ai_area_sqm: 5.70,
-    max_depth_cm: 4.8,
-    ai_depth_cm: 4.6,
+    max_depth_cm: 0,
+    ai_depth_cm: 0,
     pm_notes: 'Độ chênh cốt mép tấm vượt 48mm tại khe JT-1031-18. Bơm vữa xi măng không co ngót nâng tấm.'
   },
   {
@@ -675,8 +677,8 @@ export const mockTriageCases: TriageCase[] = [
     ai_confidence: 91.0,
     area_sqm: 0.14,
     ai_area_sqm: 0.13,
-    max_depth_cm: 1.8,
-    ai_depth_cm: 1.8,
+    max_depth_cm: 0,
+    ai_depth_cm: 0,
     pm_notes: 'Vết nứt ngang giữa tấm SLAB-1024-22. Cần kiểm tra độ mở rộng vết nứt.'
   },
   {

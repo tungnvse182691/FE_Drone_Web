@@ -1,5 +1,5 @@
 import React from 'react'
-import { Send, X, AlertTriangle, Info } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { RouteConfig, DefectItem, WorkMode, CrewTeam, PolicyThresholdConfig } from './types'
 
 export interface FastTrackDispatchModalProps {
@@ -43,7 +43,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-              <Send className="w-5 h-5 text-brand-gold" />
+              <Icon name="send" size={20} className="text-brand-gold" />
             </div>
             <div>
               <h3 className="text-base font-bold text-brand-dark">
@@ -64,9 +64,9 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -138,7 +138,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           {workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible && (
             <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <Icon name="warning" size={16} className="text-amber-600 shrink-0" />
                 <span>CẢNH BÁO: HƯ HỎNG CHƯA VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
               </div>
               <p className="text-amber-800 leading-relaxed text-[11px]">
@@ -154,7 +154,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           {workMode === 'EMERGENCY' && !selectedItems[0]?.isFastTrackEligible && (
             <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <Icon name="warning" size={16} className="text-rose-600 shrink-0" />
                 <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
               </div>
               <p className="text-rose-800 leading-relaxed text-[11px]">
@@ -197,7 +197,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
 
           {/* Hộp quy chế nhắc nhở */}
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 flex items-start gap-2">
-            <Info className="w-4 h-4 text-brand-gold shrink-0 mt-0.5" />
+            <Icon name="info" size={16} className="text-brand-gold shrink-0 mt-0.5" />
             <span>
               {workMode === 'MEASURE_ONLY' && (
                 <>
@@ -231,7 +231,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             type="button"
             className="px-5 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Icon name="send" size={14} />
             <span>Phát lệnh xuất quân (Đồng bộ App Mobile)</span>
           </button>
         </div>

@@ -78,8 +78,8 @@ export const useAIReviewState = () => {
   const [currentUrgency, setCurrentUrgency] = useState<TriageCase['urgency']>(
     selectedCase?.urgency || 'EMERGENCY'
   )
-  const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm || 1.45)
-  const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm || 8.5)
+  const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm || 0)
+  const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm || 0)
   const [currentNotes, setCurrentNotes] = useState<string>(selectedCase?.pm_notes || '')
 
   // Update form inputs when selectedCase changes
@@ -286,8 +286,11 @@ export const useAIReviewState = () => {
     handleConfirmTriageProject: linkActions.handleConfirmTriageProject,
 
     // Spread triage decisions & actions
-    targetTriageCase: actions.targetTriageCase,
-    setTargetTriageCase: actions.setTargetTriageCase,
+    targetTriageCase: linkActions.targetTriageCase || actions.targetTriageCase,
+    setTargetTriageCase: (c: import('./types').TriageCase | null) => {
+      linkActions.setTargetTriageCase(c)
+      actions.setTargetTriageCase(c)
+    },
     isNoDefectModalOpen: actions.isNoDefectModalOpen,
     setIsNoDefectModalOpen: actions.setIsNoDefectModalOpen,
     noDefectReason: actions.noDefectReason,

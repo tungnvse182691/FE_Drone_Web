@@ -1,5 +1,5 @@
 import React from 'react'
-import { Users2 } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, RouteConfig, PolicyThresholdConfig, WorkMode } from './types'
 import { DispatchModeSelector } from './DispatchModeSelector'
 import { DispatchFilters } from './DispatchFilters'
@@ -38,6 +38,7 @@ interface DispatchSectionProps {
   handleEmergencyDispatch: () => void
   onRemoveViolationItems?: () => void
   onNavigateProposals?: () => void
+  isSupervisor?: boolean
 }
 
 export const DispatchSection: React.FC<DispatchSectionProps> = ({
@@ -70,7 +71,8 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
   handleRepairDirect,
   handleEmergencyDispatch,
   onRemoveViolationItems,
-  onNavigateProposals
+  onNavigateProposals,
+  isSupervisor = false
 }) => {
   return (
     <div id="dispatch-table-section" className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">
@@ -78,12 +80,18 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-            <Users2 className="w-5 h-5 text-brand-gold" />
+            <Icon name="groups" size={20} className="text-brand-gold" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-brand-dark">Điều phối &amp; Giao việc đội ngũ kỹ thuật hiện trường</h2>
+            <h2 className="text-lg font-bold text-brand-dark">
+              {isSupervisor
+                ? 'Giám sát & Theo dõi đội ngũ kỹ thuật hiện trường'
+                : 'Điều phối & Giao việc đội ngũ kỹ thuật hiện trường'}
+            </h2>
             <p className="text-xs text-slate-500">
-              Phê duyệt lệnh xuất quân, lựa chọn phương thức thi công và quản lý trách nhiệm hiện trường
+              {isSupervisor
+                ? 'Theo dõi phân bổ hiện trường, lộ trình thực hiện và chất lượng thi công các ca cấp bách'
+                : 'Phê duyệt lệnh xuất quân, lựa chọn phương thức thi công và quản lý trách nhiệm hiện trường'}
             </p>
           </div>
         </div>
@@ -99,6 +107,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         workMode={workMode}
         selectedDefectIds={selectedDefectIds}
         handleChangeWorkMode={handleChangeWorkMode}
+        isSupervisor={isSupervisor}
       />
 
       {/* Filter Bar */}
@@ -125,6 +134,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         currentPolicy={currentPolicy}
         onRemoveViolationItems={onRemoveViolationItems}
         onNavigateProposals={onNavigateProposals}
+        isSupervisor={isSupervisor}
       />
 
       {/* MapLibre Container */}
@@ -148,6 +158,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         handleRepairDirect={handleRepairDirect}
         handleEmergencyDispatch={handleEmergencyDispatch}
         hasViolationItem={hasViolationItem}
+        isSupervisor={isSupervisor}
       />
     </div>
   )

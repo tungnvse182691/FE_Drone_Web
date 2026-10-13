@@ -132,6 +132,9 @@ export const App: React.FC = () => {
             <Route path="drone-mission" element={<DroneMissionAIReview />} />
             <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
             <Route path="ai-inbox" element={<AIReviewInbox />} />
+            <Route path="defects/:id/verify" element={<DefectDetailVerify />} />
+            <Route path="defects/:id/verify-a" element={<DefectDetailVerify />} />
+            <Route path="defects/:id/verify-b" element={<DefectDetailVerify />} />
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="field-tasks" element={<FieldTasks />} />

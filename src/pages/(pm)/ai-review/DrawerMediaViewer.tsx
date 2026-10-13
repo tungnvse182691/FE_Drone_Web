@@ -103,12 +103,14 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           </div>
 
           {/* Bottom-left AI Confidence Tag */}
-          <div className="absolute bottom-2.5 left-2.5 bg-red-600/90 text-white px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1.5 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-            <span>
-              AI Confidence: {selectedCase.ai_confidence}% ({selectedCase.defect_title})
-            </span>
-          </div>
+          {selectedCase.ai_confidence > 0 && (
+            <div className="absolute bottom-2.5 left-2.5 bg-red-600/95 text-white px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-md border border-white/20">
+              <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
+              <span>
+                Độ tin cậy AI: {selectedCase.ai_confidence}% • {selectedCase.defect_title}
+              </span>
+            </div>
+          )}
         </div>
       ) : (
         /* Live Mini MapLibre in Drawer */

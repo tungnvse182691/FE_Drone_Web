@@ -10,6 +10,7 @@ export interface ReviewCasesTableProps {
   cases: TriageCase[]
   filteredCases: TriageCase[]
   selectedCase: TriageCase
+  isSupervisor?: boolean
   onSelectCase: (c: TriageCase) => void
   selectedReportIds: string[]
   onToggleSelectReport: (id: string, e: React.MouseEvent) => void
@@ -35,6 +36,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   cases,
   filteredCases,
   selectedCase,
+  isSupervisor = false,
   onSelectCase,
   selectedReportIds,
   onToggleSelectReport,
@@ -57,46 +59,54 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   return (
     <div className="flex-1 w-full bg-white rounded-xl border border-brand-border shadow-2xs p-4 flex flex-col justify-between">
       <div className="space-y-4">
-        {/* Floating Batch Action Bar when items selected */}
-        <BatchActionBar
-          selectedReportIds={selectedReportIds}
-          cases={cases}
-          onOpenLinkReportsModal={onOpenLinkReportsModal}
-          onOpenTriageProject={onOpenTriageProject}
-          onClearSelectedReports={onClearSelectedReports}
-          onBulkVerify={onBulkVerify}
-          onBulkNeedSurvey={onBulkNeedSurvey}
-        />
+        {/* Floating Batch Action Bar when items selected (Chỉ dành cho PM phân luồng tác nghiệp) */}
+        {!isSupervisor && (
+          <BatchActionBar
+            selectedReportIds={selectedReportIds}
+            cases={cases}
+            onOpenLinkReportsModal={onOpenLinkReportsModal}
+            onOpenTriageProject={onOpenTriageProject}
+            onClearSelectedReports={onClearSelectedReports}
+            onBulkVerify={onBulkVerify}
+            onBulkNeedSurvey={onBulkNeedSurvey}
+          />
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <div>
             <h2 className="font-bold text-base text-brand-dark">
-              Danh Sách Khiếm Khuyết Tiếp Nhận &amp; Thẩm Định
+              {isSupervisor
+                ? 'Danh Sách Khiếm Khuyết Giám Sát'
+                : 'Danh Sách Khiếm Khuyết Tiếp Nhận & Thẩm Định'}
             </h2>
             <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
               <span>
                 Hiển thị {filteredCases.length} / {cases.length} hồ sơ
               </span>
-              <span>•</span>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-700 font-medium">
-                <input
-                  type="checkbox"
-                  checked={collapseMergedRows}
-                  onChange={(e) => setCollapseMergedRows(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold"
-                />
-                <span>Gộp báo trùng theo cây (Master-Tree)</span>
-              </label>
-              <span>•</span>
-              <button
-                type="button"
-                onClick={onResetTriageData}
-                className="text-slate-500 hover:text-brand-dark hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                title="Đặt lại dữ liệu mẫu ban đầu qua API"
-              >
-                <Icon name="refresh" size={13} />
-                <span>Đặt lại dữ liệu</span>
-              </button>
+              {!isSupervisor && (
+                <>
+                  <span>•</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none text-slate-700 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={collapseMergedRows}
+                      onChange={(e) => setCollapseMergedRows(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold"
+                    />
+                    <span>Gộp báo trùng theo cây (Master-Tree)</span>
+                  </label>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={onResetTriageData}
+                    className="text-slate-500 hover:text-brand-dark hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                    title="Đặt lại dữ liệu mẫu ban đầu qua API"
+                  >
+                    <Icon name="refresh" size={13} />
+                    <span>Đặt lại dữ liệu</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="relative w-full sm:w-64">
@@ -119,6 +129,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
           selectedReportIds={selectedReportIds}
           collapseMergedRows={collapseMergedRows}
           expandedMasterIds={expandedMasterIds}
+          isSupervisor={isSupervisor}
           onSelectCase={onSelectCase}
           onToggleSelectReport={onToggleSelectReport}
           onSelectAllReports={onSelectAllReports}

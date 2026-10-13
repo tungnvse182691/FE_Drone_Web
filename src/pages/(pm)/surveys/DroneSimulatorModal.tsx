@@ -274,7 +274,7 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
               >
                 <Icon name="auto_awesome" size={16} className="text-white" />
-                <span>Mở Canvas Thẩm Định AI (WF-09)</span>
+                <span>Mở Canvas Thẩm Định AI</span>
               </button>
             )}
           </div>

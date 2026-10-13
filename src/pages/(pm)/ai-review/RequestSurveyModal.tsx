@@ -34,7 +34,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
   if (!isOpen || !targetTriageCase) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -103,7 +103,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
                   <div>
                     <span className="font-bold text-slate-800 block text-xs">Đo đạc hiện trường</span>
                     <span className="text-[10px] text-blue-700 font-semibold uppercase">
-                      Chế độ MEASURE_ONLY (BR-09)
+                      Chế độ đo đạc thực địa
                     </span>
                     <p className="text-[11px] text-slate-500 mt-1 leading-snug">
                       Kỹ sư/Tổ đội đi thực địa dùng thước đo độ sâu lòng hố (depth) và đo diện tích nứt vỡ chuẩn

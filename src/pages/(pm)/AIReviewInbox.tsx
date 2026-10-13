@@ -99,6 +99,7 @@ export const AIReviewInbox: React.FC = () => {
           cases={cases}
           filteredCases={filteredCases}
           selectedCase={selectedCase}
+          isSupervisor={isSupervisor}
           onSelectCase={handleSelectCase}
           selectedReportIds={selectedReportIds}
           onToggleSelectReport={handleToggleSelectReport}
@@ -128,6 +129,7 @@ export const AIReviewInbox: React.FC = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         selectedCase={selectedCase}
+        isSupervisor={isSupervisor}
         setSelectedCaseId={setSelectedCaseId}
         cases={cases}
         detailViewMode={detailViewMode}

@@ -1,6 +1,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
+import { useAuthStore } from '../../../store/authStore'
+import { RoleCode } from '../../../types/enums'
 import { AIDetectionItem } from './types'
 
 export interface MissionTriageListProps {
@@ -36,6 +38,9 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
   reviewProgressPercent,
   showToast: _showToast
 }) => {
+  const { user } = useAuthStore()
+  const basePath = user?.role === RoleCode.SUPERVISOR ? '/sup' : '/pm'
+
   const filteredDetections = detections.filter((d) => {
     if (kmFilter === 'ALL') return true
     if (kmFilter === 'KM_1024_1026') return d.kmValue >= 1024 && d.kmValue < 1026
@@ -252,7 +257,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                   <div className="pl-2 pt-2 border-t border-amber-200/60 flex items-center gap-2">
                     {isPending ? (
                       <Link
-                        to={`/pm/defects/${item.id.toLowerCase()}/verify-a`}
+                        to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
                         state={{ from: window.location.pathname }}
                         onClick={(e) => e.stopPropagation()}
                         className="w-full py-2.5 px-3 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] active:scale-98 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer"
@@ -269,7 +274,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                           Đã ghi nhận vào hồ sơ khiếm khuyết
                         </span>
                         <Link
-                          to={`/pm/defects/${item.id.toLowerCase()}/verify-a`}
+                          to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
                           state={{ from: window.location.pathname }}
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs font-semibold text-emerald-800 hover:underline flex items-center gap-0.5"
@@ -285,7 +290,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                           Đã loại bỏ (Báo giả AI)
                         </span>
                         <Link
-                          to={`/pm/defects/${item.id.toLowerCase()}/verify-a`}
+                          to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
                           state={{ from: window.location.pathname }}
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs font-semibold text-slate-600 hover:underline flex items-center gap-0.5 not-italic"

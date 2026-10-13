@@ -7,6 +7,8 @@ interface SurveyTableProps {
   filteredMissions: SurveyMission[]
   activeTab: 'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'
   setActiveTab: (tab: 'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED') => void
+  selectedRouteFilter: string
+  setSelectedRouteFilter: (route: string) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
   basePath: string
@@ -19,6 +21,8 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
   filteredMissions,
   activeTab,
   setActiveTab,
+  selectedRouteFilter,
+  setSelectedRouteFilter,
   searchQuery,
   setSearchQuery,
   basePath,
@@ -29,14 +33,28 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
   const scheduledCount = missions.filter((m) => m.status === 'SCHEDULED').length
   const completedCount = missions.filter((m) => m.status === 'BASELINE_LOCKED').length
 
+  // Danh mục Tuyến đường / Dự án trích xuất động theo BR-32 & DA05
+  const routeOptions = React.useMemo(() => {
+    const map = new Map<string, string>()
+    missions.forEach((m) => {
+      if (m.project_id && !map.has(m.project_id)) {
+        map.set(m.project_id, m.project_name)
+      }
+    })
+    return [
+      { value: 'ALL', label: 'Toàn bộ tuyến đường' },
+      ...Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+    ]
+  }, [missions])
+
   return (
     <div className="bg-white border border-[#E2E5E9] rounded-xl p-4 shadow-2xs space-y-3">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         {/* Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-xs font-medium">
+        <div className="flex items-center gap-1.5 p-1 bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-xs font-medium overflow-x-auto">
           <button
             onClick={() => setActiveTab('ALL')}
-            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'ALL'
                 ? 'bg-white text-[#1A1D20] font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-[#1A1D20]'
@@ -46,7 +64,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('PENDING')}
-            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'PENDING'
                 ? 'bg-[#FEF3E2] text-[#F59E0B] font-bold border border-amber-200 shadow-2xs'
                 : 'text-slate-600 hover:text-[#1A1D20]'
@@ -59,7 +77,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('SCHEDULED')}
-            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'SCHEDULED'
                 ? 'bg-white text-[#1A1D20] font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-[#1A1D20]'
@@ -69,7 +87,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('COMPLETED')}
-            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'COMPLETED'
                 ? 'bg-white text-[#1A1D20] font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-[#1A1D20]'
@@ -79,18 +97,43 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
           </button>
         </div>
 
-        {/* Search Box */}
-        <div className="relative w-full md:w-64">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            <Icon name="search" size={16} />
+        {/* Filter Controls: Route Select Dropdown & Search Input */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Route Filter Dropdown (BR-32 & DA05) */}
+          <div className="relative min-w-[210px] sm:max-w-[240px]">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <Icon name="alt_route" size={15} />
+            </div>
+            <select
+              value={selectedRouteFilter}
+              onChange={(e) => setSelectedRouteFilter(e.target.value)}
+              className="w-full pl-8 pr-7 py-1.5 text-xs bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-[#1A1D20] font-medium appearance-none focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all cursor-pointer truncate"
+              title="Lọc danh mục đợt bay theo tuyến đường (BR-32 & DA05)"
+            >
+              {routeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <Icon name="expand_more" size={15} />
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="Tìm mã #MS-, lý trình, phi công..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-[#1A1D20] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all"
-          />
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-60">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
+              <Icon name="search" size={15} />
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm mã #MS-, tên tuyến, lý trình..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-[#1A1D20] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all"
+            />
+          </div>
         </div>
       </div>
 

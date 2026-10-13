@@ -5,11 +5,13 @@ import type { TriageCase } from './types'
 export interface DrawerReporterInfoProps {
   selectedCase: TriageCase
   onOpenTriageProject: (c: TriageCase) => void
+  isSupervisor?: boolean
 }
 
 export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
   selectedCase,
   onOpenTriageProject,
+  isSupervisor = false,
 }) => {
   if (!selectedCase.reporter_name && !selectedCase.description) {
     return null
@@ -60,19 +62,25 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
       {/* Triage Project Assignment Status (PA03) */}
       <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
         <div className="flex flex-col">
-          <span className="text-[10px] text-slate-400">Dự án bảo hành phụ trách (PA03):</span>
+          <span className="text-[10px] text-slate-400">Dự án bảo hành phụ trách:</span>
           <span className="font-semibold text-xs text-brand-dark">
-            {selectedCase.project_id ? selectedCase.project_name : 'Chưa điều phối gán vào dự án'}
+            {selectedCase.project_id
+              ? selectedCase.project_name
+              : isSupervisor
+              ? 'Chờ PM điều phối gán vào dự án'
+              : 'Chưa điều phối gán vào dự án'}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => onOpenTriageProject(selectedCase)}
-          className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
-        >
-          <Icon name="domain" size={14} />
-          <span>{selectedCase.project_id ? 'Đổi dự án' : 'Điều phối dự án (PA03)'}</span>
-        </button>
+        {!isSupervisor && (
+          <button
+            type="button"
+            onClick={() => onOpenTriageProject(selectedCase)}
+            className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+          >
+            <Icon name="domain" size={14} />
+            <span>{selectedCase.project_id ? 'Đổi dự án' : 'Gán vào dự án'}</span>
+          </button>
+        )}
       </div>
     </div>
   )

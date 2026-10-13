@@ -17,6 +17,7 @@ interface DefectVerifyFormProps {
   setNotes: (val: string) => void
   onVerify: (status: DefectStatus) => void
   onRequestSurvey?: (reason: string, mode: 'DRONE_RESURVEY' | 'MEASURE_ONLY') => void
+  isSupervisor?: boolean
 }
 
 export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
@@ -30,7 +31,8 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
   notes,
   setNotes,
   onVerify,
-  onRequestSurvey
+  onRequestSurvey,
+  isSupervisor = false
 }) => {
   // Modal trạng thái: 'NONE' | 'RESURVEY' (Bay bổ sung KS11) | 'MEASURE' (Đo thực địa AI13)
   const [modalMode, setModalMode] = useState<'NONE' | 'RESURVEY' | 'MEASURE'>('NONE')
@@ -64,8 +66,21 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
 
   return (
     <>
-      <Card title="Xác Minh & Thẩm Định Hư Hỏng">
+      <Card title={isSupervisor ? 'Thẩm Tra Kỹ Thuật Khiếm Khuyết AI' : 'Xác Minh & Thẩm Định Hư Hỏng'}>
         <div className="space-y-4 text-xs">
+          {/* Supervisor Read-only Banner (AI01 & AI10) */}
+          {isSupervisor && (
+            <div className="bg-slate-100 border border-slate-300 rounded-lg p-2.5 flex items-start gap-2 text-slate-800 text-xs">
+              <Icon name="visibility" size={16} className="text-[#2D3748] shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-[12px] text-[#1A1D20]">Chế độ Giám sát (Chỉ đọc)</div>
+                <div className="text-[11px] text-slate-600 mt-0.5">
+                  Thẩm tra mô hình Bounding Box, kích thước và ảnh đa kỳ đối chiếu Baseline theo AI01 &amp; AI10.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 1. Phân Loại Khiếm Khuyết (Defect Type) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -79,9 +94,12 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               )}
             </div>
             <select
+              disabled={isSupervisor}
               value={effectiveType}
               onChange={(e) => onTypeChange && onTypeChange(e.target.value as DefectType)}
-              className={`w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-semibold text-slate-800 cursor-pointer ${
+              className={`w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-semibold text-slate-800 ${
+                isSupervisor ? 'cursor-default opacity-85' : 'cursor-pointer'
+              } ${
                 isTypeAdjusted ? 'border-amber-400 bg-amber-50/20' : 'border-[#E2E5E9]'
               }`}
             >
@@ -107,8 +125,9 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             </label>
             <select
               value={severity}
+              disabled={isSupervisor}
               onChange={(e) => setSeverity(e.target.value as Severity)}
-              className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-medium"
+              className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-medium disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
             >
               <option value={Severity.CRITICAL}>CRITICAL — Đặc biệt khẩn cấp</option>
               <option value={Severity.HIGH}>HIGH — Nghiêm trọng</option>
@@ -168,12 +187,13 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             </div>
           </div>
 
+          {/* 5. Ghi Chú / Ý Kiến Thẩm Định */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block font-semibold text-slate-700 uppercase tracking-wider">
-                Ý Kiến Thẩm Định Của PM <span className="text-red-500">*</span>
+                {isSupervisor ? 'Ý Kiến Thẩm Định Kỹ Thuật (PM)' : 'Ý Kiến Thẩm Định Của PM'} {!isSupervisor && <span className="text-red-500">*</span>}
               </label>
-              {!notes.trim() && (
+              {!isSupervisor && !notes.trim() && (
                 <span className="text-[10px] text-red-500 font-semibold">
                   (Bắt buộc nhập lý do)
                 </span>
@@ -181,16 +201,17 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             </div>
             <textarea
               value={notes}
+              disabled={isSupervisor}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className={`w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 font-medium ${
-                !notes.trim()
+              className={`w-full px-3 py-2 bg-white border rounded-lg focus:outline-none focus:ring-2 font-medium disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed ${
+                !isSupervisor && !notes.trim()
                   ? 'border-red-300 focus:ring-red-400 bg-red-50/20'
                   : 'border-[#E2E5E9] focus:ring-[#C9A227]'
               }`}
-              placeholder="Nhập lý do thẩm định (Bắt buộc: ví dụ đã đối chiếu thước đo thực tế, hoặc phát hiện bóng đổ nhiễu AI)..."
+              placeholder={isSupervisor ? 'Chưa có ghi chú thẩm định...' : 'Nhập lý do thẩm định (Bắt buộc: ví dụ đã đối chiếu thước đo thực tế, hoặc phát hiện bóng đổ nhiễu AI)...'}
             />
-            {!notes.trim() && (
+            {!isSupervisor && !notes.trim() && (
               <p className="text-[11px] text-red-500 mt-1 flex items-center gap-1 font-medium">
                 <Icon name="error" size={14} className="text-red-500" />
                 <span>Bắt buộc nhập lý do/ý kiến thẩm định trước khi bấm xác nhận hoặc từ chối.</span>
@@ -198,49 +219,63 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             )}
           </div>
 
-          {/* Action Buttons - 4 Nhánh Quyết Định Nghiệp Vụ Chuẩn Spec v2.2 */}
-          <div className="pt-3 border-t border-slate-100 space-y-2">
-            {/* 1. Xác nhận hư hỏng thực tế (VERIFIED) */}
-            <Button
-              disabled={!notes.trim()}
-              onClick={() => onVerify(DefectStatus.VERIFIED)}
-              className="w-full bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-              icon={<Icon name="check_circle" size={18} />}
-            >
-              Xác Nhận Hư Hỏng Thực Tế (VERIFIED)
-            </Button>
+          {/* Action Buttons: Phân định quyền PM (4 nút thẩm định) vs Supervisor (Thẩm tra đối chiếu AI01/AI10) */}
+          {isSupervisor ? (
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                  <Icon name="verified_user" size={16} className="text-emerald-600" />
+                  <span>Kết Quả Thẩm Tra Kỹ Thuật (BR-02 / FR-13)</span>
+                </div>
+                <p className="text-slate-600 text-xs leading-relaxed">
+                  Trạng thái hiện tại: <strong className="text-slate-900 font-mono">{defect.status}</strong>. Supervisor thực hiện thẩm tra trực quan hình ảnh AI BBox và so sánh ảnh đa kỳ (Temporal) đối chiếu thực tế. Quyền phê duyệt/từ chối giải pháp được thực hiện tại màn hình <em>Thẩm duyệt đợt sửa chữa</em>.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="pt-3 border-t border-slate-100 space-y-2">
+              {/* 1. Xác nhận hư hỏng thực tế (VERIFIED) */}
+              <Button
+                disabled={!notes.trim()}
+                onClick={() => onVerify(DefectStatus.VERIFIED)}
+                className="w-full bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                icon={<Icon name="check_circle" size={18} />}
+              >
+                Xác Nhận Hư Hỏng Thực Tế (VERIFIED)
+              </Button>
 
-            {/* 2. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
-            <button
-              type="button"
-              onClick={() => setModalMode('MEASURE')}
-              className="w-full py-2.5 px-3 bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-            >
-              <Icon name="straighten" size={16} className="text-blue-600" />
-              <span>Yêu Cầu Đo Đạc Thực Địa (AI13)</span>
-            </button>
+              {/* 2. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
+              <button
+                type="button"
+                onClick={() => setModalMode('MEASURE')}
+                className="w-full py-2.5 px-3 bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <Icon name="straighten" size={16} className="text-blue-600" />
+                <span>Yêu Cầu Đo Đạc Thực Địa (AI13)</span>
+              </button>
 
-            {/* 3. Yêu cầu bay bổ sung khi dữ liệu chưa đạt (KS11 / BR-43) */}
-            <button
-              type="button"
-              onClick={() => setModalMode('RESURVEY')}
-              className="w-full py-2.5 px-3 bg-white hover:bg-amber-50 text-[#8C6D1F] border border-amber-300 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-            >
-              <Icon name="photo_camera" size={16} className="text-[#C9A227]" />
-              <span>Yêu Cầu Bay Bổ Sung (KS11 / BR-43)</span>
-            </button>
+              {/* 3. Yêu cầu bay bổ sung khi dữ liệu chưa đạt (KS11 / BR-43) */}
+              <button
+                type="button"
+                onClick={() => setModalMode('RESURVEY')}
+                className="w-full py-2.5 px-3 bg-white hover:bg-amber-50 text-[#8C6D1F] border border-amber-300 font-bold rounded-lg text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <Icon name="photo_camera" size={16} className="text-[#C9A227]" />
+                <span>Yêu Cầu Bay Bổ Sung (KS11 / BR-43)</span>
+              </button>
 
-            {/* 4. Từ chối / Báo giả (REJECTED / DISCARDED) */}
-            <Button
-              variant="outline"
-              disabled={!notes.trim()}
-              onClick={() => onVerify(DefectStatus.REJECTED)}
-              className="w-full text-[#E5484D] border-rose-200 hover:bg-rose-50 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-              icon={<Icon name="cancel" size={18} />}
-            >
-              Từ Chối / Báo Giả (REJECTED)
-            </Button>
-          </div>
+              {/* 4. Từ chối / Báo giả (REJECTED / DISCARDED) */}
+              <Button
+                variant="outline"
+                disabled={!notes.trim()}
+                onClick={() => onVerify(DefectStatus.REJECTED)}
+                className="w-full text-[#E5484D] border-rose-200 hover:bg-rose-50 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                icon={<Icon name="cancel" size={18} />}
+              >
+                Từ Chối / Báo Giả (REJECTED)
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 

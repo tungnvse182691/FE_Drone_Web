@@ -54,7 +54,7 @@ export const useAIReviewLinkActions = ({
   // Link Duplicate Reports Modal (PA04, BR-30, BR-31)
   const handleOpenLinkReportsModal = () => {
     if (selectedReportIds.length < 2) {
-      showToast('Vui lòng chọn ít nhất 2 phản ánh để thực hiện liên kết báo trùng (PA04)!')
+      showToast('Vui lòng chọn ít nhất 2 phản ánh để thực hiện liên kết báo trùng!')
       return
     }
     setLinkMasterCaseId(selectedReportIds[0])
@@ -103,7 +103,7 @@ export const useAIReviewLinkActions = ({
     setSelectedReportIds([])
     setSelectedCaseId(linkMasterCaseId)
     showToast(
-      `Đã liên kết thành công ${secondaryIds.length} phản ánh vào hồ sơ chính [${master.code}] (Tuân thủ PA04, BR-30, BR-31)!`
+      `Đã liên kết thành công ${secondaryIds.length} phản ánh vào hồ sơ chính [${master.code}]!`
     )
   }
 
@@ -185,7 +185,7 @@ export const useAIReviewLinkActions = ({
 
     setIsTriageProjectModalOpen(false)
     setSelectedReportIds([])
-    showToast(`Đã điều phối ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công (PA03)!`)
+    showToast(`Đã gán ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
   }
 
   return {

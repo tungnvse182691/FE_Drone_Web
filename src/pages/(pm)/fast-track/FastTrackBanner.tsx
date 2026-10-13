@@ -1,5 +1,5 @@
 import React from 'react'
-import { Zap } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 
 export interface FastTrackBannerProps {
   sourceCase: {
@@ -21,7 +21,7 @@ export const FastTrackBanner: React.FC<FastTrackBannerProps> = ({
     <div className="p-4 bg-amber-50/90 border-2 border-brand-gold rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-800 shadow-md animate-in fade-in">
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-xl bg-brand-gold text-white shrink-0 mt-0.5">
-          <Zap className="w-5 h-5 fill-white" />
+          <Icon name="bolt" size={20} className="text-white" />
         </div>
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">

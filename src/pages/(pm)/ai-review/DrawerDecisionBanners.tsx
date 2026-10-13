@@ -8,6 +8,7 @@ export interface DrawerDecisionBannersProps {
   setSelectedCaseId: (id: string) => void
   onUnlinkReport: (childId: string) => void
   onResetConclusion: (c?: TriageCase) => void
+  isSupervisor?: boolean
 }
 
 export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
@@ -15,8 +16,10 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
   setSelectedCaseId,
   onUnlinkReport,
   onResetConclusion,
+  isSupervisor = false,
 }) => {
   const navigate = useNavigate()
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   return (
     <>
@@ -27,7 +30,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
             <div>
               <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO MASTER CASE</span>
               <span className="text-[11px] text-purple-700">
-                Dữ liệu được hợp nhất để không tạo trùng lệnh thi công (BR-30).
+                Dữ liệu được hợp nhất để không tạo trùng lệnh thi công.
               </span>
             </div>
           </div>
@@ -40,14 +43,16 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               <span>Xem Case Gốc</span>
               <Icon name="arrow_forward" size={14} />
             </button>
-            <button
-              type="button"
-              onClick={() => onUnlinkReport(selectedCase.id)}
-              className="px-2 py-1 bg-white hover:bg-slate-100 text-purple-800 border border-purple-200 text-xs font-semibold rounded-lg cursor-pointer"
-              title="Tách thành hồ sơ riêng"
-            >
-              Tách riêng
-            </button>
+            {!isSupervisor && (
+              <button
+                type="button"
+                onClick={() => onUnlinkReport(selectedCase.id)}
+                className="px-2 py-1 bg-white hover:bg-slate-100 text-purple-800 border border-purple-200 text-xs font-semibold rounded-lg cursor-pointer"
+                title="Tách thành hồ sơ riêng"
+              >
+                Tách riêng
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -65,23 +70,32 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => navigate('/pm/proposals')}
-              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
-              title="Gom vào gói đề xuất sửa chữa kỹ thuật (Repair Package)"
-            >
-              <span>Gom gói sửa chữa</span>
-              <Icon name="arrow_forward" size={14} />
-            </button>
-            <button
-              type="button"
-              onClick={() => onResetConclusion(selectedCase)}
-              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] rounded-lg cursor-pointer"
-              title="Đặt lại để thẩm định lại"
-            >
-              Sửa lại
-            </button>
+            {!isSupervisor && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate(`${basePath}/proposals`)}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
+                  title="Gom vào gói đề xuất sửa chữa kỹ thuật (Repair Package)"
+                >
+                  <span>Gom gói sửa chữa</span>
+                  <Icon name="arrow_forward" size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onResetConclusion(selectedCase)}
+                  className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] rounded-lg cursor-pointer"
+                  title="Đặt lại để thẩm định lại"
+                >
+                  Sửa lại
+                </button>
+              </>
+            )}
+            {isSupervisor && (
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-lg border border-emerald-300">
+                Chờ PM lập đợt sửa
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -91,19 +105,21 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-start gap-2">
             <Icon name="close" size={20} className="text-red-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-xs block">KẾT LUẬN: KHÔNG CÓ KHIẾM KHUYẾT (NO_DEFECT - BÁO SAI)</span>
+              <span className="font-bold text-xs block">KẾT LUẬN: KHÔNG CÓ KHIẾM KHUYẾT (BÁO SAI)</span>
               <p className="text-[11px] text-red-800 mt-0.5 italic">
-                Lý do kỹ thuật (BR-39): "{selectedCase.conclusion_reason || selectedCase.pm_notes}"
+                Lý do kỹ thuật: "{selectedCase.conclusion_reason || selectedCase.pm_notes}"
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => onResetConclusion(selectedCase)}
-            className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold rounded-lg cursor-pointer shrink-0"
-          >
-            Thẩm định lại
-          </button>
+          {!isSupervisor && (
+            <button
+              type="button"
+              onClick={() => onResetConclusion(selectedCase)}
+              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold rounded-lg cursor-pointer shrink-0"
+            >
+              Thẩm định lại
+            </button>
+          )}
         </div>
       )}
 
@@ -118,13 +134,15 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => onResetConclusion(selectedCase)}
-            className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold rounded-lg cursor-pointer shrink-0"
-          >
-            Thẩm định lại
-          </button>
+          {!isSupervisor && (
+            <button
+              type="button"
+              onClick={() => onResetConclusion(selectedCase)}
+              className="px-2 py-1 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] font-semibold rounded-lg cursor-pointer shrink-0"
+            >
+              Thẩm định lại
+            </button>
+          )}
         </div>
       )}
 
@@ -150,7 +168,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               type="button"
               onClick={() =>
                 navigate(
-                  `/pm/field-tasks?tab=MEASUREMENTS&highlightCode=${encodeURIComponent(selectedCase.code)}`
+                  `${isSupervisor ? '/sup' : '/pm'}/field-tasks?tab=MEASUREMENTS&highlightCode=${encodeURIComponent(selectedCase.code)}`
                 )
               }
               className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1 shrink-0"

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
 import { triageService } from '../../../api/services/triageService'
+import { useAuthStore } from '../../../store/authStore'
+import { RoleCode } from '../../../types/enums'
 
 export interface UseAIReviewActionsProps {
   cases: TriageCase[]
@@ -34,6 +36,9 @@ export const useAIReviewActions = ({
   setIsDetailModalOpen
 }: UseAIReviewActionsProps) => {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const basePath = isSupervisor ? '/sup' : '/pm'
 
   // Modal target case & reason states
   const [targetTriageCase, setTargetTriageCase] = useState<TriageCase | null>(null)
@@ -113,7 +118,7 @@ export const useAIReviewActions = ({
   const handleNavigateFastTrack = (c?: TriageCase) => {
     const target = c || selectedCase
     navigate(
-      `/pm/fast-track?defectCode=${encodeURIComponent(target.code)}&caseId=${encodeURIComponent(target.id)}`,
+      `${basePath}/fast-track?defectCode=${encodeURIComponent(target.code)}&caseId=${encodeURIComponent(target.id)}`,
       {
         state: { targetDefect: target }
       }
@@ -157,7 +162,7 @@ export const useAIReviewActions = ({
     setIsDetailModalOpen?.(false)
 
     showToast(
-      `Đã ghi nhận kết luận Từ chối (NO_DEFECT) cho hồ sơ [${targetCode}] (Tuân thủ BR-39)!`
+      `Đã ghi nhận kết luận Từ chối (Không có khiếm khuyết) cho hồ sơ [${targetCode}]!`
     )
   }
 

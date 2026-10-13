@@ -16,7 +16,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
       <div className="bg-slate-900 rounded-2xl max-w-3xl w-full p-4 shadow-2xl border border-slate-700 space-y-3 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-white">
           <div className="flex items-center gap-2">

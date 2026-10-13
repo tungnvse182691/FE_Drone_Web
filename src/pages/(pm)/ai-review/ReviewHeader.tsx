@@ -50,14 +50,16 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-              Hộp Thư Tiếp Nhận &amp; Sàng Lọc Lỗi
+              {isSupervisor ? 'Hộp Thư Giám Sát Khiếm Khuyết AI' : 'Hộp Thư Tiếp Nhận & Sàng Lọc Lỗi'}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
               {pendingCount} ca chờ xác minh
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Sàng lọc khiếm khuyết từ Drone AI và phản ánh hiện trường theo quy chuẩn TCVN
+            {isSupervisor
+              ? 'Theo dõi luồng khiếm khuyết từ Drone AI và phản ánh hiện trường phục vụ kiểm soát chất lượng'
+              : 'Sàng lọc khiếm khuyết từ Drone AI và phản ánh hiện trường theo quy chuẩn TCVN'}
           </p>
         </div>
 
@@ -71,7 +73,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
             <Icon name="download" size={16} className="text-slate-500" />
             <span>Xuất báo cáo Excel</span>
           </button>
-          {selectedReportIds.length >= 2 && (
+          {selectedReportIds.length >= 2 && !isSupervisor && (
             <button
               onClick={onOpenLinkReportsModal}
               type="button"
@@ -86,7 +88,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            <span>Điều phối xử lý nhanh</span>
+            <span>{isSupervisor ? 'Theo dõi ca cấp bách' : 'Điều phối xử lý nhanh'}</span>
             <Icon name="chevron_right" size={16} />
           </button>
         </div>

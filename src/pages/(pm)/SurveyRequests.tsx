@@ -20,6 +20,7 @@ export const SurveyRequests: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'>('ALL')
+  const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState(highlightCode || '')
   const [missions, setMissions] = useState<SurveyMission[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -60,17 +61,27 @@ export const SurveyRequests: React.FC = () => {
   const sim = useDroneSimulator(fetchMissions)
 
   const filteredMissions = missions.filter((m) => {
+    // 1. Lọc theo Tab trạng thái
     if (activeTab === 'PENDING' && m.status !== 'PENDING_AI_REVIEW') return false
     if (activeTab === 'SCHEDULED' && m.status !== 'SCHEDULED') return false
     if (activeTab === 'COMPLETED' && m.status !== 'BASELINE_LOCKED') return false
 
+    // 2. Lọc theo Tuyến đường / Dự án theo BR-32, BR-36
+    if (selectedRouteFilter !== 'ALL' && m.project_id !== selectedRouteFilter) {
+      return false
+    }
+
+    // 3. Tìm kiếm từ khóa bao quát theo DA05 & BR-32 (Mã, tên tuyến, lý trình từ Km đến Km, phi công, thiết bị)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       return (
         m.code.toLowerCase().includes(q) ||
         m.title.toLowerCase().includes(q) ||
+        m.project_name.toLowerCase().includes(q) ||
         m.start_km.toLowerCase().includes(q) ||
-        m.pilot_name.toLowerCase().includes(q)
+        m.end_km.toLowerCase().includes(q) ||
+        m.pilot_name.toLowerCase().includes(q) ||
+        m.drone_model.toLowerCase().includes(q)
       )
     }
     return true
@@ -100,6 +111,8 @@ export const SurveyRequests: React.FC = () => {
           filteredMissions={filteredMissions}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          selectedRouteFilter={selectedRouteFilter}
+          setSelectedRouteFilter={setSelectedRouteFilter}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           basePath={basePath}

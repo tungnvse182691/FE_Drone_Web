@@ -24,7 +24,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   if (!isOpen || !targetTriageCase) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
@@ -32,7 +32,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               <Icon name="domain" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Điều Phối Phản Ánh Vào Dự Án (PA03)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Gán Phản Ánh Vào Dự Án Bảo Hành</h3>
               <p className="text-xs text-slate-500">Chỉ định tuyến đường bảo hành chịu trách nhiệm sửa chữa</p>
             </div>
           </div>
@@ -101,7 +101,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="domain" size={16} />
-            <span>Xác Nhận Điều Phối Dự Án</span>
+            <span>Xác Nhận Gán Vào Dự Án</span>
           </button>
         </div>
       </div>

@@ -10,7 +10,7 @@ export const DrawerFooter: React.FC<DrawerFooterProps> = ({ handleClose }) => {
     <div className="p-4 px-6 border-t border-slate-100 bg-slate-50/80 flex items-center justify-between shrink-0">
       <div className="text-xs text-slate-500 flex items-center gap-1.5">
         <Icon name="verified_user" size={16} className="text-brand-gold" />
-        <span>Hồ sơ thẩm định theo chuẩn PA05 / BR-39 tiêu chuẩn Hoàng Hải.</span>
+        <span>Hồ sơ thẩm định chất lượng hạ tầng đường bộ - Hoàng Hải.</span>
       </div>
       <button
         type="button"

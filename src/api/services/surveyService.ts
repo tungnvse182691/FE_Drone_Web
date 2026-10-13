@@ -101,6 +101,44 @@ export const INITIAL_SURVEY_MISSIONS: SurveyMissionItem[] = [
     coverage_percent: 0,
     status: 'SCHEDULED',
     status_label: 'Đang lên lịch bay (Sẵn sàng cất cánh)'
+  },
+  {
+    id: 'srv-05',
+    code: '#MS-2026-0918',
+    title: 'Bay khảo sát nhánh đèo kiểm tra độ ổn định mái taluy',
+    project_id: 'br-01-haivan',
+    project_name: 'Nhánh rẽ Đèo Hải Vân (BR-01)',
+    start_km: 'Km 0+000',
+    end_km: 'Km 1+850',
+    flight_date: '18/09/2026',
+    pilot_name: 'Hoàng Quốc Bảo (Pilot RTK Level 3)',
+    drone_model: 'DJI Matrice 300 RTK + Zenmuse P1',
+    total_photos: 960,
+    gsd_resolution: '1.08 cm/pixel',
+    ai_defects_count: 5,
+    ai_pending_count: 5,
+    coverage_percent: 92,
+    status: 'PENDING_AI_REVIEW',
+    status_label: 'Chờ thẩm định AI Canvas'
+  },
+  {
+    id: 'srv-06',
+    code: '#MS-2026-1015',
+    title: 'Bay lập Baseline phân đoạn Km 12 – Km 25 cao tốc La Sơn',
+    project_id: 'prj-lstl-05',
+    project_name: 'Cao tốc La Sơn - Túy Loan (PRJ-LSTL-05)',
+    start_km: 'Km 12+000',
+    end_km: 'Km 25+000',
+    flight_date: '02/10/2026',
+    pilot_name: 'Trần Quang Khải (Pilot RTK)',
+    drone_model: 'DJI Matrice 350 RTK',
+    total_photos: 2480,
+    gsd_resolution: '1.10 cm/pixel',
+    ai_defects_count: 18,
+    ai_pending_count: 0,
+    coverage_percent: 96,
+    status: 'BASELINE_LOCKED',
+    status_label: 'Đã khóa Baseline'
   }
 ]
 

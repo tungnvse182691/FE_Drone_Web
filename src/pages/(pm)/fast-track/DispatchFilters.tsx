@@ -1,5 +1,5 @@
 import React from 'react'
-import { RefreshCw } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 
 export interface DispatchFiltersProps {
   routeFilter: string
@@ -71,7 +71,7 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
           type="button"
           className="w-full py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+          <Icon name="refresh" size={14} className="text-slate-400" />
           <span>Đặt lại bộ lọc</span>
         </button>
       </div>

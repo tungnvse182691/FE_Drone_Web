@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, CheckCircle2, AlertOctagon, Eye, Lock, ArrowRight, Trash2 } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, WorkMode, PolicyThresholdConfig } from './types'
 
 export interface DispatchTableProps {
@@ -15,6 +15,7 @@ export interface DispatchTableProps {
   currentPolicy: PolicyThresholdConfig
   onRemoveViolationItems?: () => void
   onNavigateProposals?: () => void
+  isSupervisor?: boolean
 }
 
 export const DispatchTable: React.FC<DispatchTableProps> = ({
@@ -29,7 +30,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   selectedItems,
   currentPolicy,
   onRemoveViolationItems,
-  onNavigateProposals
+  onNavigateProposals,
+  isSupervisor = false
 }) => {
   // Chỉ đếm các item đạt chuẩn Fast Track để tính trạng thái Select All
   const eligibleDefects = filteredDefects.filter((d) => d.isFastTrackEligible)
@@ -40,24 +42,28 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* BẢNG CHỌN KHIẾM KHUYẾT (Defect Selection Table) */}
+      {/* BẢNG DANH SÁCH KHIẾM KHUYẾT (Defect Table) */}
       <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-left bg-white text-xs">
           <thead>
             <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
               <th className="p-3 w-12 text-center">
-                <input
-                  type="checkbox"
-                  disabled={workMode !== 'MEASURE_ONLY' || eligibleDefects.length === 0}
-                  title={
-                    workMode !== 'MEASURE_ONLY'
-                      ? 'Chế độ Sửa nhanh/Khẩn cấp chỉ áp dụng cho 1 lỗi đơn lẻ (BR-08)'
-                      : 'Chọn tất cả khiếm khuyết đạt chuẩn Fast Track'
-                  }
-                  checked={isAllEligibleSelected}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="w-4 h-4 rounded cursor-pointer accent-brand-gold disabled:opacity-30 disabled:cursor-not-allowed"
-                />
+                {isSupervisor ? (
+                  <span className="text-slate-400 font-mono text-[11px]">#</span>
+                ) : (
+                  <input
+                    type="checkbox"
+                    disabled={workMode !== 'MEASURE_ONLY' || eligibleDefects.length === 0}
+                    title={
+                      workMode !== 'MEASURE_ONLY'
+                        ? 'Chế độ Sửa nhanh/Khẩn cấp chỉ áp dụng cho 1 lỗi đơn lẻ (BR-08)'
+                        : 'Chọn tất cả khiếm khuyết đạt chuẩn Fast Track'
+                    }
+                    checked={isAllEligibleSelected}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="w-4 h-4 rounded cursor-pointer accent-brand-gold disabled:opacity-30 disabled:cursor-not-allowed"
+                  />
+                )}
               </th>
               <th className="p-3">Mã Defect</th>
               <th className="p-3">Vị trí (Km / Tuyến / Làn)</th>
@@ -69,7 +75,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredDefects.map((defect) => {
+            {filteredDefects.map((defect, index) => {
               const isChecked = selectedDefectIds.includes(defect.id)
               const isEligible = defect.isFastTrackEligible
 
@@ -79,36 +85,40 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   className={`transition-colors ${
                     !isEligible
                       ? 'bg-rose-50/30 hover:bg-rose-50/50 opacity-90'
-                      : isChecked
+                      : isChecked && !isSupervisor
                       ? 'bg-amber-50/30 hover:bg-amber-50/60'
                       : 'hover:bg-slate-50'
                   }`}
                 >
                   <td className="p-3 text-center">
-                    <div className="flex items-center justify-center relative group">
-                      <input
-                        type={workMode === 'MEASURE_ONLY' ? 'checkbox' : 'radio'}
-                        name="defect-selection"
-                        disabled={workMode === 'INSPECT_AND_REPAIR' && !isEligible}
-                        checked={isChecked}
-                        onChange={() => handleToggleSelect(defect.id)}
-                        className={`w-4 h-4 cursor-pointer accent-brand-gold ${
-                          workMode === 'MEASURE_ONLY' ? 'rounded' : 'rounded-full'
-                        } disabled:opacity-30 disabled:cursor-not-allowed`}
-                      />
-                      {!isEligible && workMode === 'INSPECT_AND_REPAIR' && (
-                        <div className="absolute left-full ml-1 hidden group-hover:flex items-center px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
-                          <Lock className="w-3 h-3 text-rose-400 mr-1" />
-                          Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (BR-04)
-                        </div>
-                      )}
-                      {!isEligible && workMode === 'EMERGENCY' && (
-                        <div className="absolute left-full ml-1 hidden group-hover:flex items-center px-2 py-1 bg-rose-950 text-white rounded text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
-                          <AlertTriangle className="w-3 h-3 text-amber-400 mr-1" />
-                          Khẩn cấp 24/7: Khắc phục tạm thông xe (Hậu kiểm sau)
-                        </div>
-                      )}
-                    </div>
+                    {isSupervisor ? (
+                      <span className="font-mono text-slate-400 text-[11px]">{index + 1}</span>
+                    ) : (
+                      <div className="flex items-center justify-center relative group">
+                        <input
+                          type={workMode === 'MEASURE_ONLY' ? 'checkbox' : 'radio'}
+                          name="defect-selection"
+                          disabled={workMode === 'INSPECT_AND_REPAIR' && !isEligible}
+                          checked={isChecked}
+                          onChange={() => handleToggleSelect(defect.id)}
+                          className={`w-4 h-4 cursor-pointer accent-brand-gold ${
+                            workMode === 'MEASURE_ONLY' ? 'rounded' : 'rounded-full'
+                          } disabled:opacity-30 disabled:cursor-not-allowed`}
+                        />
+                        {!isEligible && workMode === 'INSPECT_AND_REPAIR' && (
+                          <div className="absolute left-full ml-1 hidden group-hover:flex items-center px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
+                            <Icon name="lock" size={12} className="text-rose-400 mr-1" />
+                            Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (BR-04)
+                          </div>
+                        )}
+                        {!isEligible && workMode === 'EMERGENCY' && (
+                          <div className="absolute left-full ml-1 hidden group-hover:flex items-center px-2 py-1 bg-rose-950 text-white rounded text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
+                            <Icon name="warning" size={12} className="text-amber-400 mr-1" />
+                            Khẩn cấp 24/7: Khắc phục tạm thông xe (Hậu kiểm sau)
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 font-mono font-bold">
                     <span className={isEligible ? 'text-brand-dark' : 'text-rose-600'}>{defect.code}</span>
@@ -123,9 +133,11 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                      <span className={isEligible ? 'text-brand-gold' : 'text-rose-600'}>
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                      </span>
+                      <Icon
+                        name="warning"
+                        size={14}
+                        className={isEligible ? 'text-brand-gold' : 'text-rose-600'}
+                      />
                       <span>{defect.type}</span>
                     </div>
                   </td>
@@ -141,18 +153,23 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                   <td className="p-3">
                     {isEligible ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <Icon name="check_circle" size={14} className="text-emerald-600" />
                         <span>Đạt chuẩn Fast Track</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                        <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                        <Icon name="report" size={14} className="text-rose-600" />
                         <span>Vi phạm ngưỡng (Over-limit)</span>
                       </span>
                     )}
                   </td>
                   <td className="p-3">
-                    {isEligible ? (
+                    {isSupervisor ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200">
+                        <Icon name="groups" size={14} className="text-slate-400 shrink-0" />
+                        <span>{defect.assignedCrew || 'Chờ phân công'}</span>
+                      </span>
+                    ) : isEligible ? (
                       <select
                         value={defect.assignedCrew}
                         onChange={(e) => handleAssignCrew(defect.id, e.target.value)}
@@ -165,31 +182,31 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                       </select>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
-                        <Lock className="w-3 h-3 text-slate-400" />
+                        <Icon name="lock" size={12} className="text-slate-400" />
                         <span>Chờ gom đợt (WF-07)</span>
                       </span>
                     )}
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {!isEligible && onNavigateProposals && (
+                      {!isSupervisor && !isEligible && onNavigateProposals && (
                         <button
                           onClick={onNavigateProposals}
                           type="button"
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-[#8C6D1F] border border-amber-200 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap"
                           title="Đưa vào Gói đề xuất sửa chữa lớn (WF-07) để trình Supervisor thẩm duyệt"
                         >
-                          <ArrowRight className="w-3 h-3" />
+                          <Icon name="arrow_forward" size={12} />
                           <span>Gom đợt duyệt</span>
                         </button>
                       )}
                       <button
                         onClick={() => setDetailDefect(defect)}
                         type="button"
-                        className="p-1 rounded-lg text-slate-500 hover:text-brand-dark hover:bg-slate-100 cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-brand-dark hover:bg-slate-100 cursor-pointer transition-colors"
                         title="Xem chi tiết trắc địa"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Icon name="visibility" size={16} />
                       </button>
                     </div>
                   </td>
@@ -202,14 +219,18 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
 
       {/* WARNING BANNER CHẶN KHI CÓ HẠNG MỤC VƯỢT NGƯỠNG */}
       {hasViolationItem && (
-        <div className="p-4 rounded-xl bg-rose-50 border-l-4 border-rose-600 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs animate-in fade-in duration-200">
+        <div className="p-4 rounded-xl bg-rose-50 border-l-4 border-rose-600 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center shrink-0 text-rose-600 mt-0.5">
-              <AlertOctagon className="w-5 h-5" />
+              <Icon name="report" size={20} />
             </div>
             <div className="space-y-1 text-xs">
               <h3 className="font-bold text-rose-800 text-sm flex items-center gap-2">
-                <span>Chặn xuất quân: Phát hiện khiếm khuyết vi phạm ngưỡng chính sách Fast Track!</span>
+                <span>
+                  {isSupervisor
+                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết vi phạm ngưỡng chính sách Fast Track'
+                    : 'Chặn xuất quân: Phát hiện khiếm khuyết vi phạm ngưỡng chính sách Fast Track!'}
+                </span>
               </h3>
               <p className="text-slate-700 leading-relaxed">
                 Hệ thống phát hiện{' '}
@@ -226,13 +247,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-            {onRemoveViolationItems && (
+            {!isSupervisor && onRemoveViolationItems && (
               <button
                 onClick={onRemoveViolationItems}
                 type="button"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-700 font-bold rounded-lg border border-rose-300 shadow-2xs text-xs cursor-pointer transition-colors"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Icon name="delete" size={14} />
                 <span>Loại bỏ lỗi vượt ngưỡng</span>
               </button>
             )}
@@ -242,8 +263,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                 type="button"
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#2D3748] hover:bg-[#1A1D20] text-white font-bold rounded-lg shadow-xs text-xs cursor-pointer transition-colors"
               >
-                <span>Chuyển sang Gói đề xuất (WF-07)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>{isSupervisor ? 'Xem Gói đề xuất (WF-07)' : 'Chuyển sang Gói đề xuất (WF-07)'}</span>
+                <Icon name="arrow_forward" size={14} />
               </button>
             )}
           </div>

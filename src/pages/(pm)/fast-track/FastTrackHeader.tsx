@@ -1,5 +1,5 @@
 import React from 'react'
-import { ChevronRight, Plus, Send, ShieldAlert } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 
 export interface FastTrackHeaderProps {
   basePath: string
@@ -25,9 +25,9 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
           >
             Trang chủ
           </button>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <Icon name="chevron_right" size={14} className="text-slate-400" />
           <span className="hover:text-brand-gold cursor-pointer transition-colors">Quản lý tuyến</span>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+          <Icon name="chevron_right" size={14} className="text-slate-400" />
           <span className="text-brand-gold font-semibold">Chính sách &amp; Giao việc đo đạc (WF-05)</span>
         </nav>
 
@@ -54,19 +54,21 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-slate-700 text-xs font-semibold rounded-xl shadow-xs hover:bg-slate-50 border border-slate-200 cursor-pointer transition-colors"
           >
-            <Plus className="w-4 h-4 text-brand-gold" />
+            <Icon name="add" size={16} className="text-brand-gold" />
             <span>Tạo phiên bản chính sách mới</span>
           </button>
         )}
 
-        <button
-          onClick={onScrollToDispatch}
-          type="button"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors"
-        >
-          <Send className="w-4 h-4" />
-          <span>Tạo lệnh giao việc</span>
-        </button>
+        {!isSupervisor && (
+          <button
+            onClick={onScrollToDispatch}
+            type="button"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors"
+          >
+            <Icon name="send" size={16} />
+            <span>Tạo lệnh giao việc</span>
+          </button>
+        )}
       </div>
     </div>
   )

@@ -6,36 +6,21 @@ export interface DrawerClusterDeduplicationProps {
   selectedCase: TriageCase
   onToggleClusterItem: (code: string) => void
   onOpenMergeModal: (c: TriageCase) => void
+  isSupervisor?: boolean
 }
 
 export const DrawerClusterDeduplication: React.FC<DrawerClusterDeduplicationProps> = ({
   selectedCase,
   onToggleClusterItem,
   onOpenMergeModal,
+  isSupervisor = false,
 }) => {
   if (!selectedCase.cluster_duplicates || selectedCase.cluster_duplicates.length === 0) {
     return null
   }
 
   if (selectedCase.cluster_duplicates.every((d) => d.is_merged)) {
-    return (
-      <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-3.5 shadow-2xs space-y-1.5 text-emerald-950 animate-in fade-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
-            <Icon name="check_circle" size={16} className="text-emerald-600 shrink-0" />
-            <span>
-              Đã hợp nhất cụm {selectedCase.cluster_duplicates.length} phản ánh lân cận (&lt; 2.5m)
-            </span>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-600 text-white">
-            Đã gộp
-          </span>
-        </div>
-        <p className="text-[11px] text-emerald-700 leading-relaxed">
-          Đã hợp nhất bằng chứng ảnh và mô tả từ {selectedCase.cluster_duplicates.map((d) => d.code).join(', ')} vào hồ sơ gốc này (BR-30, BR-31).
-        </p>
-      </div>
-    )
+    return null
   }
 
   return (
@@ -47,23 +32,36 @@ export const DrawerClusterDeduplication: React.FC<DrawerClusterDeduplicationProp
             Phát hiện {selectedCase.cluster_duplicates.length} phản ánh lân cận (&lt; 2.5m)
           </span>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-brand-gold text-white">
-          Gợi ý gộp
-        </span>
+        {!isSupervisor ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-brand-gold text-white">
+            Gợi ý gộp
+          </span>
+        ) : (
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            Chế độ xem
+          </span>
+        )}
       </div>
 
       <div className="space-y-1.5">
         {selectedCase.cluster_duplicates.map((dup) => (
-          <label
+          <div
             key={dup.code}
-            className="flex items-start gap-2.5 p-2 rounded-lg bg-white border border-amber-200/60 cursor-pointer hover:bg-amber-50/50 transition-colors"
+            className={`flex items-start gap-2.5 p-2 rounded-lg bg-white border border-amber-200/60 ${
+              !isSupervisor ? 'cursor-pointer hover:bg-amber-50/50' : ''
+            } transition-colors`}
+            onClick={!isSupervisor ? () => onToggleClusterItem(dup.code) : undefined}
           >
-            <input
-              type="checkbox"
-              checked={dup.selected}
-              onChange={() => onToggleClusterItem(dup.code)}
-              className="mt-1 w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold"
-            />
+            {!isSupervisor ? (
+              <input
+                type="checkbox"
+                checked={dup.selected}
+                onChange={() => onToggleClusterItem(dup.code)}
+                className="mt-1 w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold cursor-pointer"
+              />
+            ) : (
+              <Icon name="location_on" size={16} className="mt-0.5 text-slate-400 shrink-0" />
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs font-bold text-brand-dark">{dup.code}</span>
@@ -75,23 +73,30 @@ export const DrawerClusterDeduplication: React.FC<DrawerClusterDeduplicationProp
                 {dup.source} • {dup.reporter}
               </p>
             </div>
-          </label>
+          </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between pt-1">
-        <button
-          type="button"
-          onClick={() => onOpenMergeModal(selectedCase)}
-          className="text-xs font-bold text-[#8F7212] hover:underline inline-flex items-center gap-1 cursor-pointer"
-        >
-          <Icon name="call_merge" size={14} />
-          <span>Tự động gộp dữ liệu ảnh &amp; mô tả vào Case gốc này</span>
-        </button>
-        <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-          Đã chọn: {selectedCase.cluster_duplicates.filter((d) => d.selected).length}/{selectedCase.cluster_duplicates.length}
-        </span>
-      </div>
+      {!isSupervisor ? (
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => onOpenMergeModal(selectedCase)}
+            className="text-xs font-bold text-[#8F7212] hover:underline inline-flex items-center gap-1 cursor-pointer"
+          >
+            <Icon name="call_merge" size={14} />
+            <span>Tự động gộp dữ liệu ảnh &amp; mô tả vào Case gốc này</span>
+          </button>
+          <span className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+            Đã chọn: {selectedCase.cluster_duplicates.filter((d) => d.selected).length}/{selectedCase.cluster_duplicates.length}
+          </span>
+        </div>
+      ) : (
+        <div className="pt-1 text-[11px] text-slate-500 flex items-center gap-1.5">
+          <Icon name="info" size={14} className="text-slate-400 shrink-0" />
+          <span>Thẩm quyền gộp/tách phản ánh trùng do Chỉ huy trưởng (PM) phụ trách thẩm định.</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -25,13 +25,17 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
               Dashboard
             </span>
             <Icon name="chevron_right" size={16} className="text-slate-400" />
-            <span className="text-[#1A1D20] font-semibold truncate">Khảo Sát Drone & Thẩm Định AI</span>
+            <span className="text-[#1A1D20] font-semibold truncate">
+              {isSupervisor ? 'Giám Sát Drone & Thẩm Định AI' : 'Khảo Sát Drone & Thẩm Định AI'}
+            </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-[#1A1D20] font-sansation tracking-tight truncate">
-            Kế Hoạch & Yêu Cầu Bay Khảo Sát Drone
+            {isSupervisor ? 'Giám Sát Các Đợt Bay Khảo Sát Drone' : 'Kế Hoạch & Yêu Cầu Bay Khảo Sát Drone'}
           </h1>
           <p className="text-xs text-slate-500 mt-1 line-clamp-1">
-            Quản lý các đợt bay chụp ảnh trắc địa/RGB độ phân giải cao và thẩm định AI Bounding Box mặt đường (WF-09)
+            {isSupervisor
+              ? 'Theo dõi tiến độ bay trắc địa và kết quả phân tích AI phục vụ công tác giám sát, nghiệm thu'
+              : 'Quản lý các đợt bay chụp ảnh trắc địa/RGB độ phân giải cao và thẩm định AI Bounding Box mặt đường'}
           </p>
         </div>
 

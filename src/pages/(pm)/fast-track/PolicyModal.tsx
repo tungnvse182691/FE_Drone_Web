@@ -1,5 +1,5 @@
 import React from 'react'
-import { ShieldCheck, X, CheckCircle2, Lock, AlertTriangle } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { PolicyThresholdConfig } from './types'
 
 export interface PolicyModalProps {
@@ -47,7 +47,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-              <ShieldCheck className="w-4 h-4 text-brand-gold" />
+              <Icon name="verified_user" size={18} className="text-brand-gold" />
             </div>
             <div>
               <h3 className="text-base font-bold text-brand-dark">Tạo Phiên Bản Chính Sách Fast Track Mới</h3>
@@ -56,9 +56,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 cursor-pointer"
+            className="text-slate-400 hover:text-slate-700 cursor-pointer p-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <Icon name="close" size={20} />
           </button>
         </div>
 
@@ -130,19 +130,19 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <Icon name="check_circle" size={14} className="text-emerald-600 shrink-0" />
                 <span>LOW (Nhẹ)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800">
-                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <Icon name="check_circle" size={14} className="text-blue-600 shrink-0" />
                 <span>MEDIUM (Vừa)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi nặng">
-                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
                 <span>HIGH (Khóa)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi khẩn cấp/nguy hiểm">
-                <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
                 <span>CRITICAL (Khóa)</span>
               </div>
             </div>
@@ -163,7 +163,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           </div>
 
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <Icon name="warning" size={16} className="text-amber-600 shrink-0 mt-0.5" />
             <span>
               <strong>Quy tắc hệ thống:</strong> Khi chọn <em>Kích hoạt chính sách ngay</em>, hệ thống sẽ tự động cập nhật bảng khiếm khuyết theo ngưỡng mới và lưu bản hiện tại ({currentPolicy.version}) vào kho lưu trữ (ARCHIVED).
             </span>
@@ -192,7 +192,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="button"
               className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <Icon name="check_circle" size={14} />
               <span>Kích hoạt chính sách ngay</span>
             </button>
           </div>

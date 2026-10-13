@@ -1,5 +1,5 @@
 import React from 'react'
-import { MapPin, Users2 } from 'lucide-react'
+import { Icon } from '../../../components/ui/Icon'
 import { RouteConfig } from './types'
 
 export interface DispatchMapProps {
@@ -21,7 +21,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
     <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-brand-gold" />
+          <Icon name="location_on" size={16} className="text-brand-gold" />
           <span className="text-xs font-bold text-brand-dark">
             Bản Đồ Hiện Trường GIS &amp; Lộ Trình Tuyến: {currentRouteConfig.name}
           </span>
@@ -55,7 +55,7 @@ export const DispatchMap: React.FC<DispatchMapProps> = ({
         <div ref={mapContainerRef} className="w-full h-full" />
         <div className="absolute top-2.5 left-2.5 bg-black/80 backdrop-blur-md text-white px-3 py-1.5 rounded-lg text-[10px] font-mono border border-white/10 pointer-events-none z-10 shadow-md">
           <div className="flex items-center gap-1.5 text-brand-gold font-bold">
-            <Users2 className="w-3.5 h-3.5" />
+            <Icon name="groups" size={14} className="text-brand-gold" />
             <span>{currentRouteConfig.code}: {currentRouteConfig.stationRange}</span>
           </div>
           <div className="text-slate-300 mt-0.5">
