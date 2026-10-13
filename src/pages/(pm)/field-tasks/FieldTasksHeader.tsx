@@ -43,19 +43,21 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
     <div className="space-y-4">
       {/* 1. BREADCRUMB */}
       <nav aria-label="Đường dẫn trang" className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
-        <a href="#/pm/dashboard" className="hover:text-[#C9A227] transition-colors flex items-center gap-1">
+        <a href={isSupervisor ? '#/sup/dashboard' : '#/pm/dashboard'} className="hover:text-[#C9A227] transition-colors flex items-center gap-1">
           <Icon name="home" size={14} />
           <span>Trang chủ</span>
         </a>
         <Icon name="chevron_right" size={14} className="text-slate-400" />
-        <span className="font-semibold text-slate-800">Nhiệm vụ & Đo đạc hiện trường</span>
+        <span className="font-semibold text-slate-800">
+          {isSupervisor ? 'Nghiệm thu hiện trường' : 'Nhiệm vụ & Đo đạc hiện trường'}
+        </span>
       </nav>
 
       {/* 2. HEADER SECTION (MINIMALIST) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-            Nhiệm Vụ & Đo Đạc Hiện Trường
+            {isSupervisor ? 'Nghiệm Thu Hiện Trường' : 'Nhiệm Vụ & Đo Đạc Hiện Trường'}
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Dự án: <strong className="text-slate-700">QL1A - Giai đoạn 2 (Km 1024 - Km 1045)</strong> • Tiếp nhận kết quả đo thực địa & phân giải xung đột đồng bộ ngoại tuyến.

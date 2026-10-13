@@ -142,7 +142,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Phê duyệt gói', path: '/sup/proposals', icon: Boxes },
         { label: 'Nghiệm thu đóng đợt', path: '/sup/acceptance', icon: ShieldCheck },
-        { label: 'Nhiệm vụ hiện trường', path: '/sup/field-tasks', icon: ClipboardList }
+        { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList }
       ]
     },
     {

@@ -836,19 +836,19 @@ sequenceDiagram
 
 ---
 
-#### BƯỚC SUP-10: Theo dõi Nhiệm vụ Đo đạc Hiện trường & Ca Xử lý Cấp bách (FR-18, FR-20, FR-24, BR-25, PA01-PA07)
-- **Đường dẫn URL:** `/sup/field-tasks` (Menu: *Nhiệm vụ hiện trường*) & `/sup/fast-track` (Menu: *Xử lý cấp bách*)
-- **Thẩm quyền:** Giám sát trưởng (Supervisor / Chủ đầu tư).
-- **Mục tiêu:** Giám sát các nhiệm vụ đo đạc bổ sung thực địa (do Supervisor yêu cầu khi bấm `REQUEST_EVIDENCE`) và theo dõi tiến độ giải quyết các sự cố hư hỏng nguy hiểm thuộc diện cấp bách.
+#### BƯỚC SUP-10: Theo dõi Nhiệm vụ Đo đạc Hiện trường & Giám sát Tuyến Cấp bách (FR-17, FR-18, BR-16, BR-21, BR-25, BR-46, RPT-04)
+- **Đường dẫn URL:** `/sup/field-tasks` (Menu: *Nghiệm thu hiện trường*) & `/sup/fast-track` (Menu: *Xử lý cấp bách*)
+- **Thẩm quyền:** Giám sát trưởng (Supervisor / Chủ đầu tư) — Chế độ giám sát & hậu kiểm (Read-only / Audit).
+- **Mục tiêu:** Giám sát các phiếu giao việc đo đạc bổ sung thực địa (phát sinh khi Supervisor yêu cầu `REQUEST_EVIDENCE`), theo dõi xung đột ngoại tuyến, và hậu kiểm các ca sửa nhanh (Fast Track) cùng sự cố an toàn khẩn cấp (Emergency).
 - **Thao tác kiểm tra trên màn hình:**
-  1. [ ] **Theo dõi Nhiệm vụ Đo đạc Bổ sung Hiện trường (`/sup/field-tasks` - FR-18, FR-20):**
-     - Xem danh sách các phiếu giao việc đo đạc bổ sung phát sinh từ các quyết định thẩm duyệt (`REQUEST_EVIDENCE`).
-     - Theo dõi trạng thái thực hiện của Kỹ sư hiện trường/Tổ thi công: `ASSIGNED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `SUBMITTED`.
-     - Kiểm tra số liệu đo đạc thực tế gửi về: Chiều rộng vết nứt ($mm$), chiều sâu ổ gà ($cm$), ảnh chụp kèm thước đo cơ học và tọa độ GPS xác thực.
-  2. [ ] **Giám sát Ca Xử lý Cấp bách (`/sup/fast-track` - BR-25, FR-24, PA01-PA07):**
-     - Xem danh mục các sự cố giao thông khẩn cấp được kích hoạt nhánh Fast Track (sụt trượt, ổ gà sâu nguy hiểm đe dọa an toàn).
-     - Kiểm tra quy tắc BR-25: PM được quyền tổ chức thi công sửa chữa ngay lập tức; sau khi hoàn thành, PM tự nghiệm thu nội bộ và gửi hồ sơ báo cáo hoàn công RPT-04 sang cho Supervisor theo dõi.
-- **Tiêu chuẩn đạt (Expected):** Supervisor kiểm soát chặt chẽ các nhiệm vụ đo kiểm tra chéo và theo dõi toàn bộ các ca cấp bách trên tuyến mà không gây ách tắc giao thông.
+  1. [x] **Theo dõi Nhiệm vụ Đo đạc Bổ sung & Xung đột Hiện trường (`/sup/field-tasks` - FR-17, BR-16, BR-21):**
+     - **Tab Nhật ký đo đạc (`MEASUREMENTS`):** Xem danh sách phiếu đo đạc bổ sung phát sinh từ quyết định thẩm duyệt (`REQUEST_EVIDENCE`); theo dõi tiến độ (`ASSIGNED` $\rightarrow$ `IN_PROGRESS` $\rightarrow$ `SUBMITTED`); kiểm tra số đo thực tế (chiều rộng nứt $mm$, độ sâu ổ gà $cm$, ảnh kèm thước đo cơ học/laser và tọa độ GPS).
+     - **Tab Xung đột ngoại tuyến (`CONFLICTS` - BR-16, FR-22):** Giám sát các trường hợp sai lệch dữ liệu khi Đội hiện trường đồng bộ offline (mất kết nối kéo dài, sai lệch phiên bản snapshot chính sách).
+  2. [x] **Giám sát Tuyến Điều phối Nhanh & Sự cố Khẩn cấp (`/sup/fast-track` - FR-18, BR-08, BR-25, BR-46, RPT-04):**
+     - **Chính sách Fast Track:** Xem quy chuẩn chính sách hiệu lực (`FastTrackPolicy` do CĐT/Ban Giám sát phê duyệt ban hành, ngưỡng diện tích $\le 0.5m^2$, độ sâu $\le 5cm$).
+     - **Hậu kiểm ca sửa nhanh (Fast Track - BR-25, RPT-04):** Kiểm tra danh mục các hư hỏng nhỏ riêng lẻ được PM giao sửa ngay trong chuyến; kiểm tra hồ sơ báo cáo hoàn công RPT-04 do PM tự nghiệm thu nội bộ gửi sang mà không cần phê duyệt trước thi công.
+     - **Giám sát sự cố an toàn khẩn cấp (Emergency - BR-46, SC10):** Theo dõi các điểm hư hỏng nguy hiểm đe dọa an toàn giao thông (sụt trượt, hố sụt sâu) được PM kích hoạt xử lý tạm thời 24/7 để thông xe an toàn.
+- **Tiêu chuẩn đạt (Expected):** Giao diện hiển thị rõ chế độ giám sát `Read-only` cho Supervisor; kiểm soát minh bạch số liệu đo đạc thực địa và theo dõi kịp thời toàn bộ các ca xử lý nhanh/khẩn cấp trên tuyến.
 
 ---
 
@@ -900,7 +900,7 @@ sequenceDiagram
 | **SUP-07** | Danh mục & Đóng dự án hết bảo hành | SUP | [x] Đạt | [x] Đạt | [x] Đạt | Xem hạn bảo hành, đóng dự án CLOSED khi hết hạn (BC01, DA12) |
 | **SUP-08** | Quản trị tài khoản & Kiểm toán | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Đặt lại MK (CN10), khóa user (QT01), Audit (QT09), Legal Hold (QT14) |
 | **SUP-09** | Giám sát bay Drone & Hộp thư lỗi AI | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Xem tiến độ bay (KS10) và rà soát phát hiện AI sơ bộ (AI01, AI04) |
-| **SUP-10** | Nhiệm vụ hiện trường & Ca cấp bách | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Theo dõi đo bổ sung (FR-18) và giám sát sự cố Fast Track (BR-25) |
+| **SUP-10** | Nghiệm thu hiện trường & Tuyến cấp bách | SUP | [x] Đạt | [x] Đạt | [x] Đạt | Giám sát đo bổ sung (FR-17, BR-21), xung đột ngoại tuyến (BR-16) và tuyến sửa nhanh/khẩn cấp (FR-18, BR-25, BR-46) |
 | **SUP-11** | Đối chứng thực nghiệm Mô hình AI | SUP | [ ] Đạt / [ ] Chưa | [ ] Đạt / [ ] Chưa | [ ] Đạt | Thẩm định khoa học Bias/MAE/RMSE mm và xuất CSV đối soát (RS01-RS06) |
 
 

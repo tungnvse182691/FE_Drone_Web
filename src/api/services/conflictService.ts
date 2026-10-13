@@ -25,6 +25,7 @@ export interface ResolveConflictPayload {
     | 'SUBMIT_RESCUE_TO_SUP'
     | 'AUTHORIZE_RESCUE'
     | 'SUPERVISOR_REJECT_RESCUE'
+    | 'REQUEST_ADDITIONAL_EVIDENCE'
   reason: string
   decidedBy: string
   decidedByRole: 'PROJECT_MANAGER' | 'SUPERVISOR'
@@ -107,6 +108,10 @@ export const conflictService = {
         decisionText = 'Từ chối Fast Track (Chuyển duyệt đợt v2.2)'
         nextStatusLabel = 'TỪ CHỐI FAST TRACK'
       }
+    } else if (payload.decision === 'REQUEST_ADDITIONAL_EVIDENCE') {
+      nextStatus = 'CONFLICT_INTAKE'
+      decisionText = 'Yêu cầu đo lại & bổ sung ảnh bằng chứng'
+      nextStatusLabel = 'YÊU CẦU BỔ SUNG BẰNG CHỨNG'
     } else if (current.conflict_type === 'DUPLICATE_WORK_ATTEMPT') {
       if (payload.decision === 'ACCEPT_INCOMING') {
         nextStatus = 'RESOLVED_ACCEPT_INCOMING'
@@ -134,12 +139,12 @@ export const conflictService = {
     } else if (current.conflict_type === 'DEVICE_RESCUE_PENDING') {
       if (payload.decision === 'SUBMIT_RESCUE_TO_SUP') {
         nextStatus = 'CONFLICT_INTAKE'
-        decisionText = 'Trình Giám sát ký số cứu hộ (Q17)'
-        nextStatusLabel = 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)'
+        decisionText = 'Trình Giám sát xác nhận cứu hộ (Q17)'
+        nextStatusLabel = 'ĐÃ TRÌNH GIÁM SÁT (CHỜ XÁC NHẬN)'
       } else if (payload.decision === 'AUTHORIZE_RESCUE') {
         nextStatus = 'RESCUE_AUTHORIZED'
-        decisionText = 'Ký số phê duyệt cứu hộ (Q17)'
-        nextStatusLabel = 'ĐÃ KÝ SỐ DUYỆT CỨU HỘ'
+        decisionText = 'Xác nhận dữ liệu cứu hộ (Q17)'
+        nextStatusLabel = 'ĐÃ XÁC NHẬN CỨU HỘ'
       } else if (payload.decision === 'SUPERVISOR_REJECT_RESCUE') {
         nextStatus = 'RESCUE_REJECTED'
         decisionText = 'Từ chối gói cứu hộ'

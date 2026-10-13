@@ -13,6 +13,7 @@ export interface ConflictResolveModalProps {
     | 'SUBMIT_RESCUE_TO_SUP'
     | 'AUTHORIZE_RESCUE'
     | 'SUPERVISOR_REJECT_RESCUE'
+    | 'REQUEST_ADDITIONAL_EVIDENCE'
     | null
   resolutionReason: string
   setResolutionReason: (reason: string) => void
@@ -84,9 +85,10 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
                   (selectedConflict?.conflict_type === 'AGGREGATE_VERSION_CONFLICT'
                     ? 'Tạo phụ lục đợt mới (BR-26)'
                     : 'Hợp nhất thủ công (Manual Merge)')}
-                {pendingDecision === 'SUBMIT_RESCUE_TO_SUP' && 'Trình Giám sát ký số cứu hộ (Q17 / Quyết định 42A)'}
-                {pendingDecision === 'AUTHORIZE_RESCUE' && 'Ký số phê duyệt cứu hộ (Q17)'}
+                {pendingDecision === 'SUBMIT_RESCUE_TO_SUP' && 'Trình Giám sát xác nhận cứu hộ (Q17 / Quyết định 42A)'}
+                {pendingDecision === 'AUTHORIZE_RESCUE' && 'Xác nhận dữ liệu cứu hộ (Q17)'}
                 {pendingDecision === 'SUPERVISOR_REJECT_RESCUE' && 'Từ chối gói cứu hộ'}
+                {pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE' && 'Yêu cầu đo lại & Bổ sung ảnh bằng chứng (Q05)'}
               </span>
             </div>
           </div>

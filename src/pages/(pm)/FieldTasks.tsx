@@ -80,6 +80,7 @@ export const FieldTasks: React.FC = () => {
     | 'SUBMIT_RESCUE_TO_SUP'
     | 'AUTHORIZE_RESCUE'
     | 'SUPERVISOR_REJECT_RESCUE'
+    | 'REQUEST_ADDITIONAL_EVIDENCE'
     | null
   >(null)
   const [resolutionReason, setResolutionReason] = useState<string>('')
@@ -160,6 +161,7 @@ export const FieldTasks: React.FC = () => {
       | 'SUBMIT_RESCUE_TO_SUP'
       | 'AUTHORIZE_RESCUE'
       | 'SUPERVISOR_REJECT_RESCUE'
+      | 'REQUEST_ADDITIONAL_EVIDENCE'
   ) => {
     setPendingDecision(decision)
     setResolutionReason('')

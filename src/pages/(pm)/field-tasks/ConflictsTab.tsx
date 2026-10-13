@@ -33,6 +33,7 @@ export interface ConflictsTabProps {
       | 'SUBMIT_RESCUE_TO_SUP'
       | 'AUTHORIZE_RESCUE'
       | 'SUPERVISOR_REJECT_RESCUE'
+      | 'REQUEST_ADDITIONAL_EVIDENCE'
   ) => void
 }
 

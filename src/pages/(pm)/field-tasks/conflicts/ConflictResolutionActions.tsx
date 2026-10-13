@@ -14,6 +14,7 @@ export interface ConflictResolutionActionsProps {
       | 'SUBMIT_RESCUE_TO_SUP'
       | 'AUTHORIZE_RESCUE'
       | 'SUPERVISOR_REJECT_RESCUE'
+      | 'REQUEST_ADDITIONAL_EVIDENCE'
   ) => void
 }
 
@@ -33,9 +34,14 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
     <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
       <div className="text-xs text-slate-500">
         {selectedConflict.status === 'CONFLICT_INTAKE' ? (
+          selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ XÁC NHẬN)' ||
           selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
             <span className="flex items-center gap-1.5 text-purple-700 font-medium">
-              <Icon name="schedule" size={15} /> Đã trình Giám sát (Chờ ký số)
+              <Icon name="schedule" size={15} /> Đã trình Giám sát (Chờ xác nhận)
+            </span>
+          ) : selectedConflict.status_label === 'YÊU CẦU BỔ SUNG BẰNG CHỨNG' ? (
+            <span className="flex items-center gap-1.5 text-amber-700 font-medium">
+              <Icon name="add_a_photo" size={15} /> Yêu cầu bổ sung bằng chứng (Chờ nộp lại)
             </span>
           ) : (
             <span className="flex items-center gap-1.5 text-amber-700 font-medium">
@@ -65,21 +71,31 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
       {isRescueConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <>
           {isPM && (
+            selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ XÁC NHẬN)' ||
             selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
               <div className="text-xs text-slate-500 italic flex items-center gap-1.5">
                 <Icon name="hourglass_top" size={14} className="text-purple-600" />
-                <span>Đã gửi tờ trình cứu hộ lên Giám sát. Chờ ký số phê duyệt (Q17).</span>
+                <span>Đã gửi tờ trình cứu hộ lên Giám sát. Chờ Giám sát xác nhận (Q17).</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
                   className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-dark hover:bg-slate-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                  title="Quy chuẩn Q17: PM lập tờ trình chuyển Supervisor ký số phê duyệt gói SQLite"
+                  title="Quy chuẩn Q17: PM lập tờ trình chuyển Supervisor xác nhận gói dữ liệu SQLite"
                 >
                   <Icon name="send" size={15} className="text-brand-gold" />
-                  <span>Trình Giám sát duyệt cứu hộ (Q17)</span>
+                  <span>Trình Giám sát xác nhận cứu hộ (Q17)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenResolve('REQUEST_ADDITIONAL_EVIDENCE')}
+                  className="px-3.5 py-2 rounded-lg text-amber-800 text-xs font-semibold bg-amber-50 hover:bg-amber-100 transition border border-amber-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  title="Yêu cầu kỹ sư hiện trường nộp bổ sung ảnh chụp hoặc đo đạc kiểm chứng lại"
+                >
+                  <Icon name="add_a_photo" size={15} />
+                  <span>Yêu cầu đo lại / Bổ sung ảnh</span>
                 </button>
               </div>
             )
@@ -93,7 +109,7 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-purple-700 hover:bg-purple-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <Icon name="verified_user" size={15} />
-                <span>Ký số phê duyệt cứu hộ</span>
+                <span>Xác nhận dữ liệu cứu hộ</span>
               </button>
               <button
                 type="button"
