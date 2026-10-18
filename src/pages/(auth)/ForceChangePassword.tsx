@@ -39,7 +39,7 @@ export const ForceChangePassword: React.FC = () => {
       setIsForceSuccess(true)
       setTimeout(() => {
         const updatedUser = res.user
-        setUserAndToken(updatedUser, `mock-jwt-token-${updatedUser.id}`)
+        setUserAndToken(updatedUser)
         if (updatedUser.role === RoleCode.SUPERVISOR) {
           navigate('/sup/dashboard')
         } else {

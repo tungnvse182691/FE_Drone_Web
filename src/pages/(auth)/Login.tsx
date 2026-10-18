@@ -52,7 +52,7 @@ export const Login: React.FC = () => {
     try {
       // Gọi qua Mock API Service bất đồng bộ (In-memory, KHÔNG dùng localStorage)
       const res = await authService.login({ email, password })
-      setUserAndToken(res.user, res.token)
+      setUserAndToken(res.user)
 
       if (res.user.must_change_password) {
         setViewMode('force')
@@ -76,7 +76,7 @@ export const Login: React.FC = () => {
       setIsForceSuccess(true)
       setTimeout(() => {
         const currentUser = res.user
-        setUserAndToken(currentUser, `mock-jwt-token-${currentUser.id}`)
+        setUserAndToken(currentUser)
         const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
         navigate(dest)
       }, 700)
