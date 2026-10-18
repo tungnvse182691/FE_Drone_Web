@@ -26,7 +26,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="text-lg font-bold tracking-tight text-slate-900 font-headline">HoÃ ng Háº£i</span>
+              <span className="text-lg font-bold tracking-tight text-slate-900 font-headline">Hoàng Hải</span>
               <span className="px-1.5 py-0.5 rounded bg-brand-gold/10 text-brand-goldMuted font-mono text-[11px] font-bold">PRO</span>
             </div>
             <span className="text-xs text-slate-500">RoadGuard Civil Platform v2.2</span>
@@ -47,10 +47,10 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
       {/* Main Headline */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-snug font-headline">
-          Báº¡n nháº­n Ä‘Æ°á»£c lá»i má»i tham gia dá»± Ã¡n
+          Bạn nhận được lời mời tham gia dự án
         </h1>
         <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-          Supervisor <strong className="text-slate-900 font-semibold">Nguyá»…n VÄƒn An</strong> (Ban QLDA) Ä‘Ã£ gá»­i lá»i má»i tham gia quáº£n trá»‹ &amp; váº­n hÃ nh dá»± Ã¡n háº¡ táº§ng giao thÃ´ng trá»ng Ä‘iá»ƒm.
+          Supervisor <strong className="text-slate-900 font-semibold">Nguyễn Văn An</strong> (Ban QLDA) đã gửi lời mời tham gia quản trị &amp; vận hành dự án hạ tầng giao thông trọng điểm.
         </p>
       </div>
 
@@ -62,10 +62,10 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
         <div className="flex items-center justify-between pb-3 mb-3 border-b border-black/5">
           <span className="text-xs uppercase tracking-wider text-slate-600 font-bold flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-brand-gold" />
-            Chi tiáº¿t phÃ¢n cÃ´ng nhÃ¢n sá»±
+            Chi tiết phân công nhân sự
           </span>
           <span className="font-mono text-[11px] text-slate-500 font-semibold">
-            MÃƒ: {token ? `#${token}` : '#IVT-2026-98F'}
+            Mã: {token ? `#${token}` : '#IVT-2026-98F'}
           </span>
         </div>
 
@@ -76,11 +76,11 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
               <Route className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="block text-[11px] text-slate-500">Dá»± Ã¡n cÃ´ng trÃ¬nh</span>
-              <p className="text-sm font-bold text-slate-900 truncate">Quá»‘c lá»™ 1A - Giai Ä‘oáº¡n 2</p>
+              <span className="block text-[11px] text-slate-500">Dự án công trình</span>
+              <p className="text-sm font-bold text-slate-900 truncate">Quốc lộ 1A - Giai đoạn 2</p>
               <div className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-white rounded-full font-mono text-[10px] text-brand-goldMuted font-semibold border border-slate-200">
                 <span>Km 1024 - Km 1045</span>
-                <span className="text-slate-300">â€¢</span>
+                <span className="text-slate-300">•</span>
                 <span>PRJ-QL1A-02</span>
               </div>
             </div>
@@ -92,7 +92,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
               <BadgeAlert className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="block text-[11px] text-slate-500">Vai trÃ² bá»• nhiá»‡m</span>
+              <span className="block text-[11px] text-slate-500">Vai trò bổ nhiệm</span>
               <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold text-white shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                 <span className="text-xs font-semibold tracking-wide">Project Manager (PM)</span>
@@ -107,7 +107,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-slate-500">Email xÃ¡c thá»±c</span>
+                <span className="text-[11px] text-slate-500">Email xác thực</span>
                 <span className="inline-flex items-center text-[10px] text-slate-500 font-medium bg-black/5 px-1.5 py-0.2 rounded-full">
                   <Lock className="w-2.5 h-2.5 mr-0.5" /> Read-only
                 </span>
@@ -124,9 +124,9 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
               <Timer className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <span className="block text-[11px] text-slate-500">Thá»i háº¡n liÃªn káº¿t</span>
+              <span className="block text-[11px] text-slate-500">Thời hạn liên kết</span>
               <div className="mt-0.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#D97706]">
-                <span className="text-xs font-bold">CÃ²n 48 giá»</span>
+                <span className="text-xs font-bold">Còn 48 giờ</span>
                 <span className="text-[10px] text-[#D97706]/80">(23:59 02/10/2026)</span>
               </div>
             </div>

@@ -13,11 +13,11 @@ export const AcceptInvitation: React.FC = () => {
   const { token } = useParams<{ token?: string }>()
   const { login } = useAuthStore()
 
-  // Cháº¿ Ä‘á»™ xem Demo: 'valid' (Token há»£p lá»‡) hoáº·c 'expired' (Token háº¿t háº¡n)
+  // Chế độ xem Demo: 'valid' (Token hợp lệ) hoặc 'expired' (Token hết hạn)
   const [demoState, setDemoState] = useState<InvitationDemoState>('valid')
 
   // Form state
-  const [fullName, setFullName] = useState('Äá»— Quá»‘c HoÃ ng')
+  const [fullName, setFullName] = useState('Đỗ Quốc Hoàng')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -32,10 +32,10 @@ export const AcceptInvitation: React.FC = () => {
     special: /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password),
   }
 
-  // Password strength score (0 to 4 váº¡ch)
+  // Password strength score (0 to 4 vạch)
   const getStrength = () => {
     if (!password) {
-      return { score: 0, label: 'ChÆ°a nháº­p máº­t kháº©u', color: 'text-slate-400', barColor: 'bg-slate-200' }
+      return { score: 0, label: 'Chưa nhập mật khẩu', color: 'text-slate-400', barColor: 'bg-slate-200' }
     }
     let passed = 0
     if (rules.length) passed++
@@ -44,15 +44,15 @@ export const AcceptInvitation: React.FC = () => {
     if (password.length >= 12) passed++
 
     if (password.length < 8) {
-      return { score: 1, label: 'Yáº¿u (Weak)', color: 'text-rose-500', barColor: 'bg-rose-500' }
+      return { score: 1, label: 'Yếu (Weak)', color: 'text-rose-500', barColor: 'bg-rose-500' }
     }
     if (passed <= 2) {
-      return { score: 2, label: 'Trung bÃ¬nh (Fair)', color: 'text-amber-500', barColor: 'bg-amber-500' }
+      return { score: 2, label: 'Trung bình (Fair)', color: 'text-amber-500', barColor: 'bg-amber-500' }
     }
     if (passed === 3) {
-      return { score: 3, label: 'KhÃ¡ máº¡nh (Good)', color: 'text-brand-goldMuted', barColor: 'bg-brand-gold' }
+      return { score: 3, label: 'Khá mạnh (Good)', color: 'text-brand-goldMuted', barColor: 'bg-brand-gold' }
     }
-    return { score: 4, label: 'Ráº¥t máº¡nh (Strong) â€” Chuáº©n Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
+    return { score: 4, label: 'Rất mạnh (Strong) â€” Chuẩn Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
   }
 
   const strength = getStrength()
@@ -101,7 +101,7 @@ export const AcceptInvitation: React.FC = () => {
             <Route className="w-6 h-6 stroke-[2.2]" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-base text-slate-900 tracking-tight font-headline">HoÃ ng Háº£i RoadGuard</span>
+            <span className="font-bold text-base text-slate-900 tracking-tight font-headline">Hoàng Hải RoadGuard</span>
             <span className="text-[11px] text-slate-500 font-mono uppercase tracking-wider">Civil Asset &amp; Highway Telemetry</span>
           </div>
         </div>
@@ -124,7 +124,7 @@ export const AcceptInvitation: React.FC = () => {
           {/* Interactive Floating Mode Switcher (Demo State Toggle) */}
           <div className="fixed top-4 right-4 z-50 flex items-center p-1 bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200">
             <div className="flex items-center text-xs mr-2 pl-3 text-slate-500 font-medium">
-              <span>Cháº¿ Ä‘á»™ Demo:</span>
+              <span>Chế độ Demo:</span>
             </div>
             <button
               onClick={() => setDemoState('valid')}
@@ -135,7 +135,7 @@ export const AcceptInvitation: React.FC = () => {
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-              Token há»£p lá»‡
+              Token hợp lệ
             </button>
             <button
               onClick={() => setDemoState('expired')}
@@ -146,14 +146,14 @@ export const AcceptInvitation: React.FC = () => {
               }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-              Token háº¿t háº¡n
+              Token hết hạn
             </button>
           </div>
 
           {/* Decorative Highway Stationing Watermark Badge */}
           <div className="hidden lg:flex items-center gap-2 mb-4 px-3.5 py-1 bg-slate-200/70 rounded-full border border-slate-300/40 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
-            <span className="text-[12px] font-mono text-slate-600 font-medium">Há»† THá»NG KIá»‚M SOÃT THI CÃ”NG &amp; Háº  Táº¦NG GIAO THÃ”NG Sá»</span>
+            <span className="text-[12px] font-mono text-slate-600 font-medium">HỆ THỐNG KIỂM SOÁT THI CÔNG &amp; HẠ TẦNG GIAO THÔNG SỐ</span>
             <span className="text-slate-400">â€¢</span>
             <span className="text-[12px] font-mono text-brand-goldMuted font-bold">SECURE ONBOARDING GATEWAY</span>
           </div>
@@ -191,7 +191,7 @@ export const AcceptInvitation: React.FC = () => {
                   onFillStrongPassword={handleFillStrongPassword}
                   onSubmit={handleSubmit}
                   onReject={() => {
-                    if (window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n tá»« chá»‘i lá»i má»i tham gia dá»± Ã¡n nÃ y?')) {
+                    if (window.confirm('Bạn có chắc chắn muốn từ chối lời mời tham gia dự án này?')) {
                       navigate('/login')
                     }
                   }}
@@ -207,8 +207,8 @@ export const AcceptInvitation: React.FC = () => {
 
           {/* Sub-footer Legal */}
           <div className="w-full max-w-2xl text-center mt-6 space-y-1 px-4 pb-2 text-[11px] text-slate-400">
-            <p>Há»‡ thá»‘ng báº£o máº­t háº¡ táº§ng sá»‘ RoadGuard â€¢ NhÃ  tháº§u HoÃ ng Háº£i â€¢ TuÃ¢n thá»§ TCVN 8819:2011 â€¢ MÃ£ hÃ³a End-to-End TLS 1.3 â€¢ ToÃ n váº¹n SHA-256</p>
-            <p>Â© 2026 HoÃ ng Háº£i Infrastructure Management Group. All rights reserved.</p>
+            <p>Hệ thống bảo mật hạ tầng số RoadGuard â€¢ Nhà thầu Hoàng Hải â€¢ Tuân thủ TCVN 8819:2011 â€¢ Mã hóa End-to-End TLS 1.3 â€¢ Toàn vẹn SHA-256</p>
+            <p>Â© 2026 Hoàng Hải Infrastructure Management Group. All rights reserved.</p>
           </div>
         </div>
       </main>

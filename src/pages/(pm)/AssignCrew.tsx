@@ -19,7 +19,7 @@ export const AssignCrew: React.FC = () => {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-          Màn 14: Phân Công Đội Thi Công (Repair Crew)
+          Phân Công Đội Thi Công (Repair Crew)
         </h1>
         <p className="text-xs text-slate-500 mt-1">
           Chỉ định tổ đội thi công hiện trường thực hiện đợt sửa chữa đã được phê duyệt
