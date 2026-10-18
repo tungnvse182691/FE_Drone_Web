@@ -129,6 +129,48 @@ export const fastTrackService = {
   },
 
   /**
+   * Kiểm tra điều kiện Fast Track theo 17_10 (API-146)
+   * Fail closed: nếu API không trả về eligible thì coi như không đủ điều kiện
+   */
+  async checkEligibility(
+    projectId: string,
+    packageId: string,
+    itemId: string
+  ): Promise<{ eligible: boolean; missingReasons: string[] }> {
+    const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || !import.meta.env.VITE_API_URL
+
+    if (USE_MOCK) {
+      // Mock fallback: dùng cờ isFastTrackEligible từ data
+      const defect = inMemoryDefects.find((d) => d.id === itemId)
+      if (!defect) {
+        return { eligible: false, missingReasons: ['Không tìm thấy hạng mục'] }
+      }
+      return {
+        eligible: defect.isFastTrackEligible ?? false,
+        missingReasons: defect.isFastTrackEligible
+          ? []
+          : [defect.violationReason || 'Không đủ điều kiện Fast Track'],
+      }
+    }
+
+    // Gọi API-146 thật
+    const { checkEligibilityApi } = await import('../fastTrack')
+    try {
+      const result = await checkEligibilityApi(projectId, packageId, itemId)
+      return {
+        eligible: result.eligible,
+        missingReasons: result.missingReasons ?? [],
+      }
+    } catch {
+      // API fail → fail closed
+      return {
+        eligible: false,
+        missingReasons: ['Không thể kiểm tra điều kiện. Vui lòng thử lại.'],
+      }
+    }
+  },
+
+  /**
    * Lấy danh sách các đội thi công hiện trường (GET /api/v1/crews)
    */
   async getCrews(): Promise<CrewTeam[]> {
