@@ -12,6 +12,7 @@ import {
   HelpCircle
 } from 'lucide-react'
 import { PasswordRules, PasswordStrength } from './types'
+import { useToastStore } from '../../../store/toastStore'
 
 export interface AcceptFormProps {
   fullName: string
@@ -58,6 +59,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
   onSubmit,
   onReject
 }) => {
+  const toast = useToastStore()
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-4">
@@ -242,7 +244,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => alert('Vui lòng liên hệ Giám sát trưởng Nguyễn Văn An hoặc Ban Chỉ huy dự án Hoàng Hải: 1900-6868')}
+              onClick={() => toast.info('Vui lòng liên hệ Giám sát trưởng Nguyễn Văn An hoặc Ban Chỉ huy dự án Hoàng Hải: 1900-6868')}
               className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-goldMuted transition underline underline-offset-4 cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />

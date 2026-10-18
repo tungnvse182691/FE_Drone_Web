@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { LegalHoldProject } from '../../../types/domain'
+import { useToastStore } from '../../../store/toastStore'
 
 export interface LegalHoldModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
   onClose,
   onConfirm
 }) => {
+  const toast = useToastStore()
   const [reason, setReason] = useState('')
   const [authority, setAuthority] = useState('')
   const [reference, setReference] = useState('')
@@ -47,7 +49,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
 
     if (isEnabling) {
       if (!reason.trim() || !authority.trim() || !reference.trim()) {
-        alert('Vui lòng nhập đầy đủ lý do, cơ quan yêu cầu và số hiệu công văn căn cứ.')
+        toast.warning('Vui lòng nhập đầy đủ lý do, cơ quan yêu cầu và số hiệu công văn căn cứ.')
         return
       }
 

@@ -4,8 +4,10 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
 import { ForcePasswordForm } from './force-change-password/ForcePasswordForm'
+import { useToastStore } from '../../store/toastStore'
 
 export const ForceChangePassword: React.FC = () => {
+  const toast = useToastStore()
   const navigate = useNavigate()
   const { user, setUserAndToken } = useAuthStore()
 
@@ -47,7 +49,7 @@ export const ForceChangePassword: React.FC = () => {
         }
       }, 700)
     } catch {
-      alert('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
     }
   }
 

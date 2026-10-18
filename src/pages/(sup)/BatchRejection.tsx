@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { useToastStore } from '../../store/toastStore'
 
 export const BatchRejection: React.FC = () => {
+  const toast = useToastStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [reasonCategory, setReasonCategory] = useState('Biện pháp kỹ thuật chưa phù hợp quy chuẩn')
@@ -12,7 +14,7 @@ export const BatchRejection: React.FC = () => {
 
   const handleReject = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Đã gửi yêu cầu chỉnh sửa hồ sơ (REVISION_REQUIRED) về cho Chỉ huy trưởng (PM)!')
+    toast.success('Đã gửi yêu cầu chỉnh sửa hồ sơ (REVISION_REQUIRED) về cho Chỉ huy trưởng (PM)!')
     navigate('/sup/proposals')
   }
 

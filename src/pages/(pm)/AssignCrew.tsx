@@ -4,15 +4,17 @@ import { Button } from '../../components/ui/Button'
 import { InputField } from '../../components/ui/InputField'
 import { mockRepairBatches } from '../../api/mock/data'
 import { Users2, Calendar, ShieldAlert } from 'lucide-react'
+import { useToastStore } from '../../store/toastStore'
 
 export const AssignCrew: React.FC = () => {
+  const toast = useToastStore()
   const [crewName, setCrewName] = useState('Đội Thi Công Số 2 (Hoàng Hải)')
   const [deadline, setDeadline] = useState('2026-10-25')
   const [safetyNotes, setSafetyNotes] = useState('Yêu cầu đặt biển báo cách vị trí thi công 150m, có người phân luồng')
 
   const handleAssign = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Đã giao việc cho Đội thi công thành công! Lệnh công tác được đồng bộ đến App Mobile của thợ.')
+    toast.success('Đã giao việc cho Đội thi công thành công! Lệnh công tác được đồng bộ đến App Mobile của thợ.')
   }
 
   return (

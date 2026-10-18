@@ -7,8 +7,10 @@ import { LoginViewMode } from './login/types'
 import { LoginForm } from './login/LoginForm'
 import { ForcePasswordSection } from './login/ForcePasswordSection'
 import { LoginHeader, LoginBrandCardHeader, LoginFooter } from './login/LoginHeader'
+import { useToastStore } from '../../store/toastStore'
 
 export const Login: React.FC = () => {
+  const toast = useToastStore()
   const navigate = useNavigate()
   const { setUserAndToken } = useAuthStore()
 
@@ -81,7 +83,7 @@ export const Login: React.FC = () => {
         navigate(dest)
       }, 700)
     } catch {
-      alert('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
     }
   }
 

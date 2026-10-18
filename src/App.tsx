@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { ToastContainer } from './components/ui/ToastContainer'
 import { RoleCode } from './types/enums'
 import {
   ProtectedRoute,
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         {/* Auth routes guarded against already logged in users */}
         <Route element={<PublicAuthRoute />}>

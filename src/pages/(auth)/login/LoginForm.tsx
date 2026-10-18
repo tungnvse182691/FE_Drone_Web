@@ -1,4 +1,5 @@
 import React from 'react'
+import { useToastStore } from '../../../store/toastStore'
 
 export interface LoginFormProps {
   email: string
@@ -29,6 +30,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   isLoading,
   onSubmit
 }) => {
+  const toast = useToastStore()
   return (
     <section className="space-y-5">
       <div>
@@ -124,7 +126,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <button
             type="button"
-            onClick={() => alert('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu công vụ.')}
+            onClick={() => toast.info('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu công vụ.')}
             className="text-xs font-medium text-[#8C6D1F] hover:text-[#6B5219] transition-colors cursor-pointer"
           >
             Quên mật khẩu?
