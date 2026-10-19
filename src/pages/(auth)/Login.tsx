@@ -129,7 +129,7 @@ export const Login: React.FC = () => {
         <main className="w-full flex-1 relative z-10">
           <div className="mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-10 py-10 lg:py-12 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-[56px] items-center">
             {/* Cột trái: Panel branding */}
-            <div className="flex flex-col justify-center">
+            <div className="flex flex-col justify-center items-center text-center">
               {/* Logo to hơn và canh giữa cùng chữ HOÀNG HẢI ROADGUARD */}
               <div className="w-full max-w-[560px] flex flex-col items-center mb-7">
                 <div className="w-[170px] h-[170px] sm:w-[185px] sm:h-[185px] rounded-full border-[4px] border-[rgba(201,162,39,0.58)] shadow-[0_20px_52px_rgba(201,162,39,0.32)] float-logo overflow-hidden bg-white mb-4">
@@ -145,59 +145,14 @@ export const Login: React.FC = () => {
                 </div>
               </div>
 
-              <h1 className="text-[34px] sm:text-[44px] font-extrabold tracking-[-0.02em] text-[#1A1D20] leading-[1.12] mb-4">
+              <h1 className="text-[34px] sm:text-[44px] font-extrabold tracking-[-0.02em] text-[#1A1D20] leading-[1.12] mb-4 text-center">
                 Nền tảng số quản lý{' '}
                 <span className="gold-gradient-text">bảo hành hạ tầng đường bộ</span>
               </h1>
 
-              <p className="text-[15px] text-[#5B6470] leading-[1.7] mb-8 max-w-[560px]">
+              <p className="text-[15px] text-[#5B6470] leading-[1.7] mb-8 max-w-[560px] text-center mx-auto">
                 Từ khảo sát trên không, trí tuệ nhân tạo thẩm định hư hỏng đến điều phối thi công và nghiệm thu hiện trường — mọi nghiệp vụ bảo hành đường bê tông trong một hệ thống duy nhất.
               </p>
-
-              {/* 3 tính năng */}
-              <div className="space-y-5 pt-6 border-t border-[#E2E5E9]">
-                <div className="flex items-start gap-4">
-                  <div className="w-[46px] h-[46px] rounded-[14px] bg-[#FEF9E7] border border-[rgba(201,162,39,0.28)] text-[#C9A227] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">flight</span>
-                  </div>
-                  <div className="pt-0.5">
-                    <div className="text-[14px] font-bold text-[#1A1D20] leading-snug">
-                      Khảo sát trên không
-                    </div>
-                    <div className="text-[13px] text-[#5B6470] leading-[1.6] mt-1">
-                      Lập kế hoạch bay, thu thập ảnh toàn tuyến, trí tuệ nhân tạo tự động phát hiện ổ gà, nứt rạn.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-[46px] h-[46px] rounded-[14px] bg-[#FEF9E7] border border-[rgba(201,162,39,0.28)] text-[#C9A227] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">smart_toy</span>
-                  </div>
-                  <div className="pt-0.5">
-                    <div className="text-[14px] font-bold text-[#1A1D20] leading-snug">
-                      Thẩm định thông minh &amp; xử lý nhanh
-                    </div>
-                    <div className="text-[13px] text-[#5B6470] leading-[1.6] mt-1">
-                      Bóc tách khối lượng tự động, luồng ưu tiên cho hư hỏng khẩn cấp.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-[46px] h-[46px] rounded-[14px] bg-[#FEF9E7] border border-[rgba(201,162,39,0.28)] text-[#C9A227] flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-[22px]">verified</span>
-                  </div>
-                  <div className="pt-0.5">
-                    <div className="text-[14px] font-bold text-[#1A1D20] leading-snug">
-                      Nghiệm thu số
-                    </div>
-                    <div className="text-[13px] text-[#5B6470] leading-[1.6] mt-1">
-                      Đối chiếu Trước/Sau tại hiện trường, đóng đợt bảo hành minh bạch.
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Cột phải: Card đăng nhập */}
