@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Inbox,
-  Flame,
   Clock,
   ArrowRight
 } from 'lucide-react'
@@ -50,9 +49,8 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* Priority Tag */}
                   {item.priority === 'EMERGENCY' ? (
-                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold flex items-center gap-1">
-                      <Flame className="w-3 h-3 text-rose-600 animate-pulse" />
-                      <span>KHẨN CẤP (EMERGENCY)</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold">
+                      <span>KHẨN CẤP</span>
                     </span>
                   ) : item.priority === 'HIGH' ? (
                     <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
@@ -82,7 +80,6 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                  <Clock className="w-3.5 h-3.5" />
                   <span>{item.timeAgo}</span>
                 </div>
               </div>
@@ -111,12 +108,11 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                 <div className="flex items-center gap-2 shrink-0">
                   {/* SLA remaining alert tag */}
                   {item.slaHoursRemaining !== undefined && (
-                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold flex items-center gap-1 ${
+                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold ${
                       item.slaHoursRemaining < 2
                         ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
                         : 'bg-amber-50 text-amber-800 border border-amber-200'
                     }`}>
-                      <Clock className="w-3 h-3" />
                       <span>SLA còn: {item.slaHoursRemaining}h</span>
                     </span>
                   )}

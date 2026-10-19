@@ -1,5 +1,5 @@
 import React from 'react'
-import { Volume2, X, Flame, Clock, Bell } from 'lucide-react'
+import { X, Flame, Clock, Bell } from 'lucide-react'
 import { AudioModeConfig } from './types'
 
 interface AudioConfigModalProps {
@@ -34,8 +34,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-5 h-5 text-brand-gold" />
-            <h3 className="font-bold text-slate-900 text-base">Cấu Hình Cảnh Báo Âm Thanh (SLAAudio)</h3>
+            <h3 className="font-bold text-slate-900 text-base">Cấu Hình Cảnh Báo Âm Thanh</h3>
           </div>
           <button
             onClick={onClose}
@@ -94,7 +93,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
               <div className="flex items-center gap-2">
                 <Flame className="w-4 h-4 text-red-600 shrink-0" />
                 <div>
-                  <div className="font-bold text-slate-800">Còi khẩn cấp 24/7 (Siren)</div>
+                  <div className="font-bold text-slate-800">Còi khẩn cấp 24/7</div>
                   <div className="text-[10px] text-slate-500">Khi có lỗi sụt lún nguy hiểm hoặc SLA &lt; 2h</div>
                 </div>
               </div>

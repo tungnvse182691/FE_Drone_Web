@@ -1,8 +1,5 @@
 import React from 'react'
 import {
-  AlertTriangle,
-  RefreshCw,
-  Bot,
   Search
 } from 'lucide-react'
 import { NotificationCategoryTab, NotificationPriorityFilter } from './types'
@@ -66,7 +63,6 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
               : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
           }`}
         >
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
           <span>Cần tôi xử lý</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'ACTION_REQUIRED' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'
@@ -84,7 +80,6 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
               : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <RefreshCw className="w-3.5 h-3.5 text-brand-gold" />
           <span>Bàn giao PM ↔ Giám sát</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'HANDOVER' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
@@ -102,7 +97,6 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
               : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
           }`}
         >
-          <Bot className="w-3.5 h-3.5 text-purple-600" />
           <span>Tiến trình AI &amp; Drone</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'AI_SYSTEM' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
@@ -131,7 +125,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
           className="h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
         >
           <option value="ALL">Mức độ: Tất cả</option>
-          <option value="EMERGENCY">Khẩn cấp (EMERGENCY)</option>
+          <option value="EMERGENCY">Khẩn cấp</option>
           <option value="HIGH">Ưu tiên cao (SLA)</option>
           <option value="NORMAL">Thông thường</option>
         </select>

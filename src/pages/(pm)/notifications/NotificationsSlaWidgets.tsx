@@ -65,7 +65,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <RefreshCw className="w-4 h-4 text-brand-gold" />
-            <h3 className="font-bold text-sm text-brand-dark">Dòng Chảy Bàn Giao (Handoff)</h3>
+            <h3 className="font-bold text-sm text-brand-dark">Dòng Chảy Bàn Giao</h3>
           </div>
           <span className="text-[10px] text-slate-400 font-semibold">Quy chuẩn v2.2</span>
         </div>
@@ -89,7 +89,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             </div>
             <div>
               <div className="font-bold text-amber-950">PM Thẩm định &amp; Lập Đề xuất</div>
-              <div className="text-[11px] text-amber-800">Xác minh Bounding box, gộp đợt sửa chữa hoặc mở lệnh Fast Track</div>
+              <div className="text-[11px] text-amber-800">Xác minh Bounding box, gộp đợt sửa chữa hoặc mở lệnh xử lý nhanh</div>
             </div>
           </div>
 

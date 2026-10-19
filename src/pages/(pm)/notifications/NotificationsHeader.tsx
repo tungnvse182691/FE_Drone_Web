@@ -3,9 +3,6 @@ import { Link } from 'react-router-dom'
 import {
   Home,
   ChevronRight,
-  ShieldCheck,
-  Wrench,
-  Flame,
   CheckCircle2,
   Volume2,
   VolumeX
@@ -65,19 +62,16 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
               Trung Tâm Thông Báo &amp; Điều Phối Bàn Giao
             </h1>
             {isSupervisor ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 text-xs font-bold">
                 <span>Hộp thư: Ban Tư Vấn Giám Sát (SUPERVISOR)</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
-                <Wrench className="w-3.5 h-3.5 text-brand-gold" />
-                <span>Hộp thư: Ban Chỉ Huy PM Nhà Thầu (PROJECT_MANAGER)</span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
+                <span>Hộp thư: Ban Chỉ Huy PM Nhà Thầu</span>
               </span>
             )}
             {emergencyCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold animate-pulse">
-                <Flame className="w-3.5 h-3.5 text-rose-600" />
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold animate-pulse">
                 <span>{emergencyCount} Lệnh khẩn cấp</span>
               </span>
             )}
@@ -88,7 +82,7 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
           <p className="text-xs text-slate-500 leading-relaxed">
             {isSupervisor
               ? 'Kênh thông báo & chỉ đạo của Giám sát: Thẩm duyệt gói đề xuất sửa chữa, nghiệm thu hồ sơ hiện trường, xác nhận tuyến đường và cảnh báo suy thoái rủi ro.'
-              : 'Kênh điều hành & tiếp nhận chỉ đạo của Chỉ huy trưởng (PM): Lệnh ứng cứu khẩn cấp, tiến độ đợt sửa Fast Track, kết quả thẩm định Drone AI và phản hồi duyệt hồ sơ.'}
+              : 'Kênh điều hành & tiếp nhận chỉ đạo của Chỉ huy trưởng (PM): Lệnh ứng cứu khẩn cấp, tiến độ đợt sửa xử lý nhanh, kết quả thẩm định Drone AI và phản hồi duyệt hồ sơ.'}
           </p>
         </div>
 
