@@ -323,18 +323,18 @@ export const PMDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setInboxTab('DRONE')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer whitespace-nowrap ${
                     inboxTab === 'DRONE'
                       ? 'bg-white text-brand-dark shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Trí tuệ nhân tạo phát hiện ({defects.length})
+                  Trí tuệ nhân tạo ({defects.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setInboxTab('CITIZEN')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer whitespace-nowrap ${
                     inboxTab === 'CITIZEN'
                       ? 'bg-white text-brand-dark shadow-2xs font-bold'
                       : 'text-slate-500 hover:text-slate-800'
@@ -350,7 +350,7 @@ export const PMDashboard: React.FC = () => {
                 onClick={() =>
                   navigate(inboxTab === 'DRONE' ? '/pm/ai-inbox?source=drone' : '/pm/ai-inbox?source=citizen')
                 }
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-brand-dark hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-brand-dark hover:bg-slate-100 rounded-lg transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
                 <span>Xem tất cả</span>
                 <Icon name="arrow_forward" size={15} />
