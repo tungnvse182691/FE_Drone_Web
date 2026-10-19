@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, WorkMode, PolicyThresholdConfig } from './types'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface DispatchTableProps {
   workMode: WorkMode
@@ -16,6 +17,7 @@ export interface DispatchTableProps {
   onRemoveViolationItems?: () => void
   onNavigateProposals?: () => void
   isSupervisor?: boolean
+  eligibilityMap?: Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
 }
 
 export const DispatchTable: React.FC<DispatchTableProps> = ({
@@ -31,10 +33,65 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
   currentPolicy,
   onRemoveViolationItems,
   onNavigateProposals,
-  isSupervisor = false
+  isSupervisor = false,
+  eligibilityMap
 }) => {
-  // Chỉ đếm các item đạt chuẩn Fast Track để tính trạng thái Select All
-  const eligibleDefects = filteredDefects.filter((d) => d.isFastTrackEligible)
+  const [internalMap, setInternalMap] = useState<
+    Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
+  >({})
+
+  const activeMap = eligibilityMap || internalMap
+
+  useEffect(() => {
+    if (eligibilityMap) return
+    let isMounted = true
+    const ids = filteredDefects.map((d) => d.id)
+    if (ids.length === 0) return
+
+    setInternalMap((prev) => {
+      const next = { ...prev }
+      for (const d of filteredDefects) {
+        if (!next[d.id]) {
+          next[d.id] = {
+            eligible: d.isFastTrackEligible ?? true,
+            missingReasons: d.violationReason ? [d.violationReason] : [],
+            loading: true
+          }
+        }
+      }
+      return next
+    })
+
+    Promise.all(
+      filteredDefects.map(async (d) => {
+        const res = await fastTrackService.checkEligibility(d.id)
+        return { id: d.id, res }
+      })
+    ).then((results) => {
+      if (!isMounted) return
+      setInternalMap((prev) => {
+        const next = { ...prev }
+        for (const { id, res } of results) {
+          next[id] = {
+            eligible: res.eligible,
+            missingReasons: res.missingReasons || [],
+            loading: false
+          }
+        }
+        return next
+      })
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [filteredDefects, eligibilityMap])
+
+  // Chỉ đếm các item đạt chuẩn Fast Track theo API-146 để tính trạng thái Select All
+  const eligibleDefects = filteredDefects.filter((d) => {
+    const el = activeMap[d.id]
+    return el ? el.eligible : d.isFastTrackEligible
+  })
   const isAllEligibleSelected =
     workMode === 'MEASURE_ONLY' &&
     eligibleDefects.length > 0 &&
@@ -77,7 +134,14 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
           <tbody className="divide-y divide-slate-100">
             {filteredDefects.map((defect, index) => {
               const isChecked = selectedDefectIds.includes(defect.id)
-              const isEligible = defect.isFastTrackEligible
+              const itemEligibility = activeMap[defect.id]
+              const isLoadingEligibility = itemEligibility?.loading ?? false
+              const isEligible = itemEligibility ? itemEligibility.eligible : defect.isFastTrackEligible
+              const missingReasons = itemEligibility?.missingReasons?.length
+                ? itemEligibility.missingReasons
+                : defect.violationReason
+                ? [defect.violationReason]
+                : []
 
               return (
                 <tr
@@ -98,7 +162,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         <input
                           type={workMode === 'MEASURE_ONLY' ? 'checkbox' : 'radio'}
                           name="defect-selection"
-                          disabled={workMode === 'INSPECT_AND_REPAIR' && !isEligible}
+                          disabled={isLoadingEligibility || (workMode === 'INSPECT_AND_REPAIR' && !isEligible)}
                           checked={isChecked}
                           onChange={() => handleToggleSelect(defect.id)}
                           className={`w-4 h-4 cursor-pointer accent-brand-gold ${
@@ -108,7 +172,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         {!isEligible && workMode === 'INSPECT_AND_REPAIR' && (
                           <div className="absolute left-full ml-1 hidden group-hover:flex items-center px-2 py-1 bg-slate-900 text-white rounded text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
                             <Icon name="lock" size={12} className="text-rose-400 mr-1" />
-                            Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (BR-04)
+                            <span>{missingReasons[0] || 'Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (API-146)'}</span>
                           </div>
                         )}
                         {!isEligible && workMode === 'EMERGENCY' && (
@@ -151,16 +215,28 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                     </span>
                   </td>
                   <td className="p-3">
-                    {isEligible ? (
+                    {isLoadingEligibility ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                        <Icon name="progress_activity" size={12} className="animate-spin text-slate-500" />
+                        <span>Đang kiểm tra...</span>
+                      </span>
+                    ) : isEligible ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         <Icon name="check_circle" size={14} className="text-emerald-600" />
                         <span>Đạt chuẩn Fast Track</span>
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                        <Icon name="report" size={14} className="text-rose-600" />
-                        <span>Vi phạm ngưỡng (Over-limit)</span>
-                      </span>
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                          <Icon name="report" size={14} className="text-rose-600" />
+                          <span>Không đủ điều kiện (API-146)</span>
+                        </span>
+                        {missingReasons.length > 0 && (
+                          <div className="text-[10px] text-rose-700 font-medium max-w-xs truncate" title={missingReasons.join('; ')}>
+                            {missingReasons[0]}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="p-3">
@@ -228,21 +304,39 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
               <h3 className="font-bold text-rose-800 text-sm flex items-center gap-2">
                 <span>
                   {isSupervisor
-                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết vi phạm ngưỡng chính sách Fast Track'
-                    : 'Chặn xuất quân: Phát hiện khiếm khuyết vi phạm ngưỡng chính sách Fast Track!'}
+                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết không đủ điều kiện Fast Track (API-146)'
+                    : 'Chặn xuất quân: Phát hiện khiếm khuyết không đủ điều kiện Fast Track (API-146)!'}
                 </span>
               </h3>
-              <p className="text-slate-700 leading-relaxed">
-                Hệ thống phát hiện{' '}
-                {selectedItems
-                  .filter((d) => !d.isFastTrackEligible)
-                  .map((d) => (
-                    <span key={d.id} className="font-mono font-bold text-rose-700 mr-1.5">
-                      {d.code} ({d.areaM2}m² / {d.depthCm}cm)
-                    </span>
-                  ))}
-                vượt quá quy chuẩn của <strong className="font-semibold">{currentPolicy.version}</strong> (Diện tích &gt; {currentPolicy.maxAreaM2}m² hoặc Sâu &gt; {currentPolicy.maxDepthCm}cm). Theo quy định <strong className="text-rose-700">BR-04</strong>, các hư hỏng nặng này bắt buộc phải lập hồ sơ trình Supervisor duyệt.
-              </p>
+              <div className="text-slate-700 leading-relaxed space-y-1">
+                <p>
+                  Hệ thống kiểm tra qua <strong>API-146</strong> xác định các khiếm khuyết sau không đủ điều kiện xử lý nhanh:
+                </p>
+                <div className="space-y-1 pl-1">
+                  {selectedItems
+                    .filter((d) => {
+                      const el = activeMap[d.id]
+                      return el ? !el.eligible : !d.isFastTrackEligible
+                    })
+                    .map((d) => {
+                      const el = activeMap[d.id]
+                      const reasons = el?.missingReasons?.length
+                        ? el.missingReasons
+                        : d.violationReason
+                        ? [d.violationReason]
+                        : ['Không đạt ngưỡng chính sách Fast Track']
+                      return (
+                        <div key={d.id} className="text-[11px] text-rose-800 flex items-start gap-1 font-mono">
+                          <span className="font-bold shrink-0">{d.code}:</span>
+                          <span className="font-sans font-medium text-rose-700">{reasons.join('; ')}</span>
+                        </div>
+                      )
+                    })}
+                </div>
+                <p className="text-[11px] text-slate-500 pt-0.5">
+                  Theo quy định <strong className="text-rose-700">BR-04</strong>, các hư hỏng không đủ điều kiện này bắt buộc phải lập hồ sơ trình Supervisor duyệt.
+                </p>
+              </div>
             </div>
           </div>
 

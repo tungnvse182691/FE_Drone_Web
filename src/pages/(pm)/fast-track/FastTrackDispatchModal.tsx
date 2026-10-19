@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { RouteConfig, DefectItem, WorkMode, CrewTeam, PolicyThresholdConfig } from './types'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface FastTrackDispatchModalProps {
   isOpen: boolean
@@ -35,7 +36,60 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   handleExecuteDispatch,
   currentPolicy
 }) => {
+  const [checking, setChecking] = useState(false)
+  const [eligibilityMap, setEligibilityMap] = useState<
+    Record<string, { eligible: boolean; missingReasons: string[] }>
+  >({})
+
+  useEffect(() => {
+    if (!isOpen || selectedItems.length === 0) {
+      setEligibilityMap({})
+      setChecking(false)
+      return
+    }
+
+    let isMounted = true
+    setChecking(true)
+    Promise.all(
+      selectedItems.map(async (item) => {
+        const res = await fastTrackService.checkEligibility(item.id)
+        return { id: item.id, res }
+      })
+    )
+      .then((results) => {
+        if (!isMounted) return
+        const map: Record<string, { eligible: boolean; missingReasons: string[] }> = {}
+        for (const { id, res } of results) {
+          map[id] = res
+        }
+        setEligibilityMap(map)
+      })
+      .catch(() => {
+        if (!isMounted) return
+        const map: Record<string, { eligible: boolean; missingReasons: string[] }> = {}
+        for (const item of selectedItems) {
+          map[item.id] = {
+            eligible: false,
+            missingReasons: ['Lỗi kết nối khi kiểm tra điều kiện API-146.']
+          }
+        }
+        setEligibilityMap(map)
+      })
+      .finally(() => {
+        if (isMounted) setChecking(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [isOpen, selectedItems])
+
   if (!isOpen) return null
+
+  const hasIneligibleItem = selectedItems.some((d) => {
+    const el = eligibilityMap[d.id]
+    return el ? !el.eligible : !d.isFastTrackEligible
+  })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -78,20 +132,57 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
               <span className="text-slate-500 font-mono text-[10px]">Tuyến: {currentRouteConfig.name}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {selectedItems.map((d) => (
-                <span
-                  key={d.id}
-                  className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border ${
-                    d.isFastTrackEligible
-                      ? 'bg-white text-emerald-800 border-emerald-200'
-                      : 'bg-rose-50 text-rose-800 border-rose-200'
-                  }`}
-                >
-                  {d.code} ({d.stationing})
-                </span>
-              ))}
+              {selectedItems.map((d) => {
+                const el = eligibilityMap[d.id]
+                const isItemEligible = el ? el.eligible : d.isFastTrackEligible
+                const reasons = el?.missingReasons?.length ? el.missingReasons : (d.violationReason ? [d.violationReason] : [])
+                return (
+                  <span
+                    key={d.id}
+                    title={!isItemEligible && reasons.length > 0 ? reasons.join('; ') : undefined}
+                    className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-bold border inline-flex items-center gap-1 ${
+                      isItemEligible
+                        ? 'bg-white text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    <span>{d.code} ({d.stationing})</span>
+                    {!isItemEligible && <Icon name="report" size={12} className="text-rose-600" />}
+                  </span>
+                )
+              })}
             </div>
           </div>
+
+          {/* Cảnh báo khi có lỗi không đủ điều kiện ở chế độ Đo & Sửa ngay */}
+          {workMode === 'INSPECT_AND_REPAIR' && hasIneligibleItem && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-rose-800 text-xs">
+                <Icon name="report" size={16} className="text-rose-600 shrink-0" />
+                <span>CHẶN LỆNH: CÓ KHIẾM KHUYẾT KHÔNG ĐỦ ĐIỀU KIỆN FAST TRACK (API-146)</span>
+              </div>
+              <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
+                {selectedItems
+                  .filter((d) => {
+                    const el = eligibilityMap[d.id]
+                    return el ? !el.eligible : !d.isFastTrackEligible
+                  })
+                  .map((d) => {
+                    const el = eligibilityMap[d.id]
+                    const reasons = el?.missingReasons?.length
+                      ? el.missingReasons
+                      : d.violationReason
+                      ? [d.violationReason]
+                      : ['Không đạt ngưỡng chính sách Fast Track']
+                    return (
+                      <li key={d.id}>
+                        <span className="font-mono font-bold">{d.code}:</span> {reasons.join(', ')}
+                      </li>
+                    )
+                  })}
+              </ul>
+            </div>
+          )}
 
           {/* Chọn tổ đội thi công / đo đạc */}
           <div className="space-y-2">
@@ -134,36 +225,49 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             })()}
           </div>
 
-          {/* Cảnh báo khi chọn lỗi chưa vượt ngưỡng ở chế độ Khẩn cấp */}
-          {workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible && (
-            <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
-                <Icon name="warning" size={16} className="text-amber-600 shrink-0" />
-                <span>CẢNH BÁO: HƯ HỎNG CHƯA VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
-              </div>
-              <p className="text-amber-800 leading-relaxed text-[11px]">
-                Khiếm khuyết này có diện tích <strong>{selectedItems[0]?.areaM2} m²</strong> (&le; {currentPolicy.maxAreaM2} m²) và độ sâu <strong>{selectedItems[0]?.depthCm} cm</strong> (&le; {currentPolicy.maxDepthCm} cm). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (Fast Track)</strong> thông thường.
-              </p>
-              <div className="text-[11px] text-amber-950 font-bold bg-white/80 p-2 rounded-lg border border-amber-200">
-                ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 10 ký tự) để phục vụ thanh tra dự án!
-              </div>
-            </div>
-          )}
+          {/* Cảnh báo khi chọn lỗi đủ chuẩn ở chế độ Khẩn cấp */}
+          {workMode === 'EMERGENCY' && selectedItems[0] && (
+            (() => {
+              const el = eligibilityMap[selectedItems[0].id]
+              const isEligible = el ? el.eligible : selectedItems[0].isFastTrackEligible
+              const reasons = el?.missingReasons?.length
+                ? el.missingReasons
+                : selectedItems[0].violationReason
+                ? [selectedItems[0].violationReason]
+                : []
 
-          {/* Ưu tiên khẩn cấp khi chọn lỗi vượt ngưỡng gây ách tắc giao thông */}
-          {workMode === 'EMERGENCY' && !selectedItems[0]?.isFastTrackEligible && (
-            <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
-                <Icon name="warning" size={16} className="text-rose-600 shrink-0" />
-                <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG VƯỢT NGƯỠNG AN TOÀN ({selectedItems[0]?.code})</span>
-              </div>
-              <p className="text-rose-800 leading-relaxed text-[11px]">
-                Hư hỏng có diện tích <strong>{selectedItems[0]?.areaM2} m²</strong> / độ sâu <strong>{selectedItems[0]?.depthCm} cm</strong> đang gây nguy cơ tai nạn hoặc ùn tắc giao thông. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy tắc BR-46 / FR-37.
-              </p>
-              <div className="text-[11px] text-rose-950 font-bold bg-white/80 p-2 rounded-lg border border-rose-200">
-                🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Supervisor Hậu kiểm (Post-audit).
-              </div>
-            </div>
+              if (isEligible) {
+                return (
+                  <div className="p-3 bg-amber-50/90 border border-amber-300 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-900 text-xs">
+                      <Icon name="warning" size={16} className="text-amber-600 shrink-0" />
+                      <span>CẢNH BÁO: HƯ HỎNG ĐỦ CHUẨN XỬ LÝ NHANH THÔNG THƯỜNG ({selectedItems[0].code})</span>
+                    </div>
+                    <p className="text-amber-800 leading-relaxed text-[11px]">
+                      Khiếm khuyết này đủ điều kiện theo API-146 ({currentPolicy.version}). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (Fast Track)</strong> thông thường.
+                    </p>
+                    <div className="text-[11px] text-amber-950 font-bold bg-white/80 p-2 rounded-lg border border-amber-200">
+                      ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 10 ký tự) để phục vụ thanh tra dự án!
+                    </div>
+                  </div>
+                )
+              } else {
+                return (
+                  <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
+                      <Icon name="warning" size={16} className="text-rose-600 shrink-0" />
+                      <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG KHÔNG ĐỦ ĐIỀU KIỆN FAST TRACK ({selectedItems[0].code})</span>
+                    </div>
+                    <p className="text-rose-800 leading-relaxed text-[11px]">
+                      Lý do từ API-146: <strong>{reasons.join(', ') || 'Vượt ngưỡng an toàn'}</strong>. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy tắc BR-46 / FR-37.
+                    </p>
+                    <div className="text-[11px] text-rose-950 font-bold bg-white/80 p-2 rounded-lg border border-rose-200">
+                      🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Supervisor Hậu kiểm (Post-audit).
+                    </div>
+                  </div>
+                )
+              }
+            })()
           )}
 
           {/* Chỉ đạo & Ghi chú của PM */}
@@ -228,11 +332,25 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </button>
           <button
             onClick={handleExecuteDispatch}
+            disabled={checking || (workMode === 'INSPECT_AND_REPAIR' && hasIneligibleItem)}
             type="button"
-            className="px-5 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+            className={`px-5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 ${
+              checking || (workMode === 'INSPECT_AND_REPAIR' && hasIneligibleItem)
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-brand-gold hover:bg-[#B38E1F] cursor-pointer'
+            }`}
           >
-            <Icon name="send" size={14} />
-            <span>Phát lệnh xuất quân (Đồng bộ App Mobile)</span>
+            {checking ? (
+              <>
+                <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
+                <span>Đang kiểm tra API-146...</span>
+              </>
+            ) : (
+              <>
+                <Icon name="send" size={14} />
+                <span>Phát lệnh xuất quân (Đồng bộ App Mobile)</span>
+              </>
+            )}
           </button>
         </div>
       </div>

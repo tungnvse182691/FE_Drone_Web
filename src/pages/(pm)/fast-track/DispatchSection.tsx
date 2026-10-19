@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, RouteConfig, PolicyThresholdConfig, WorkMode } from './types'
 import { DispatchModeSelector } from './DispatchModeSelector'
@@ -6,6 +6,7 @@ import { DispatchFilters } from './DispatchFilters'
 import { DispatchTable } from './DispatchTable'
 import { DispatchMap } from './DispatchMap'
 import { DispatchActionBar } from './DispatchActionBar'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 interface DispatchSectionProps {
   defects: DefectItem[]
@@ -74,6 +75,61 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
   onNavigateProposals,
   isSupervisor = false
 }) => {
+  const [eligibilityMap, setEligibilityMap] = useState<
+    Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
+  >({})
+
+  useEffect(() => {
+    let isMounted = true
+    const ids = filteredDefects.map((d) => d.id)
+    if (ids.length === 0) return
+
+    setEligibilityMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      for (const d of filteredDefects) {
+        if (!next[d.id]) {
+          next[d.id] = {
+            eligible: d.isFastTrackEligible ?? true,
+            missingReasons: d.violationReason ? [d.violationReason] : [],
+            loading: true
+          }
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+
+    Promise.all(
+      filteredDefects.map(async (d) => {
+        const res = await fastTrackService.checkEligibility(d.id)
+        return { id: d.id, res }
+      })
+    ).then((results) => {
+      if (!isMounted) return
+      setEligibilityMap((prev) => {
+        const next = { ...prev }
+        for (const { id, res } of results) {
+          next[id] = {
+            eligible: res.eligible,
+            missingReasons: res.missingReasons || [],
+            loading: false
+          }
+        }
+        return next
+      })
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [filteredDefects])
+
+  const apiHasViolation = selectedItems.some((d) => {
+    const el = eligibilityMap[d.id]
+    return el ? !el.eligible : !d.isFastTrackEligible
+  })
+  const effectiveHasViolation = hasViolationItem || apiHasViolation
   return (
     <div id="dispatch-table-section" className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">
       {/* Header Dispatch */}
@@ -129,12 +185,13 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         handleToggleSelect={handleToggleSelect}
         handleAssignCrew={handleAssignCrew}
         setDetailDefect={setDetailDefect}
-        hasViolationItem={hasViolationItem}
+        hasViolationItem={effectiveHasViolation}
         selectedItems={selectedItems}
         currentPolicy={currentPolicy}
         onRemoveViolationItems={onRemoveViolationItems}
         onNavigateProposals={onNavigateProposals}
         isSupervisor={isSupervisor}
+        eligibilityMap={eligibilityMap}
       />
 
       {/* MapLibre Container */}
@@ -157,8 +214,9 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         handleDispatchBatch={handleDispatchBatch}
         handleRepairDirect={handleRepairDirect}
         handleEmergencyDispatch={handleEmergencyDispatch}
-        hasViolationItem={hasViolationItem}
+        hasViolationItem={effectiveHasViolation}
         isSupervisor={isSupervisor}
+        eligibilityMap={eligibilityMap}
       />
     </div>
   )

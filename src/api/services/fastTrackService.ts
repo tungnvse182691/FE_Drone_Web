@@ -133,10 +133,23 @@ export const fastTrackService = {
    * Fail closed: nếu API không trả về eligible thì coi như không đủ điều kiện
    */
   async checkEligibility(
-    projectId: string,
-    packageId: string,
-    itemId: string
+    param1: string,
+    param2?: string,
+    param3?: string
   ): Promise<{ eligible: boolean; missingReasons: string[] }> {
+    let projectId = 'prj-ql1a-01'
+    let packageId = 'pkg-ft-01'
+    let itemId = param1
+
+    if (param3 !== undefined) {
+      projectId = param1
+      packageId = param2!
+      itemId = param3
+    } else if (param2 !== undefined) {
+      packageId = param1
+      itemId = param2
+    }
+
     const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || !import.meta.env.VITE_API_URL
 
     if (USE_MOCK) {
@@ -168,6 +181,24 @@ export const fastTrackService = {
         missingReasons: ['Không thể kiểm tra điều kiện. Vui lòng thử lại.'],
       }
     }
+  },
+
+  /**
+   * Kiểm tra nhiều items cùng lúc theo API-146
+   */
+  async checkBatchEligibility(
+    itemIds: string[],
+    projectId = 'prj-ql1a-01',
+    packageId = 'pkg-ft-01'
+  ): Promise<Map<string, { eligible: boolean; missingReasons: string[] }>> {
+    const results = new Map<string, { eligible: boolean; missingReasons: string[] }>()
+    await Promise.all(
+      itemIds.map(async (id) => {
+        const res = await this.checkEligibility(projectId, packageId, id)
+        results.set(id, res)
+      })
+    )
+    return results
   },
 
   /**

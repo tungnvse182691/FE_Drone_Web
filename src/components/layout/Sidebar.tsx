@@ -131,7 +131,6 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         { label: 'Giám sát Drone', path: '/sup/surveys', icon: PlaneTakeoff },
-        { label: 'Hộp thư tiếp nhận lỗi', path: '/sup/ai-inbox', icon: Inbox },
         { label: 'Xử lý cấp bách', path: '/sup/fast-track', icon: Zap }
       ]
     },

@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, WorkMode } from './types'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface DispatchActionBarProps {
   selectedDefectIds: string[]
@@ -14,6 +15,7 @@ export interface DispatchActionBarProps {
   handleEmergencyDispatch: () => void
   hasViolationItem: boolean
   isSupervisor?: boolean
+  eligibilityMap?: Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }>
 }
 
 export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
@@ -27,8 +29,61 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
   handleRepairDirect,
   handleEmergencyDispatch,
   hasViolationItem,
-  isSupervisor = false
+  isSupervisor = false,
+  eligibilityMap
 }) => {
+  const [internalChecking, setInternalChecking] = useState(false)
+  const [singleItemResult, setSingleItemResult] = useState<{
+    eligible: boolean
+    missingReasons: string[]
+  } | null>(null)
+
+  useEffect(() => {
+    if (eligibilityMap || selectedItems.length !== 1) {
+      setSingleItemResult(null)
+      setInternalChecking(false)
+      return
+    }
+
+    let isMounted = true
+    setInternalChecking(true)
+    fastTrackService
+      .checkEligibility(selectedItems[0].id)
+      .then((res) => {
+        if (!isMounted) return
+        setSingleItemResult(res)
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setSingleItemResult({
+          eligible: false,
+          missingReasons: ['Lỗi kiểm tra điều kiện API-146.']
+        })
+      })
+      .finally(() => {
+        if (isMounted) setInternalChecking(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [selectedItems, eligibilityMap])
+
+  const firstItem = selectedItems[0]
+  const firstItemFromMap = firstItem && eligibilityMap ? eligibilityMap[firstItem.id] : null
+  const isChecking = firstItemFromMap ? firstItemFromMap.loading : internalChecking
+  const firstItemEligible = firstItemFromMap
+    ? firstItemFromMap.eligible
+    : singleItemResult
+    ? singleItemResult.eligible
+    : (firstItem?.isFastTrackEligible ?? false)
+  const firstItemMissingReasons = firstItemFromMap?.missingReasons?.length
+    ? firstItemFromMap.missingReasons
+    : singleItemResult?.missingReasons?.length
+    ? singleItemResult.missingReasons
+    : firstItem?.violationReason
+    ? [firstItem.violationReason]
+    : []
   return (
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
       {/* Selection Summary */}
@@ -116,22 +171,31 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
               <div className="relative group">
                 <button
                   onClick={handleRepairDirect}
-                  disabled={hasViolationItem || selectedDefectIds.length !== 1}
+                  disabled={hasViolationItem || !firstItemEligible || isChecking || selectedDefectIds.length !== 1}
                   type="button"
                   className={`px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 shadow-xs transition-all ${
-                    hasViolationItem || selectedDefectIds.length !== 1
+                    hasViolationItem || !firstItemEligible || isChecking || selectedDefectIds.length !== 1
                       ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                   }`}
                 >
-                  <Icon name="build" size={14} />
-                  <span>Phát lệnh Đo &amp; Sửa ngay (1 khiếm khuyết)</span>
+                  {isChecking ? (
+                    <>
+                      <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
+                      <span>Đang kiểm tra API-146...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="build" size={14} />
+                      <span>Phát lệnh Đo &amp; Sửa ngay (1 khiếm khuyết)</span>
+                    </>
+                  )}
                 </button>
-                {(hasViolationItem || selectedDefectIds.length !== 1) && (
+                {(hasViolationItem || !firstItemEligible || selectedDefectIds.length !== 1) && !isChecking && (
                   <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                     <Icon name="report" size={14} className="text-rose-400 mr-1 shrink-0" />
-                    {hasViolationItem
-                      ? 'Khóa: Khiếm khuyết được chọn vượt ngưỡng chính sách Fast Track'
+                    {hasViolationItem || !firstItemEligible
+                      ? `Khóa: ${firstItemMissingReasons[0] || 'Khiếm khuyết không đủ điều kiện Fast Track (API-146)'}`
                       : 'Quy tắc BR-08: Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
                   </div>
                 )}
@@ -140,33 +204,44 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
 
             {workMode === 'EMERGENCY' && (
               <div className="flex items-center gap-2.5">
-                {selectedItems[0]?.isFastTrackEligible && (
+                {firstItemEligible && (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-semibold animate-pulse">
                     <Icon name="warning" size={16} className="text-amber-600 shrink-0" />
-                    <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} chưa vượt ngưỡng an toàn!</span>
+                    <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} đủ chuẩn Fast Track thông thường!</span>
                   </div>
                 )}
-                {!selectedItems[0]?.isFastTrackEligible && selectedItems[0] && (
+                {!firstItemEligible && selectedItems[0] && (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-300 rounded-xl text-rose-900 text-xs font-semibold">
                     <Icon name="local_fire_department" size={16} className="text-rose-600 shrink-0" />
-                    <span>Hư hỏng #{selectedItems[0]?.code} vượt ngưỡng — Khắc phục tạm thông xe (Hậu kiểm sau)</span>
+                    <span>
+                      Hư hỏng #{selectedItems[0]?.code} không đủ điều kiện ({firstItemMissingReasons[0] || 'Vượt ngưỡng'}) — Khắc phục tạm thông xe (Hậu kiểm sau)
+                    </span>
                   </div>
                 )}
                 <div className="relative group">
                   <button
                     onClick={handleEmergencyDispatch}
-                    disabled={selectedDefectIds.length !== 1}
+                    disabled={selectedDefectIds.length !== 1 || isChecking}
                     type="button"
                     className={`px-5 py-2 text-xs font-bold rounded-xl flex items-center gap-2 shadow-xs transition-all ${
-                      selectedDefectIds.length !== 1
+                      selectedDefectIds.length !== 1 || isChecking
                         ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                         : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
                     }`}
                   >
-                    <Icon name="local_fire_department" size={14} />
-                    <span>Phát lệnh Xử lý khẩn cấp (24/7 Priority)</span>
+                    {isChecking ? (
+                      <>
+                        <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
+                        <span>Đang kiểm tra API-146...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="local_fire_department" size={14} />
+                        <span>Phát lệnh Xử lý khẩn cấp (24/7 Priority)</span>
+                      </>
+                    )}
                   </button>
-                  {selectedDefectIds.length !== 1 && (
+                  {selectedDefectIds.length !== 1 && !isChecking && (
                     <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                       <Icon name="report" size={14} className="text-rose-400 mr-1 shrink-0" />
                       Chỉ chọn đúng 1 vị trí nguy hiểm để điều động xe khẩn cấp

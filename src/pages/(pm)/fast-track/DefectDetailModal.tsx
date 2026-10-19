@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem } from './types'
+import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface DefectDetailModalProps {
   detailDefect: DefectItem | null
@@ -11,7 +12,51 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
   detailDefect,
   onClose
 }) => {
+  const [checking, setChecking] = useState<boolean>(false)
+  const [eligibility, setEligibility] = useState<{
+    eligible: boolean
+    missingReasons: string[]
+  } | null>(null)
+
+  useEffect(() => {
+    if (!detailDefect) {
+      setEligibility(null)
+      setChecking(false)
+      return
+    }
+
+    let isMounted = true
+    setChecking(true)
+    fastTrackService
+      .checkEligibility(detailDefect.id)
+      .then((res) => {
+        if (!isMounted) return
+        setEligibility(res)
+      })
+      .catch(() => {
+        if (!isMounted) return
+        setEligibility({
+          eligible: false,
+          missingReasons: ['Không thể kiểm tra điều kiện (API-146).']
+        })
+      })
+      .finally(() => {
+        if (isMounted) setChecking(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [detailDefect?.id])
+
   if (!detailDefect) return null
+
+  const isEligible = eligibility ? eligibility.eligible : (detailDefect.isFastTrackEligible ?? false)
+  const missingReasons = eligibility?.missingReasons?.length
+    ? eligibility.missingReasons
+    : detailDefect.violationReason
+    ? [detailDefect.violationReason]
+    : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -20,15 +65,22 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-base text-brand-dark">{detailDefect.code}</span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                  detailDefect.isFastTrackEligible
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-rose-100 text-rose-800'
-                }`}
-              >
-                {detailDefect.isFastTrackEligible ? 'Đạt chuẩn' : 'Vi phạm ngưỡng'}
-              </span>
+              {checking ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                  <Icon name="progress_activity" size={10} className="animate-spin text-slate-500" />
+                  <span>Đang kiểm tra API-146...</span>
+                </span>
+              ) : (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isEligible
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-rose-100 text-rose-800'
+                  }`}
+                >
+                  {isEligible ? 'Đạt chuẩn Fast Track' : 'Không đủ điều kiện (API-146)'}
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500">{detailDefect.stationing} • {detailDefect.lane}</p>
           </div>
@@ -58,6 +110,22 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
             <div>Đội phụ trách: <strong>{detailDefect.assignedCrew}</strong></div>
             <div>Độ tin cậy AI: <strong>{detailDefect.aiConfidence}%</strong></div>
           </div>
+
+          {!checking && !isEligible && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+                <Icon name="report" size={14} className="text-rose-600 shrink-0" />
+                <span>Lý do không đủ điều kiện Fast Track (API-146):</span>
+              </div>
+              <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
+                {missingReasons.length > 0 ? (
+                  missingReasons.map((r, i) => <li key={i}>{r}</li>)
+                ) : (
+                  <li>Khiếm khuyết không đạt tiêu chuẩn điều phối nhanh theo quy định của hệ thống.</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end pt-3 border-t border-slate-100">
