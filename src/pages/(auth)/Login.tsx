@@ -193,7 +193,7 @@ export const Login: React.FC = () => {
                       Nghiệm thu số
                     </div>
                     <div className="text-[13px] text-[#5B6470] leading-[1.6] mt-1">
-                      Đối chiếu Before/After tại hiện trường, đóng đợt bảo hành minh bạch.
+                      Đối chiếu Trước/Sau tại hiện trường, đóng đợt bảo hành minh bạch.
                     </div>
                   </div>
                 </div>

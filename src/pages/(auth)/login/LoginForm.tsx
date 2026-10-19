@@ -191,7 +191,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       )}
 
-      {/* 2 nút demo: PM Demo | Supervisor Demo */}
+      {/* 2 nút tài khoản dùng thử: PM | Giám sát */}
       <div className="pt-4 border-t border-[#E2E5E9]">
         <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
           Tài khoản kiểm thử nhanh (Mật khẩu mặc định: 123456):
@@ -207,7 +207,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           >
             <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-[#C9A227]">badge</span>
-              <span>PM Demo</span>
+              <span>PM Dùng thử</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
               pmhoang@gmail.com
@@ -224,7 +224,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           >
             <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-[#C9A227]">supervisor_account</span>
-              <span>Supervisor Demo</span>
+              <span>Giám sát Dùng thử</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
               suphoang@gmail.com
