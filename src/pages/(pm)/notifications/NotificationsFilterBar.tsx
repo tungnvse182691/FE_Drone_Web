@@ -36,14 +36,14 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
   return (
     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
       {/* Horizontal Category Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
         <button
           type="button"
           onClick={() => onChangeTab('ALL')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ALL'
-              ? 'bg-brand-gold text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
           }`}
         >
           <span>Tất cả</span>
@@ -57,15 +57,15 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('ACTION_REQUIRED')}
-          className={`px-4 py-2 rounded-full font-bold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-[11px] rounded-[16px] font-bold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ACTION_REQUIRED'
-              ? 'bg-amber-500 text-white shadow-xs'
-              : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
           }`}
         >
           <span>Cần tôi xử lý</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === 'ACTION_REQUIRED' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-900'
+            activeTab === 'ACTION_REQUIRED' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
           }`}>
             {actionRequiredCount}
           </span>
@@ -74,10 +74,10 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('HANDOVER')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'HANDOVER'
-              ? 'bg-brand-gold text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
           }`}
         >
           <span>Bàn giao PM ↔ Giám sát</span>
@@ -91,10 +91,10 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('AI_SYSTEM')}
-          className={`px-4 py-2 rounded-full font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'AI_SYSTEM'
-              ? 'bg-brand-gold text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+              ? 'bg-[#C9A227] text-white shadow-xs'
+              : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
           }`}
         >
           <span>Tiến trình AI &amp; Drone</span>

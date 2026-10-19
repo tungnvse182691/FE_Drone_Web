@@ -36,27 +36,55 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
         </div>
 
         <div className="space-y-3">
-          {criticalSlaItems.slice(0, 3).map((item) => (
-            <div
-              key={item.id}
-              onClick={() => onNavigateAction(item)}
-              className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200 hover:border-brand-gold transition-all cursor-pointer space-y-2"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-brand-dark font-mono">{item.resourceId}</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
-                  {item.slaType}
-                </span>
+          {criticalSlaItems.slice(0, 3).map((item) => {
+            const isUrgent = (item.slaHoursRemaining ?? 99) < 4
+            const maxHours = item.slaType?.includes('2h')
+              ? 2
+              : item.slaType?.includes('48h')
+                ? 48
+                : item.slaType?.includes('72h')
+                  ? 72
+                  : 24
+            const progressPercent = Math.min(
+              100,
+              Math.max(15, Math.round(((item.slaHoursRemaining ?? 1) / maxHours) * 100))
+            )
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => onNavigateAction(item)}
+                className="p-3 rounded-xl bg-slate-50 hover:bg-amber-50/50 border border-slate-200 hover:border-brand-gold transition-all cursor-pointer space-y-2"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-brand-dark font-mono">{item.resourceId}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                    {item.slaType}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-600 line-clamp-1">{item.title}</div>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                  <span className="text-slate-500">{item.stationing}</span>
+                  <span className="font-mono font-bold text-rose-600">
+                    Còn {item.slaHoursRemaining} giờ
+                  </span>
+                </div>
+
+                {/* Thanh tiến độ 6px bo tròn */}
+                <div className="w-full h-[6px] rounded-full bg-slate-200/80 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${progressPercent}%`,
+                      background: isUrgent
+                        ? 'linear-gradient(90deg, #F59E0B, #EF4444)'
+                        : 'linear-gradient(90deg, #34D399, #10B981)'
+                    }}
+                  />
+                </div>
               </div>
-              <div className="text-[11px] text-slate-600 line-clamp-1">{item.title}</div>
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
-                <span className="text-slate-500">{item.stationing}</span>
-                <span className="font-mono font-bold text-rose-600">
-                  Còn {item.slaHoursRemaining} giờ
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
