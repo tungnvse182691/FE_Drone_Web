@@ -1,0 +1,210 @@
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spinBorder {
+  0% {
+    --angle: 0deg;
+  }
+
+  100% {
+    --angle: 360deg;
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate(35px, -25px) scale(1.08);
+  }
+
+  100% {
+    transform: translate(-30px, 30px) scale(0.95);
+  }
+}
+
+@keyframes floatY {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+/* Material Symbols font assurance */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Gold gradient headline */
+.gold-gradient-text {
+  background: linear-gradient(120deg, #E8C547, #C9A227 60%, #9A7A1E);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Card with animated conic border */
+.card-border-animated {
+  padding: 2px;
+  border-radius: 26px;
+  background: conic-gradient(from var(--angle),
+      rgba(201, 162, 39, 0.85),
+      rgba(201, 162, 39, 0.12),
+      rgba(59, 130, 246, 0.35),
+      rgba(201, 162, 39, 0.12),
+      rgba(201, 162, 39, 0.85));
+  animation: spinBorder 7s linear infinite;
+  box-shadow: 0 28px 80px rgba(140, 109, 31, 0.18);
+}
+
+/* Inner white glass card */
+.glass-card-white {
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  padding: 42px 40px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+@media (max-width: 640px) {
+  .glass-card-white {
+    padding: 30px 22px;
+  }
+}
+
+/* Light Aurora grid overlay */
+.aurora-grid-light {
+  background-size: 56px 56px;
+  background-image:
+    linear-gradient(to right, rgba(26, 29, 32, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 29, 32, 0.035) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 85%);
+}
+
+/* Light Aurora blobs */
+.aurora-blob-light-1 {
+  width: 560px;
+  height: 560px;
+  background: radial-gradient(circle, rgba(201, 162, 39, 0.22), transparent 70%);
+  filter: blur(90px);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.aurora-blob-light-2 {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(45, 72, 100, 0.16), transparent 70%);
+  filter: blur(90px);
+  animation: drift 18s ease-in-out infinite alternate;
+  animation-delay: -6s;
+}
+
+.aurora-blob-light-3 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(201, 162, 39, 0.12), transparent 70%);
+  filter: blur(90px);
+  animation: drift 18s ease-in-out infinite alternate;
+  animation-delay: -12s;
+}
+
+/* Contour lines overlay */
+.auth-curves {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Logo float animation */
+.float-logo {
+  animation: floatY 5s ease-in-out infinite;
+}
+
+/* Light Aurora input */
+.aurora-input-light {
+  width: 100%;
+  padding: 14px 16px 14px 46px;
+  background: #FFFFFF;
+  border: 1px solid #E2E5E9;
+  border-radius: 12px;
+  color: #1A1D20;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aurora-input-light::placeholder {
+  color: #8B939D;
+}
+
+.aurora-input-light:focus {
+  outline: none;
+  background: #FFFFFF;
+  border-color: #C9A227;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
+
+/* Primary gold CTA */
+.aurora-btn-gold {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #F3D27A 0%, #C9A227 55%, #A8861F 100%);
+  color: #1A1D20;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 8px 28px rgba(201, 162, 39, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.aurora-btn-gold:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.aurora-btn-gold:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.aurora-btn-gold:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Accessibility: reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+  .card-border-animated,
+  .aurora-blob-light-1,
+  .aurora-blob-light-2,
+  .aurora-blob-light-3,
+  .float-logo {
+    animation: none !important;
+  }
+}

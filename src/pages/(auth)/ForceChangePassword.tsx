@@ -5,11 +5,12 @@ import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
 import { ForcePasswordForm } from './force-change-password/ForcePasswordForm'
 import { useToastStore } from '../../store/toastStore'
+import './auth-light-aurora.css'
 
 export const ForceChangePassword: React.FC = () => {
   const toast = useToastStore()
   const navigate = useNavigate()
-  const { user, setUserAndToken } = useAuthStore()
+  const { setUserAndToken } = useAuthStore()
 
   // State cho Form Đổi mật khẩu bắt buộc
   const [tempPassword, setTempPassword] = useState('123456')
@@ -54,75 +55,102 @@ export const ForceChangePassword: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen text-slate-800 flex flex-col justify-between bg-[#F8F9FA]">
-      {/* Thanh tiêu đề tối giản */}
-      <header className="w-full px-6 py-4 flex items-center justify-between z-10 border-b border-[#E2E5E9] bg-white">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227]">
-            <span className="material-symbols-outlined text-[20px]">shield</span>
-          </div>
+    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] flex flex-col justify-between relative overflow-x-hidden">
+      {/* Light Aurora Background: 3 blobs + grid + 3 đường cong contour bezier */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[120px] -left-[120px] aurora-blob-1 rounded-full" />
+        <div className="absolute -bottom-[100px] -right-[100px] aurora-blob-2 rounded-full" />
+        <div className="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 aurora-blob-3 rounded-full" />
+        <div className="absolute inset-0 aurora-grid-overlay" />
+        
+        {/* Đường cong mờ contour lines */}
+        <svg className="curves absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+          <path d="M-100,700 C300,620 600,780 900,700 S1300,600 1540,680" fill="none" stroke="rgba(201,162,39,0.20)" strokeWidth="1.5"/>
+          <path d="M-100,745 C300,665 600,825 900,745 S1300,645 1540,725" fill="none" stroke="rgba(201,162,39,0.12)" strokeWidth="1.5"/>
+          <path d="M-100,150 C400,80 700,200 1100,120 S1400,180 1540,140" fill="none" stroke="rgba(59,130,246,0.14)" strokeWidth="1.5"/>
+        </svg>
+      </div>
+
+      {/* Topbar: logo 44px + HOÀNG HẢI ROADGUARD / Hạ tầng giao thông đường bộ */}
+      <header className="w-full px-6 sm:px-10 py-3.5 flex items-center justify-between z-10 border-b border-[#E2E5E9] bg-white/85 backdrop-blur-[14px]">
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Logo Hoàng Hải RoadGuard"
+            className="w-[44px] h-[44px] rounded-full object-cover border-2 border-[rgba(201,162,39,0.5)] shadow-[0_4px_12px_rgba(201,162,39,0.25)] shrink-0"
+          />
           <div className="flex flex-col">
-            <span className="text-xs font-semibold text-slate-800 tracking-wide uppercase">
+            <span className="text-xs sm:text-sm font-bold text-[#1A1D20] tracking-wider uppercase">
               Hoàng Hải RoadGuard
             </span>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[#5B6470]">
               Hạ tầng giao thông đường bộ
             </span>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-xs text-emerald-800 font-medium">
+          <span className="w-2 h-2 rounded-full bg-[#2F9E44] animate-pulse"></span>
+          <span>Bảo mật hệ thống thông tin hạ tầng</span>
+        </div>
       </header>
 
-      {/* Thẻ đổi mật khẩu trung tâm */}
-      <main className="w-full flex-1 flex items-center justify-center p-4 z-10 my-4">
-        <div className="w-full max-w-[460px] bg-white p-7 sm:p-9 border border-[#E2E5E9] rounded-xl shadow-xs transition-all">
-          {/* Brand Header */}
-          <div className="flex items-center gap-3 mb-6 pb-5 border-b border-[#E2E5E9]">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#C9A227] shrink-0">
-              <span className="material-symbols-outlined text-[28px]">lock_reset</span>
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-[#1A1D20]">
-                  Hoàng Hải
-                </span>
-                <span className="text-[11px] px-2 py-0.5 font-semibold bg-amber-50 text-[#8C6D1F] border border-amber-200/60 rounded">
-                  ROADGUARD
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5 font-normal truncate">
-                Quản lý Bảo hành &amp; Sửa chữa Hạ tầng
-              </p>
-            </div>
+      {/* Vùng trung tâm: Container centered, max-width ~560px */}
+      <main className="w-full flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 z-10 my-2">
+        <div className="w-full max-w-[560px] flex flex-col items-center">
+          {/* Logo tròn 104px */}
+          <img
+            src="/logo.png"
+            alt="Logo Hoàng Hải RoadGuard"
+            className="float-logo-104 mb-5 bg-white"
+          />
+
+          {/* Eyebrow */}
+          <div className="text-[12px] font-bold tracking-[0.4em] uppercase text-[#C9A227] mb-2.5">
+            HOÀNG HẢI ROADGUARD
           </div>
 
-          <ForcePasswordForm
-            tempPassword={tempPassword}
-            setTempPassword={setTempPassword}
-            showTempPassword={showTempPassword}
-            setShowTempPassword={setShowTempPassword}
-            newPassword={newPassword}
-            setNewPassword={setNewPassword}
-            showNewPassword={showNewPassword}
-            setShowNewPassword={setShowNewPassword}
-            confirmPassword={confirmPassword}
-            setConfirmPassword={setConfirmPassword}
-            showConfirmPassword={showConfirmPassword}
-            setShowConfirmPassword={setShowConfirmPassword}
-            rules={rules}
-            rulesPassedCount={rulesPassedCount}
-            allRulesPassed={allRulesPassed}
-            isConfirmMatched={isConfirmMatched}
-            isConfirmMismatched={isConfirmMismatched}
-            isForceSuccess={isForceSuccess}
-            onSubmit={handleForcePasswordSubmit}
-          />
+          {/* H1 */}
+          <h1 className="text-[30px] sm:text-[40px] font-extrabold tracking-[-0.01em] text-[#1A1D20] leading-tight mb-6 text-center">
+            Thiết lập{' '}
+            <span className="bg-gradient-to-r from-[#E8C547] via-[#C9A227] to-[#9A7A1E] bg-clip-text text-transparent">
+              mật khẩu mới
+            </span>
+          </h1>
+
+          {/* Card viền gradient xoay - nền trắng */}
+          <div className="w-full card-border-animated">
+            <div className="glass-card-inner">
+              <ForcePasswordForm
+                tempPassword={tempPassword}
+                setTempPassword={setTempPassword}
+                showTempPassword={showTempPassword}
+                setShowTempPassword={setShowTempPassword}
+                newPassword={newPassword}
+                setNewPassword={setNewPassword}
+                showNewPassword={showNewPassword}
+                setShowNewPassword={setShowNewPassword}
+                confirmPassword={confirmPassword}
+                setConfirmPassword={setConfirmPassword}
+                showConfirmPassword={showConfirmPassword}
+                setShowConfirmPassword={setShowConfirmPassword}
+                rules={rules}
+                rulesPassedCount={rulesPassedCount}
+                allRulesPassed={allRulesPassed}
+                isConfirmMatched={isConfirmMatched}
+                isConfirmMismatched={isConfirmMismatched}
+                isForceSuccess={isForceSuccess}
+                onSubmit={handleForcePasswordSubmit}
+              />
+            </div>
+          </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full px-6 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 z-10 gap-2 border-t border-[#E2E5E9] bg-white">
-        <div className="flex items-center gap-2 text-slate-500">
-          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+      <footer className="w-full px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between text-xs text-[#5B6470] z-10 gap-2 border-t border-[#E2E5E9] bg-white/85 backdrop-blur-[14px]">
+        <div className="flex items-center gap-2 text-[#5B6470]">
+          <span className="w-2 h-2 rounded-full bg-[#2F9E44]"></span>
           <span>Bảo mật hệ thống thông tin hạ tầng</span>
         </div>
         <div className="flex items-center gap-3 text-slate-400">

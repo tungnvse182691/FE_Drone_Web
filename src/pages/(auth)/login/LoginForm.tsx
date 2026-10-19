@@ -14,6 +14,7 @@ export interface LoginFormProps {
   setLoginError: (val: boolean) => void
   isLoading: boolean
   onSubmit: (e: React.FormEvent) => void
+  onSwitchToForce?: () => void
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
@@ -28,23 +29,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   loginError,
   setLoginError,
   isLoading,
-  onSubmit
+  onSubmit,
+  onSwitchToForce
 }) => {
   const toast = useToastStore()
+
   return (
     <section className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-[#1A1D20]">
-          Đăng nhập hệ thống
-        </h1>
-        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+        <h3 className="text-2xl font-bold tracking-tight text-[#1A1D20]">
+          Đăng nhập
+        </h3>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">
           Nền tảng giám sát bảo hành &amp; điều phối khắc phục hạ tầng đường bộ
         </p>
       </div>
 
       {/* Thông báo lỗi đăng nhập */}
       {loginError && (
-        <div className="p-3 rounded-lg bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
+        <div className="p-3.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
           <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
             error
           </span>
@@ -55,6 +58,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             type="button"
             onClick={() => setLoginError(false)}
             className="text-red-400 hover:text-red-700 cursor-pointer p-0.5"
+            aria-label="Đóng thông báo lỗi"
           >
             <span className="material-symbols-outlined text-[16px]">close</span>
           </button>
@@ -69,16 +73,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             Email công vụ
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <span className="material-symbols-outlined text-[18px]">mail</span>
-            </div>
+            <span className="material-symbols-outlined absolute left-[14px] top-1/2 -translate-y-1/2 text-[20px] text-[#C9A227] pointer-events-none">
+              mail
+            </span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="pmhoang@gmail.com hoặc suphoang@gmail.com"
               required
-              className="w-full pl-10 pr-4 py-2.5 bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-sm text-[#1A1D20] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/20 focus:border-[#C9A227] focus:bg-white transition-all"
+              className="aurora-input-light font-mono"
             />
           </div>
         </div>
@@ -89,23 +93,24 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             Mật khẩu
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <span className="material-symbols-outlined text-[18px]">lock</span>
-            </div>
+            <span className="material-symbols-outlined absolute left-[14px] top-1/2 -translate-y-1/2 text-[20px] text-[#C9A227] pointer-events-none">
+              lock
+            </span>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu truy cập"
               required
-              className="w-full pl-10 pr-10 py-2.5 bg-[#F8F9FA] border border-[#E2E5E9] rounded-lg text-sm text-[#1A1D20] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C9A227]/20 focus:border-[#C9A227] focus:bg-white transition-all font-mono"
+              className="aurora-input-light pr-10 font-mono"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              className="absolute right-[14px] top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <span className="material-symbols-outlined text-[20px]">
                 {showPassword ? 'visibility_off' : 'visibility'}
               </span>
             </button>
@@ -138,19 +143,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-sm font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+            className="aurora-btn-gold flex items-center justify-center gap-2 cursor-pointer"
           >
             {isLoading ? (
               <>
-                <span className="material-symbols-outlined text-[18px] animate-spin">
+                <span className="material-symbols-outlined text-[20px] animate-spin text-[#0B0E14]">
                   progress_activity
                 </span>
                 <span>Đang xác thực thông tin...</span>
               </>
             ) : (
               <>
-                <span>Đăng nhập vào hệ thống</span>
-                <span className="material-symbols-outlined text-[18px]">
+                <span>Vào hệ thống</span>
+                <span className="material-symbols-outlined text-[20px] text-[#0B0E14]">
                   arrow_forward
                 </span>
               </>
@@ -159,24 +164,52 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       </form>
 
-      {/* Lối tắt chọn tài khoản mẫu nhanh (Tối giản - Tiện lợi khi kiểm thử) */}
-      <div className="pt-3 border-t border-[#E2E5E9]">
-        <span className="text-[11px] font-medium text-slate-400 block mb-2">
+      {/* Khu vực Đổi mật khẩu lần đầu (kích hoạt tài khoản mới) */}
+      {onSwitchToForce && (
+        <div className="p-3.5 rounded-xl bg-[#FEF9E7] border border-[rgba(201,162,39,0.30)] flex items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-white border border-[rgba(201,162,39,0.28)] text-[#C9A227] flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[18px]">key</span>
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-[#1A1D20]">
+                Được cấp mật khẩu tạm?
+              </div>
+              <div className="text-[11px] text-slate-500 truncate">
+                Đổi mật khẩu lần đầu để kích hoạt tài khoản
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onSwitchToForce}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-white hover:bg-[#FAF4DF] border border-[rgba(201,162,39,0.40)] text-[#8C6D1F] hover:text-[#6B5219] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+          >
+            <span>Đổi ngay</span>
+            <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+          </button>
+        </div>
+      )}
+
+      {/* 2 nút demo: PM Demo | Supervisor Demo */}
+      <div className="pt-4 border-t border-[#E2E5E9]">
+        <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
           Tài khoản kiểm thử nhanh (Mật khẩu mặc định: 123456):
         </span>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => {
               setEmail('pmhoang@gmail.com')
               setPassword('123456')
             }}
-            className="px-2.5 py-1.5 rounded-md border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-colors cursor-pointer group"
+            className="p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="text-[11px] font-semibold text-slate-800 group-hover:text-[#8C6D1F]">
-              Chỉ huy trưởng (PM)
+            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">badge</span>
+              <span>PM Demo</span>
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
+            <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
               pmhoang@gmail.com
             </div>
           </button>
@@ -187,12 +220,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               setEmail('suphoang@gmail.com')
               setPassword('123456')
             }}
-            className="px-2.5 py-1.5 rounded-md border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-colors cursor-pointer group"
+            className="p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="text-[11px] font-semibold text-slate-800 group-hover:text-[#8C6D1F]">
-              Giám sát (Supervisor)
+            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">supervisor_account</span>
+              <span>Supervisor Demo</span>
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
+            <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
               suphoang@gmail.com
             </div>
           </button>
