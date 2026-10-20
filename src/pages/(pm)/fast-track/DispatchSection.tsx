@@ -131,15 +131,15 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
   })
   const effectiveHasViolation = hasViolationItem || apiHasViolation
   return (
-    <div id="dispatch-table-section" className="bg-white rounded-2xl p-6 shadow-xs border border-brand-border space-y-6">
+    <div id="dispatch-table-section" className="bg-white rounded-[20px] p-6 shadow-2xs border border-[#E2E5E9] space-y-6">
       {/* Header Dispatch */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-            <Icon name="groups" size={20} className="text-brand-gold" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-[#C9A227] shadow-2xs">
+            <Icon name="groups" size={22} className="text-[#C9A227]" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-brand-dark">
+            <h2 className="text-lg font-bold text-[#1A1D20]">
               {isSupervisor
                 ? 'Giám sát & Theo dõi đội ngũ kỹ thuật hiện trường'
                 : 'Điều phối & Giao việc đội ngũ kỹ thuật hiện trường'}

@@ -26,14 +26,14 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
   stats
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-brand-border shadow-2xs">
-      <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-[20px] border border-[#E2E5E9] shadow-2xs">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => setFilterType('ALL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             filterType === 'ALL'
-              ? 'bg-brand-gold text-white shadow-xs'
+              ? 'bg-[#C9A227] text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -42,9 +42,9 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
         <button
           type="button"
           onClick={() => setFilterType('PENDING')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             filterType === 'PENDING'
-              ? 'bg-brand-gold text-white shadow-xs'
+              ? 'bg-[#B45309] text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -53,9 +53,9 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
         <button
           type="button"
           onClick={() => setFilterType('RESCUE')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             filterType === 'RESCUE'
-              ? 'bg-purple-600 text-white shadow-xs'
+              ? 'bg-purple-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -64,9 +64,9 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
         <button
           type="button"
           onClick={() => setFilterType('RESOLVED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             filterType === 'RESOLVED'
-              ? 'bg-brand-gold text-white shadow-xs'
+              ? 'bg-[#047857] text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -81,7 +81,7 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
           placeholder="Tìm mã xung đột, mã lỗi, lý trình, thợ..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-gold"
+          className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
         />
       </div>
     </div>

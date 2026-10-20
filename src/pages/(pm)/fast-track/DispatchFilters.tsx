@@ -19,13 +19,13 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
   setStatusFilter
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-      <div className="space-y-1">
-        <label className="text-[11px] font-bold text-slate-600 uppercase">Tuyến đường &amp; Phân đoạn</label>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3.5 p-4 bg-white rounded-[20px] border border-[#E2E5E9] shadow-2xs">
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Tuyến đường &amp; Phân đoạn</label>
         <select
           value={routeFilter}
           onChange={(e) => handleRouteChange(e.target.value)}
-          className="w-full px-3 py-1.5 bg-white rounded-lg text-xs font-bold text-slate-800 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+          className="w-full px-3 py-2 bg-slate-50 hover:bg-white rounded-xl text-xs font-bold text-slate-800 border border-[#E2E5E9] focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer transition-colors"
         >
           <option value="QL1A_PK04">QL1A - Giai đoạn 2 (Km 1025 - Km 1045)</option>
           <option value="QL1A_PK01">QL1A - Giai đoạn 1 (Km 1000 - Km 1025)</option>
@@ -34,12 +34,12 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
         </select>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-[11px] font-bold text-slate-600 uppercase">Đội hiện trường phân bổ</label>
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Đội hiện trường phân bổ</label>
         <select
           value={crewFilter}
           onChange={(e) => setCrewFilter(e.target.value)}
-          className="w-full px-3 py-1.5 bg-white rounded-lg text-xs font-medium text-slate-700 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+          className="w-full px-3 py-2 bg-slate-50 hover:bg-white rounded-xl text-xs font-medium text-slate-700 border border-[#E2E5E9] focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer transition-colors"
         >
           <option value="ALL">Tất cả các tổ đội</option>
           <option value="Tổ tuần tra số 01">Tổ tuần tra số 01 - Kỹ sư Kiên</option>
@@ -49,12 +49,12 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
         </select>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-[11px] font-bold text-slate-600 uppercase">Trạng thái xử lý nhanh</label>
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">Trạng thái xử lý nhanh</label>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full px-3 py-1.5 bg-white rounded-lg text-xs font-medium text-slate-700 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          className="w-full px-3 py-2 bg-slate-50 hover:bg-white rounded-xl text-xs font-medium text-slate-700 border border-[#E2E5E9] focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer transition-colors"
         >
           <option value="ALL">Tất cả trạng thái tiêu chuẩn</option>
           <option value="ELIGIBLE">Chỉ hiển thị Đạt chuẩn (≤ 0.5 m²)</option>
@@ -69,9 +69,9 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
             setStatusFilter('ALL')
           }}
           type="button"
-          className="w-full py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+          className="w-full py-2 px-3.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-[#E2E5E9] flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
         >
-          <Icon name="refresh" size={14} className="text-slate-400" />
+          <Icon name="refresh" size={14} className="text-slate-500" />
           <span>Đặt lại bộ lọc</span>
         </button>
       </div>

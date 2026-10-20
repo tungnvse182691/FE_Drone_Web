@@ -175,7 +175,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   }
 
   return (
-    <Card className="overflow-hidden border border-slate-200 bg-white">
+    <div className="rounded-[20px] overflow-hidden border border-[#E2E5E9] bg-white shadow-2xs">
       {/* Banner thông báo khi được chuyển tiếp từ Triage */}
       {highlightCode && (
         <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3 text-slate-800 text-xs">
@@ -190,16 +190,16 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       )}
 
       {/* TOOLBAR: FILTER TABS & ACTIONS */}
-      <div className="p-3.5 border-b border-slate-200 bg-slate-50/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="p-3.5 border-b border-[#EDEFF2] bg-[#F8F9FA]/70 flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Bộ lọc trạng thái (Pills) */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               statusFilter === 'ALL'
-                ? 'bg-slate-900 text-white font-semibold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
             Tất cả ({counts.all})
@@ -207,10 +207,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           <button
             type="button"
             onClick={() => setStatusFilter('ASSIGNED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               statusFilter === 'ASSIGNED'
-                ? 'bg-slate-800 text-white font-semibold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
             Cần thực hiện ({counts.assigned})
@@ -218,10 +218,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           <button
             type="button"
             onClick={() => setStatusFilter('IN_PROGRESS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               statusFilter === 'IN_PROGRESS'
-                ? 'bg-blue-600 text-white font-semibold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#1E40AF] text-white border-[#1E40AF] shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
             Đang đo đạc ({counts.inProgress})
@@ -229,10 +229,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           <button
             type="button"
             onClick={() => setStatusFilter('SUBMITTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               statusFilter === 'SUBMITTED'
-                ? 'bg-amber-600 text-white font-semibold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#B45309] text-white border-[#B45309] shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
             Đã có số đo ({counts.submitted})
@@ -240,10 +240,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           <button
             type="button"
             onClick={() => setStatusFilter('VERIFIED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border ${
               statusFilter === 'VERIFIED'
-                ? 'bg-emerald-600 text-white font-semibold'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                ? 'bg-[#047857] text-white border-[#047857] shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
             Đã xác minh ({counts.verified})
@@ -261,7 +261,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm theo mã, lỗi, kỹ sư..."
-              className="pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#C9A227] w-48 sm:w-56"
+              className="pl-8 pr-3 py-1.5 bg-white border border-[#E2E5E9] rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#C9A227] w-48 sm:w-56"
             />
             {searchTerm && (
               <button
@@ -277,7 +277,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
           >
             <Icon name="add" size={15} />
             <span>Tạo nhiệm vụ</span>
@@ -289,18 +289,20 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-200 bg-[#F8F9FA] text-[#2D3748]">
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Mã Nhiệm Vụ</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Khiếm Khuyết & Vị Trí</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Phương Pháp Đo</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Số Đo Thực Tế</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Kỹ Sư Phụ Trách</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider">Ảnh Đối Chứng</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider text-center">Trạng Thái</th>
-              <th className="py-2.5 px-3.5 font-medium uppercase text-[11px] tracking-wider text-right">Thao Tác</th>
+            <tr className="border-b border-[#EDEFF2] bg-[#F8F9FA] text-slate-600">
+              <th className="sticky left-0 bg-[#F8F9FA] z-10 py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[1px_0_0_#EDEFF2] whitespace-nowrap">
+                Mã Nhiệm Vụ
+              </th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Khiếm Khuyết & Vị Trí</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Phương Pháp Đo</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Số Đo Thực Tế</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Kỹ Sư Phụ Trách</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ảnh Đối Chứng</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 text-center whitespace-nowrap">Trạng Thái</th>
+              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 text-right whitespace-nowrap">Thao Tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-[#EDEFF2]">
             {isLoading ? (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-slate-500">
@@ -330,27 +332,29 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 return (
                   <tr
                     key={task.id}
-                    className={`transition-colors hover:bg-slate-50 ${
+                    className={`group transition-colors hover:bg-slate-50/80 border-b border-[#EDEFF2] ${
                       isHighlighted ? 'bg-amber-50/80 border-l-4 border-l-[#C9A227]' : ''
                     }`}
                   >
-                    {/* Mã nhiệm vụ */}
-                    <td className="py-3 px-3.5 font-mono font-medium text-slate-800">
+                    {/* Mã nhiệm vụ (Sticky trái) */}
+                    <td className={`sticky left-0 z-10 py-3.5 px-4 font-mono font-medium text-slate-800 shadow-[1px_0_0_#EDEFF2] transition-colors ${
+                      isHighlighted ? 'bg-amber-50/90' : 'bg-white group-hover:bg-slate-50/90'
+                    }`}>
                       <button
                         type="button"
                         onClick={() => setSelectedDetailTask(task)}
-                        className="flex items-center gap-1.5 hover:text-[#C9A227] text-left transition-colors cursor-pointer group"
+                        className="flex items-center gap-1.5 hover:text-[#C9A227] text-left transition-colors cursor-pointer group/btn"
                         title="Bấm để xem chi tiết & ảnh phóng to"
                       >
                         {isHighlighted && <Icon name="bolt" size={13} className="text-[#C9A227]" />}
-                        <span className="font-semibold underline decoration-slate-300 group-hover:decoration-[#C9A227] underline-offset-2">
+                        <span className="font-semibold underline decoration-slate-300 group-hover/btn:decoration-[#C9A227] underline-offset-2">
                           {task.code}
                         </span>
                       </button>
                     </td>
 
                     {/* Khiếm khuyết & Vị trí */}
-                    <td className="py-3 px-3.5">
+                    <td className="py-3.5 px-4">
                       <div className="font-mono font-semibold text-slate-900">{task.defect_code}</div>
                       {task.defect_name && (
                         <div className="text-[11px] text-slate-600 line-clamp-1">{task.defect_name}</div>
@@ -361,33 +365,33 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </td>
 
                     {/* Phương pháp đo */}
-                    <td className="py-3 px-3.5 text-slate-700 max-w-xs">
-                      <div className="line-clamp-2 leading-relaxed">{task.measurement_type}</div>
+                    <td className="py-3.5 px-4 text-slate-700 max-w-xs">
+                      <div className="line-clamp-2 leading-relaxed text-xs">{task.measurement_type}</div>
                     </td>
 
                     {/* Số đo thực tế */}
-                    <td className="py-3 px-3.5 font-mono">
+                    <td className="py-3.5 px-4 font-mono">
                       {task.status === 'ASSIGNED' ? (
                         <span className="text-slate-400 italic text-[11px]">Chưa đo</span>
                       ) : task.status === 'IN_PROGRESS' ? (
-                        <span className="text-blue-600 italic text-[11px] flex items-center gap-1">
+                        <span className="text-[#1E40AF] italic text-[11px] flex items-center gap-1">
                           <Icon name="pending" size={13} />
                           <span>Đang thực hiện</span>
                         </span>
                       ) : (
-                        <span className="font-semibold text-slate-900 text-xs">
+                        <span className="font-bold text-slate-900 text-xs font-mono">
                           {task.measured_value} mm
                         </span>
                       )}
                     </td>
 
                     {/* Kỹ sư phụ trách */}
-                    <td className="py-3 px-3.5 text-slate-700">
+                    <td className="py-3.5 px-4 text-slate-700 text-xs">
                       <span>{task.technician_name}</span>
                     </td>
 
                     {/* Ảnh đối chứng (Drone & Thước đo) */}
-                    <td className="py-3 px-3.5">
+                    <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5">
                         {/* 1. Ảnh Drone khảo sát ban đầu */}
                         {task.defect_photo_url && (
@@ -448,29 +452,29 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </div>
                     </td>
 
-                    {/* Trạng thái (Pill chuẩn DESIGN.md) */}
-                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                    {/* Trạng thái (Pill 999px chuẩn spec) */}
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
                       {task.status === 'ASSIGNED' ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
                           CẦN THỰC HIỆN
                         </span>
                       ) : task.status === 'IN_PROGRESS' ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0F9FF] text-[#1E40AF] border border-[#B8C5D9]">
                           ĐANG ĐO ĐẠC
                         </span>
                       ) : task.status === 'SUBMITTED' ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
                           ĐÃ CÓ SỐ ĐO
                         </span>
                       ) : (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
                           ĐÃ XÁC MINH
                         </span>
                       )}
                     </td>
 
                     {/* Thao tác */}
-                    <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       {isProcessing ? (
                         <span className="text-[11px] text-slate-400 flex items-center justify-end gap-1">
                           <Icon name="sync" size={13} className="animate-spin" />
@@ -1184,6 +1188,6 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           verifyButtonText="Xác minh số liệu này ngay"
         />
       )}
-    </Card>
+    </div>
   )
 }

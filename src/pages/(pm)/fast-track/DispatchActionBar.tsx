@@ -85,34 +85,34 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
     ? [firstItem.violationReason]
     : []
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pt-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-5 bg-white rounded-[20px] border border-[#E2E5E9] shadow-2xs">
       {/* Selection Summary */}
       <div className="space-y-1 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-brand-dark text-sm">
+          <span className="font-bold text-slate-900 text-sm">
             {isSupervisor
               ? `Hồ sơ khảo sát: ${selectedDefectIds.length} khiếm khuyết trên tuyến`
               : `Đã chọn: ${selectedDefectIds.length} khiếm khuyết`}
           </span>
-          <span className="text-slate-400">•</span>
+          <span className="text-slate-300">•</span>
           <span className="text-slate-600">
             Tổng chiều dài khảo sát:{' '}
-            <strong className="text-brand-dark font-mono font-bold">{surveyDistanceM} m</strong>
+            <strong className="text-slate-900 font-mono font-bold">{surveyDistanceM} m</strong>
           </span>
           {hasViolationItem && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
-              <Icon name="report" size={12} className="text-rose-600" />
+            <span className="inline-flex items-center gap-1 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
+              <Icon name="report" size={13} className="text-[#B91C1C]" />
               {isSupervisor ? 'Có lỗi vi phạm ngưỡng xử lý nhanh' : 'Chặn giao việc: Có lỗi vượt ngưỡng'}
             </span>
           )}
         </div>
         <div className="text-slate-500 flex items-center gap-1.5 flex-wrap text-[11px]">
-          <Icon name="groups" size={14} className="text-brand-gold" />
+          <Icon name="groups" size={14} className="text-[#C9A227]" />
           <span>
             {isSupervisor ? (
-              <>Đội thi công phụ trách: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'Đang chờ PM phân công'}</strong></>
+              <>Đội thi công phụ trách: <strong className="text-slate-900 font-semibold">{selectedItems[0]?.assignedCrew || 'Đang chờ PM phân công'}</strong></>
             ) : (
-              <>Phân bổ sơ bộ: <strong className="text-brand-dark font-semibold">{selectedItems[0]?.assignedCrew || 'Chưa chỉ định'}</strong> (Bấm nút bên phải để phát lệnh chính thức)</>
+              <>Phân bổ sơ bộ: <strong className="text-slate-900 font-semibold">{selectedItems[0]?.assignedCrew || 'Chưa chỉ định'}</strong> (Bấm nút bên phải để phát lệnh chính thức)</>
             )}
           </span>
         </div>

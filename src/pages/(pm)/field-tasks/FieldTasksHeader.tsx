@@ -54,7 +54,7 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
       </nav>
 
       {/* 2. HEADER SECTION (MINIMALIST) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-[20px] border border-[#E2E5E9] shadow-2xs">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
             {isSupervisor ? 'Nghiệm Thu Hiện Trường' : 'Nhiệm Vụ & Đo Đạc Hiện Trường'}
@@ -120,115 +120,315 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
 
       {/* 4. KPI CARDS CHO TAB ĐO ĐẠC */}
       {activeTab === 'MEASUREMENTS' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Cần thực hiện
-              </span>
-              <Icon name="schedule" size={16} className="text-slate-400" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* KPI 1: Cần thực hiện */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #CBD5E1',
+              background: 'linear-gradient(180deg, #F8FAFC 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#64748B'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(100, 116, 139, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#CBD5E1'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #64748B, #94A3B8)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#64748B', boxShadow: '0 0 0 4px rgba(100, 116, 139, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Cần thực hiện
+                  </span>
+                </div>
+                <Icon name="schedule" size={16} className="text-slate-400" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-slate-900">{taskStats.assigned}</span>
+                <span className="text-xs text-slate-500 font-medium">phiếu</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-slate-800">{taskStats.assigned}</span>
-              <span className="text-xs text-slate-500">phiếu</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Đang đo đạc
-              </span>
-              <Icon name="pending" size={16} className="text-blue-500" />
+          {/* KPI 2: Đang đo đạc */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #B8C5D9',
+              background: 'linear-gradient(180deg, #F0F9FF 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#1E40AF'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(30, 64, 175, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#B8C5D9'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #1E40AF, #3B82F6)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#1E40AF', boxShadow: '0 0 0 4px rgba(30, 64, 175, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Đang đo đạc
+                  </span>
+                </div>
+                <Icon name="pending" size={16} className="text-[#1E40AF]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-[#1E40AF]">{taskStats.inProgress}</span>
+                <span className="text-xs text-slate-500 font-medium">hiện trường</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-blue-600">{taskStats.inProgress}</span>
-              <span className="text-xs text-slate-500">hiện trường</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Đã có số đo
-              </span>
-              <Icon name="format_list_numbered" size={16} className="text-amber-500" />
+          {/* KPI 3: Đã có số đo */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #E3D3AC',
+              background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#B45309'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(180, 83, 9, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#E3D3AC'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B45309, #F59E0B)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Đã có số đo
+                  </span>
+                </div>
+                <Icon name="format_list_numbered" size={16} className="text-[#B45309]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-[#B45309]">{taskStats.submitted}</span>
+                <span className="text-xs text-slate-500 font-medium">chờ duyệt</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-amber-600">{taskStats.submitted}</span>
-              <span className="text-xs text-slate-500">chờ duyệt</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Đã xác minh
-              </span>
-              <Icon name="check_circle" size={16} className="text-emerald-500" />
+          {/* KPI 4: Đã xác minh */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #A7C4B8',
+              background: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#047857'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(4, 120, 87, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#A7C4B8'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #047857, #10B981)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#047857', boxShadow: '0 0 0 4px rgba(4, 120, 87, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Đã xác minh
+                  </span>
+                </div>
+                <Icon name="check_circle" size={16} className="text-[#047857]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-[#047857]">{taskStats.verified}</span>
+                <span className="text-xs text-slate-500 font-medium">hoàn tất</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-emerald-600">{taskStats.verified}</span>
-              <span className="text-xs text-slate-500">hoàn tất</span>
-            </div>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* 5. KPI CARDS CHO TAB XUNG ĐỘT (GỌN GÀNG, MINIMALISM) */}
+      {/* 5. KPI CARDS CHO TAB XUNG ĐỘT */}
       {activeTab === 'CONFLICTS' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Tổng ca xung đột
-              </span>
-              <Icon name="layers" size={16} className="text-[#C9A227]" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {/* KPI 1: Tổng ca xung đột */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #E5D8B4',
+              background: 'linear-gradient(180deg, #FFFDF5 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#C9A227'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(201, 162, 39, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#E5D8B4'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #C9A227, #D97706)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#C9A227', boxShadow: '0 0 0 4px rgba(201, 162, 39, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Tổng ca xung đột
+                  </span>
+                </div>
+                <Icon name="layers" size={16} className="text-[#C9A227]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-2xl font-bold font-mono text-slate-900">{stats.total}</span>
+                <span className="text-xs text-amber-700 font-semibold font-mono">({stats.pending} chờ xử lý)</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-slate-900">{stats.total}</span>
-              <span className="text-xs text-amber-600 font-medium">({stats.pending} chờ xử lý)</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Đổi đội ngoại tuyến
-              </span>
-              <Icon name="call_split" size={16} className="text-blue-500" />
+          {/* KPI 2: Đổi đội ngoại tuyến */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #B8C5D9',
+              background: 'linear-gradient(180deg, #F0F9FF 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#1E40AF'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(30, 64, 175, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#B8C5D9'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #1E40AF, #3B82F6)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#1E40AF', boxShadow: '0 0 0 4px rgba(30, 64, 175, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Đổi đội ngoại tuyến
+                  </span>
+                </div>
+                <Icon name="call_split" size={16} className="text-[#1E40AF]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-slate-900">{stats.reassign}</span>
+                <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-slate-900">{stats.reassign}</span>
-              <span className="text-xs text-slate-500">hồ sơ</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Lệch chính sách
-              </span>
-              <Icon name="warning" size={16} className="text-amber-500" />
+          {/* KPI 3: Lệch chính sách */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #E3D3AC',
+              background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#B45309'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(180, 83, 9, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#E3D3AC'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B45309, #F59E0B)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Lệch chính sách
+                  </span>
+                </div>
+                <Icon name="warning" size={16} className="text-[#B45309]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold font-mono text-slate-900">{stats.policyMismatch}</span>
+                <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-slate-900">{stats.policyMismatch}</span>
-              <span className="text-xs text-slate-500">hồ sơ</span>
-            </div>
-          </Card>
+          </div>
 
-          <Card className="p-3.5 bg-white border border-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-slate-500">
-                Cứu hộ thiết bị
-              </span>
-              <Icon name="phonelink_erase" size={16} className="text-purple-500" />
+          {/* KPI 4: Cứu hộ thiết bị */}
+          <div
+            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+            style={{
+              border: '1.5px solid #E6A8A8',
+              background: 'linear-gradient(180deg, #FEF2F2 0%, #ffffff 45%)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#B91C1C'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(185, 28, 28, 0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = '#E6A8A8'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B91C1C, #EF4444)' }} />
+            <div className="p-4 flex flex-col justify-between flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-[10px] h-[10px] rounded-full shrink-0"
+                    style={{ backgroundColor: '#B91C1C', boxShadow: '0 0 0 4px rgba(185, 28, 28, 0.15)' }}
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Cứu hộ thiết bị
+                  </span>
+                </div>
+                <Icon name="phonelink_erase" size={16} className="text-[#B91C1C]" />
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-2xl font-bold font-mono text-[#B91C1C]">{stats.rescuePending}</span>
+                <span className="text-xs text-rose-700 font-medium">chờ Giám sát ký</span>
+              </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-semibold text-purple-700">{stats.rescuePending}</span>
-              <span className="text-xs text-purple-600 font-medium">chờ Supervisor ký</span>
-            </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
