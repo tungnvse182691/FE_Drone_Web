@@ -3,7 +3,6 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase, ViewSourceMode } from './types'
 import { BatchActionBar } from './BatchActionBar'
 import { CitizenTriageTable } from './CitizenTriageTable'
-import { DroneAiQueueView } from './DroneAiQueueView'
 
 export interface ReviewCasesTableProps {
   viewSourceMode: ViewSourceMode
@@ -57,7 +56,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   onBulkNeedSurvey
 }) => {
   return (
-    <div className="flex-1 w-full bg-white rounded-xl border border-brand-border shadow-2xs p-4 flex flex-col justify-between">
+    <div className="flex-1 w-full bg-white rounded-2xl border border-[#E2E5E9] shadow-2xs p-4 flex flex-col justify-between">
       <div className="space-y-4">
         {/* Floating Batch Action Bar when items selected (Chỉ dành cho PM phân luồng tác nghiệp) */}
         {!isSupervisor && (

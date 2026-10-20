@@ -42,67 +42,71 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
   showToast,
 }) => {
   return (
-    <div className="bg-white rounded-xl border border-brand-border shadow-2xs p-4 space-y-3">
-      {/* 1. Horizontal Status Tabs */}
+    <div className="bg-white rounded-2xl border border-[#E2E5E9] shadow-2xs p-4 space-y-3.5">
+      {/* 1. Horizontal Status Tabs (Spec: bo tròn 999px, padding 10px 18px, viền #E2E5E9, tab active nền đen #1A1D20 chữ trắng) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
           onClick={() => setActiveTab('ALL')}
           type="button"
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'ALL'
-              ? 'bg-brand-dark text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          Tất cả <span className="ml-1 opacity-70">({cases.length})</span>
+          Tất cả <span className="ml-1 opacity-75">({cases.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('PENDING')}
           type="button"
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+          className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'PENDING'
-              ? 'bg-brand-gold text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          <Icon name="schedule" size={14} />
           <span>Chờ xác minh</span>
-          <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px]">{pendingCount}</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+            activeTab === 'PENDING' ? 'bg-amber-400 text-slate-900' : 'bg-amber-100 text-amber-800'
+          }`}>
+            {pendingCount}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab('MERGED')}
           type="button"
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'MERGED'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          Đã gộp trùng <span className="ml-1 opacity-70">({mergedCount})</span>
+          Đã gộp trùng <span className="ml-1 opacity-75">({mergedCount})</span>
         </button>
         <button
           onClick={() => setActiveTab('NEED_SURVEY')}
           type="button"
-          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+          className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'NEED_SURVEY'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          Cần đo đạc <span className="ml-1 opacity-70">({surveyCount})</span>
+          Cần đo đạc <span className="ml-1 opacity-75">({surveyCount})</span>
         </button>
         <button
           onClick={() => setActiveTab('CRITICAL')}
           type="button"
-          className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+          className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'CRITICAL'
-              ? 'bg-red-600 text-white shadow-xs'
-              : 'bg-red-50 text-red-700 hover:bg-red-100'
+              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          <Icon name="warning" size={14} />
           <span>Khẩn cấp</span>
-          <span className="ml-0.5 bg-red-700 text-white px-1.5 py-0.2 rounded-full text-[10px]">{criticalCount}</span>
+          <span className="bg-red-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-2xs">
+            {criticalCount}
+          </span>
         </button>
       </div>
 

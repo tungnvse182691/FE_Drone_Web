@@ -50,7 +50,7 @@ export const CitizenTriageStatusBadge: React.FC<CitizenTriageStatusBadgeProps> =
         />
         <span>
           {isNoDefect
-            ? 'Báo sai (No Defect)'
+            ? 'Báo sai'
             : isOutOfScope
             ? 'Ngoài phạm vi'
             : 'Từ chối'}
