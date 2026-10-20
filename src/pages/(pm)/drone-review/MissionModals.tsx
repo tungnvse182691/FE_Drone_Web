@@ -44,7 +44,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
   const [cameraAngle, setCameraAngle] = useState<'45' | '60' | '90'>('45')
   const [droneModel, setDroneModel] = useState<string>('DJI Matrice 300 RTK')
   const [gsdReq, setGsdReq] = useState<string>('≤ 0.35 cm/pixel')
-  const [selectedPilot, setSelectedPilot] = useState<string>('Lê Hoàng Long (Drone Operator chính)')
+  const [selectedPilot, setSelectedPilot] = useState<string>('Lê Hoàng Long (Phi công thiết bị bay chính)')
 
   // Tự động sinh nội dung chỉ dẫn kỹ thuật khi đổi đối tượng quét
   useEffect(() => {
@@ -212,23 +212,23 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           </div>
         </div>
 
-        {/* 3. Chỉ định Drone Operator / Phi công bay (Quy tắc BR-43) */}
+        {/* 3. Chỉ định phi công thiết bị bay (Quy tắc BR-43) */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-700 block">
-            3. Chỉ định Drone Operator / Phi công điều khiển (Quy tắc BR-43):
+            3. Chỉ định phi công thiết bị bay (Quy tắc BR-43):
           </label>
           <select
             value={selectedPilot}
             onChange={(e) => setSelectedPilot(e.target.value)}
             className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
           >
-            <option value="Lê Hoàng Long (Drone Operator chính)">Lê Hoàng Long (Drone Operator chính - Sẵn sàng)</option>
-            <option value="Hoàng Quốc Bảo (Pilot RTK Level 3)">Hoàng Quốc Bảo (Pilot RTK Level 3)</option>
-            <option value="Trần Quang Khải (Pilot Chuyên gia đo quét)">Trần Quang Khải (Pilot Chuyên gia đo quét)</option>
+            <option value="Lê Hoàng Long (Phi công thiết bị bay chính)">Lê Hoàng Long (Phi công thiết bị bay chính - Sẵn sàng)</option>
+            <option value="Hoàng Quốc Bảo (Phi công RTK cấp 3)">Hoàng Quốc Bảo (Phi công RTK cấp 3)</option>
+            <option value="Trần Quang Khải (Phi công chuyên gia đo quét)">Trần Quang Khải (Phi công chuyên gia đo quét)</option>
             <option value="Nguyễn Văn An (Đội bay Hoàng Hải 02)">Nguyễn Văn An (Đội bay Hoàng Hải 02)</option>
           </select>
           <p className="text-[10px] text-slate-500 italic">
-            * Theo quy tắc BR-43, PM xác nhận phạm vi bay bổ sung và có toàn quyền chỉ định hoặc thay đổi Operator.
+            * Theo quy tắc BR-43, PM xác nhận phạm vi bay bổ sung và có toàn quyền chỉ định hoặc thay đổi phi công thiết bị bay.
           </p>
         </div>
 

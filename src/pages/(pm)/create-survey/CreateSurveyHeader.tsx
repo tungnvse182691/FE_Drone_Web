@@ -18,10 +18,10 @@ export const CreateSurveyHeader: React.FC<CreateSurveyHeaderProps> = ({ onBack }
       </button>
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-[#1A1D20] font-sansation tracking-tight">
-          Tạo Yêu Cầu Bay Khảo Sát Drone
+          Tạo Yêu Cầu Bay Khảo Sát Trên Không
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Lập kế hoạch hành lang bay trắc địa và chuyển tiếp lệnh bay tới ứng dụng di động của Drone Operator
+          Lập kế hoạch hành lang bay trắc địa và chuyển tiếp lệnh bay tới ứng dụng di động của phi công thiết bị bay
         </p>
       </div>
     </div>

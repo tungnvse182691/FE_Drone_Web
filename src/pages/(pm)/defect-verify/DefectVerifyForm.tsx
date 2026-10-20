@@ -322,7 +322,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Chỉ định Drone Operator (Phi công điều khiển):
+                  Chỉ định phi công thiết bị bay:
                 </label>
                 <select
                   value={resurveyPilot}
@@ -340,7 +340,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Ghi chú cụ thể cho Drone Operator:</label>
+                <label className="block font-semibold text-slate-700 mb-1">Ghi chú cụ thể cho phi công thiết bị bay:</label>
                 <textarea
                   value={resurveyDetail}
                   onChange={(e) => setResurveyDetail(e.target.value)}
