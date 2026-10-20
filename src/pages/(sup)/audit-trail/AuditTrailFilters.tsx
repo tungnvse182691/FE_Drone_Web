@@ -34,7 +34,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
   isSupervisor
 }) => {
   return (
-    <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+    <div className="bg-white p-4 rounded-[20px] border-[1.5px] border-[#E2E5E9] space-y-3 shadow-2xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Filter 1: Vai trò tác nhân (Thuần Việt 100%, không kèm mã code tiếng Anh) */}
         <div className="space-y-1">
@@ -44,7 +44,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
           <select
             value={selectedActorRole}
             onChange={(e) => onChangeActorRole(e.target.value)}
-            className="w-full h-9 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
+            className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả vai trò</option>
             <option value={RoleCode.SUPERVISOR}>Kỹ sư giám sát</option>
@@ -64,7 +64,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
           <select
             value={selectedActionType}
             onChange={(e) => onChangeActionType(e.target.value)}
-            className="w-full h-9 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
+            className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả hành động</option>
             {isSupervisor && (
@@ -90,7 +90,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
           <select
             value={selectedEntityType}
             onChange={(e) => onChangeEntityType(e.target.value)}
-            className="w-full h-9 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
+            className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả thực thể</option>
             <option value="REPAIR_BATCH">Đợt sửa chữa</option>
@@ -109,7 +109,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
             Tìm kiếm từ khóa
           </label>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
               search
             </span>
             <input
@@ -117,14 +117,14 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
               value={searchKeyword}
               onChange={(e) => onChangeSearchKeyword(e.target.value)}
               placeholder="Mã sự kiện, người thực hiện, lý trình..."
-              className="w-full h-9 pl-8 pr-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-brand-gold placeholder:text-slate-400"
+              className="w-full h-9 pl-9 pr-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-[#C9A227] placeholder:text-slate-400 transition-colors"
             />
           </div>
         </div>
       </div>
 
       {/* Dòng điều khiển mốc thời gian & Reset */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-[#EDEFF2] text-xs">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-slate-500 font-medium mr-1">Khoảng thời gian:</span>
           {(['24h', '7d', '30d', 'all'] as const).map((tf) => (
@@ -132,9 +132,9 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
               key={tf}
               type="button"
               onClick={() => onChangeTimeFilter(tf)}
-              className={`px-2.5 py-1 rounded text-xs transition cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-xs transition cursor-pointer font-semibold ${
                 timeFilter === tf
-                  ? 'bg-slate-900 text-white font-semibold'
+                  ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >

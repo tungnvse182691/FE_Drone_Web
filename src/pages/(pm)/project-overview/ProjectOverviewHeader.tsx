@@ -52,7 +52,8 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
       </nav>
 
       {/* Main Header Card - Minimalism */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="relative bg-white border border-[#E2E5E9] rounded-[20px] p-6 shadow-2xs overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C9A227] via-[#1E40AF] to-slate-200" />
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight font-headline">

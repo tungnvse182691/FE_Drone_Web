@@ -18,32 +18,35 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   const isRepairDone = project.repair_packages > 0
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs flex flex-col gap-4 font-body">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2 border-b border-slate-100">
+    <div className="relative bg-white border border-[#E2E5E9] rounded-[20px] p-6 shadow-2xs overflow-hidden flex flex-col gap-4 font-body">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C9A227] to-slate-200" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-2 border-b border-[#EDEFF2]">
         <div>
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 font-headline">
-            <Icon name="alt_route" size={20} className="text-brand-gold" />
-            <span>Tiến trình bàn giao &amp; Vòng đời bảo hành</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227] ring-4 ring-[#C9A227]/20" />
+            <h2 className="text-base font-bold text-slate-900 font-headline">
+              Tiến trình bàn giao &amp; Vòng đời bảo hành
+            </h2>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
             Luân chuyển trách nhiệm giữa Giám sát và Chỉ huy trưởng (PM).
           </p>
         </div>
-        <span className="font-mono text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+        <span className="font-mono text-xs px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">
           {isAlignmentDone ? 'Giai đoạn: 03/05' : 'Giai đoạn: 01/05'}
         </span>
       </div>
 
       {/* Vertical Stepper */}
       <div className="relative pl-6 sm:pl-8 flex flex-col gap-4 pt-2">
-        <div className="absolute left-3 sm:left-4 top-3 bottom-4 w-0.5 bg-slate-200 -translate-x-1/2"></div>
+        <div className="absolute left-3 sm:left-4 top-3 bottom-4 w-0.5 bg-[#E2E5E9] -translate-x-1/2" />
 
         {/* Step 1: Khởi tạo dự án (SUP - DA01, BR-01) - Đã hoàn thành */}
         <div className="relative flex items-start gap-4">
-          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center ring-4 ring-white shadow-2xs border border-emerald-200">
+          <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-emerald-50 text-[#047857] flex items-center justify-center ring-4 ring-white shadow-2xs border border-emerald-200">
             <Icon name="check" size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs">
+          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-900 font-bold">
                 Bước 1: Khởi tạo dự án &amp; Phân quyền PM điều hành (DA01, BR-01)
@@ -63,22 +66,22 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isAlignmentDone
-                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                : 'bg-amber-50 text-brand-gold border-amber-200 animate-pulse'
+                ? 'bg-emerald-50 text-[#047857] border-emerald-200'
+                : 'bg-amber-50 text-[#C9A227] border-amber-200 animate-pulse'
             }`}
           >
             <Icon name={isAlignmentDone ? 'check' : 'play_arrow'} size={14} />
           </div>
           <div
             className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
-              isAlignmentDone ? 'bg-slate-50 border-slate-200' : 'bg-amber-50/40 border-amber-200'
+              isAlignmentDone ? 'bg-slate-50 border-[#E2E5E9]' : 'bg-amber-50/40 border-amber-200'
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-900 font-bold">
                 Bước 2: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
               </span>
-              <span className="font-mono text-[11px] text-brand-gold font-semibold">
+              <span className="font-mono text-[11px] text-[#8C6D1F] font-semibold">
                 {isAlignmentDone ? 'Đã duyệt tuyến' : 'Đang chờ PM'}
               </span>
             </div>
@@ -94,7 +97,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-                  className="px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
+                  className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
                 >
                   <Icon name="alt_route" size={14} />
                   <span>Vào thiết lập tim tuyến ngay</span>
@@ -109,13 +112,13 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isSurveyDone
-                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                ? 'bg-emerald-50 text-[#047857] border-emerald-200'
                 : 'bg-slate-100 text-slate-400 border-slate-200'
             }`}
           >
             <Icon name={isSurveyDone ? 'check' : 'lock'} size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-90">
+          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-90">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-800 font-semibold">
                 Bước 3: Khảo sát không ảnh Drone AI &amp; Thẩm định lỗi
@@ -135,13 +138,13 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isRepairDone
-                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                ? 'bg-emerald-50 text-[#047857] border-emerald-200'
                 : 'bg-slate-100 text-slate-400 border-slate-200'
             }`}
           >
             <Icon name={isRepairDone ? 'check' : 'lock'} size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-80">
+          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-80">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-800 font-semibold">
                 Bước 4: Gom đợt sửa chữa &amp; Trình duyệt phương án kỹ thuật (WF-07)
@@ -161,7 +164,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div className="absolute -left-6 sm:-left-8 w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center ring-4 ring-white shadow-2xs border border-slate-200">
             <Icon name="lock" size={14} />
           </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-75">
+          <div className="bg-slate-50 border border-[#E2E5E9] rounded-xl p-3.5 flex-1 shadow-2xs opacity-75">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-800 font-semibold">
                 Bước 5: Nghiệm thu Trước/Sau &amp; Ký số đóng đợt (WF-10)
@@ -177,3 +180,4 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
     </div>
   )
 }
+

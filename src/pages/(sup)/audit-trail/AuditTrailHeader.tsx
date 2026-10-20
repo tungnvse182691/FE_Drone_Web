@@ -50,7 +50,8 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
       </div>
 
       {/* 2. HEADER BANNER & BỘ ĐIỀU KHIỂN DỰ ÁN */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-[20px] border-[1.5px] border-[#E2E5E9] shadow-2xs relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1E40AF] via-[#C9A227] to-slate-200" />
         <div className="space-y-1 max-w-3xl">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             Nhật Ký Hoạt Động &amp; Truy Vết Hệ Thống
@@ -63,7 +64,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
         {/* Thanh chọn Dự án & Thao tác */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Chọn dự án */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs">
+          <div className="flex items-center gap-2 bg-white border border-[#E2E5E9] rounded-[10px] px-3 py-1.5 text-xs shadow-2xs">
             <span className="material-symbols-outlined text-[18px] text-slate-400">folder_open</span>
             <span className="text-slate-500 font-medium hidden sm:inline">Dự án:</span>
             <select
@@ -82,10 +83,10 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
             type="button"
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
             title="Tải mới dữ liệu sự kiện"
           >
-            <span className={`material-symbols-outlined text-[16px] text-slate-500 ${isRefreshing ? 'animate-spin text-brand-gold' : ''}`}>
+            <span className={`material-symbols-outlined text-[16px] text-slate-500 ${isRefreshing ? 'animate-spin text-[#C9A227]' : ''}`}>
               refresh
             </span>
             <span className="hidden sm:inline">Làm mới</span>
@@ -95,7 +96,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenExportModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white font-semibold text-xs transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-semibold text-xs transition cursor-pointer shadow-2xs"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
             <span>Xuất nhật ký</span>

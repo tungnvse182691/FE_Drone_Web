@@ -38,13 +38,13 @@ export const SystemControl: React.FC = () => {
 
       {/* 2. Tabs Navigation (Chỉ hiển thị cho Supervisor khi cần chuyển sang AI Models hoặc Danh mục khiếm khuyết) */}
       {isSupervisor && (
-        <div className="bg-white border border-slate-200 px-4 pt-2 rounded-xl shadow-xs flex items-center gap-2 overflow-x-auto select-none">
+        <div className="bg-white border-[1.5px] border-[#E2E5E9] px-4 pt-2 rounded-[20px] shadow-2xs flex items-center gap-2 overflow-x-auto select-none">
           <button
             type="button"
             onClick={() => s.setActiveTab('retention-legal-hold')}
-            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               s.activeTab === 'retention-legal-hold'
-                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                ? 'text-slate-900 font-bold border-b-2 border-[#C9A227]'
                 : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -53,7 +53,7 @@ export const SystemControl: React.FC = () => {
                 s.activeLegalHoldProject
                   ? 'text-rose-600'
                   : s.activeTab === 'retention-legal-hold'
-                  ? 'text-brand-gold'
+                  ? 'text-[#C9A227]'
                   : 'text-slate-400'
               }`}
             >
@@ -61,7 +61,7 @@ export const SystemControl: React.FC = () => {
             </span>
             <span>Lưu trữ &amp; Phong tỏa pháp lý</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 ${
                 s.activeLegalHoldProject
                   ? 'bg-rose-100 text-rose-800 border border-rose-200'
                   : 'bg-slate-100 text-slate-600'
@@ -74,22 +74,22 @@ export const SystemControl: React.FC = () => {
           <button
             type="button"
             onClick={() => s.setActiveTab('ai-models')}
-            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               s.activeTab === 'ai-models'
-                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                ? 'text-slate-900 font-bold border-b-2 border-[#C9A227]'
                 : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <span
               className={`material-symbols-outlined text-[18px] ${
-                s.activeTab === 'ai-models' ? 'text-brand-gold' : 'text-slate-400'
+                s.activeTab === 'ai-models' ? 'text-[#C9A227]' : 'text-slate-400'
               }`}
             >
               psychology
             </span>
             <span>Mô hình AI &amp; Đánh giá</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${
                 s.activeTab === 'ai-models'
                   ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
                   : 'bg-slate-100 text-slate-600 border-transparent'
@@ -102,22 +102,22 @@ export const SystemControl: React.FC = () => {
           <button
             type="button"
             onClick={() => s.setActiveTab('defect-catalog')}
-            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer ${
+            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               s.activeTab === 'defect-catalog'
-                ? 'text-slate-900 font-bold border-b-2 border-brand-gold'
+                ? 'text-slate-900 font-bold border-b-2 border-[#C9A227]'
                 : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             <span
               className={`material-symbols-outlined text-[18px] ${
-                s.activeTab === 'defect-catalog' ? 'text-brand-gold' : 'text-slate-400'
+                s.activeTab === 'defect-catalog' ? 'text-[#C9A227]' : 'text-slate-400'
               }`}
             >
               fact_check
             </span>
             <span>Danh mục khiếm khuyết TCVN</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${
                 s.activeTab === 'defect-catalog'
                   ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
                   : 'bg-slate-100 text-slate-600 border-transparent'

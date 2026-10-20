@@ -17,24 +17,27 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
   onViewDetail
 }) => {
   return (
-    <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4 shadow-xs">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-        <div>
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-rose-600">
-              delete
-            </span>
-            {isSupervisor
-              ? 'Thẩm Duyệt Yêu Cầu Hủy Hồ Sơ Lưu Trữ'
-              : 'Theo Dõi Đề Xuất Hủy Dữ Liệu Bảo Hành'}
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {isSupervisor
-              ? 'Thẩm định hồ sơ đề xuất giải phóng dữ liệu hết hạn bảo hành từ Chỉ huy trưởng'
-              : 'Danh sách các đề xuất hủy dữ liệu Drone và hồ sơ đo đạc đã trình Giám sát'}
-          </p>
+    <div className="lg:col-span-7 bg-white border-[1.5px] border-[#E2E5E9] rounded-[20px] p-5 flex flex-col gap-4 shadow-2xs relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-amber-500 to-slate-200" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#EDEFF2]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[10px] bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+            <span className="material-symbols-outlined text-[18px]">delete</span>
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">
+              {isSupervisor
+                ? 'Thẩm Duyệt Yêu Cầu Hủy Hồ Sơ Lưu Trữ'
+                : 'Theo Dõi Đề Xuất Hủy Dữ Liệu Bảo Hành'}
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {isSupervisor
+                ? 'Thẩm định hồ sơ đề xuất giải phóng dữ liệu hết hạn bảo hành từ Chỉ huy trưởng'
+                : 'Danh sách các đề xuất hủy dữ liệu Drone và hồ sơ đo đạc đã trình Giám sát'}
+            </p>
+          </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold self-start sm:self-auto font-mono">
+        <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold self-start sm:self-auto font-mono whitespace-nowrap shrink-0">
           {deletionRequests.filter((r) => r.status === 'PENDING_APPROVAL').length} yêu cầu chờ duyệt
         </span>
       </div>
@@ -56,44 +59,44 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
             return (
               <div
                 key={req.id}
-                className={`p-4 rounded-xl border space-y-3 transition-all ${
+                className={`p-4 rounded-[14px] border space-y-3 transition-all ${
                   isPurged
                     ? 'bg-slate-50/70 border-slate-200 opacity-80'
                     : isBlockedByHold
                     ? 'bg-rose-50/40 border-rose-200'
                     : isRetentionNotExpired
                     ? 'bg-amber-50/40 border-amber-200'
-                    : 'bg-white border-slate-200 shadow-xs'
+                    : 'bg-white border-[#E2E5E9] shadow-2xs'
                 }`}
               >
                 {/* Header yêu cầu */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="font-mono font-bold text-xs text-slate-900 bg-slate-100 px-2 py-0.5 rounded-[6px] border border-slate-200">
                       {req.request_code}
                     </span>
                     {isBlockedByHold ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span className="material-symbols-outlined text-[13px]">lock</span>
                         BỊ KHÓA BỞI PHONG TỎA PHÁP LÝ
                       </span>
                     ) : isRetentionNotExpired ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span className="material-symbols-outlined text-[13px]">schedule</span>
                         CHƯA ĐỦ THỜI HẠN (DƯỚI 5 NĂM)
                       </span>
                     ) : isPurged ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span className="material-symbols-outlined text-[13px]">verified</span>
                         ĐÃ PHÊ DUYỆT XÓA DỮ LIỆU
                       </span>
                     ) : isRejected ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span className="material-symbols-outlined text-[13px]">cancel</span>
                         ĐÃ TỪ CHỐI ĐỀ XUẤT
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1 whitespace-nowrap shrink-0">
                         <span className="material-symbols-outlined text-[13px]">check_circle</span>
                         ĐỦ ĐIỀU KIỆN XÓA (TRÊN 5 NĂM)
                       </span>
@@ -107,7 +110,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                     <button
                       type="button"
                       onClick={() => onViewDetail?.(req)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
                       title="Xem chi tiết đề xuất"
                     >
                       <span className="material-symbols-outlined text-[15px] text-slate-500">
@@ -119,7 +122,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                 </div>
 
                 {/* Nội dung tóm tắt dữ liệu đề xuất xóa */}
-                <div className="text-xs text-slate-800 bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                <div className="text-xs text-slate-800 bg-[#F8F9FA] p-3 rounded-[10px] border border-[#E2E5E9] space-y-1">
                   <div>
                     <span className="text-slate-500">Dự án:</span>{' '}
                     <strong className="text-slate-900">{req.project_name}</strong>{' '}
@@ -129,7 +132,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                     <span className="text-slate-500">Hạng mục tệp:</span>{' '}
                     <span className="font-semibold text-slate-800">{req.data_description}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-slate-600 text-[11px] pt-1">
+                  <div className="flex items-center gap-4 text-slate-600 text-[11px] pt-1 flex-wrap">
                     <span>
                       Dung lượng: <strong className="text-slate-900 font-mono">{req.data_size_gb} GB</strong>
                     </span>
@@ -150,7 +153,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
 
                 {/* Cảnh báo lý do từ chối nếu có */}
                 {req.rejection_reason && (
-                  <div className="p-2.5 rounded-lg bg-rose-50 text-rose-800 text-[11px] flex items-center gap-2 font-medium border border-rose-200">
+                  <div className="p-2.5 rounded-[10px] bg-rose-50 text-rose-800 text-[11px] flex items-center gap-2 font-medium border border-rose-200">
                     <span className="material-symbols-outlined text-[16px] text-rose-600 shrink-0">
                       warning
                     </span>
@@ -190,7 +193,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRejectDeletion(req.id)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer"
+                          className="px-3 py-1.5 rounded-[10px] border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer"
                         >
                           Từ chối
                         </button>
@@ -199,7 +202,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
                           type="button"
                           disabled={isBlockedByHold || isRetentionNotExpired}
                           onClick={() => handleApprovePurge(req.id)}
-                          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-xs ${
+                          className={`px-3.5 py-1.5 rounded-[10px] text-xs font-bold flex items-center gap-1.5 transition shadow-2xs ${
                             isBlockedByHold || isRetentionNotExpired
                               ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                               : 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'

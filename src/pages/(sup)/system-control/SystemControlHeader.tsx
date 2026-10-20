@@ -10,7 +10,8 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
   onOpenCreateDeletion
 }) => {
   return (
-    <div className="flex flex-col gap-3 bg-white border border-slate-200 p-5 rounded-xl shadow-xs">
+    <div className="flex flex-col gap-3 bg-white border-[1.5px] border-[#E2E5E9] p-5 rounded-[20px] shadow-2xs relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 via-[#C9A227] to-slate-200" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav className="flex items-center gap-2 text-xs text-slate-500 font-medium">
           <span className="hover:text-slate-800 transition-colors cursor-pointer">
@@ -26,7 +27,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
-            <span className="material-symbols-outlined text-[15px] text-brand-gold">
+            <span className="material-symbols-outlined text-[15px] text-[#C9A227]">
               {isSupervisor ? 'admin_panel_settings' : 'engineering'}
             </span>
             <span>
@@ -56,7 +57,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenCreateDeletion}
-            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+            className="px-3.5 py-2 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px] text-rose-600">
               delete_forever
