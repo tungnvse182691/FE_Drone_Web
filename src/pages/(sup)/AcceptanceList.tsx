@@ -100,7 +100,7 @@ export const AcceptanceList: React.FC = () => {
               Danh sách hồ sơ &amp; Gói thầu chờ nghiệm thu
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Kiểm tra hồ sơ Before/After, đối chứng độ chặt K98 và tiến hành nghiệm thu hoặc yêu cầu sửa lại theo TCVN 8819:2011.
+              Kiểm tra hồ sơ Trước/Sau, đối chứng độ chặt K98 và tiến hành nghiệm thu hoặc yêu cầu sửa lại theo TCVN 8819:2011.
             </p>
           </div>
 
@@ -125,7 +125,7 @@ export const AcceptanceList: React.FC = () => {
             <span className="text-xl font-bold text-[#B45309] font-sansation">{stats.pending}</span>
           </div>
           <div className="bg-rose-50/60 p-3 rounded-lg border border-rose-200/80">
-            <span className="text-[11px] text-rose-800 font-medium block">Yêu cầu sửa lại (Rework)</span>
+            <span className="text-[11px] text-rose-800 font-medium block">Yêu cầu sửa lại</span>
             <span className="text-xl font-bold text-[#E5484D] font-sansation">{stats.rework}</span>
           </div>
           <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200/80">

@@ -340,7 +340,7 @@ export const ProfilePage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Email hệ thống (Read-only)
+                  Email hệ thống (chỉ đọc)
                 </label>
                 <input
                   type="email"
@@ -366,7 +366,7 @@ export const ProfilePage: React.FC = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Đường dẫn ảnh đại diện (Avatar URL)
+                Đường dẫn ảnh đại diện
               </label>
               <div className="flex items-center gap-2">
                 <input

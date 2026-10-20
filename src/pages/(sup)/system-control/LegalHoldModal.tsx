@@ -97,11 +97,11 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
             <div>
               <h3 className="text-sm font-bold text-slate-900 font-headline">
                 {isEnabling
-                  ? 'Thiết lập Phong tỏa Pháp lý (Legal Hold)'
-                  : 'Gỡ bỏ Phong tỏa Pháp lý (Legal Hold)'}
+                  ? 'Thiết lập Phong tỏa Pháp lý'
+                  : 'Gỡ bỏ Phong tỏa Pháp lý'}
               </h3>
               <p className="text-[11px] text-slate-500">
-                PUT /projects/{'{projectId}'}/legal-hold • QT14, BR-45
+                Quy trình QT14, BR-45
               </p>
             </div>
           </div>
@@ -206,7 +206,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
               <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-950 flex items-start gap-2.5 leading-relaxed">
                 <Icon name="info" size={17} className="text-amber-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Xác nhận gỡ bỏ phong tỏa:</strong> Bạn có chắc chắn muốn hủy cờ Legal Hold cho dự án này không? Sau khi gỡ bỏ, hồ sơ hết hạn bảo hành trên 5 năm sẽ có thể được đề xuất giải phóng dữ liệu theo quy định lưu trữ.
+                  <strong>Xác nhận gỡ bỏ phong tỏa:</strong> Bạn có chắc chắn muốn hủy cờ phong tỏa pháp lý cho dự án này không? Sau khi gỡ bỏ, hồ sơ hết hạn bảo hành trên 5 năm sẽ có thể được đề xuất giải phóng dữ liệu theo quy định lưu trữ.
                 </div>
               </div>
 
@@ -254,7 +254,7 @@ export const LegalHoldModal: React.FC<LegalHoldModalProps> = ({
               ) : isEnabling ? (
                 <>
                   <Icon name="gavel" size={15} />
-                  <span>Kích hoạt Phong tỏa (Legal Hold)</span>
+                  <span>Kích hoạt Phong tỏa</span>
                 </>
               ) : (
                 <>

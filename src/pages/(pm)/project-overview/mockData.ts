@@ -90,7 +90,7 @@ export const INITIAL_MEMBERS: ProjectMember[] = [
     id: 'mem-04',
     name: 'Phạm Văn Đức',
     role_code: 'DRONE_PILOT',
-    role_title: 'Phi công Drone (Drone Pilot)',
+    role_title: 'Phi công thiết bị bay',
     role_badge: 'DRONE PILOT',
     avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=120&auto=format&fit=crop&q=80',
     is_online: false,

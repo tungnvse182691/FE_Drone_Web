@@ -21,7 +21,7 @@ export const AssignCrew: React.FC = () => {
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-          Phân Công Đội Thi Công (Repair Crew)
+          Phân Công Đội Thi Công
         </h1>
         <p className="text-xs text-slate-500 mt-1">
           Chỉ định tổ đội thi công hiện trường thực hiện đợt sửa chữa đã được phê duyệt
@@ -55,7 +55,7 @@ export const AssignCrew: React.FC = () => {
           </div>
 
           <InputField
-            label="Hạn Chót Hoàn Thành (Deadline)"
+            label="Hạn Chót Hoàn Thành"
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
@@ -75,7 +75,7 @@ export const AssignCrew: React.FC = () => {
           </div>
 
           <Button type="submit" className="w-full mt-4" size="lg" icon={<Users2 className="w-4 h-4" />}>
-            Ban Hành Lệnh Giao Việc (ASSIGNED)
+            Ban Hành Lệnh Giao Việc
           </Button>
         </form>
       </Card>

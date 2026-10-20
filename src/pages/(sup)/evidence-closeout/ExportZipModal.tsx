@@ -72,7 +72,7 @@ export const ExportZipModal: React.FC<ExportZipModalProps> = ({
               <div className="space-y-0.5">
                 <span className="font-semibold text-slate-900 block">Biên bản nghiệm thu kỹ thuật (PDF/A)</span>
                 <span className="text-slate-500 text-[11px] block">
-                  Tệp PDF chuẩn lưu trữ (ISO 19005), tích hợp hình ảnh Before/After, thông số K98 và mã băm SHA-256.
+                  Tệp PDF chuẩn lưu trữ (ISO 19005), tích hợp hình ảnh Trước/Sau, thông số K98 và mã băm SHA-256.
                 </span>
               </div>
             </div>

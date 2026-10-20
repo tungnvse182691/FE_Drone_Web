@@ -164,7 +164,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex-1 shadow-2xs opacity-75">
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-800 font-semibold">
-                Bước 5: Nghiệm thu Before/After &amp; Ký số đóng đợt (WF-10)
+                Bước 5: Nghiệm thu Trước/Sau &amp; Ký số đóng đợt (WF-10)
               </span>
               <span className="font-mono text-[11px] text-slate-400">Giai đoạn cuối</span>
             </div>

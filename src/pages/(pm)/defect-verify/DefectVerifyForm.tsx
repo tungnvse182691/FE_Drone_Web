@@ -75,7 +75,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               <div>
                 <div className="font-bold text-[12px] text-[#1A1D20]">Chế độ Giám sát (Chỉ đọc)</div>
                 <div className="text-[11px] text-slate-600 mt-0.5">
-                  Thẩm tra mô hình Bounding Box, kích thước và ảnh đa kỳ đối chiếu Baseline theo AI01 &amp; AI10.
+                  Thẩm tra mô hình khung nhận diện, kích thước và ảnh đa kỳ đối chiếu Baseline theo AI01 &amp; AI10.
                 </div>
               </div>
             </div>
@@ -103,7 +103,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 isTypeAdjusted ? 'border-amber-400 bg-amber-50/20' : 'border-[#E2E5E9]'
               }`}
             >
-              <option value={DefectType.POTHOLE}>Ổ gà / Hố sụt bản mặt đường (POTHOLE)</option>
+              <option value={DefectType.POTHOLE}>Ổ gà / Hố sụt bản mặt đường</option>
               <option value={DefectType.LONGITUDINAL_CRACK}>Nứt dọc / Nứt đơn (LONGITUDINAL CRACK)</option>
               <option value={DefectType.TRANSVERSE_CRACK}>Nứt ngang (TRANSVERSE CRACK)</option>
               <option value={DefectType.ALLIGATOR_CRACK}>Nứt lưới / Nứt chân vịt (ALLIGATOR CRACK)</option>
@@ -118,10 +118,10 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             )}
           </div>
 
-          {/* 2. Mức Độ Nghiêm Trọng (Severity) */}
+          {/* 2. Mức Độ Nghiêm Trọng */}
           <div>
             <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-              Mức Độ Nghiêm Trọng (Severity)
+              Mức Độ Nghiêm Trọng
             </label>
             <select
               value={severity}
@@ -241,7 +241,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 className="w-full bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                 icon={<Icon name="check_circle" size={18} />}
               >
-                Xác Nhận Hư Hỏng Thực Tế (VERIFIED)
+                Xác Nhận Hư Hỏng Thực Tế
               </Button>
 
               {/* 2. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
@@ -272,7 +272,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 className="w-full text-[#E5484D] border-rose-200 hover:bg-rose-50 font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                 icon={<Icon name="cancel" size={18} />}
               >
-                Từ Chối / Báo Giả (REJECTED)
+                Từ Chối / Báo Giả
               </Button>
             </div>
           )}
@@ -314,7 +314,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 >
                   <option value="Ảnh mờ / thiếu độ nét nhận diện">Ảnh mờ / thiếu độ nét nhận diện</option>
                   <option value="Lóa sáng / ngược sáng mặt đường">Lóa sáng / ngược sáng mặt đường</option>
-                  <option value="Khuất mép đường / thiếu vùng phủ (Coverage)">Khuất mép đường / thiếu vùng phủ (Coverage)</option>
+                  <option value="Khuất mép đường / thiếu vùng phủ">Khuất mép đường / thiếu vùng phủ</option>
                   <option value="Lệch tọa độ RTK / GPS trôi">Lệch tọa độ RTK / GPS trôi</option>
                   <option value="Cần góc chụp thẳng đứng NADIR chi tiết hơn">Cần góc chụp thẳng đứng NADIR chi tiết hơn</option>
                 </select>
@@ -417,7 +417,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Đơn vị nhận nhiệm vụ (Repair Crew):</label>
+                <label className="block font-semibold text-slate-700 mb-1">Đơn vị nhận nhiệm vụ:</label>
                 <select
                   value={measureCrew}
                   onChange={(e) => setMeasureCrew(e.target.value)}

@@ -32,7 +32,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-rose-600" />
           <h3 className="font-sansation font-bold text-slate-900 text-sm">
-            Danh sách đoạn tuyến rủi ro cao (RPT-06 High Risk)
+            Danh sách đoạn tuyến rủi ro cao
           </h3>
         </div>
         <button
@@ -140,11 +140,11 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
                   <td className="py-3.5">
                     {item.risk_level === 'Critical' ? (
                       <span className="px-2.5 py-0.5 text-[11px] font-bold text-rose-700 bg-red-100 rounded-full inline-block border border-red-200">
-                        Critical
+                        Rủi ro cao
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 bg-sky-100 rounded-full inline-block border border-sky-200">
-                        Watch
+                        Theo dõi
                       </span>
                     )}
                   </td>

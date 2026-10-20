@@ -142,7 +142,7 @@ export const DefectCatalogModal: React.FC<DefectCatalogModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Mức độ mặc định (Severity) <span className="text-rose-500">*</span>
+                Mức độ mặc định <span className="text-rose-500">*</span>
               </label>
               <select
                 value={severity}

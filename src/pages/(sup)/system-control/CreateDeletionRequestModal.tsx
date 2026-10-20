@@ -105,7 +105,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
               </div>
               <p className="text-[11px] leading-relaxed text-rose-700">
                 {isBlockedByHold
-                  ? 'Dự án đang trong diện thanh tra phong tỏa pháp lý (Legal Hold). Tuyệt đối không được phép lập đề xuất hủy dữ liệu.'
+                  ? 'Dự án đang trong diện thanh tra phong tỏa pháp lý. Tuyệt đối không được phép lập đề xuất hủy dữ liệu.'
                   : 'Hồ sơ chưa đủ thời hạn 5 năm sau thời điểm kết thúc bảo hành (quy định BR-45). Nút gửi đề xuất đã bị vô hiệu hóa.'}
               </p>
             </div>

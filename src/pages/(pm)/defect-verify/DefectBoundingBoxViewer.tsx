@@ -225,7 +225,7 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-800 flex items-center gap-1.5">
             <Icon name="crop_free" size={16} className="text-[#C9A227]" />
-            <span>Thẩm định Bounding Box AI</span>
+            <span>Thẩm định khung nhận diện AI</span>
           </span>
           {isModified ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
@@ -289,7 +289,7 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
         {isDrawingMode && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-slate-900/90 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-xs flex items-center gap-1.5 shadow-lg pointer-events-none z-30 animate-pulse">
             <Icon name="touch_app" size={14} />
-            <span>Nhấp và kéo chuột trên ảnh để vẽ hộp Bounding Box mới</span>
+            <span>Nhấp và kéo chuột trên ảnh để vẽ hộp khung nhận diện mới</span>
           </div>
         )}
 

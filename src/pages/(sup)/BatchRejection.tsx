@@ -14,7 +14,7 @@ export const BatchRejection: React.FC = () => {
 
   const handleReject = (e: React.FormEvent) => {
     e.preventDefault()
-    toast.success('Đã gửi yêu cầu chỉnh sửa hồ sơ (REVISION_REQUIRED) về cho Chỉ huy trưởng (PM)!')
+    toast.success('Đã gửi yêu cầu chỉnh sửa hồ sơ về cho Chỉ huy trưởng (PM)!')
     navigate('/sup/proposals')
   }
 
@@ -29,7 +29,7 @@ export const BatchRejection: React.FC = () => {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-            Yêu Cầu Sửa Đổi Hồ Sơ Đợt Sửa Chữa (Revision Required)
+            Yêu Cầu Sửa Đổi Hồ Sơ Đợt Sửa Chữa
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Phản hồi kỹ thuật của Tư vấn Giám sát yêu cầu PM giải trình hoặc tính toán lại khối lượng kỹ thuật
@@ -78,7 +78,7 @@ export const BatchRejection: React.FC = () => {
               variant="danger"
               icon={<AlertTriangle className="w-4 h-4" />}
             >
-              Gửi Yêu Cầu Chỉnh Sửa (REVISION_REQUIRED)
+              Gửi yêu cầu chỉnh sửa
             </Button>
           </div>
         </form>

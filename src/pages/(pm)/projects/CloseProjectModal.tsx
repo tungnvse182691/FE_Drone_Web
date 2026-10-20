@@ -201,7 +201,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
                   QUY CHẾ ĐÓNG BĂNG VĨNH VIỄN (KHÔNG THỂ MỞ LẠI):
                 </strong>
                 <span>
-                  Sau khi đóng, hồ sơ kỹ thuật sẽ bị khóa chỉ đọc (Read-only), chuyển vào kho số lưu trữ tối thiểu <strong>5 năm</strong>. Toàn bộ tính năng lập khảo sát và tạo đợt sửa chữa sẽ bị ngừng vĩnh viễn.
+                  Sau khi đóng, hồ sơ kỹ thuật sẽ bị khóa chỉ đọc, chuyển vào kho số lưu trữ tối thiểu <strong>5 năm</strong>. Toàn bộ tính năng lập khảo sát và tạo đợt sửa chữa sẽ bị ngừng vĩnh viễn.
                 </span>
                 <label htmlFor="chk-irrevocable-ack" className="flex items-center gap-2 pt-1 font-medium text-slate-900 cursor-pointer select-none">
                   <input

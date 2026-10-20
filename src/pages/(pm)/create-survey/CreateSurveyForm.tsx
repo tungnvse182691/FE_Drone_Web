@@ -382,7 +382,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider">
-                Độ Phủ Chồng Ảnh Trắc Địa (Image Overlap)
+                Độ Phủ Chồng Ảnh Trắc Địa
               </label>
               <button
                 type="button"

@@ -264,7 +264,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                         title="Mở màn hình Thẩm định chi tiết Bounding box & Đa kỳ để duyệt hoặc xử lý chuyên sâu"
                       >
                         <Icon name="layers" size={16} className="text-white" />
-                        <span>Thẩm định chi tiết (Bounding Box & Đa kỳ)</span>
+                        <span>Thẩm định chi tiết (Khung nhận diện & Đa kỳ)</span>
                         <Icon name="arrow_forward" size={14} className="text-white/80" />
                       </Link>
                     ) : isApproved ? (
@@ -307,7 +307,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                 <div className="pl-2 pt-1 border-t border-slate-100/70 flex items-center justify-between text-[11px] text-slate-400">
                   <span className="flex items-center gap-1 text-slate-500 hover:text-brand-dark">
                     <Icon name="ads_click" size={13} className="text-brand-gold" />
-                    <span>Bấm để trích xuất ảnh & Bounding Box</span>
+                    <span>Bấm để trích xuất ảnh & khung nhận diện</span>
                   </span>
                   {item.metrics.area && (
                     <span className="font-mono text-slate-500">{item.metrics.area}</span>

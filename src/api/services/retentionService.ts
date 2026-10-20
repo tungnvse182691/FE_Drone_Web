@@ -182,7 +182,7 @@ export const retentionService = {
     const current = inMemoryRequests[index]
     if (decision === 'APPROVE') {
       if (current.blocked_by_legal_hold) {
-        throw new Error('Không thể phê duyệt: Dự án đang có lệnh phong tỏa pháp lý (Legal Hold)')
+        throw new Error('Không thể phê duyệt: Dự án đang có lệnh phong tỏa pháp lý')
       }
       if (!current.is_eligible_5years) {
         throw new Error('Không thể phê duyệt: Dữ liệu chưa đủ thời hạn 5 năm sau bảo hành')

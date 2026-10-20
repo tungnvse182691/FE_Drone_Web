@@ -223,7 +223,7 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
                     Chuyến bay mô phỏng đã hoàn tất thành công!
                   </div>
                   <div className="text-xs text-emerald-700 mt-0.5">
-                    Nhiệm vụ [{mission.code}] đã chuyển sang <strong>PENDING_AI_REVIEW</strong>. Đã sẵn sàng mở Canvas để Project Manager thẩm định bounding box!
+                    Nhiệm vụ [{mission.code}] đã chuyển sang <strong>PENDING_AI_REVIEW</strong>. Đã sẵn sàng mở khung hình để Project Manager thẩm định khung nhận diện!
                   </div>
                 </div>
               </div>

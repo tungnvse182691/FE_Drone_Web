@@ -233,7 +233,7 @@ export function useProposalApprovalState(id: string | undefined) {
     const labelMap = {
       EVIDENCE: 'yêu cầu bổ sung bằng chứng (REQUEST_EVIDENCE)',
       RECONSIDER: 'yêu cầu xem lại phương án (REQUEST_RECONSIDER)',
-      REJECT: 'từ chối giải pháp kỹ thuật (REJECTED)'
+      REJECT: 'từ chối giải pháp kỹ thuật'
     }
 
     showToast(`Đã gửi phản hồi ${labelMap[modalFeedbackType]} cho hạng mục ${activeModalItem.item_code}!`)

@@ -102,7 +102,7 @@ export const MissionViewer: React.FC<MissionViewerProps> = ({
                 type="button"
                 onClick={() => {
                   setIsAiOverlayVisible(!isAiOverlayVisible)
-                  showToast(isAiOverlayVisible ? 'Đã tắt lớp AI Bounding Box.' : 'Đã bật lớp AI Bounding Box.')
+                  showToast(isAiOverlayVisible ? 'Đã tắt lớp AI khung nhận diện.' : 'Đã bật lớp AI khung nhận diện.')
                 }}
                 className={`px-2.5 py-1 text-xs font-semibold rounded-full flex items-center gap-1 transition-all cursor-pointer ${
                   isAiOverlayVisible

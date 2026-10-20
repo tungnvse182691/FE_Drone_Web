@@ -37,17 +37,17 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-brand-gold" />
           <h3 className="font-sansation font-bold text-slate-900 text-sm">
-            Bản đồ danh mục rủi ro hư hỏng (GIS Risk Portfolio)
+            Bản đồ danh mục rủi ro hư hỏng
           </h3>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 text-[11px] font-bold text-rose-700 bg-red-100/80 rounded-full border border-red-200 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
-            High Risk ({filteredRiskItems.filter((i: RiskPortfolioItem) => i.risk_level === 'Critical').length})
+            Rủi ro cao ({filteredRiskItems.filter((i: RiskPortfolioItem) => i.risk_level === 'Critical').length})
           </span>
           <span className="px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 bg-sky-100 rounded-full border border-sky-200">
-            Watch ({MOCK_RISK_ITEMS.filter((i) => i.risk_level === 'Watch').length})
+            Theo dõi ({MOCK_RISK_ITEMS.filter((i) => i.risk_level === 'Watch').length})
           </span>
         </div>
       </div>
@@ -66,7 +66,7 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
                   activePinItem.risk_level === 'Critical' ? 'bg-rose-500 text-white' : 'bg-sky-500 text-white'
                 }`}
               >
-                {activePinItem.risk_level}
+                {activePinItem.risk_level === 'Critical' ? 'Rủi ro cao' : 'Theo dõi'}
               </span>
             </div>
             <p className="text-slate-300 font-mono text-[11px]">{activePinItem.chainage_display}</p>

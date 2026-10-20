@@ -182,7 +182,7 @@ export const initialNotifications: NotificationItem[] = [
     category: 'HANDOVER',
     categoryLabel: 'Phản hồi phê duyệt',
     title: 'Supervisor đã chấp thuận Phương án kỹ thuật Gói PKG-2026-07',
-    message: 'Tư vấn giám sát đã duyệt 3/3 hạng mục phương án sửa chữa và mở khóa trạng thái APPROVED. PM có thể tiến hành phân công Đội thi công ra hiện trường.',
+    message: 'Tư vấn giám sát đã duyệt 3/3 hạng mục phương án sửa chữa và mở khóa trạng thái đã duyệt. PM có thể tiến hành phân công Đội thi công ra hiện trường.',
     resourceType: 'REPAIR_PROPOSAL',
     resourceId: 'PKG-2026-07',
     routeCode: 'QL1A • PK-04',

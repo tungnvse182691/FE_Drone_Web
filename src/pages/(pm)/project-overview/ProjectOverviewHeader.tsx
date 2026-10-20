@@ -153,7 +153,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Hồ sơ công trình đã đóng bảo hành (DA12) • Trạng thái chỉ đọc (Read-only)
+                  Hồ sơ công trình đã đóng bảo hành (DA12) • Trạng thái chỉ đọc
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800 uppercase tracking-wide">
                   LƯU TRỮ HỒ SƠ (QT13)

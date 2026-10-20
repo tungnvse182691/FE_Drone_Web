@@ -43,7 +43,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             {isSupervisor
               ? 'Quản Trị Lưu Trữ Hồ Sơ, Kiểm Soát AI & Phong Tỏa Pháp Lý'
-              : 'Lưu Trữ Bảo Hành & Phong Tỏa Pháp Lý (Legal Hold)'}
+              : 'Lưu Trữ Bảo Hành & Phong Tỏa Pháp Lý'}
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
             {isSupervisor

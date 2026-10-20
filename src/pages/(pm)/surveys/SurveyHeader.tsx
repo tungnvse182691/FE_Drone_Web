@@ -35,7 +35,7 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
           <p className="text-xs text-slate-500 mt-1 line-clamp-1">
             {isSupervisor
               ? 'Theo dõi tiến độ bay trắc địa và kết quả phân tích AI phục vụ công tác giám sát, nghiệm thu'
-              : 'Quản lý các đợt bay chụp ảnh trắc địa/RGB độ phân giải cao và thẩm định AI Bounding Box mặt đường'}
+              : 'Quản lý các đợt bay chụp ảnh trắc địa/RGB độ phân giải cao và thẩm định khung nhận diện AI mặt đường'}
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
           >
             <Icon name="auto_awesome" size={16} className="text-white" />
-            <span>Mở Canvas Thẩm Định AI</span>
+            <span>Mở Khung Hình Thẩm Định AI</span>
           </button>
           {!isSupervisor && (
             <button

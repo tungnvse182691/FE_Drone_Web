@@ -24,7 +24,7 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
             gavel
           </span>
           <h2 className="text-sm font-bold text-slate-900">
-            Cơ Chế Phong Tỏa Pháp Lý (Legal Hold)
+            Cơ Chế Phong Tỏa Pháp Lý
           </h2>
         </div>
         <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-semibold border border-slate-200">

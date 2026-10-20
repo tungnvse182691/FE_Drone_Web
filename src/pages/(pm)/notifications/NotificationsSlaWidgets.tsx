@@ -105,7 +105,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
               1
             </div>
             <div>
-              <div className="font-bold text-emerald-950">Drone AI Scan &amp; Phát hiện</div>
+              <div className="font-bold text-emerald-950">Thiết bị bay quét &amp; Phát hiện</div>
               <div className="text-[11px] text-emerald-800">Mô hình AI Road-YOLOv9 đo đạc và gắn cờ khiếm khuyết</div>
             </div>
           </div>
@@ -117,7 +117,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             </div>
             <div>
               <div className="font-bold text-amber-950">PM Thẩm định &amp; Lập Đề xuất</div>
-              <div className="text-[11px] text-amber-800">Xác minh Bounding box, gộp đợt sửa chữa hoặc mở lệnh xử lý nhanh</div>
+              <div className="text-[11px] text-amber-800">Xác minh khung nhận diện, gộp đợt sửa chữa hoặc mở lệnh xử lý nhanh</div>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Volume2 className="w-4 h-4 text-brand-gold" />
-            <span className="font-bold text-sm">Hệ Thống Âm Thanh SLAAudio</span>
+            <span className="font-bold text-sm">Hệ Thống Âm Thanh</span>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             isAudioEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
@@ -160,7 +160,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
         </div>
 
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          Tích hợp Web Audio API phát tiếng còi khẩn cấp và tiếng ping bàn giao độc lập ngoại tuyến.
+          Tích hợp công nghệ âm thanh trình duyệt phát tiếng còi khẩn cấp và tiếng ping bàn giao độc lập ngoại tuyến.
         </p>
 
         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">

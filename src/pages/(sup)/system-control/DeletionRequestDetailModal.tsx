@@ -67,7 +67,7 @@ export const DeletionRequestDetailModal: React.FC<DeletionRequestDetailModalProp
               </span>
               <div>
                 <span className="font-bold block">
-                  BỊ KHÓA BỞI PHONG TỎA PHÁP LÝ (LEGAL HOLD)
+                  BỊ KHÓA BỞI PHONG TỎA PHÁP LÝ
                 </span>
                 <span className="text-[11px] text-rose-700">
                   Dự án đang trong diện thanh tra. Mọi thao tác giải phóng hoặc hủy dữ liệu bị chặn tuyệt đối.

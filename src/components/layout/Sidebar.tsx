@@ -76,8 +76,8 @@ export const Sidebar: React.FC = () => {
           children: [
             { label: 'Danh sách đợt bay', path: '/pm/surveys' },
             { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' },
-            { label: 'Canvas thẩm định AI', path: '/pm/surveys/srv-01/review' },
-            { label: 'Thẩm định Bounding Box', path: '/pm/defects/det-03/verify-a' }
+            { label: 'Khung hình thẩm định AI', path: '/pm/surveys/srv-01/review' },
+            { label: 'Thẩm định khung nhận diện', path: '/pm/defects/det-03/verify-a' }
           ]
         },
         { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },

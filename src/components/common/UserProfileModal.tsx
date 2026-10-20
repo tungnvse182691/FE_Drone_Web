@@ -366,7 +366,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Email hệ thống (Read-only)
+                    Email hệ thống (chỉ đọc)
                   </label>
                   <input
                     type="email"
@@ -393,7 +393,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               {/* Đường dẫn ảnh đại diện */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Đường dẫn ảnh đại diện (Avatar URL)
+                  Đường dẫn ảnh đại diện
                 </label>
                 <div className="flex items-center gap-2">
                   <input

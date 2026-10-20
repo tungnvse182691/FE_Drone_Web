@@ -74,7 +74,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-slate-600 font-medium">
               <span className="w-2 h-2 rounded-full bg-brand-gold"></span>
-              <span>Trục chính (Mainline):</span>
+              <span>Trục chính:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
               {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : (project.length_km > 0 ? `${project.length_km} km` : '0 km')}
@@ -84,7 +84,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
           <div className="flex items-center justify-between border-t border-slate-200/60 pt-1.5">
             <span className="flex items-center gap-1.5 text-slate-600 font-medium">
               <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>Tuyến phụ (Branches):</span>
+              <span>Tuyến phụ:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
               {branchesCount > 0 ? (

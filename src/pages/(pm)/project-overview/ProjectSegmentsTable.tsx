@@ -73,7 +73,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-brand-gold"></span>
-          <span>Tuyến chính (Mainline)</span>
+          <span>Tuyến chính</span>
           <span className="text-[11px] font-mono px-1.5 py-0.2 bg-white rounded border border-slate-200 text-slate-700">
             {segments.length} đoạn • {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : '0km'}
           </span>
@@ -89,7 +89,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>Tuyến phụ (Branches)</span>
+          <span>Tuyến phụ</span>
           <span className="text-[11px] font-mono px-1.5 py-0.2 bg-white rounded border border-slate-200 text-slate-700">
             {(() => {
               const branchesSegmentsCount = branches.reduce((acc, b) => acc + (b.segments && Array.isArray(b.segments) && b.segments.length > 0 ? b.segments.length : 1), 0)

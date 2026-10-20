@@ -58,7 +58,7 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
                 <span className="material-symbols-outlined text-[18px] text-rose-600">
                   gavel
                 </span>
-                <span>ĐANG CÓ LỆNH PHONG TỎA PHÁP LÝ (LEGAL HOLD)</span>
+                <span>ĐANG CÓ LỆNH PHONG TỎA PHÁP LÝ</span>
               </div>
               <p className="text-[11px] text-rose-700 leading-relaxed">
                 Hồ sơ công trình đang chịu sự thanh tra, kiểm tra đột xuất. Toàn bộ chức năng đề xuất xóa hoặc tiêu hủy dữ liệu đối với dự án này bị khóa cứng trên toàn hệ thống.

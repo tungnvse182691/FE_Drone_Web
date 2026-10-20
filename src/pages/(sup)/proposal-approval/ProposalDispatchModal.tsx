@@ -138,7 +138,7 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-bold text-slate-700 block">Thời hạn hoàn thành thi công (Deadline):</label>
+              <label className="font-bold text-slate-700 block">Thời hạn hoàn thành thi công:</label>
               <input
                 type="text"
                 value={dispatchDeadline}

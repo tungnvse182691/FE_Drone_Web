@@ -56,7 +56,7 @@ export function useLegalHoldState(
 
   const handleOpenLegalHoldModal = (project: LegalHoldProject) => {
     if (!isSupervisor) {
-      alert('Chỉ tài khoản Giám sát / Chủ đầu tư mới có thẩm quyền bật/tắt Phong tỏa pháp lý (Legal Hold).')
+      alert('Chỉ tài khoản Giám sát / Chủ đầu tư mới có thẩm quyền bật/tắt Phong tỏa pháp lý.')
       return
     }
     setProjectToSetLegalHold(project)
@@ -125,7 +125,7 @@ export function useLegalHoldState(
 
     const proj = legalHoldProjects.find((p) => p.project_id === newDelProject)
     if (proj?.is_legal_hold) {
-      alert('HỆ THỐNG TỰ ĐỘNG CHẶN: Dự án đang có lệnh Phong tỏa pháp lý (Legal Hold) phục vụ thanh tra. Nghiêm cấm gửi đề xuất xóa dữ liệu!')
+      alert('HỆ THỐNG TỰ ĐỘNG CHẶN: Dự án đang có lệnh Phong tỏa pháp lý phục vụ thanh tra. Nghiêm cấm gửi đề xuất xóa dữ liệu!')
       return
     }
 

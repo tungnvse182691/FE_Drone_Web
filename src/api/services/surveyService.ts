@@ -451,7 +451,7 @@ export const INITIAL_PILOTS: AvailablePilot[] = [
   {
     id: 'pilot-01',
     name: 'Lê Hoàng Long',
-    roleLabel: 'Drone Pilot — Đội bay Hoàng Hải 01',
+    roleLabel: 'Phi công thiết bị bay — Đội bay Hoàng Hải 01',
     phone: '0988.123.456',
     license: 'Cục Tác Chiến #TC-UAV-2024-089',
     device: 'DJI Matrice 350 RTK + Zenmuse P1'
@@ -459,7 +459,7 @@ export const INITIAL_PILOTS: AvailablePilot[] = [
   {
     id: 'pilot-02',
     name: 'Trần Quang Khải',
-    roleLabel: 'Drone Pilot — Đội bay Hoàng Hải 02',
+    roleLabel: 'Phi công thiết bị bay — Đội bay Hoàng Hải 02',
     phone: '0972.555.888',
     license: 'Cục Tác Chiến #TC-UAV-2025-112',
     device: 'DJI Mavic 3 Enterprise RTK'
@@ -467,7 +467,7 @@ export const INITIAL_PILOTS: AvailablePilot[] = [
   {
     id: 'pilot-03',
     name: 'Nguyễn Thành Đạt',
-    roleLabel: 'Drone Pilot — Chuyên gia bay địa hình & SfM',
+    roleLabel: 'Phi công thiết bị bay — Chuyên gia bay địa hình & SfM',
     phone: '0915.777.999',
     license: 'Cục Tác Chiến #TC-UAV-2025-240',
     device: 'DJI Matrice 300 RTK + Zenmuse H20T'
@@ -475,7 +475,7 @@ export const INITIAL_PILOTS: AvailablePilot[] = [
   {
     id: 'pilot-04',
     name: 'Phạm Minh Tuấn',
-    roleLabel: 'Drone Pilot — Đội bay dự phòng khẩn cấp',
+    roleLabel: 'Phi công thiết bị bay — Đội bay dự phòng khẩn cấp',
     phone: '0903.444.222',
     license: 'Cục Tác Chiến #TC-UAV-2026-031',
     device: 'DJI Phantom 4 RTK'

@@ -201,7 +201,7 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           </div>
           <h4 className="text-white text-sm font-bold mb-1">Chưa trích xuất khung hình</h4>
           <p className="text-slate-400 text-xs max-w-sm leading-relaxed">
-            Vui lòng bấm vào một khiếm khuyết trong <strong>Danh sách phát hiện AI</strong> bên phải để trích xuất khung ảnh độ phân giải cao và Bounding Box trắc địa.
+            Vui lòng bấm vào một khiếm khuyết trong <strong>Danh sách phát hiện AI</strong> bên phải để trích xuất khung ảnh độ phân giải cao và khung nhận diện trắc địa.
           </p>
         </div>
       )}

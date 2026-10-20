@@ -61,7 +61,7 @@ export const SurveyKpiCards: React.FC = () => {
           <Icon name="verified" size={22} className="text-[#2F9E44]" />
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-xs text-slate-500 truncate">Độ phủ hành lang (Coverage)</span>
+          <span className="text-xs text-slate-500 truncate">Độ phủ hành lang</span>
           <span className="text-lg font-bold text-slate-900 font-mono">
             94.8% <span className="text-xs font-normal text-slate-500 font-sans">toàn tuyến</span>
           </span>
