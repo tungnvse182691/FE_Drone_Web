@@ -103,7 +103,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               <th className="py-3 px-3">Vai trò &amp; Dự án phụ trách</th>
               <th className="py-3 px-3">Phiên &amp; Thiết bị</th>
               <th className="py-3 px-3">Trạng thái</th>
-              <th className="py-3 px-4 text-right">Hành động</th>
+              <th className="py-3 px-2 text-right">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-800">
@@ -226,12 +226,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                   </td>
 
                   {/* Hành động (Gọn gàng với Icon Buttons + Tooltips) */}
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
+                  <td className="py-3 px-2 text-right">
+                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={() => setSelectedUserDetail(u)}
-                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:border-brand-gold hover:text-brand-goldDark text-slate-600 transition-all cursor-pointer shadow-2xs"
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:border-brand-gold hover:text-brand-goldDark text-slate-600 transition-all cursor-pointer shadow-2xs shrink-0"
                         title="Xem chi tiết hồ sơ nhân sự, dự án và thiết bị"
                       >
                         <span className="material-symbols-outlined text-[17px] block">
@@ -244,7 +244,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(u)}
-                            className="p-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 transition-all cursor-pointer shadow-2xs"
+                            className="p-1.5 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 transition-all cursor-pointer shadow-2xs shrink-0"
                             title="Chỉnh sửa thông tin nhân sự và dự án phụ trách"
                           >
                             <span className="material-symbols-outlined text-[17px] text-brand-gold block">
@@ -258,7 +258,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                               setUserToResetPassword(u)
                               setShowResetPasswordModal(true)
                             }}
-                            className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-800 transition-all cursor-pointer shadow-2xs"
+                            className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-800 transition-all cursor-pointer shadow-2xs shrink-0"
                             title="Đặt lại mật khẩu tạm thời & kích hoạt buộc đổi mật khẩu (CN10)"
                           >
                             <span className="material-symbols-outlined text-[17px] block">
@@ -274,7 +274,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             <button
                               type="button"
                               onClick={() => handleRestoreUser(u.id)}
-                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-2xs"
+                              className="p-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-2xs shrink-0"
                               title="Khôi phục quyền truy cập tài khoản (QT01)"
                             >
                               <span className="material-symbols-outlined text-[17px] block">
@@ -288,7 +288,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                                 setUserToSuspend(u)
                                 setShowSuspendModal(true)
                               }}
-                              className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-all cursor-pointer shadow-2xs"
+                              className="p-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 transition-all cursor-pointer shadow-2xs shrink-0"
                               title="Đình chỉ nhân sự và bàn giao công việc (QT01, QT02)"
                             >
                               <span className="material-symbols-outlined text-[17px] block">

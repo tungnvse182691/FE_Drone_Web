@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -52,7 +52,7 @@ export const AcceptInvitation: React.FC = () => {
     if (passed === 3) {
       return { score: 3, label: 'Khá mạnh (Good)', color: 'text-brand-goldMuted', barColor: 'bg-brand-gold' }
     }
-    return { score: 4, label: 'Rất mạnh (Strong) â€” Chuẩn Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
+    return { score: 4, label: 'Rất mạnh (Strong) — Chuẩn Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
   }
 
   const strength = getStrength()
@@ -154,7 +154,7 @@ export const AcceptInvitation: React.FC = () => {
           <div className="hidden lg:flex items-center gap-2 mb-4 px-3.5 py-1 bg-slate-200/70 rounded-full border border-slate-300/40 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
             <span className="text-[12px] font-mono text-slate-600 font-medium">HỆ THỐNG KIỂM SOÁT THI CÔNG &amp; HẠ TẦNG GIAO THÔNG SỐ</span>
-            <span className="text-slate-400">â€¢</span>
+            <span className="text-slate-400">•</span>
             <span className="text-[12px] font-mono text-brand-goldMuted font-bold">SECURE ONBOARDING GATEWAY</span>
           </div>
 
@@ -207,7 +207,7 @@ export const AcceptInvitation: React.FC = () => {
 
           {/* Sub-footer Legal */}
           <div className="w-full max-w-2xl text-center mt-6 space-y-1 px-4 pb-2 text-[11px] text-slate-400">
-            <p>Hệ thống bảo mật hạ tầng số RoadGuard â€¢ Nhà thầu Hoàng Hải â€¢ Tuân thủ TCVN 8819:2011 â€¢ Mã hóa End-to-End TLS 1.3 â€¢ Toàn vẹn SHA-256</p>
+            <p>Hệ thống bảo mật hạ tầng số RoadGuard • Nhà thầu Hoàng Hải • Tuân thủ TCVN 8819:2011 • Mã hóa End-to-End TLS 1.3 • Toàn vẹn SHA-256</p>
             <p>Â© 2026 Hoàng Hải Infrastructure Management Group. All rights reserved.</p>
           </div>
         </div>

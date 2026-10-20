@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   User,
   Lock,
@@ -262,7 +262,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
         </div>
         <div className="flex items-center gap-2 font-mono">
           <span>TCVN 8819:2011</span>
-          <span>â€¢</span>
+          <span>•</span>
           <span>SHA-256 Verified</span>
         </div>
       </div>

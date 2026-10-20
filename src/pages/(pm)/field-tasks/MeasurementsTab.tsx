@@ -372,7 +372,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       ) : task.status === 'IN_PROGRESS' ? (
                         <span className="text-blue-600 italic text-[11px] flex items-center gap-1">
                           <Icon name="pending" size={13} />
-                          <span>Đang thực hiện</span>
+                          <span>Đang chờ thực hiện</span>
                         </span>
                       ) : (
                         <span className="font-semibold text-slate-900 text-xs">
@@ -487,28 +487,6 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             <Icon name="visibility" size={13} className="text-slate-500" />
                             <span>Chi tiết & Ảnh</span>
                           </button>
-
-                          {task.status === 'ASSIGNED' && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSubmitModal(task)}
-                              className="px-2 py-0.5 rounded border border-dashed border-slate-300 text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-[10px] transition-colors cursor-pointer"
-                              title="Công cụ test: Mô phỏng Mobile App của Crew gửi số đo về máy chủ"
-                            >
-                              [Test] Sync
-                            </button>
-                          )}
-
-                          {task.status === 'IN_PROGRESS' && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSubmitModal(task)}
-                              className="px-2 py-0.5 rounded border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 text-[10px] transition-colors cursor-pointer"
-                              title="Công cụ test: Mô phỏng Mobile App của Crew gửi số đo về máy chủ"
-                            >
-                              [Test] Sync
-                            </button>
-                          )}
 
                           {task.status === 'SUBMITTED' && (
                             <button
