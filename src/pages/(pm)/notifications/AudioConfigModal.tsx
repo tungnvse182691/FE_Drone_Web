@@ -110,7 +110,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
                 <div>
                   <div className="font-bold text-[14px] text-slate-800">Còi khẩn cấp 24/7</div>
                   <div className="text-[12px] text-[#6B7280]">
-                    Khi có lỗi sụt lún nguy hiểm hoặc SLA &lt; 2h
+                    Khi có lỗi sụt lún nguy hiểm hoặc <span className="whitespace-nowrap">SLA &lt; 2h</span>
                   </div>
                 </div>
               </div>

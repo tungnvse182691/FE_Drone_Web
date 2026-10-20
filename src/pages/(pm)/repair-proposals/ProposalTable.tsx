@@ -144,7 +144,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
               <th className="py-2.5 px-3 whitespace-nowrap">Người lập / Ngày trình</th>
               <th className="py-2.5 px-3 whitespace-nowrap">Trạng thái</th>
               <th className="py-2.5 px-3 min-w-[140px] whitespace-nowrap">Tiến độ phê duyệt</th>
-              <th className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20">
+              <th className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 min-w-[200px]">
                 Thao tác
               </th>
             </tr>

@@ -148,17 +148,17 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
       </td>
 
       {/* Sticky Column: Thao tác */}
-      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10">
-        <div className="flex items-center justify-end gap-1.5 relative">
+      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 z-10 min-w-[200px]">
+        <div className="flex items-center justify-end gap-1.5 relative whitespace-nowrap">
           {/* Vai trò Supervisor */}
           {isSupervisor && pkg.status === 'SUBMITTED' && (
             <Tooltip content="Kỹ sư Giám sát phê duyệt nhanh gói đề xuất này">
               <button
                 onClick={() => onQuickApprove(pkg.id, pkg.code)}
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2F9E44] hover:bg-emerald-700 text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#2F9E44] hover:bg-emerald-700 text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
               >
-                <Icon name="shield" size={13} />
+                <Icon name="shield" size={13} className="shrink-0" />
                 <span>Phê duyệt</span>
               </button>
             </Tooltip>
@@ -172,9 +172,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                   navigate(`${basePath}/proposals/${pkg.id}`)
                 }}
                 type="button"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
               >
-                <Icon name="person" size={13} />
+                <Icon name="person" size={13} className="shrink-0" />
                 <span>Theo dõi</span>
               </button>
             </Tooltip>
@@ -187,9 +187,9 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                 <button
                   onClick={() => onSubmitDraft(pkg.id, pkg.code)}
                   type="button"
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-xs shadow-2xs transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
                 >
-                  <Icon name="send" size={13} />
+                  <Icon name="send" size={13} className="shrink-0" />
                   <span>Trình duyệt</span>
                 </button>
               </Tooltip>
@@ -197,7 +197,7 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                 <button
                   onClick={() => onDeleteDraft(pkg.id, pkg.code)}
                   type="button"
-                  className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer shrink-0"
                 >
                   <Icon name="delete" size={15} />
                 </button>
@@ -210,10 +210,10 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
             <button
               onClick={() => navigate(`${basePath}/proposals/${pkg.id}`)}
               type="button"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[12px] whitespace-nowrap transition-colors cursor-pointer shrink-0"
             >
-              <Icon name="visibility" size={14} className="text-slate-600" />
-              <span>{isSupervisor ? 'Thẩm định' : 'Xem hồ sơ'}</span>
+              <Icon name="visibility" size={14} className="text-slate-600 shrink-0" />
+              <span className="whitespace-nowrap">{isSupervisor ? 'Thẩm định' : 'Xem hồ sơ'}</span>
             </button>
           </Tooltip>
 

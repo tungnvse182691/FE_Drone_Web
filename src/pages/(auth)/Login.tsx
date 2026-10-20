@@ -127,7 +127,7 @@ export const Login: React.FC = () => {
 
       {viewMode === 'login' ? (
         <main className="w-full flex-1 relative z-10">
-          <div className="mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-10 py-10 lg:py-12 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-[56px] items-center">
+          <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-8 lg:px-10 py-8 lg:py-12 grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-10 lg:gap-[56px] items-center">
             {/* Cột trái: Panel branding */}
             <div className="flex flex-col justify-center items-center text-center">
               {/* Logo to hơn và canh giữa cùng chữ HOÀNG HẢI ROADGUARD */}

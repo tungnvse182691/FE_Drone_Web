@@ -167,15 +167,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       {/* Khu vực Đổi mật khẩu lần đầu (kích hoạt tài khoản mới) */}
       {onSwitchToForce && (
         <div className="p-3.5 rounded-xl bg-[#FEF9E7] border border-[rgba(201,162,39,0.30)] flex items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-8 h-8 rounded-lg bg-white border border-[rgba(201,162,39,0.28)] text-[#C9A227] flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[18px]">key</span>
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-[#1A1D20]">
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-[#1A1D20] whitespace-normal">
                 Được cấp mật khẩu tạm?
               </div>
-              <div className="text-[11px] text-slate-500 truncate">
+              <div className="text-[11px] text-slate-500 whitespace-normal leading-tight mt-0.5">
                 Đổi mật khẩu lần đầu để kích hoạt tài khoản
               </div>
             </div>
@@ -183,7 +183,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           <button
             type="button"
             onClick={onSwitchToForce}
-            className="shrink-0 px-3 py-1.5 rounded-lg bg-white hover:bg-[#FAF4DF] border border-[rgba(201,162,39,0.40)] text-[#8C6D1F] hover:text-[#6B5219] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+            className="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg bg-white hover:bg-[#FAF4DF] border border-[rgba(201,162,39,0.40)] text-[#8C6D1F] hover:text-[#6B5219] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
           >
             <span>Đổi ngay</span>
             <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
@@ -196,20 +196,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
           Tài khoản kiểm thử nhanh (Mật khẩu mặc định: 123456):
         </span>
-        <div className="grid grid-cols-2 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => {
               setEmail('pmhoang@gmail.com')
               setPassword('123456')
             }}
-            className="p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
+            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">badge</span>
-              <span>PM Dùng thử</span>
+            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">badge</span>
+              <span className="truncate">PM Dùng thử</span>
             </div>
-            <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
+            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
               pmhoang@gmail.com
             </div>
           </button>
@@ -220,13 +220,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               setEmail('suphoang@gmail.com')
               setPassword('123456')
             }}
-            className="p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
+            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">supervisor_account</span>
-              <span>Giám sát Dùng thử</span>
+            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
+              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">supervisor_account</span>
+              <span className="truncate">Giám sát Dùng thử</span>
             </div>
-            <div className="text-[11px] text-slate-500 truncate mt-0.5 font-mono">
+            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
               suphoang@gmail.com
             </div>
           </button>
