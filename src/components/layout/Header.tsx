@@ -17,7 +17,7 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-brand-border px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header className="h-16 bg-white border-b border-brand-border px-6 flex items-center justify-between sticky top-0 z-50 shadow-xs">
         <div className="flex items-center gap-3.5">
           {/* Logo Xe Bồn Cơ Giới Hoàng Hải */}
           <img
