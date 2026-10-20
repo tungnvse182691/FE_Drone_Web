@@ -78,7 +78,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
                       : 'bg-rose-100 text-rose-800'
                   }`}
                 >
-                  {isEligible ? 'Đạt chuẩn Fast Track' : 'Không đủ điều kiện (API-146)'}
+                  {isEligible ? 'Đạt chuẩn xử lý nhanh' : 'Không đủ điều kiện (API-146)'}
                 </span>
               )}
             </div>
@@ -115,7 +115,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
                 <Icon name="report" size={14} className="text-rose-600 shrink-0" />
-                <span>Lý do không đủ điều kiện Fast Track (API-146):</span>
+                <span>Lý do không đủ điều kiện xử lý nhanh (API-146):</span>
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {missingReasons.length > 0 ? (

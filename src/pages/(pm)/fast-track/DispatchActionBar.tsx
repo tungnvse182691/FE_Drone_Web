@@ -102,7 +102,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
           {hasViolationItem && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
               <Icon name="report" size={12} className="text-rose-600" />
-              {isSupervisor ? 'Có lỗi vi phạm ngưỡng Fast Track' : 'Chặn giao việc: Có lỗi vượt ngưỡng'}
+              {isSupervisor ? 'Có lỗi vi phạm ngưỡng xử lý nhanh' : 'Chặn giao việc: Có lỗi vượt ngưỡng'}
             </span>
           )}
         </div>
@@ -123,7 +123,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
         {isSupervisor ? (
           <div className="flex items-center gap-2 text-xs text-slate-600 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-2xs">
             <Icon name="visibility" size={16} className="text-brand-gold shrink-0" />
-            <span className="font-medium">Chế độ giám sát hiện trường (Read-only) • Thẩm quyền giao việc thuộc Chỉ huy trưởng (PM)</span>
+            <span className="font-medium">Chế độ giám sát hiện trường (Chỉ xem) • Thẩm quyền giao việc thuộc Chỉ huy trưởng (PM)</span>
           </div>
         ) : (
           <>
@@ -161,7 +161,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                 {hasViolationItem && (
                   <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                     <Icon name="report" size={14} className="text-rose-400 mr-1 shrink-0" />
-                    Khóa: Không thể giao việc Fast Track khi có khiếm khuyết vi phạm ngưỡng!
+                    Khóa: Không thể giao việc xử lý nhanh khi có khiếm khuyết vi phạm ngưỡng!
                   </div>
                 )}
               </div>
@@ -195,7 +195,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                   <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                     <Icon name="report" size={14} className="text-rose-400 mr-1 shrink-0" />
                     {hasViolationItem || !firstItemEligible
-                      ? `Khóa: ${firstItemMissingReasons[0] || 'Khiếm khuyết không đủ điều kiện Fast Track (API-146)'}`
+                      ? `Khóa: ${firstItemMissingReasons[0] || 'Khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)'}`
                       : 'Quy tắc BR-08: Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
                   </div>
                 )}
@@ -207,7 +207,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                 {firstItemEligible && (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-semibold animate-pulse">
                     <Icon name="warning" size={16} className="text-amber-600 shrink-0" />
-                    <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} đủ chuẩn Fast Track thông thường!</span>
+                    <span>Lưu ý: Hư hỏng #{selectedItems[0]?.code} đủ chuẩn xử lý nhanh thông thường!</span>
                   </div>
                 )}
                 {!firstItemEligible && selectedItems[0] && (
@@ -237,7 +237,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                     ) : (
                       <>
                         <Icon name="local_fire_department" size={14} />
-                        <span>Phát lệnh Xử lý khẩn cấp (24/7 Priority)</span>
+                        <span>Phát lệnh Xử lý khẩn cấp (Ưu tiên 24/7)</span>
                       </>
                     )}
                   </button>

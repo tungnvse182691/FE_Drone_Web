@@ -100,13 +100,13 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         {pkg.status === 'SUBMITTED' && (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FEF3E2] text-[#F59E0B] border border-amber-200">
             <Icon name="schedule" size={13} />
-            <span>Chờ phê duyệt</span>
+            <span>Đã gửi</span>
           </span>
         )}
         {pkg.status === 'DECIDED' && (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-emerald-200">
             <Icon name="check_circle" size={13} />
-            <span>Đã phê duyệt</span>
+            <span>Đã duyệt</span>
           </span>
         )}
         {pkg.status === 'DISPATCHED' && (

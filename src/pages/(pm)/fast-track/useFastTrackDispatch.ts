@@ -89,7 +89,7 @@ export function useFastTrackDispatch(
     const target = defects.find((d) => d.id === id)
     // Chặn không cho chọn lỗi vi phạm ngưỡng trong luồng Fast Track Đo & Sửa ngay (BR-04)
     if (target && !target.isFastTrackEligible && workMode === 'INSPECT_AND_REPAIR') {
-      showToast(`Không thể chọn ${target.code}: Chế độ Đo & Sửa ngay chỉ áp dụng cho hư hỏng nhỏ đạt chuẩn Fast Track (BR-04). Với lỗi lớn gây ùn tắc, vui lòng chuyển sang Chế độ Xử lý khẩn cấp!`)
+      showToast(`Không thể chọn ${target.code}: Chế độ Đo & Sửa ngay chỉ áp dụng cho hư hỏng nhỏ đạt chuẩn xử lý nhanh (BR-04). Với lỗi lớn gây ùn tắc, vui lòng chuyển sang Chế độ Xử lý khẩn cấp!`)
       return
     }
 
@@ -110,7 +110,7 @@ export function useFastTrackDispatch(
       setSelectedDefectIds(eligibleItems.map((d) => d.id))
       const violationCount = filteredDefects.length - eligibleItems.length
       if (violationCount > 0) {
-        showToast(`Đã tự động lọc bỏ ${violationCount} khiếm khuyết vi phạm ngưỡng. Chỉ chọn các lỗi đạt chuẩn Fast Track!`)
+        showToast(`Đã tự động lọc bỏ ${violationCount} khiếm khuyết vi phạm ngưỡng. Chỉ chọn các lỗi đạt chuẩn xử lý nhanh!`)
       }
     } else {
       setSelectedDefectIds([])
@@ -162,7 +162,7 @@ export function useFastTrackDispatch(
     }
     // Chặn giao việc tuyệt đối nếu có lỗi vi phạm ngưỡng
     if (hasViolationItem) {
-      showToast('CHẶN GIAO VIỆC: Danh sách chứa hạng mục vi phạm ngưỡng chính sách Fast Track! Bắt buộc loại bỏ hoặc gom vào Gói đề xuất sửa chữa lớn.')
+      showToast('CHẶN GIAO VIỆC: Danh sách chứa hạng mục vi phạm ngưỡng chính sách xử lý nhanh! Bắt buộc loại bỏ hoặc gom vào Gói đề xuất sửa chữa lớn.')
       return
     }
     setIsDispatchModalOpen(true)
@@ -170,11 +170,11 @@ export function useFastTrackDispatch(
 
   const handleRepairDirect = () => {
     if (hasViolationItem) {
-      showToast('KHÔNG THỂ THỰC HIỆN: Hạng mục được chọn vi phạm ngưỡng chính sách Fast Track!')
+      showToast('KHÔNG THỂ THỰC HIỆN: Hạng mục được chọn vi phạm ngưỡng chính sách xử lý nhanh!')
       return
     }
     if (selectedDefectIds.length !== 1) {
-      showToast('Chế độ Đo và Sửa ngay (Fast Track Direct) chỉ áp dụng cho đúng 1 lỗi đơn lẻ!')
+      showToast('Chế độ Đo và Sửa ngay (Xử lý nhanh trực tiếp) chỉ áp dụng cho đúng 1 lỗi đơn lẻ!')
       return
     }
     setIsDispatchModalOpen(true)
@@ -198,14 +198,14 @@ export function useFastTrackDispatch(
     if (selectedDefectIds.length === 0) return
 
     if (hasViolationItem && workMode !== 'EMERGENCY') {
-      showToast('LỖI BẢO MẬT QUY CHUẨN: Không được phép giao việc Fast Track cho hạng mục vi phạm ngưỡng!')
+      showToast('LỖI BẢO MẬT QUY CHUẨN: Không được phép giao việc xử lý nhanh cho hạng mục vi phạm ngưỡng!')
       return
     }
 
     if (workMode === 'EMERGENCY') {
       if (!dispatchNotes || dispatchNotes.trim().length < 10) {
         showToast(
-          'BẮT BUỘC: Lệnh khẩn cấp 24/7 yêu cầu nhập lý do hiện trường / chỉ đạo phân luồng (tối thiểu 10 ký tự) để phục vụ Supervisor hậu kiểm!'
+          'BẮT BUỘC: Lệnh khẩn cấp 24/7 yêu cầu nhập lý do hiện trường / chỉ đạo phân luồng (tối thiểu 10 ký tự) để phục vụ Giám sát hậu kiểm!'
         )
         return
       }
@@ -233,7 +233,7 @@ export function useFastTrackDispatch(
       workMode === 'MEASURE_ONLY'
         ? 'Gom lô đo đạc'
         : workMode === 'INSPECT_AND_REPAIR'
-        ? 'Đo & Sửa ngay Fast Track'
+        ? 'Đo & Sửa ngay xử lý nhanh'
         : 'Khẩn cấp 24/7'
 
     if (workMode === 'EMERGENCY' && selectedItems[0]?.isFastTrackEligible) {

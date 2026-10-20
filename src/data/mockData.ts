@@ -1249,7 +1249,7 @@ export const mockSyncConflicts: SyncConflictItem[] = [
     route_name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
     chainage: 'Km 1033+400 (Làn rẽ phải)',
     conflict_type: 'DUPLICATE_WORK_ATTEMPT',
-    conflict_type_label: 'Trùng lặp 2 thiết bị nộp cùng vị trí (Dedup)',
+    conflict_type_label: 'Trùng lặp 2 thiết bị nộp cùng vị trí',
     severity: 'MEDIUM',
     status: 'CONFLICT_INTAKE',
     status_label: 'Chờ PM chọn bản ghi chuẩn',

@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   Route,
   Mail,
@@ -27,9 +27,8 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="text-lg font-bold tracking-tight text-slate-900 font-headline">Hoàng Hải</span>
-              <span className="px-1.5 py-0.5 rounded bg-brand-gold/10 text-brand-goldMuted font-mono text-[11px] font-bold">PRO</span>
             </div>
-            <span className="text-xs text-slate-500">RoadGuard Civil Platform v2.2</span>
+            <span className="text-xs text-slate-500">Nền tảng RoadGuard v2.2</span>
           </div>
         </div>
 
@@ -50,7 +49,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
           Bạn nhận được lời mời tham gia dự án
         </h1>
         <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
-          Supervisor <strong className="text-slate-900 font-semibold">Nguyễn Văn An</strong> (Ban QLDA) đã gửi lời mời tham gia quản trị &amp; vận hành dự án hạ tầng giao thông trọng điểm.
+          Giám sát viên <strong className="text-slate-900 font-semibold">Nguyễn Văn An</strong> (Ban QLDA) đã gửi lời mời tham gia quản trị &amp; vận hành dự án hạ tầng giao thông trọng điểm.
         </p>
       </div>
 
@@ -95,7 +94,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
               <span className="block text-[11px] text-slate-500">Vai trò bổ nhiệm</span>
               <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold text-white shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                <span className="text-xs font-semibold tracking-wide">Project Manager (PM)</span>
+                <span className="text-xs font-semibold tracking-wide">Chỉ huy trưởng (PM)</span>
               </div>
             </div>
           </div>
@@ -109,7 +108,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ token }) => {
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] text-slate-500">Email xác thực</span>
                 <span className="inline-flex items-center text-[10px] text-slate-500 font-medium bg-black/5 px-1.5 py-0.2 rounded-full">
-                  <Lock className="w-2.5 h-2.5 mr-0.5" /> Read-only
+                  <Lock className="w-2.5 h-2.5 mr-0.5" /> Chỉ đọc
                 </span>
               </div>
               <p className="font-mono text-slate-900 text-xs truncate mt-0.5 font-semibold">

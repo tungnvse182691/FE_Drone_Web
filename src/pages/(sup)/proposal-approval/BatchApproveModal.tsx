@@ -45,7 +45,7 @@ export const BatchApproveModal: React.FC<BatchApproveModalProps> = ({
 
         <div className="bg-[#F8F9FA] p-3 rounded-lg border border-slate-200 text-xs text-slate-600 space-y-1">
           <div className="flex justify-between">
-            <span>Số hạng mục sẽ chuyển APPROVED:</span>
+            <span>Số hạng mục sẽ duyệt:</span>
             <span className="font-bold text-slate-900">{stats.total - stats.approved} mục</span>
           </div>
           <div className="flex justify-between">

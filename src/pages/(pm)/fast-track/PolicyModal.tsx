@@ -50,7 +50,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               <Icon name="verified_user" size={18} className="text-brand-gold" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Tạo Phiên Bản Chính Sách Fast Track Mới</h3>
+              <h3 className="text-base font-bold text-brand-dark">Tạo Phiên Bản Chính Sách Xử Lý Nhanh Mới</h3>
               <span className="text-[10px] text-slate-500">Kế thừa và điều chỉnh từ {currentPolicy.version}</span>
             </div>
           </div>
@@ -69,7 +69,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="text"
               value={formVersionName}
               onChange={(e) => setFormVersionName(e.target.value)}
-              placeholder="Ví dụ: Policy v2.2"
+              placeholder="Ví dụ: Chính sách v2.2"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
           </div>
@@ -126,28 +126,28 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
-              Mức độ nghiêm trọng cho phép áp dụng Fast Track
+              Mức độ nghiêm trọng cho phép áp dụng xử lý nhanh
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
                 <Icon name="check_circle" size={14} className="text-emerald-600 shrink-0" />
-                <span>LOW (Nhẹ)</span>
+                <span>Thấp (Nhẹ)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800">
                 <Icon name="check_circle" size={14} className="text-blue-600 shrink-0" />
-                <span>MEDIUM (Vừa)</span>
+                <span>Trung bình (Vừa)</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi nặng">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt xử lý nhanh với lỗi nặng">
                 <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
                 <span>HIGH (Khóa)</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt Fast Track với lỗi khẩn cấp/nguy hiểm">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt xử lý nhanh với lỗi khẩn cấp/nguy hiểm">
                 <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
                 <span>CRITICAL (Khóa)</span>
               </div>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              🔒 <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, Fast Track chỉ áp dụng cho hư hỏng nhỏ/vừa (LOW &amp; MEDIUM). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Supervisor hoặc Đội cứu hộ khẩn cấp.
+              🔒 <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, xử lý nhanh chỉ áp dụng cho hư hỏng nhỏ/vừa (Thấp &amp; Trung bình). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Giám sát hoặc Đội cứu hộ khẩn cấp.
             </span>
           </div>
 
@@ -185,7 +185,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="button"
               className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-xl border border-amber-200 shadow-2xs cursor-pointer transition-colors"
             >
-              Lưu dự thảo (DRAFT)
+              Lưu bản nháp
             </button>
             <button
               onClick={() => handleApplyPolicy('ACTIVATE')}

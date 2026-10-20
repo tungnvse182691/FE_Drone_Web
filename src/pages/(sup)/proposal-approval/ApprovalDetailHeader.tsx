@@ -96,22 +96,22 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
               {status === 'DISPATCHED' ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
                   <Icon name="local_shipping" size={14} className="text-blue-600" />
-                  <span>ASSIGNED - Đã giao việc</span>
+                  <span>Đã giao việc</span>
                 </span>
               ) : status === 'DRAFT' ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F8F9FA] text-[#2D3748] border border-slate-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <span>DRAFT - Bản nháp</span>
+                  <span>Bản nháp</span>
                 </span>
               ) : status === 'DECIDED' || (stats.total > 0 && stats.approved === stats.total) ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E9F7EC] text-[#2F9E44] border border-emerald-200">
                   <Icon name="check_circle" size={14} className="text-[#2F9E44]" />
-                  <span>APPROVED - Đã phê duyệt {Math.round(stats.percent)}%</span>
+                  <span>Đã duyệt {Math.round(stats.percent)}%</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3E2] text-[#F59E0B] border border-amber-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-ping opacity-75"></span>
-                  <span>SUBMITTED - Chờ Supervisor phê duyệt</span>
+                  <span>Đã gửi - Chờ Giám sát phê duyệt</span>
                 </span>
               )}
             </div>
@@ -173,8 +173,8 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
           <Icon name="security" size={16} className="text-brand-gold shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">
             <strong className="text-slate-900 font-semibold">Quy định thẩm quyền:</strong>{' '}
-            Supervisor thẩm duyệt phương pháp kỹ thuật &amp; khối lượng thi công từng vị trí. PM phát lệnh giao việc hiện trường (Dispatch) cho các hạng mục đã được phê duyệt (
-            <strong className="text-[#2F9E44]">APPROVED</strong>).
+            Giám sát thẩm duyệt phương pháp kỹ thuật &amp; khối lượng thi công từng vị trí. PM phát lệnh giao việc hiện trường (Dispatch) cho các hạng mục đã được phê duyệt (
+            <strong className="text-[#2F9E44]">ĐÃ DUYỆT</strong>).
           </div>
         </div>
       </div>

@@ -56,7 +56,13 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                       : 'bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {selectedPackageForDetail.status}
+                  {selectedPackageForDetail.status === 'SUBMITTED'
+                    ? 'Đã gửi'
+                    : selectedPackageForDetail.status === 'DECIDED'
+                    ? 'Đã duyệt'
+                    : selectedPackageForDetail.status === 'DISPATCHED'
+                    ? 'Đã giao việc'
+                    : 'Bản nháp'}
                 </span>
                 <span className="text-xs text-slate-500 font-mono">
                   Snapshot: v1.0 (Immutable)
@@ -158,7 +164,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                 <span className="w-32 text-right font-mono font-semibold text-slate-900">0.45 m² (Sâu 5.2cm)</span>
                 <span className="w-24 text-right">
                   <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    APPROVED
+                    Đã duyệt
                   </span>
                 </span>
               </div>
@@ -170,7 +176,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                 <span className="w-32 text-right font-mono font-semibold text-slate-900">0.85 m² (Sâu 3.1cm)</span>
                 <span className="w-24 text-right">
                   <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    APPROVED
+                    Đã duyệt
                   </span>
                 </span>
               </div>
@@ -182,7 +188,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                 <span className="w-32 text-right font-mono font-semibold text-slate-900">1.25 m² (Sâu 4.5cm)</span>
                 <span className="w-24 text-right">
                   <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-bold bg-amber-100 text-amber-800">
-                    PENDING
+                    Chờ duyệt
                   </span>
                 </span>
               </div>

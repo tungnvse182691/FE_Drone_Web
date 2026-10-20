@@ -102,7 +102,7 @@ export const useFastTrackState = (isSupervisor = false) => {
           areaM2: area,
           depthCm: depth,
           isFastTrackEligible: isEligible,
-          violationReason: isEligible ? undefined : 'Diện tích hoặc độ sâu vượt ngưỡng chính sách Fast Track hiện hành',
+          violationReason: isEligible ? undefined : 'Diện tích hoặc độ sâu vượt ngưỡng chính sách xử lý nhanh hiện hành',
           assignedCrew: 'Chưa chỉ định',
           gps: {
             lat: incomingTargetDefect.gps?.lat || 16.0560,

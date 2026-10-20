@@ -31,11 +31,11 @@ export const FastTrackBanner: React.FC<FastTrackBannerProps> = ({
             </span>
             {sourceCase.isEligible ? (
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                ✓ Đủ tiêu chuẩn Fast Track Direct
+                ✓ Đủ tiêu chuẩn Xử lý nhanh trực tiếp
               </span>
             ) : (
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300">
-                ⚠ Vượt ngưỡng Fast Track (Chuyển sang Chế độ Đo đạc)
+                ⚠ Vượt ngưỡng xử lý nhanh (Chuyển sang Chế độ Đo đạc)
               </span>
             )}
           </div>

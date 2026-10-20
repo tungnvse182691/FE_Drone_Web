@@ -31,7 +31,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-bold text-brand-dark tracking-tight">
-                  Quy chuẩn chính sách Fast Track áp dụng
+                  Quy chuẩn chính sách xử lý nhanh áp dụng
                 </h2>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
@@ -125,7 +125,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
             </div>
             <div>
               <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                LOW / MEDIUM
+                Thấp / Trung bình
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
                 Hư hỏng nhẹ, không gây ách tắc
@@ -190,7 +190,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
             >
               <Icon name="description" size={14} className="text-brand-gold" />
-              <span>Nhật ký kiểm toán (Audit Trail)</span>
+              <span>Nhật ký kiểm toán</span>
             </button>
           </div>
         </div>
@@ -204,7 +204,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <div className="flex items-center gap-2">
                 <Icon name="history" size={20} className="text-brand-gold" />
                 <div>
-                  <h3 className="text-base font-bold text-brand-dark">Lịch sử các phiên bản chính sách Fast Track</h3>
+                  <h3 className="text-base font-bold text-brand-dark">Lịch sử các phiên bản chính sách xử lý nhanh</h3>
                   <p className="text-[11px] text-slate-500">
                     Hồ sơ quy chuẩn kỹ thuật áp dụng theo từng giai đoạn dự án
                   </p>

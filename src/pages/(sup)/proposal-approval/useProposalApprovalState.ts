@@ -175,7 +175,7 @@ export function useProposalApprovalState(id: string | undefined) {
       supervisor_notes: 'Đã phê duyệt thông qua phương án kỹ thuật và khối lượng bóc tách.'
     })
     setItems(repairService.getItems(activeKey))
-    showToast(`Hạng mục ${itemId.toUpperCase()} đã được Supervisor phê duyệt (APPROVED)!`)
+    showToast(`Hạng mục ${itemId.toUpperCase()} đã được Giám sát phê duyệt (Đã duyệt)!`)
   }
 
   const handleOpenDecisionModal = (item: RepairItemDetail, initialType: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => {

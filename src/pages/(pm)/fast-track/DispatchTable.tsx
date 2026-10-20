@@ -114,7 +114,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                     title={
                       workMode !== 'MEASURE_ONLY'
                         ? 'Chế độ Sửa nhanh/Khẩn cấp chỉ áp dụng cho 1 lỗi đơn lẻ (BR-08)'
-                        : 'Chọn tất cả khiếm khuyết đạt chuẩn Fast Track'
+                        : 'Chọn tất cả khiếm khuyết đạt chuẩn xử lý nhanh'
                     }
                     checked={isAllEligibleSelected}
                     onChange={(e) => handleSelectAll(e.target.checked)}
@@ -126,7 +126,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
               <th className="p-3">Vị trí (Km / Tuyến / Làn)</th>
               <th className="p-3">Loại khiếm khuyết</th>
               <th className="p-3">Kích thước sơ bộ</th>
-              <th className="p-3">Đánh giá Fast Track v2.1</th>
+              <th className="p-3">Đánh giá xử lý nhanh v2.1</th>
               <th className="p-3">Đội đo đạc phân công</th>
               <th className="p-3 text-right">Thao tác</th>
             </tr>
@@ -223,7 +223,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                     ) : isEligible ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         <Icon name="check_circle" size={14} className="text-emerald-600" />
-                        <span>Đạt chuẩn Fast Track</span>
+                        <span>Đạt chuẩn xử lý nhanh</span>
                       </span>
                     ) : (
                       <div className="space-y-0.5">
@@ -270,7 +270,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                           onClick={onNavigateProposals}
                           type="button"
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-50 hover:bg-amber-100 text-[#8C6D1F] border border-amber-200 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap"
-                          title="Đưa vào Gói đề xuất sửa chữa lớn (WF-07) để trình Supervisor thẩm duyệt"
+                          title="Đưa vào Gói đề xuất sửa chữa lớn (WF-07) để trình Giám sát thẩm duyệt"
                         >
                           <Icon name="arrow_forward" size={12} />
                           <span>Gom đợt duyệt</span>
@@ -304,8 +304,8 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
               <h3 className="font-bold text-rose-800 text-sm flex items-center gap-2">
                 <span>
                   {isSupervisor
-                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết không đủ điều kiện Fast Track (API-146)'
-                    : 'Chặn xuất quân: Phát hiện khiếm khuyết không đủ điều kiện Fast Track (API-146)!'}
+                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)'
+                    : 'Chặn xuất quân: Phát hiện khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)!'}
                 </span>
               </h3>
               <div className="text-slate-700 leading-relaxed space-y-1">
@@ -324,7 +324,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                         ? el.missingReasons
                         : d.violationReason
                         ? [d.violationReason]
-                        : ['Không đạt ngưỡng chính sách Fast Track']
+                        : ['Không đạt ngưỡng chính sách xử lý nhanh']
                       return (
                         <div key={d.id} className="text-[11px] text-rose-800 flex items-start gap-1 font-mono">
                           <span className="font-bold shrink-0">{d.code}:</span>
@@ -334,7 +334,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                     })}
                 </div>
                 <p className="text-[11px] text-slate-500 pt-0.5">
-                  Theo quy định <strong className="text-rose-700">BR-04</strong>, các hư hỏng không đủ điều kiện này bắt buộc phải lập hồ sơ trình Supervisor duyệt.
+                  Theo quy định <strong className="text-rose-700">BR-04</strong>, các hư hỏng không đủ điều kiện này bắt buộc phải lập hồ sơ trình Giám sát duyệt.
                 </p>
               </div>
             </div>

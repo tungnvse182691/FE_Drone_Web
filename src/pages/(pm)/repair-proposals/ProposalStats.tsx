@@ -38,7 +38,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
         <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="text-slate-400 text-[11px]">Chưa khóa trình duyệt</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-[#F8F9FA] text-[#2D3748] border border-slate-200">
-            DRAFT
+            Bản nháp
           </span>
         </div>
       </div>
@@ -60,9 +60,9 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
           </div>
         </div>
         <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span className="text-slate-400 text-[11px]">Supervisor thẩm định</span>
+          <span className="text-slate-400 text-[11px]">Giám sát thẩm định</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-[#FEF3E2] text-[#F59E0B] border border-amber-200">
-            SUBMITTED
+            Đã gửi
           </span>
         </div>
       </div>
@@ -86,7 +86,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
         <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="text-slate-400 text-[11px]">Đã phê duyệt phương án</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-emerald-200">
-            APPROVED
+            Đã duyệt
           </span>
         </div>
       </div>
@@ -110,7 +110,7 @@ export const ProposalStats: React.FC<ProposalStatsProps> = ({
         <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
           <span className="text-slate-400 text-[11px]">Đã phân công tổ thi công</span>
           <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-blue-50 text-blue-800 border border-blue-200">
-            ASSIGNED
+            Đã giao việc
           </span>
         </div>
       </div>

@@ -33,7 +33,7 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
 
         <div className="flex items-center gap-2.5 pt-0.5">
           <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-            Cấu hình chính sách Fast Track &amp; Điều phối hiện trường
+            Cấu hình chính sách xử lý nhanh &amp; Điều phối hiện trường
           </h1>
           <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
             <span className="w-1.5 h-1.5 rounded-full bg-brand-gold"></span>

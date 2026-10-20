@@ -104,7 +104,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                 {workMode === 'MEASURE_ONLY'
                   ? 'Lệnh Khảo Sát Đo Đạc Hiện Trường'
                   : workMode === 'INSPECT_AND_REPAIR'
-                  ? 'Lệnh Đo & Sửa Ngay Fast Track Tại Chỗ'
+                  ? 'Lệnh Đo & Sửa ngay xử lý nhanh tại chỗ'
                   : 'Lệnh Ứng Cứu Khẩn Cấp Mặt Đường 24/7'}
               </h3>
               <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
@@ -159,7 +159,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-rose-800 text-xs">
                 <Icon name="report" size={16} className="text-rose-600 shrink-0" />
-                <span>CHẶN LỆNH: CÓ KHIẾM KHUYẾT KHÔNG ĐỦ ĐIỀU KIỆN FAST TRACK (API-146)</span>
+                <span>CHẶN LỆNH: CÓ KHIẾM KHUYẾT KHÔNG ĐỦ ĐIỀU KIỆN XỬ LÝ NHANH (API-146)</span>
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {selectedItems
@@ -173,7 +173,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                       ? el.missingReasons
                       : d.violationReason
                       ? [d.violationReason]
-                      : ['Không đạt ngưỡng chính sách Fast Track']
+                      : ['Không đạt ngưỡng chính sách xử lý nhanh']
                     return (
                       <li key={d.id}>
                         <span className="font-mono font-bold">{d.code}:</span> {reasons.join(', ')}
@@ -244,7 +244,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                       <span>CẢNH BÁO: HƯ HỎNG ĐỦ CHUẨN XỬ LÝ NHANH THÔNG THƯỜNG ({selectedItems[0].code})</span>
                     </div>
                     <p className="text-amber-800 leading-relaxed text-[11px]">
-                      Khiếm khuyết này đủ điều kiện theo API-146 ({currentPolicy.version}). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (Fast Track)</strong> thông thường.
+                      Khiếm khuyết này đủ điều kiện theo API-146 ({currentPolicy.version}). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (xử lý nhanh)</strong> thông thường.
                     </p>
                     <div className="text-[11px] text-amber-950 font-bold bg-white/80 p-2 rounded-lg border border-amber-200">
                       ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 10 ký tự) để phục vụ thanh tra dự án!
@@ -256,13 +256,13 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                   <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
                       <Icon name="warning" size={16} className="text-rose-600 shrink-0" />
-                      <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG KHÔNG ĐỦ ĐIỀU KIỆN FAST TRACK ({selectedItems[0].code})</span>
+                      <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG KHÔNG ĐỦ ĐIỀU KIỆN XỬ LÝ NHANH ({selectedItems[0].code})</span>
                     </div>
                     <p className="text-rose-800 leading-relaxed text-[11px]">
                       Lý do từ API-146: <strong>{reasons.join(', ') || 'Vượt ngưỡng an toàn'}</strong>. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy tắc BR-46 / FR-37.
                     </p>
                     <div className="text-[11px] text-rose-950 font-bold bg-white/80 p-2 rounded-lg border border-rose-200">
-                      🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Supervisor Hậu kiểm (Post-audit).
+                      🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Giám sát Hậu kiểm (Post-audit).
                     </div>
                   </div>
                 )
@@ -274,7 +274,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           <div className="space-y-1">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                Chỉ đạo của Chỉ huy trưởng (PM Dispatch Notes)
+                Chỉ đạo của Chỉ huy trưởng
               </label>
               {workMode === 'EMERGENCY' && (
                 <span className="text-[10px] text-amber-700 font-bold">
@@ -305,17 +305,17 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             <span>
               {workMode === 'MEASURE_ONLY' && (
                 <>
-                  <strong>Quy chuẩn MEASURE_ONLY:</strong> Lệnh chỉ cấp quyền đo đạc và chụp ảnh trắc địa. Tổ đội tuyệt đối không được tự ý cào bóc hay sửa chữa khi chưa có phương án kỹ thuật được duyệt.
+                  <strong>Quy chuẩn Chỉ đo đạc:</strong> Lệnh chỉ cấp quyền đo đạc và chụp ảnh trắc địa. Tổ đội tuyệt đối không được tự ý cào bóc hay sửa chữa khi chưa có phương án kỹ thuật được duyệt.
                 </>
               )}
               {workMode === 'INSPECT_AND_REPAIR' && (
                 <>
-                  <strong>Quy chuẩn FAST TRACK:</strong> Tổ đội mang vật liệu vá nguội và được phép thi công dứt điểm tại hiện trường nếu số đo thực tế đạt chuẩn chính sách ({currentPolicy.version}).
+                  <strong>Quy chuẩn Xử lý nhanh:</strong> Tổ đội mang vật liệu vá nguội và được phép thi công dứt điểm tại hiện trường nếu số đo thực tế đạt chuẩn chính sách ({currentPolicy.version}).
                 </>
               )}
               {workMode === 'EMERGENCY' && (
                 <>
-                  <strong>Quy chuẩn EMERGENCY:</strong> Cắm biển báo nguy hiểm và phân luồng ngay lập tức. Được phép khắc phục tạm thời trước để bảo đảm an toàn giao thông thông suốt.
+                  <strong>Quy chuẩn Khẩn cấp:</strong> Cắm biển báo nguy hiểm và phân luồng ngay lập tức. Được phép khắc phục tạm thời trước để bảo đảm an toàn giao thông thông suốt.
                 </>
               )}
             </span>

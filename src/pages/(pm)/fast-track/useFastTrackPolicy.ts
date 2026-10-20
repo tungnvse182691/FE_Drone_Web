@@ -112,7 +112,7 @@ export function useFastTrackPolicy(
         time: `${nowDate} ${nowTime}:00`,
         user: 'Nguyễn Văn Hoàng (PM)',
         hash: `sha256:${Math.random().toString(16).substring(2, 8)}...${Math.random().toString(16).substring(2, 6)}`,
-        note: `Nâng ngưỡng Fast Track: Diện tích ≤ ${area} m², Độ sâu ≤ ${depth} cm, SLA ≤ ${sla}h. ${formPolicyNote}`
+        note: `Nâng ngưỡng xử lý nhanh: Diện tích ≤ ${area} m², Độ sâu ≤ ${depth} cm, SLA ≤ ${sla}h. ${formPolicyNote}`
       }
       setAuditLogs((prev) => [newAudit, ...prev])
 

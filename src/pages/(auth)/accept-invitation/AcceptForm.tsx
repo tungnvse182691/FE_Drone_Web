@@ -212,7 +212,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
             <span className="text-xs text-slate-600 leading-snug">
               Tôi cam kết tuân thủ quy chế bảo mật số liệu công trình,{' '}
               <strong className="text-slate-900">Nghị định 130/2018/NĐ-CP</strong> và tính toàn vẹn của chuỗi bằng chứng pháp lý (
-              <span className="font-mono font-semibold">Audit Trail SHA-256</span>).
+              <span className="font-mono font-semibold">Nhật ký kiểm toán</span>).
             </span>
           </label>
         </div>
@@ -225,7 +225,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
             className="w-full py-3.5 px-6 rounded-xl bg-brand-gold hover:bg-brand-goldMuted text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.99] transition shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
-              <span>Äang kích hoạt tài khoản...</span>
+              <span>Đang kích hoạt tài khoản...</span>
             ) : (
               <>
                 <span>Chấp thuận lời mời &amp; Vào không gian dự án</span>
@@ -248,7 +248,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
               className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-goldMuted transition underline underline-offset-4 cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
-              <span>Cần hỗ trợ từ Giám sát viên (Supervisor)?</span>
+              <span>Cần hỗ trợ từ Giám sát viên?</span>
             </button>
           </div>
         </div>

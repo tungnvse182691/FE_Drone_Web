@@ -94,7 +94,7 @@ export const initFastTrackMap = (
               <span>${defect.stationing} (${defect.lane})</span><br/>
               <span style="font-weight:600;">Kích thước: ${defect.areaM2} m² • Sâu: ${defect.depthCm} cm</span><br/>
               <span style="color:${isEligible ? '#15803D' : '#DC2626'}; font-weight:bold;">
-                ${isEligible ? '✓ Đạt chuẩn Fast Track' : '⚠ Vi phạm ngưỡng (Over-limit)'}
+                ${isEligible ? '✓ Đạt chuẩn xử lý nhanh' : '⚠ Vi phạm ngưỡng'}
               </span><br/>
               <span style="color:#64748B;">Phân công: ${defect.assignedCrew}</span>
             </div>

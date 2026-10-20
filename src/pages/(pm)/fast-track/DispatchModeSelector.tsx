@@ -18,7 +18,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
   return (
     <div>
       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
-        {isSupervisor ? 'Phân loại luồng xử lý hiện trường (Chế độ giám sát)' : 'Chế độ giao việc (Work Dispatch Mode)'}
+        {isSupervisor ? 'Phân loại luồng xử lý hiện trường (Chế độ giám sát)' : 'Chế độ giao việc'}
       </label>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tab 1: Gom lô đo đạc (MEASURE_ONLY) */}
@@ -46,7 +46,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-[#8F7212]">
             <span className="px-2 py-0.5 rounded-full bg-amber-100/80 border border-amber-200 text-[10px]">
-              MEASURE_ONLY
+              Chỉ đo đạc
             </span>
             <span className="w-3.5 h-3.5 rounded-full border-2 border-brand-gold flex items-center justify-center">
               {workMode === 'MEASURE_ONLY' && <span className="w-2 h-2 rounded-full bg-brand-gold"></span>}
@@ -69,15 +69,15 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
               <span className="font-bold text-sm text-brand-dark">Đo và Sửa ngay</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Fast Track Direct
+              Xử lý nhanh trực tiếp
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
-            Chỉ áp dụng cho 1 lỗi mức LOW đơn lẻ thỏa mãn policy Fast Track. Cho phép mang vật liệu vá nguội trực tiếp.
+            Chỉ áp dụng cho 1 lỗi mức Thấp đơn lẻ thỏa mãn chính sách xử lý nhanh. Cho phép mang vật liệu vá nguội trực tiếp.
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-emerald-700">
             <span className="px-2 py-0.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-[10px]">
-              INSPECT_AND_REPAIR
+              Kiểm tra và sửa
             </span>
             <span className="w-3.5 h-3.5 rounded-full border-2 border-emerald-600 flex items-center justify-center">
               {workMode === 'INSPECT_AND_REPAIR' && <span className="w-2 h-2 rounded-full bg-emerald-600"></span>}
@@ -100,7 +100,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
               <span className="font-bold text-sm text-brand-dark">Xử lý khẩn cấp</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-              24/7 Priority
+              Ưu tiên 24/7
             </span>
           </div>
           <p className="text-xs text-slate-600 mb-3 leading-relaxed">
@@ -108,7 +108,7 @@ export const DispatchModeSelector: React.FC<DispatchModeSelectorProps> = ({
           </p>
           <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-slate-100 text-rose-700">
             <span className="px-2 py-0.5 rounded-full bg-rose-100/80 border border-rose-200 text-[10px]">
-              EMERGENCY_DISPATCH
+              Điều động khẩn cấp
             </span>
             <span className="w-3.5 h-3.5 rounded-full border-2 border-rose-600 flex items-center justify-center">
               {workMode === 'EMERGENCY' && <span className="w-2 h-2 rounded-full bg-rose-600"></span>}

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { Route, ShieldCheck } from 'lucide-react'
+import { ShieldCheck } from 'lucide-react'
 import { InvitationDemoState } from './accept-invitation/types'
 import { InvitationCard } from './accept-invitation/InvitationCard'
 import { AcceptForm } from './accept-invitation/AcceptForm'
@@ -52,7 +52,7 @@ export const AcceptInvitation: React.FC = () => {
     if (passed === 3) {
       return { score: 3, label: 'Khá mạnh (Good)', color: 'text-brand-goldMuted', barColor: 'bg-brand-gold' }
     }
-    return { score: 4, label: 'Rất mạnh (Strong) — Chuẩn Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
+    return { score: 4, label: 'Rất mạnh — Chuẩn Enterprise', color: 'text-emerald-600', barColor: 'bg-emerald-600' }
   }
 
   const strength = getStrength()
@@ -97,12 +97,14 @@ export const AcceptInvitation: React.FC = () => {
       {/* Top Header */}
       <header className="relative z-10 w-full px-6 md:px-10 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-gold flex items-center justify-center text-white shadow-xs">
-            <Route className="w-6 h-6 stroke-[2.2]" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Hoàng Hải"
+            className="w-[44px] h-[44px] rounded-full object-cover"
+          />
           <div className="flex flex-col">
             <span className="font-bold text-base text-slate-900 tracking-tight font-headline">Hoàng Hải RoadGuard</span>
-            <span className="text-[11px] text-slate-500 font-mono uppercase tracking-wider">Civil Asset &amp; Highway Telemetry</span>
+            <span className="text-[11px] text-slate-500 font-mono uppercase tracking-wider">Hạ tầng đường bộ &amp; Giám sát</span>
           </div>
         </div>
 
@@ -122,40 +124,42 @@ export const AcceptInvitation: React.FC = () => {
       <main className="relative z-10 w-full flex-1 flex flex-col items-center justify-center px-4 py-6">
         <div className="flex flex-col w-full items-center justify-center relative">
           {/* Interactive Floating Mode Switcher (Demo State Toggle) */}
-          <div className="fixed top-4 right-4 z-50 flex items-center p-1 bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200">
-            <div className="flex items-center text-xs mr-2 pl-3 text-slate-500 font-medium">
-              <span>Chế độ Demo:</span>
+          {import.meta.env.DEV && (
+            <div className="fixed top-4 right-4 z-50 flex items-center p-1 bg-white/95 backdrop-blur-md rounded-full shadow-lg border border-slate-200">
+              <div className="flex items-center text-xs mr-2 pl-3 text-slate-500 font-medium">
+                <span>Chế độ Demo:</span>
+              </div>
+              <button
+                onClick={() => setDemoState('valid')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  demoState === 'valid'
+                    ? 'bg-brand-gold text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                Token hợp lệ
+              </button>
+              <button
+                onClick={() => setDemoState('expired')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  demoState === 'expired'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                Token hết hạn
+              </button>
             </div>
-            <button
-              onClick={() => setDemoState('valid')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                demoState === 'valid'
-                  ? 'bg-brand-gold text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-              Token hợp lệ
-            </button>
-            <button
-              onClick={() => setDemoState('expired')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-                demoState === 'expired'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-              Token hết hạn
-            </button>
-          </div>
+          )}
 
           {/* Decorative Highway Stationing Watermark Badge */}
           <div className="hidden lg:flex items-center gap-2 mb-4 px-3.5 py-1 bg-slate-200/70 rounded-full border border-slate-300/40 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></span>
             <span className="text-[12px] font-mono text-slate-600 font-medium">HỆ THỐNG KIỂM SOÁT THI CÔNG &amp; HẠ TẦNG GIAO THÔNG SỐ</span>
             <span className="text-slate-400">•</span>
-            <span className="text-[12px] font-mono text-brand-goldMuted font-bold">SECURE ONBOARDING GATEWAY</span>
+            <span className="text-[12px] font-mono text-brand-goldMuted font-bold">CỔNG TIẾP NHẬN AN TOÀN</span>
           </div>
 
           {/* STATE A: VALID INVITATION CARD */}
@@ -208,7 +212,7 @@ export const AcceptInvitation: React.FC = () => {
           {/* Sub-footer Legal */}
           <div className="w-full max-w-2xl text-center mt-6 space-y-1 px-4 pb-2 text-[11px] text-slate-400">
             <p>Hệ thống bảo mật hạ tầng số RoadGuard • Nhà thầu Hoàng Hải • Tuân thủ TCVN 8819:2011 • Mã hóa End-to-End TLS 1.3 • Toàn vẹn SHA-256</p>
-            <p>Â© 2026 Hoàng Hải Infrastructure Management Group. All rights reserved.</p>
+            <p>© 2026 Hoàng Hải Infrastructure Management Group. Bảo lưu mọi quyền.</p>
           </div>
         </div>
       </main>

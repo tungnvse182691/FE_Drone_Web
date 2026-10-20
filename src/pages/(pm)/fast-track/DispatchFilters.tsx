@@ -50,7 +50,7 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
       </div>
 
       <div className="space-y-1">
-        <label className="text-[11px] font-bold text-slate-600 uppercase">Trạng thái Fast Track</label>
+        <label className="text-[11px] font-bold text-slate-600 uppercase">Trạng thái xử lý nhanh</label>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}

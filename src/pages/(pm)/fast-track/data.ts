@@ -65,7 +65,7 @@ export const ROUTE_CONFIGS: Record<string, RouteConfig> = {
 // 2. CHÍNH SÁCH ĐIỀU PHỐI (POLICY)
 // ==========================================
 export const INITIAL_POLICY: PolicyThresholdConfig = {
-  version: 'Policy v2.1',
+  version: 'Chính sách v2.1',
   status: 'ACTIVE',
   maxAreaM2: 0.5,
   maxDepthCm: 5.0,
@@ -75,14 +75,14 @@ export const INITIAL_POLICY: PolicyThresholdConfig = {
   activatedBy: 'Kỹ sư Nguyễn Văn Hoàng (PM)',
   activatedAt: '08:30 • 15/08/2026',
   appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
-  description: 'Quy chuẩn kích hoạt tự động: 3/3 Tiêu chí bắt buộc phải thỏa mãn để tự động mở luồng Fast Track.'
+  description: 'Quy chuẩn kích hoạt tự động: 3/3 Tiêu chí bắt buộc phải thỏa mãn để tự động mở luồng xử lý nhanh.'
 }
 
 export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
   {
     id: 'pol-21',
-    version: 'Policy v2.1',
-    displayName: 'Policy v2.1 (Hiện hành)',
+    version: 'Chính sách v2.1',
+    displayName: 'Chính sách v2.1 (Hiện hành)',
     status: 'ACTIVE',
     activatedBy: 'PM Hoàng',
     activatedAt: '08:30 15/08/2026',
@@ -94,8 +94,8 @@ export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
   },
   {
     id: 'pol-20',
-    version: 'Policy v2.0',
-    displayName: 'Policy v2.0 (Lưu trữ)',
+    version: 'Chính sách v2.0',
+    displayName: 'Chính sách v2.0 (Lưu trữ)',
     status: 'ARCHIVED',
     activatedBy: 'PGĐ Trần Nam',
     activatedAt: '10:15 01/06/2026',
@@ -107,8 +107,8 @@ export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
   },
   {
     id: 'pol-19',
-    version: 'Policy v1.9',
-    displayName: 'Policy v1.9 (Lưu trữ)',
+    version: 'Chính sách v1.9',
+    displayName: 'Chính sách v1.9 (Lưu trữ)',
     status: 'ARCHIVED',
     activatedBy: 'PM Hoàng',
     activatedAt: '14:00 12/01/2026',
@@ -122,14 +122,14 @@ export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
 
 export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
-    title: 'Cập nhật Policy v2.1 (ACTIVE)',
+    title: 'Cập nhật Chính sách v2.1 (HIỆU LỰC)',
     time: '15/08/2026 08:30:12',
     user: 'Nguyễn Văn Hoàng (PM)',
     hash: 'sha256:7f8a9b...c41e',
     note: 'Nâng ngưỡng diện tích từ 0.4 m² lên 0.5 m² để phù hợp điều kiện thời tiết mùa mưa.'
   },
   {
-    title: 'Kích hoạt Policy v2.0',
+    title: 'Kích hoạt Chính sách v2.0',
     time: '01/06/2026 10:15:45',
     user: 'Trần Nam (PGĐ Dự án)',
     hash: 'sha256:2b4c6e...a991',
@@ -174,21 +174,21 @@ export const INITIAL_DEFECTS: DefectItem[] = [
   {
     id: 'DEF-01', code: '#DEF-2026-0101', routeId: 'QL1A_PK04',
     routeName: 'QL1A - Giai đoạn 2 (Km 1025 - Km 1045)', stationing: 'Km 1032+450', kmValue: 1032.45,
-    lane: 'Làn phải (R1)', type: 'Ổ gà nông (Pothole L1)', areaM2: 0.35, depthCm: 3.2,
+    lane: 'Làn phải (R1)', type: 'Ổ gà nông (Ổ gà mức 1)', areaM2: 0.35, depthCm: 3.2,
     isFastTrackEligible: true, assignedCrew: 'Tổ tuần tra số 01', gps: { lat: 16.0520, lng: 108.1970 },
     image: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80', aiConfidence: 94
   },
   {
     id: 'DEF-02', code: '#DEF-2026-0102', routeId: 'QL1A_PK04',
     routeName: 'QL1A - Giai đoạn 2 (Km 1025 - Km 1045)', stationing: 'Km 1032+520', kmValue: 1032.52,
-    lane: 'Làn giữa (M1)', type: 'Nứt rạn lưới mai (Alligator Cracking)', areaM2: 0.45, depthCm: 2.0,
+    lane: 'Làn giữa (M1)', type: 'Nứt rạn lưới mai', areaM2: 0.45, depthCm: 2.0,
     isFastTrackEligible: true, assignedCrew: 'Tổ tuần tra số 01', gps: { lat: 16.0535, lng: 108.1990 },
     image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop&q=80', aiConfidence: 91
   },
   {
     id: 'DEF-03', code: '#DEF-2026-0105', routeId: 'QL1A_PK04',
     routeName: 'QL1A - Giai đoạn 2 (Km 1025 - Km 1045)', stationing: 'Km 1033+110', kmValue: 1033.11,
-    lane: 'Lề đường phải', type: 'Vỡ mép thảm nhựa (Edge Break)', areaM2: 0.85, depthCm: 6.5,
+    lane: 'Lề đường phải', type: 'Vỡ mép thảm nhựa', areaM2: 0.85, depthCm: 6.5,
     isFastTrackEligible: false, violationReason: 'Diện tích 0.85 m² (> 0.5 m²) & Độ sâu 6.5 cm (> 5.0 cm)',
     assignedCrew: 'Tổ đo đạc số 02', gps: { lat: 16.0560, lng: 108.2025 },
     image: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&auto=format&fit=crop&q=80', aiConfidence: 96
