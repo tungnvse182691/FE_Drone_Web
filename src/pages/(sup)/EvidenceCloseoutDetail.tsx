@@ -161,9 +161,9 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
         if (refreshedPkg) setCurrentPackage(refreshedPkg)
       }
-      showToast(`PM đã chấp thuận và đóng lỗi Fast Track ${currentItem.item_code} (BR-25)!`)
+      showToast(`PM đã chấp thuận và đóng lỗi xử lý nhanh ${currentItem.item_code} (BR-25)!`)
     } catch (err) {
-      showToast('Có lỗi khi đóng lỗi Fast Track.')
+      showToast('Có lỗi khi đóng lỗi xử lý nhanh.')
     }
   }
 

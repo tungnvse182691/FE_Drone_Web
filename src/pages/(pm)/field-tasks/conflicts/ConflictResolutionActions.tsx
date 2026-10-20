@@ -165,25 +165,25 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 type="button"
                 onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
                 className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Đặc cách cho phép tự sửa Fast Track theo chính sách v1.8"
+                title="Đặc cách cho phép tự sửa xử lý nhanh theo chính sách v1.8"
               >
                 <Icon name="check_circle" size={15} />
-                <span>Đặc cách duyệt Fast Track</span>
+                <span>Đặc cách duyệt xử lý nhanh</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
                 className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-white hover:bg-rose-50 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Bác bỏ đề xuất Fast Track, chuyển sang diện lập hồ sơ đợt sửa theo chính sách v2.2"
+                title="Bác bỏ đề xuất xử lý nhanh, chuyển sang diện lập hồ sơ đợt sửa theo chính sách v2.2"
               >
                 <Icon name="cancel" size={15} className="text-rose-600" />
-                <span>Từ chối Fast Track (Chuyển duyệt đợt)</span>
+                <span>Từ chối xử lý nhanh (Chuyển duyệt đợt)</span>
               </button>
             </>
           )}
           {isSupervisor && (
             <div className="text-xs text-slate-500 italic">
-              Chỉ huy trưởng (PM) có thẩm quyền phân giải chính sách Fast Track.
+              Chỉ huy trưởng (PM) có thẩm quyền phân giải chính sách xử lý nhanh.
             </div>
           )}
         </div>

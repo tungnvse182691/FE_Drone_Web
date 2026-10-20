@@ -329,9 +329,9 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                   onChange={(e) => setResurveyPilot(e.target.value)}
                   className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-medium"
                 >
-                  <option value="Lê Hoàng Long">Lê Hoàng Long (Drone Operator chính - Sẵn sàng)</option>
-                  <option value="Hoàng Quốc Bảo">Hoàng Quốc Bảo (Pilot RTK Level 3)</option>
-                  <option value="Trần Quang Khải">Trần Quang Khải (Pilot Chuyên gia đo quét)</option>
+                  <option value="Lê Hoàng Long">Lê Hoàng Long (Phi công thiết bị bay chính - Sẵn sàng)</option>
+                  <option value="Hoàng Quốc Bảo">Hoàng Quốc Bảo (Phi công RTK cấp 3)</option>
+                  <option value="Trần Quang Khải">Trần Quang Khải (Phi công chuyên gia đo quét)</option>
                   <option value="Nguyễn Văn An">Nguyễn Văn An (Đội bay Hoàng Hải 02)</option>
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1 italic">

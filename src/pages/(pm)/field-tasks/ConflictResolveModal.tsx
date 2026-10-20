@@ -67,7 +67,7 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
                   (selectedConflict?.conflict_type === 'ASSIGNMENT_REASSIGNED'
                     ? 'Công nhận kết quả Tổ 02 (Thu hồi Đội 01)'
                     : selectedConflict?.conflict_type === 'POLICY_VERSION_MISMATCH'
-                    ? 'Đặc cách duyệt Fast Track (v1.8)'
+                    ? 'Đặc cách duyệt xử lý nhanh (v1.8)'
                     : selectedConflict?.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
                     ? 'Chọn bản Máy chính (38mm)'
                     : 'Chấp thuận bản Hiện trường')}
@@ -75,7 +75,7 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
                   (selectedConflict?.conflict_type === 'ASSIGNMENT_REASSIGNED'
                     ? 'Từ chối kết quả Tổ 02 (Giữ Đội 01)'
                     : selectedConflict?.conflict_type === 'POLICY_VERSION_MISMATCH'
-                    ? 'Từ chối Fast Track (Chuyển duyệt đợt v2.2)'
+                    ? 'Từ chối xử lý nhanh (Chuyển duyệt đợt v2.2)'
                     : selectedConflict?.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
                     ? 'Chọn bản Máy phụ (45mm)'
                     : selectedConflict?.conflict_type === 'AGGREGATE_VERSION_CONFLICT'

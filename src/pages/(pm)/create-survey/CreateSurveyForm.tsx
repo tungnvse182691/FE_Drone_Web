@@ -419,7 +419,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
-                Chỉ Định Phi Công (Drone Operator)
+                Chỉ định phi công thiết bị bay
               </label>
               <select
                 value={pilotId}

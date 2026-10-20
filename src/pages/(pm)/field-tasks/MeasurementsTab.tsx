@@ -372,7 +372,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       ) : task.status === 'IN_PROGRESS' ? (
                         <span className="text-blue-600 italic text-[11px] flex items-center gap-1">
                           <Icon name="pending" size={13} />
-                          <span>Đang chờ thực hiện</span>
+                          <span>Đang thực hiện</span>
                         </span>
                       ) : (
                         <span className="font-semibold text-slate-900 text-xs">
