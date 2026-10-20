@@ -105,27 +105,33 @@ export const ProposalApprovalDetail: React.FC = () => {
       />
 
       {/* Technical volume summary bar */}
-      <ApprovalStatsBar stats={stats} />
+      <div className="rounded-[20px] overflow-hidden border border-[#E2E5E9] bg-white shadow-2xs [&>section]:border-0 [&>section]:shadow-none [&>section]:rounded-none">
+        <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #047857 0%, #065F46 100%)' }} />
+        <ApprovalStatsBar stats={stats} />
+      </div>
 
       {/* Items table & filter toolbar */}
-      <ApprovalItemsTable
-        items={items}
-        filteredItems={filteredItems}
-        displayedItems={displayedItems}
-        filterTab={filterTab}
-        setFilterTab={setFilterTab}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        totalPages={totalPages}
-        stats={stats}
-        onViewPhoto={(item) => setViewingPhotoItem(item)}
-        onQuickApprove={handleQuickApproveItem}
-        onOpenDecisionModal={handleOpenDecisionModal}
-        onCrewChange={handleCrewChange}
-        isSupervisor={isSupervisor}
-      />
+      <div className="rounded-[20px] overflow-hidden border border-[#E2E5E9] bg-white shadow-2xs [&>section]:border-0 [&>section]:shadow-none [&>section]:rounded-none">
+        <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #C9A227 0%, #8C6D1F 100%)' }} />
+        <ApprovalItemsTable
+          items={items}
+          filteredItems={filteredItems}
+          displayedItems={displayedItems}
+          filterTab={filterTab}
+          setFilterTab={setFilterTab}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          totalPages={totalPages}
+          stats={stats}
+          onViewPhoto={(item) => setViewingPhotoItem(item)}
+          onQuickApprove={handleQuickApproveItem}
+          onOpenDecisionModal={handleOpenDecisionModal}
+          onCrewChange={handleCrewChange}
+          isSupervisor={isSupervisor}
+        />
+      </div>
 
       {/* Decision, Dispatch, Batch Approve, and Lightbox Modals */}
       <ApprovalModals

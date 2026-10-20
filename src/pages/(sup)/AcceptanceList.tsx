@@ -2,7 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { acceptanceService, AcceptancePackage } from '../../api/services/acceptanceService'
+import {
+  acceptanceService,
+  AcceptancePackage,
+  INITIAL_ACCEPTANCE_RECORDS
+} from '../../api/services/acceptanceService'
+import { Icon } from '../../components/ui/Icon'
 
 export const AcceptanceList: React.FC = () => {
   const navigate = useNavigate()
@@ -81,9 +86,9 @@ export const AcceptanceList: React.FC = () => {
   }, [packages])
 
   return (
-    <div className="space-y-5 pb-16 text-[#1A1D20]">
+    <div className="space-y-6 pb-16 text-[#1A1D20]">
       {/* HEADER SECTION & BREADCRUMB */}
-      <section className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-3">
+      <section className="bg-white border border-[#E2E5E9] rounded-[20px] p-6 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-slate-500 font-medium mb-1">
@@ -93,55 +98,124 @@ export const AcceptanceList: React.FC = () => {
               >
                 Trang chủ
               </button>
-              <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
+              <Icon name="chevron_right" size={14} className="text-slate-400" />
               <span className="text-slate-900 font-medium">Nghiệm thu chất lượng công trình</span>
             </nav>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-sansation">
+            <h1 className="text-2xl font-bold text-slate-900 font-headline">
               Danh sách hồ sơ &amp; Gói thầu chờ nghiệm thu
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               Kiểm tra hồ sơ Trước/Sau, đối chứng độ chặt K98 và tiến hành nghiệm thu hoặc yêu cầu sửa lại theo TCVN 8819:2011.
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#F8F9FA] border border-slate-200 text-slate-700">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">
-                {isSupervisorView ? 'verified_user' : 'engineering'}
-              </span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#F8F9FA] border border-slate-200 text-slate-700 shadow-2xs">
+              <Icon
+                name={isSupervisorView ? 'verified_user' : 'engineering'}
+                size={16}
+                className="text-[#C9A227]"
+              />
               <span>{isSupervisorView ? 'Kỹ sư Giám sát' : 'Chỉ huy trưởng (PM)'}</span>
             </div>
           </div>
         </div>
 
-        {/* KPI METRIC CARDS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-          <div className="bg-[#F8F9FA] p-3 rounded-lg border border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium block">Tổng số gói thi công</span>
-            <span className="text-xl font-bold text-slate-900 font-sansation">{stats.total}</span>
+        {/* KPI METRIC CARDS (4 thẻ có điểm nhấn) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {/* KPI 1: Tổng số */}
+          <div
+            className="rounded-[20px] overflow-hidden transition-all duration-300 relative bg-white hover:-translate-y-1 shadow-2xs"
+            style={{
+              border: '1.5px solid #E5D8B4',
+              background: 'linear-gradient(180deg, #FFFDF5 0%, #ffffff 45%)'
+            }}
+          >
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #C9A227 0%, #8C6D1F 100%)' }} />
+            <div className="p-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#C9A227]" />
+                  <span className="absolute inset-0 rounded-full bg-[#C9A227]/20" />
+                </div>
+                <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider">Tổng số gói thi công</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 font-sansation pt-1">{stats.total}</div>
+            </div>
           </div>
-          <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-200/80">
-            <span className="text-[11px] text-amber-800 font-medium block">Chờ nghiệm thu hiện trường</span>
-            <span className="text-xl font-bold text-[#B45309] font-sansation">{stats.pending}</span>
+
+          {/* KPI 2: Chờ nghiệm thu */}
+          <div
+            className="rounded-[20px] overflow-hidden transition-all duration-300 relative bg-white hover:-translate-y-1 shadow-2xs"
+            style={{
+              border: '1.5px solid #E3D3AC',
+              background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)'
+            }}
+          >
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #B45309 0%, #92400E 100%)' }} />
+            <div className="p-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B45309]" />
+                  <span className="absolute inset-0 rounded-full bg-[#B45309]/20" />
+                </div>
+                <span className="text-[11px] text-[#B45309] font-bold uppercase tracking-wider">Chờ nghiệm thu</span>
+              </div>
+              <div className="text-2xl font-bold text-[#B45309] font-sansation pt-1">{stats.pending}</div>
+            </div>
           </div>
-          <div className="bg-rose-50/60 p-3 rounded-lg border border-rose-200/80">
-            <span className="text-[11px] text-rose-800 font-medium block">Yêu cầu sửa lại</span>
-            <span className="text-xl font-bold text-[#E5484D] font-sansation">{stats.rework}</span>
+
+          {/* KPI 3: Yêu cầu sửa lại */}
+          <div
+            className="rounded-[20px] overflow-hidden transition-all duration-300 relative bg-white hover:-translate-y-1 shadow-2xs"
+            style={{
+              border: '1.5px solid #E6A8A8',
+              background: 'linear-gradient(180deg, #FEF2F2 0%, #ffffff 45%)'
+            }}
+          >
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #B91C1C 0%, #7F1D1D 100%)' }} />
+            <div className="p-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]" />
+                  <span className="absolute inset-0 rounded-full bg-[#B91C1C]/20" />
+                </div>
+                <span className="text-[11px] text-[#B91C1C] font-bold uppercase tracking-wider">Yêu cầu sửa lại</span>
+              </div>
+              <div className="text-2xl font-bold text-[#B91C1C] font-sansation pt-1">{stats.rework}</div>
+            </div>
           </div>
-          <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200/80">
-            <span className="text-[11px] text-emerald-800 font-medium block">Đã đóng gói / Đạt chuẩn</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl font-bold text-[#2F9E44] font-sansation">{stats.closed}</span>
-              <span className="text-[11px] text-slate-500">đã đóng ({stats.passed} chờ đóng)</span>
+
+          {/* KPI 4: Đã đóng gói / Đạt chuẩn */}
+          <div
+            className="rounded-[20px] overflow-hidden transition-all duration-300 relative bg-white hover:-translate-y-1 shadow-2xs"
+            style={{
+              border: '1.5px solid #A7C4B8',
+              background: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)'
+            }}
+          >
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #047857 0%, #065F46 100%)' }} />
+            <div className="p-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#047857]" />
+                  <span className="absolute inset-0 rounded-full bg-[#047857]/20" />
+                </div>
+                <span className="text-[11px] text-[#047857] font-bold uppercase tracking-wider">Đã đóng gói / Đạt</span>
+              </div>
+              <div className="flex items-baseline gap-2 pt-1">
+                <span className="text-2xl font-bold text-[#047857] font-sansation">{stats.closed}</span>
+                <span className="text-[11px] text-slate-500 font-medium">({stats.passed} chờ đóng)</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* FILTER & TOOLBAR */}
-      <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs space-y-3">
+      <section className="bg-white border border-[#E2E5E9] rounded-[20px] p-4 shadow-2xs space-y-3">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Status Tabs */}
+          {/* Status Pills */}
           <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium">
             {[
               { id: 'ALL', label: 'Tất cả' },
@@ -153,9 +227,9 @@ export const AcceptanceList: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setSelectedStatus(tab.id)}
-                className={`px-3 py-1.5 rounded-md transition cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
                   selectedStatus === tab.id
-                    ? 'bg-[#C9A227] text-white shadow-2xs font-semibold'
+                    ? 'bg-[#C9A227] text-white shadow-2xs'
                     : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700'
                 }`}
               >
@@ -167,15 +241,13 @@ export const AcceptanceList: React.FC = () => {
           {/* Search & Project Filter */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400">
-                search
-              </span>
+              <Icon name="search" size={16} className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Tìm mã gói, mã vụ việc, lý trình..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-3 py-1.5 bg-[#F8F9FA] border border-slate-300 rounded-md text-xs text-slate-900 placeholder:text-slate-400 w-full sm:w-64 focus:outline-none focus:border-[#C9A227]"
+                className="pl-9 pr-3 py-1.5 bg-[#F8F9FA] border border-slate-300 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 w-full sm:w-64 focus:outline-none focus:border-[#C9A227]"
               />
             </div>
 
@@ -183,7 +255,7 @@ export const AcceptanceList: React.FC = () => {
               <select
                 value={selectedProject}
                 onChange={(e) => setSelectedProject(e.target.value)}
-                className="w-full sm:w-auto px-3 py-1.5 bg-[#F8F9FA] border border-slate-300 rounded-md text-xs font-medium text-slate-800 focus:outline-none focus:border-[#C9A227] cursor-pointer"
+                className="w-full sm:w-auto px-3.5 py-1.5 bg-[#F8F9FA] border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#C9A227] cursor-pointer"
               >
                 <option value="ALL">Tất cả dự án bảo hành</option>
                 {projectsList.map((prj) => (
@@ -197,170 +269,236 @@ export const AcceptanceList: React.FC = () => {
         </div>
       </section>
 
-      {/* TABLE / CARD LIST */}
-      <section className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-        {isLoading ? (
-          <div className="flex items-center justify-center p-12 text-slate-500">
-            <span className="w-5 h-5 border-2 border-[#C9A227] border-t-transparent rounded-full animate-spin mr-2"></span>
-            <span className="text-xs font-medium">Đang tải danh sách gói nghiệm thu...</span>
-          </div>
-        ) : filteredPackages.length === 0 ? (
-          <div className="text-center p-12 text-slate-500 space-y-1">
-            <span className="material-symbols-outlined text-[36px] text-slate-300 block">inventory_2</span>
-            <p className="text-sm font-medium text-slate-700">Không tìm thấy gói nghiệm thu nào phù hợp</p>
-            <p className="text-xs text-slate-400">Thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#F8F9FA] border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Gói đề xuất &amp; Vụ việc</th>
-                  <th className="py-3 px-4">Dự án &amp; Đoạn tuyến</th>
-                  <th className="py-3 px-4">Khối lượng kỹ thuật</th>
-                  <th className="py-3 px-4">Đơn vị thi công &amp; SLA</th>
-                  <th className="py-3 px-4 text-center">Tiến độ nghiệm thu</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredPackages.map((pkg) => (
-                  <tr key={pkg.id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Mã gói & tiêu đề */}
-                    <td className="py-3.5 px-4 space-y-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-slate-900">{pkg.code}</span>
-                        <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+      {/* LƯỚI THẺ NGHIỆM THU (GRID 3 CỘT THAY CHO BẢNG) */}
+      {isLoading ? (
+        <div className="flex items-center justify-center p-16 bg-white rounded-[20px] border border-[#E2E5E9] text-slate-500 shadow-2xs">
+          <Icon name="sync" size={20} className="animate-spin text-[#C9A227] mr-2" />
+          <span className="text-xs font-semibold">Đang tải danh sách gói nghiệm thu...</span>
+        </div>
+      ) : filteredPackages.length === 0 ? (
+        <div className="text-center p-16 bg-white rounded-[20px] border border-[#E2E5E9] text-slate-500 space-y-2 shadow-2xs">
+          <Icon name="inventory_2" size={36} className="text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-700">Không tìm thấy gói nghiệm thu nào phù hợp</p>
+          <p className="text-xs text-slate-400">Thử thay đổi bộ lọc trạng thái hoặc từ khóa tìm kiếm</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filteredPackages.map((pkg) => {
+            const isClosed = Boolean(pkg.is_closed)
+            const isPassed = pkg.status === 'PASSED' && !isClosed
+            const isRework = pkg.status === 'REWORK_REQUIRED'
+
+            const cfg = (() => {
+              if (isClosed || isPassed) {
+                return {
+                  border: '#A7C4B8',
+                  gradient: 'linear-gradient(90deg, #047857 0%, #065F46 100%)',
+                  dot: '#047857',
+                  halo: 'rgba(4, 120, 87, 0.15)',
+                  bgTint: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)',
+                  hoverShadow: '0 12px 28px rgba(4, 120, 87, 0.15)'
+                }
+              }
+              if (isRework) {
+                return {
+                  border: '#E6A8A8',
+                  gradient: 'linear-gradient(90deg, #B91C1C 0%, #7F1D1D 100%)',
+                  dot: '#B91C1C',
+                  halo: 'rgba(185, 28, 28, 0.15)',
+                  bgTint: 'linear-gradient(180deg, #FEF2F2 0%, #ffffff 45%)',
+                  hoverShadow: '0 12px 28px rgba(185, 28, 28, 0.15)'
+                }
+              }
+              return {
+                border: '#E3D3AC',
+                gradient: 'linear-gradient(90deg, #B45309 0%, #92400E 100%)',
+                dot: '#B45309',
+                halo: 'rgba(180, 83, 9, 0.15)',
+                bgTint: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
+                hoverShadow: '0 12px 28px rgba(180, 83, 9, 0.15)'
+              }
+            })()
+
+            // Lấy ảnh mẫu Trước / Sau từ records
+            const matchedRecord = INITIAL_ACCEPTANCE_RECORDS.find((r) => r.package_id === pkg.id) || INITIAL_ACCEPTANCE_RECORDS[0]
+            const beforePhoto = matchedRecord?.before_photo
+            const afterPhoto = matchedRecord?.after_photo
+            const progressRatio = pkg.total_items > 0 ? Math.round((pkg.accepted_items / pkg.total_items) * 100) : 0
+
+            return (
+              <div
+                key={pkg.id}
+                onClick={() => navigate(`${basePath}/acceptance/${pkg.id}`)}
+                style={{
+                  border: `1.5px solid ${cfg.border}`,
+                  background: cfg.bgTint,
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                className="rounded-[20px] overflow-hidden cursor-pointer flex flex-col justify-between hover:-translate-y-1 hover:shadow-lg relative group"
+              >
+                {/* 4px top gradient line */}
+                <div className="h-1 w-full" style={{ background: cfg.gradient }} />
+
+                <div className="p-5 flex flex-col justify-between flex-1 gap-4">
+                  {/* Hàng 1: Mã gói & Badges */}
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {/* Dot 10px + Halo 4px */}
+                        <div className="relative flex items-center justify-center w-4 h-4 shrink-0 mt-0.5">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.dot }} />
+                          <span className="absolute inset-0 rounded-full" style={{ backgroundColor: cfg.halo }} />
+                        </div>
+                        <span className="font-mono font-bold text-sm text-slate-900">{pkg.code}</span>
+                        <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                           {pkg.case_code}
                         </span>
                       </div>
-                      <p className="font-medium text-slate-800 line-clamp-1">{pkg.title}</p>
-                    </td>
 
-                    {/* Dự án & Lý trình */}
-                    <td className="py-3.5 px-4 space-y-0.5">
-                      <p className="text-slate-800 font-medium line-clamp-1">{pkg.project_name}</p>
-                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
-                        <span className="material-symbols-outlined text-[13px] text-[#C9A227]">location_on</span>
-                        <span>{pkg.chainage_display}</span>
-                      </span>
-                    </td>
-
-                    {/* Khối lượng kỹ thuật */}
-                    <td className="py-3.5 px-4 space-y-0.5">
-                      <span className="font-medium text-slate-800 block">{pkg.technical_scope}</span>
-                      <span className="text-[11px] text-slate-500">TCVN 8819:2011</span>
-                    </td>
-
-                    {/* Đơn vị & SLA */}
-                    <td className="py-3.5 px-4 space-y-0.5">
-                      <span className="text-slate-800 line-clamp-1">{pkg.contractor_name}</span>
-                      <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                          pkg.is_closed
-                            ? 'text-slate-600'
-                            : pkg.status === 'REWORK_REQUIRED'
-                            ? 'text-rose-700'
-                            : pkg.status === 'PASSED'
-                            ? 'text-emerald-700'
-                            : 'text-amber-800'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">
-                          {pkg.is_closed ? 'verified' : 'schedule'}
-                        </span>
-                        <span>{pkg.is_closed ? 'Bảo hành 12 tháng' : pkg.sla_display}</span>
-                      </span>
-                    </td>
-
-                    {/* Tiến độ & Trạng thái */}
-                    <td className="py-3.5 px-4 text-center space-y-1">
-                      <div>
-                        {pkg.is_closed ? (
-                          <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#1A1D20] text-white border border-[#2D3748]">
-                              <span className="material-symbols-outlined text-[14px] text-[#C9A227]">lock</span>
-                              <span>ĐÃ ĐÓNG GÓI</span>
-                            </span>
-                            <span className="block text-[10px] text-slate-500">
-                              Đã lưu trữ ({pkg.accepted_items}/{pkg.total_items} đạt)
-                            </span>
-                          </div>
-                        ) : pkg.status === 'PASSED' ? (
-                          <div className="space-y-0.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
-                              <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                              <span>{pkg.status_label}</span>
-                            </span>
-                            <span className="block text-[10px] text-amber-700 font-medium">
-                              Chờ Giám sát đóng đợt
-                            </span>
-                          </div>
-                        ) : pkg.status === 'PENDING_INSPECTION' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#FEF3E2] text-[#B45309] border border-[#FDE68A]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {/* Badge trạng thái */}
+                      <div className="shrink-0">
+                        {isClosed ? (
+                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#1A1D20] text-white border border-[#2D3748]">
+                            <Icon name="lock" size={13} className="text-[#C9A227]" />
+                            <span>ĐÃ ĐÓNG GÓI</span>
+                          </span>
+                        ) : isPassed ? (
+                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
+                            <Icon name="check_circle" size={13} />
+                            <span>{pkg.status_label}</span>
+                          </span>
+                        ) : isRework ? (
+                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
+                            <Icon name="replay" size={13} />
                             <span>{pkg.status_label}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-[#FDECEC] text-[#E5484D] border border-[#F8B4B4]">
-                            <span className="material-symbols-outlined text-[14px]">replay</span>
+                          <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
+                            <Icon name="schedule" size={13} />
                             <span>{pkg.status_label}</span>
                           </span>
                         )}
                       </div>
+                    </div>
 
-                      {/* Thanh tiến độ */}
-                      <div className="w-28 mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            pkg.is_closed || pkg.status === 'PASSED'
-                              ? 'bg-[#2F9E44]'
-                              : pkg.status === 'REWORK_REQUIRED'
-                              ? 'bg-[#E5484D]'
-                              : 'bg-[#C9A227]'
-                          }`}
-                          style={{ width: `${Math.round((pkg.accepted_items / pkg.total_items) * 100)}%` }}
-                        ></div>
+                    <h3 className="font-bold text-sm text-slate-900 line-clamp-1 group-hover:text-[#C9A227] transition-colors">
+                      {pkg.title}
+                    </h3>
+                  </div>
+
+                  {/* Ảnh Đối Chứng Trước / Sau */}
+                  <div className="grid grid-cols-2 gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 relative group/img">
+                        <img
+                          src={beforePhoto}
+                          alt="Trước thi công"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                        />
+                        <span className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Trước
+                        </span>
                       </div>
-                    </td>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-100 border border-emerald-300 relative group/img">
+                        <img
+                          src={afterPhoto}
+                          alt="Sau thi công"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                        />
+                        <span className="absolute top-1.5 left-1.5 bg-emerald-900/80 text-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Sau
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Nút hành động */}
-                    <td className="py-3.5 px-4 text-right">
-                      {pkg.is_closed ? (
-                        <button
-                          onClick={() => navigate(`${basePath}/acceptance/${pkg.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium shadow-2xs transition cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-slate-200"
-                        >
-                          <span className="material-symbols-outlined text-[14px] text-slate-500">inventory_2</span>
-                          <span>Xem hồ sơ</span>
-                        </button>
-                      ) : pkg.status === 'PASSED' ? (
-                        <button
-                          onClick={() => navigate(`${basePath}/acceptance/${pkg.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium shadow-2xs transition cursor-pointer bg-[#2D3748] hover:bg-[#1A1D20] text-white"
-                          title="Hạng mục đã đạt 100%, vào kiểm tra và đóng đợt thi công"
-                        >
-                          <span className="material-symbols-outlined text-[14px] text-[#C9A227]">lock</span>
-                          <span>Đóng đợt ngay</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => navigate(`${basePath}/acceptance/${pkg.id}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium shadow-2xs transition cursor-pointer bg-[#C9A227] hover:bg-[#8C6D1F] text-white"
-                        >
-                          <span>Vào nghiệm thu</span>
-                          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                  {/* Thông tin metadata */}
+                  <div className="space-y-1.5 text-xs text-slate-600 pt-1 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <Icon name="near_me" size={14} className="text-slate-400 shrink-0" />
+                      <span className="font-medium text-slate-800 truncate">{pkg.project_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                      <Icon name="location_on" size={14} className="text-[#C9A227] shrink-0" />
+                      <span className="text-slate-700">{pkg.chainage_display}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Icon name="engineering" size={14} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{pkg.contractor_name}</span>
+                    </div>
+                  </div>
+
+                  {/* Thanh tiến độ */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
+                      <span>Tiến độ: {pkg.accepted_items}/{pkg.total_items} hạng mục</span>
+                      <span className="font-mono font-bold text-slate-700">{progressRatio}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/80">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isClosed || isPassed
+                            ? 'bg-[#047857]'
+                            : isRework
+                            ? 'bg-[#B91C1C]'
+                            : 'bg-[#C9A227]'
+                        }`}
+                        style={{ width: `${progressRatio}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Hàng nút hành động (whitespace-nowrap không bị rớt dòng) */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-end">
+                    {isClosed ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`${basePath}/acceptance/${pkg.id}`)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer bg-white hover:bg-slate-50 text-slate-700 border border-[#E2E5E9] whitespace-nowrap"
+                      >
+                        <Icon name="inventory_2" size={14} className="text-slate-500" />
+                        <span>Xem hồ sơ</span>
+                      </button>
+                    ) : isPassed ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`${basePath}/acceptance/${pkg.id}`)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer bg-[#1A1D20] hover:bg-black text-[#F1E5C6] whitespace-nowrap"
+                        title="Hạng mục đã đạt 100%, vào kiểm tra và đóng đợt thi công"
+                      >
+                        <Icon name="lock" size={14} className="text-[#C9A227]" />
+                        <span>Đóng đợt ngay</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`${basePath}/acceptance/${pkg.id}`)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer bg-[#C9A227] hover:bg-[#B38E1F] text-white whitespace-nowrap"
+                      >
+                        <span>Vào nghiệm thu</span>
+                        <Icon name="arrow_forward" size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
+
 export default AcceptanceList

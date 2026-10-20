@@ -111,7 +111,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-2xs border border-slate-200 space-y-4 font-body">
+    <div className="bg-white rounded-[20px] p-5 shadow-2xs border border-[#E2E5E9] space-y-4 font-body">
       {/* Search & Filter Component */}
       <ProposalFilterBar
         searchTerm={searchTerm}
@@ -129,22 +129,22 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
         onResetFilters={onResetFilters}
       />
 
-      {/* Responsive Table với Sticky Cột Đầu & Cột Cuối */}
-      <div className="overflow-x-auto w-full rounded-lg border border-slate-200 bg-white shadow-2xs">
-        <table className="w-full text-left border-collapse text-xs min-w-[1240px]">
+      {/* Responsive Table với Sticky Cột Đầu & Cột Cuối — Fit 1440px không tràn ngang */}
+      <div className="overflow-x-auto w-full rounded-xl border border-[#EDEFF2] bg-white">
+        <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-[#F8F9FA] border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-              <th className="py-2.5 px-3 whitespace-nowrap sticky left-0 bg-[#F8F9FA] z-20">
+            <tr className="bg-[#F8F9FA] border-b border-[#EDEFF2] text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
+              <th className="py-3 px-3 whitespace-nowrap sticky left-0 bg-[#F8F9FA] z-20 w-[88px] min-w-[88px] shadow-[1px_0_0_#EDEFF2]">
                 Mã gói
               </th>
-              <th className="py-2.5 px-3 min-w-[280px] max-w-[340px]">Tên gói công việc &amp; Phạm vi lý trình</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Hạng mục lỗi</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Khối lượng dự kiến</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Thời gian thi công</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Người lập / Ngày trình</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Trạng thái</th>
-              <th className="py-2.5 px-3 min-w-[140px] whitespace-nowrap">Tiến độ phê duyệt</th>
-              <th className="py-2.5 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 min-w-[200px]">
+              <th className="py-3 px-3 min-w-[180px]">Tên gói công việc &amp; Phạm vi lý trình</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[100px] min-w-[100px]">Hạng mục lỗi</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[125px] min-w-[125px]">Khối lượng dự kiến</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Thời gian thi công</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[125px] min-w-[125px]">Người lập / Ngày trình</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Trạng thái</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">Tiến độ duyệt</th>
+              <th className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 w-[155px] min-w-[155px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
                 Thao tác
               </th>
             </tr>

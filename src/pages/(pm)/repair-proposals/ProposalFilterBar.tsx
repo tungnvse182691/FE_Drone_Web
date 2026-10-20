@@ -55,18 +55,18 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
               onSetPage(1)
             }}
             placeholder="Tìm theo mã gói, tên công việc hoặc lý trình..."
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-gold transition-all"
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C9A227] transition-all"
           />
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           <button
             onClick={() => onTabChange('ALL')}
             type="button"
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeFilterTab === 'ALL'
-                ? 'bg-brand-gold text-white font-bold'
+                ? 'bg-[#C9A227] text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -75,9 +75,9 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <button
             onClick={() => onTabChange('SUBMITTED')}
             type="button"
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeFilterTab === 'SUBMITTED'
-                ? 'bg-amber-500 text-white font-bold'
+                ? 'bg-[#B45309] text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -86,9 +86,9 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <button
             onClick={() => onTabChange('DECIDED')}
             type="button"
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeFilterTab === 'DECIDED'
-                ? 'bg-[#2F9E44] text-white font-bold'
+                ? 'bg-[#047857] text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -97,9 +97,9 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <button
             onClick={() => onTabChange('DISPATCHED')}
             type="button"
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeFilterTab === 'DISPATCHED'
-                ? 'bg-blue-600 text-white font-bold'
+                ? 'bg-[#1E40AF] text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -108,9 +108,9 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <button
             onClick={() => onTabChange('DRAFT')}
             type="button"
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
               activeFilterTab === 'DRAFT'
-                ? 'bg-[#2D3748] text-white font-bold'
+                ? 'bg-[#1A1D20] text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -121,13 +121,13 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
 
       {/* INLINE BỘ LỌC TRỰC TIẾP */}
       <div className="flex items-center gap-2 flex-wrap pt-0.5 text-xs">
-        <span className="text-slate-500 font-medium text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
-          <Icon name="filter_alt" size={14} className="text-brand-gold" />
+        <span className="text-slate-500 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5 mr-1">
+          <Icon name="filter_alt" size={14} className="text-[#C9A227]" />
           <span>Bộ lọc:</span>
         </span>
 
         {/* Tuyến đường */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
           <span className="text-slate-400 text-[11px]">Tuyến:</span>
           <select
             value={advRoute}
@@ -135,7 +135,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
               onRouteFilterChange(e.target.value)
               onSetPage(1)
             }}
-            className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer"
+            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
           >
             <option value="ALL">Tất cả tuyến đường</option>
             <option value="QL1A_PK04">QL1A - Giai đoạn 2</option>
@@ -144,7 +144,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
         </div>
 
         {/* Quy mô */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
           <span className="text-slate-400 text-[11px]">Quy mô:</span>
           <select
             value={advScale}
@@ -152,7 +152,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
               onScaleFilterChange(e.target.value)
               onSetPage(1)
             }}
-            className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer"
+            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
           >
             <option value="ALL">Tất cả quy mô</option>
             <option value="LARGE">&gt; 100 m² (Quy mô lớn)</option>
@@ -162,7 +162,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
         </div>
 
         {/* Đơn vị thi công */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
           <span className="text-slate-400 text-[11px]">Đơn vị:</span>
           <select
             value={advContractor}
@@ -170,7 +170,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
               onContractorFilterChange(e.target.value)
               onSetPage(1)
             }}
-            className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer"
+            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
           >
             <option value="ALL">Tất cả đơn vị</option>
             <option value="Đội thi công sửa chữa Hoàng Hải 01">Đội Hoàng Hải 01</option>
@@ -184,7 +184,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <button
             onClick={onResetFilters}
             type="button"
-            className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-red-600 transition-colors cursor-pointer px-2 py-1"
+            className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-red-600 transition-colors cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-red-50"
           >
             <Icon name="sync" size={13} />
             <span>Đặt lại</span>

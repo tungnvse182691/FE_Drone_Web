@@ -36,7 +36,7 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight font-headline">
             Danh mục gói đề xuất sửa chữa kỹ thuật
           </h1>
-          <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-800 font-mono text-xs font-bold shadow-2xs">
+          <span className="px-3.5 py-1.5 rounded-full bg-white border border-[#E2E5E9] text-slate-800 font-mono text-xs font-bold shadow-2xs">
             PRJ-QL1A-02 • {totalPackagesCount} Gói công việc
           </span>
         </div>
@@ -51,9 +51,9 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
           <button
             onClick={onOpenCreateModal}
             type="button"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C9A227] hover:bg-[#B38E1F] text-white font-bold text-xs shadow-2xs transition-all cursor-pointer"
           >
-            <Icon name="add" size={16} />
+            <Icon name="add" size={17} />
             <span>Tạo gói đề xuất mới</span>
           </button>
         )}
