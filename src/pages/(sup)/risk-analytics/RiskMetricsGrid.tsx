@@ -96,7 +96,7 @@ export const RiskMetricsGrid: React.FC<RiskMetricsGridProps> = ({
               </div>
               <span className="text-slate-300">|</span>
               <div className="flex flex-col text-right">
-                <span className="text-[10px] text-slate-500 font-medium uppercase">PM Fast Track</span>
+                <span className="text-[10px] text-slate-500 font-medium uppercase">PM XỬ LÝ NHANH</span>
                 <span className="font-mono font-bold text-[#8C6D1F]">{currentProject.met04_pm_days} ngày</span>
               </div>
             </div>

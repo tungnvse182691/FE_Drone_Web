@@ -147,7 +147,7 @@ export const INITIAL_EXPORT_RECORDS: ExportRecord[] = [
   },
   {
     id: 'rec-04', code: 'EXP-2026-0810', project_id: 'prj-ql1a-02', project_code: 'PRJ-QL1A-02',
-    quarter: 'MONTH_08_2026', track: 'FAST_TRACK', type: 'Nhật ký thi công dặm vá Fast Track',
+    quarter: 'MONTH_08_2026', track: 'FAST_TRACK', type: 'Nhật ký thi công dặm vá xử lý nhanh',
     type_badge_color: 'bg-amber-50 text-amber-800 border-amber-200', type_category_name: 'Nhật ký thi công',
     dossier_no: 'FT-LOG-2026-08', scope_display: 'Km 1025+000 - Km 1035+000', as_of_time: '10/08/2026 17:15',
     as_of_timestamp: 1786367700000, file_size: '34 MB', file_size_mb: 34, format_display: 'ZIP + CSV',
@@ -173,7 +173,7 @@ export const INITIAL_EXPORT_RECORDS: ExportRecord[] = [
   // PRJ-CTBN-01 (Cao tốc Bắc Nam)
   {
     id: 'rec-15', code: 'EXP-2026-0919', project_id: 'prj-ctbn-01', project_code: 'PRJ-CTBN-01',
-    quarter: 'Q3_2026', track: 'FAST_TRACK', type: 'Biên bản xử lý hộ lan va chạm Fast Track',
+    quarter: 'Q3_2026', track: 'FAST_TRACK', type: 'Biên bản xử lý hộ lan va chạm xử lý nhanh',
     type_badge_color: 'bg-emerald-50 text-emerald-800 border-emerald-200', type_category_name: 'Nghiệm thu đối chứng',
     dossier_no: 'FT-2026-0919', scope_display: 'Km 438+100', as_of_time: '19/08/2026 16:40',
     as_of_timestamp: 1787140800000, file_size: '26 MB', file_size_mb: 26, format_display: 'ZIP + PDF',

@@ -97,7 +97,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
               : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
           }`}
         >
-          <span>Tiến trình AI &amp; Drone</span>
+          <span>Tiến trình AI &amp; Thiết bị bay</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'AI_SYSTEM' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
           }`}>

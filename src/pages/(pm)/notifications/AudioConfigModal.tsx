@@ -178,7 +178,7 @@ export const AudioConfigModal: React.FC<AudioConfigModalProps> = ({
                     Chuông Ping bàn giao công việc
                   </div>
                   <div className="text-[12px] text-[#6B7280]">
-                    Âm dịu nhẹ khi PM hoặc Supervisor gửi hồ sơ
+                    Âm dịu nhẹ khi PM hoặc Giám sát gửi hồ sơ
                   </div>
                 </div>
               </div>

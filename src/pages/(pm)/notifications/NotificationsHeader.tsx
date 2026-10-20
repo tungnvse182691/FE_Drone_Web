@@ -82,7 +82,7 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
           <p className="text-xs text-slate-500 leading-relaxed">
             {isSupervisor
               ? 'Kênh thông báo & chỉ đạo của Giám sát: Thẩm duyệt gói đề xuất sửa chữa, nghiệm thu hồ sơ hiện trường, xác nhận tuyến đường và cảnh báo suy thoái rủi ro.'
-              : 'Kênh điều hành & tiếp nhận chỉ đạo của Chỉ huy trưởng (PM): Lệnh ứng cứu khẩn cấp, tiến độ đợt sửa xử lý nhanh, kết quả thẩm định Drone AI và phản hồi duyệt hồ sơ.'}
+              : 'Kênh điều hành & tiếp nhận chỉ đạo của Chỉ huy trưởng (PM): Lệnh ứng cứu khẩn cấp, tiến độ đợt sửa xử lý nhanh, kết quả thẩm định thiết bị bay AI và phản hồi duyệt hồ sơ.'}
           </p>
         </div>
 

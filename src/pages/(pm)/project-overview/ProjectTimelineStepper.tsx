@@ -26,7 +26,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
             <span>Tiến trình bàn giao &amp; Vòng đời bảo hành</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Luân chuyển trách nhiệm giữa Giám sát (Supervisor) và Chỉ huy trưởng (PM).
+            Luân chuyển trách nhiệm giữa Giám sát và Chỉ huy trưởng (PM).
           </p>
         </div>
         <span className="font-mono text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-semibold border border-slate-200">
@@ -53,7 +53,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Supervisor đã khởi tạo hồ sơ quản lý và bàn giao quyền quản trị tuyến cho <strong className="text-slate-900">{project.pm_name}</strong> ({project.pm_email}).
+              Giám sát đã khởi tạo hồ sơ quản lý và bàn giao quyền quản trị tuyến cho <strong className="text-slate-900">{project.pm_name}</strong> ({project.pm_email}).
             </p>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Drone bay chụp ảnh hiện trường, AI phát hiện nứt vỡ, PM thẩm định bounding box &amp; so sánh đa kỳ.
+              Drone bay chụp ảnh hiện trường, AI phát hiện nứt vỡ, PM thẩm định khung nhận diện &amp; so sánh đa kỳ.
             </p>
           </div>
         </div>
@@ -151,7 +151,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Gom khiếm khuyết cùng lý trình, tính khối lượng cào bóc m², trám nứt m, trình Supervisor phê duyệt.
+              Gom khiếm khuyết cùng lý trình, tính khối lượng cào bóc m², trám nứt m, trình Giám sát phê duyệt.
             </p>
           </div>
         </div>
@@ -169,7 +169,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               <span className="font-mono text-[11px] text-slate-400">Giai đoạn cuối</span>
             </div>
             <p className="text-xs text-slate-500">
-              Supervisor đối soát ảnh trước/sau sửa chữa, kiểm tra đạt 100% và ký số giải ngân tiền bảo hành.
+              Giám sát đối soát ảnh trước/sau sửa chữa, kiểm tra đạt 100% và ký số giải ngân tiền bảo hành.
             </p>
           </div>
         </div>

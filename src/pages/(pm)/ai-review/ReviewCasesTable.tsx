@@ -92,7 +92,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
                       onChange={(e) => setCollapseMergedRows(e.target.checked)}
                       className="w-3.5 h-3.5 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold"
                     />
-                    <span>Gộp báo trùng theo cây (Master-Tree)</span>
+                    <span>Gộp báo cáo trùng theo cây</span>
                   </label>
                   <span>•</span>
                   <button

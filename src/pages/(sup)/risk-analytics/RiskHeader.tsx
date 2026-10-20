@@ -187,7 +187,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                   setSelectedTrack(e.target.value)
                   const trackLabel = 
                     e.target.value === 'FAST_TRACK' 
-                      ? 'Sửa nhanh Fast Track' 
+                      ? 'Quy trình xử lý nhanh' 
                       : e.target.value === 'APPROVAL_TRACK' 
                       ? 'Thẩm duyệt thông thường' 
                       : e.target.value === 'EMERGENCY'
@@ -197,8 +197,8 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >
-                <option value="ALL">Tất cả quy trình (Fast Track, Thẩm duyệt, Khẩn cấp)</option>
-                <option value="FAST_TRACK">Sửa nhanh Fast Track (&lt; 24h)</option>
+                <option value="ALL">Tất cả quy trình (Xử lý nhanh, Thẩm duyệt, Khẩn cấp)</option>
+                <option value="FAST_TRACK">Quy trình xử lý nhanh (&lt; 24h)</option>
                 <option value="APPROVAL_TRACK">Thẩm duyệt thông thường (Hồ sơ kỹ thuật)</option>
                 <option value="EMERGENCY">Xử lý khẩn cấp (24/7)</option>
               </select>

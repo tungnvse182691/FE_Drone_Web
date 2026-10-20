@@ -53,7 +53,7 @@ export const INITIAL_MEMBERS: ProjectMember[] = [
     id: 'mem-01',
     name: 'Nguyễn Văn An',
     role_code: 'SUPERVISOR',
-    role_title: 'Giám sát trưởng (Supervisor)',
+    role_title: 'Giám sát trưởng',
     role_badge: 'SUPERVISOR',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
     is_online: true,

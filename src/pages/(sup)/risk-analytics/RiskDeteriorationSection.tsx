@@ -172,7 +172,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
 
                   <div className="text-[11px] text-slate-300 space-y-1">
                     <div className="flex items-center justify-between text-slate-400">
-                      <span>Mức độ khẩn cấp (Urgency):</span>
+                      <span>Mức độ khẩn cấp:</span>
                       <span className="font-semibold text-rose-400">
                         {activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
                       </span>

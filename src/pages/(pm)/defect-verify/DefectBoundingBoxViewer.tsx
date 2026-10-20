@@ -310,7 +310,9 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
         >
           {/* Nhãn loại lỗi & kích thước phía trên khung */}
           <div className="absolute -top-6 left-0 flex items-center gap-1 bg-[#1A1D20]/95 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-md border border-white/20 whitespace-nowrap pointer-events-none">
-            <span className="text-[#C9A227]">{displayType}</span>
+            <span className="text-[#C9A227]">
+              {displayType === DefectType.POTHOLE ? 'Ổ gà' : displayType}
+            </span>
             <span className="text-slate-400">|</span>
             <span className="text-slate-200">
               {displayType.includes('CRACK')

@@ -160,7 +160,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                Dự án được đóng bởi <strong className="text-slate-900">{project.closed_by || 'Supervisor'}</strong> ngày{' '}
+                Dự án được đóng bởi <strong className="text-slate-900">{project.closed_by || 'Giám sát'}</strong> ngày{' '}
                 {project.closed_at ? new Date(project.closed_at).toLocaleDateString('vi-VN') : '15/01/2026'}.
                 {project.closed_reason && ` Kết luận: "${project.closed_reason}"`}
               </p>
@@ -179,14 +179,14 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Đang chờ Supervisor duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa (WF-07)
+                  Đang chờ Giám sát duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa (WF-07)
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 uppercase tracking-wide">
                   SLA CẢNH BÁO
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Trách nhiệm hiện tại: <strong className="font-semibold text-slate-900">Giám sát trưởng (Supervisor)</strong>.
+                Trách nhiệm hiện tại: <strong className="font-semibold text-slate-900">Giám sát trưởng</strong>.
               </p>
             </div>
           </div>
@@ -213,7 +213,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                 Bước tiếp theo: Thiết lập tim tuyến &amp; bề rộng mặt đường (PM - WF-02)
               </span>
               <p className="text-xs text-slate-600 mt-0.5">
-                Dự án vừa được khởi tạo bởi Supervisor (DA01). Kỹ sư PM <strong className="text-slate-900">{project.pm_name}</strong> cần nhập chuỗi tọa độ tim tuyến WGS84 và bề rộng để kích hoạt không gian trắc địa.
+                Dự án vừa được khởi tạo bởi Giám sát (DA01). Kỹ sư PM <strong className="text-slate-900">{project.pm_name}</strong> cần nhập chuỗi tọa độ tim tuyến WGS84 và bề rộng để kích hoạt không gian trắc địa.
               </p>
             </div>
           </div>
@@ -243,7 +243,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {project.length_km} km) và trình duyệt sang Supervisor.
+                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {project.length_km} km) và trình duyệt sang Giám sát.
               </p>
             </div>
           </div>

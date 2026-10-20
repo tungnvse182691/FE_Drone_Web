@@ -263,7 +263,7 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
         <div className="flex items-center gap-2 font-mono">
           <span>TCVN 8819:2011</span>
           <span>•</span>
-          <span>SHA-256 Verified</span>
+          <span>Đã xác thực SHA-256</span>
         </div>
       </div>
     </>

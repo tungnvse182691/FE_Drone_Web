@@ -127,7 +127,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
               3
             </div>
             <div>
-              <div className="font-bold text-blue-950">Supervisor Thẩm Duyệt Phương Án</div>
+              <div className="font-bold text-blue-950">Giám sát thẩm duyệt phương án</div>
               <div className="text-[11px] text-blue-800">Duyệt từng hạng mục hoặc yêu cầu chỉnh sửa phương án kỹ thuật</div>
             </div>
           </div>

@@ -129,7 +129,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               onChange={(e) => setSeverity(e.target.value as Severity)}
               className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C9A227] font-medium disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed"
             >
-              <option value={Severity.CRITICAL}>CRITICAL — Đặc biệt khẩn cấp</option>
+              <option value={Severity.CRITICAL}>Nguy cấp — Đặc biệt khẩn cấp</option>
               <option value={Severity.HIGH}>HIGH — Nghiêm trọng</option>
               <option value={Severity.MEDIUM}>MEDIUM — Trung bình</option>
               <option value={Severity.LOW}>LOW — Nhẹ</option>

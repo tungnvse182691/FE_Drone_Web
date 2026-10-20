@@ -173,7 +173,7 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
           <Icon name="security" size={16} className="text-brand-gold shrink-0 mt-0.5" />
           <div className="flex-1 leading-relaxed">
             <strong className="text-slate-900 font-semibold">Quy định thẩm quyền:</strong>{' '}
-            Giám sát thẩm duyệt phương pháp kỹ thuật &amp; khối lượng thi công từng vị trí. PM phát lệnh giao việc hiện trường (Dispatch) cho các hạng mục đã được phê duyệt (
+            Giám sát thẩm duyệt phương pháp kỹ thuật &amp; khối lượng thi công từng vị trí. PM phát lệnh giao việc hiện trường cho các hạng mục đã được phê duyệt (
             <strong className="text-[#2F9E44]">ĐÃ DUYỆT</strong>).
           </div>
         </div>
