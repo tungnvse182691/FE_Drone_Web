@@ -496,9 +496,9 @@ export const mockDefects: Defect[] = [
     image_url: 'https://images.unsplash.com/photo-1584463699043-441d8e1c6b3e?w=1200&auto=format&fit=crop&q=80',
     previous_epoch_image_url: undefined, // Kỳ đầu tiên ghi nhận, chưa có ảnh lịch sử
     bounding_box: { x: 0.1, y: 0.45, width: 0.8, height: 0.15 },
-    length_m: 3.5,
-    width_m: 0.04,
-    depth_mm: 18,
+    length_m: undefined,
+    width_m: undefined,
+    depth_mm: undefined,
     batch_id: undefined,
     created_at: '2026-08-23'
   }

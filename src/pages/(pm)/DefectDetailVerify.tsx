@@ -91,10 +91,19 @@ function convertDetectionToDefect(item?: AIDetectionItem | null): Defect {
     severity = Severity.LOW
   }
 
-  const lengthM = parseFloat(safeItem?.metrics?.length?.replace(' m', '') || '0.85') || 0.85
-  const widthM = parseFloat(safeItem?.metrics?.crackWidth?.replace(' mm', '') || '0.65') / (safeItem?.metrics?.crackWidth ? 1000 : 1) || 0.65
+  const lengthM = safeItem?.metrics?.length ? parseFloat(safeItem.metrics.length.replace(' m', '')) : undefined
+  const widthM = safeItem?.metrics?.crackWidth
+    ? safeItem.metrics.crackWidth.includes('mm')
+      ? parseFloat(safeItem.metrics.crackWidth.replace(' mm', '')) / 1000
+      : parseFloat(safeItem.metrics.crackWidth.replace(' m', ''))
+    : undefined
   const depthMm = safeItem?.metrics?.depth
     ? parseFloat(safeItem.metrics.depth.replace(' cm', '')) * 10
+    : undefined
+  const areaM2 = safeItem?.metrics?.area
+    ? parseFloat(safeItem.metrics.area.replace(' m²', ''))
+    : lengthM && widthM
+    ? parseFloat((lengthM * widthM).toFixed(2))
     : undefined
 
   return {
@@ -121,6 +130,7 @@ function convertDetectionToDefect(item?: AIDetectionItem | null): Defect {
     length_m: lengthM,
     width_m: widthM,
     depth_mm: depthMm,
+    area_m2: areaM2,
     batch_id: 'pkg-05',
     created_at: '2026-09-24'
   }
@@ -174,7 +184,6 @@ export const DefectDetailVerify: React.FC = () => {
 
   // Đối tượng Defect hiển thị hiện tại
   const [customDefectType, setCustomDefectType] = useState<DefectType | null>(null)
-  const [customDimensions, setCustomDimensions] = useState<{ lengthM: number; widthM: number } | null>(null)
   const [isBboxModified, setIsBboxModified] = useState<boolean>(false)
 
   const defect: Defect = useMemo(() => {
@@ -183,10 +192,6 @@ export const DefectDetailVerify: React.FC = () => {
       if (localStatusOverride) converted.status = localStatusOverride
       if (localCodeOverride) converted.code = localCodeOverride
       if (customDefectType) converted.defect_type = customDefectType
-      if (customDimensions) {
-        converted.length_m = customDimensions.lengthM
-        converted.width_m = customDimensions.widthM
-      }
       return converted
     }
     if (matchedMockDefect) {
@@ -194,10 +199,6 @@ export const DefectDetailVerify: React.FC = () => {
       if (localStatusOverride) copy.status = localStatusOverride
       if (localCodeOverride) copy.code = localCodeOverride
       if (customDefectType) copy.defect_type = customDefectType
-      if (customDimensions) {
-        copy.length_m = customDimensions.lengthM
-        copy.width_m = customDimensions.widthM
-      }
       return copy
     }
     // Fallback sang DET-01
@@ -205,12 +206,8 @@ export const DefectDetailVerify: React.FC = () => {
     if (localStatusOverride) fallback.status = localStatusOverride
     if (localCodeOverride) fallback.code = localCodeOverride
     if (customDefectType) fallback.defect_type = customDefectType
-    if (customDimensions) {
-      fallback.length_m = customDimensions.lengthM
-      fallback.width_m = customDimensions.widthM
-    }
     return fallback
-  }, [matchedDetection, matchedMockDefect, detections, localStatusOverride, localCodeOverride, customDefectType, customDimensions])
+  }, [matchedDetection, matchedMockDefect, detections, localStatusOverride, localCodeOverride, customDefectType])
 
   // Danh sách chuyển đổi nhanh giữa các khuyết tật trong header
   const availableItems = useMemo(() => {
@@ -248,7 +245,6 @@ export const DefectDetailVerify: React.FC = () => {
     setLocalStatusOverride(null)
     setLocalCodeOverride(null)
     setCustomDefectType(null)
-    setCustomDimensions(null)
     setIsBboxModified(false)
   }, [id, defect.id])
 
@@ -283,8 +279,10 @@ export const DefectDetailVerify: React.FC = () => {
         metrics: {
           reviewer: 'KS. Đỗ Quốc Hoàng (PM)',
           dismissReason: newStatus === DefectStatus.REJECTED ? notes : undefined,
-          length: `${customDimensions?.lengthM ?? defect.length_m ?? 1.2} m`,
-          crackWidth: `${customDimensions?.widthM ?? defect.width_m ?? 0.8} m`
+          length: defect.length_m ? `${defect.length_m} m` : undefined,
+          crackWidth: defect.width_m ? `${defect.width_m} m` : undefined,
+          depth: defect.depth_mm ? `${defect.depth_mm / 10} cm` : undefined,
+          area: defect.area_m2 ? `${defect.area_m2} m²` : undefined
         }
       })
     } catch (err) {
@@ -328,7 +326,7 @@ export const DefectDetailVerify: React.FC = () => {
           }
         })
       } catch (e) {}
-      showToast(`Đã tạo Lệnh Bay Bổ Sung (KS11 / BR-43) tại Km ${defect.chainage_km}. Tiếp tục rà soát đợt bay.`)
+      showToast(`Đã tạo Lệnh Bay Bổ Sung tại Km ${defect.chainage_km}. Tiếp tục rà soát đợt bay.`)
       setTimeout(() => {
         navigate(returnUrl)
       }, 1200)
@@ -337,7 +335,7 @@ export const DefectDetailVerify: React.FC = () => {
       try {
         await surveyService.updateSurveyDetection('srv-01', finalDetId, {
           status: 'PENDING',
-          metrics: { depth: 'Chờ đo thực địa AI13', reviewer: 'Chờ kết quả đo' }
+          metrics: { depth: 'Chờ đo thực tế', reviewer: 'Chờ kết quả đo' }
         })
       } catch (e) {}
       try {
@@ -354,7 +352,7 @@ export const DefectDetailVerify: React.FC = () => {
           }
         })
       } catch (e) {}
-      showToast(`Đã giao nhiệm vụ Đo Đạc Hiện Trường (AI13 / TN01) tại Km ${defect.chainage_km}.`)
+      showToast(`Đã giao nhiệm vụ Đo Đạc Hiện Trường tại Km ${defect.chainage_km}.`)
       setTimeout(() => {
         navigate(returnUrl)
       }, 1200)
@@ -386,17 +384,19 @@ export const DefectDetailVerify: React.FC = () => {
         type: (customDefectType || defect.defect_type) as any,
         metrics: {
           reviewer: `KS. Đỗ Quốc Hoàng (PM) • Tái phát từ ${priorId}`,
-          length: `${customDimensions?.lengthM ?? defect.length_m ?? 1.2} m`,
-          crackWidth: `${customDimensions?.widthM ?? defect.width_m ?? 0.8} m`
+          length: defect.length_m ? `${defect.length_m} m` : undefined,
+          crackWidth: defect.width_m ? `${defect.width_m} m` : undefined,
+          depth: defect.depth_mm ? `${defect.depth_mm / 10} cm` : undefined,
+          area: defect.area_m2 ? `${defect.area_m2} m²` : undefined
         }
       })
     } catch (err) {
       console.warn('Sync recurrence to survey detections warning:', err)
     }
 
-    const auditNote = `[LIÊN KẾT TÁI PHÁT - API-110] Nối với lỗi cũ ${priorId}. Căn cứ: ${reason}. ${notesText}`
+    const auditNote = `[LIÊN KẾT TÁI PHÁT] Nối với lỗi cũ ${priorId}. Căn cứ: ${reason}. ${notesText}`
     setNotes((prev) => (prev ? `${prev}\n${auditNote}` : auditNote))
-    showToast(`Đã liên kết tái phát khiếm khuyết với lỗi cũ ${priorId} (API-110). Dữ liệu đợt bay đã cập nhật!`)
+    showToast(`Đã liên kết tái phát khiếm khuyết với lỗi cũ ${priorId}. Dữ liệu đợt bay đã cập nhật!`)
   }
 
   return (
@@ -427,9 +427,8 @@ export const DefectDetailVerify: React.FC = () => {
               <DefectBoundingBoxViewer
                 defect={defect}
                 currentType={customDefectType || defect.defect_type}
-                onBboxChange={(_newBbox, lengthM, widthM) => {
+                onBboxChange={(_newBbox) => {
                   setIsBboxModified(true)
-                  setCustomDimensions({ lengthM, widthM })
                 }}
               />
             )}
@@ -446,7 +445,6 @@ export const DefectDetailVerify: React.FC = () => {
             defect={defect}
             currentType={customDefectType || defect.defect_type}
             onTypeChange={(newType) => setCustomDefectType(newType)}
-            dimensions={customDimensions || { lengthM: defect.length_m || 1.2, widthM: defect.width_m || 0.8 }}
             isBboxModified={isBboxModified}
             severity={severity}
             setSeverity={setSeverity}

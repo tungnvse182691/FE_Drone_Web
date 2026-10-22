@@ -55,7 +55,7 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
             {isRecurrent && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs animate-in fade-in">
                 <Icon name="history" size={14} className="text-[#C9A227]" />
-                <span>TÁI PHÁT ({linkedPriorCode || 'DEF-OLD'}) • API-110</span>
+                <span>TÁI PHÁT ({linkedPriorCode || 'DEF-OLD'})</span>
               </span>
             )}
 

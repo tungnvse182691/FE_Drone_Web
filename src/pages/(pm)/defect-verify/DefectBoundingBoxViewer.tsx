@@ -13,7 +13,7 @@ interface BoundingBoxCoords {
 interface DefectBoundingBoxViewerProps {
   defect: Defect
   currentType?: DefectType
-  onBboxChange?: (newBbox: BoundingBoxCoords, lengthM: number, widthM: number) => void
+  onBboxChange?: (newBbox: BoundingBoxCoords) => void
 }
 
 type ResizeDirection = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'w' | 'e'
@@ -45,28 +45,16 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
     setIsDrawingMode(false)
   }, [defect.id])
 
-  // Tính kích thước thực tế dựa trên bbox (chuẩn hóa tương quan tỷ lệ ảnh)
-  const calculateRealDimensions = useCallback(
-    (b: BoundingBoxCoords) => {
-      // Giả định góc chụp drone 20m có chiều rộng khung nhìn đường ~ 7.5m và chiều dài ~ 8.5m
-      const calculatedLength = parseFloat(Math.max(0.2, b.height * 8.5).toFixed(2))
-      const calculatedWidth = parseFloat(Math.max(0.15, b.width * 7.5).toFixed(2))
-      return { lengthM: calculatedLength, widthM: calculatedWidth }
-    },
-    []
-  )
-
-  // Cập nhật khi bbox thay đổi
+  // Cập nhật khi bbox thay đổi (chỉ lưu vùng ROI 2D, không tính toán kích thước vật lý theo Spec 17_10)
   const updateBbox = useCallback(
     (newB: BoundingBoxCoords, markModified = true) => {
       setBbox(newB)
       if (markModified) setIsModified(true)
-      const dims = calculateRealDimensions(newB)
       if (onBboxChange) {
-        onBboxChange(newB, dims.lengthM, dims.widthM)
+        onBboxChange(newB)
       }
     },
-    [calculateRealDimensions, onBboxChange]
+    [onBboxChange]
   )
 
   // Reset về khung gốc do AI dự đoán
@@ -215,7 +203,6 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
     }
   }, [dragAction, updateBbox])
 
-  const dimensions = calculateRealDimensions(bbox)
   const displayType = currentType || defect.defect_type
 
   return (
@@ -308,16 +295,14 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
             height: `${bbox.height * 100}%`
           }}
         >
-          {/* Nhãn loại lỗi & kích thước phía trên khung */}
+          {/* Nhãn loại lỗi & nhận diện AI phía trên khung */}
           <div className="absolute -top-6 left-0 flex items-center gap-1 bg-[#1A1D20]/95 text-white px-2 py-0.5 rounded text-[10px] font-bold shadow-md border border-white/20 whitespace-nowrap pointer-events-none">
             <span className="text-[#C9A227]">
               {displayType === DefectType.POTHOLE ? 'Ổ gà' : displayType}
             </span>
             <span className="text-slate-400">|</span>
             <span className="text-slate-200">
-              {displayType.includes('CRACK')
-                ? `Dài L: ${dimensions.lengthM}m`
-                : `${dimensions.lengthM}m × ${dimensions.widthM}m`}
+              Vùng AI phát hiện
             </span>
           </div>
 
@@ -372,13 +357,14 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
         </div>
 
         {/* Thanh ghi chú thao tác dưới chân ảnh */}
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white/80 bg-slate-950/70 backdrop-blur-xs px-3 py-1 rounded-lg border border-white/10 pointer-events-none">
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white/80 bg-slate-950/70 backdrop-blur-xs px-3 py-1.5 rounded-lg border border-white/10 pointer-events-none">
           <div className="flex items-center gap-1.5">
             <Icon name="open_with" size={13} className="text-amber-400" />
-            <span>Kéo thân hộp để dịch chuyển • Kéo các điểm neo tròn để co giãn kích thước</span>
+            <span>Kéo thân hộp để dịch chuyển • Kéo các điểm neo để điều chỉnh vùng nhận diện BBox</span>
           </div>
-          <div className="font-mono text-amber-300 font-bold">
-            S = {(dimensions.lengthM * dimensions.widthM).toFixed(2)} m²
+          <div className="text-amber-300 font-semibold flex items-center gap-1 text-[11px]">
+            <Icon name="straighten" size={13} className="text-amber-400" />
+            <span>Chờ đo đạc thực tế</span>
           </div>
         </div>
       </div>

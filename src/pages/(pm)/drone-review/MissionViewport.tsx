@@ -166,8 +166,19 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
               </div>
 
               {/* Kích thước hình học đo đạc phía dưới */}
-              <div className="absolute -bottom-6 right-0 bg-slate-900/95 backdrop-blur-md text-white px-2 py-0.5 rounded font-mono text-[10px] shadow border border-slate-700/60 whitespace-nowrap">
-                {activeItem.bbox?.dims || ''}
+              <div
+                className={`absolute -bottom-6 right-0 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium shadow border whitespace-nowrap flex items-center gap-1 ${
+                  activeItem.status === 'APPROVED'
+                    ? 'bg-slate-900/95 text-emerald-300 border-emerald-600/70'
+                    : 'bg-slate-900/95 text-amber-300 border-slate-700/60'
+                }`}
+              >
+                <Icon
+                  name={activeItem.status === 'APPROVED' ? 'check_circle' : 'straighten'}
+                  size={12}
+                  className={activeItem.status === 'APPROVED' ? 'text-emerald-400' : 'text-amber-400'}
+                />
+                <span>{activeItem.bbox?.dims || 'Chờ đo thực tế'}</span>
               </div>
             </div>
           )}

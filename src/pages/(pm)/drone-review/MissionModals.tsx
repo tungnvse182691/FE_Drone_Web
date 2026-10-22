@@ -88,11 +88,11 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           </button>
         </div>
 
-        {/* Căn cứ kỹ thuật trắc địa (BR-43 & KS11) */}
+        {/* Căn cứ kỹ thuật trắc địa */}
         <div className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
           <Icon name="info" size={18} className="text-amber-700 shrink-0 mt-0.5" />
           <div className="leading-relaxed">
-            <strong className="block mb-0.5">Cơ sở kỹ thuật trắc địa (TCVN & Quy tắc BR-43):</strong>
+            <strong className="block mb-0.5">Cơ sở kỹ thuật trắc địa (TCVN):</strong>
             <span>
               Độ phủ ảnh trực giao của đợt bay hiện tại đạt <strong>{coveragePercentage}%</strong> (chưa đạt ngưỡng tối thiểu <strong>95%</strong> để Khóa Baseline số). Phát lệnh bay bù Oblique giúp bổ sung dữ liệu góc nghiêng tại khu vực bị khuất bóng râm, cây cối hoặc rào chắn.
             </span>
@@ -326,11 +326,11 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           </div>
         </div>
 
-        {/* Nội dung quy tắc BR-40 */}
+        {/* Nội dung quy tắc Baseline */}
         <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
           <div className="font-bold flex items-center gap-1.5 text-amber-800">
             <Icon name="verified" size={16} />
-            <span>Quy tắc nghiệp vụ BR-40 (Baseline theo band):</span>
+            <span>Quy tắc xác nhận mốc Baseline:</span>
           </div>
           <p className="leading-relaxed">
             Hệ thống cho phép PM <strong>xác nhận Baseline cho từng phân đoạn/vùng đủ điều kiện</strong> (giữ phần đạt, bổ sung phần thiếu). Phân đoạn Km 1024 - 1027 đã đủ độ phủ và có thể chốt mốc Baseline kỹ thuật ngay.

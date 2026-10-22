@@ -10,10 +10,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L3 (Nghiêm trọng)',
       confidence: 94,
       description: 'Ổ gà sâu, bong bật lớp bê tông nhựa C19, lộ cốt liệu đá 1x2',
-      metrics: {
-        area: '0.27 m²',
-        depth: '6.8 cm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1024.35,
       bbox: {
@@ -21,8 +18,8 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         left: '28%',
         width: '42%',
         height: '38%',
-        label: '[AI #DET-01] Ổ gà cấp độ 3 (Pothole L3) • 94%',
-        dims: 'Dài 60cm × Rộng 45cm • Sâu 6.8cm',
+        label: '[AI #DET-01] Ổ gà cấp độ 3 • 94%',
+        dims: 'Chờ đo thực tế',
         borderColor: '#EF4444'
       }
     },
@@ -35,10 +32,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L2 (Trung bình)',
       confidence: 88,
       description: 'Vết nứt dọc dạng chân chim liên tục theo vệt bánh xe',
-      metrics: {
-        length: '1.8 m',
-        crackWidth: '4.2 mm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1025.11,
       bbox: {
@@ -47,7 +41,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '18%',
         height: '55%',
         label: '[AI #DET-02] Nứt dọc • 88%',
-        dims: 'L: 1.8m • Khe: 4.2mm',
+        dims: 'Chờ đo thực tế',
         borderColor: '#F97316',
         isDashed: true
       }
@@ -63,6 +57,8 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       description: 'Vỡ mép thảm bê tông nhựa cạnh rãnh thu nước dọc tuyến',
       metrics: {
         length: '1.2 m',
+        crackWidth: '0.15 m',
+        depth: '5.0 cm',
         area: '0.18 m²',
         reviewer: 'KS. Đỗ Quốc Hoàng'
       },
@@ -75,7 +71,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '25%',
         height: '25%',
         label: '[AI #DET-03] ĐÃ DUYỆT → DEF-2026-0120',
-        dims: 'L: 1.2m • Rộng 15cm',
+        dims: 'L: 1.2m • R: 0.15m • Sâu: 5cm (Đã đo)',
         borderColor: '#10B981'
       }
     },
@@ -112,10 +108,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L2 (Cần xử lý)',
       confidence: 79,
       description: 'Nứt chéo bề mặt khu vực tiếp giáp khe co giãn cầu vượt',
-      metrics: {
-        length: '0.95 m',
-        crackWidth: '3.5 mm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1027.1,
       bbox: {
@@ -124,7 +117,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '30%',
         height: '35%',
         label: '[AI #DET-05] Nứt chéo • 79%',
-        dims: 'L: 0.95m • Khe: 3.5mm',
+        dims: 'Chờ đo thực tế',
         borderColor: '#0284C7'
       }
     },
@@ -137,10 +130,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L1 (Nhẹ)',
       confidence: 75,
       description: 'Bề mặt nhựa asphalt mất lớp nhựa mịn, trồi cát hạt',
-      metrics: {
-        area: '0.45 m²',
-        depth: '1.2 cm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1027.85,
       bbox: {
@@ -149,7 +139,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '22%',
         height: '25%',
         label: '[AI #DET-06] Bong tróc • 75%',
-        dims: 'Diện tích: 0.45 m²',
+        dims: 'Chờ đo thực tế',
         borderColor: '#0284C7'
       }
     },
@@ -162,10 +152,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L3 (Nghiêm trọng)',
       confidence: 86,
       description: 'Hằn lún sống trâu liên tục dọc vệt bánh xe tải nặng',
-      metrics: {
-        length: '4.5 m',
-        depth: '3.2 cm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1028.6,
       bbox: {
@@ -174,7 +161,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '24%',
         height: '60%',
         label: '[AI #DET-07] Lún vệt bánh xe • 86%',
-        dims: 'Dài 4.5m • Lún sâu 3.2cm',
+        dims: 'Chờ đo thực tế',
         borderColor: '#EF4444'
       }
     },
@@ -187,10 +174,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
       severityLevel: 'L2 (Trung bình)',
       confidence: 82,
       description: 'Vết nứt ngang vuông góc với tim đường xuyên suốt 2 làn xe',
-      metrics: {
-        length: '7.0 m',
-        crackWidth: '2.8 mm'
-      },
+      metrics: {},
       status: 'PENDING',
       kmValue: 1029.4,
       bbox: {
@@ -199,7 +183,7 @@ export const INITIAL_DETECTIONS: AIDetectionItem[] = [
         width: '90%',
         height: '14%',
         label: '[AI #DET-08] Nứt ngang • 82%',
-        dims: 'L: 7.0m • Khe: 2.8mm',
+        dims: 'Chờ đo thực tế',
         borderColor: '#F97316'
       }
     }

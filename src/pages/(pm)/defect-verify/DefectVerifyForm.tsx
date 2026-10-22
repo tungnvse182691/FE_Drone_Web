@@ -25,7 +25,6 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
   defect,
   currentType,
   onTypeChange,
-  dimensions,
   isBboxModified = false,
   severity,
   setSeverity,
@@ -55,9 +54,6 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
 
   const effectiveType = currentType || defect.defect_type
   const isTypeAdjusted = currentType && currentType !== defect.defect_type
-  const lengthM = dimensions?.lengthM ?? defect.length_m ?? 1.2
-  const widthM = dimensions?.widthM ?? defect.width_m ?? 0.8
-  const areaM2 = (lengthM * widthM).toFixed(2)
 
   const handleConfirmResurvey = () => {
     const fullReason = `${resurveyReason} • Phi công: ${resurveyPilot}${resurveyDetail ? ` - ${resurveyDetail}` : ''}`
@@ -92,27 +88,26 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
         </div>
 
         <div className="space-y-4 text-xs">
-          {/* Supervisor Read-only Banner (AI01 & AI10) */}
+          {/* Supervisor Read-only Banner */}
           {isSupervisor && (
             <div className="bg-slate-50 border border-slate-200 rounded-[12px] p-3 flex items-start gap-2.5 text-slate-800 text-xs">
               <Icon name="visibility" size={16} className="text-[#2D3748] shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold text-[12px] text-[#1A1D20]">Chế độ Giám sát (Chỉ đọc)</div>
                 <div className="text-[11px] text-slate-600 mt-0.5">
-                  Thẩm tra mô hình khung nhận diện, kích thước và ảnh đa kỳ đối chiếu Baseline theo AI01 &amp; AI10.
+                  Thẩm tra mô hình khung nhận diện, kích thước và ảnh đa kỳ đối chiếu Baseline.
                 </div>
               </div>
             </div>
           )}
 
-          {/* Recurrent Defect Banner (API-110 / BR-37) */}
+          {/* Recurrent Defect Banner */}
           {isLinkedRecurrence && (
             <div className="bg-amber-50 border border-amber-300 rounded-[12px] p-3 flex items-start gap-2.5 text-amber-900 text-xs">
               <Icon name="history" size={18} className="text-[#C9A227] shrink-0 mt-0.5" />
               <div>
                 <div className="font-bold text-[12px] text-amber-950 flex items-center gap-1.5">
-                  <span>ĐÃ LIÊN KẾT TÁI PHÁT (RECURRENT DEFECT)</span>
-                  <span className="font-mono text-[10px] px-1.5 py-0.2 bg-amber-200/80 rounded text-amber-900 font-semibold">API-110</span>
+                  <span>ĐÃ LIÊN KẾT TÁI PHÁT</span>
                 </div>
                 <div className="text-[11px] text-amber-800 mt-0.5">
                   Liên kết với lỗi cũ: <strong className="font-mono">{linkedPriorCode}</strong> • Nguyên nhân: {recurrenceReason}
@@ -144,11 +139,11 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               }`}
             >
               <option value={DefectType.POTHOLE}>Ổ gà / Hố sụt bản mặt đường</option>
-              <option value={DefectType.LONGITUDINAL_CRACK}>Nứt dọc / Nứt đơn (LONGITUDINAL CRACK)</option>
-              <option value={DefectType.TRANSVERSE_CRACK}>Nứt ngang (TRANSVERSE CRACK)</option>
-              <option value={DefectType.ALLIGATOR_CRACK}>Nứt lưới / Nứt chân vịt (ALLIGATOR CRACK)</option>
-              <option value={DefectType.RUTTING}>Hằn lún vệt bánh xe (RUTTING)</option>
-              <option value={DefectType.RAVELING}>Bong bật cốt liệu / Phong hóa (RAVELING)</option>
+              <option value={DefectType.LONGITUDINAL_CRACK}>Nứt dọc / Nứt đơn</option>
+              <option value={DefectType.TRANSVERSE_CRACK}>Nứt ngang</option>
+              <option value={DefectType.ALLIGATOR_CRACK}>Nứt lưới / Nứt da cá sấu</option>
+              <option value={DefectType.RUTTING}>Hằn lún vệt bánh xe</option>
+              <option value={DefectType.RAVELING}>Bong bật cốt liệu</option>
             </select>
             {isTypeAdjusted && (
               <p className="text-[11px] text-amber-800 mt-1.5 flex items-center gap-1.5 font-medium bg-amber-50/80 p-2 rounded-[10px] border border-amber-200">
@@ -169,62 +164,80 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               onChange={(e) => setSeverity(e.target.value as Severity)}
               className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
             >
-              <option value={Severity.CRITICAL}>Nguy cấp — Đặc biệt khẩn cấp</option>
-              <option value={Severity.HIGH}>HIGH — Nghiêm trọng</option>
-              <option value={Severity.MEDIUM}>MEDIUM — Trung bình</option>
-              <option value={Severity.LOW}>LOW — Nhẹ</option>
+              <option value={Severity.CRITICAL}>Khẩn cấp / Nguy cấp</option>
+              <option value={Severity.HIGH}>Nghiêm trọng</option>
+              <option value={Severity.MEDIUM}>Trung bình</option>
+              <option value={Severity.LOW}>Nhẹ</option>
             </select>
           </div>
 
-          {/* 3. Kích Thước Hình Học Chuẩn Kỹ Thuật (NFR-12: Tách biệt rõ m / mm / cm) */}
-          <div className="p-3 bg-[#F8F9FA] rounded-[14px] border border-[#E2E5E9] space-y-2">
+          {/* 3. Kích Thước Hình Học */}
+          <div className="p-3 bg-[#F8F9FA] rounded-[14px] border border-[#E2E5E9] space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                Kích Thước Hình Học (TCVN)
+                Kích Thước Hình Học
               </span>
-              {isBboxModified ? (
-                <span className="text-[10px] font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                  <Icon name="straighten" size={12} />
-                  <span>Theo khung kéo</span>
-                </span>
-              ) : (
-                <span className="text-[10px] text-slate-500 font-mono">
-                  Đơn vị chuẩn kỹ thuật
-                </span>
-              )}
+              <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                defect.length_m || defect.width_m || defect.depth_mm
+                  ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                  : 'text-amber-900 bg-amber-100 border-amber-300'
+              }`}>
+                <Icon name={defect.length_m || defect.depth_mm ? 'check_circle' : 'straighten'} size={12} className={defect.length_m || defect.depth_mm ? 'text-emerald-700' : 'text-amber-700'} />
+                <span>{defect.length_m || defect.depth_mm ? 'Đã đo thực tế' : 'Chờ đo thực tế'}</span>
+              </span>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
-                <span className="text-slate-400 text-[10px] block">Chiều dài (L):</span>
-                <div className="font-bold text-xs text-[#1A1D20] font-mono mt-0.5">
-                  {typeof lengthM === 'number' ? lengthM.toFixed(2) : lengthM} m
+
+            {effectiveType.includes('POTHOLE') || effectiveType.includes('RUT') || effectiveType.includes('RAVEL') ? (
+              /* Dạng hư hỏng kết cấu mặt đường cần đo độ sâu (Ổ gà, Hằn lún, Vỡ mép / Bong bật) */
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Chiều dài (L):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.length_m ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.length_m ? `${defect.length_m} m` : 'Chưa đo'}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Chiều rộng (W):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.width_m ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.width_m ? `${defect.width_m} m` : 'Chưa đo'}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Chiều sâu (H):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.depth_mm ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.depth_mm ? `${(defect.depth_mm / 10).toFixed(1).replace('.0', '')} cm` : 'Chưa đo'}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Diện tích (S):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.area_m2 || (defect.length_m && defect.width_m) ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.area_m2 ? `${defect.area_m2} m²` : (defect.length_m && defect.width_m ? `${(defect.length_m * defect.width_m).toFixed(2)} m²` : 'Chưa đo')}
+                  </div>
                 </div>
               </div>
-              <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
-                <span className="text-slate-400 text-[10px] block">
-                  {effectiveType.includes('CRACK') ? 'Bề rộng khe nứt:' : 'Chiều rộng (W):'}
-                </span>
-                <div className="font-bold text-xs text-[#1A1D20] font-mono mt-0.5">
-                  {effectiveType.includes('CRACK')
-                    ? `${(widthM < 0.1 ? widthM * 1000 : widthM).toFixed(1)} mm`
-                    : `${widthM} m`}
+            ) : (
+              /* Dạng vết nứt mặt đường (Nứt dọc, nứt ngang, nứt da cá sấu) */
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Chiều dài vết nứt (L):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.length_m ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.length_m ? `${defect.length_m} m` : 'Chưa đo'}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Bề rộng khe nứt (W):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.width_m ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.width_m ? (defect.width_m < 0.1 ? `${(defect.width_m * 1000).toFixed(0)} mm` : `${defect.width_m} m`) : 'Chưa đo'}
+                  </div>
+                </div>
+                <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block">Diện tích vùng nứt (S):</span>
+                  <div className={`font-medium text-xs mt-0.5 ${defect.area_m2 || (defect.length_m && defect.width_m) ? 'text-slate-900 font-mono font-bold' : 'text-amber-800 italic'}`}>
+                    {defect.area_m2 ? `${defect.area_m2} m²` : (defect.length_m && defect.width_m ? `${(defect.length_m * defect.width_m).toFixed(2)} m²` : 'Chưa đo')}
+                  </div>
                 </div>
               </div>
-              <div className="bg-white p-2.5 rounded-[10px] border border-slate-200">
-                <span className="text-slate-400 text-[10px] block">
-                  {effectiveType.includes('POTHOLE') || effectiveType.includes('RUT')
-                    ? 'Chiều sâu (H):'
-                    : 'Diện tích (S):'}
-                </span>
-                <div className="font-bold text-xs text-[#C9A227] font-mono mt-0.5">
-                  {effectiveType.includes('POTHOLE') || effectiveType.includes('RUT')
-                    ? defect.depth_mm
-                      ? `${(defect.depth_mm / 10).toFixed(1)} cm`
-                      : 'Chờ đo thực địa (AI13)'
-                    : `${areaM2} m²`}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* 5. Ghi Chú / Ý Kiến Thẩm Định */}
@@ -259,13 +272,13 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             )}
           </div>
 
-          {/* Action Buttons: Phân định quyền PM (4 nút thẩm định) vs Supervisor (Thẩm tra đối chiếu AI01/AI10) */}
+          {/* Action Buttons: Phân định quyền PM (4 nút thẩm định) vs Supervisor */}
           {isSupervisor ? (
             <div className="pt-3 border-t border-slate-100 space-y-2">
               <div className="p-3 bg-slate-50 rounded-[12px] border border-slate-200 space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] uppercase tracking-wider">
                   <Icon name="verified_user" size={16} className="text-emerald-600" />
-                  <span>Kết Quả Thẩm Tra Kỹ Thuật (BR-02 / FR-13)</span>
+                  <span>Kết Quả Thẩm Tra Kỹ Thuật</span>
                 </div>
                 <p className="text-slate-600 text-xs leading-relaxed">
                   Trạng thái hiện tại: <strong className="text-slate-900 font-mono">{defect.status}</strong>. Supervisor thực hiện thẩm tra trực quan hình ảnh AI BBox và so sánh ảnh đa kỳ (Temporal) đối chiếu thực tế. Quyền phê duyệt/từ chối giải pháp được thực hiện tại màn hình <em>Thẩm duyệt đợt sửa chữa</em>.
@@ -274,7 +287,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
             </div>
           ) : (
             <div className="pt-3 border-t border-slate-100 space-y-2">
-              {/* 1. Xác nhận hư hỏng thực tế (VERIFIED) */}
+              {/* 1. Xác nhận hư hỏng thực tế */}
               <Button
                 disabled={!notes.trim()}
                 onClick={() => onVerify(DefectStatus.VERIFIED)}
@@ -284,37 +297,37 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 Xác Nhận Hư Hỏng Thực Tế
               </Button>
 
-              {/* 2. Liên kết tái phát khiếm khuyết (RECURRENCES / LINK_EXISTING - API-110) */}
+              {/* 2. Liên kết tái phát khiếm khuyết */}
               <button
                 type="button"
                 onClick={() => setModalMode('RECURRENCE')}
                 className="w-full py-2.5 px-3 bg-white hover:bg-amber-50 text-[#8C6D1F] border border-amber-300 font-bold rounded-[10px] text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
               >
                 <Icon name="history" size={16} className="text-[#C9A227]" />
-                <span>Liên Kết Tái Phát (Recurrences - API-110)</span>
+                <span>Liên Kết Tái Phát</span>
               </button>
 
-              {/* 3. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
+              {/* 3. Yêu cầu đo đạc thực tế */}
               <button
                 type="button"
                 onClick={() => setModalMode('MEASURE')}
                 className="w-full py-2.5 px-3 bg-white hover:bg-blue-50 text-blue-700 border border-blue-300 font-bold rounded-[10px] text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
               >
                 <Icon name="straighten" size={16} className="text-blue-600" />
-                <span>Yêu Cầu Đo Đạc Thực Địa (AI13)</span>
+                <span>Yêu Cầu Đo Đạc Thực Địa</span>
               </button>
 
-              {/* 3. Yêu cầu bay bổ sung khi dữ liệu chưa đạt (KS11 / BR-43) */}
+              {/* 4. Yêu cầu bay bổ sung */}
               <button
                 type="button"
                 onClick={() => setModalMode('RESURVEY')}
                 className="w-full py-2.5 px-3 bg-white hover:bg-amber-50 text-[#8C6D1F] border border-amber-300 font-bold rounded-[10px] text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
               >
                 <Icon name="photo_camera" size={16} className="text-[#C9A227]" />
-                <span>Yêu Cầu Bay Bổ Sung (KS11 / BR-43)</span>
+                <span>Yêu Cầu Bay Bổ Sung</span>
               </button>
 
-              {/* 4. Từ chối / Báo giả (REJECTED / DISCARDED) */}
+              {/* 5. Từ chối / Báo giả */}
               <Button
                 variant="outline"
                 disabled={!notes.trim()}
@@ -342,7 +355,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                   <Icon name="photo_camera" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#1A1D20]">Yêu Cầu Bay Bổ Sung (KS11 / BR-43)</h3>
+                  <h3 className="text-sm font-bold text-[#1A1D20]">Yêu Cầu Bay Bổ Sung</h3>
                   <p className="text-[11px] text-slate-500">Chỉ định bay quét lại đoạn Km {defect.chainage_km}</p>
                 </div>
               </div>
@@ -386,7 +399,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                   <option value="Nguyễn Văn An">Nguyễn Văn An (Đội bay Hoàng Hải 02)</option>
                 </select>
                 <p className="text-[10px] text-slate-500 mt-1 italic">
-                  * PM có quyền đổi Operator theo BR-43 nếu chuyến bay trước chưa đáp ứng yêu cầu chất lượng.
+                  * PM có quyền đổi phi công nếu chuyến bay trước chưa đáp ứng yêu cầu chất lượng.
                 </p>
               </div>
 
@@ -402,7 +415,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               </div>
 
               <div className="p-3 bg-amber-50 rounded-[12px] border border-amber-200 text-[11px] text-[#8C6D1F]">
-                <strong>Quy tắc BR-43:</strong> PM xác nhận phạm vi bay bổ sung, giữ nguyên các dữ liệu đã đạt ở đợt trước và không giới hạn số lượt hợp lệ.
+                <strong>Lưu ý:</strong> PM xác nhận phạm vi bay bổ sung, giữ nguyên các dữ liệu đã đạt ở đợt trước và không giới hạn số lượt hợp lệ.
               </div>
             </div>
 
@@ -428,7 +441,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 2: YÊU CẦU ĐO ĐẠC THỰC ĐỊA (AI13 / TN01 / NEEDS_MEASUREMENT)        */}
+      {/* MODAL 2: YÊU CẦU ĐO ĐẠC THỰC ĐỊA                                            */}
       {/* ========================================================================= */}
       {modalMode === 'MEASURE' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -440,7 +453,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                   <Icon name="straighten" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#1A1D20]">Giao Đo Đạc Hiện Trường (AI13 / TN01)</h3>
+                  <h3 className="text-sm font-bold text-[#1A1D20]">Giao Đo Đạc Hiện Trường</h3>
                   <p className="text-[11px] text-slate-500">Xác thực căn cứ vật lý cho lỗi {defect.code}</p>
                 </div>
               </div>
@@ -482,7 +495,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               </div>
 
               <div className="p-3 bg-blue-50 rounded-[12px] border border-blue-200 text-[11px] text-blue-900">
-                <strong>Quy tắc AI13 & TN01:</strong> Khi ảnh drone chưa đủ số đo vật lý, PM bắt buộc giao Repair Crew đo thực tế; trạng thái hồ sơ chuyển sang <code>NEEDS_MEASUREMENT</code> chờ nộp bằng chứng trước khi kết luận.
+                <strong>Lưu ý:</strong> Khi ảnh drone chưa đủ số đo vật lý, PM giao đội hiện trường đo thực tế; hồ sơ sẽ chuyển sang trạng thái chờ nộp bằng chứng kích thước trước khi kết luận.
               </div>
             </div>
 
@@ -508,7 +521,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 3: LIÊN KẾT TÁI PHÁT KHIẾM KHUYẾT (RECURRENCES / API-110 / BR-37)    */}
+      {/* MODAL 3: LIÊN KẾT TÁI PHÁT KHIẾM KHUYẾT                                     */}
       {/* ========================================================================= */}
       {modalMode === 'RECURRENCE' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -520,7 +533,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                   <Icon name="history" size={20} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#1A1D20]">Liên Kết Khiếm Khuyết Tái Phát (API-110)</h3>
+                  <h3 className="text-sm font-bold text-[#1A1D20]">Liên Kết Khiếm Khuyết Tái Phát</h3>
                   <p className="text-[11px] text-slate-500">Móc nối chuỗi lịch sử hư hỏng cho {defect.code}</p>
                 </div>
               </div>
@@ -575,7 +588,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               </div>
 
               <div className="p-3 bg-amber-50 rounded-[12px] border border-amber-200 text-[11px] text-[#8C6D1F]">
-                <strong>Quy tắc Spec 17_10 &amp; BR-37:</strong> Khi liên kết tái phát, dữ liệu được móc nối vào chuỗi Audit Trail bảo hành của dự án, giữ nguyên lịch sử hư hỏng cũ và tính vào chỉ số suy thoái mặt đường. Cấm dùng lệnh chỉnh sửa thường (repair correction) để tạo tái phát tùy ý.
+                <strong>Lưu ý:</strong> Khi liên kết tái phát, dữ liệu được móc nối vào chuỗi lịch sử bảo hành của dự án, giữ nguyên lịch sử hư hỏng cũ và tính vào chỉ số suy thoái mặt đường.
               </div>
             </div>
 

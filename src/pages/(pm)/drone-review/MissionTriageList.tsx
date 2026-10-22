@@ -224,41 +224,66 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
               {/* KHI THẺ ĐƯỢC CHỌN (EXPANDED): Hiện thông số & nút sang màn hình thẩm định chi tiết */}
               {isSelected ? (
                 <>
-                  {/* TẦNG 3: THÔNG SỐ ĐO ĐẠC HÌNH HỌC TỰ ĐỘNG CỦA AI */}
+                  {/* TẦNG 3: TRẠNG THÁI KÍCH THƯỚC HÌNH HỌC */}
                   <div className="pl-2 animate-in fade-in duration-200">
-                    <div className="grid grid-cols-2 gap-1.5 p-2 bg-white/90 rounded-lg border border-amber-200/70 text-[11px] text-slate-600 shadow-2xs">
-                      {item.metrics.area && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Diện tích (ước lượng 2D):</span>
-                          <strong className="font-mono text-slate-900 font-semibold">{item.metrics.area}</strong>
+                    <div className="p-2.5 bg-white/90 rounded-lg border border-slate-200 text-[11px] text-slate-600 shadow-2xs space-y-1.5">
+                      {isApproved && (item.metrics.length || item.metrics.area || item.metrics.depth) ? (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-700 font-semibold">Kích thước hình học:</span>
+                            <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                              <Icon name="check_circle" size={12} className="text-emerald-600" />
+                              <span>Đã đo thực tế</span>
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                            {item.metrics.length && (
+                              <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded">
+                                <span className="text-slate-500">Chiều dài (L):</span>
+                                <strong className="font-mono text-slate-900">{item.metrics.length}</strong>
+                              </div>
+                            )}
+                            {item.metrics.crackWidth && (
+                              <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded">
+                                <span className="text-slate-500">Bề rộng (W):</span>
+                                <strong className="font-mono text-slate-900">{item.metrics.crackWidth}</strong>
+                              </div>
+                            )}
+                            {item.metrics.depth && (
+                              <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded">
+                                <span className="text-slate-500">Chiều sâu (H):</span>
+                                <strong className="font-mono text-slate-900">{item.metrics.depth}</strong>
+                              </div>
+                            )}
+                            {item.metrics.area && (
+                              <div className="flex items-center justify-between bg-slate-50 p-1.5 rounded">
+                                <span className="text-slate-500">Diện tích (S):</span>
+                                <strong className="font-mono text-slate-900">{item.metrics.area}</strong>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {item.metrics.depth && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Độ sâu (chờ đo):</span>
-                          <strong className="font-mono text-amber-700 font-semibold">{item.metrics.depth}</strong>
-                        </div>
-                      )}
-                      {item.metrics.length && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Chiều dài ước lượng:</span>
-                          <strong className="font-mono text-slate-900 font-semibold">{item.metrics.length}</strong>
-                        </div>
-                      )}
-                      {item.metrics.crackWidth && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-500">Độ hở khe (chờ đo):</span>
-                          <strong className="font-mono text-amber-700 font-semibold">{item.metrics.crackWidth}</strong>
+                      ) : (
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-600 font-semibold">Kích thước hình học:</span>
+                            <span className="text-[10px] font-semibold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                              Chờ đo thực tế
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 italic leading-snug mt-1">
+                            AI BBox chỉ định vị nhận diện. Kích thước vật lý chính thức do Đội hiện trường đo bằng thước nộp về.
+                          </p>
                         </div>
                       )}
                       {item.metrics.reviewer && (
-                        <div className="col-span-2 flex items-center justify-between text-emerald-800 pt-1 border-t border-slate-200/60 font-medium">
+                        <div className="flex items-center justify-between text-emerald-800 pt-1 border-t border-slate-200/60 font-medium">
                           <span>Người duyệt thẩm định:</span>
                           <span className="font-semibold">{item.metrics.reviewer}</span>
                         </div>
                       )}
                       {item.metrics.dismissReason && (
-                        <div className="col-span-2 text-slate-500 italic pt-1 border-t border-slate-200/60">
+                        <div className="text-slate-500 italic pt-1 border-t border-slate-200/60">
                           Lý do loại bỏ: {item.metrics.dismissReason}
                         </div>
                       )}
@@ -271,7 +296,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                       <div className="w-full flex items-center justify-between text-xs font-medium text-amber-900 bg-amber-50/80 p-2.5 rounded-lg border border-amber-200">
                         <span className="flex items-center gap-1.5">
                           <Icon name="history" size={14} className="text-[#C9A227]" />
-                          <span>Đã liên kết tái phát với <strong>{item.priorDefectCode}</strong> (API-110)</span>
+                          <span>Đã liên kết tái phát với <strong>{item.priorDefectCode}</strong></span>
                         </span>
                         <Link
                           to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
@@ -337,11 +362,14 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                     <Icon name="ads_click" size={13} className="text-brand-gold" />
                     <span>Bấm để trích xuất ảnh & khung nhận diện</span>
                   </span>
-                  {item.metrics.area && (
-                    <span className="font-mono text-slate-500">{item.metrics.area}</span>
-                  )}
-                  {item.metrics.length && (
-                    <span className="font-mono text-slate-500">{item.metrics.length}</span>
+                  {isApproved && (item.metrics.length || item.metrics.area) ? (
+                    <span className="text-[10px] text-emerald-800 font-mono font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      {item.metrics.length || item.metrics.area}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-800 font-medium bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      Chờ đo thực tế
+                    </span>
                   )}
                 </div>
               )}
