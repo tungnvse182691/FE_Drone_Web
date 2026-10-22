@@ -56,6 +56,8 @@ export interface AlignmentSidebarProps {
   onClearMainline?: () => void
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  isSupervisor?: boolean
 }
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
@@ -102,7 +104,9 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onClearAllSegments,
   onClearMainline,
   onOpenImportModal,
-  mainlineLengthKm
+  mainlineLengthKm,
+  alignmentStatus,
+  isSupervisor
 }) => {
   return (
     <div className="xl:col-span-4 flex flex-col gap-3">
@@ -186,6 +190,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onClearMainline={onClearMainline}
             onOpenImportModal={onOpenImportModal}
             mainlineLengthKm={mainlineLengthKm}
+            alignmentStatus={alignmentStatus}
+            isSupervisor={isSupervisor}
           />
         )}
 
@@ -196,6 +202,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             selectedSegmentId={selectedSegmentId}
             onUpdateSegmentWidth={onUpdateSegmentWidth}
             onUpdateAllWidths={onUpdateAllWidths}
+            isReadOnly={alignmentStatus === 'CONFIRMED' || isSupervisor}
           />
         )}
 

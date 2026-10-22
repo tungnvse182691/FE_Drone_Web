@@ -7,13 +7,15 @@ export interface SidebarWidthProfileTabProps {
   selectedSegmentId: string | null
   onUpdateSegmentWidth: (id: string, width: number) => void
   onUpdateAllWidths: (width: number) => void
+  isReadOnly?: boolean
 }
 
 export const SidebarWidthProfileTab: React.FC<SidebarWidthProfileTabProps> = ({
   segments,
   selectedSegmentId,
   onUpdateSegmentWidth,
-  onUpdateAllWidths
+  onUpdateAllWidths,
+  isReadOnly = false
 }) => {
   return (
     <div className="flex flex-col gap-3">
@@ -103,35 +105,38 @@ export const SidebarWidthProfileTab: React.FC<SidebarWidthProfileTabProps> = ({
                       step="0.5"
                       min="2"
                       max="60"
+                      disabled={isReadOnly}
                       value={width}
                       onChange={(e) => {
                         const val = parseFloat(e.target.value) || 3.0
                         onUpdateSegmentWidth(seg.id, val)
                       }}
-                      className="w-full h-8 pl-3 pr-10 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                      className="w-full h-8 pl-3 pr-10 bg-white disabled:bg-slate-100 disabled:text-slate-500 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                     />
                     <span className="absolute right-2.5 top-2 text-[11px] font-bold text-slate-400 pointer-events-none">
                       mét
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    {[3.0, 4.0, 6.0, 8.0, 10.0].map((wVal) => (
-                      <button
-                        key={wVal}
-                        type="button"
-                        onClick={() => onUpdateSegmentWidth(seg.id, wVal)}
-                        className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
-                          width === wVal
-                            ? 'bg-brand-gold text-white shadow-2xs'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:border-brand-gold'
-                        }`}
-                        title={`Đặt bề rộng đoạn này là ${wVal}m`}
-                      >
-                        {wVal}m
-                      </button>
-                    ))}
-                  </div>
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-1">
+                      {[3.0, 4.0, 6.0, 8.0, 10.0].map((wVal) => (
+                        <button
+                          key={wVal}
+                          type="button"
+                          onClick={() => onUpdateSegmentWidth(seg.id, wVal)}
+                          className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
+                            width === wVal
+                              ? 'bg-brand-gold text-white shadow-2xs'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:border-brand-gold'
+                          }`}
+                          title={`Đặt bề rộng đoạn này là ${wVal}m`}
+                        >
+                          {wVal}m
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/60">
@@ -145,21 +150,23 @@ export const SidebarWidthProfileTab: React.FC<SidebarWidthProfileTabProps> = ({
       </div>
 
       {/* Đặt nhanh tất cả các đoạn */}
-      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-        <span className="text-slate-600 font-medium">Đặt nhanh tất cả các đoạn:</span>
-        <div className="flex items-center gap-1">
-          {[3.0, 4.0, 6.0, 8.0, 10.0].map((wVal) => (
-            <button
-              key={wVal}
-              type="button"
-              onClick={() => onUpdateAllWidths(wVal)}
-              className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:border-brand-gold text-slate-700 text-[10px] font-mono font-bold transition-all cursor-pointer"
-            >
-              Đồng loạt {wVal}m
-            </button>
-          ))}
+      {!isReadOnly && (
+        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+          <span className="text-slate-600 font-medium">Đặt nhanh tất cả các đoạn:</span>
+          <div className="flex items-center gap-1">
+            {[3.0, 4.0, 6.0, 8.0, 10.0].map((wVal) => (
+              <button
+                key={wVal}
+                type="button"
+                onClick={() => onUpdateAllWidths(wVal)}
+                className="px-2 py-0.5 rounded bg-white border border-slate-200 hover:border-brand-gold text-slate-700 text-[10px] font-mono font-bold transition-all cursor-pointer"
+              >
+                Đồng loạt {wVal}m
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

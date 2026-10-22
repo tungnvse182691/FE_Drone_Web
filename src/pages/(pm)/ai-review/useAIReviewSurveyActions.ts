@@ -63,7 +63,7 @@ export const useAIReviewSurveyActions = ({
         sla_hours: surveySlaHours,
         created_at: nowTime
       },
-      pm_notes: `${(targetTriageCase?.pm_notes || selectedCase.pm_notes) ? (targetTriageCase?.pm_notes || selectedCase.pm_notes) + '\n' : ''}[LỆNH ĐO ĐẠC WF-11] Hình thức: ${
+      pm_notes: `${(targetTriageCase?.pm_notes || selectedCase.pm_notes) ? (targetTriageCase?.pm_notes || selectedCase.pm_notes) + '\n' : ''}[LỆNH ĐO ĐẠC] Hình thức: ${
         surveyMode === 'MEASURE_ONLY' ? 'Đo đạc hiện trường' : 'Bay quét Drone bổ sung'
       }. Đơn vị: ${surveyAssignedCrew}. Hạn SLA: ${surveySlaHours}h. Lý do: ${finalReason}`
     }
@@ -112,7 +112,7 @@ export const useAIReviewSurveyActions = ({
     setIsDetailModalOpen?.(false)
 
     showToast(
-      `Đã phát lệnh đo đạc [WF-11] cho hồ sơ [${targetCode}]! Chuyển trạng thái sang Cần đo đạc.`
+      `Đã phát lệnh đo đạc cho hồ sơ [${targetCode}]! Chuyển trạng thái sang Cần đo đạc.`
     )
   }
 

@@ -14,6 +14,8 @@ interface DefectVerifyHeaderProps {
   onBack: () => void
   availableItems?: Array<{ id: string; label: string }>
   basePath?: string
+  isRecurrent?: boolean
+  linkedPriorCode?: string | null
 }
 
 export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
@@ -23,7 +25,9 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
   setViewMode,
   onBack,
   availableItems,
-  basePath = '/pm'
+  basePath = '/pm',
+  isRecurrent = false,
+  linkedPriorCode = null
 }) => {
   const navigate = useNavigate()
 
@@ -48,6 +52,12 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
             </h1>
             <StatusBadge status={defect.status} />
             <StatusBadge status={severity} />
+            {isRecurrent && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs animate-in fade-in">
+                <Icon name="history" size={14} className="text-[#C9A227]" />
+                <span>TÁI PHÁT ({linkedPriorCode || 'DEF-OLD'}) • API-110</span>
+              </span>
+            )}
 
             {/* Selector nhanh giữa các Defect thực tế trong đợt bay */}
             <div className="ml-2 flex items-center gap-1.5 text-xs bg-[#F8F9FA] px-3 py-1 rounded-full border border-[#E2E5E9]">

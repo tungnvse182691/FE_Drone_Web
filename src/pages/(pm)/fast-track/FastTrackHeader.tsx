@@ -28,7 +28,7 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
           <Icon name="chevron_right" size={14} className="text-slate-400" />
           <span className="hover:text-brand-gold cursor-pointer transition-colors">Quản lý tuyến</span>
           <Icon name="chevron_right" size={14} className="text-slate-400" />
-          <span className="text-brand-gold font-semibold">Chính sách &amp; Giao việc đo đạc (WF-05)</span>
+          <span className="text-brand-gold font-semibold">Chính sách &amp; Giao việc đo đạc</span>
         </nav>
 
         <div className="flex items-center gap-2.5 pt-0.5">

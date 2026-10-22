@@ -595,12 +595,12 @@ export function useAlignmentState() {
 
   const handleSubmitAlignment = () => {
     if (segmentsState.segments.length === 0) {
-      showToast('Cảnh báo v2.2 (WF-02): Tuyến đường chưa có phân đoạn nào! Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động" (hoặc nạp tệp tọa độ) trước khi trình duyệt.')
+      showToast('Cảnh báo: Tuyến đường chưa có phân đoạn nào! Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động" (hoặc nạp tệp tọa độ) trước khi trình duyệt.')
       return
     }
     const hasAnyGap = segmentsState.segments.some((s) => s.hasGap)
     if (hasAnyGap) {
-      showToast('Cảnh báo v2.2 (WF-02.F04): Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
+      showToast('Cảnh báo: Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
       return
     }
     alignmentService.saveAlignmentData(selectedProjectId, {
@@ -611,7 +611,7 @@ export function useAlignmentState() {
     })
     alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
     setAlignmentStatus('PENDING_APPROVAL')
-    showToast('Đã gửi hồ sơ thiết lập tim tuyến (WF-02) sang Supervisor để thẩm duyệt & ký số!')
+    showToast('Đã gửi hồ sơ thiết lập tim tuyến sang Supervisor để thẩm duyệt & ký số!')
   }
 
   const handleLockAlignment = () => {
@@ -659,7 +659,7 @@ export function useAlignmentState() {
     }
     mapState.handleFitBounds([])
 
-    showToast('Đã xóa toàn bộ tim tuyến chính và các mốc lý trình! Bạn có thể bấm "Nhập Tuyến / Tọa độ (WF-02)" để nạp lại.')
+    showToast('Đã xóa toàn bộ tim tuyến chính và các mốc lý trình! Bạn có thể bấm "Nhập Tuyến / Tọa độ" để nạp lại.')
   }
 
   const basePath = isSupervisor ? '/sup' : '/pm'

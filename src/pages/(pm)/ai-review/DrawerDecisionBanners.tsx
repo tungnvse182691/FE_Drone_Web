@@ -153,7 +153,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               <Icon name="photo_camera" size={20} className="text-blue-600 shrink-0" />
               <div>
                 <span className="font-bold text-xs block text-blue-900">
-                  LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG (WF-11)
+                  LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG
                 </span>
                 <span className="text-[11px] text-blue-700">
                   {selectedCase.survey_assignment

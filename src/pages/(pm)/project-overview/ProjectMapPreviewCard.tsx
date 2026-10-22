@@ -233,7 +233,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
             className="mt-1 px-3 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
           >
             <Icon name="alt_route" size={14} />
-            <span>Thiết lập tim tuyến (WF-02)</span>
+            <span>Thiết lập tim tuyến</span>
           </button>
         </div>
       )}

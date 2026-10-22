@@ -233,7 +233,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
                 <Icon name="lock" size={13} className="text-slate-400" />
-                <span>Chờ gom đợt (WF-07)</span>
+                <span>Chờ gom đợt</span>
               </span>
             )}
           </div>
@@ -245,7 +245,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
                 onClick={onNavigateProposals}
                 type="button"
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#8C6D1F] border border-amber-200 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap"
-                title="Đưa vào Gói đề xuất sửa chữa lớn (WF-07) để trình Giám sát thẩm duyệt"
+                title="Đưa vào Gói đề xuất sửa chữa lớn để trình Giám sát thẩm duyệt"
               >
                 <Icon name="arrow_forward" size={13} />
                 <span>Gom đợt duyệt</span>
@@ -492,7 +492,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
                 type="button"
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#1A1D20] hover:bg-black text-[#F1E5C6] font-bold rounded-xl shadow-xs text-xs cursor-pointer transition-colors"
               >
-                <span>{isSupervisor ? 'Xem Gói đề xuất (WF-07)' : 'Chuyển sang Gói đề xuất (WF-07)'}</span>
+                <span>{isSupervisor ? 'Xem Gói đề xuất' : 'Chuyển sang Gói đề xuất'}</span>
                 <Icon name="arrow_forward" size={14} />
               </button>
             )}

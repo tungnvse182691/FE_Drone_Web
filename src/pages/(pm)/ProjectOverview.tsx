@@ -54,7 +54,7 @@ export const ProjectOverview: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3800)
   }
 
-  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10)
+  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10 - Duy nhất Supervisor có quyền)
   const handleCloseProjectConfirm = async (reason: string) => {
     if (!project) return
     try {
@@ -247,7 +247,7 @@ export const ProjectOverview: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (DA12, QT13, BC10) */}
+      {/* MODAL ĐÓNG DỰ ÁN KHI HẾT HẠN BẢO HÀNH (DA12, QT13, BC10 - Duy nhất Supervisor) */}
       <CloseProjectModal
         isOpen={isCloseModalOpen}
         project={project}

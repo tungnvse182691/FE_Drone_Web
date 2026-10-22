@@ -17,6 +17,7 @@ export interface SidebarSegmentCardProps {
   onEdit: () => void
   onOpenSplit: () => void
   onDelete: () => void
+  isReadOnly?: boolean
 }
 
 export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
@@ -26,7 +27,8 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
   onSnap,
   onEdit,
   onOpenSplit,
-  onDelete
+  onDelete,
+  isReadOnly = false
 }) => {
   return (
     <div
@@ -85,18 +87,20 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               ? `Hở ${segment.gapDistance}m so với đoạn trước`
               : `Chồng lấn ${Math.abs(segment.gapDistance || 0)}m`}
           </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onSnap()
-            }}
-            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
-            title="Khép kín khoảng hở với phân đoạn liền trước"
-          >
-            <Link2 className="w-3 h-3" />
-            <span>Nối tiếp giáp</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSnap()
+              }}
+              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[10px] font-bold shadow-2xs cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+              title="Khép kín khoảng hở với phân đoạn liền trước"
+            >
+              <Link2 className="w-3 h-3" />
+              <span>Nối tiếp giáp</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -112,43 +116,45 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
             Tiếp giáp khép kín
           </span>
         )}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onEdit()
-            }}
-            className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
-            title="Chỉnh sửa lý trình & thông số"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+        {!isReadOnly && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+              className="p-1.5 hover:bg-amber-100/60 rounded-md text-slate-500 hover:text-[#8F7212] transition-colors cursor-pointer"
+              title="Chỉnh sửa lý trình & thông số"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenSplit()
-            }}
-            className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
-            title="Tách phân đoạn này tại mốc Km"
-          >
-            <SplitSquareVertical className="w-3.5 h-3.5" />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpenSplit()
+              }}
+              className="p-1.5 hover:bg-sky-100/60 rounded-md text-slate-500 hover:text-sky-700 transition-colors cursor-pointer"
+              title="Tách phân đoạn này tại mốc Km"
+            >
+              <SplitSquareVertical className="w-3.5 h-3.5" />
+            </button>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            className="p-1.5 hover:bg-rose-100/60 rounded-md text-slate-500 hover:text-rose-700 transition-colors cursor-pointer"
-            title="Xóa phân đoạn"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
+              className="p-1.5 hover:bg-rose-100/60 rounded-md text-slate-500 hover:text-rose-700 transition-colors cursor-pointer"
+              title="Xóa phân đoạn"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ interface DefectVerifyFormProps {
   setNotes: (val: string) => void
   onVerify: (status: DefectStatus) => void
   onRequestSurvey?: (reason: string, mode: 'DRONE_RESURVEY' | 'MEASURE_ONLY') => void
+  onLinkRecurrence?: (priorId: string, reason: string, notes: string) => void
   isSupervisor?: boolean
 }
 
@@ -32,15 +33,25 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
   setNotes,
   onVerify,
   onRequestSurvey,
+  onLinkRecurrence,
   isSupervisor = false
 }) => {
-  // Modal trạng thái: 'NONE' | 'RESURVEY' (Bay bổ sung KS11) | 'MEASURE' (Đo thực địa AI13)
-  const [modalMode, setModalMode] = useState<'NONE' | 'RESURVEY' | 'MEASURE'>('NONE')
+  // Modal trạng thái: 'NONE' | 'RESURVEY' (Bay bổ sung KS11) | 'MEASURE' (Đo thực địa AI13) | 'RECURRENCE' (Liên kết tái phát API-110)
+  const [modalMode, setModalMode] = useState<'NONE' | 'RESURVEY' | 'MEASURE' | 'RECURRENCE'>('NONE')
   const [resurveyReason, setResurveyReason] = useState('Ảnh mờ / thiếu độ nét nhận diện')
   const [resurveyPilot, setResurveyPilot] = useState('Lê Hoàng Long')
   const [resurveyDetail, setResurveyDetail] = useState('')
   const [measureType, setMeasureType] = useState('Đo chiều sâu hố lún / ổ gà')
   const [measureCrew, setMeasureCrew] = useState('Đội Kiểm định & Đo đạc Hiện trường 01')
+
+  // State cho Liên kết tái phát khiếm khuyết (API-110 / recurrences)
+  const [priorDefectId, setPriorDefectId] = useState('DEF-2025-0412')
+  const [recurrenceReason, setRecurrenceReason] = useState('Nứt phản xạ qua lớp vá cũ do tải trọng xe nặng')
+  const [recurrenceNotes, setRecurrenceNotes] = useState(
+    'Đối chiếu chuỗi ảnh đa kỳ: vị trí nứt mới trùng khớp 100% với mép vá cũ tháng 11/2025. Cần liên kết tái phát để theo dõi độ suy thoái.'
+  )
+  const [isLinkedRecurrence, setIsLinkedRecurrence] = useState(false)
+  const [linkedPriorCode, setLinkedPriorCode] = useState<string | null>(null)
 
   const effectiveType = currentType || defect.defect_type
   const isTypeAdjusted = currentType && currentType !== defect.defect_type
@@ -89,6 +100,22 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 <div className="font-bold text-[12px] text-[#1A1D20]">Chế độ Giám sát (Chỉ đọc)</div>
                 <div className="text-[11px] text-slate-600 mt-0.5">
                   Thẩm tra mô hình khung nhận diện, kích thước và ảnh đa kỳ đối chiếu Baseline theo AI01 &amp; AI10.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recurrent Defect Banner (API-110 / BR-37) */}
+          {isLinkedRecurrence && (
+            <div className="bg-amber-50 border border-amber-300 rounded-[12px] p-3 flex items-start gap-2.5 text-amber-900 text-xs">
+              <Icon name="history" size={18} className="text-[#C9A227] shrink-0 mt-0.5" />
+              <div>
+                <div className="font-bold text-[12px] text-amber-950 flex items-center gap-1.5">
+                  <span>ĐÃ LIÊN KẾT TÁI PHÁT (RECURRENT DEFECT)</span>
+                  <span className="font-mono text-[10px] px-1.5 py-0.2 bg-amber-200/80 rounded text-amber-900 font-semibold">API-110</span>
+                </div>
+                <div className="text-[11px] text-amber-800 mt-0.5">
+                  Liên kết với lỗi cũ: <strong className="font-mono">{linkedPriorCode}</strong> • Nguyên nhân: {recurrenceReason}
                 </div>
               </div>
             </div>
@@ -257,7 +284,17 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
                 Xác Nhận Hư Hỏng Thực Tế
               </Button>
 
-              {/* 2. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
+              {/* 2. Liên kết tái phát khiếm khuyết (RECURRENCES / LINK_EXISTING - API-110) */}
+              <button
+                type="button"
+                onClick={() => setModalMode('RECURRENCE')}
+                className="w-full py-2.5 px-3 bg-white hover:bg-amber-50 text-[#8C6D1F] border border-amber-300 font-bold rounded-[10px] text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <Icon name="history" size={16} className="text-[#C9A227]" />
+                <span>Liên Kết Tái Phát (Recurrences - API-110)</span>
+              </button>
+
+              {/* 3. Yêu cầu đo đạc thực tế khi cần căn cứ vật lý (AI13 / TN01 / NEEDS_MEASUREMENT) */}
               <button
                 type="button"
                 onClick={() => setModalMode('MEASURE')}
@@ -464,6 +501,106 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               >
                 <Icon name="assignment" size={16} />
                 <span>Giao Nhiệm Vụ Đo Đạc</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 3: LIÊN KẾT TÁI PHÁT KHIẾM KHUYẾT (RECURRENCES / API-110 / BR-37)    */}
+      {/* ========================================================================= */}
+      {modalMode === 'RECURRENCE' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-[20px] max-w-lg w-full p-6 shadow-2xl border-[1.5px] border-[#E2E5E9] space-y-4 animate-in fade-in zoom-in-95 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#C9A227] via-amber-500 to-amber-200" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-[10px] bg-amber-50 text-[#C9A227] border border-amber-200">
+                  <Icon name="history" size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#1A1D20]">Liên Kết Khiếm Khuyết Tái Phát (API-110)</h3>
+                  <p className="text-[11px] text-slate-500">Móc nối chuỗi lịch sử hư hỏng cho {defect.code}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalMode('NONE')}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-[8px] cursor-pointer"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Chọn khiếm khuyết / quyết định sửa chữa cũ tại vị trí này:
+                </label>
+                <select
+                  value={priorDefectId}
+                  onChange={(e) => setPriorDefectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium"
+                >
+                  <option value="DEF-2025-0412">DEF-2025-0412 — Vết nứt dọc đã trám nhựa (Tháng 11/2025) • Quyết định: DEC-2025-089</option>
+                  <option value="DEF-2025-0219">DEF-2025-0219 — Ổ gà bù vênh BTN C12.5 (Tháng 08/2025) • Quyết định: DEC-2025-045</option>
+                  <option value="DEF-2024-0980">DEF-2024-0980 — Bong bật rỗ tổ ong mặt đường (Tháng 04/2024) • Quyết định: DEC-2024-012</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Căn cứ kỹ thuật tái phát:</label>
+                <select
+                  value={recurrenceReason}
+                  onChange={(e) => setRecurrenceReason(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] font-medium"
+                >
+                  <option value="Nứt phản xạ qua lớp vá cũ do tải trọng xe nặng">Nứt phản xạ qua lớp vá cũ do tải trọng xe nặng</option>
+                  <option value="Lún sụt nền móng đường cục bộ tái diễn">Lún sụt nền móng đường cục bộ tái diễn</option>
+                  <option value="Bong tróc mép vuốt nối giữa lớp thảm mới và cũ">Bong tróc mép vuốt nối giữa lớp thảm mới và cũ</option>
+                  <option value="Khuyết tật nứt mỏi kết cấu áo đường">Khuyết tật nứt mỏi kết cấu áo đường</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Ghi chú đối chiếu chuỗi ảnh đa kỳ (Temporal Audit):</label>
+                <textarea
+                  value={recurrenceNotes}
+                  onChange={(e) => setRecurrenceNotes(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227]"
+                  placeholder="Ghi chú đối chiếu tọa độ và lịch sử..."
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 rounded-[12px] border border-amber-200 text-[11px] text-[#8C6D1F]">
+                <strong>Quy tắc Spec 17_10 &amp; BR-37:</strong> Khi liên kết tái phát, dữ liệu được móc nối vào chuỗi Audit Trail bảo hành của dự án, giữ nguyên lịch sử hư hỏng cũ và tính vào chỉ số suy thoái mặt đường. Cấm dùng lệnh chỉnh sửa thường (repair correction) để tạo tái phát tùy ý.
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setModalMode('NONE')}
+                className="px-3.5 py-2 rounded-[10px] text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLinkedRecurrence(true)
+                  setLinkedPriorCode(priorDefectId)
+                  if (onLinkRecurrence) {
+                    onLinkRecurrence(priorDefectId, recurrenceReason, recurrenceNotes)
+                  }
+                  setModalMode('NONE')
+                }}
+                className="px-4 py-2 bg-[#C9A227] hover:bg-[#8C6D1F] text-white rounded-[10px] text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <Icon name="link" size={16} />
+                <span>Xác Nhận Liên Kết Tái Phát</span>
               </button>
             </div>
           </div>

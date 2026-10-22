@@ -139,6 +139,8 @@ export const DefectDetailVerify: React.FC = () => {
   const [detections, setDetections] = useState<AIDetectionItem[]>(INITIAL_DETECTIONS)
   const [localStatusOverride, setLocalStatusOverride] = useState<DefectStatus | null>(null)
   const [localCodeOverride, setLocalCodeOverride] = useState<string | null>(null)
+  const [isRecurrent, setIsRecurrent] = useState(false)
+  const [linkedPriorCode, setLinkedPriorCode] = useState<string | null>(null)
 
   // Tải danh sách detections từ store để đảm bảo đồng bộ mới nhất
   useEffect(() => {
@@ -359,6 +361,44 @@ export const DefectDetailVerify: React.FC = () => {
     }
   }
 
+  const handleLinkRecurrence = async (priorId: string, reason: string, notesText: string) => {
+    setIsRecurrent(true)
+    setLinkedPriorCode(priorId)
+    setLocalStatusOverride(DefectStatus.VERIFIED)
+
+    const rawId = id || defect.id || 'det-01'
+    const cleanDetId = rawId.toUpperCase().replace('DEF-', 'DET-').replace('DET-2026-', 'DET-')
+    const finalDetId = cleanDetId.startsWith('DET-') ? cleanDetId : `DET-${cleanDetId.slice(-2)}`
+    const newDefectCode =
+      defect.code.startsWith('DEF-')
+        ? defect.code
+        : `DEF-2026-0${finalDetId.replace('DET-', '')}0`
+
+    setLocalCodeOverride(newDefectCode)
+
+    try {
+      await surveyService.updateSurveyDetection('srv-01', finalDetId, {
+        status: 'APPROVED',
+        defectCode: newDefectCode,
+        isRecurrent: true,
+        priorDefectCode: priorId,
+        recurrenceReason: reason,
+        type: (customDefectType || defect.defect_type) as any,
+        metrics: {
+          reviewer: `KS. Đỗ Quốc Hoàng (PM) • Tái phát từ ${priorId}`,
+          length: `${customDimensions?.lengthM ?? defect.length_m ?? 1.2} m`,
+          crackWidth: `${customDimensions?.widthM ?? defect.width_m ?? 0.8} m`
+        }
+      })
+    } catch (err) {
+      console.warn('Sync recurrence to survey detections warning:', err)
+    }
+
+    const auditNote = `[LIÊN KẾT TÁI PHÁT - API-110] Nối với lỗi cũ ${priorId}. Căn cứ: ${reason}. ${notesText}`
+    setNotes((prev) => (prev ? `${prev}\n${auditNote}` : auditNote))
+    showToast(`Đã liên kết tái phát khiếm khuyết với lỗi cũ ${priorId} (API-110). Dữ liệu đợt bay đã cập nhật!`)
+  }
+
   return (
     <div className="space-y-6">
       {/* 1. Header & Switcher */}
@@ -370,6 +410,8 @@ export const DefectDetailVerify: React.FC = () => {
         onBack={() => navigate(returnUrl)}
         availableItems={availableItems}
         basePath={basePath}
+        isRecurrent={isRecurrent}
+        linkedPriorCode={linkedPriorCode}
       />
 
       {/* 2. Main Grid: Left is Photo Viewer / GIS Map, Right is Verification Form */}
@@ -412,6 +454,7 @@ export const DefectDetailVerify: React.FC = () => {
             setNotes={setNotes}
             onVerify={handleVerify}
             onRequestSurvey={handleRequestSurvey}
+            onLinkRecurrence={handleLinkRecurrence}
             isSupervisor={isSupervisor}
           />
         </div>

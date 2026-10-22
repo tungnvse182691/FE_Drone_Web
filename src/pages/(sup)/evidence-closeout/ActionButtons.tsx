@@ -146,9 +146,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                   onClick={onPMSubmitToSupervisor}
                   type="button"
                   className="px-3.5 h-8 bg-[#C9A227] hover:bg-[#8C6D1F] active:bg-[#6B5219] text-white font-medium text-xs rounded-md shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  title="Khai báo hoàn thành thi công theo API-110 để chuyển gói sang chờ Giám sát nghiệm thu"
                 >
-                  <span className="material-symbols-outlined text-[16px]">send</span>
-                  <span>Trình Giám sát nghiệm thu</span>
+                  <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+                  <span>Khai Báo Hoàn Thành Thi Công (API-110)</span>
                 </button>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">

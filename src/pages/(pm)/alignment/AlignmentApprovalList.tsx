@@ -32,10 +32,10 @@ export const AlignmentApprovalList: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 tracking-tight font-headline">
-              Danh mục thẩm định &amp; Phê duyệt tim tuyến (WF-02)
+              Danh mục thẩm định &amp; Phê duyệt tim tuyến
             </h1>
             <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-              Giám sát kiểm tra hình học tim tuyến, bề rộng và hệ thống tuyến nhánh do PM nạp lên trước khi khóa phiên bản bất biến (FR-07, BR-35).
+              Giám sát kiểm tra hình học tim tuyến, bề rộng và hệ thống tuyến nhánh do PM nạp lên trước khi khóa phiên bản chính thức.
             </p>
           </div>
         </div>

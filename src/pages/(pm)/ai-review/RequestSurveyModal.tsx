@@ -42,7 +42,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
               <Icon name="photo_camera" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Lệnh Khảo Sát &amp; Đo Đạc Bổ Sung (WF-11)</h3>
+              <h3 className="text-base font-bold text-brand-dark">Lệnh Khảo Sát &amp; Đo Đạc Bổ Sung</h3>
               <p className="text-xs text-slate-500">
                 Nêu lý do kỹ thuật, chọn hình thức và phân công đơn vị đi đo / bay drone lại
               </p>
@@ -263,7 +263,7 @@ export const RequestSurveyModal: React.FC<RequestSurveyModalProps> = ({
             className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="check" size={16} />
-            <span>Phát Lệnh Khảo Sát / Đo Lại (WF-11)</span>
+            <span>Phát Lệnh Khảo Sát / Đo Lại</span>
           </button>
         </div>
       </div>

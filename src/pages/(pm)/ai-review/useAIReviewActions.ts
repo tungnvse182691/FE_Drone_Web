@@ -96,7 +96,7 @@ export const useAIReviewActions = ({
     setIsDetailModalOpen?.(false)
 
     showToast(
-      `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào lệnh sửa chữa (WF-05).`
+      `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
     )
   }
 

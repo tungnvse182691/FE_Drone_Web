@@ -4,10 +4,16 @@ import { ReworkModal } from './ReworkModal'
 import { VerifyModal } from './VerifyModal'
 import { ExportPdfAModal } from './ExportPdfAModal'
 import { ExportZipModal } from './ExportZipModal'
+import { DeclareConstructionModal } from './DeclareConstructionModal'
+import { AcceptancePackage } from '../../../api/services/acceptanceService'
 
 export interface CloseoutModalsProps {
   currentItem: CaseItem
   caseItems: CaseItem[]
+  currentPackage?: AcceptancePackage | null
+  isDeclareModalOpen?: boolean
+  setIsDeclareModalOpen?: (open: boolean) => void
+  onConfirmDeclaration?: (evidenceIds: string[], notes: string) => void
   isReworkModalOpen: boolean
   setIsReworkModalOpen: (open: boolean) => void
   reworkChecklist: {
@@ -68,7 +74,11 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   includeDroneRawTiff,
   setIncludeDroneRawTiff,
   isExporting,
-  handleTriggerExport
+  handleTriggerExport,
+  currentPackage,
+  isDeclareModalOpen,
+  setIsDeclareModalOpen,
+  onConfirmDeclaration
 }) => {
   return (
     <>
@@ -119,6 +129,17 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             onExport={handleTriggerExport}
           />
         )
+      )}
+
+      {/* MODAL 4: DECLARE CONSTRUCTION COMPLETION (API-110) */}
+      {isDeclareModalOpen && setIsDeclareModalOpen && onConfirmDeclaration && (
+        <DeclareConstructionModal
+          isOpen={isDeclareModalOpen}
+          onClose={() => setIsDeclareModalOpen(false)}
+          currentPackage={currentPackage || null}
+          currentItem={currentItem}
+          onConfirmDeclaration={onConfirmDeclaration}
+        />
       )}
     </>
   )

@@ -464,6 +464,70 @@ export const projectService = {
     return JSON.parse(JSON.stringify(closedProject))
   },
 
+  /**
+   * API-110: Chuyển trạng thái vòng đời dự án (Kích hoạt, Tạm dừng)
+   * Actor: Chỉ huy trưởng dự án (PM) hoặc Giám sát (Supervisor)
+   * Command: 'activate' | 'suspend'
+   */
+  async updateLifecycleStatus(
+    projectId: string,
+    command: 'activate' | 'suspend',
+    payload?: { reason?: string; actor?: string }
+  ): Promise<HubProject> {
+    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    if (!isMock) {
+      const res = await apiClient.post<HubProject>(`/projects/${projectId}/lifecycle/${command}`, payload)
+      return res.data
+    }
+
+    // Giả lập độ trễ mạng HTTP
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    const targetIndex = projectStore.findIndex((p) => p.id === projectId || p.code === projectId)
+    if (targetIndex === -1) {
+      throw new Error(`[404] Không tìm thấy dự án với mã [${projectId}].`)
+    }
+
+    const currentProject = projectStore[targetIndex]
+    if (currentProject.status === 'CLOSED') {
+      throw new Error(`[409] Dự án đã đóng vĩnh viễn, không thể chuyển đổi trạng thái vòng đời.`)
+    }
+
+    let updatedProject: HubProject
+    if (command === 'activate') {
+      updatedProject = {
+        ...currentProject,
+        status: 'ACTIVE',
+        status_label: 'Đang bảo hành',
+        status_color: '#1B5E20'
+      }
+    } else if (command === 'suspend') {
+      const reason = payload?.reason?.trim()
+      if (!reason || reason.length < 5) {
+        throw new Error('[422] Vui lòng nhập lý do tạm dừng dự án (tối thiểu 5 ký tự).')
+      }
+      updatedProject = {
+        ...currentProject,
+        status: 'RESTRICTED',
+        status_label: 'Tạm dừng vận hành',
+        status_color: '#D97706'
+      }
+    } else {
+      throw new Error(`[400] Lệnh vòng đời không hợp lệ: ${command}`)
+    }
+
+    projectStore[targetIndex] = updatedProject
+
+    // Phát sự kiện đồng bộ reactive trên toàn client
+    window.dispatchEvent(
+      new CustomEvent('roadguard_state_change', {
+        detail: { projectId, command, status: updatedProject.status }
+      })
+    )
+
+    return JSON.parse(JSON.stringify(updatedProject))
+  },
+
   updateProjectStatus(id: string, status: HubProject['status']): HubProject | null {
     let updatedProj: HubProject | null = null
     projectStore = projectStore.map((p) => {

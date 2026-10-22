@@ -72,6 +72,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const [isReworkModalOpen, setIsReworkModalOpen] = useState(false)
   const [isCloseCaseModalOpen, setIsCloseCaseModalOpen] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [isDeclareModalOpen, setIsDeclareModalOpen] = useState(false)
 
   // Rework Form State
   const [reworkNotes, setReworkNotes] = useState(
@@ -167,7 +168,11 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     }
   }
 
-  const handlePMSubmitToSupervisor = async () => {
+  const handlePMSubmitToSupervisor = () => {
+    setIsDeclareModalOpen(true)
+  }
+
+  const handleConfirmDeclaration = async (evidenceIds: string[], notes: string) => {
     if (!currentItem) return
     try {
       const updated = await acceptanceService.submitItemToSupervisor(currentItem.id)
@@ -176,9 +181,11 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         const refreshedPkg = await acceptanceService.getAcceptancePackageById(currentPackage.id)
         if (refreshedPkg) setCurrentPackage(refreshedPkg)
       }
-      showToast(`PM đã trình hồ sơ ${currentItem.item_code} lên Giám sát nghiệm thu!`)
+      showToast(
+        `PM đã gửi Khai Báo Hoàn Thành Thi Công (API-110) cho ${currentItem.item_code} kèm ${evidenceIds.length} bằng chứng! Gói đã chuyển sang Chờ Giám Sát Nghiệm Thu.`
+      )
     } catch (err) {
-      showToast('Có lỗi khi trình hồ sơ.')
+      showToast('Có lỗi khi gửi khai báo hoàn thành thi công.')
     }
   }
 
@@ -304,6 +311,10 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         setIncludeDroneRawTiff={setIncludeDroneRawTiff}
         isExporting={isExporting}
         handleTriggerExport={handleTriggerExport}
+        currentPackage={currentPackage}
+        isDeclareModalOpen={isDeclareModalOpen}
+        setIsDeclareModalOpen={setIsDeclareModalOpen}
+        onConfirmDeclaration={handleConfirmDeclaration}
       />
     </div>
   )

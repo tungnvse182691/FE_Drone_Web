@@ -116,7 +116,8 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
       <div className="flex flex-col gap-2.5 max-h-[640px] overflow-y-auto pr-1">
         {filteredDetections.map((item) => {
           const isSelected = item.id === selectedDetectionId
-          const isApproved = item.status === 'APPROVED'
+          const isRecurrent = item.isRecurrent === true
+          const isApproved = item.status === 'APPROVED' && !isRecurrent
           const isRejected = item.status === 'REJECTED'
           const isPending = item.status === 'PENDING'
 
@@ -127,6 +128,8 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
               className={`rounded-xl border transition-all flex flex-col relative cursor-pointer ${
                 isSelected
                   ? 'bg-amber-50/50 border-brand-gold ring-2 ring-brand-gold/50 shadow-xs p-3.5 gap-2.5'
+                  : isRecurrent
+                  ? 'bg-amber-50/30 border-amber-300 hover:border-amber-400 p-3 gap-1.5'
                   : isApproved
                   ? 'bg-emerald-50/20 border-emerald-200 hover:border-emerald-300 hover:bg-emerald-50/30 p-3 gap-1.5'
                   : isRejected
@@ -137,7 +140,9 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
               {/* Left accent color bar */}
               <div
                 style={{
-                  backgroundColor: isApproved
+                  backgroundColor: isRecurrent
+                    ? '#C9A227'
+                    : isApproved
                     ? '#10B981'
                     : isRejected
                     ? '#94A3B8'
@@ -170,7 +175,9 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
 
                 <span
                   className={`px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 flex items-center gap-1 ${
-                    isApproved
+                    isRecurrent
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                      : isApproved
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                       : isRejected
                       ? 'bg-slate-200 text-slate-600 border border-slate-300'
@@ -179,7 +186,12 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                       : 'bg-amber-100 text-amber-800 border border-amber-200'
                   }`}
                 >
-                  {isApproved ? (
+                  {isRecurrent ? (
+                    <>
+                      <Icon name="history" size={12} className="text-[#C9A227]" />
+                      <span>TÁI PHÁT ({item.priorDefectCode || 'DEF-OLD'})</span>
+                    </>
+                  ) : isApproved ? (
                     <>
                       <Icon name="check_circle" size={12} className="text-emerald-700" />
                       <span>ĐÃ DUYỆT → {item.defectCode}</span>
@@ -255,7 +267,23 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
 
                   {/* TẦNG 4: HÀNG NÚT BẤM HÀNH ĐỘNG - CHUYỂN HƯỚNG SANG MÀN HÌNH THẨM ĐỊNH CHI TIẾT */}
                   <div className="pl-2 pt-2 border-t border-amber-200/60 flex items-center gap-2">
-                    {isPending ? (
+                    {isRecurrent ? (
+                      <div className="w-full flex items-center justify-between text-xs font-medium text-amber-900 bg-amber-50/80 p-2.5 rounded-lg border border-amber-200">
+                        <span className="flex items-center gap-1.5">
+                          <Icon name="history" size={14} className="text-[#C9A227]" />
+                          <span>Đã liên kết tái phát với <strong>{item.priorDefectCode}</strong> (API-110)</span>
+                        </span>
+                        <Link
+                          to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
+                          state={{ from: window.location.pathname }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-semibold text-amber-900 hover:underline flex items-center gap-0.5"
+                        >
+                          <span>Xem lại</span>
+                          <Icon name="chevron_right" size={14} />
+                        </Link>
+                      </div>
+                    ) : isPending ? (
                       <Link
                         to={`${basePath}/defects/${item.id.toLowerCase()}/verify-a`}
                         state={{ from: window.location.pathname }}

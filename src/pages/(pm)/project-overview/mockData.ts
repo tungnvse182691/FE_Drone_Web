@@ -23,7 +23,7 @@ export const INITIAL_SEGMENTS: Segment[] = [
     code: 'SEG-03',
     stationing: 'Km 1033+500 – Km 1038+000',
     length_km: 4.5,
-    status_label: 'Đang sửa chữa (WF-07)',
+    status_label: 'Đang sửa chữa',
     status_type: 'REPAIRING',
     open_defects: '3 điểm',
     defects_count: 3

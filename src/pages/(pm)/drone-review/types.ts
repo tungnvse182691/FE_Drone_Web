@@ -16,6 +16,9 @@ export interface AIDetectionItem {
     dismissReason?: string
   }
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  isRecurrent?: boolean
+  priorDefectCode?: string
+  recurrenceReason?: string
   defectCode?: string
   kmValue: number
   bbox: {

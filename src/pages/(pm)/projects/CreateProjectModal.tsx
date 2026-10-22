@@ -86,7 +86,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 Khởi tạo dự án bảo hành mới
               </h2>
               <p className="text-xs text-slate-500 font-body">
-                Bước SUP-01: Thiết lập thông tin bàn giao &amp; chỉ định 1 PM chính (FR-04, BR-01)
+                Thiết lập thông tin bàn giao &amp; chỉ định 1 PM chính
               </p>
             </div>
           </div>
@@ -153,7 +153,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 <label className="block font-medium text-slate-700">
                   Chỉ định 1 PM chính <span className="text-rose-600">*</span>
                 </label>
-                <span className="text-[10px] text-slate-400 font-mono">BR-01, DA03</span>
               </div>
               <select
                 required

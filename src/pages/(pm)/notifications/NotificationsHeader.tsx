@@ -37,7 +37,7 @@ export const NotificationsHeader: React.FC<NotificationsHeaderProps> = ({
             <span>Trang chủ</span>
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-semibold text-[#8F7212]">Trung tâm thông báo &amp; Bàn giao (WF-14)</span>
+          <span className="font-semibold text-[#8F7212]">Trung tâm thông báo &amp; Bàn giao</span>
         </nav>
 
         {/* Live WebSocket Status Indicator */}

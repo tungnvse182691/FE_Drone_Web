@@ -21,7 +21,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({ memb
             </h2>
           </div>
           <p className="text-[11px] text-slate-500 mt-1">
-            Phân cấp thẩm quyền &amp; phụ trách (BR-01, DA03)
+            Phân cấp thẩm quyền &amp; vai trò trách nhiệm
           </p>
         </div>
         <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">

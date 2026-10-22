@@ -59,7 +59,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
           type="button"
           className="text-xs text-[#8C6D1F] hover:text-[#C9A227] flex items-center gap-1 font-bold cursor-pointer shrink-0 transition-colors"
         >
-          <span>Xem bản đồ GIS phân đoạn (WF-02)</span>
+          <span>Xem bản đồ GIS phân đoạn</span>
           <Icon name="chevron_right" size={16} />
         </button>
       </div>
@@ -128,7 +128,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 mt-1 shadow-2xs"
               >
                 <Icon name="add" size={14} />
-                <span>Thiết lập tim tuyến (WF-02)</span>
+                <span>Thiết lập tim tuyến</span>
               </button>
             </div>
           ) : (
@@ -218,7 +218,7 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
                 className="px-3.5 py-1.5 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 mt-1 shadow-2xs"
               >
                 <Icon name="add" size={14} />
-                <span>Thêm tuyến nhánh phụ (WF-02)</span>
+                <span>Thêm tuyến nhánh phụ</span>
               </button>
             </div>
           ) : (

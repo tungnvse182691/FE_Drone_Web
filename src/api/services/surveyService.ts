@@ -43,7 +43,7 @@ export const INITIAL_SURVEY_MISSIONS: SurveyMissionItem[] = [
     ai_pending_count: 8,
     coverage_percent: 87,
     status: 'PENDING_AI_REVIEW',
-    status_label: 'Chờ thẩm định AI Canvas (WF-09)'
+    status_label: 'Chờ thẩm định AI Canvas'
   },
   {
     id: 'srv-02',
@@ -617,7 +617,7 @@ export const surveyService = {
           ai_pending_count: 8,
           coverage_percent: 98,
           status: 'PENDING_AI_REVIEW',
-          status_label: 'Chờ thẩm định AI Canvas (WF-09)'
+          status_label: 'Chờ thẩm định AI Canvas'
         }
         return completedItem
       }

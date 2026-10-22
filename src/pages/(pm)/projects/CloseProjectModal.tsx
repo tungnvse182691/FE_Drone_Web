@@ -97,10 +97,10 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 font-headline">
-                Đóng dự án bảo hành (DA12)
+                Đóng dự án bảo hành
               </h3>
               <p className="text-[11px] text-slate-500">
-                Đóng băng hồ sơ, kết thúc bảo hành &amp; lưu trữ số 5 năm (QT13, BR-45)
+                Đóng băng hồ sơ, kết thúc bảo hành &amp; lưu trữ số 5 năm
               </p>
             </div>
           </div>
@@ -109,6 +109,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
             onClick={handleClose}
             disabled={isSubmitting}
             className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-md hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+            aria-label="Đóng"
           >
             <Icon name="close" size={18} />
           </button>
@@ -158,7 +159,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
               <Icon name="error" size={18} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="leading-relaxed text-[11px] space-y-1">
                 <strong className="font-bold block text-rose-800">
-                  VI PHẠM ĐIỀU KIỆN ĐÓNG BẢO HÀNH (BR-45):
+                  VI PHẠM ĐIỀU KIỆN ĐÓNG BẢO HÀNH:
                 </strong>
                 <span>
                   Công trình vẫn còn <strong>{project.open_defects} điểm khiếm khuyết</strong> chưa hoàn thành sửa chữa hoặc chưa qua nghiệm thu đạt chuẩn (PASSED). Giám sát viên không được phép ký đóng dự án khi còn tồn đọng lỗi.

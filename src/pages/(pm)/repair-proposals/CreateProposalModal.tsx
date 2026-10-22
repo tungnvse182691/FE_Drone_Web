@@ -185,7 +185,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                 <span>Phương án kỹ thuật sửa chữa tổng quát <span className="text-rose-500">*</span></span>
               </label>
               <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
-                Chỉ huy trưởng (PM) soạn thảo • Trình Giám sát duyệt (WF-07)
+                Chỉ huy trưởng (PM) soạn thảo • Trình Giám sát duyệt
               </span>
             </div>
 

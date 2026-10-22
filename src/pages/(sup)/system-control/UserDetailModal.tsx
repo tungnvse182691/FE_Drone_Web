@@ -153,32 +153,32 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/70 space-y-2">
             <h4 className="font-bold text-amber-900 text-xs flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-brand-gold" />
-              <span>Ma trận quyền hạn nghiệp vụ (RBAC Spec v2.2)</span>
+              <span>Ma trận quyền hạn nghiệp vụ</span>
             </h4>
             <ul className="space-y-1.5 text-[11px] text-amber-900/90 list-disc list-inside">
               {selectedUserDetail.role === RoleCode.SUPERVISOR ? (
                 <>
-                  <li>Toàn quyền thẩm duyệt hồ sơ đợt sửa chữa &amp; phương án kỹ thuật (WF-12).</li>
-                  <li>Quyền bật / tắt lệnh phong tỏa pháp lý (Legal Hold BR-45) khi có yêu cầu thanh tra.</li>
-                  <li>Nghiệm thu chất lượng thi công hiện trường &amp; Ký số đóng đợt sửa chữa (WF-16/18).</li>
+                  <li>Toàn quyền thẩm duyệt hồ sơ đợt sửa chữa &amp; phương án kỹ thuật.</li>
+                  <li>Quyền bật / tắt lệnh phong tỏa pháp lý khi có yêu cầu thanh tra.</li>
+                  <li>Nghiệm thu chất lượng thi công hiện trường &amp; Ký số đóng đợt sửa chữa.</li>
                   <li>Quản lý danh sách nhân sự, phân bổ dự án và phê duyệt hủy dữ liệu hết hạn bảo hành.</li>
                 </>
               ) : selectedUserDetail.role === RoleCode.PROJECT_MANAGER ? (
                 <>
-                  <li>Tạo và quản lý yêu cầu bay khảo sát Drone trên tuyến được giao (WF-05/06).</li>
-                  <li>Thẩm định kết quả phát hiện hư hỏng tự động của AI (Bounding box &amp; Đa kỳ WF-08/09).</li>
-                  <li>Gom đợt sửa chữa, lập bảng quy chuẩn kỹ thuật và trình duyệt hồ sơ lên Giám sát (WF-10/11).</li>
-                  <li>Giao việc cho Đội thi công (Crew) và xác nhận hoàn thành công việc hiện trường (WF-14/17).</li>
+                  <li>Tạo và quản lý yêu cầu bay khảo sát Drone trên tuyến được giao.</li>
+                  <li>Thẩm định kết quả phát hiện hư hỏng tự động của AI (Bounding box &amp; Phân tích đa kỳ).</li>
+                  <li>Gom đợt sửa chữa, lập bảng quy chuẩn kỹ thuật và trình duyệt hồ sơ lên Giám sát.</li>
+                  <li>Giao việc cho Đội thi công (Crew) và xác nhận hoàn thành công việc hiện trường.</li>
                 </>
               ) : selectedUserDetail.role === RoleCode.DRONE_OPERATOR ? (
                 <>
-                  <li>Thực thi kế hoạch bay khảo sát không ảnh theo lịch trình được PM duyệt (WF-05).</li>
+                  <li>Thực thi kế hoạch bay khảo sát không ảnh theo lịch trình được PM duyệt.</li>
                   <li>Đồng bộ ảnh thô, dữ liệu trắc địa vệ tinh RTK và nhật ký tọa độ chuyến bay.</li>
                   <li>Báo cáo an toàn bay, thời tiết và hiện trạng thiết bị phần cứng UAV.</li>
                 </>
               ) : (
                 <>
-                  <li>Tiếp nhận lệnh sửa chữa (Work Order) ngoài hiện trường từ PM (WF-14).</li>
+                  <li>Tiếp nhận lệnh sửa chữa (Work Order) ngoài hiện trường từ PM.</li>
                   <li>Thực hiện vá dặm ổ gà, trám khe nứt và chụp ảnh đối chứng nghiệm thu trước/sau.</li>
                   <li>Đồng bộ biên bản thi công ngoại tuyến về máy chủ khi có mạng 4G/Wi-Fi.</li>
                 </>

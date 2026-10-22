@@ -45,7 +45,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   </div>
                   <span className="text-sm text-white font-bold mt-1">Dự án ngoài phạm vi phụ trách</span>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
-                    Bạn hiện chỉ được cấp quyền quản lý các tuyến được Supervisor chỉ định (BR-02).
+                    Bạn hiện chỉ được cấp quyền quản lý các tuyến được Giám sát chỉ định.
                   </p>
                 </div>
               </div>
@@ -141,7 +141,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                       <Icon name="warning" size={16} className="text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến (BR-01)</span>
+                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
                       </div>
                     </div>
                   </div>
@@ -214,7 +214,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                   >
                     <Icon name="inventory_2" size={16} />
-                    <span>Tra cứu hồ sơ lưu trữ (BC10)</span>
+                    <span>Tra cứu hồ sơ lưu trữ</span>
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     {isSupervisor && onOpenCloseModal && (
                       <button
                         type="button"
-                        title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                        title="Đóng dự án khi hết hạn bảo hành"
                         onClick={(e) => {
                           e.stopPropagation()
                           onOpenCloseModal(prj)
@@ -271,7 +271,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
           <div className="flex flex-col gap-1 max-w-xs">
             <h4 className="text-sm font-bold text-slate-900 font-headline">Tạo hồ sơ dự án mới</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-body">
-              Khởi tạo hồ sơ quản lý bảo hành công trình &amp; chỉ định 1 PM chính (BR-01, FR-04).
+              Khởi tạo hồ sơ quản lý bảo hành công trình &amp; chỉ định 1 PM chính.
             </p>
           </div>
           <button

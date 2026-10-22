@@ -63,7 +63,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
               Dự án
             </button>
             <Icon name="chevron_right" size={14} className="text-slate-400" />
-            <span className="text-slate-800 font-semibold truncate">Thiết lập tim tuyến &amp; Phân đoạn (WF-02)</span>
+            <span className="text-slate-800 font-semibold truncate">Thiết lập tim tuyến &amp; Phân đoạn</span>
           </nav>
 
           <span className="text-slate-300">•</span>
@@ -137,17 +137,20 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
 
       {/* Action Button Group */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <button
-          onClick={onOpenImportModal}
-          className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          type="button"
-        >
-          <Icon name="upload_file" size={14} className="text-slate-500" />
-          <span>Nhập Tuyến / Tọa độ (WF-02)</span>
-        </button>
+        {/* PM: Import Coordinates Button (Only allowed when in DRAFT) */}
+        {!isSupervisor && alignmentStatus === 'DRAFT' && (
+          <button
+            onClick={onOpenImportModal}
+            className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            type="button"
+          >
+            <Icon name="upload_file" size={14} className="text-slate-500" />
+            <span>Nhập Tuyến / Tọa độ</span>
+          </button>
+        )}
 
-        {/* PM: Clear Mainline Button */}
-        {!isSupervisor && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
+        {/* PM: Clear Mainline Button (Strictly only when DRAFT - never allowed when CONFIRMED) */}
+        {!isSupervisor && alignmentStatus === 'DRAFT' && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
           <button
             onClick={() => {
               if (confirm('Bạn có chắc chắn muốn xóa toàn bộ tim tuyến trục chính và các mốc lý trình của dự án này không? Bản đồ sẽ trở về trạng thái trống để bạn nhập hoặc vẽ lại từ đầu.')) {

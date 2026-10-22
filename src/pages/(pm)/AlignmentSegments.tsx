@@ -273,6 +273,8 @@ export const AlignmentSegments: React.FC = () => {
           onClearMainline={handleClearMainline}
           onOpenImportModal={() => importState.setIsImportModalOpen(true)}
           mainlineLengthKm={importedLengthKm}
+          alignmentStatus={alignmentStatus}
+          isSupervisor={isSupervisor}
         />
       </section>
     </div>
