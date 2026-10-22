@@ -11,10 +11,10 @@
 ---
 
 ### MENU 1: TỔNG QUAN (`/pm/dashboard`)
-* **Màn hình Spec:** `PM-13`
+* **Màn hình Spec:** `PM-01`, `PM-11`, `PM-12` (Workflow 10)
+* **Trạng thái:** Đã hoàn thành chuẩn hóa theo specs (Đã đổi thẻ KPI số 3 sang "Phản Ánh Cần Kết Luận (PM-11)"; đã bổ sung widget Đồng Hồ Thời Hạn Nhiệm Vụ `API-062` với đếm ngược thời gian thực và modal xin gia hạn `API-064`).
 * **Các điểm chưa làm hoặc đang bị sai:**
-  1. `[ĐANG BỊ SAI]` **Ẩn các widget phê duyệt hồ sơ:** Màn hình dashboard của PM tuyệt đối không hiển thị các widget phê duyệt gói sửa chữa hay thẩm định cấp phép (đặc quyền của Supervisor).
-  2. `[CHƯA LÀM]` **Đồng hồ thời hạn xử lý (Clocks & Business Duties - `API-062`):** Bổ sung widget cảnh báo các đợt bay drone hoặc nhiệm vụ đo đạc hiện trường sắp hết hạn SLA.
+  - *(Đã giải quyết xong toàn bộ các vấn đề của Menu 1)*
 
 ---
 

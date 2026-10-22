@@ -5,6 +5,7 @@ import { Icon } from '../../components/ui/Icon'
 import { dashboardService, PMDashboardData } from '../../api/services/dashboardService'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { OperationalClocksWidget } from './dashboard/OperationalClocksWidget'
 
 export const PMDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -83,7 +84,7 @@ export const PMDashboard: React.FC = () => {
     )
   }
 
-  const { stats, defects, citizenCases, repairBatches } = data
+  const { stats, defects, citizenCases, repairBatches, clocks = [] } = data
 
   return (
     <div className="space-y-6">
@@ -254,21 +255,21 @@ export const PMDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3: Phản ánh dân cần phân loại */}
+        {/* KPI 3: Phản ánh dân cần kết luận (chuẩn PM-11, Triage do Supervisor thực hiện) */}
         <div
           onClick={() => navigate('/pm/ai-inbox?source=citizen')}
           className="pm-kpi-card pm-kpi-card-3 flex items-center justify-between"
         >
           <div className="space-y-1">
             <span className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-[0.04em] block">
-              Phản Ánh Dân Cần Phân Loại
+              Phản Ánh Cần Kết Luận
             </span>
             <div className="text-[36px] leading-[42px] font-extrabold text-[#1A1D20] pm-kpi-value transition-transform duration-250 origin-left">
               {stats.citizenCasesCount}
             </div>
             <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-0.5">
-              <Icon name="sync" className="text-sky-600" size={13} />
-              <span>Sẵn sàng rà soát trùng lặp</span>
+              <Icon name="check_circle" className="text-sky-600" size={13} />
+              <span>Đã gán dự án • Chờ kết luận (PM-11)</span>
             </div>
           </div>
           <div className="w-[48px] h-[48px] rounded-[12px] bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center transition-transform duration-250 pm-kpi-icon shrink-0">
@@ -298,6 +299,9 @@ export const PMDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Widget Đồng hồ thời hạn nhiệm vụ (Clocks & SLA - API-062) */}
+      <OperationalClocksWidget clocks={clocks} />
 
       {/* Main Content Grid: Hộp Thư Tiếp Nhận & Danh Sách Đợt Sửa Chữa (Bo góc 16px, viền #E2E5E9) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

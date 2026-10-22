@@ -50,7 +50,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'ALL'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -61,13 +61,13 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'PENDING'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
           <span>Chờ xác minh</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === 'PENDING' ? 'bg-amber-400 text-slate-900' : 'bg-amber-100 text-amber-800'
+            activeTab === 'PENDING' ? 'bg-amber-100 text-amber-900' : 'bg-amber-100 text-amber-800'
           }`}>
             {pendingCount}
           </span>
@@ -77,7 +77,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'MERGED'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -88,7 +88,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap cursor-pointer border ${
             activeTab === 'NEED_SURVEY'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
@@ -99,7 +99,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
           type="button"
           className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer border ${
             activeTab === 'CRITICAL'
-              ? 'bg-[#1A1D20] text-white border-[#1A1D20] shadow-xs'
+              ? 'bg-brand-gold text-white border-brand-gold shadow-xs font-bold'
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >

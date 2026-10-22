@@ -52,14 +52,33 @@
   - **Phần 2: Role Supervisor (SUP)** — Lần lượt từ Menu 1 đến Menu 5.
 - Mỗi menu chỉ ghi rõ: `[CHƯA LÀM]` hoặc `[ĐANG BỊ SAI - CẦN SỬA]`, kèm mã API và căn cứ specs tương ứng.
 
+### 1.6. Chuẩn hóa Dashboard PM & Đồng Hồ Thời Hạn Nhiệm Vụ (Clocks & SLA - API-062 / API-064)
+- **Chuẩn hóa KPI Card số 3 (`PMDashboard.tsx`):**
+  - Chuyển từ "Phản Ánh Dân Cần Phân Loại" sang **"Phản Ánh Cần Kết Luận (PM-11)"** đúng thẩm quyền (PM không triage mà chỉ kết luận xử lý vụ việc).
+- **Xây dựng Widget Đồng Hồ Thời Hạn Nhiệm Vụ (`OperationalClocksWidget.tsx`):**
+  - Thực hiện chuẩn theo `API-062` (Workflow 10) và DTO `H6ClockView`.
+  - Phân loại trực quan 3 nhóm nhiệm vụ trọng yếu: Thẩm định đợt bay (`SURVEY_VERIFICATION`), Đo đạc hiện trường (`FIELD_INSPECTION`), Khai báo hoàn công (`CONSTRUCTION_DECLARATION`).
+  - Tích hợp Modal **Xin Gia Hạn Nhiệm Vụ** (`API-064`) với tùy chọn gia hạn (+4h, +1d, +2d) và bắt buộc nhập lý do giải trình thực địa.
+  - Tích hợp nút **"Xử lý ngay"** điều hướng chính xác đến từng màn hình chuyên biệt (Màn 15 `/pm/field-tasks`, Màn 08 `/pm/surveys/:id/review`, Màn 17 `/pm/acceptance`).
+- **Cơ chế thời gian thực chuẩn UX công nghiệp (Phương án A):**
+  - Tự động so sánh mốc hạn chót UTC (`currentDueAt`) với thời gian thực khách hàng qua `setInterval(1000)`.
+  - Nhiệm vụ còn trên 30 phút hoặc trên 1 giờ: Hiển thị điềm đạm giờ/phút (`Còn 2 giờ 40 phút`, `Còn 18 giờ 55 phút`), không nhảy giây gây rối mắt.
+  - Nhiệm vụ khẩn cấp (< 30 phút) hoặc Đã quá hạn SLA: Kích hoạt đếm ngược/đếm tăng chi tiết từng giây (`Còn 21 phút 45s`, `Quá hạn 1 giờ 34 phút 17s`).
+- **Làm sạch giao diện người dùng & Chuẩn hóa Design System:**
+  - Loại bỏ toàn bộ các nhãn mã debug kỹ thuật (`API-062`, `API-064`) khỏi giao diện người dùng.
+  - Đổi màu toàn bộ nút bấm và tab active đen (`bg-slate-900`) sang màu vàng đồng Hoàng Hải (`#C9A227` / `bg-brand-gold`).
+  - Xóa bỏ nút và vai trò bàn giao giả mạo để giữ đúng 5 vai trò hệ thống (`PROJECT_MANAGER`, `SUPERVISOR`, `DRONE_OPERATOR`, `REPAIR_CREW`, `REPORTER`).
+- **Cập nhật Checklist nghiệp vụ:**
+  - Đánh dấu hoàn thành toàn bộ các điểm cần sửa của Menu 1 Tổng quan PM trong `DANH_SACH_CHUC_NANG_CAN_SUA_THEO_SPECS_17_10.md`.
+
 ---
 
 ## 2. KẾT QUẢ KIỂM TRA
 
 1. **TypeScript & Build:**
    - Lệnh: `npm run build` (`tsc -b && vite build`)
-   - Kết quả: **Thành công 100%, 0 lỗi type/linter, build bundle 7.03s**.
+   - Kết quả: **Thành công 100%, 0 lỗi type/linter, build bundle 6.48s**.
 2. **Kiểm tra giao diện & Flow nghiệp vụ:**
    - Sidebar PM hiển thị gọn gàng, không còn menu mồ côi hay deep-link cứng.
    - Thao tác liên kết tái phát cập nhật ngay lập tức thẻ ngoài danh sách phát hiện AI đợt bay.
-   - Các modal mở mượt mà, không xung đột CSS hay z-index.
+   - Đồng hồ thời hạn đếm ngược chuẩn xác theo thời gian thực (Phương án A), modal xin gia hạn mở mượt mà và nút xử lý ngay điều hướng chuẩn 100% đến các màn hình đích.
