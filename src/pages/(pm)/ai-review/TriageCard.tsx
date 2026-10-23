@@ -317,15 +317,20 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
               {item.code}
             </span>
-            {isUnassigned && !isSupervisor && (
+            {isUnassigned && isSupervisor && (
               <button
                 type="button"
                 onClick={(e) => onOpenTriageProject(item, e)}
                 className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                title="Điều phối gán dự án"
+                title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
               >
-                Gán dự án
+                Điều phối dự án
               </button>
+            )}
+            {isUnassigned && !isSupervisor && (
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 select-none">
+                Chờ Giám sát điều phối
+              </span>
             )}
           </div>
 

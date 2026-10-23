@@ -67,18 +67,19 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
             {selectedCase.project_id
               ? selectedCase.project_name
               : isSupervisor
-              ? 'Chờ PM điều phối gán vào dự án'
-              : 'Chưa điều phối gán vào dự án'}
+              ? 'Chưa phân loại dự án (Cần điều phối)'
+              : 'Chờ Giám sát điều phối gán vào dự án'}
           </span>
         </div>
-        {!isSupervisor && (
+        {isSupervisor && (
           <button
             type="button"
             onClick={() => onOpenTriageProject(selectedCase)}
             className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+            title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
           >
             <Icon name="domain" size={14} />
-            <span>{selectedCase.project_id ? 'Đổi dự án' : 'Gán vào dự án'}</span>
+            <span>{selectedCase.project_id ? 'Đổi dự án' : 'Điều phối gán dự án'}</span>
           </button>
         )}
       </div>

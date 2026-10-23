@@ -181,11 +181,15 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
         </div>
         <textarea
           rows={2}
-          disabled={isSupervisor}
+          disabled={isSupervisor || !selectedCase.project_id}
           value={currentNotes}
           onChange={(e) => setCurrentNotes(e.target.value)}
-          placeholder="Nhập ghi chú kỹ thuật, chỉ đạo vá nóng cấp bách hoặc đề xuất cắm biển cảnh báo tạm..."
-          className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold disabled:bg-slate-100 disabled:text-slate-600"
+          placeholder={
+            !selectedCase.project_id
+              ? 'Hồ sơ chưa được gán vào dự án • Đang chờ Giám sát điều phối tuyến...'
+              : 'Nhập ghi chú kỹ thuật, chỉ đạo vá nóng cấp bách hoặc đề xuất cắm biển cảnh báo tạm...'
+          }
+          className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold disabled:bg-slate-100 disabled:text-slate-500"
         />
       </div>
 
@@ -227,6 +231,17 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               <span>Đã công bố tiến độ cho người dân ({selectedCase.published_at || 'Hôm nay'})</span>
             </div>
           )}
+        </div>
+      ) : !selectedCase.project_id ? (
+        /* Khi ca chưa được Supervisor gán vào dự án mà PM phụ trách */
+        <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-3.5 space-y-1.5">
+          <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+            <Icon name="hourglass_empty" size={15} className="text-amber-600 shrink-0" />
+            <span>Chờ Giám sát (Supervisor) điều phối dự án</span>
+          </div>
+          <p className="text-[11px] text-amber-800 leading-relaxed">
+            Theo quy định Spec 17_10, phản ánh từ người dân phải được Giám sát điều phối gán vào dự án cụ thể trước khi Chỉ huy trưởng (PM) có thẩm quyền kết luận và phát hành công khai.
+          </p>
         </div>
       ) : (
         <div className="space-y-2 pt-1">

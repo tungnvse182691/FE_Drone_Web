@@ -58,18 +58,17 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   return (
     <div className="flex-1 w-full bg-white rounded-2xl border border-[#E2E5E9] shadow-2xs p-4 flex flex-col justify-between">
       <div className="space-y-4">
-        {/* Floating Batch Action Bar when items selected (Chỉ dành cho PM phân luồng tác nghiệp) */}
-        {!isSupervisor && (
-          <BatchActionBar
-            selectedReportIds={selectedReportIds}
-            cases={cases}
-            onOpenLinkReportsModal={onOpenLinkReportsModal}
-            onOpenTriageProject={onOpenTriageProject}
-            onClearSelectedReports={onClearSelectedReports}
-            onBulkVerify={onBulkVerify}
-            onBulkNeedSurvey={onBulkNeedSurvey}
-          />
-        )}
+        {/* Floating Batch Action Bar when items selected */}
+        <BatchActionBar
+          selectedReportIds={selectedReportIds}
+          cases={cases}
+          isSupervisor={isSupervisor}
+          onOpenLinkReportsModal={onOpenLinkReportsModal}
+          onOpenTriageProject={onOpenTriageProject}
+          onClearSelectedReports={onClearSelectedReports}
+          onBulkVerify={onBulkVerify}
+          onBulkNeedSurvey={onBulkNeedSurvey}
+        />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
           <div>

@@ -5,6 +5,7 @@ import { TriageCase } from './types'
 export interface BatchActionBarProps {
   selectedReportIds: string[]
   cases: TriageCase[]
+  isSupervisor?: boolean
   onOpenLinkReportsModal: () => void
   onOpenTriageProject: (c: TriageCase, e?: React.MouseEvent) => void
   onClearSelectedReports: () => void
@@ -15,6 +16,7 @@ export interface BatchActionBarProps {
 export const BatchActionBar: React.FC<BatchActionBarProps> = ({
   selectedReportIds,
   cases,
+  isSupervisor = false,
   onOpenLinkReportsModal,
   onOpenTriageProject,
   onClearSelectedReports,
@@ -32,7 +34,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
         </span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        {onBulkVerify && (
+        {!isSupervisor && onBulkVerify && (
           <button
             type="button"
             onClick={onBulkVerify}
@@ -43,7 +45,7 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
             <span>Xác nhận hàng loạt</span>
           </button>
         )}
-        {onBulkNeedSurvey && (
+        {!isSupervisor && onBulkNeedSurvey && (
           <button
             type="button"
             onClick={onBulkNeedSurvey}
@@ -54,31 +56,36 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
             <span>Đánh dấu kiểm tra lại</span>
           </button>
         )}
-        <button
-          type="button"
-          onClick={onOpenLinkReportsModal}
-          disabled={selectedReportIds.length < 2}
-          className="px-3 py-1.5 rounded-lg bg-slate-950 text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-          title={
-            selectedReportIds.length < 2
-              ? 'Chọn từ 2 phản ánh trở lên để liên kết báo trùng'
-              : 'Liên kết báo trùng'
-          }
-        >
-          <Icon name="link" size={14} className="text-brand-gold" />
-          <span>Liên kết báo trùng</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            const first = cases.find((c) => selectedReportIds.includes(c.id))
-            if (first) onOpenTriageProject(first)
-          }}
-          className="px-3 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors border border-amber-300"
-        >
-          <Icon name="domain" size={14} className="text-amber-700" />
-          <span>Gán vào dự án</span>
-        </button>
+        {!isSupervisor && (
+          <button
+            type="button"
+            onClick={onOpenLinkReportsModal}
+            disabled={selectedReportIds.length < 2}
+            className="px-3 py-1.5 rounded-lg bg-slate-950 text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+            title={
+              selectedReportIds.length < 2
+                ? 'Chọn từ 2 phản ánh trở lên để liên kết báo trùng'
+                : 'Liên kết báo trùng (API-022)'
+            }
+          >
+            <Icon name="link" size={14} className="text-brand-gold" />
+            <span>Liên kết báo trùng</span>
+          </button>
+        )}
+        {isSupervisor && (
+          <button
+            type="button"
+            onClick={() => {
+              const first = cases.find((c) => selectedReportIds.includes(c.id))
+              if (first) onOpenTriageProject(first)
+            }}
+            className="px-3 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors border border-amber-300"
+            title="Giám sát điều phối gán vào dự án (API-024)"
+          >
+            <Icon name="domain" size={14} className="text-amber-700" />
+            <span>Điều phối vào dự án</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onClearSelectedReports}

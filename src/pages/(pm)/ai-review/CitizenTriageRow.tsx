@@ -125,20 +125,20 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
             {/* Tên dự án */}
             {isUnassigned ? (
               isSupervisor ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit">
-                  <Icon name="domain" size={12} className="text-slate-400" />
-                  <span>Chưa gán dự án</span>
-                </span>
-              ) : (
                 <button
                   type="button"
                   onClick={(e) => onOpenTriageProject(item, e)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors w-fit cursor-pointer"
-                  title="Bấm để điều phối gán vào dự án"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors w-fit cursor-pointer shadow-2xs"
+                  title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
                 >
-                  <Icon name="domain" size={12} className="text-amber-700" />
-                  <span>Chưa gán - Điều phối</span>
+                  <Icon name="domain" size={13} className="text-amber-800" />
+                  <span>Điều phối dự án</span>
                 </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200 w-fit select-none">
+                  <Icon name="hourglass_empty" size={12} className="text-slate-400" />
+                  <span>Chờ Giám sát điều phối</span>
+                </span>
               )
             ) : (
               <div className="flex items-center gap-1">
@@ -148,12 +148,12 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 >
                   {item.project_name}
                 </span>
-                {!isSupervisor && (
+                {isSupervisor && (
                   <button
                     type="button"
                     onClick={(e) => onOpenTriageProject(item, e)}
                     className="text-slate-400 hover:text-slate-700 p-0.5 rounded cursor-pointer"
-                    title="Đổi dự án"
+                    title="Giám sát điều phối lại dự án"
                   >
                     <Icon name="edit" size={12} />
                   </button>

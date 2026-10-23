@@ -71,11 +71,14 @@
 #### 3.2. Hộp thư tiếp nhận lỗi (`/pm/ai-inbox`)
 * **Màn hình Spec:** `PM-11`
 * **Trạng thái các mục:**
-  - 🟡 **CẦN CHUẨN HÓA: Ẩn nút "Điều phối gán dự án (Triage - `API-024`)" khỏi PM:**
+  - ✅ **ĐÃ CHUẨN HÓA: Ẩn nút "Điều phối gán dự án (Triage - `API-024`)" khỏi PM:**
     - Căn cứ: Spec 17_10 [04_Web-Business-Flows.md:17](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/docs/specs/17_10/04_Web-Business-Flows.md#L17) (*"Supervisor triages with API-024; only then does PM assess candidates"*).
-    - Việc cần làm: Chuyển nút bấm Triage gán dự án sang giao diện của Supervisor (`/sup/cases`). Ẩn hoàn toàn nút này trên giao diện PM.
-  - 🟡 **CẦN CHUẨN HÓA: Quy định phạm vi xử lý phản ánh của PM:**
-    - PM chỉ nhìn thấy và thực hiện các thao tác: **Kết luận vụ việc** (`API-020`), **Gộp phản ánh trùng lặp** (`API-022`), **Tách phản ánh** (`API-023`), và **Phát hành công khai cho người dân** (`API-021`) đối với các phản ánh **đã được Supervisor gán vào dự án mà PM phụ trách**.
+    - Đã thực hiện:
+      - Ẩn hoàn toàn nút Triage gán dự án trên giao diện PM (tại `CitizenTriageRow.tsx`, `TriageCard.tsx`, `DrawerReporterInfo.tsx`, và `BatchActionBar.tsx`).
+      - Nút điều phối gán dự án (`API-024`) chỉ hiển thị và được kích hoạt khi vai trò đăng nhập là **Supervisor** (`SUP-02`).
+  - ✅ **ĐÃ CHUẨN HÓA: Quy định phạm vi xử lý phản ánh của PM:**
+    - Đối với ca chưa gán dự án (`UNASSIGNED`): PM chỉ nhìn thấy nhãn và banner trạng thái: **`Chờ Giám sát (Supervisor) điều phối dự án`**, đồng thời khóa toàn bộ thao tác kết luận kỹ thuật.
+    - Đối với ca **đã được Supervisor gán vào dự án**: PM có toàn quyền thực hiện 4 nghiệp vụ: **Kết luận vụ việc** (`API-020`), **Phát hành công khai cho người dân** (`API-021`), **Gộp phản ánh trùng lặp** (`API-022`), và **Tách phản ánh** (`API-023`).
 
 #### 3.3. Điều phối nhanh (Fast Track - `/pm/fast-track`)
 * **Màn hình Spec:** `PM-10`

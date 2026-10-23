@@ -64,6 +64,7 @@ export interface Defect {
   length_m?: number
   width_m?: number
   depth_mm?: number
+  area_m2?: number
   batch_id?: string
   created_at: string
 }
