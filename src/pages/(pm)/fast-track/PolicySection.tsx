@@ -8,6 +8,7 @@ export interface PolicySectionProps {
   isSupervisor?: boolean
   onActivateDraft: (item: any) => void
   onOpenAuditModal: () => void
+  onOpenPolicyModal?: () => void
 }
 
 export const PolicySection: React.FC<PolicySectionProps> = ({
@@ -16,6 +17,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
   isSupervisor = false,
   onActivateDraft,
   onOpenAuditModal,
+  onOpenPolicyModal
 }) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
 
@@ -39,22 +41,35 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách do Ban Giám Sát / CĐT phê duyệt ban hành • Áp dụng toàn tuyến QL1A (Km 1000 - Km 1080)
+                Chính sách do Chỉ huy trưởng (PM) lập dự thảo &amp; xuất bản (API-162..167) • Căn cứ phạm vi tuyến được cấp phép (API-175)
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap self-start md:self-center">
             {isSupervisor ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200">
-                <Icon name="check_circle" size={14} className="text-brand-gold" />
-                <span>Quyền phê duyệt: Giám sát / Ban QLDA</span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                <Icon name="visibility" size={14} className="text-slate-400" />
+                <span>Chế độ Giám sát: Theo dõi thông tin (SUP-08)</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
-                <Icon name="lock" size={14} className="text-slate-400" />
-                <span>Chỉ huy trưởng tuân thủ thực thi (Chế độ Xem)</span>
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
+                  <Icon name="manage_accounts" size={14} className="text-brand-gold" />
+                  <span>Quyền PM: Lập dự thảo &amp; Xuất bản (API-162..167)</span>
+                </span>
+                {onOpenPolicyModal && (
+                  <button
+                    onClick={onOpenPolicyModal}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+                    title="Chỉnh sửa hoặc lập dự thảo chính sách xử lý nhanh mới (API-162, API-164)"
+                  >
+                    <Icon name="tune" size={14} className="text-brand-gold" />
+                    <span>Điều chỉnh chính sách</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -250,7 +265,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                       )}
                     </div>
 
-                    {isSupervisor && item.status === 'DRAFT' && (
+                    {!isSupervisor && item.status === 'DRAFT' && (
                       <button
                         type="button"
                         onClick={() => {
@@ -258,14 +273,15 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                           setIsHistoryModalOpen(false)
                         }}
                         className="px-2.5 py-1 text-[11px] font-bold text-white bg-brand-gold hover:bg-[#B38E1F] rounded-lg transition-colors cursor-pointer shadow-xs"
+                        title="Xuất bản dự thảo này thành chính sách hiệu lực chính thức (API-165)"
                       >
-                        Kích hoạt ngay
+                        Xuất bản (API-165)
                       </button>
                     )}
                   </div>
 
                   <p className="text-[11px] text-slate-500">
-                    Phê duyệt bởi: <strong>{item.activatedBy}</strong> • {item.activatedAt}
+                    Người phụ trách: <strong>{item.activatedBy}</strong> • {item.activatedAt}
                   </p>
                   <div className="text-[11px] text-[#8F7212] font-semibold">{item.route}</div>
                   <div className="text-[11px] text-slate-600 font-mono bg-white p-2 rounded-lg border border-slate-200/80">

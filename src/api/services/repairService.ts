@@ -115,28 +115,28 @@ export const INITIAL_PACKAGES: ProposalWorkPackage[] = [
   {
     id: 'pkg-09',
     code: 'PKG-2026-09',
-    title: 'Xử lý nứt rạn mai rùa phân đoạn đèo',
+    title: 'Gói gom xử lý các điểm hư hỏng vượt ngưỡng Fast Track (Km 1033 - Km 1036)',
     route_id: 'QL1A_PK04',
     route_name: 'QL1A - Giai đoạn 2 (Km 1024 - Km 1045)',
-    chainage_start: 'Km 1042+000',
-    chainage_end: 'Km 1045+500',
-    chainage_display: 'Km 1042+000 - Km 1045+500',
+    chainage_start: 'Km 1033+110',
+    chainage_end: 'Km 1035+050',
+    chainage_display: 'Km 1033+110 - Km 1035+050',
     segments_count: 2,
-    defect_count: 3,
-    defect_summary: '3 điểm hư hỏng nứt lưới',
-    technical_scope: 'Xử lý móng CPĐD: 95 m²',
-    material_scope: 'Lưới địa kỹ thuật: 150 m²',
-    duration_days: 4,
-    date_range: '19/08 - 23/08/2026',
+    defect_count: 2,
+    defect_summary: '2 điểm gom từ Điều phối nhanh: #DEF-2026-0105 & #DEF-2026-0115',
+    technical_scope: 'Cào bóc thảm: 2.05 m²',
+    material_scope: 'Bê tông nhựa C19: 0.45 m³',
+    duration_days: 2,
+    date_range: 'Dự kiến 2 ngày',
     created_by_name: 'Đỗ Quốc Hoàng (PM)',
     created_by_initials: 'ĐH',
     created_by_role: 'Chỉ huy trưởng dự án',
-    created_at: '19/08/2026 - 08:15',
+    created_at: '23/10/2026 - 13:30',
     status: 'DRAFT',
     status_label: 'Bản nháp',
     approved_items: 0,
-    total_items: 3,
-    contractor_name: 'Chưa phân công'
+    total_items: 2,
+    contractor_name: 'Đội thi công sửa chữa Hoàng Hải 01'
   }
 ]
 
@@ -466,6 +466,55 @@ export const PKG_07_ITEMS: RepairItemDetail[] = [
   }
 ]
 
+export const PKG_09_ITEMS: RepairItemDetail[] = [
+  {
+    id: 'item-09-01',
+    item_code: '#ITEM-01',
+    defect_code: '#DEF-2026-0105',
+    chainage: 'Km 1033+110',
+    lane_info: 'Lề đường phải • Tuyến QL1A PK-04',
+    defect_title: 'Vỡ mép thảm nhựa (Vượt ngưỡng Fast Track: 0.85 m² / 6.5 cm)',
+    defect_measurements: 'Sâu 6.5cm • S = 0.85 m²',
+    solution_title: 'Cào bóc cục bộ 7cm & thảm BTN C19 theo TCVN 8819',
+    solution_standard: 'Tiêu chuẩn cào bóc thảm TCVN 8819',
+    volume_display: '0.85 m²',
+    volume_sub: 'Sâu 6.5 cm',
+    area_m2: 0.85,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Đội thi công sửa chữa Hoàng Hải 01',
+    image_url: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1033_R1_SPALL.JPG',
+    gps_coords: '16.0560, 108.2025',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  },
+  {
+    id: 'item-09-02',
+    item_code: '#ITEM-02',
+    defect_code: '#DEF-2026-0115',
+    chainage: 'Km 1035+050',
+    lane_info: 'Làn phải R1 • Tuyến QL1A PK-04',
+    defect_title: 'Lún vệt bánh xe sâu (Vượt ngưỡng Fast Track: 1.20 m² / 7.2 cm)',
+    defect_measurements: 'Sâu 7.2cm • S = 1.20 m²',
+    solution_title: 'Cào bóc san phẳng 8cm & bù vênh thảm BTN C19',
+    solution_standard: 'Tiêu chuẩn cào bóc thảm TCVN 8819',
+    volume_display: '1.20 m²',
+    volume_sub: 'Sâu 7.2 cm',
+    area_m2: 1.20,
+    status: 'PENDING',
+    status_label: 'CHỜ DUYỆT',
+    assigned_crew: 'Đội thi công sửa chữa Hoàng Hải 01',
+    image_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
+    ortho_code: 'IMG_1035_R1_RUT.JPG',
+    gps_coords: '16.0650, 108.2130',
+    resolution: '4K • 3840x2160',
+    pilot_name: 'Kỹ sư UAV Trần Hùng',
+    drone_model: 'DJI Matrice 350 RTK'
+  }
+]
+
 // =============================================================================
 // MOCK API STORE SINGLETON (Độc lập trong bộ nhớ, không dùng localStorage)
 // =============================================================================
@@ -478,7 +527,9 @@ const apiItemsByPackage: Record<string, RepairItemDetail[]> = {
   'pkg-08': [...PKG_08_ITEMS],
   'PKG-2026-08': [...PKG_08_ITEMS],
   'pkg-07': [...PKG_07_ITEMS],
-  'PKG-2026-07': [...PKG_07_ITEMS]
+  'PKG-2026-07': [...PKG_07_ITEMS],
+  'pkg-09': [...PKG_09_ITEMS],
+  'PKG-2026-09': [...PKG_09_ITEMS]
 }
 
 const dispatchMockChangeEvent = () => {

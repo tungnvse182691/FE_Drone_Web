@@ -84,10 +84,10 @@
 * **Màn hình Spec:** `PM-10`
 * **Trạng thái các mục:**
   - ✅ **Quyền Nghiệm thu chốt gói Fast Track (`API-147`):** Đã đúng chuẩn, dành riêng cho PM bấm *"Chấp thuận & Đóng Fast Track"* trong `ActionButtons.tsx`.
-  - 🟡 **CẦN BỔ SUNG: Hiển thị lý do cụ thể khi không đủ điều kiện xử lý nhanh (`API-146`):**
-    - Khi kiểm tra tính hợp lệ Fast Track, hiển thị thông báo/tooltip nêu rõ lý do từ Server (ví dụ: *"Diện tích vượt quá ngưỡng chính sách (> 1.0 m²)"*, *"Nằm ngoài phân đoạn tuyến được cấp phép"*).
-  - 🟡 **CẦN CHUẨN HÓA: Phân quyền Quản lý chính sách Fast Track (`API-162` .. `API-167`):**
-    - Theo spec `PM-10`, PM là người lập dự thảo và xuất bản/điều chỉnh chính sách xử lý cấp bách cho tuyến mình phụ trách. Cần mở quyền chỉnh sửa dự thảo chính sách (ngưỡng diện tích, độ sâu, SLA) cho PM trong `PolicySection.tsx`.
+  - ✅ **ĐÃ BỔ SUNG: Hiển thị lý do cụ thể khi không đủ điều kiện xử lý nhanh (`API-146`):**
+    - Khi kiểm tra tính hợp lệ Fast Track, hiển thị danh sách lý do cụ thể từ Server/missingReasons ngay trên thẻ khiếm khuyết (`DefectCard`) và tooltip khi checkbox bị khóa (ví dụ: *"Diện tích 0.85 m² vượt quá ngưỡng chính sách (≤ 0.50 m²)"*, *"Nằm ngoài phân đoạn tuyến được cấp phép"*).
+  - ✅ **ĐÃ CHUẨN HÓA: Phân quyền Quản lý chính sách Fast Track (`API-162` .. `API-167`):**
+    - Đã mở quyền lập dự thảo, điều chỉnh ngưỡng kỹ thuật và xuất bản chính sách cho PM trong `PolicySection.tsx`, `FastTrackHeader.tsx` và `PolicyModal.tsx`. Khóa quyền sửa chính sách đối với Giám sát (chuyển sang chế độ theo dõi thông tin `SUP-08` chuẩn spec).
 
 ---
 

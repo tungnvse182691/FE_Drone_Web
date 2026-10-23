@@ -46,6 +46,17 @@ export const DEFECTS_BY_SEGMENT: Record<string, UnassignedDefectItem[]> = {
       selected: false,
       area_m2: 0.35,
       depth_cm: 1.8
+    },
+    {
+      id: 'DEF-03',
+      code: '#DEF-2026-0105',
+      title: 'Vỡ mép thảm nhựa',
+      stationing: 'Km 1033+110',
+      lane_detail: 'Lề đường phải • Vượt ngưỡng Fast Track (0.85 m² / 6.5 cm)',
+      severity_label: 'Trung bình (L2)',
+      selected: false,
+      area_m2: 0.85,
+      depth_cm: 6.5
     }
   ],
   'seg-01': [
@@ -116,6 +127,17 @@ export const DEFECTS_BY_SEGMENT: Record<string, UnassignedDefectItem[]> = {
       selected: false,
       area_m2: 0.50,
       depth_cm: 2.0
+    },
+    {
+      id: 'DEF-06',
+      code: '#DEF-2026-0115',
+      title: 'Lún vệt bánh xe sâu',
+      stationing: 'Km 1035+050',
+      lane_detail: 'Làn phải (R1) • Vượt ngưỡng Fast Track (1.20 m² / 7.2 cm)',
+      severity_label: 'Nghiêm trọng (L3)',
+      selected: false,
+      area_m2: 1.20,
+      depth_cm: 7.2
     }
   ],
   'seg-04': [

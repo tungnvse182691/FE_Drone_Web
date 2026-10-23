@@ -50,8 +50,8 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               <Icon name="verified_user" size={18} className="text-brand-gold" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Tạo Phiên Bản Chính Sách Xử Lý Nhanh Mới</h3>
-              <span className="text-[10px] text-slate-500">Kế thừa và điều chỉnh từ {currentPolicy.version}</span>
+              <h3 className="text-base font-bold text-brand-dark">Lập Dự Thảo &amp; Điều Chỉnh Chính Sách (PM-10)</h3>
+              <span className="text-[10px] text-slate-500">Chỉ huy trưởng (PM) lập dự thảo &amp; xuất bản theo API-162, API-164, API-165</span>
             </div>
           </div>
           <button
@@ -163,9 +163,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           </div>
 
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-            <Icon name="warning" size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <Icon name="info" size={16} className="text-brand-gold shrink-0 mt-0.5" />
             <span>
-              <strong>Quy tắc hệ thống:</strong> Khi chọn <em>Kích hoạt chính sách ngay</em>, hệ thống sẽ tự động cập nhật bảng khiếm khuyết theo ngưỡng mới và lưu bản hiện tại ({currentPolicy.version}) vào kho lưu trữ (ARCHIVED).
+              <strong>Thẩm quyền PM (Spec PM-10):</strong> Chỉ huy trưởng có quyền lập dự thảo (API-162), điều chỉnh ngưỡng kỹ thuật (API-164), và xuất bản chính sách (API-165). Khi xuất bản, hệ thống tự động đánh giá lại tính hợp lệ (API-146) cho toàn bộ khiếm khuyết trên tuyến.
             </span>
           </div>
         </div>
@@ -184,16 +184,18 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               onClick={() => handleApplyPolicy('DRAFT')}
               type="button"
               className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-xl border border-amber-200 shadow-2xs cursor-pointer transition-colors"
+              title="Lưu bản ghi dự thảo chính sách theo API-162 / API-164"
             >
-              Lưu bản nháp
+              Lưu dự thảo (API-162)
             </button>
             <button
               onClick={() => handleApplyPolicy('ACTIVATE')}
               type="button"
               className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+              title="Xuất bản chính thức áp dụng toàn tuyến theo API-165"
             >
               <Icon name="check_circle" size={14} />
-              <span>Kích hoạt chính sách ngay</span>
+              <span>Xuất bản chính sách (API-165)</span>
             </button>
           </div>
         </div>

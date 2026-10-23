@@ -189,7 +189,7 @@ export const INITIAL_DEFECTS: DefectItem[] = [
     id: 'DEF-03', code: '#DEF-2026-0105', routeId: 'QL1A_PK04',
     routeName: 'QL1A - Giai đoạn 2 (Km 1025 - Km 1045)', stationing: 'Km 1033+110', kmValue: 1033.11,
     lane: 'Lề đường phải', type: 'Vỡ mép thảm nhựa', areaM2: 0.85, depthCm: 6.5,
-    isFastTrackEligible: false, violationReason: 'Diện tích 0.85 m² (> 0.5 m²) & Độ sâu 6.5 cm (> 5.0 cm)',
+    isFastTrackEligible: false, violationReason: 'Diện tích 0.85 m² vượt quá ngưỡng chính sách (≤ 0.50 m²) & Độ sâu 6.5 cm (≤ 5.0 cm)',
     assignedCrew: 'Tổ đo đạc số 02', gps: { lat: 16.0560, lng: 108.2025 },
     image: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&auto=format&fit=crop&q=80', aiConfidence: 96
   },
@@ -211,7 +211,7 @@ export const INITIAL_DEFECTS: DefectItem[] = [
     id: 'DEF-06', code: '#DEF-2026-0115', routeId: 'QL1A_PK04',
     routeName: 'QL1A - Giai đoạn 2 (Km 1025 - Km 1045)', stationing: 'Km 1035+050', kmValue: 1035.05,
     lane: 'Làn phải (R1)', type: 'Lún vệt bánh xe sâu', areaM2: 1.20, depthCm: 7.2,
-    isFastTrackEligible: false, violationReason: 'Diện tích 1.20 m² (> 0.5 m²) & Độ sâu 7.2 cm (> 5.0 cm)',
+    isFastTrackEligible: false, violationReason: 'Diện tích 1.20 m² vượt quá ngưỡng chính sách (≤ 0.50 m²) & Độ sâu 7.2 cm (≤ 5.0 cm)',
     assignedCrew: 'Tổ đo đạc số 02', gps: { lat: 16.0650, lng: 108.2130 },
     image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80', aiConfidence: 95
   },
@@ -233,7 +233,7 @@ export const INITIAL_DEFECTS: DefectItem[] = [
     id: 'DEF-13', code: '#DEF-2026-0208', routeId: 'QL1A_PK01',
     routeName: 'QL1A - Giai đoạn 1 (Km 1000 - Km 1025)', stationing: 'Km 1012+800', kmValue: 1012.80,
     lane: 'Lề đường', type: 'Bong bật nhựa cục bộ', areaM2: 0.65, depthCm: 3.5,
-    isFastTrackEligible: false, violationReason: 'Diện tích 0.65 m² vượt ngưỡng 0.5 m²',
+    isFastTrackEligible: false, violationReason: 'Diện tích 0.65 m² vượt quá ngưỡng chính sách (≤ 0.50 m²)',
     assignedCrew: 'Tổ đo đạc số 02', gps: { lat: 15.9600, lng: 108.2830 },
     image: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&auto=format&fit=crop&q=80', aiConfidence: 90
   },
@@ -248,7 +248,7 @@ export const INITIAL_DEFECTS: DefectItem[] = [
     id: 'DEF-22', code: '#DEF-2026-0305', routeId: 'EXPRESSWAY_LINK',
     routeName: 'Đường nối Cao tốc Bắc - Nam (Km 0 - Km 12)', stationing: 'Km 07+200', kmValue: 7.20,
     lane: 'Làn khẩn cấp', type: 'Trồi lún khe co giãn', areaM2: 0.70, depthCm: 4.8,
-    isFastTrackEligible: false, violationReason: 'Diện tích 0.70 m² vượt ngưỡng 0.5 m²',
+    isFastTrackEligible: false, violationReason: 'Nằm ngoài phân đoạn tuyến được cấp phép xử lý nhanh (Km 07+200)',
     assignedCrew: 'Tổ đo đạc số 02', gps: { lat: 16.1500, lng: 108.1400 },
     image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80', aiConfidence: 93
   },

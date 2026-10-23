@@ -117,6 +117,7 @@ export const FastTrackDispatch: React.FC = () => {
         isSupervisor={isSupervisor}
         onActivateDraft={handleActivateDraft}
         onOpenAuditModal={() => setIsAuditModalOpen(true)}
+        onOpenPolicyModal={() => setIsPolicyModalOpen(true)}
       />
 
       {/* Banner thông báo tự động điều phối khiếm khuyết từ Triage Inbox (Chỉ dành riêng cho PM) */}
@@ -159,7 +160,10 @@ export const FastTrackDispatch: React.FC = () => {
         handleRepairDirect={handleRepairDirect}
         handleEmergencyDispatch={handleEmergencyDispatch}
         onRemoveViolationItems={handleRemoveViolationItems}
-        onNavigateProposals={() => navigate(`${basePath}/proposals`)}
+        onNavigateProposals={() => {
+          showToast('⚡ Chuyển sang trang Gói sửa chữa để gom đợt thi công trình Giám sát duyệt!')
+          navigate(`${basePath}/proposals`)
+        }}
       />
 
       {/* MODALS */}

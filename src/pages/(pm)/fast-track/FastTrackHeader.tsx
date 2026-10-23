@@ -47,15 +47,16 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
 
       {/* Action Buttons Top Bar */}
       <div className="flex items-center gap-2.5 flex-wrap">
-        {/* Nút Tạo phiên bản chính sách: CHỈ dành cho Supervisor / CĐT duyệt chính sách */}
-        {isSupervisor && (
+        {/* Nút Điều chỉnh / Lập dự thảo chính sách: Dành riêng cho PM theo spec PM-10 (API-162..167) */}
+        {!isSupervisor && (
           <button
             onClick={onOpenPolicyModal}
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-slate-700 text-xs font-semibold rounded-xl shadow-xs hover:bg-slate-50 border border-slate-200 cursor-pointer transition-colors"
+            title="Lập dự thảo hoặc điều chỉnh chính sách xử lý nhanh (API-162, API-164)"
           >
-            <Icon name="add" size={16} className="text-brand-gold" />
-            <span>Tạo phiên bản chính sách mới</span>
+            <Icon name="tune" size={16} className="text-brand-gold" />
+            <span>Điều chỉnh chính sách (PM-10)</span>
           </button>
         )}
 

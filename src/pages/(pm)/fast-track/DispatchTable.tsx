@@ -151,9 +151,9 @@ const DefectCard: React.FC<DefectCardProps> = ({
                     } disabled:opacity-30 disabled:cursor-not-allowed`}
                   />
                   {!isEligible && workMode === 'INSPECT_AND_REPAIR' && (
-                    <div className="absolute right-full mr-2 top-0 hidden group-hover:flex items-center px-2.5 py-1 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap z-20 shadow-lg pointer-events-none">
-                      <Icon name="lock" size={12} className="text-rose-400 mr-1" />
-                      <span>{missingReasons[0] || 'Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (API-146)'}</span>
+                    <div className="absolute right-full mr-2 top-0 hidden group-hover:flex items-center px-2.5 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium z-20 shadow-lg pointer-events-none max-w-xs whitespace-normal">
+                      <Icon name="lock" size={12} className="text-rose-400 mr-1.5 shrink-0" />
+                      <span>{missingReasons.join('; ') || 'Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (API-146)'}</span>
                     </div>
                   )}
                   {!isEligible && workMode === 'EMERGENCY' && (
@@ -192,15 +192,24 @@ const DefectCard: React.FC<DefectCardProps> = ({
                 <span>Đạt chuẩn xử lý nhanh</span>
               </span>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
                   <Icon name="report" size={13} className="text-[#B91C1C]" />
                   <span>Không đủ điều kiện (API-146)</span>
                 </span>
                 {missingReasons.length > 0 && (
-                  <p className="text-[11px] text-[#B91C1C] font-medium line-clamp-1" title={missingReasons.join('; ')}>
-                    {missingReasons[0]}
-                  </p>
+                  <div className="p-2 rounded-lg bg-rose-50/70 border border-rose-200/60 text-[11px] text-rose-800 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1">
+                      <Icon name="info" size={12} className="text-rose-500 shrink-0" />
+                      <span>Lý do từ chối xử lý nhanh:</span>
+                    </div>
+                    {missingReasons.map((reason, rIdx) => (
+                      <div key={rIdx} className="flex items-start gap-1 font-medium leading-tight text-rose-700">
+                        <span className="text-rose-400 select-none">•</span>
+                        <span>{reason}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -245,10 +254,10 @@ const DefectCard: React.FC<DefectCardProps> = ({
                 onClick={onNavigateProposals}
                 type="button"
                 className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-[#8C6D1F] border border-amber-200 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs whitespace-nowrap"
-                title="Đưa vào Gói đề xuất sửa chữa lớn để trình Giám sát thẩm duyệt"
+                title="Chuyển sang trang Gói sửa chữa (/pm/proposals) để gom điểm này vào đợt thi công trình Giám sát duyệt"
               >
                 <Icon name="arrow_forward" size={13} />
-                <span>Gom đợt duyệt</span>
+                <span>Sang Gói sửa chữa</span>
               </button>
             )}
             <button
