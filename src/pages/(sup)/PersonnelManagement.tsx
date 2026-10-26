@@ -70,12 +70,12 @@ export const PersonnelManagement: React.FC = () => {
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               {isSupervisor
                 ? 'Quản Trị Tài Khoản, Phân Quyền & Nhân Sự Hệ Thống'
-                : 'Nhân Sự Ban Điều Hành Dự Án & Thiết Bị Hiện Trường'}
+                : 'Nhân Sự Ban Điều Hành Dự Án'}
             </h1>
             <p className="text-xs text-slate-500 leading-relaxed">
               {isSupervisor
                 ? 'Quản lý cấp phát tài khoản, phân quyền vai trò chuyên môn (PM, Giám sát, Kỹ sư Drone, Tổ thi công) và kiểm soát phiên làm việc trên toàn hệ thống.'
-                : 'Theo dõi danh sách kỹ sư, tổ thi công hiện trường và thiết bị làm việc được biên chế trong ban điều hành dự án.'}
+                : 'Theo dõi danh sách kỹ sư và tổ thi công hiện trường được biên chế trong ban điều hành dự án.'}
             </p>
           </div>
 

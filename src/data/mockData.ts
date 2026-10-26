@@ -1948,7 +1948,7 @@ export const mockSystemUserAccounts: SystemUserAccount[] = [
     role_label: 'Chỉ huy trưởng (PM)',
     project_scope: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
     project_id: 'prj-ql1a-02',
-    device_info: 'MacBook Pro M2 / Chrome 128',
+    device_info: 'Web Dashboard / Chrome 128',
     ip_address: '113.161.44.82 (Đà Nẵng)',
     status: 'ACTIVE',
     last_active: 'Vừa xong',
@@ -1962,7 +1962,7 @@ export const mockSystemUserAccounts: SystemUserAccount[] = [
     role: RoleCode.SUPERVISOR,
     role_label: 'Giám sát kỹ thuật',
     project_scope: 'Toàn bộ gói thầu Hoàng Hải',
-    device_info: 'Dell XPS 15 / Chrome 128',
+    device_info: 'Web Dashboard / Chrome 128',
     ip_address: '14.162.180.20 (Huế)',
     status: 'ACTIVE',
     last_active: '10 phút trước'

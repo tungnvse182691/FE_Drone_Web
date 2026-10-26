@@ -153,7 +153,7 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
         role: newPersonnelRole,
         role_label: roleLabel,
         project_scope: finalScope,
-        device_info: 'Chưa kích hoạt thiết bị',
+        device_info: 'Chưa kích hoạt tài khoản',
         ip_address: 'Chưa có phiên',
         status: 'INVITED', // Chuẩn Spec 17_10: Trạng thái chờ kích hoạt qua link email
         last_active: 'Chờ kích hoạt',

@@ -49,12 +49,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-bold text-slate-900">
-              Danh sách nhân sự &amp; Thiết bị hiện trường
+              Danh sách nhân sự hệ thống
             </h2>
             <p className="text-xs text-slate-500">
               {isSupervisor
-                ? 'Quản lý phiên đăng nhập thực tế, thiết bị thu thập dữ liệu hiện trường và kiểm soát tài khoản'
-                : 'Danh sách nhân sự và thiết bị trong ban điều hành dự án (Chế độ xem Chỉ huy trưởng PM)'}
+                ? 'Quản lý danh sách tài khoản, vai trò chuyên môn và phân công dự án bảo hành'
+                : 'Danh sách nhân sự trong ban điều hành dự án (Chế độ xem Chỉ huy trưởng PM)'}
             </p>
           </div>
         </div>
@@ -84,20 +84,6 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             <option value={RoleCode.DRONE_OPERATOR}>Kỹ sư Drone</option>
             <option value={RoleCode.REPAIR_CREW}>Đội trưởng thi công</option>
           </select>
-
-          {isSupervisor && (
-            <button
-              type="button"
-              onClick={() => {
-                setAddPersonnelTab('NEW')
-                setShowAddPersonnelModal(true)
-              }}
-              className="px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">mail</span>
-              <span>+ Gửi lời mời nhân sự</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -107,7 +93,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             <tr className="bg-[#F8F9FA] text-slate-700 font-semibold uppercase tracking-wider border-b border-[#EDEFF2] text-[12px]">
               <th className="py-3 px-4">Thành viên &amp; Liên hệ</th>
               <th className="py-3 px-3">Vai trò &amp; Dự án phụ trách</th>
-              <th className="py-3 px-3">Phiên &amp; Thiết bị</th>
+              <th className="py-3 px-3">Đăng nhập gần nhất</th>
               <th className="py-3 px-3">Trạng thái</th>
               <th className="py-3 px-2 text-right">Hành động</th>
             </tr>
@@ -191,22 +177,23 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     </div>
                   </td>
 
-                  {/* Phiên & Thiết bị */}
+                  {/* Đăng nhập gần nhất */}
                   <td className="py-3 px-3">
                     <div className="flex flex-col gap-0.5">
-                      <div
-                        className="text-slate-800 font-medium flex items-center gap-1.5 text-xs truncate max-w-[200px]"
-                        title={u.device_info}
-                      >
+                      <div className="text-slate-800 font-medium flex items-center gap-1.5 text-xs">
                         <span
                           className={`w-2 h-2 rounded-full shrink-0 ${
-                            isSuspended ? 'bg-slate-400' : 'bg-emerald-500'
+                            isSuspended
+                              ? 'bg-slate-400'
+                              : isInvited
+                              ? 'bg-amber-400'
+                              : 'bg-emerald-500'
                           }`}
                         ></span>
-                        <span className="truncate">{u.device_info}</span>
+                        <span>{isInvited ? 'Chưa kích hoạt' : u.last_active}</span>
                       </div>
                       <div className="text-[10px] font-mono text-slate-500 truncate max-w-[200px]">
-                        {u.last_active} • {u.ip_address}
+                        {isInvited ? 'Đã gửi thư mời qua Email' : `IP: ${u.ip_address}`}
                       </div>
                     </div>
                   </td>
@@ -238,7 +225,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                         type="button"
                         onClick={() => setSelectedUserDetail(u)}
                         className="p-1.5 rounded-[8px] border border-slate-200 bg-white hover:border-[#C9A227] hover:text-[#8C6D1F] text-slate-600 transition-all cursor-pointer shadow-2xs shrink-0"
-                        title="Xem chi tiết hồ sơ nhân sự, dự án và thiết bị"
+                        title="Xem chi tiết hồ sơ nhân sự và phân công dự án"
                       >
                         <span className="material-symbols-outlined text-[17px] block">
                           visibility

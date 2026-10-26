@@ -120,7 +120,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
             <h4 className="font-bold text-slate-900 text-xs flex items-center gap-2">
               <Phone className="w-4 h-4 text-brand-gold" />
-              <span>Thông tin liên hệ &amp; Thiết bị hiện trường</span>
+              <span>Thông tin liên hệ &amp; Phiên làm việc</span>
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
@@ -136,9 +136,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 text-[11px] block">Thiết bị đăng nhập gần nhất:</span>
+                <span className="text-slate-500 text-[11px] block">Trạng thái kích hoạt / Phiên:</span>
                 <span className="font-medium text-slate-800">
-                  {selectedUserDetail.device_info}
+                  {selectedUserDetail.status === 'INVITED' ? 'Chưa kích hoạt qua Email' : selectedUserDetail.last_active}
                 </span>
               </div>
               <div>
@@ -174,7 +174,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 <>
                   <li>Thực thi kế hoạch bay khảo sát không ảnh theo lịch trình được PM duyệt.</li>
                   <li>Đồng bộ ảnh thô, dữ liệu trắc địa vệ tinh RTK và nhật ký tọa độ chuyến bay.</li>
-                  <li>Báo cáo an toàn bay, thời tiết và hiện trạng thiết bị phần cứng UAV.</li>
+                  <li>Báo cáo an toàn bay, điều kiện thời tiết và tình trạng kỹ thuật UAV.</li>
                 </>
               ) : (
                 <>
