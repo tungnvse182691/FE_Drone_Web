@@ -66,27 +66,48 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
         {/* Form Body */}
         <div className="space-y-3.5 text-xs">
           {/* Hồ sơ phản ánh tiếp nhận gốc */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-            <div className="flex items-center justify-between">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="font-bold text-slate-800">Hồ sơ phản ánh tiếp nhận:</span>
               <span className="font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                 {targetTriageCase.code}
               </span>
             </div>
-            <div className="flex items-center justify-between text-slate-700">
-              <span className="font-medium">{targetTriageCase.defect_title}</span>
-              <span className="font-mono text-slate-600">
-                {targetTriageCase.stationing} ({targetTriageCase.lane || 'Làn cơ giới'})
-              </span>
+
+            <div className="flex gap-3">
+              {/* Thumbnail ảnh hiện trường người dân gửi (nếu có) */}
+              {targetTriageCase.image_url && (
+                <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-300 shrink-0 bg-slate-200 shadow-2xs">
+                  <img
+                    src={targetTriageCase.image_url}
+                    alt={targetTriageCase.defect_title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback nếu ảnh lỗi
+                      e.currentTarget.src =
+                        'https://images.unsplash.com/photo-1578953186255-a13f70ecb1e5?auto=format&fit=crop&w=400&q=80'
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="font-bold text-slate-900 truncate">{targetTriageCase.defect_title}</span>
+                  <span className="font-mono text-slate-600 text-[11px] shrink-0 ml-2">
+                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Làn xe thô sơ'})
+                  </span>
+                </div>
+                {targetTriageCase.description && (
+                  <p className="text-slate-600 text-[11px] italic bg-white p-1.5 rounded border border-slate-200 line-clamp-2">
+                    "{targetTriageCase.description}"
+                  </p>
+                )}
+                <span className="text-[10px] text-slate-500 block pt-0.5">
+                  Người gửi: {targetTriageCase.reporter_name || targetTriageCase.source_label} • {targetTriageCase.reporter_phone || 'Kênh ứng dụng di động'}
+                </span>
+              </div>
             </div>
-            {targetTriageCase.description && (
-              <p className="text-slate-600 text-[11px] italic bg-white p-2 rounded border border-slate-200 line-clamp-2">
-                "{targetTriageCase.description}"
-              </p>
-            )}
-            <span className="text-[10px] text-slate-500 block pt-0.5">
-              Người gửi: {targetTriageCase.reporter_name || targetTriageCase.source_label} • {targetTriageCase.reporter_phone || 'Kênh ứng dụng di động'}
-            </span>
           </div>
 
           {/* 1. Chọn Dự án bảo hành phụ trách (projectId - Spec 17_10) */}
@@ -97,13 +118,20 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer"
+              className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
-              {mockProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} - {p.name} (Km {p.start_km} &rarr; Km {p.end_km})
-                </option>
-              ))}
+              {mockProjects.map((p) => {
+                // Kiểm tra nếu p.name đã chứa chuỗi Km thì không nối thêm tránh lặp chuỗi
+                const hasKmInName = p.name.includes('Km')
+                const displayLabel = hasKmInName
+                  ? `${p.code} — ${p.name}`
+                  : `${p.code} — ${p.name} (Km ${p.start_km} → Km ${p.end_km})`
+                return (
+                  <option key={p.id} value={p.id}>
+                    {displayLabel}
+                  </option>
+                )
+              })}
             </select>
             {selectedProj && (
               <span className="text-[10px] text-slate-500 mt-1 pl-1">
@@ -112,10 +140,10 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             )}
           </div>
 
-          {/* 2. Định hướng phương thức xác minh (verificationMethod - Spec 17_10 CaseTriageDto) */}
+          {/* 2. Định hướng phương thức xác minh (Spec 17_10 CaseTriageDto.verificationMethod) */}
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1.5">
-              2. Định hướng phương thức xác minh (verificationMethod):
+              2. Định hướng phương thức xác minh:
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -174,11 +202,11 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Chỉ đạo của Giám sát (reason - Spec 17_10) */}
+          {/* 3. Chỉ đạo của Giám sát (Spec 17_10 CaseTriageDto.reason) */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-slate-700">
-                3. Chỉ đạo / Căn cứ điều phối của Giám sát (reason):
+                3. Chỉ đạo / Căn cứ điều phối của Giám sát:
               </label>
               <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
             </div>
@@ -201,25 +229,25 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <span className="text-[11px] text-slate-500 font-medium">
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
+          <span className="text-[11px] text-slate-500 font-medium truncate">
             Người thực hiện: Giám sát / Chủ đầu tư
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             >
               Hủy bỏ
             </button>
             <button
               type="button"
               onClick={handleConfirm}
-              className="px-4 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+              className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >
               <Icon name="domain" size={15} />
-              <span>Xác nhận điều phối (API-024)</span>
+              <span>Xác nhận điều phối</span>
             </button>
           </div>
         </div>
