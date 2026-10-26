@@ -94,8 +94,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               }}
               className="px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>+ Thêm nhân sự</span>
+              <span className="material-symbols-outlined text-[16px]">mail</span>
+              <span>+ Gửi lời mời nhân sự</span>
             </button>
           )}
         </div>

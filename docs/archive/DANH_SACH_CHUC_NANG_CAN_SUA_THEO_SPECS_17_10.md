@@ -15,7 +15,7 @@
 | **2** | **`PM-08`** | **PM** | **Bổ sung nút "Tái sử dụng ảnh phản ánh" (Evidence Reuse)** | `API-084` | `src/pages/(pm)/FieldTasks.tsx` | ✅ **ĐÃ HOÀN THÀNH** |
 | **3** | **`SUP-02`** | **SUP** | **Kích hoạt nút "Điều phối gán dự án (Triage)" cho Supervisor** | `API-024` | `src/pages/(pm)/AIReviewInbox.tsx` (mode SUP) | ✅ **ĐÃ HOÀN THÀNH** |
 | **4** | **`SUP-08`** | **SUP** | **Bổ sung nút "Phê duyệt độ phủ tuyến Fast Track"** | `API-176` | `src/pages/(pm)/FastTrackDispatch.tsx` (mode SUP) | ✅ **ĐÃ HOÀN THÀNH** |
-| **5** | **`SUP-04`** | **SUP** | **Hoàn thiện form "Gửi lời mời nhân sự mới" (Staff Invitations)** | `API-032` | `src/pages/(sup)/SystemControl.tsx` | ⚠️ **CẦN LÀM** |
+| **5** | **`SUP-04`** | **SUP** | **Hoàn thiện form "Gửi lời mời nhân sự mới" (Staff Invitations)** | `API-032` | `src/pages/(sup)/PersonnelManagement.tsx` | ✅ **ĐÃ HOÀN THÀNH** |
 
 ---
 
@@ -113,22 +113,24 @@ Toàn bộ các phân hệ dưới đây đã được đối chiếu, chuẩn h
 ### HẠNG MỤC 5: Hoàn Thiện Form "Gửi Lời Mời Nhân Sự Mới" (`API-032` Staff Invitations)
 
 * **Mã màn hình Spec:** `SUP-04` (Project/user administration)
-* **Vị trí trên Web:** Màn hình Quản trị nhân sự & Tài khoản (`/sup/personnel`, `/sup/system-control` - [SystemControl.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/(sup)/SystemControl.tsx)).
+* **Vị trí trên Web:** Màn hình Quản trị nhân sự & Tài khoản (`/sup/personnel` - [PersonnelManagement.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/(sup)/PersonnelManagement.tsx)).
 * **Căn cứ nghiệp vụ Spec 17_10:**
   - Spec [02_Supervisor-Screen-API-Matrix.md:18 & 58](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/docs/specs/17_10/02_Supervisor-Screen-API-Matrix.md#L18):
     - Endpoint: `POST /api/v1/invitations` (`API-032`).
     - Actor: **Supervisor** (Bearer-only / Web transport).
-    - Cấp quyền nhân sự: `PROJECT_MANAGER`, `OPERATOR`, `CREW`.
-  - Spec [04_API-Contracts/02_Full-API-Catalog.md:399](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/docs/specs/17_10/04_API-Contracts/02_Full-API-Catalog.md#L399):
-    - Body DTO: `{ email, fullName, roleCode, projectId }`.
-* **Hiện trạng cần làm:**
-  - Tại Tab Quản trị nhân sự trong `SystemControl.tsx`:
-    - Hoàn thiện Modal / Form **"Gửi lời mời nhân sự mới"**:
-      + Nhập Họ và tên nhân sự.
-      + Nhập Email công vụ.
-      + Chọn Dự án bảo hành trực thuộc.
-      + Dropdown chọn vai trò được cấp phép: **Chỉ huy trưởng (`PROJECT_MANAGER`)**, **Phi công Drone (`OPERATOR`)**, hoặc **Đội thi công hiện trường (`CREW`)**.
-    - Khi bấm gửi, tạo bản ghi lời mời mới với trạng thái `PENDING_ACTIVATION` và cập nhật danh sách nhân sự dự án (`API-237`).
+    - Cấp quyền nhân sự: `PROJECT_MANAGER`, `DRONE_OPERATOR`, `REPAIR_CREW`.
+  - Spec [04_API-Contracts/03_DTO-and-Schema-Reference.md:548](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/docs/specs/17_10/04_API-Contracts/03_DTO-and-Schema-Reference.md#L548):
+    - Schema `CreateInvitationRequestDto`: `{ email, role, projectIds }`.
+* **Kết quả thực hiện:**
+  - ✅ **Chuẩn hóa Modal Gửi Lời Mời Nhân Sự (`AddPersonnelModal.tsx`)**:
+    - Chuyển đổi tiêu đề & hành động sang đúng luồng **"Gửi Lời Mời Nhân Sự Mới"** qua Email công vụ.
+    - Cấu hình chuẩn 3 vai trò cấp dưới được phép mời: **Chỉ huy trưởng (`PROJECT_MANAGER`)**, **Phi công UAV / Kỹ sư Drone (`DRONE_OPERATOR`)**, **Đội thi công hiện trường (`REPAIR_CREW`)** (Loại bỏ quyền tự mời Supervisor).
+    - Đồng bộ danh mục dự án bảo hành chuẩn hệ thống (`SYSTEM_PROJECTS`: `PRJ-QL1A-02`, `PRJ-QL1A-01`, `PRJ-CT-BN`, `PRJ-PT-DG`).
+  - ✅ **Chuẩn hóa trạng thái bản ghi (`usePersonnelState.ts`)**:
+    - Khi Supervisor gửi thư mời, bản ghi được tạo mang trạng thái **`INVITED` (Chờ kích hoạt qua email)** thay vì tự kích hoạt `ACTIVE`.
+    - Thiết bị hiển thị: *"Chưa kích hoạt thiết bị"*, thời gian hoạt động: *"Chờ kích hoạt"*.
+    - Trên bảng [AccountsTab.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/(sup)/system-control/AccountsTab.tsx) hiển thị badge màu vàng hổ phách: **`CHỜ KÍCH HOẠT`**.
+  - ✅ **Nâng cấp nút hành động trên Header**: Đổi nhãn nút trên `PersonnelManagement.tsx` và `AccountsTab.tsx` thành **`+ Gửi lời mời nhân sự mới`**.
 
 ---
 

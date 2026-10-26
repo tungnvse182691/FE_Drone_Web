@@ -147,17 +147,17 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
 
       const newUser: SystemUserAccount = {
         id: `usr-${Date.now()}`,
-        full_name: newPersonnelName,
-        email: newPersonnelEmail,
-        phone: newPersonnelPhone || '0988.xxx.xxx',
+        full_name: newPersonnelName.trim(),
+        email: newPersonnelEmail.trim().toLowerCase(),
+        phone: newPersonnelPhone.trim() || 'Chưa cập nhật',
         role: newPersonnelRole,
         role_label: roleLabel,
         project_scope: finalScope,
-        device_info: 'Thiết bị mới • Chờ đăng nhập lần đầu',
+        device_info: 'Chưa kích hoạt thiết bị',
         ip_address: 'Chưa có phiên',
-        status: 'ACTIVE',
-        last_active: 'Vừa thêm mới',
-        certificate: newPersonnelCert || 'Hồ sơ nhân sự lưu trữ nội bộ',
+        status: 'INVITED', // Chuẩn Spec 17_10: Trạng thái chờ kích hoạt qua link email
+        last_active: 'Chờ kích hoạt',
+        certificate: newPersonnelCert.trim() || 'Hồ sơ nhân sự lưu trữ nội bộ',
         joined_date: new Date().toLocaleDateString('vi-VN')
       }
 
@@ -170,8 +170,8 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
       setNewPersonnelProject('')
       triggerNotice(
         newPersonnelProject.trim() === ''
-          ? `Đã thêm nhân sự [${newPersonnelName}] (Để trống tuyến - Có thể phân công sau)!`
-          : `Đã thêm nhân sự [${newPersonnelName}] vào dự án [${newPersonnelProject}]!`
+          ? `Đã phát hành thư mời kích hoạt đến [${newPersonnelEmail}] cho nhân sự [${newPersonnelName}]!`
+          : `Đã phát hành thư mời kích hoạt đến [${newPersonnelEmail}] cho nhân sự [${newPersonnelName}] (${newPersonnelProject})!`
       )
     } else {
       if (!assignExistingUserId) return
