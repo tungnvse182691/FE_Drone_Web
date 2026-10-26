@@ -82,6 +82,7 @@ Toàn bộ các phân hệ dưới đây đã được đối chiếu, chuẩn h
     - Chọn Dự án bảo hành phụ trách (`projectId`).
     - Lựa chọn Định hướng phương thức xác minh (`verificationMethod`): *Đo đạc hiện trường (`FIELD`)*, *Khảo sát Drone (`DRONE`)*, hoặc *Ảnh hiện có (`EXISTING_EVIDENCE`)*.
     - Nhập chỉ đạo/căn cứ điều phối của Giám sát (`reason`, tối đa 1000 ký tự).
+    - Hoàn thiện giao diện UI/UX: Cố định nút Hủy bỏ không rớt hàng, loại bỏ lặp chuỗi lý trình dự án, bỏ từ tiếng Anh kỹ thuật, tích hợp thumbnail ảnh hiện trường 64×64 xem trước.
   - ✅ **Cập nhật trạng thái luồng nghiệp vụ**: Sau khi Giám sát xác nhận, ca được chuyển sang `is_assigned: true`, gán mã dự án và chuyển trạng thái sang `Chờ PM thẩm định`. Ca phản ánh lập tức hiển thị trên giao diện của Chỉ huy trưởng để PM bắt đầu thẩm định.
 
 ---
