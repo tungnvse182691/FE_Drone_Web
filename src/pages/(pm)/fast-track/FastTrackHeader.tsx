@@ -53,10 +53,10 @@ export const FastTrackHeader: React.FC<FastTrackHeaderProps> = ({
             onClick={onOpenPolicyModal}
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white text-slate-700 text-xs font-semibold rounded-xl shadow-xs hover:bg-slate-50 border border-slate-200 cursor-pointer transition-colors"
-            title="Lập dự thảo hoặc điều chỉnh chính sách xử lý nhanh (API-162, API-164)"
+            title="Lập dự thảo hoặc điều chỉnh chính sách xử lý nhanh"
           >
             <Icon name="tune" size={16} className="text-brand-gold" />
-            <span>Điều chỉnh chính sách (PM-10)</span>
+            <span>Điều chỉnh chính sách</span>
           </button>
         )}
 

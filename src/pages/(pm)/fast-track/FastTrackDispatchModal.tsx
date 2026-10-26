@@ -70,7 +70,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
         for (const item of selectedItems) {
           map[item.id] = {
             eligible: false,
-            missingReasons: ['Lỗi kết nối khi kiểm tra điều kiện API-146.']
+            missingReasons: ['Lỗi kết nối khi kiểm tra điều kiện kỹ thuật.']
           }
         }
         setEligibilityMap(map)
@@ -159,7 +159,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-rose-800 text-xs">
                 <Icon name="report" size={16} className="text-rose-600 shrink-0" />
-                <span>CHẶN LỆNH: CÓ KHIẾM KHUYẾT KHÔNG ĐỦ ĐIỀU KIỆN XỬ LÝ NHANH (API-146)</span>
+                <span>CHẶN LỆNH: CÓ KHIẾM KHUYẾT VƯỢT NGƯỠNG XỬ LÝ NHANH</span>
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {selectedItems
@@ -244,7 +244,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                       <span>CẢNH BÁO: HƯ HỎNG ĐỦ CHUẨN XỬ LÝ NHANH THÔNG THƯỜNG ({selectedItems[0].code})</span>
                     </div>
                     <p className="text-amber-800 leading-relaxed text-[11px]">
-                      Khiếm khuyết này đủ điều kiện theo API-146 ({currentPolicy.version}). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (xử lý nhanh)</strong> thông thường.
+                      Khiếm khuyết này đủ điều kiện theo quy chuẩn hiện hành ({currentPolicy.version}). Đây là hư hỏng nhỏ đạt chuẩn <strong>Đo &amp; Sửa ngay (xử lý nhanh)</strong>.
                     </p>
                     <div className="text-[11px] text-amber-950 font-bold bg-white/80 p-2 rounded-lg border border-amber-200">
                       ⚡ Bắt buộc Chỉ huy trưởng (PM) phải nhập lý do xuất quân khẩn cấp đặc biệt vào ô bên dưới (tối thiểu 10 ký tự) để phục vụ thanh tra dự án!
@@ -256,10 +256,10 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
                   <div className="p-3 bg-rose-50/90 border border-rose-300 rounded-xl space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-rose-900 text-xs">
                       <Icon name="warning" size={16} className="text-rose-600 shrink-0" />
-                      <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG KHÔNG ĐỦ ĐIỀU KIỆN XỬ LÝ NHANH ({selectedItems[0].code})</span>
+                      <span>ƯU TIÊN KHẨN CẤP 24/7: HƯ HỎNG VƯỢT NGƯỠNG XỬ LÝ NHANH ({selectedItems[0].code})</span>
                     </div>
                     <p className="text-rose-800 leading-relaxed text-[11px]">
-                      Lý do từ API-146: <strong>{reasons.join(', ') || 'Vượt ngưỡng an toàn'}</strong>. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy tắc BR-46 / FR-37.
+                      Căn cứ kỹ thuật: <strong>{reasons.join(', ') || 'Vượt ngưỡng an toàn'}</strong>. Lệnh khẩn cấp này chỉ phục vụ <strong>rào chắn, phân luồng và dặm vá tạm để thông xe nhanh (trong 4h)</strong> theo quy định an toàn giao thông.
                     </p>
                     <div className="text-[11px] text-rose-950 font-bold bg-white/80 p-2 rounded-lg border border-rose-200">
                       🛡️ Hư hỏng gốc KHÔNG bị đóng trên hệ thống và sẽ chuyển sang Giám sát Hậu kiểm (Post-audit).
@@ -343,7 +343,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             {checking ? (
               <>
                 <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
-                <span>Đang kiểm tra API-146...</span>
+                <span>Đang kiểm tra điều kiện kỹ thuật...</span>
               </>
             ) : (
               <>

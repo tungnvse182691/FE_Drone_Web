@@ -2,11 +2,60 @@ import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { RoadCoverageFact, RoadCoverageInputDto } from './types'
 
+export interface AvailableProject {
+  id: string
+  code: string
+  name: string
+  startKm: number
+  endKm: number
+  obligationId: string
+  defaultHandover: string
+}
+
+export const AVAILABLE_PROJECTS: AvailableProject[] = [
+  {
+    id: 'PRJ-QL1A-02',
+    code: 'PRJ-QL1A-02',
+    name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+    startKm: 1020,
+    endKm: 1045,
+    obligationId: 'SCO-QL1A-2026-02',
+    defaultHandover: 'BB-BG-2026/QL1A-GĐ2'
+  },
+  {
+    id: 'PRJ-QL1A-01',
+    code: 'PRJ-QL1A-01',
+    name: 'QL1A - Giai đoạn 1 (Km 1000 - Km 1025)',
+    startKm: 1000,
+    endKm: 1025,
+    obligationId: 'SCO-QL1A-2026-01',
+    defaultHandover: 'BB-BG-2025/QL1A-GĐ1'
+  },
+  {
+    id: 'PRJ-CT-BN',
+    code: 'PRJ-CT-BN',
+    name: 'Đường nối Cao tốc Bắc - Nam (Km 0 - Km 12)',
+    startKm: 0,
+    endKm: 12,
+    obligationId: 'SCO-CTBN-2026-01',
+    defaultHandover: 'BB-BG-2026/CTBN-XL02'
+  },
+  {
+    id: 'PRJ-PT-DG',
+    code: 'PRJ-PT-DG',
+    name: 'Cao tốc Phan Thiết - Dầu Giây (Km 45 - Km 65)',
+    startKm: 45,
+    endKm: 65,
+    obligationId: 'SCO-PTDG-2026-01',
+    defaultHandover: 'BB-BG-2025/PTDG-BH'
+  }
+]
+
 export interface RoadCoverageConfirmModalProps {
   isOpen: boolean
   onClose: () => void
   roadCoverage: RoadCoverageFact
-  onConfirm: (input: RoadCoverageInputDto) => void
+  onConfirm: (input: RoadCoverageInputDto, projectInfo: { projectId: string; projectName: string; fromKm: number; toKm: number }) => void
 }
 
 export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> = ({
@@ -15,29 +64,48 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
   roadCoverage,
   onConfirm
 }) => {
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(roadCoverage.projectId || 'PRJ-QL1A-02')
   const [sourceKind, setSourceKind] = useState<'WARRANTY' | 'MAINTENANCE_BASIS'>(roadCoverage.sourceKind || 'WARRANTY')
   const [handoverVersion, setHandoverVersion] = useState(roadCoverage.handoverVersion || 'BB-BG-2026/QL1A-GĐ2')
   const [applicableFrom, setApplicableFrom] = useState(roadCoverage.applicableFromUtc || '2026-01-01')
   const [applicableTo, setApplicableTo] = useState(roadCoverage.applicableToUtc || '2026-12-31')
   const [reason, setReason] = useState(
     roadCoverage.reason ||
-      'Chấp thuận áp dụng cơ chế xử lý nhanh Fast Track theo Biên bản bàn giao và thẩm định hiện trường đợt 4/2026.'
+      'Chấp thuận áp dụng cơ chế xử lý khẩn cấp theo Biên bản bàn giao và thẩm định hiện trường đợt 4/2026.'
   )
 
   if (!isOpen) return null
 
+  const currentSelectedProj = AVAILABLE_PROJECTS.find((p) => p.id === selectedProjectId) || AVAILABLE_PROJECTS[0]
+
+  const handleProjectChange = (projId: string) => {
+    setSelectedProjectId(projId)
+    const p = AVAILABLE_PROJECTS.find((item) => item.id === projId)
+    if (p) {
+      setHandoverVersion(p.defaultHandover)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onConfirm({
-      scopeObligationId: roadCoverage.scopeObligationId,
-      handoverDocumentId: 'DOC-HD-2026-01',
-      handoverVersion,
-      sourceKind,
-      applicableFromUtc: applicableFrom,
-      applicableToUtc: applicableTo,
-      provenance: 'REAL_SOURCE',
-      reason: reason.trim()
-    })
+    onConfirm(
+      {
+        scopeObligationId: currentSelectedProj.obligationId,
+        handoverDocumentId: 'DOC-HD-2026-01',
+        handoverVersion,
+        sourceKind,
+        applicableFromUtc: applicableFrom,
+        applicableToUtc: applicableTo,
+        provenance: 'REAL_SOURCE',
+        reason: reason.trim()
+      },
+      {
+        projectId: currentSelectedProj.id,
+        projectName: currentSelectedProj.name,
+        fromKm: currentSelectedProj.startKm,
+        toKm: currentSelectedProj.endKm
+      }
+    )
   }
 
   return (
@@ -50,14 +118,9 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
               <Icon name="verified_user" size={22} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">Phê Duyệt Độ Phủ Tuyến Bảo Hành</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 font-bold">
-                  API-176
-                </span>
-              </div>
+              <h3 className="text-base font-bold text-slate-900">Phê Duyệt Độ Phủ Tuyến Bảo Hành</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Xác nhận căn cứ pháp lý &amp; phạm vi tuyến đường áp dụng cơ chế xử lý khẩn cấp (SUP-08)
+                Xác nhận căn cứ pháp lý &amp; phạm vi tuyến đường áp dụng cơ chế xử lý khẩn cấp
               </p>
             </div>
           </div>
@@ -72,29 +135,36 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          {/* 1. Tuyến đường & Phạm vi lý trình */}
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800">Tuyến đường bảo hành áp dụng:</span>
-              <span className="font-mono text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                {roadCoverage.projectId}
-              </span>
-            </div>
-            <div className="text-slate-900 font-bold text-sm">
-              {roadCoverage.projectName}
-            </div>
-            <div className="flex items-center gap-2 text-slate-600 font-mono text-[11px]">
-              <Icon name="route" size={14} className="text-amber-800 shrink-0" />
-              <span>Phạm vi: Km {roadCoverage.fromKm} &rarr; Km {roadCoverage.toKm}</span>
-              <span className="text-slate-300">•</span>
-              <span>Mã nghĩa vụ: {roadCoverage.scopeObligationId}</span>
+          {/* 1. Tuyến đường & Phạm vi lý trình (Cho phép chọn linh hoạt) */}
+          <div className="flex flex-col">
+            <label className="font-bold text-slate-700 mb-1">
+              1. Dự án / Tuyến đường bảo hành phê duyệt: <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer"
+            >
+              {AVAILABLE_PROJECTS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} — {p.name}
+                </option>
+              ))}
+            </select>
+
+            <div className="mt-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
+              <div className="flex items-center gap-1.5 font-medium">
+                <Icon name="route" size={14} className="text-amber-800 shrink-0" />
+                <span>Phạm vi: Km {currentSelectedProj.startKm} &rarr; Km {currentSelectedProj.endKm}</span>
+              </div>
+              <span className="font-mono text-slate-500">Mã nghĩa vụ: {currentSelectedProj.obligationId}</span>
             </div>
           </div>
 
-          {/* 2. Căn cứ nguồn pháp lý (sourceKind - Spec 17_10) */}
+          {/* 2. Căn cứ nguồn pháp lý (sourceKind) */}
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1.5">
-              1. Căn cứ nguồn pháp lý trách nhiệm: <span className="text-rose-500">*</span>
+              2. Căn cứ nguồn pháp lý trách nhiệm: <span className="text-rose-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2.5">
               <button
@@ -139,7 +209,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-1 flex flex-col">
               <label className="font-bold text-slate-700 mb-1">
-                2. Số hiệu văn bản: <span className="text-rose-500">*</span>
+                3. Số hiệu văn bản: <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -178,11 +248,11 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
             </div>
           </div>
 
-          {/* 4. Căn cứ / Lý do phê duyệt của Giám sát (reason - Spec 17_10) */}
+          {/* 4. Căn cứ / Lý do phê duyệt của Giám sát */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-slate-700">
-                3. Căn cứ / Lý do phê duyệt của Giám sát: <span className="text-rose-500">*</span>
+                4. Căn cứ / Lý do phê duyệt của Giám sát: <span className="text-rose-500">*</span>
               </label>
               <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
             </div>
@@ -196,11 +266,11 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
             />
           </div>
 
-          {/* Hộp thông báo thẩm quyền Spec 17_10 */}
+          {/* Hộp thông báo thẩm quyền */}
           <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200 text-[11px] text-blue-900 flex items-start gap-2.5">
             <Icon name="check_circle" size={16} className="text-blue-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              Sau khi Giám sát phê duyệt độ phủ tuyến (<strong>API-176</strong>), hệ thống xác nhận phạm vi hiệu lực pháp lý (<strong>Authoritative Road Coverage</strong>). Chỉ huy trưởng dự án (PM) mới đủ điều kiện kích hoạt điều phối nhanh Fast Track cho các hư hỏng nằm trong phạm vi tuyến này.
+              Sau khi Giám sát phê duyệt độ phủ tuyến, phạm vi hiệu lực pháp lý của dự án được xác lập chính thức. Chỉ huy trưởng dự án (PM) mới đủ điều kiện kích hoạt điều phối nhanh cho các hư hỏng nằm trong tuyến đường này.
             </div>
           </div>
 
@@ -231,3 +301,4 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
     </div>
   )
 }
+

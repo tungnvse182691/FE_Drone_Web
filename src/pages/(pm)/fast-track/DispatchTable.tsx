@@ -153,7 +153,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
                   {!isEligible && workMode === 'INSPECT_AND_REPAIR' && (
                     <div className="absolute right-full mr-2 top-0 hidden group-hover:flex items-center px-2.5 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium z-20 shadow-lg pointer-events-none max-w-xs whitespace-normal">
                       <Icon name="lock" size={12} className="text-rose-400 mr-1.5 shrink-0" />
-                      <span>{missingReasons.join('; ') || 'Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn (API-146)'}</span>
+                      <span>{missingReasons.join('; ') || 'Khóa: Đo & Sửa ngay chỉ áp dụng cho lỗi đạt chuẩn quy định'}</span>
                     </div>
                   )}
                   {!isEligible && workMode === 'EMERGENCY' && (
@@ -195,7 +195,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
               <div className="space-y-1.5">
                 <span className="inline-flex items-center gap-1.5 px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#B91C1C] border border-[#E6A8A8]">
                   <Icon name="report" size={13} className="text-[#B91C1C]" />
-                  <span>Không đủ điều kiện (API-146)</span>
+                  <span>Không đủ điều kiện</span>
                 </span>
                 {missingReasons.length > 0 && (
                   <div className="p-2 rounded-lg bg-rose-50/70 border border-rose-200/60 text-[11px] text-rose-800 space-y-1">
@@ -448,13 +448,13 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
               <h3 className="font-bold text-[#B91C1C] text-sm flex items-center gap-2">
                 <span>
                   {isSupervisor
-                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)'
-                    : 'Chặn xuất quân: Phát hiện khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)!'}
+                    ? 'Cảnh báo Giám sát: Phát hiện khiếm khuyết vượt ngưỡng xử lý nhanh'
+                    : 'Chặn xuất quân: Phát hiện khiếm khuyết vượt ngưỡng xử lý nhanh!'}
                 </span>
               </h3>
               <div className="text-slate-700 leading-relaxed space-y-1">
                 <p>
-                  Hệ thống kiểm tra qua <strong>API-146</strong> xác định các khiếm khuyết sau không đủ điều kiện xử lý nhanh:
+                  Hệ thống kiểm tra xác định các khiếm khuyết sau không đủ điều kiện xử lý nhanh:
                 </p>
                 <div className="space-y-1 pl-1">
                   {selectedItems

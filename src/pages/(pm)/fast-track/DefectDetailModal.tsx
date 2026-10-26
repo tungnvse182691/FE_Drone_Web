@@ -37,7 +37,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
         if (!isMounted) return
         setEligibility({
           eligible: false,
-          missingReasons: ['Không thể kiểm tra điều kiện (API-146).']
+          missingReasons: ['Không thể kiểm tra điều kiện kỹ thuật.']
         })
       })
       .finally(() => {
@@ -68,7 +68,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
               {checking ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
                   <Icon name="progress_activity" size={10} className="animate-spin text-slate-500" />
-                  <span>Đang kiểm tra API-146...</span>
+                  <span>Đang kiểm tra điều kiện...</span>
                 </span>
               ) : (
                 <span
@@ -78,7 +78,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
                       : 'bg-rose-100 text-rose-800'
                   }`}
                 >
-                  {isEligible ? 'Đạt chuẩn xử lý nhanh' : 'Không đủ điều kiện (API-146)'}
+                  {isEligible ? 'Đạt chuẩn xử lý nhanh' : 'Không đủ điều kiện'}
                 </span>
               )}
             </div>
@@ -115,7 +115,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1">
               <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
                 <Icon name="report" size={14} className="text-rose-600 shrink-0" />
-                <span>Lý do không đủ điều kiện xử lý nhanh (API-146):</span>
+                <span>Lý do không đủ điều kiện xử lý nhanh:</span>
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {missingReasons.length > 0 ? (

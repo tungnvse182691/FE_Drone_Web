@@ -45,7 +45,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách do Chỉ huy trưởng (PM) lập dự thảo &amp; xuất bản (API-162..167) • Căn cứ phạm vi tuyến được cấp phép (API-175)
+                Chính sách do Chỉ huy trưởng (PM) lập dự thảo &amp; xuất bản • Căn cứ phạm vi tuyến bảo hành được phê duyệt
               </p>
             </div>
           </div>
@@ -55,17 +55,17 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
                   <Icon name="visibility" size={14} className="text-slate-400" />
-                  <span>Chế độ Giám sát: Theo dõi &amp; Thẩm duyệt (SUP-08)</span>
+                  <span>Chế độ Giám sát: Theo dõi &amp; Thẩm duyệt</span>
                 </span>
                 {onOpenRoadCoverageModal && (
                   <button
                     onClick={onOpenRoadCoverageModal}
                     type="button"
                     className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C9A227] hover:bg-[#b08d20] text-white text-xs font-bold rounded-lg border border-amber-400 shadow-2xs cursor-pointer transition-colors"
-                    title="Phê duyệt hoặc cập nhật độ phủ tuyến đường bảo hành áp dụng cơ chế xử lý khẩn cấp (API-176)"
+                    title="Phê duyệt hoặc cập nhật độ phủ tuyến đường bảo hành áp dụng cơ chế xử lý khẩn cấp"
                   >
                     <Icon name="verified" size={14} />
-                    <span>Phê duyệt độ phủ tuyến (API-176)</span>
+                    <span>Phê duyệt độ phủ tuyến</span>
                   </button>
                 )}
               </div>
@@ -73,14 +73,14 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
                   <Icon name="manage_accounts" size={14} className="text-brand-gold" />
-                  <span>Quyền PM: Lập dự thảo &amp; Xuất bản (API-162..167)</span>
+                  <span>Quyền PM: Lập dự thảo &amp; Xuất bản chính sách</span>
                 </span>
                 {onOpenPolicyModal && (
                   <button
                     onClick={onOpenPolicyModal}
                     type="button"
                     className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
-                    title="Chỉnh sửa hoặc lập dự thảo chính sách xử lý nhanh mới (API-162, API-164)"
+                    title="Chỉnh sửa hoặc lập dự thảo chính sách xử lý nhanh mới"
                   >
                     <Icon name="tune" size={14} className="text-brand-gold" />
                     <span>Điều chỉnh chính sách</span>
@@ -91,7 +91,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           </div>
         </div>
 
-        {/* 1.1. KHỐI THÔNG TIN ĐỘ PHỦ TUYẾN ĐƯỜNG BẢO HÀNH (API-175, API-176 - SUP-08) */}
+        {/* 1.1. KHỐI THÔNG TIN ĐỘ PHỦ TUYẾN ĐƯỜNG BẢO HÀNH */}
         {roadCoverage && (
           <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs">
             <div className="flex items-start md:items-center gap-2.5 min-w-0">
@@ -101,7 +101,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-slate-900">
-                    Phạm vi tuyến bảo hành cấp phép (API-175):
+                    Phạm vi tuyến bảo hành cấp phép:
                   </span>
                   <span className="font-semibold text-slate-800">
                     {roadCoverage.projectName}
@@ -130,12 +130,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               {roadCoverage.status === 'CONFIRMED' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
                   <Icon name="check_circle" size={13} className="text-emerald-600" />
-                  <span>ĐỘ PHỦ TUYẾN ĐÃ DUYỆT (API-175)</span>
+                  <span>ĐÃ PHÊ DUYỆT ĐỘ PHỦ BẢO HÀNH</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
                   <Icon name="hourglass_empty" size={13} className="text-amber-800" />
-                  <span>CHỜ DUYỆT ĐỘ PHỦ TUYẾN (API-176)</span>
+                  <span>CHỜ DUYỆT ĐỘ PHỦ BẢO HÀNH</span>
                 </span>
               )}
             </div>
@@ -342,9 +342,9 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                           setIsHistoryModalOpen(false)
                         }}
                         className="px-2.5 py-1 text-[11px] font-bold text-white bg-brand-gold hover:bg-[#B38E1F] rounded-lg transition-colors cursor-pointer shadow-xs"
-                        title="Xuất bản dự thảo này thành chính sách hiệu lực chính thức (API-165)"
+                        title="Xuất bản dự thảo này thành chính sách hiệu lực chính thức"
                       >
-                        Xuất bản (API-165)
+                        Xuất bản chính sách
                       </button>
                     )}
                   </div>

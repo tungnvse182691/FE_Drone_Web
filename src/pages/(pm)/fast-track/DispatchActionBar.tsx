@@ -57,7 +57,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
         if (!isMounted) return
         setSingleItemResult({
           eligible: false,
-          missingReasons: ['Lỗi kiểm tra điều kiện API-146.']
+          missingReasons: ['Lỗi kiểm tra điều kiện kỹ thuật.']
         })
       })
       .finally(() => {
@@ -182,7 +182,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                   {isChecking ? (
                     <>
                       <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
-                      <span>Đang kiểm tra API-146...</span>
+                      <span>Đang kiểm tra điều kiện...</span>
                     </>
                   ) : (
                     <>
@@ -195,8 +195,8 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                   <div className="absolute bottom-full mb-2 right-0 hidden group-hover:flex items-center px-3 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-medium whitespace-nowrap shadow-lg z-30 pointer-events-none">
                     <Icon name="report" size={14} className="text-rose-400 mr-1 shrink-0" />
                     {hasViolationItem || !firstItemEligible
-                      ? `Khóa: ${firstItemMissingReasons[0] || 'Khiếm khuyết không đủ điều kiện xử lý nhanh (API-146)'}`
-                      : 'Quy tắc BR-08: Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
+                      ? `Khóa: ${firstItemMissingReasons[0] || 'Khiếm khuyết không đủ điều kiện xử lý nhanh'}`
+                      : 'Chế độ Đo & Sửa ngay chỉ áp dụng cho đúng 1 lỗi đạt chuẩn'}
                   </div>
                 )}
               </div>
@@ -232,7 +232,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
                     {isChecking ? (
                       <>
                         <Icon name="progress_activity" size={14} className="animate-spin text-slate-500" />
-                        <span>Đang kiểm tra API-146...</span>
+                        <span>Đang kiểm tra điều kiện...</span>
                       </>
                     ) : (
                       <>

@@ -234,17 +234,26 @@ export function useFastTrackPolicy(
     showToast(`Đã kích hoạt thành công ${item.version} làm chính sách hiện hành!`)
   }
 
-  // Supervisor phê duyệt độ phủ tuyến đường bảo hành (API-176)
-  const handleConfirmRoadCoverage = async (input: RoadCoverageInputDto) => {
+  // Supervisor phê duyệt độ phủ tuyến đường bảo hành
+  const handleConfirmRoadCoverage = async (
+    input: RoadCoverageInputDto,
+    projectInfo?: { projectId: string; projectName: string; fromKm: number; toKm: number }
+  ) => {
     try {
+      const targetProjectId = projectInfo?.projectId || roadCoverage.projectId
       const updated = await fastTrackService.confirmRoadCoverage(
-        roadCoverage.projectId,
+        targetProjectId,
         input,
         'Kỹ sư Giám sát / Chủ đầu tư'
       )
-      setRoadCoverage(updated)
+      setRoadCoverage({
+        ...updated,
+        projectName: projectInfo?.projectName || roadCoverage.projectName,
+        fromKm: projectInfo?.fromKm ?? roadCoverage.fromKm,
+        toKm: projectInfo?.toKm ?? roadCoverage.toKm
+      })
       setIsRoadCoverageModalOpen(false)
-      showToast(`ĐÃ PHÊ DUYỆT ĐỘ PHỦ TUYẾN BẢO HÀNH (${updated.projectId}) THÀNH CÔNG! (API-176)`)
+      showToast(`Đã phê duyệt độ phủ tuyến bảo hành (${projectInfo?.projectName || updated.projectId}) thành công!`)
     } catch (err) {
       console.error('Lỗi phê duyệt độ phủ tuyến:', err)
       showToast('Có lỗi xảy ra khi phê duyệt độ phủ tuyến.')
