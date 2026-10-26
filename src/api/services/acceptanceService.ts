@@ -42,6 +42,20 @@ export interface AcceptancePackage {
   completion_date: string
 }
 
+/**
+ * DTO chuẩn Backend Spec 17_10: RepairAttemptReviewInput
+ * Căn cứ: docs/specs/17_10/04_API-Contracts/02_Full-API-Catalog.md (API-158)
+ * Endpoint: POST /api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/attempts/reviews
+ * Quy tắc bất biến: PM review decision bắt buộc là "ACCEPT" hoặc "SUPPLEMENT", tuyệt đối không dùng wire "REWORK".
+ */
+export interface RepairAttemptReviewInput {
+  fieldSubmissionId?: string
+  decision: 'ACCEPT' | 'SUPPLEMENT'
+  reason: string // maxLength: 2000 ký tự
+  notes?: string
+  directives?: string[]
+}
+
 export const INITIAL_ACCEPTANCE_PACKAGES: AcceptancePackage[] = [
   {
     id: 'pkg-08',
@@ -318,12 +332,20 @@ export const acceptanceService = {
   },
 
   /**
-   * Supervisor hoặc PM phát lệnh yêu cầu tái thi công (REWORK)
-   * (POST /api/v1/evidence-closeout/items/:id/rework)
+   * PM thẩm định attempt thi công của Crew và yêu cầu sửa lại / nộp bổ sung (API-158)
+   * POST /api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/attempts/reviews
+   * Căn cứ Spec 17_10 (09_Consumer-API-Crosswalk.md:172, 02_Full-API-Catalog.md:4717-4738):
+   * PM review Decision bắt buộc là "ACCEPT" hoặc "SUPPLEMENT", tuyệt đối không dùng wire "REWORK".
    */
   async reworkCloseoutItem(
     itemId: string,
-    payload: { notes: string; directives: string[] }
+    payload: {
+      notes?: string
+      directives?: string[]
+      decision?: 'SUPPLEMENT' | 'ACCEPT'
+      reason?: string
+      fieldSubmissionId?: string
+    }
   ): Promise<CaseItem> {
     await new Promise((resolve) => setTimeout(resolve, 140))
     const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
@@ -332,13 +354,23 @@ export const acceptanceService = {
     }
     const current = inMemoryCaseItems[index]
     const nextAttempt = (current.attempt_number || 1) + 1
+
+    // Đóng gói payload DTO chuẩn API-158: decision = 'SUPPLEMENT', reason <= 2000 ký tự
+    const decision: 'SUPPLEMENT' | 'ACCEPT' = payload.decision || 'SUPPLEMENT'
+    const fullReason = (
+      payload.reason ||
+      (payload.directives && payload.directives.length > 0
+        ? `${payload.directives.join('; ')}${payload.notes ? `. Ghi chú: ${payload.notes}` : ''}`
+        : payload.notes || 'Chưa đạt tiêu chuẩn kỹ thuật thi công TCVN 8819:2011')
+    ).slice(0, 2000)
+
     inMemoryCaseItems[index] = {
       ...current,
       status: 'REWORK_REQUIRED',
       status_label: `YÊU CẦU SỬA LẠI (LẦN ${nextAttempt})`,
       attempt_number: nextAttempt,
-      rework_reason: payload.notes,
-      rework_directives: payload.directives
+      rework_reason: fullReason,
+      rework_directives: payload.directives || []
     }
     if (current.package_id && inMemoryClosedPackageIds.has(current.package_id)) {
       inMemoryClosedPackageIds.delete(current.package_id)

@@ -5,6 +5,7 @@ import { RoleCode } from '../../types/enums'
 import { fieldTaskService } from '../../api/services/fieldTaskService'
 import { conflictService } from '../../api/services/conflictService'
 import { SyncConflictItem, ResolutionStatus, FieldTask } from '../../types/domain'
+import { mockProjects } from '../../data/mockData'
 import { Icon } from '../../components/ui/Icon'
 import { FieldTasksHeader } from './field-tasks/FieldTasksHeader'
 import { ConflictsTab } from './field-tasks/ConflictsTab'
@@ -19,6 +20,13 @@ export const FieldTasks: React.FC = () => {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
+
+  // Danh mục tuyến đường / dự án mà vai trò người dùng được phân công
+  const availableProjects = useMemo(() => {
+    return mockProjects
+  }, [])
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL')
 
   // Tab chuyển đổi: Nhật ký đo đạc hiện trường (Ưu tiên mặc định cho PM-12) vs Xử lý xung đột
   const [activeTab, setActiveTab] = useState<'CONFLICTS' | 'MEASUREMENTS'>(
@@ -37,13 +45,26 @@ export const FieldTasks: React.FC = () => {
   const [fieldTasks, setFieldTasks] = useState<FieldTask[]>([])
   const [isLoadingTasks, setIsLoadingTasks] = useState<boolean>(true)
 
-  const loadTasks = async () => {
+  const loadTasks = async (projId: string = selectedProjectId) => {
     setIsLoadingTasks(true)
     try {
-      const data = await fieldTaskService.getTasks()
+      const data = await fieldTaskService.getTasks({
+        projectId: projId
+      })
       setFieldTasks(data)
     } finally {
       setIsLoadingTasks(false)
+    }
+  }
+
+  const handleSelectProject = (projId: string) => {
+    setSelectedProjectId(projId)
+    loadTasks(projId)
+    const p = mockProjects.find((x) => x.id === projId)
+    if (p) {
+      showToast(`Đã lọc tuyến đường: ${p.code} - ${p.name}`, 'info')
+    } else {
+      showToast('Đang hiển thị toàn bộ các tuyến đường phụ trách', 'info')
     }
   }
 
@@ -140,7 +161,11 @@ export const FieldTasks: React.FC = () => {
         fieldTaskService.resetTasks(),
         conflictService.resetConflicts()
       ])
-      setFieldTasks(resetTasks)
+      const filteredTasks =
+        selectedProjectId !== 'ALL'
+          ? resetTasks.filter((t) => t.project_id === selectedProjectId)
+          : resetTasks
+      setFieldTasks(filteredTasks)
       setConflicts(resetConflicts)
       if (resetConflicts.length > 0) {
         setSelectedConflictId(resetConflicts[0].id)
@@ -229,6 +254,9 @@ export const FieldTasks: React.FC = () => {
         fieldTasks={fieldTasks}
         stats={stats}
         handleResetData={handleResetData}
+        projects={availableProjects}
+        selectedProjectId={selectedProjectId}
+        onSelectProject={handleSelectProject}
       />
 
       {/* View A: Xử Lý Xung Đột Ngoại Tuyến */}
@@ -253,10 +281,12 @@ export const FieldTasks: React.FC = () => {
       {activeTab === 'MEASUREMENTS' && (
         <MeasurementsTab
           fieldTasks={fieldTasks}
-          onRefreshTasks={loadTasks}
+          onRefreshTasks={() => loadTasks(selectedProjectId)}
           highlightCode={highlightCode}
           isLoading={isLoadingTasks}
           showToast={showToast}
+          isSupervisor={isSupervisor}
+          selectedProjectId={selectedProjectId}
         />
       )}
 

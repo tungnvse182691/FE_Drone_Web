@@ -97,6 +97,8 @@ export interface RepairBatch {
 export interface FieldTask {
   id: string
   code: string
+  project_id?: string
+  project_name?: string
   defect_id: string
   defect_code: string
   defect_name?: string
@@ -114,6 +116,20 @@ export interface FieldTask {
   gps_lng?: number
   exif_device?: string
   exif_captured_at?: string
+  source_origin?: 'DRONE' | 'CITIZEN_REPORT'
+  linked_case_code?: string
+  reporter_name?: string
+  reporter_phone?: string
+  report_description?: string
+  reused_evidence?: {
+    file_id: string
+    source_evidence_id: string
+    source_kind: string
+    checksum_sha256?: string
+    reason: string
+    reused_at?: string
+    photo_url?: string
+  }
 }
 
 export interface WorkOrder {

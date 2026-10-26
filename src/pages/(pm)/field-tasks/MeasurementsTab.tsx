@@ -1,18 +1,25 @@
 import React, { useState, useMemo } from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
-import { FieldTask } from '../../../types/domain'
+import { FieldTask, Defect } from '../../../types/domain'
+import { mockDefects } from '../../../data/mockData'
 import { SafeImage } from '../../../components/common/SafeImage'
-import { fieldTaskService, CreateFieldTaskPayload } from '../../../api/services/fieldTaskService'
+import {
+  fieldTaskService,
+  CreateFieldTaskPayload,
+  FieldEvidenceReuseInput
+} from '../../../api/services/fieldTaskService'
 import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModal'
 import { ImageComparisonSlider } from '../../../components/common/ImageComparisonSlider'
 
 export interface MeasurementsTabProps {
   fieldTasks: FieldTask[]
-  onRefreshTasks: () => Promise<void>
+  onRefreshTasks: (projId?: string) => Promise<void>
   highlightCode: string | null
   isLoading?: boolean
   showToast?: (msg: string, type?: 'success' | 'info' | 'error') => void
+  isSupervisor?: boolean
+  selectedProjectId?: string
 }
 
 export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
@@ -20,7 +27,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   onRefreshTasks,
   highlightCode,
   isLoading = false,
-  showToast
+  showToast,
+  isSupervisor = false,
+  selectedProjectId = 'ALL'
 }) => {
   // Bộ lọc trạng thái & từ khóa
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
@@ -34,14 +43,97 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     }
   }
 
+  // Danh mục khiếm khuyết trong dự án để PM chọn khi tạo lệnh đo đạc
+  const availableDefects = useMemo(() => {
+    if (!selectedProjectId || selectedProjectId === 'ALL') {
+      return mockDefects
+    }
+    return mockDefects.filter((d) => d.project_id === selectedProjectId)
+  }, [selectedProjectId])
+
   // Modal Tạo nhiệm vụ mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [selectedDefectId, setSelectedDefectId] = useState<string>('')
   const [newDefectCode, setNewDefectCode] = useState('DEF-2026-0842')
+  const [newDefectName, setNewDefectName] = useState('Vỡ góc bản / Ổ gà góc tấm BTXM')
+  const [newDefectPhoto, setNewDefectPhoto] = useState<string | undefined>(undefined)
   const [newChainage, setNewChainage] = useState(1025.4)
   const [newLane, setNewLane] = useState('Làn cơ giới 1')
   const [newMethod, setNewMethod] = useState('Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách')
+  const [isCustomMethod, setIsCustomMethod] = useState(false)
+  const [customMethodText, setCustomMethodText] = useState('')
   const [newTechnician, setNewTechnician] = useState('Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)')
   const [newNotes, setNewNotes] = useState('Kiểm tra đo đạc chi tiết theo yêu cầu PM')
+
+  // Chọn khiếm khuyết từ danh sách Drone/khảo sát
+  const handleSelectDefect = (defectId: string) => {
+    setSelectedDefectId(defectId)
+    if (defectId === 'CUSTOM' || !defectId) {
+      setNewDefectCode('')
+      setNewDefectName('Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường')
+      setNewDefectPhoto(undefined)
+      setNewLane('Làn cơ giới 1')
+      return
+    }
+    const def = availableDefects.find((d) => d.id === defectId)
+    if (def) {
+      setNewDefectCode(def.code)
+      setNewChainage(def.chainage_km)
+      setNewDefectPhoto(def.image_url)
+
+      // 1. Tự động xác định làn đường dựa trên loại tuyến & vị trí ngang (X) của Bounding Box
+      if (def.project_id === 'prj-gtnt-hailang') {
+        setNewLane('Làn xe hỗn hợp (Đường liên xã 1 làn)')
+      } else if (def.bounding_box) {
+        if (def.bounding_box.x < 0.35) {
+          setNewLane('Làn cơ giới 1 (Sát dải phân cách)')
+        } else if (def.bounding_box.x < 0.65) {
+          setNewLane('Làn cơ giới 2 (Làn giữa)')
+        } else {
+          setNewLane('Làn 3 / Làn dừng khẩn cấp')
+        }
+      } else {
+        setNewLane('Làn cơ giới 1')
+      }
+
+      // 2. Tự động đề xuất phương pháp đo theo loại hư hỏng
+      let typeLabel = 'Hư hỏng mặt đường BTXM'
+      let suggestedMethod = 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách'
+      const dt = String(def.defect_type || '').toUpperCase()
+      if (dt.includes('POTHOLE') || dt.includes('SPALLING')) {
+        typeLabel = 'Vỡ góc bản / Ổ gà mép tấm BTXM'
+        suggestedMethod = 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách'
+      } else if (dt.includes('CRACK') || dt.includes('CORNER')) {
+        typeLabel = 'Nứt bê tông / Hở khe nối ngang tấm'
+        suggestedMethod = 'Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM'
+      } else if (dt.includes('RUTTING')) {
+        typeLabel = 'Vệt hằn lún bánh xe / Chênh cốt tấm BTXM'
+        suggestedMethod = 'Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe'
+      }
+      setNewDefectName(typeLabel)
+      setNewMethod(suggestedMethod)
+      setIsCustomMethod(false)
+      setCustomMethodText('')
+      setNewNotes(`Yêu cầu đo đạc kiểm tra thực địa cho khiếm khuyết ${def.code} do Drone phát hiện tại Km ${def.chainage_km}`)
+    }
+  }
+
+  // Mở modal tạo nhiệm vụ với khiếm khuyết đầu tiên có sẵn
+  const handleOpenCreateModal = () => {
+    setIsCustomMethod(false)
+    setCustomMethodText('')
+    if (availableDefects.length > 0) {
+      handleSelectDefect(availableDefects[0].id)
+    } else {
+      setSelectedDefectId('CUSTOM')
+      setNewDefectCode('DEF-2026-0842')
+      setNewChainage(1025.4)
+      setNewDefectName('Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường')
+      setNewDefectPhoto(undefined)
+      setNewLane('Làn cơ giới 1')
+    }
+    setIsCreateModalOpen(true)
+  }
 
   // Modal Ghi nhận số đo
   const [isSubmitValueModalOpen, setIsSubmitValueModalOpen] = useState(false)
@@ -51,11 +143,20 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
   // Modal Xem chi tiết & Ảnh thước đo
   const [selectedDetailTask, setSelectedDetailTask] = useState<FieldTask | null>(null)
-  const [modalPhotoTab, setModalPhotoTab] = useState<'RULER' | 'DRONE' | 'SPLIT'>('RULER')
+  const [modalPhotoTab, setModalPhotoTab] = useState<'RULER' | 'DRONE' | 'SPLIT' | 'REUSED'>('RULER')
 
   // Modal Lightbox Phóng to ảnh & So sánh song song
   const [lightboxTask, setLightboxTask] = useState<FieldTask | null>(null)
   const [lightboxInitialMode, setLightboxInitialMode] = useState<'PRIMARY' | 'SECONDARY' | 'SPLIT'>('PRIMARY')
+
+  // Modal Tái sử dụng ảnh phản ánh (API-084 Evidence Reuse)
+  const [isReuseModalOpen, setIsReuseModalOpen] = useState(false)
+  const [taskForReuse, setTaskForReuse] = useState<FieldTask | null>(null)
+  const [reuseSourceKind] = useState<'CITIZEN_REPORT'>('CITIZEN_REPORT')
+  const [reuseReason, setReuseReason] = useState<string>(
+    'Ảnh người dân phản ánh có góc chụp rõ nét, tọa độ GPS trùng khớp với vị trí khiếm khuyết (< 1.5m), đủ điều kiện kỹ thuật làm bằng chứng đối chứng trước thi công.'
+  )
+  const [isSubmittingReuse, setIsSubmittingReuse] = useState(false)
 
   // Đếm theo từng trạng thái phục vụ hiển thị số lượng trên Tab lọc
   const counts = useMemo(() => {
@@ -94,11 +195,19 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const finalMethod = isCustomMethod
+        ? (customMethodText.trim() || 'Phương pháp đo chuyên dụng theo chỉ định PM')
+        : newMethod
+
       const payload: CreateFieldTaskPayload = {
+        project_id: selectedProjectId !== 'ALL' ? selectedProjectId : 'prj-ql1a-02',
+        defect_id: selectedDefectId && selectedDefectId !== 'CUSTOM' ? selectedDefectId : undefined,
         defect_code: newDefectCode.trim().toUpperCase(),
+        defect_name: newDefectName || 'Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường',
+        defect_photo_url: newDefectPhoto,
         chainage_km: Number(newChainage) || 1025.4,
         lane: newLane,
-        measurement_type: newMethod,
+        measurement_type: finalMethod,
         technician_name: newTechnician,
         notes: newNotes
       }
@@ -171,6 +280,48 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       notify(`Lỗi: ${err?.message || 'Không thể xác minh'}`, 'error')
     } finally {
       setActionLoadingId(null)
+    }
+  }
+
+  // Mở modal phê duyệt tái sử dụng ảnh phản ánh (API-084)
+  const handleOpenReuseModal = (task: FieldTask) => {
+    setTaskForReuse(task)
+    if (task.reused_evidence) {
+      setReuseReason(task.reused_evidence.reason)
+    } else {
+      setReuseReason(
+        'Ảnh người dân phản ánh có góc chụp rõ nét, tọa độ GPS trùng khớp với vị trí khiếm khuyết (< 1.5m), đủ điều kiện kỹ thuật làm bằng chứng đối chứng trước thi công.'
+      )
+    }
+    setIsReuseModalOpen(true)
+  }
+
+  // Xác nhận gọi API-084 Tái sử dụng ảnh phản ánh
+  const handleConfirmReuseEvidence = async () => {
+    if (!taskForReuse) return
+    setIsSubmittingReuse(true)
+    try {
+      const payload: FieldEvidenceReuseInput = {
+        fileId: `file-ev-${taskForReuse.id}-${Date.now()}`,
+        sourceEvidenceId: `src-rep-${taskForReuse.defect_id}`,
+        sourceKind: reuseSourceKind,
+        expectedChecksum: '8f4c28b7e21a81239c0fae31245e3ab2140c8f59d18b2f901a1c97a9f731c512',
+        reason: reuseReason.trim()
+      }
+      const updated = await fieldTaskService.reuseEvidence(taskForReuse.id, payload)
+      await onRefreshTasks()
+      if (selectedDetailTask && selectedDetailTask.id === taskForReuse.id) {
+        setSelectedDetailTask(updated)
+      }
+      setIsReuseModalOpen(false)
+      notify(
+        `Đã phê duyệt tái sử dụng ảnh phản ánh Người dân (API-084) cho phiếu [${taskForReuse.code}]!`,
+        'success'
+      )
+    } catch (err: any) {
+      notify(`Lỗi khi tái sử dụng ảnh: ${err?.message || 'Thao tác thất bại'}`, 'error')
+    } finally {
+      setIsSubmittingReuse(false)
     }
   }
 
@@ -276,7 +427,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
           <button
             type="button"
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs"
           >
             <Icon name="add" size={15} />
@@ -390,19 +541,47 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       <span>{task.technician_name}</span>
                     </td>
 
-                    {/* Ảnh đối chứng (Drone & Thước đo) */}
+                    {/* Ảnh đối chứng (Cặp Trước - Sau: Hiện trạng vs Thước đo) */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-1.5">
-                        {/* 1. Ảnh Drone khảo sát ban đầu */}
-                        {task.defect_photo_url && (
+                      <div className="flex items-center gap-2">
+                        {/* 1. ẢNH TRƯỚC (Before): Hiện trạng ban đầu hoặc Ảnh phản ánh được duyệt API-084 */}
+                        {task.reused_evidence ? (
+                          <div className="flex flex-col items-start gap-0.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTaskForReuse(task)
+                                setIsReuseModalOpen(true)
+                              }}
+                              className="relative group w-11 h-11 rounded-lg overflow-hidden border border-amber-400 ring-2 ring-amber-300/60 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
+                              title={`Ảnh TRƯỚC: Đã duyệt tái sử dụng từ Phản ánh người dân (API-084)\nLý do: ${task.reused_evidence.reason}\n(Bấm để xem hồ sơ API-084)`}
+                            >
+                              <img
+                                src={
+                                  task.reused_evidence.photo_url ||
+                                  task.defect_photo_url ||
+                                  'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80'
+                                }
+                                alt="Ảnh phản ánh"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                <Icon name="zoom_in" size={14} />
+                              </div>
+                              <span className="absolute bottom-0 inset-x-0 text-[8px] font-mono font-bold text-center py-0.2 bg-amber-900/90 text-amber-200">
+                                Trước • API-084
+                              </span>
+                            </button>
+                          </div>
+                        ) : task.defect_photo_url ? (
                           <button
                             type="button"
                             onClick={() => {
                               setLightboxTask(task)
                               setLightboxInitialMode('SECONDARY')
                             }}
-                            className="relative group w-10 h-10 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
-                            title="Ảnh Drone khảo sát ban đầu (Bấm để phóng to)"
+                            className="relative group w-11 h-11 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
+                            title="Ảnh TRƯỚC: Hiện trạng khảo sát ban đầu từ Drone (Bấm để phóng to)"
                           >
                             <img
                               src={task.defect_photo_url}
@@ -413,12 +592,22 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               <Icon name="zoom_in" size={14} />
                             </div>
                             <span className="absolute bottom-0 inset-x-0 bg-slate-900/80 text-[8px] font-mono font-bold text-amber-300 text-center py-0.2">
-                              Drone
+                              Trước • Drone
                             </span>
                           </button>
+                        ) : (
+                          <div
+                            className="flex flex-col items-center justify-center w-11 h-11 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400 shrink-0"
+                            title="Chưa có ảnh hiện trạng ban đầu"
+                          >
+                            <Icon name="hide_image" size={14} className="text-slate-400" />
+                            <span className="text-[7px] font-medium leading-tight text-center text-slate-500 mt-0.5">
+                              Không ảnh
+                            </span>
+                          </div>
                         )}
 
-                        {/* 2. Ảnh thước đo hiện trường */}
+                        {/* 2. ẢNH SAU (After): Thước đo đối chứng từ Kỹ sư hiện trường */}
                         {task.evidence_photo_url ? (
                           <button
                             type="button"
@@ -426,28 +615,31 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               setLightboxTask(task)
                               setLightboxInitialMode('PRIMARY')
                             }}
-                            className="relative group w-10 h-10 rounded-lg overflow-hidden border border-emerald-300 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
-                            title="Ảnh thước đo đối chứng từ Mobile (Bấm để phóng to)"
+                            className="relative group w-11 h-11 rounded-lg overflow-hidden border border-emerald-400 ring-2 ring-emerald-300/60 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
+                            title="Ảnh SAU: Thước đo đối chứng từ Mobile do Kỹ sư nộp (Bấm để phóng to)"
                           >
                             <img
                               src={task.evidence_photo_url}
-                              alt="Thước đo"
+                              alt="Ảnh thước đo"
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                               <Icon name="zoom_in" size={14} />
                             </div>
-                            <span className="absolute bottom-0 inset-x-0 bg-emerald-900/90 text-[8px] font-mono font-bold text-emerald-200 text-center py-0.2">
-                              Thước đo
+                            <span className="absolute bottom-0 inset-x-0 text-[8px] font-mono font-bold text-center py-0.2 bg-emerald-900/90 text-emerald-200">
+                              Sau • Thước đo
                             </span>
                           </button>
                         ) : (
-                          <span
-                            className="text-[10px] text-slate-400 italic px-1.5 py-0.5 rounded bg-slate-50 border border-dashed border-slate-200 whitespace-nowrap"
-                            title="Chưa có ảnh thước đo (Kỹ sư ngoài hiện trường chưa nộp)"
+                          <div
+                            className="flex flex-col items-center justify-center w-11 h-11 rounded-lg border border-dashed border-slate-300 bg-slate-50 text-slate-400 shrink-0"
+                            title="Ảnh SAU: Đang chờ Kỹ sư hiện trường cắm thước đo chụp nộp về"
                           >
-                            Chờ nộp đo
-                          </span>
+                            <Icon name="straighten" size={14} className="text-slate-400" />
+                            <span className="text-[7px] font-medium leading-tight text-center text-slate-500 mt-0.5">
+                              Chờ đo
+                            </span>
+                          </div>
                         )}
                       </div>
                     </td>
@@ -481,7 +673,38 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           <span>Đang lưu...</span>
                         </span>
                       ) : (
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          {/* Nút Tái sử dụng ảnh phản ánh (API-084) - Chỉ hiện khi chưa có ảnh đo thực tế hoặc đã được duyệt tái sử dụng */}
+                          {task.reused_evidence ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReuseModal(task)}
+                              className="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs bg-amber-100/70 border-amber-300 text-amber-900 hover:bg-amber-200/70"
+                              title={
+                                isSupervisor
+                                  ? 'Giám sát xem bằng chứng ảnh phản ánh đã tái sử dụng (API-084)'
+                                  : 'Xem & cập nhật ảnh phản ánh đã phê duyệt tái sử dụng (API-084)'
+                              }
+                            >
+                              <Icon name="history_edu" size={13} className="text-amber-700" />
+                              <span>Xem ảnh phản ánh</span>
+                            </button>
+                          ) : !isSupervisor &&
+                            !task.reused_evidence &&
+                            (task.source_origin === 'CITIZEN_REPORT' ||
+                              Boolean(task.linked_case_code)) &&
+                            (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS') ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenReuseModal(task)}
+                              className="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs bg-amber-50/70 border-amber-200 text-amber-800 hover:bg-amber-100"
+                              title="Chỉ huy trưởng (PM) tái sử dụng ảnh từ nguồn phản ánh người dân làm bằng chứng đối chứng trước thi công (API-084)"
+                            >
+                              <Icon name="history_edu" size={13} className="text-amber-700" />
+                              <span>Tái sử dụng ảnh</span>
+                            </button>
+                          ) : null}
+
                           <button
                             type="button"
                             onClick={() => setSelectedDetailTask(task)}
@@ -544,64 +767,226 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
+              {/* Chọn khiếm khuyết nguồn từ đợt bay Drone / khảo sát */}
+              <div className="flex flex-col bg-amber-50/60 p-3 rounded-xl border border-amber-200">
+                <label className="font-semibold text-slate-800 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Icon name="search_insights" size={15} className="text-[#C9A227]" />
+                    <span>Chọn khiếm khuyết cần đo đạc (từ dữ liệu khảo sát Drone)</span>
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-bold px-1.5 py-0.2 rounded bg-amber-100 border border-amber-200">
+                    {availableDefects.length} khiếm khuyết trong tuyến
+                  </span>
+                </label>
+                <select
+                  value={selectedDefectId}
+                  onChange={(e) => handleSelectDefect(e.target.value)}
+                  className="w-full bg-white border border-amber-300 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer font-medium"
+                >
+                  {availableDefects.map((d) => {
+                    const existingTask = fieldTasks.find((t) => t.defect_code === d.code)
+                    const statusTag = existingTask
+                      ? `[Đã có phiếu ${existingTask.code} - ${existingTask.status === 'VERIFIED' ? 'Đã đo xong' : 'Đang xử lý'}]`
+                      : '[⚡ Chưa đo chiều sâu - Cần đo thực địa]'
+                    const srcTag = d.survey_id ? 'Drone AI' : 'Người dân'
+                    return (
+                      <option key={d.id} value={d.id}>
+                        {statusTag} {d.code} • Km {d.chainage_km} • {d.defect_type} ({srcTag})
+                      </option>
+                    )
+                  })}
+                  <option value="CUSTOM">[+] Tự nhập mã khiếm khuyết khác</option>
+                </select>
+
+                {/* Hộp Preview ảnh Drone & thông số ban đầu khi chọn khiếm khuyết */}
+                {selectedDefectId && selectedDefectId !== 'CUSTOM' ? (
+                  <div className="mt-2.5 p-2 bg-white rounded-lg border border-amber-200/80 flex items-start gap-3 shadow-2xs">
+                    {newDefectPhoto ? (
+                      <div className="w-16 h-14 rounded overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+                        <img src={newDefectPhoto} alt="Drone Preview" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-14 rounded border border-dashed border-slate-300 shrink-0 bg-slate-50 flex items-center justify-center text-slate-400">
+                        <Icon name="photo_camera" size={20} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1 text-[11px] space-y-0.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{newDefectCode}</span>
+                        <span className="text-[10px] text-amber-700 font-medium px-1.5 py-0.2 rounded bg-amber-50 border border-amber-200">
+                          Ảnh Drone gốc
+                        </span>
+                      </div>
+                      <p className="text-slate-800 font-semibold truncate">{newDefectName}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 pt-0.5">
+                        <span>Lý trình: <strong className="text-slate-800">Km {newChainage}</strong></span>
+                        <span>•</span>
+                        <span className="text-amber-800 font-medium bg-amber-50 px-1 rounded">Chưa có số đo chiều sâu (TCVN)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 italic">
+                        Mô hình AI chỉ quét hình học 2D trên mặt đường. Bắt buộc tạo nhiệm vụ này để Kỹ sư hiện trường đo chiều sâu hố / khe nứt vật lý.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2.5 p-2.5 bg-slate-50 rounded-lg border border-dashed border-slate-300 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded border border-slate-200 bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                      <Icon name="add_a_photo" size={20} />
+                    </div>
+                    <div className="text-[11px] text-slate-600">
+                      <span className="font-semibold text-slate-800 block">Đo đạc đột xuất ngoài hiện trường</span>
+                      <span>Chưa có ảnh Drone ban đầu. Kỹ sư sẽ chụp ảnh đối chứng qua app Mobile khi ra đo thực địa.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col">
-                  <label className="font-medium text-slate-700 mb-1">Mã khiếm khuyết <span className="text-rose-500">*</span></label>
+                  <label className="font-medium text-slate-700 mb-1 flex items-center justify-between">
+                    <span>Mã khiếm khuyết <span className="text-rose-500">*</span></span>
+                    {selectedDefectId !== 'CUSTOM' && (
+                      <span className="text-[9px] text-slate-500 flex items-center gap-0.5 font-normal">
+                        <Icon name="lock" size={11} /> Khóa theo Drone
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="text"
                     value={newDefectCode}
                     onChange={(e) => setNewDefectCode(e.target.value)}
                     placeholder="VD: DEF-2026-0842"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] font-mono uppercase"
+                    readOnly={selectedDefectId !== 'CUSTOM'}
+                    className={`w-full border text-xs p-2 rounded-lg font-mono uppercase ${
+                      selectedDefectId !== 'CUSTOM'
+                        ? 'bg-slate-100 border-slate-200 text-slate-700 cursor-not-allowed font-semibold'
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:border-[#C9A227]'
+                    }`}
                     required
                   />
                 </div>
                 <div className="flex flex-col">
-                  <label className="font-medium text-slate-700 mb-1">Lý trình (Km) <span className="text-rose-500">*</span></label>
+                  <label className="font-medium text-slate-700 mb-1 flex items-center justify-between">
+                    <span>Lý trình (Km) <span className="text-rose-500">*</span></span>
+                    {selectedDefectId !== 'CUSTOM' && (
+                      <span className="text-[9px] text-slate-500 flex items-center gap-0.5 font-normal">
+                        <Icon name="lock" size={11} /> Cố định GPS RTK
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     value={newChainage}
                     onChange={(e) => setNewChainage(parseFloat(e.target.value) || 0)}
                     placeholder="VD: 1025.4"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] font-mono"
+                    readOnly={selectedDefectId !== 'CUSTOM'}
+                    className={`w-full border text-xs p-2 rounded-lg font-mono ${
+                      selectedDefectId !== 'CUSTOM'
+                        ? 'bg-slate-100 border-slate-200 text-slate-700 cursor-not-allowed font-semibold'
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:border-[#C9A227]'
+                    }`}
                     required
                   />
                 </div>
               </div>
 
               <div className="flex flex-col">
-                <label className="font-medium text-slate-700 mb-1">Vị trí làn đường</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-medium text-slate-700">Vị trí làn đường</label>
+                  <span className="text-[10px] text-slate-400">Gợi ý từ tọa độ AI (Có thể đối soát lại qua ảnh)</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                  {['Làn cơ giới 1', 'Làn cơ giới 2', 'Làn xe hỗn hợp', 'Làn dừng khẩn cấp'].map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => setNewLane(l)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer border ${
+                        newLane.includes(l)
+                          ? 'bg-amber-100 border-amber-300 text-amber-900 font-bold'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="text"
                   value={newLane}
                   onChange={(e) => setNewLane(e.target.value)}
-                  placeholder="VD: Làn cơ giới 1"
+                  placeholder="VD: Làn cơ giới 1 (Sát dải phân cách)"
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227]"
                 />
               </div>
 
               <div className="flex flex-col">
-                <label className="font-medium text-slate-700 mb-1">Phương pháp & Thiết bị đo <span className="text-rose-500">*</span></label>
-                <select
-                  value={newMethod}
-                  onChange={(e) => setNewMethod(e.target.value)}
-                  className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
-                >
-                  <option value="Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách">
-                    Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách
-                  </option>
-                  <option value="Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM">
-                    Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM
-                  </option>
-                  <option value="Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM">
-                    Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM
-                  </option>
-                  <option value="Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe">
-                    Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe
-                  </option>
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-medium text-slate-700">Phương pháp & Thiết bị đo <span className="text-rose-500">*</span></label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomMethod(!isCustomMethod)
+                      if (!isCustomMethod) setCustomMethodText('')
+                    }}
+                    className="text-[10px] text-[#C9A227] hover:underline font-semibold cursor-pointer flex items-center gap-0.5"
+                  >
+                    <Icon name={isCustomMethod ? 'list' : 'edit'} size={12} />
+                    <span>{isCustomMethod ? 'Chọn danh mục TCVN' : 'Tự nhập phương pháp khác'}</span>
+                  </button>
+                </div>
+                {!isCustomMethod ? (
+                  <select
+                    value={newMethod}
+                    onChange={(e) => {
+                      if (e.target.value === 'CUSTOM') {
+                        setIsCustomMethod(true)
+                        setCustomMethodText('')
+                      } else {
+                        setNewMethod(e.target.value)
+                      }
+                    }}
+                    className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
+                  >
+                    <option value="Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách">
+                      Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách
+                    </option>
+                    <option value="Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM">
+                      Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM
+                    </option>
+                    <option value="Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM">
+                      Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM
+                    </option>
+                    <option value="Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe">
+                      Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe
+                    </option>
+                    <option value="CUSTOM">[+] Phương pháp & thiết bị khác (PM tự nhập)...</option>
+                  </select>
+                ) : (
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={customMethodText}
+                      onChange={(e) => setCustomMethodText(e.target.value)}
+                      placeholder="Nhập phương pháp / thiết bị chuyên dụng (VD: Khoan lấy mẫu lõi bê tông, Thước đo 3m độ võng bánh xe)..."
+                      className="w-full bg-amber-50/40 border border-amber-300 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227]"
+                      autoFocus
+                      required
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>PM được phép chỉ định thiết bị đo đặc thù theo yêu cầu dự toán</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomMethod(false)}
+                        className="text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                      >
+                        Quay lại chọn danh mục
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col">
@@ -612,7 +997,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
                 >
                   <option value="Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)">Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)</option>
-                  <option value="Kỹ sư Lê Quốc Tuấn (Đội tuần đường)">Kỹ sư Lê Quốc Tuấn (Đội tuần đường)</option>
+                  <option value="Kỹ sư Lê Quốc Tuấn (Tổ cơ động 01)">Kỹ sư Lê Quốc Tuấn (Tổ cơ động 01)</option>
                   <option value="Kỹ sư Hoàng Văn Bách (Tổ kết cấu)">Kỹ sư Hoàng Văn Bách (Tổ kết cấu)</option>
                   <option value="Kỹ sư Nguyễn Trọng Hải (Tổ cơ động 01)">Kỹ sư Nguyễn Trọng Hải (Tổ cơ động 01)</option>
                 </select>
@@ -800,6 +1185,22 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </button>
                     )}
 
+                    {/* Tab Ảnh Phản ánh tái sử dụng */}
+                    {selectedDetailTask.reused_evidence && (
+                      <button
+                        type="button"
+                        onClick={() => setModalPhotoTab('REUSED')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer flex items-center gap-1 ${
+                          modalPhotoTab === 'REUSED'
+                            ? 'bg-amber-600 text-white font-semibold'
+                            : 'bg-amber-100 hover:bg-amber-200 text-amber-900'
+                        }`}
+                      >
+                        <Icon name="history_edu" size={11} />
+                        <span>Phản ánh (API-084)</span>
+                      </button>
+                    )}
+
                     {/* Tab Chia đôi nội bộ */}
                     {selectedDetailTask.evidence_photo_url && selectedDetailTask.defect_photo_url && (
                       <button
@@ -915,6 +1316,41 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       </div>
                     </div>
+                  ) : modalPhotoTab === 'REUSED' && selectedDetailTask.reused_evidence ? (
+                    /* 4. CHẾ ĐỘ XEM ẢNH PHẢN ÁNH TÁI SỬ DỤNG (API-084) */
+                    <div
+                      onClick={() => {
+                        handleOpenReuseModal(selectedDetailTask)
+                      }}
+                      className="relative rounded-xl overflow-hidden border border-amber-300 bg-slate-900 shadow-inner group cursor-pointer"
+                    >
+                      <img
+                        src={
+                          selectedDetailTask.reused_evidence.photo_url ||
+                          selectedDetailTask.defect_photo_url ||
+                          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
+                        }
+                        alt="Ảnh phản ánh tái sử dụng"
+                        className="w-full h-56 object-cover object-center group-hover:scale-102 transition-transform duration-200"
+                      />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 bg-amber-950/90 text-amber-200 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg transition-opacity border border-amber-400">
+                          <Icon name="history_edu" size={16} />
+                          <span>Xem chi tiết hồ sơ thẩm định API-084</span>
+                        </span>
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white p-2 rounded-lg text-[11px] flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Icon name="history_edu" size={13} className="text-amber-400" />
+                          <span className="font-medium text-amber-300">
+                            Ảnh phản ánh ({selectedDetailTask.reused_evidence.source_kind === 'CITIZEN_REPORT' ? 'Người dân' : 'Tuần kiểm'})
+                          </span>
+                        </div>
+                        <span className="font-mono text-amber-400 font-bold text-[10px]">
+                          API-084 Approved
+                        </span>
+                      </div>
+                    </div>
                   ) : selectedDetailTask.evidence_photo_url ? (
                     /* 3. CHẾ ĐỘ XEM ẢNH THƯỚC ĐO HIỆN TRƯỜNG */
                     <div
@@ -955,12 +1391,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
                   {/* Thumbnail chuyển đổi nhanh ở phía dưới */}
                   {modalPhotoTab !== 'SPLIT' && (
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
                       {selectedDetailTask.evidence_photo_url && (
                         <button
                           type="button"
                           onClick={() => setModalPhotoTab('RULER')}
-                          className={`flex-1 p-1.5 rounded-lg border text-left transition-colors flex items-center gap-2 cursor-pointer ${
+                          className={`flex-1 min-w-[120px] p-1.5 rounded-lg border text-left transition-colors flex items-center gap-2 cursor-pointer ${
                             modalPhotoTab === 'RULER'
                               ? 'bg-emerald-50/70 border-emerald-300'
                               : 'bg-white border-slate-200 hover:bg-slate-50'
@@ -980,11 +1416,39 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </button>
                       )}
 
+                      {selectedDetailTask.reused_evidence && (
+                        <button
+                          type="button"
+                          onClick={() => setModalPhotoTab('REUSED')}
+                          className={`flex-1 min-w-[120px] p-1.5 rounded-lg border text-left transition-colors flex items-center gap-2 cursor-pointer ${
+                            modalPhotoTab === 'REUSED'
+                              ? 'bg-amber-100/80 border-amber-300'
+                              : 'bg-white border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <img
+                            src={
+                              selectedDetailTask.reused_evidence.photo_url ||
+                              selectedDetailTask.defect_photo_url ||
+                              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
+                            }
+                            alt="Phản ánh"
+                            className="w-10 h-8 rounded object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-[10px] font-bold text-amber-900 block truncate">
+                              Ảnh phản ánh
+                            </span>
+                            <span className="text-[9px] text-amber-700 block">API-084</span>
+                          </div>
+                        </button>
+                      )}
+
                       {selectedDetailTask.defect_photo_url && (
                         <button
                           type="button"
                           onClick={() => setModalPhotoTab('DRONE')}
-                          className={`flex-1 p-1.5 rounded-lg border text-left transition-colors flex items-center gap-2 cursor-pointer ${
+                          className={`flex-1 min-w-[120px] p-1.5 rounded-lg border text-left transition-colors flex items-center gap-2 cursor-pointer ${
                             modalPhotoTab === 'DRONE'
                               ? 'bg-amber-50/70 border-amber-300'
                               : 'bg-white border-slate-200 hover:bg-slate-50'
@@ -1088,6 +1552,34 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     )}
                   </div>
 
+                  {/* Thông tin bằng chứng tái sử dụng (API-084) nếu có */}
+                  {selectedDetailTask.reused_evidence && (
+                    <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-300 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
+                        <Icon name="history_edu" size={15} className="text-amber-700" />
+                        <span>Đã tái sử dụng ảnh phản ánh (API-084)</span>
+                      </div>
+                      <div className="text-[11px] text-amber-900 space-y-0.5">
+                        <p>
+                          <span className="text-amber-700 font-medium">Nguồn dữ liệu: </span>
+                          <span className="font-semibold">
+                            Phản ánh người dân (CITIZEN_REPORT • API-084)
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-amber-700 font-medium">Lý do PM duyệt: </span>
+                          <span>{selectedDetailTask.reused_evidence.reason}</span>
+                        </p>
+                        {selectedDetailTask.reused_evidence.checksum_sha256 && (
+                          <p className="font-mono text-[10px] text-amber-800 break-all">
+                            <span className="text-amber-700 font-sans font-medium">SHA-256: </span>
+                            {selectedDetailTask.reused_evidence.checksum_sha256}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {selectedDetailTask.notes && (
                     <div>
                       <span className="text-slate-500 block text-[11px]">Ghi chú hiện trường:</span>
@@ -1101,11 +1593,42 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
               <span className="text-[11px] text-slate-400">
                 Thẩm quyền: Chỉ huy trưởng (PM) kiểm tra ảnh & xác minh
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Nút Tái sử dụng ảnh phản ánh (API-084) */}
+                {selectedDetailTask.reused_evidence ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenReuseModal(selectedDetailTask)
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    title="Xem & cập nhật thông tin bằng chứng ảnh phản ánh đã phê duyệt tái sử dụng (API-084)"
+                  >
+                    <Icon name="history_edu" size={14} className="text-amber-700" />
+                    <span>Xem ảnh phản ánh (API-084)</span>
+                  </button>
+                ) : !isSupervisor &&
+                  !selectedDetailTask.reused_evidence &&
+                  (selectedDetailTask.source_origin === 'CITIZEN_REPORT' ||
+                    Boolean(selectedDetailTask.linked_case_code)) &&
+                  (selectedDetailTask.status === 'ASSIGNED' || selectedDetailTask.status === 'IN_PROGRESS') ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleOpenReuseModal(selectedDetailTask)
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                    title="Phê duyệt tái sử dụng ảnh từ nguồn phản ánh người dân/tuần kiểm làm bằng chứng đối chứng trước thi công (API-084)"
+                  >
+                    <Icon name="history_edu" size={14} className="text-amber-700" />
+                    <span>Tái sử dụng ảnh phản ánh (API-084)</span>
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={() => setSelectedDetailTask(null)}
@@ -1127,6 +1650,230 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     <Icon name="check" size={15} />
                     <span>Xác minh số liệu này</span>
                   </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: TÁI SỬ DỤNG ẢNH PHẢN ÁNH (API-084 Evidence Reuse) */}
+      {isReuseModalOpen && taskForReuse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-5 border border-slate-200 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
+                  <Icon name="history_edu" size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Tái Sử Dụng Ảnh Phản Ánh Hiện Trường
+                    </h3>
+                    <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
+                      API-084
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Phê duyệt dùng ảnh phản ánh chất lượng cao làm bằng chứng "Trước thi công" cho nhiệm vụ {taskForReuse.code}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReuseModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <Icon name="close" size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Cột trái: Ảnh phản ánh & Metadata GPS/EXIF */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+                    Ảnh phản ánh hiện trường
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
+                    EXIF đã xác thực
+                  </span>
+                </div>
+
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 w-full h-56 sm:h-64 group shadow-inner">
+                  <img
+                    src={
+                      taskForReuse.defect_photo_url ||
+                      'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
+                    }
+                    onError={(e) => {
+                      e.currentTarget.onerror = null
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
+                    }}
+                    alt="Ảnh phản ánh hiện trường"
+                    className="w-full h-full object-cover block"
+                  />
+                  <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 font-semibold">
+                    <Icon name="location_on" size={12} className="text-amber-400" />
+                    <span>Km {taskForReuse.chainage_km}</span>
+                  </div>
+                </div>
+
+                {/* Box Metadata Kỹ thuật */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Tọa độ GPS:</span>
+                    <span className="font-mono font-medium text-slate-800">
+                      {taskForReuse.gps_lat || 16.2458}° N, {taskForReuse.gps_lng || 108.1245}° E
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Độ lệch vị trí:</span>
+                    <span className="text-emerald-700 font-semibold">&lt; 1.5 mét (Đạt chuẩn định vị GPS)</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Thiết bị ghi nhận:</span>
+                    <span className="text-slate-800">
+                      {taskForReuse.exif_device || 'Thiết bị di động hiện trường'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Thời gian chụp:</span>
+                    <span className="text-slate-800">
+                      {taskForReuse.exif_captured_at || taskForReuse.created_at || '2026-08-25 08:35:10'}
+                    </span>
+                  </div>
+                  <div className="pt-1 border-t border-slate-200">
+                    <span className="text-slate-500 block text-[10px]">Mã băm an toàn SHA-256:</span>
+                    <span className="font-mono text-[9px] text-slate-600 block truncate">
+                      8f4c28b7e21a81239c0fae31245e3ab2140c8f59d18b2f901a1c97a9f731c512
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cột phải: Form thẩm duyệt tái sử dụng của PM */}
+              <div className="space-y-3">
+                {/* Thông tin hồ sơ nhiệm vụ */}
+                <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-amber-800 font-medium">Nhiệm vụ:</span>
+                    <span className="font-mono font-bold text-slate-900">{taskForReuse.code}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-amber-800 font-medium">Khiếm khuyết:</span>
+                    <span className="font-mono font-semibold text-slate-800">{taskForReuse.defect_code}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-amber-800 font-medium">Vị trí:</span>
+                    <span className="text-slate-700 font-medium">
+                      Km {taskForReuse.chainage_km} • {taskForReuse.lane || 'Làn cơ giới 1'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hồ sơ nguồn gốc tin báo (Source Provenance) */}
+                <div className="p-3 bg-white rounded-xl border border-amber-300 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                    <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                      <Icon name="assignment" size={14} className="text-amber-700" />
+                      <span>Hồ sơ phản ánh tiếp nhận gốc:</span>
+                    </span>
+                    <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[10px] border border-amber-200">
+                      {taskForReuse.linked_case_code || '#CAS-2026-0839'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px] text-slate-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Người dân phản ánh:</span>
+                      <span className="font-semibold text-slate-900">
+                        {taskForReuse.reporter_name?.includes('(')
+                          ? taskForReuse.reporter_name
+                          : `${taskForReuse.reporter_name || 'Nguyễn Văn A'} (${taskForReuse.reporter_phone || '0905.123.456'})`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Kênh tiếp nhận:</span>
+                      <span className="text-slate-800 font-medium flex items-center gap-1">
+                        <Icon name="smartphone" size={13} className="text-emerald-600" />
+                        <span>Ứng dụng di động phản ánh</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Thời gian tiếp nhận:</span>
+                      <span className="font-mono text-slate-800">21:30, 25/08/2026</span>
+                    </div>
+                    <div className="pt-1">
+                      <span className="text-slate-500 block text-[10px]">Nội dung phản ánh:</span>
+                      <p className="italic text-slate-800 bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] mt-0.5">
+                        "{taskForReuse.report_description || 'Vỡ cạnh mép tấm BTXM lân cận, xe máy va quẹt gồ ghề nguy hiểm.'}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lý do phê duyệt (reason) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-medium text-slate-700">
+                      Lý do phê duyệt của Chỉ huy trưởng <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    value={reuseReason}
+                    onChange={(e) => setReuseReason(e.target.value)}
+                    placeholder="Nhập căn cứ thẩm định của Chỉ huy trưởng..."
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:border-[#C9A227] focus:bg-white transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Người thực hiện: Chỉ huy trưởng dự án
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReuseModalOpen(false)}
+                  disabled={isSubmittingReuse}
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                {!isSupervisor ? (
+                  <button
+                    type="button"
+                    onClick={handleConfirmReuseEvidence}
+                    disabled={isSubmittingReuse || !reuseReason.trim()}
+                    className="px-4 py-1.5 text-xs font-semibold bg-[#C9A227] hover:bg-[#b08d20] disabled:bg-slate-300 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    {isSubmittingReuse ? (
+                      <>
+                        <Icon name="sync" size={14} className="animate-spin" />
+                        <span>Đang lưu phê duyệt...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="check" size={14} />
+                        <span>Xác nhận tái sử dụng ảnh</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-slate-500 italic px-2 py-1">
+                    (Giám sát xem bằng chứng đối soát • Quyền duyệt: Chỉ huy trưởng)
+                  </span>
                 )}
               </div>
             </div>

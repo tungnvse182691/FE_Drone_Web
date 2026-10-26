@@ -14,16 +14,36 @@ let inMemoryTasks: FieldTask[] = JSON.parse(JSON.stringify(mockFieldTasks))
 export interface FieldTaskFilterParams {
   status?: string
   search?: string
+  projectId?: string
 }
 
 export interface CreateFieldTaskPayload {
+  project_id?: string
+  project_name?: string
   defect_id?: string
   defect_code: string
+  defect_name?: string
+  defect_photo_url?: string
   measurement_type: string
   chainage_km: number
   lane?: string
   technician_name: string
   notes?: string
+  source_origin?: 'DRONE' | 'CITIZEN_REPORT'
+  linked_case_code?: string
+}
+
+/**
+ * DTO Tái sử dụng ảnh phản ánh làm bằng chứng trước thi công (API-084)
+ * POST /api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence-reuse
+ * Căn cứ Spec 17_10: 02_Full-API-Catalog.md:3874, 03_DTO-and-Schema-Reference.md:1032
+ */
+export interface FieldEvidenceReuseInput {
+  fileId: string
+  sourceEvidenceId: string
+  sourceKind: string
+  expectedChecksum: string
+  reason: string
 }
 
 export const fieldTaskService = {
@@ -33,6 +53,10 @@ export const fieldTaskService = {
   async getTasks(params?: FieldTaskFilterParams): Promise<FieldTask[]> {
     await new Promise((resolve) => setTimeout(resolve, 80))
     let list = [...inMemoryTasks]
+
+    if (params?.projectId && params.projectId !== 'ALL') {
+      list = list.filter((t) => (t.project_id || 'prj-ql1a-02') === params.projectId)
+    }
 
     if (params?.status && params.status !== 'ALL') {
       list = list.filter((t) => t.status === params.status)
@@ -71,10 +95,12 @@ export const fieldTaskService = {
     const newTask: FieldTask = {
       id: `ft-${Date.now()}`,
       code: `TSK-MEAS-${Math.floor(1000 + Math.random() * 9000)}`,
+      project_id: payload.project_id || 'prj-ql1a-02',
+      project_name: payload.project_name || 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
       defect_id: payload.defect_id || `def-${Date.now()}`,
       defect_code: payload.defect_code.trim().toUpperCase(),
-      defect_name: 'Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường',
-      defect_photo_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
+      defect_name: payload.defect_name || 'Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường',
+      defect_photo_url: payload.defect_photo_url || undefined,
       measurement_type: payload.measurement_type,
       chainage_km: Number(payload.chainage_km) || 1025.4,
       lane: payload.lane || 'Làn cơ giới 1',
@@ -82,6 +108,8 @@ export const fieldTaskService = {
       technician_name: payload.technician_name,
       created_at: new Date().toISOString().split('T')[0],
       notes: payload.notes || 'Lệnh đo đạc phát sinh từ thẩm định kỹ thuật',
+      source_origin: payload.source_origin || 'DRONE',
+      linked_case_code: payload.linked_case_code,
       gps_lat: 16.2405,
       gps_lng: 108.1310,
       exif_device: 'DJI Matrice 350 RTK (Zenmuse P1)',
@@ -152,6 +180,51 @@ export const fieldTaskService = {
     inMemoryTasks[index] = {
       ...inMemoryTasks[index],
       status: 'VERIFIED'
+    }
+
+    return JSON.parse(JSON.stringify(inMemoryTasks[index]))
+  },
+
+  /**
+   * Tái sử dụng ảnh phản ánh làm bằng chứng trước thi công (API-084)
+   * POST /api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence-reuse
+   * Actor: PM (WebCookie)
+   */
+  async reuseEvidence(
+    taskId: string,
+    payload: FieldEvidenceReuseInput,
+    projectId?: string
+  ): Promise<FieldTask> {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    const index = inMemoryTasks.findIndex((t) => t.id === taskId)
+    if (index === -1) {
+      throw new Error(`Không tìm thấy nhiệm vụ đo đạc ID: ${taskId}`)
+    }
+
+    const currentTask = inMemoryTasks[index]
+    const reusedAt = new Date().toISOString()
+
+    // Không ghi đè evidence_photo_url (ảnh thước đo hiện trường của Kỹ sư).
+    // Theo Spec 17_10 (06_FIELD:21): "không biến reused ảnh thành Crew capture mới".
+    // Ảnh phản ánh tái sử dụng được lưu độc lập vào reused_evidence.photo_url.
+    const reusedPhoto =
+      currentTask.defect_photo_url ||
+      'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
+
+    inMemoryTasks[index] = {
+      ...currentTask,
+      reused_evidence: {
+        file_id: payload.fileId,
+        source_evidence_id: payload.sourceEvidenceId,
+        source_kind: payload.sourceKind,
+        checksum_sha256: payload.expectedChecksum,
+        reason: payload.reason,
+        reused_at: reusedAt,
+        photo_url: reusedPhoto
+      },
+      notes: currentTask.notes
+        ? `${currentTask.notes} • [API-084 Tái sử dụng ảnh ${payload.sourceKind}] ${payload.reason}`
+        : `[API-084 Tái sử dụng ảnh ${payload.sourceKind}] ${payload.reason}`
     }
 
     return JSON.parse(JSON.stringify(inMemoryTasks[index]))

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
-import { SyncConflictItem, FieldTask } from '../../../types/domain'
+import { SyncConflictItem, FieldTask, Project } from '../../../types/domain'
 
 export interface FieldTasksHeaderProps {
   isSupervisor: boolean
@@ -18,6 +18,9 @@ export interface FieldTasksHeaderProps {
     rescuePending: number
   }
   handleResetData: () => void
+  projects: Project[]
+  selectedProjectId: string
+  onSelectProject: (projectId: string) => void
 }
 
 export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
@@ -28,8 +31,15 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
   conflicts: _conflicts,
   fieldTasks,
   stats,
-  handleResetData
+  handleResetData,
+  projects,
+  selectedProjectId,
+  onSelectProject
 }) => {
+  const currentProject = useMemo(() => {
+    return projects.find((p) => p.id === selectedProjectId)
+  }, [projects, selectedProjectId])
+
   // Thống kê nhanh các trạng thái đo đạc
   const taskStats = useMemo(() => {
     const assigned = fieldTasks.filter((t) => t.status === 'ASSIGNED').length
@@ -53,40 +63,83 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
         </span>
       </nav>
 
-      {/* 2. HEADER SECTION (MINIMALIST) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-[20px] border border-[#E2E5E9] shadow-2xs">
+      {/* 2. HEADER SECTION (WITH PROJECT / ROUTE SELECTOR) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-[20px] border border-[#E2E5E9] shadow-2xs">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-            {isSupervisor ? 'Nghiệm Thu Hiện Trường' : 'Nhiệm Vụ & Đo Đạc Hiện Trường'}
-          </h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
+              {isSupervisor ? 'Nghiệm Thu Hiện Trường' : 'Nhiệm Vụ & Đo Đạc Hiện Trường'}
+            </h1>
+            {currentProject && (
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                {currentProject.code}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 mt-1">
-            Dự án: <strong className="text-slate-700">QL1A - Giai đoạn 2 (Km 1024 - Km 1045)</strong> • Tiếp nhận kết quả đo thực địa & phân giải xung đột đồng bộ ngoại tuyến.
+            {currentProject ? (
+              <>
+                Dự án: <strong className="text-slate-800 font-semibold">{currentProject.name}</strong> • Lý trình Km {currentProject.start_km} - Km {currentProject.end_km} • Tiếp nhận kết quả đo thực địa & phân giải xung đột.
+              </>
+            ) : (
+              <>
+                Phạm vi: <strong className="text-slate-800 font-semibold">Toàn bộ dự án & tuyến đường phụ trách ({projects.length} tuyến)</strong> • Tiếp nhận kết quả đo thực địa & phân giải xung đột.
+              </>
+            )}
           </p>
         </div>
 
-        {/* Action & Role Pill */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-medium ${
-              isSupervisor
-                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                : 'bg-amber-50 text-amber-800 border-amber-200'
-            }`}
-          >
-            <Icon name="verified_user" size={15} className={isSupervisor ? 'text-purple-600' : 'text-amber-600'} />
-            <span>
-              {isSupervisor ? 'Giám sát (Duyệt cứu hộ)' : 'Chỉ huy trưởng (PM)'}
-            </span>
+        {/* Project Selector & Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          {/* Bộ chọn tuyến đường / dự án */}
+          <div className="relative min-w-[270px]">
+            <select
+              value={selectedProjectId}
+              onChange={(e) => onSelectProject(e.target.value)}
+              className="w-full pl-8 pr-8 py-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-xl border border-slate-300 focus:outline-none focus:border-[#C9A227] text-xs cursor-pointer appearance-none font-semibold transition-all shadow-2xs"
+              title="Lọc nhiệm vụ đo đạc theo tuyến đường dự án mà vai trò được phân công"
+            >
+              <option value="ALL">
+                🌐 Toàn bộ tuyến đường ({projects.length} Dự án)
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  🛣️ {p.code} • {p.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#C9A227]">
+              <Icon name="alt_route" size={15} />
+            </div>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <Icon name="expand_more" size={16} />
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={handleResetData}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Khôi phục dữ liệu mẫu ban đầu để kiểm thử"
-          >
-            <Icon name="refresh" size={15} className="text-[#C9A227]" />
-            <span>Khôi phục mẫu</span>
-          </button>
+
+          {/* Action & Role Pill */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-medium ${
+                isSupervisor
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              }`}
+            >
+              <Icon name="verified_user" size={15} className={isSupervisor ? 'text-purple-600' : 'text-amber-600'} />
+              <span>
+                {isSupervisor ? 'Giám sát (Duyệt cứu hộ)' : 'Chỉ huy trưởng (PM)'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetData}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              title="Khôi phục dữ liệu mẫu ban đầu để kiểm thử"
+            >
+              <Icon name="refresh" size={15} className="text-[#C9A227]" />
+              <span>Khôi phục mẫu</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -122,7 +122,15 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     if (reworkChecklist.other_defect && otherDefectText.trim()) selectedIssues.push(otherDefectText.trim())
 
     try {
+      const combinedReason = (
+        selectedIssues.length > 0
+          ? `${selectedIssues.join('; ')}${reworkNotes ? `. Ghi chú: ${reworkNotes}` : ''}`
+          : reworkNotes.trim() || 'Chưa đạt tiêu chuẩn kỹ thuật thi công TCVN 8819:2011'
+      ).slice(0, 2000)
+
       const updated = await acceptanceService.reworkCloseoutItem(currentItem.id, {
+        decision: 'SUPPLEMENT',
+        reason: combinedReason,
         notes: reworkNotes,
         directives: selectedIssues
       })
@@ -132,7 +140,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         if (refreshedPkg) setCurrentPackage(refreshedPkg)
       }
       setIsReworkModalOpen(false)
-      showToast(`Đã phát lệnh yêu cầu sửa lại (REWORK) cho hạng mục ${currentItem.item_code}!`)
+      showToast(`Đã phát lệnh yêu cầu sửa lại cho hạng mục ${currentItem.item_code}!`)
     } catch (err) {
       showToast('Có lỗi xảy ra khi phát lệnh sửa lại.')
     }
