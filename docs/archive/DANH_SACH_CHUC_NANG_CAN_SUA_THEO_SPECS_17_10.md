@@ -12,9 +12,9 @@
 | STT | Màn hình Spec | Vai trò | Chức năng nghiệp vụ | Mã API Spec 17_10 | File Component / Service | Trạng thái |
 |:---:|:---:|:---:|---|:---:|---|:---:|
 | **1** | **`PM-09`** | **PM** | **Chuẩn hóa DTO khi yêu cầu sửa lại (`SUPPLEMENT` thay vì `REWORK`)** | `API-158` | `src/api/services/acceptanceService.ts` | ✅ **ĐÃ HOÀN THÀNH** |
-| **2** | **`PM-08`** | **PM** | **Bổ sung nút "Tái sử dụng ảnh phản ánh" (Evidence Reuse)** | `API-084` | `src/pages/(pm)/FieldTasks.tsx` | ⚠️ **CẦN LÀM** |
-| **3** | **`SUP-02`** | **SUP** | **Kích hoạt nút "Điều phối gán dự án (Triage)" cho Supervisor** | `API-024` | `src/pages/(pm)/AIReviewInbox.tsx` (mode SUP) | ⚠️ **CẦN LÀM** |
-| **4** | **`SUP-08`** | **SUP** | **Bổ sung nút "Phê duyệt độ phủ tuyến Fast Track"** | `API-176` | `src/pages/(pm)/FastTrackDispatch.tsx` (mode SUP) | ⚠️ **CẦN LÀM** |
+| **2** | **`PM-08`** | **PM** | **Bổ sung nút "Tái sử dụng ảnh phản ánh" (Evidence Reuse)** | `API-084` | `src/pages/(pm)/FieldTasks.tsx` | ✅ **ĐÃ HOÀN THÀNH** |
+| **3** | **`SUP-02`** | **SUP** | **Kích hoạt nút "Điều phối gán dự án (Triage)" cho Supervisor** | `API-024` | `src/pages/(pm)/AIReviewInbox.tsx` (mode SUP) | ✅ **ĐÃ HOÀN THÀNH** |
+| **4** | **`SUP-08`** | **SUP** | **Bổ sung nút "Phê duyệt độ phủ tuyến Fast Track"** | `API-176` | `src/pages/(pm)/FastTrackDispatch.tsx` (mode SUP) | ✅ **ĐÃ HOÀN THÀNH** |
 | **5** | **`SUP-04`** | **SUP** | **Hoàn thiện form "Gửi lời mời nhân sự mới" (Staff Invitations)** | `API-032` | `src/pages/(sup)/SystemControl.tsx` | ⚠️ **CẦN LÀM** |
 
 ---
@@ -104,7 +104,9 @@ Toàn bộ các phân hệ dưới đây đã được đối chiếu, chuẩn h
     - Nhập số hiệu văn bản bàn giao (`handoverVersion`).
     - Chọn khoảng thời gian hiệu lực (`applicableFromUtc` & `applicableToUtc`).
     - Nhập căn cứ / lý do phê duyệt của Giám sát (`reason`).
-  - ✅ **Cập nhật trạng thái luồng**: Sau khi Supervisor bấm xác nhận, hệ thống chuyển trạng thái sang `ĐỘ PHỦ TUYẾN ĐÃ DUYỆT (API-175)`, lưu vết Audit Log và kích hoạt tính hợp lệ (Eligibility) cho cơ chế điều phối khẩn cấp.
+  - ✅ **Cập nhật trạng thái luồng**: Sau khi Supervisor bấm xác nhận, hệ thống chuyển trạng thái sang `ĐÃ PHÊ DUYỆT ĐỘ PHỦ BẢO HÀNH`, lưu vết Audit Log và kích hoạt tính hợp lệ (Eligibility) cho cơ chế điều phối khẩn cấp.
+  - ✅ **Bỏ gán cứng, cho phép chọn linh hoạt Dự án**: Tích hợp danh mục dự án hệ thống (`PRJ-QL1A-02`, `PRJ-QL1A-01`, `PRJ-CT-BN`, `PRJ-PT-DG`), tự động cập nhật phạm vi lý trình (Km $\to$ Km), mã nghĩa vụ pháp lý và số hiệu biên bản bàn giao mẫu tương ứng khi đổi dự án.
+  - ✅ **Dọn dẹp triệt để các mã kỹ thuật / API rác**: Loại bỏ các chuỗi `API-176`, `(SUP-08)`, `API-165`, `API-146`, `API-162` khỏi tất cả các thành phần UI, chuyển toàn bộ sang từ ngữ chuyên môn công trình đường bộ thuần Việt.
 
 ---
 
