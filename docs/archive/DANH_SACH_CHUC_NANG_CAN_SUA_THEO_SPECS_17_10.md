@@ -96,10 +96,15 @@ Toàn bộ các phân hệ dưới đây đã được đối chiếu, chuẩn h
     - Endpoint: `POST /api/v1/projects/{projectId}/road-coverage` (`API-176`).
     - Actor: **Supervisor** (WebCookie).
   - Nghiệp vụ thực tế: PM là người lập và xuất bản chính sách ngưỡng kích thước kỹ thuật (`API-162..167`), nhưng **Giám sát (Supervisor) là người có thẩm quyền phê duyệt danh mục các phân đoạn tuyến đường được phép áp dụng cơ chế xử lý khẩn cấp** (`API-176` Road Coverage Approval).
-* **Hiện trạng cần làm:**
-  - Tại phần *Phạm vi đoạn tuyến cấp phép Fast Track* trong `PolicySection.tsx`, khi vai trò là Supervisor (`isSupervisor === true`):
-    - Hiển thị nút bấm: **`Phê duyệt độ phủ tuyến (API-176)`**.
-    - Cho phép Supervisor xem danh sách các phân đoạn tuyến đang đề xuất áp dụng Fast Track và bấm xác nhận phê duyệt phạm vi hiệu lực.
+* **Kết quả thực hiện:**
+  - ✅ **Hoàn thành phân quyền chuẩn 100%**: Trên màn hình Fast Track (`/sup/fast-track` - `SUP-08`), khi đăng nhập vai trò **Supervisor**, hiển thị nút bấm màu vàng đồng **`Phê duyệt độ phủ tuyến (API-176)`**. Khi đăng nhập vai trò **PM**, hệ thống ẩn nút này (chỉ hiển thị nhãn độ phủ tuyến đã duyệt `API-175`).
+  - ✅ **Tích hợp Sub-Card Độ phủ tuyến bảo hành (`API-175`)**: Hiển thị trực quan thông tin tuyến `PRJ-QL1A-02 (Km 1020 → Km 1045)`, căn cứ hợp đồng bảo hành, số hiệu biên bản bàn giao, thời hạn hiệu lực và trạng thái phê duyệt.
+  - ✅ **Chuẩn hóa Modal Phê Duyệt theo DTO `RoadCoverageInputDto` (`API-176`)**:
+    - Chọn căn cứ nguồn pháp lý (`sourceKind`: `WARRANTY` - Bảo hành công trình hoặc `MAINTENANCE_BASIS` - Bảo dưỡng thường xuyên).
+    - Nhập số hiệu văn bản bàn giao (`handoverVersion`).
+    - Chọn khoảng thời gian hiệu lực (`applicableFromUtc` & `applicableToUtc`).
+    - Nhập căn cứ / lý do phê duyệt của Giám sát (`reason`).
+  - ✅ **Cập nhật trạng thái luồng**: Sau khi Supervisor bấm xác nhận, hệ thống chuyển trạng thái sang `ĐỘ PHỦ TUYẾN ĐÃ DUYỆT (API-175)`, lưu vết Audit Log và kích hoạt tính hợp lệ (Eligibility) cho cơ chế điều phối khẩn cấp.
 
 ---
 

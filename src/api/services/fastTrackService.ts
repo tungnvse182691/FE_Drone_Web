@@ -13,10 +13,12 @@ import {
   DefectItem,
   CrewTeam,
   RouteConfig,
-  WorkMode
+  WorkMode,
+  RoadCoverageFact,
+  RoadCoverageInputDto
 } from '../../pages/(pm)/fast-track/types'
 
-export type { PolicyThresholdConfig }
+export type { PolicyThresholdConfig, RoadCoverageFact, RoadCoverageInputDto }
 
 // ==========================================
 // In-Memory Mock Store (Tuân thủ nguyên tắc Zero localStorage, giả lập RESTful API bất đồng bộ)
@@ -26,6 +28,24 @@ let inMemoryPolicyHistory: PolicyHistoryItem[] = JSON.parse(JSON.stringify(INITI
 let inMemoryAuditLogs: AuditLogItem[] = JSON.parse(JSON.stringify(INITIAL_AUDIT_LOGS))
 let inMemoryDefects: DefectItem[] = JSON.parse(JSON.stringify(INITIAL_DEFECTS))
 let inMemoryCrews: CrewTeam[] = JSON.parse(JSON.stringify(CREW_TEAMS))
+
+const INITIAL_ROAD_COVERAGE: RoadCoverageFact = {
+  projectId: 'PRJ-QL1A-02',
+  projectName: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+  scopeObligationId: 'SCO-QL1A-2026-01',
+  fromKm: 1020,
+  toKm: 1045,
+  sourceKind: 'WARRANTY',
+  handoverVersion: 'BB-BG-2026/QL1A-GĐ2',
+  applicableFromUtc: '2026-01-01',
+  applicableToUtc: '2026-12-31',
+  status: 'PENDING',
+  confirmedBy: undefined,
+  confirmedAt: undefined,
+  reason: undefined
+}
+
+let inMemoryRoadCoverage: RoadCoverageFact = JSON.parse(JSON.stringify(INITIAL_ROAD_COVERAGE))
 
 export interface DispatchPayload {
   defectIds: string[]
@@ -240,5 +260,55 @@ export const fastTrackService = {
       message: `Đã giao thành công ${payload.defectIds.length} vị trí cho [${crewName}]`,
       count: payload.defectIds.length
     }
+  },
+
+  /**
+   * Lấy thông tin độ phủ tuyến bảo hành của dự án (GET /api/v1/projects/{projectId}/road-coverage - API-175)
+   */
+  async getRoadCoverage(projectId?: string): Promise<RoadCoverageFact> {
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    return JSON.parse(JSON.stringify(inMemoryRoadCoverage))
+  },
+
+  /**
+   * Supervisor xác nhận phê duyệt độ phủ tuyến bảo hành (POST /api/v1/projects/{projectId}/road-coverage - API-176)
+   */
+  async confirmRoadCoverage(
+    projectId: string,
+    input: RoadCoverageInputDto,
+    confirmedBy: string = 'Giám sát / Chủ đầu tư'
+  ): Promise<RoadCoverageFact> {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const nowDate = new Date().toLocaleDateString('vi-VN')
+
+    inMemoryRoadCoverage = {
+      ...inMemoryRoadCoverage,
+      projectId,
+      scopeObligationId: input.scopeObligationId || inMemoryRoadCoverage.scopeObligationId,
+      sourceKind: input.sourceKind,
+      handoverVersion: input.handoverVersion,
+      applicableFromUtc: input.applicableFromUtc,
+      applicableToUtc: input.applicableToUtc,
+      status: 'CONFIRMED',
+      confirmedBy,
+      confirmedAt: `${nowTime} ${nowDate}`,
+      reason: input.reason
+    }
+
+    // Ghi Audit Log cho hành động phê duyệt độ phủ tuyến
+    inMemoryAuditLogs = [
+      {
+        title: `Phê duyệt độ phủ tuyến bảo hành (API-176)`,
+        time: `${nowDate} ${nowTime}:00`,
+        user: confirmedBy,
+        hash: `sha256:${Math.random().toString(36).substring(2, 10)}...${Math.random().toString(36).substring(2, 6)}`,
+        note: `Supervisor phê duyệt độ phủ tuyến ${inMemoryRoadCoverage.projectName} (${inMemoryRoadCoverage.fromKm} - ${inMemoryRoadCoverage.toKm}). Văn bản: ${input.handoverVersion}. Căn cứ: ${input.reason}`
+      },
+      ...inMemoryAuditLogs
+    ]
+
+    return JSON.parse(JSON.stringify(inMemoryRoadCoverage))
   }
 }
+

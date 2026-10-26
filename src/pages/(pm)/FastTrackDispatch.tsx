@@ -9,6 +9,7 @@ import { DispatchSection } from './fast-track/DispatchSection'
 import { FastTrackModals } from './fast-track/FastTrackModals'
 import { FastTrackHeader } from './fast-track/FastTrackHeader'
 import { FastTrackBanner } from './fast-track/FastTrackBanner'
+import { RoadCoverageConfirmModal } from './fast-track/RoadCoverageConfirmModal'
 import { useFastTrackState } from './fast-track/useFastTrackState'
 
 export type { RouteConfig } from './fast-track/types'
@@ -26,6 +27,10 @@ export const FastTrackDispatch: React.FC = () => {
     currentPolicy,
     policyHistory,
     auditLogs,
+    roadCoverage,
+    isRoadCoverageModalOpen,
+    setIsRoadCoverageModalOpen,
+    handleConfirmRoadCoverage,
     formVersionName,
     setFormVersionName,
     formMaxArea,
@@ -115,10 +120,13 @@ export const FastTrackDispatch: React.FC = () => {
         currentPolicy={currentPolicy}
         policyHistory={policyHistory}
         isSupervisor={isSupervisor}
+        roadCoverage={roadCoverage}
+        onOpenRoadCoverageModal={() => setIsRoadCoverageModalOpen(true)}
         onActivateDraft={handleActivateDraft}
         onOpenAuditModal={() => setIsAuditModalOpen(true)}
         onOpenPolicyModal={() => setIsPolicyModalOpen(true)}
       />
+
 
       {/* Banner thông báo tự động điều phối khiếm khuyết từ Triage Inbox (Chỉ dành riêng cho PM) */}
       {!isSupervisor && (
@@ -203,6 +211,17 @@ export const FastTrackDispatch: React.FC = () => {
         setDispatchNotes={setDispatchNotes}
         handleExecuteDispatch={handleExecuteDispatch}
       />
+
+      {/* Modal Phê duyệt độ phủ tuyến đường bảo hành (API-176 - SUP-08) */}
+      {roadCoverage && (
+        <RoadCoverageConfirmModal
+          isOpen={isRoadCoverageModalOpen}
+          onClose={() => setIsRoadCoverageModalOpen(false)}
+          roadCoverage={roadCoverage}
+          onConfirm={handleConfirmRoadCoverage}
+        />
+      )}
     </div>
   )
+
 }

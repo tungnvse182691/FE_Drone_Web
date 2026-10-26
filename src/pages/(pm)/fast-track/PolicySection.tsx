@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import type { PolicyThresholdConfig, PolicyHistoryItem } from './types'
+import type { PolicyThresholdConfig, PolicyHistoryItem, RoadCoverageFact } from './types'
 
 export interface PolicySectionProps {
   currentPolicy: PolicyThresholdConfig
   policyHistory: (PolicyHistoryItem | any)[]
   isSupervisor?: boolean
+  roadCoverage?: RoadCoverageFact
+  onOpenRoadCoverageModal?: () => void
   onActivateDraft: (item: any) => void
   onOpenAuditModal: () => void
   onOpenPolicyModal?: () => void
@@ -15,6 +17,8 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
   currentPolicy,
   policyHistory,
   isSupervisor = false,
+  roadCoverage,
+  onOpenRoadCoverageModal,
   onActivateDraft,
   onOpenAuditModal,
   onOpenPolicyModal
@@ -48,10 +52,23 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
 
           <div className="flex items-center gap-2 flex-wrap self-start md:self-center">
             {isSupervisor ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
-                <Icon name="visibility" size={14} className="text-slate-400" />
-                <span>Chế độ Giám sát: Theo dõi thông tin (SUP-08)</span>
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200">
+                  <Icon name="visibility" size={14} className="text-slate-400" />
+                  <span>Chế độ Giám sát: Theo dõi &amp; Thẩm duyệt (SUP-08)</span>
+                </span>
+                {onOpenRoadCoverageModal && (
+                  <button
+                    onClick={onOpenRoadCoverageModal}
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C9A227] hover:bg-[#b08d20] text-white text-xs font-bold rounded-lg border border-amber-400 shadow-2xs cursor-pointer transition-colors"
+                    title="Phê duyệt hoặc cập nhật độ phủ tuyến đường bảo hành áp dụng cơ chế xử lý khẩn cấp (API-176)"
+                  >
+                    <Icon name="verified" size={14} />
+                    <span>Phê duyệt độ phủ tuyến (API-176)</span>
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200">
@@ -74,8 +91,60 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           </div>
         </div>
 
+        {/* 1.1. KHỐI THÔNG TIN ĐỘ PHỦ TUYẾN ĐƯỜNG BẢO HÀNH (API-175, API-176 - SUP-08) */}
+        {roadCoverage && (
+          <div className="p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs">
+            <div className="flex items-start md:items-center gap-2.5 min-w-0">
+              <div className="p-1.5 rounded-lg bg-white border border-slate-200 text-amber-800 shrink-0 mt-0.5 md:mt-0">
+                <Icon name="route" size={16} />
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-slate-900">
+                    Phạm vi tuyến bảo hành cấp phép (API-175):
+                  </span>
+                  <span className="font-semibold text-slate-800">
+                    {roadCoverage.projectName}
+                  </span>
+                  <span className="font-mono text-slate-600 bg-white px-1.5 py-0.2 rounded border border-slate-200 text-[11px]">
+                    Km {roadCoverage.fromKm} &rarr; Km {roadCoverage.toKm}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-500 text-[11px] flex-wrap">
+                  <span>Căn cứ: <strong>{roadCoverage.sourceKind === 'WARRANTY' ? 'Bảo hành công trình' : 'Bảo dưỡng thường xuyên'}</strong></span>
+                  <span>•</span>
+                  <span>Văn bản: <strong className="font-mono">{roadCoverage.handoverVersion}</strong></span>
+                  <span>•</span>
+                  <span>Hiệu lực: <strong className="font-mono">{roadCoverage.applicableFromUtc} &rarr; {roadCoverage.applicableToUtc}</strong></span>
+                  {roadCoverage.confirmedBy && (
+                    <>
+                      <span>•</span>
+                      <span className="text-emerald-700">Duyệt bởi: <strong>{roadCoverage.confirmedBy}</strong> ({roadCoverage.confirmedAt})</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
+              {roadCoverage.status === 'CONFIRMED' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                  <Icon name="check_circle" size={13} className="text-emerald-600" />
+                  <span>ĐỘ PHỦ TUYẾN ĐÃ DUYỆT (API-175)</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+                  <Icon name="hourglass_empty" size={13} className="text-amber-800" />
+                  <span>CHỜ DUYỆT ĐỘ PHỦ TUYẾN (API-176)</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 2. BODY: 4 THẺ CHỈ SỐ KỸ THUẬT ĐỐI XỨNG CÂN ĐỐI (1 HÀNG 4 CỘT) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
           {/* Card 1: Ngưỡng Diện Tích */}
           <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
             <div className="flex items-center justify-between">

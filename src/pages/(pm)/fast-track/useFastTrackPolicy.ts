@@ -3,7 +3,9 @@ import {
   PolicyThresholdConfig,
   PolicyHistoryItem,
   AuditLogItem,
-  DefectItem as DispatchDefectItem
+  DefectItem as DispatchDefectItem,
+  RoadCoverageFact,
+  RoadCoverageInputDto
 } from './types'
 import {
   INITIAL_POLICY,
@@ -12,6 +14,19 @@ import {
 } from './mockData'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 
+const DEFAULT_ROAD_COVERAGE: RoadCoverageFact = {
+  projectId: 'PRJ-QL1A-02',
+  projectName: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
+  scopeObligationId: 'SCO-QL1A-2026-01',
+  fromKm: 1020,
+  toKm: 1045,
+  sourceKind: 'WARRANTY',
+  handoverVersion: 'BB-BG-2026/QL1A-GĐ2',
+  applicableFromUtc: '2026-01-01',
+  applicableToUtc: '2026-12-31',
+  status: 'PENDING'
+}
+
 export function useFastTrackPolicy(
   setDefects: React.Dispatch<React.SetStateAction<DispatchDefectItem[]>>,
   showToast: (msg: string) => void
@@ -19,21 +34,25 @@ export function useFastTrackPolicy(
   const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig>(INITIAL_POLICY)
   const [policyHistory, setPolicyHistory] = useState<PolicyHistoryItem[]>(INITIAL_POLICY_HISTORY)
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS)
+  const [roadCoverage, setRoadCoverage] = useState<RoadCoverageFact>(DEFAULT_ROAD_COVERAGE)
+  const [isRoadCoverageModalOpen, setIsRoadCoverageModalOpen] = useState(false)
 
   // Khởi tạo từ async Mock API Service (Zero localStorage)
   useEffect(() => {
     let isMounted = true
     const loadPolicyData = async () => {
       try {
-        const [pol, hist, logs] = await Promise.all([
+        const [pol, hist, logs, cov] = await Promise.all([
           fastTrackService.getPolicy(),
           fastTrackService.getPolicyHistory(),
-          fastTrackService.getAuditLogs()
+          fastTrackService.getAuditLogs(),
+          fastTrackService.getRoadCoverage()
         ])
         if (isMounted) {
           if (pol) setCurrentPolicy(pol)
           if (hist && hist.length > 0) setPolicyHistory(hist)
           if (logs && logs.length > 0) setAuditLogs(logs)
+          if (cov) setRoadCoverage(cov)
         }
       } catch (err) {
         console.warn('Lỗi tải dữ liệu chính sách từ Mock API:', err)
@@ -44,6 +63,7 @@ export function useFastTrackPolicy(
       isMounted = false
     }
   }, [])
+
 
   // Form states cho Modal Tạo chính sách mới
   const [formVersionName, setFormVersionName] = useState('Policy v2.2')
@@ -214,12 +234,33 @@ export function useFastTrackPolicy(
     showToast(`Đã kích hoạt thành công ${item.version} làm chính sách hiện hành!`)
   }
 
+  // Supervisor phê duyệt độ phủ tuyến đường bảo hành (API-176)
+  const handleConfirmRoadCoverage = async (input: RoadCoverageInputDto) => {
+    try {
+      const updated = await fastTrackService.confirmRoadCoverage(
+        roadCoverage.projectId,
+        input,
+        'Kỹ sư Giám sát / Chủ đầu tư'
+      )
+      setRoadCoverage(updated)
+      setIsRoadCoverageModalOpen(false)
+      showToast(`ĐÃ PHÊ DUYỆT ĐỘ PHỦ TUYẾN BẢO HÀNH (${updated.projectId}) THÀNH CÔNG! (API-176)`)
+    } catch (err) {
+      console.error('Lỗi phê duyệt độ phủ tuyến:', err)
+      showToast('Có lỗi xảy ra khi phê duyệt độ phủ tuyến.')
+    }
+  }
+
   return {
     currentPolicy,
     setCurrentPolicy,
     policyHistory,
     setPolicyHistory,
     auditLogs,
+    roadCoverage,
+    isRoadCoverageModalOpen,
+    setIsRoadCoverageModalOpen,
+    handleConfirmRoadCoverage,
     formVersionName,
     setFormVersionName,
     formMaxArea,
@@ -240,3 +281,4 @@ export function useFastTrackPolicy(
     handleActivateDraft
   }
 }
+

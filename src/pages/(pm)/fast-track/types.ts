@@ -63,3 +63,37 @@ export interface AuditLogItem {
   note: string
   title: string
 }
+
+// ==========================================
+// ROAD COVERAGE SCHEMAS (API-175, API-176 - SUP-08)
+// ==========================================
+export interface RoadCoverageInputDto {
+  scopeObligationId: string
+  expectedScopeHash?: string
+  handoverDocumentId: string
+  handoverVersion: string
+  sourceKind: 'WARRANTY' | 'MAINTENANCE_BASIS'
+  sourceId?: string
+  sourceVersion?: string
+  applicableFromUtc: string
+  applicableToUtc: string
+  provenance: 'REAL_SOURCE' | 'TEST_ONLY'
+  reason: string
+  supersedesId?: string
+}
+
+export interface RoadCoverageFact {
+  projectId: string
+  projectName: string
+  scopeObligationId: string
+  fromKm: number
+  toKm: number
+  sourceKind: 'WARRANTY' | 'MAINTENANCE_BASIS'
+  handoverVersion: string
+  applicableFromUtc: string
+  applicableToUtc: string
+  status: 'CONFIRMED' | 'PENDING'
+  confirmedBy?: string
+  confirmedAt?: string
+  reason?: string
+}
