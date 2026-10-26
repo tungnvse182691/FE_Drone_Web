@@ -46,7 +46,10 @@ export interface ReviewModalsProps {
   setIsTriageProjectModalOpen: (open: boolean) => void
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
-  onConfirmTriageProject: () => void
+  onConfirmTriageProject: (
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
+    reason: string
+  ) => void
 
   // Modal 6: No Defect
   isNoDefectModalOpen: boolean

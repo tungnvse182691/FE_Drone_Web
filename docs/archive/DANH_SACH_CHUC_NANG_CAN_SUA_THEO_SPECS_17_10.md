@@ -76,6 +76,13 @@ Toàn bộ các phân hệ dưới đây đã được đối chiếu, chuẩn h
   - Cần kích hoạt hiển thị nút **`Điều phối vào dự án`** (`API-024`) khi người đăng nhập là **Supervisor** (`isSupervisor === true`):
     - Trên bảng danh sách phản ánh [CitizenTriageRow.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/(pm)/ai-review/CitizenTriageRow.tsx) và dạng thẻ [TriageCard.tsx](file:///d:/hoctap/k%C3%AC%209/%C4%91%E1%BB%93%20%C3%A1n/FE_Drone_Web/src/pages/(pm)/ai-review/TriageCard.tsx) đối với các ca có trạng thái `UNASSIGNED`.
     - Mở modal điều phối: Chọn Dự án bảo hành cần phân công, chọn mức độ ưu tiên ban đầu (`Severity`), sau khi gán thành công thì cập nhật ca sang trạng thái `ASSIGNED_TO_PROJECT` để PM bắt đầu thẩm định.
+* **Kết quả thực hiện:**
+  - ✅ **Hoàn thành phân quyền chuẩn 100%**: Khi đăng nhập vai trò **Supervisor**, các ca chưa phân công (`#REP-2026-0012`, `#REP-2026-0013`) hiển thị nút **`Điều phối dự án`**. Khi đăng nhập vai trò **PM**, hệ thống khóa nút và chỉ hiển thị nhãn `Chờ Giám sát điều phối`.
+  - ✅ **Chuẩn hóa Modal Điều phối theo DTO `CaseTriageDto` (`API-024`)**:
+    - Chọn Dự án bảo hành phụ trách (`projectId`).
+    - Lựa chọn Định hướng phương thức xác minh (`verificationMethod`): *Đo đạc hiện trường (`FIELD`)*, *Khảo sát Drone (`DRONE`)*, hoặc *Ảnh hiện có (`EXISTING_EVIDENCE`)*.
+    - Nhập chỉ đạo/căn cứ điều phối của Giám sát (`reason`, tối đa 1000 ký tự).
+  - ✅ **Cập nhật trạng thái luồng nghiệp vụ**: Sau khi Giám sát xác nhận, ca được chuyển sang `is_assigned: true`, gán mã dự án và chuyển trạng thái sang `Chờ PM thẩm định`. Ca phản ánh lập tức hiển thị trên giao diện của Chỉ huy trưởng để PM bắt đầu thẩm định.
 
 ---
 

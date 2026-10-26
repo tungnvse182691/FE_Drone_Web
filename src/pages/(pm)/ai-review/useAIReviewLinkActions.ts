@@ -158,7 +158,10 @@ export const useAIReviewLinkActions = ({
     setIsTriageProjectModalOpen(true)
   }
 
-  const handleConfirmTriageProject = () => {
+  const handleConfirmTriageProject = (
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' = 'FIELD',
+    reason: string = ''
+  ) => {
     if (!targetTriageCase) return
     const project = mockProjects.find((p) => p.id === selectedProjectId)
     const projectName = project ? project.name : 'Dự án đã chỉ định'
@@ -168,6 +171,12 @@ export const useAIReviewLinkActions = ({
         ? selectedReportIds
         : [targetTriageCase.id]
 
+    const methodLabels: Record<string, string> = {
+      FIELD: 'Khảo sát đo đạc hiện trường (FIELD)',
+      DRONE: 'Bay quét Drone bổ sung (DRONE)',
+      EXISTING_EVIDENCE: 'Thẩm định bằng chứng hiện có (EXISTING_EVIDENCE)'
+    }
+
     setCases((prev) =>
       prev.map((c) => {
         if (targetIds.includes(c.id)) {
@@ -176,7 +185,9 @@ export const useAIReviewLinkActions = ({
             project_id: selectedProjectId,
             project_name: projectName,
             is_assigned: true,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN PA03] Đã tiếp nhận và gán vào dự án: ${projectName}`
+            status: 'PENDING',
+            status_label: 'Chờ PM thẩm định',
+            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN API-024] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
           }
         }
         return c
@@ -185,7 +196,7 @@ export const useAIReviewLinkActions = ({
 
     setIsTriageProjectModalOpen(false)
     setSelectedReportIds([])
-    showToast(`Đã gán ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
+    showToast(`Đã điều phối ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
   }
 
   return {
