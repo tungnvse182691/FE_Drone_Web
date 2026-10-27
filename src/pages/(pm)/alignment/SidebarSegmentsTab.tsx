@@ -77,7 +77,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
 }) => {
   const isAllSelected = selectedSegmentId === 'ALL'
   const isMain = selectedTargetType === 'MAINLINE'
-  const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 25.0)
+  const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 0.0)
   const displayMainlineKm = mainlineLengthKm || importedLengthKm || 0.0
   const mainlineLenText = displayMainlineKm >= 1 ? `${displayMainlineKm.toFixed(1)} km` : `${(displayMainlineKm * 1000).toFixed(0)}m`
 
@@ -177,6 +177,15 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                 : 'Hồ sơ tim tuyến đang chờ Giám sát phê duyệt (PENDING_APPROVAL).'}
             </span>
           </div>
+        ) : isSupervisor ? (
+          <div className="p-3 bg-slate-100 border border-slate-200 rounded-lg flex items-center gap-2 text-xs text-slate-700 font-medium">
+            <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+            <span>
+              {currentCoords.length === 0
+                ? 'Chế độ Giám sát: Đang chờ Chỉ huy trưởng PM nạp tệp tim tuyến và chia phân đoạn.'
+                : 'Chế độ Giám sát: Hồ sơ tim tuyến đang ở bản nháp do PM quản lý. Giám sát sẽ thẩm duyệt khi PM gửi trình duyệt.'}
+            </span>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
@@ -228,7 +237,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               ))}
             </div>
 
-            {/* Chỉ giữ nút Áp dụng chia đoạn (đã xóa nút Thêm đoạn mới đơn lẻ theo yêu cầu) */}
+            {/* Chỉ giữ nút Áp dụng chia đoạn */}
             <div>
               <button
                 type="button"
@@ -358,9 +367,11 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               Dự án mới chưa có tim tuyến &amp; phân đoạn
             </span>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              Dự án này chưa được thiết lập tim tuyến đường. Bạn có thể bấm nút <strong className="text-amber-800">"Nhập Tuyến / Tọa độ"</strong> để tải lên tệp KML / GeoJSON / CSV hoặc dán chuỗi tọa độ.
+              {isSupervisor
+                ? 'Dự án này chưa được PM nạp dữ liệu tim tuyến. Khi PM nạp tọa độ và bấm "Trình duyệt tim tuyến", hồ sơ sẽ xuất hiện để Giám sát thẩm duyệt.'
+                : 'Dự án này chưa được thiết lập tim tuyến đường. Bạn có thể bấm nút "Nhập Tuyến / Tọa độ" để tải lên tệp KML / GeoJSON / CSV hoặc dán chuỗi tọa độ.'}
             </p>
-            {onOpenImportModal && (
+            {!isSupervisor && onOpenImportModal && (
               <button
                 type="button"
                 onClick={onOpenImportModal}

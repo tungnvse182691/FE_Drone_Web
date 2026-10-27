@@ -5,12 +5,14 @@ import { HubProject } from '../projects/types'
 interface ProjectTimelineStepperProps {
   project: HubProject
   basePath: string
+  isSupervisor?: boolean
   onNavigate: (path: string) => void
 }
 
 export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   project,
   basePath,
+  isSupervisor = false,
   onNavigate
 }) => {
   const isAlignmentDone = project.length_km > 0
@@ -19,9 +21,10 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   const isOperating = isAlignmentDone && !isClosed && !isSuspended
 
   // Xác định giai đoạn hiện tại (1 - 4)
+  const isEarlyClosedWithoutAlignment = isClosed && !isAlignmentDone
   const currentStageNum = isClosed ? 4 : isSuspended ? 3 : isAlignmentDone ? 3 : 2
   const currentStageLabel = isClosed
-    ? 'Giai đoạn: 04/04 • Đã đóng dự án'
+    ? (isEarlyClosedWithoutAlignment ? 'Đã đóng hồ sơ trước hạn (Chưa nạp tuyến)' : 'Giai đoạn: 04/04 • Đã đóng dự án')
     : isSuspended
     ? 'Giai đoạn: 03/04 • Tạm dừng vận hành'
     : isAlignmentDone
@@ -81,22 +84,38 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isAlignmentDone
                 ? 'bg-emerald-50 text-[#047857] border-emerald-200'
+                : isClosed
+                ? 'bg-slate-100 text-slate-400 border-slate-300'
                 : 'bg-amber-50 text-[#C9A227] border-amber-200 animate-pulse'
             }`}
           >
-            <Icon name={isAlignmentDone ? 'check' : 'play_arrow'} size={14} />
+            <Icon name={isAlignmentDone ? 'check' : isClosed ? 'remove' : 'play_arrow'} size={14} />
           </div>
           <div
             className={`border rounded-xl p-3.5 flex-1 shadow-2xs ${
-              isAlignmentDone ? 'bg-slate-50 border-[#E2E5E9]' : 'bg-amber-50/40 border-amber-200'
+              isAlignmentDone
+                ? 'bg-slate-50 border-[#E2E5E9]'
+                : isClosed
+                ? 'bg-slate-50/70 border-slate-200'
+                : 'bg-amber-50/40 border-amber-200'
             }`}
           >
             <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
               <span className="text-xs text-slate-900 font-bold">
                 Giai đoạn 2: Thiết lập &amp; Phê duyệt tim tuyến (Baseline trắc địa)
               </span>
-              <span className="font-mono text-[11px] text-[#8C6D1F] font-semibold">
-                {isAlignmentDone ? 'Đã duyệt & khóa SHA-256' : 'Đang chờ PM nạp tuyến'}
+              <span className={`font-mono text-[11px] font-semibold ${
+                isAlignmentDone
+                  ? 'text-emerald-700'
+                  : isClosed
+                  ? 'text-slate-500'
+                  : 'text-[#8C6D1F]'
+              }`}>
+                {isAlignmentDone
+                  ? 'Đã duyệt & khóa SHA-256'
+                  : isClosed
+                  ? 'Đã đóng trước khi thiết lập tuyến'
+                  : 'Đang chờ PM nạp tuyến'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -104,20 +123,31 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                 <>
                   Đã chuẩn hóa tim tuyến trục chính dài <strong className="text-slate-900">{project.length_km} km</strong>, hệ quy chiếu WGS84 EPSG:4326. Giám sát đã ký duyệt khóa mốc lý trình bất biến.
                 </>
+              ) : isClosed ? (
+                <>
+                  Dự án đã được Giám sát thực hiện thủ tục đóng kết thúc bảo hành trước hạn khi chưa phát sinh hồ sơ tim tuyến trắc địa.
+                </>
               ) : (
                 <>PM cần nạp tệp tọa độ KML / GeoJSON và thiết lập phân đoạn để Giám sát thẩm duyệt khóa mốc lý trình.</>
               )}
             </p>
-            {!isAlignmentDone && (
+            {!isAlignmentDone && !isClosed && (
               <div className="mt-2.5">
-                <button
-                  type="button"
-                  onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
-                >
-                  <Icon name="alt_route" size={14} />
-                  <span>Vào thiết lập tim tuyến ngay</span>
-                </button>
+                {!isSupervisor ? (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Icon name="alt_route" size={14} />
+                    <span>Vào thiết lập tim tuyến ngay</span>
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-amber-800 bg-amber-100/70 border border-amber-200 px-3 py-1.5 rounded-lg font-medium">
+                    <Icon name="schedule" size={14} />
+                    <span>Trách nhiệm: Chỉ huy trưởng PM đang tiến hành nạp hồ sơ tim tuyến</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -128,7 +158,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
           <div
             className={`absolute -left-6 sm:-left-8 w-6 h-6 rounded-full flex items-center justify-center ring-4 ring-white shadow-2xs border ${
               isClosed
-                ? 'bg-emerald-50 text-[#047857] border-emerald-200'
+                ? (isAlignmentDone ? 'bg-emerald-50 text-[#047857] border-emerald-200' : 'bg-slate-100 text-slate-400 border-slate-300')
                 : isSuspended
                 ? 'bg-amber-100 text-amber-800 border-amber-300'
                 : isOperating
@@ -137,7 +167,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
             }`}
           >
             {isClosed ? (
-              <Icon name="check" size={14} />
+              isAlignmentDone ? <Icon name="check" size={14} /> : <Icon name="remove" size={14} />
             ) : isSuspended ? (
               <Icon name="pause" size={14} />
             ) : isOperating ? (
@@ -169,16 +199,24 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                   </span>
                 )}
               </span>
-              <span className="font-mono text-[11px] text-amber-800 font-bold bg-amber-100/80 px-2 py-0.5 rounded-md border border-amber-200">
+              <span className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                isClosed
+                  ? (isAlignmentDone ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200')
+                  : isSuspended
+                  ? 'text-amber-800 bg-amber-100/80 border-amber-200'
+                  : 'text-amber-800 bg-amber-100/80 border-amber-200'
+              }`}>
                 {isClosed
-                  ? 'Đã hoàn thành nghĩa vụ'
+                  ? (isAlignmentDone ? 'Đã hoàn thành nghĩa vụ' : 'Không phát sinh chu trình vận hành')
                   : isSuspended
                   ? 'Chu trình tạm ngưng vận hành'
                   : `Chu trình lặp • Còn ${project.days_remaining} ngày`}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
-              {isSuspended ? (
+              {isClosed && !isAlignmentDone ? (
+                <>Dự án kết thúc sớm và đóng băng hồ sơ lưu trữ trước khi bước vào chu trình theo dõi định kỳ và khảo sát bay Drone.</>
+              ) : isSuspended ? (
                 <>Dự án đang tạm dừng vận hành. Các hoạt động tạo yêu cầu bay Drone và lập gói sửa chữa mới đang tạm ngưng theo lệnh điều hành.</>
               ) : (
                 <>Chu trình tuần hoàn trong suốt thời hạn bảo hành: Khảo sát Drone AI phát hiện nứt vỡ, PM gom gói sửa chữa kỹ thuật và Giám sát nghiệm thu hiện trường đạt 100%.</>
@@ -235,14 +273,20 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               <span className="text-xs text-slate-900 font-bold">
                 Giai đoạn 4: Nghiệm thu đóng dự án &amp; Lưu trữ hồ sơ số
               </span>
-              <span className="font-mono text-[11px] text-slate-500">
-                {isClosed ? 'Đã đóng dự án' : 'Hết hạn bảo hành & Sạch 100% lỗi'}
+              <span className="font-mono text-[11px] text-slate-500 font-semibold">
+                {isClosed ? (isEarlyClosedWithoutAlignment ? 'Đã đóng trước hạn' : 'Đã đóng dự án') : 'Hết hạn bảo hành & Sạch 100% lỗi'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
               {isClosed ? (
                 <>
-                  Dự án đã chính thức đóng kết thúc bảo hành vào ngày <strong>{project.closed_at || 'hết hạn'}</strong> bởi <strong>{project.closed_by || 'Giám sát trưởng'}</strong>. Toàn bộ hồ sơ trắc địa, nhật ký bay và nghiệm thu được lưu trữ số 5 năm.
+                  Dự án đã chính thức đóng kết thúc bảo hành vào ngày{' '}
+                  <strong>
+                    {project.closed_at
+                      ? new Date(project.closed_at).toLocaleDateString('vi-VN')
+                      : 'vừa qua'}
+                  </strong>{' '}
+                  bởi <strong>{project.closed_by || 'Giám sát viên'}</strong>. Toàn bộ hồ sơ trắc địa, nhật ký bay và nghiệm thu được chuyển sang kho số lưu trữ 5 năm.
                 </>
               ) : (
                 <>

@@ -403,7 +403,7 @@ export const Sidebar: React.FC = () => {
       {/* Footer bản quyền & phiên bản */}
       <div className="p-3.5 border-t border-[#E2E5E9] bg-slate-50/60 text-[11px] text-slate-500">
         <div className="font-bold text-slate-700">Dự án Nhà thầu Hoàng Hải</div>
-        <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ v2.2</div>
+        <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ</div>
       </div>
     </aside>
   )

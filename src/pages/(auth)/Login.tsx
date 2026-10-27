@@ -24,6 +24,7 @@ export const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
   const [loginError, setLoginError] = useState(false)
+  const [loginErrorMessage, setLoginErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   // State cho Form Đổi mật khẩu bắt buộc
@@ -51,11 +52,12 @@ export const Login: React.FC = () => {
     e.preventDefault()
     setIsLoading(true)
     setLoginError(false)
+    setLoginErrorMessage('')
 
     try {
       // Gọi qua Mock API Service bất đồng bộ
       const res = await authService.login({ email, password })
-      setUserAndToken(res.user)
+      setUserAndToken(res.user, res.token)
 
       if (res.user.must_change_password) {
         setViewMode('force')
@@ -63,8 +65,16 @@ export const Login: React.FC = () => {
         const dest = res.user.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
         navigate(dest)
       }
-    } catch {
+    } catch (err: any) {
+      console.error('🔥 Login error details:', err?.response?.status, err?.response?.data, err)
       setLoginError(true)
+      const detailMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Email hoặc mật khẩu không chính xác'
+      setLoginErrorMessage(detailMsg)
+      toast.error(detailMsg)
     } finally {
       setIsLoading(false)
     }
@@ -83,8 +93,13 @@ export const Login: React.FC = () => {
         const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
         navigate(dest)
       }, 700)
-    } catch {
-      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+    } catch (err: any) {
+      const detailMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.'
+      toast.error(detailMsg)
     }
   }
 
@@ -170,6 +185,7 @@ export const Login: React.FC = () => {
                     setRememberMe={setRememberMe}
                     loginError={loginError}
                     setLoginError={setLoginError}
+                    errorMessage={loginErrorMessage}
                     isLoading={isLoading}
                     onSubmit={handleLoginSubmit}
                     onSwitchToForce={() => setViewMode('force')}

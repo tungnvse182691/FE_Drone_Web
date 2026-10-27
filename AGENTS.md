@@ -90,3 +90,30 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
 - **Routing:** React Router DOM v7
 - **Icons:** Lucide React
 - **HTTP Client:** Axios (với Request/Response Interceptor)
+
+---
+
+## 📡 PHẦN F: KỶ LUẬT TÍCH HỢP API BACKEND ROADGUARD (CHỐNG BỊA / CHỐNG SÓT)
+
+> **MỤC TIÊU:** Đảm bảo 100% code gọi API ăn khớp với Backend Candidate3 đang chạy trong Docker (http://localhost:18081). Tuyệt đối không đoán endpoint hay DTO.
+
+### 1. Nguồn-Sự-Thật (Source of Truth) cho API:
+- **Contract chuẩn duy nhất:** File docs/contracts/openapi.json (chứa toàn bộ 260 endpoint canonical, schema request/response, headers bắt buộc).
+- **Danh mục tra nhanh:** docs/contracts/FE-API-CATALOG.json (tra theo operationId).
+- **Luồng nghiệp vụ mẫu:** docs/contracts/FE-W01-W10-RECIPES.md (các bước W01–W10, vai trò và điều kiện tiên quyết).
+
+### 2. Quy trình 4 bước BẮT BUỘC trước khi viết code gọi API:
+1. **Tra cứu operationId:** Mở docs/contracts/openapi.json tìm chính xác method (GET/POST/PUT/PATCH/DELETE), đường dẫn path (ví dụ: /api/v1/projects/{projectId}/...).
+2. **Kiểm tra schema DTO:** Đối chiếu đúng tên trường request/response. Tuyệt đối không tự suy diễn tên trường camelCase hay snake_case nếu OpenAPI quy định khác.
+3. **Kiểm tra Header bắt buộc:**
+   - **X-CSRF-TOKEN:** Bắt buộc cho mọi mutation Web (POST, PUT, PATCH, DELETE). Lấy từ GET /api/v1/auth/web/csrf hoặc cookie session.
+   - **Idempotency-Key:** Bắt buộc cho các lệnh ghi/tạo mới tài nguyên (sinh UUID ngẫu nhiên v4).
+   - **If-Match:** Bắt buộc khi cập nhật tài nguyên có rowVersion / ETag (lấy từ ETag của response GET trước đó).
+4. **Xử lý Optional Fields đúng Candidate3:**
+   - Các trường như conclusion (Case) hoặc ccessPoint (Survey) có thể bị omit (trả về undefined thay vì 
+ull). Code FE phải dùng safe navigation (item?.conclusion) và hiển thị empty state phù hợp.
+
+### 3. Môi trường kết nối:
+- Backend Docker chạy tại: http://localhost:18081.
+- Vite Dev Server chạy tại: http://localhost:5173 với reverse proxy /api trỏ về http://localhost:18081 (được cấu hình trong ite.config.ts).
+- Web Auth sử dụng cookie WebSession với withCredentials: true. Không lưu JWT vào localStorage cho Web.

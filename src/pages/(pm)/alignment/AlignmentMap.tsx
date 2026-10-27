@@ -85,6 +85,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
   // Trạng thái thu gọn/mở rộng bảng Mặt cắt ngang & Thông số kỹ thuật
   const [isCrossSectionMinimized, setIsCrossSectionMinimized] = useState<boolean>(false)
   const pickedLenKm = calculateCoordsLengthKm(pickedCoords)
+  const hasActualGeometry = importedLengthKm > 0 || (segments && segments.length > 0)
 
   return (
     <div className="xl:col-span-8 flex flex-col gap-2">
@@ -256,14 +257,15 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
         {/* MAPLIBRE GL JS CONTAINER */}
         <div ref={mapContainerRef} className="absolute inset-0 z-10 w-full h-full" />
 
-        {/* MAP FLOATING BOTTOM OVERLAYS */}
-        <div className="relative z-30 p-3 flex flex-col md:flex-row items-end justify-between gap-3 pointer-events-none">
-          {/* Bottom Left: Engineering Cross-Section & Slabs HUD */}
-          <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md p-3 rounded-xl text-white shadow-2xl flex flex-col gap-2 max-w-sm md:max-w-md w-full border border-slate-700/80 text-xs transition-all">
-            {(() => {
-              const isAll = selectedSegmentId === 'ALL' || !selectedSegmentId
-              let targetItem: any = null
-              let branchNamePrefix = ''
+        {/* MAP FLOATING BOTTOM OVERLAYS: Ẩn cả 2 bảng chú thích khi chưa có tim tuyến, hiện cả 2 khi đã có tim tuyến */}
+        {hasActualGeometry && (
+          <div className="relative z-30 p-3 flex flex-col md:flex-row items-end justify-between gap-3 pointer-events-none">
+            {/* Bottom Left: Engineering Cross-Section & Slabs HUD */}
+            <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md p-3 rounded-xl text-white shadow-2xl flex flex-col gap-2 max-w-sm md:max-w-md w-full border border-slate-700/80 text-xs transition-all">
+              {(() => {
+                const isAll = selectedSegmentId === 'ALL' || !selectedSegmentId
+                let targetItem: any = null
+                let branchNamePrefix = ''
 
               // 1. Nếu đang ở ngữ cảnh Tuyến Nhánh (selectedTargetType !== 'MAINLINE')
               if (currentBranch && selectedTargetType === currentBranch.id) {
@@ -365,7 +367,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               // Fallback nếu trục chính
               const currSeg = targetItem || (isAll ? null : (segments[0] || null))
 
-              const totalRouteKm = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 25.0)
+              const totalRouteKm = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0) || (importedLengthKm || 0.0)
               const avgRoadWidth = segments.length > 0
                 ? segments.reduce((acc, s) => acc + (s.roadWidthM || 8.0) * s.lengthKm, 0) / Math.max(0.001, totalRouteKm)
                 : 8.0
@@ -504,7 +506,8 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           {/* Bottom Right: GIS Map Legend */}
           <AlignmentMapLegend />
         </div>
-      </div>
+      )}
     </div>
+  </div>
   )
 }

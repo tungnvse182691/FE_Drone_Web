@@ -29,11 +29,23 @@ export function useAlignmentState() {
     if (urlProjectId && list.some((p) => p.id === urlProjectId)) {
       return urlProjectId
     }
-    return list[0]?.id || PM_ASSIGNED_PROJECTS[0].id
+    return list[0]?.id || ''
   })
 
   const activeProject = useMemo(() => {
-    return assignedProjects.find((p) => p.id === selectedProjectId) || assignedProjects[0] || PM_ASSIGNED_PROJECTS[0]
+    return assignedProjects.find((p) => p.id === selectedProjectId) || assignedProjects[0] || {
+      id: selectedProjectId || '',
+      code: '',
+      name: 'Chưa có dự án',
+      stationOriginText: 'Km 0+000',
+      stationOriginKm: 0.0,
+      endKm: 0.0,
+      crs: 'EPSG:32648 (UTM Zone 48N)',
+      lengthKm: 0.0,
+      defaultCoords: [],
+      defaultKmPoints: [],
+      defaultSegments: []
+    }
   }, [assignedProjects, selectedProjectId])
 
   // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
@@ -57,6 +69,24 @@ export function useAlignmentState() {
     return () => window.removeEventListener('roadguard_state_change', handleStateChange)
   }, [selectedProjectId])
 
+  // Khôi phục danh sách dự án từ Backend khi F5 tải lại trang
+  useEffect(() => {
+    projectService.fetchProjects().then(() => {
+      const list = getAvailableAssignedProjects()
+      if (list.length > 0) {
+        setAssignedProjects(list)
+        const targetId = (urlProjectId && list.some((p) => p.id === urlProjectId))
+          ? urlProjectId
+          : (selectedProjectId || list[0].id)
+        if (targetId && targetId !== selectedProjectId) {
+          handleSwitchProject(targetId)
+        }
+      }
+    }).catch((err) => {
+      console.warn('Lỗi nạp dự án tim tuyến:', err)
+    })
+  }, [urlProjectId])
+
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
@@ -69,7 +99,10 @@ export function useAlignmentState() {
   const [syncJointWithSlab, setSyncJointWithSlab] = useState<boolean>(true)
 
   // Quản lý Tuyến nhánh (Branch Alignment)
+  // Nếu là Giám sát (Supervisor) mà trạng thái dự án là DRAFT (PM chưa trình duyệt), Giám sát xem như chưa có tuyến
   const [branches, setBranches] = useState<any[]>(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    if (isSupervisor && state.status === 'DRAFT') return []
     const saved = alignmentService.getAlignmentData(selectedProjectId)
     if (saved.branches !== undefined) return saved.branches
     return activeProject.defaultBranches || []
@@ -88,16 +121,22 @@ export function useAlignmentState() {
 
   // State tọa độ tim tuyến và mốc lý trình đồng bộ toàn cục
   const [currentCoords, setCurrentCoords] = useState<[number, number][]>(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    if (isSupervisor && state.status === 'DRAFT') return []
     const saved = alignmentService.getAlignmentData(selectedProjectId)
     if (saved.coords !== undefined) return saved.coords
     return activeProject.defaultCoords || []
   })
   const [currentKmPoints, setCurrentKmPoints] = useState<number[]>(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    if (isSupervisor && state.status === 'DRAFT') return []
     const saved = alignmentService.getAlignmentData(selectedProjectId)
     if (saved.kmPoints !== undefined) return saved.kmPoints
     return activeProject.defaultKmPoints || []
   })
   const [importedLengthKm, setImportedLengthKm] = useState<number>(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    if (isSupervisor && state.status === 'DRAFT') return 0.0
     const saved = alignmentService.getAlignmentData(selectedProjectId)
     if (saved.coords && saved.coords.length >= 2) {
       return calculateCoordsLengthKm(saved.coords)
@@ -153,9 +192,11 @@ export function useAlignmentState() {
 
   // Hook 1: Segments & Slabs State
   const initialSegments = useMemo(() => {
+    const state = alignmentService.getAlignmentState(selectedProjectId)
+    if (isSupervisor && state.status === 'DRAFT') return []
     const saved = alignmentService.getAlignmentData(selectedProjectId)
     return saved.segments || activeProject.defaultSegments
-  }, [selectedProjectId, activeProject])
+  }, [selectedProjectId, activeProject, isSupervisor])
 
   const segmentsState = useAlignmentSegmentsState({
     initialSegments,
@@ -310,12 +351,27 @@ export function useAlignmentState() {
     if (!target) return
     setSelectedProjectId(prjId)
 
+    const state = alignmentService.getAlignmentState(prjId)
+    setAlignmentStatus(state.status)
+
+    // Nếu Giám sát xem dự án đang DRAFT (chưa trình duyệt), không hiển thị bản nháp đang sửa của PM
+    const isDraftForSupervisor = isSupervisor && state.status === 'DRAFT'
     const saved = alignmentService.getAlignmentData(prjId)
-    const coords = saved.coords !== undefined ? saved.coords : (target.defaultCoords || [])
-    const kmPoints = saved.kmPoints !== undefined ? saved.kmPoints : (target.defaultKmPoints || [])
-    const branchesData = saved.branches !== undefined ? saved.branches : (target.defaultBranches || [])
-    const segsData = saved.segments !== undefined ? saved.segments : (target.defaultSegments || [])
-    const calcLen = coords.length >= 2 ? calculateCoordsLengthKm(coords) : (target.defaultCoords.length >= 2 ? target.lengthKm : 0)
+    const coords = (!isDraftForSupervisor && saved.coords !== undefined)
+      ? saved.coords
+      : (!isDraftForSupervisor ? (target.defaultCoords || []) : [])
+    const kmPoints = (!isDraftForSupervisor && saved.kmPoints !== undefined)
+      ? saved.kmPoints
+      : (!isDraftForSupervisor ? (target.defaultKmPoints || []) : [])
+    const branchesData = (!isDraftForSupervisor && saved.branches !== undefined)
+      ? saved.branches
+      : (!isDraftForSupervisor ? (target.defaultBranches || []) : [])
+    const segsData = (!isDraftForSupervisor && saved.segments !== undefined)
+      ? saved.segments
+      : (!isDraftForSupervisor ? (target.defaultSegments || []) : [])
+    const calcLen = coords.length >= 2
+      ? calculateCoordsLengthKm(coords)
+      : (!isDraftForSupervisor && target.defaultCoords.length >= 2 ? target.lengthKm : 0)
 
     setCurrentCoords(coords)
     setCurrentKmPoints(kmPoints)
@@ -337,9 +393,6 @@ export function useAlignmentState() {
       surfaceMaterial: 'Mặt BTN C12.5',
       color: SEGMENT_COLORS[0]
     })
-
-    const state = alignmentService.getAlignmentState(prjId)
-    setAlignmentStatus(state.status)
 
     showToast(`Đã chuyển sang dự án [${target.code}] ${target.name}`)
     if (mapState.mapRef.current) {
@@ -623,7 +676,7 @@ export function useAlignmentState() {
     })
     alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor', totalProjectLengthKm)
     setAlignmentStatus('CONFIRMED')
-    showToast('Dự án đã chính thức KHÓA TIM TUYẾN (CONFIRMED)! Chữ ký số SHA-256 đã được gắn bất biến.')
+    showToast('Dự án đã chính thức xác nhận và khóa tim tuyến thành công!')
   }
 
   // Xóa toàn bộ tim tuyến chính và các phân đoạn để PM nhập hoặc vẽ lại từ đầu

@@ -49,8 +49,13 @@ export const ForceChangePassword: React.FC = () => {
           navigate('/pm/dashboard')
         }
       }, 700)
-    } catch {
-      toast.error('Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.')
+    } catch (err: any) {
+      const detailMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.message ||
+        'Đổi mật khẩu thất bại, vui lòng kiểm tra lại mật khẩu hiện tại.'
+      toast.error(detailMsg)
     }
   }
 

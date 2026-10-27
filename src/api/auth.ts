@@ -85,3 +85,27 @@ export async function getSessionApi(): Promise<SessionResponse> {
   const res = await apiClient.get<SessionResponse>('/auth/web/session')
   return res.data
 }
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+/** API-004: Đổi mật khẩu (yêu cầu Idempotency-Key và X-CSRF-TOKEN) */
+export async function changePasswordApi(
+  payload: ChangePasswordRequest,
+  csrfToken: string
+): Promise<void> {
+  const idempotencyKey = crypto.randomUUID()
+  await apiClient.post(
+    '/auth/change-password',
+    payload,
+    {
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'Idempotency-Key': idempotencyKey,
+      },
+    }
+  )
+}
+

@@ -38,17 +38,66 @@ export const dashboardService = {
    * (Có async, loading, error state và sẵn sàng swap sang API thật)
    */
   async getPMDashboard(): Promise<PMDashboardData> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    const isMock = import.meta.env.VITE_USE_MOCK === 'true'
+
+    let realCitizenCases: TriageCase[] = []
+    let realProjectsCount = 0
 
     if (!isMock) {
-      const res = await apiClient.get<PMDashboardData>('/dashboard/pm')
-      return res.data
+      try {
+        const res = await apiClient.get<PMDashboardData>('/dashboard/pm')
+        if (res.data) return res.data
+      } catch {
+        // Backend Candidate3 không có endpoint tổng hợp /dashboard/pm, tiếp tục tổng hợp từ các endpoint rời
+      }
+
+      // Thử gọi các endpoint con của Candidate3
+      try {
+        const casesRes = await apiClient.get<{ items?: any[] }>('/cases')
+        if (casesRes.data?.items) {
+          realCitizenCases = casesRes.data.items.map((item: any, idx: number) => ({
+            id: item.caseId || item.id || `case-${idx}`,
+            code: item.caseCode || item.code || `CASE-${(item.caseId || '').slice(0, 8)}`,
+            source: 'CITIZEN',
+            source_label: 'Phản ánh người dân',
+            source_detail: 'Ứng dụng RoadGuard Citizen',
+            project_id: item.projectId || '72f84201-c001-4000-8000-000000000001',
+            project_name: item.projectName || 'Synthetic Project A',
+            stationing: item.stationing || 'Km 0+000',
+            lane: item.lane || 'Làn 1',
+            defect_title: item.title || item.description || 'Phản ánh mặt đường người dân',
+            defect_type: item.defectType || 'POTHOLE',
+            severity: item.severity || 'MEDIUM',
+            urgency: item.urgency || 'NORMAL',
+            time_ago: 'Hôm nay',
+            created_at: item.createdAt || new Date().toISOString(),
+            status: item.status || 'PENDING',
+            status_label: 'Chờ xử lý',
+            image_url: item.mediaUrls?.[0] || 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800',
+            gps: {
+              lat: item.lat || 16.0544,
+              lng: item.lng || 108.2022,
+              altitude_m: 10,
+              resolution_cm_px: 0.5,
+            },
+            ai_confidence: item.confidence || 0.85,
+            area_sqm: item.areaSqm || 1.2,
+            ai_area_sqm: item.areaSqm || 1.2,
+            max_depth_cm: item.depthCm || 3.5,
+            ai_depth_cm: item.depthCm || 3.5,
+            pm_notes: '',
+            description: item.description || '',
+            conclusion: item.conclusion || null,
+          }))
+        }
+      } catch (e) {
+        console.warn('⚠️ [Candidate3] Chưa tải được /cases:', e)
+      }
     }
 
-    // Mô phỏng network delay bất đồng bộ chuẩn RESTful
-    await new Promise((resolve) => setTimeout(resolve, 350))
-
-    const citizenCases = mockTriageCases.filter((c) => c.source === 'CITIZEN')
+    const citizenCases = realCitizenCases.length > 0 
+      ? realCitizenCases 
+      : mockTriageCases.filter((c) => c.source === 'CITIZEN')
     const pendingAIDefects = mockDefects.filter((d) => d.status === 'OPEN' || d.status === 'VERIFIED')
 
     const nowTs = Date.now()

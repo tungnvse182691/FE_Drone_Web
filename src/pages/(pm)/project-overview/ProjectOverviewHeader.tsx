@@ -7,7 +7,6 @@ interface ProjectOverviewHeaderProps {
   basePath: string
   isSupervisor: boolean
   onNavigate: (path: string) => void
-  onUpdateInfo: () => void
   onCloseProject?: () => void
   mainlineLengthKm?: number
   branchesLengthKm?: number
@@ -19,7 +18,6 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
   basePath,
   isSupervisor,
   onNavigate,
-  onUpdateInfo,
   onCloseProject,
   mainlineLengthKm = 0,
   branchesLengthKm = 0,
@@ -111,9 +109,14 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
 
             <span className="text-slate-300">•</span>
-            <div className="flex items-center gap-1">
-              <Icon name="location_on" size={16} className="text-slate-400" />
-              <span>Khu vực: {project.region} ({project.location_detail})</span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+              <Icon name="location_on" size={15} className="text-brand-gold shrink-0" />
+              <span>
+                Địa bàn:{' '}
+                <strong className={project.region || project.location_detail ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal italic'}>
+                  {project.region || project.location_detail || 'Chưa thiết lập địa bàn'}
+                </strong>
+              </span>
             </div>
             <span className="text-slate-300">•</span>
             <div className="flex items-center gap-1">
@@ -123,7 +126,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: Đóng dự án (Duy nhất Supervisor) & Cập nhật thông tin */}
+        {/* Action Buttons: Đóng dự án (Duy nhất Supervisor) */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {isSupervisor && project.status !== 'CLOSED' && onCloseProject && (
             <button
@@ -133,17 +136,6 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             >
               <Icon name="lock" size={16} />
               <span>Đóng dự án</span>
-            </button>
-          )}
-
-          {project.status !== 'CLOSED' && (
-            <button
-              onClick={onUpdateInfo}
-              type="button"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors border border-slate-200 cursor-pointer"
-            >
-              <Icon name="settings" size={16} className="text-slate-500" />
-              <span>Cập nhật thông tin</span>
             </button>
           )}
         </div>
@@ -245,14 +237,22 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
-            type="button"
-            className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
-          >
-            <span>Thiết lập tim tuyến</span>
-            <Icon name="arrow_forward" size={16} />
-          </button>
+          {!isSupervisor ? (
+            <button
+              onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
+              type="button"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
+            >
+              <Icon name="alt_route" size={16} />
+              <span>Thiết lập tim tuyến</span>
+              <Icon name="arrow_forward" size={16} />
+            </button>
+          ) : (
+            <div className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-amber-100 text-[#92400E] border border-amber-200 text-xs font-semibold shrink-0">
+              <Icon name="schedule" size={16} />
+              <span>Trách nhiệm: Chờ PM nạp tim tuyến</span>
+            </div>
+          )}
         </div>
       ) : project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT' ? (
         <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

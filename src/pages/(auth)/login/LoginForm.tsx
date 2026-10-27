@@ -12,6 +12,7 @@ export interface LoginFormProps {
   setRememberMe: (val: boolean) => void
   loginError: boolean
   setLoginError: (val: boolean) => void
+  errorMessage?: string
   isLoading: boolean
   onSubmit: (e: React.FormEvent) => void
   onSwitchToForce?: () => void
@@ -28,6 +29,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   setRememberMe,
   loginError,
   setLoginError,
+  errorMessage,
   isLoading,
   onSubmit,
   onSwitchToForce
@@ -52,7 +54,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             error
           </span>
           <div className="flex-1">
-            <span className="font-semibold">Đăng nhập không thành công:</span> Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.
+            <span className="font-semibold">Đăng nhập không thành công:</span> {errorMessage || 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.'}
           </div>
           <button
             type="button"
@@ -191,43 +193,43 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       )}
 
-      {/* 2 nút tài khoản dùng thử: PM | Giám sát */}
+      {/* 2 nút tài khoản dùng thử chuẩn Docker Candidate3: PM | Giám sát */}
       <div className="pt-4 border-t border-[#E2E5E9]">
         <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
-          Tài khoản kiểm thử nhanh (Mật khẩu mặc định: 123456):
+          Tài khoản Seed Docker Candidate3 (Bấm để tự điền tự động):
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => {
-              setEmail('pmhoang@gmail.com')
-              setPassword('123456')
+              setEmail('pm-a@sandbox.example.test')
+              setPassword('Rg1!6NDP3wctfXKjXNzvYjSeg-grQxza2t_BGNxmH_DDlyfjEr7oZFEMtLmnssW7Meed')
             }}
             className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
             <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
               <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">badge</span>
-              <span className="truncate">PM Dùng thử</span>
+              <span className="truncate">PM-A (Chỉ huy trưởng)</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              pmhoang@gmail.com
+              pm-a@sandbox.example.test
             </div>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              setEmail('suphoang@gmail.com')
-              setPassword('123456')
+              setEmail('supervisor@sandbox.example.test')
+              setPassword('Rg1!1YpbfL2fpPP1JWp3t1HdkXpTPZVdUJ2OrWllT8iNLvBPaZq3MMU5g3XT7VFUCwDv')
             }}
             className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
           >
             <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
               <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">supervisor_account</span>
-              <span className="truncate">Giám sát Dùng thử</span>
+              <span className="truncate">Giám sát (Supervisor)</span>
             </div>
             <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              suphoang@gmail.com
+              supervisor@sandbox.example.test
             </div>
           </button>
         </div>

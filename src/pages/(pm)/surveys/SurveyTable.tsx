@@ -121,7 +121,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                 value={selectedRouteFilter}
                 onChange={(e) => setSelectedRouteFilter(e.target.value)}
                 className="w-full pl-8 pr-7 py-2 text-xs bg-[#F8F9FA] border border-[#E2E5E9] rounded-xl text-[#1A1D20] font-medium appearance-none focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all cursor-pointer truncate"
-                title="Lọc danh mục đợt bay theo tuyến đường (BR-32 & DA05)"
+                title="Lọc danh mục đợt bay theo tuyến đường"
               >
                 {routeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>

@@ -12,9 +12,15 @@ export const apiClient = axios.create({
   withCredentials: true,
 })
 
-// Request Interceptor: gắn CSRF token (17_10: X-CSRF-TOKEN)
+// Request Interceptor: gắn Bearer token và CSRF token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const token =
+      useAuthStore.getState().token ||
+      (typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null)
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
     const csrfToken = useAuthStore.getState().csrfToken
     if (csrfToken) {
       config.headers['X-CSRF-TOKEN'] = csrfToken

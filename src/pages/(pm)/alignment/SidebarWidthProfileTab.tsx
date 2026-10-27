@@ -25,9 +25,6 @@ export const SidebarWidthProfileTab: React.FC<SidebarWidthProfileTabProps> = ({
             <Sliders className="w-3.5 h-3.5 text-brand-gold" />
             <span>Hồ sơ Bề rộng mặt đường (RoadWidthProfile)</span>
           </span>
-          <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
-            Chuẩn v2.2
-          </span>
         </div>
         <p className="text-[11px] text-slate-600 leading-relaxed">
           Khai báo bề rộng mặt đường (mét) từng đoạn từ điểm A đến B. Hệ thống tự động tính bán rộng tim đường

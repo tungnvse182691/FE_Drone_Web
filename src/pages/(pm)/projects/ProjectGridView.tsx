@@ -59,12 +59,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
               ></div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent"></div>
 
-              <div className="absolute top-3 left-3 flex items-center gap-1.5">
+              <div className="absolute top-3 left-3">
                 <span className="font-mono px-2 py-0.5 bg-white/95 rounded-md text-[11px] text-slate-900 font-bold shadow-2xs">
                   {prj.code}
-                </span>
-                <span className="text-[11px] px-2 py-0.5 rounded-md bg-black/40 text-white font-medium">
-                  {prj.region}
                 </span>
               </div>
 
@@ -75,6 +72,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                       ? 'bg-slate-200 text-slate-800'
                       : prj.status === 'NEAR_EXPIRY'
                       ? 'bg-[#FEE2E2] text-rose-700 font-bold'
+                      : prj.status_label === 'Chưa thiết lập tim tuyến' || prj.status_label === 'Chưa có tim tuyến'
+                      ? 'bg-slate-100 text-slate-600'
                       : prj.status === 'PENDING_ALIGNMENT'
                       ? 'bg-[#FEF3C7] text-[#D97706]'
                       : 'bg-[#EDF7ED] text-[#1B5E20]'
@@ -86,30 +85,41 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         ? 'bg-slate-600'
                         : prj.status === 'NEAR_EXPIRY'
                         ? 'bg-rose-600 animate-ping'
+                        : prj.status_label === 'Chưa thiết lập tim tuyến' || prj.status_label === 'Chưa có tim tuyến'
+                        ? 'bg-slate-400'
                         : prj.status === 'PENDING_ALIGNMENT'
                         ? 'bg-[#D97706]'
                         : 'bg-[#1B5E20]'
                     }`}
                   ></span>
-                  {prj.status_label}
+                  {prj.status_label === 'Chưa thiết lập tim tuyến' ? 'Chưa có tim tuyến' : prj.status_label}
                 </span>
               </div>
 
               <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/95">
-                <span className="font-mono text-xs flex items-center gap-1">
-                  <Icon name="alt_route" size={14} className="text-brand-gold" />
-                  <span>{prj.stationing_text}</span>
+                <span className="font-mono text-xs flex items-center gap-1.5 truncate">
+                  <Icon name="alt_route" size={14} className="text-brand-gold shrink-0" />
+                  <span className="truncate">{prj.stationing_text}</span>
                 </span>
-                <span className="text-[11px] opacity-85">{prj.location_detail}</span>
               </div>
             </div>
 
             {/* Card Body */}
             <div className="p-4 flex flex-col flex-1 justify-between gap-3.5">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand-gold transition-colors leading-snug font-headline">
                   {prj.name}
                 </h3>
+
+                <div className="flex items-center gap-1 text-xs text-slate-600">
+                  <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+                  <span className="truncate">
+                    Địa bàn:{' '}
+                    <strong className={prj.region || prj.location_detail ? 'text-slate-800 font-semibold' : 'text-slate-400 font-normal italic'}>
+                      {prj.region || prj.location_detail || 'Chưa thiết lập địa bàn'}
+                    </strong>
+                  </span>
+                </div>
 
                 {/* PM Info Block (BR-01) */}
                 {prj.is_assigned ? (

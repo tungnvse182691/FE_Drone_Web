@@ -16,12 +16,15 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || !import.meta.e
 
 interface AuthState {
   user: User | null
+  token: string | null
   csrfToken: string | null
   isAuthenticated: boolean
   mustChangePassword: boolean
+  setToken: (token: string | null) => void
+  setUser: (user: User | null) => void
   // Mock-only (giữ tương thích)
   login: (role: RoleCode) => void
-  setUserAndToken: (user: User) => void
+  setUserAndToken: (user: User, token?: string | null) => void
   // 17_10
   setCsrfToken: (token: string) => void
   setSession: (session: SessionResponse) => void
@@ -32,40 +35,74 @@ interface AuthState {
   updateUser: (data: Partial<User>) => void
 }
 
+function normalizeRole(roleStr: string): RoleCode {
+  const upper = (roleStr || '').toUpperCase().replace(/[^A-Z]/g, '')
+  if (upper.includes('SUPERVISOR')) return RoleCode.SUPERVISOR
+  if (upper.includes('PROJECT') || upper.includes('PM') || upper.includes('MANAGER')) return RoleCode.PROJECT_MANAGER
+  if (upper.includes('DRONE') || upper.includes('OPERATOR')) return RoleCode.DRONE_OPERATOR
+  if (upper.includes('CREW')) return RoleCode.REPAIR_CREW
+  return RoleCode.PROJECT_MANAGER
+}
+
 function sessionToUser(session: SessionResponse): User {
-  const u = session.user
+  const u = session.user as any
+  const name = u.fullName || u.displayName || 'Người dùng RoadGuard'
+  const email = u.email || 'pm-a@sandbox.example.test'
   return {
     id: u.id,
-    email: u.email,
-    username: u.email,
-    full_name: u.fullName,
-    fullName: u.fullName,
-    role: u.role as RoleCode,
+    email,
+    username: email,
+    full_name: name,
+    fullName: name,
+    role: normalizeRole(u.role),
     must_change_password: session.mustChangePassword,
   } as User
 }
 
+
+const savedToken = typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null
+let savedUser: User | null = null
+try {
+  const u = typeof window !== 'undefined' ? sessionStorage.getItem('rg_user') : null
+  if (u) savedUser = JSON.parse(u)
+} catch {}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  // Không hardcode: Khi mới mở trang chưa đăng nhập thì phiên là null
-  user: null,
+  user: savedUser,
+  token: savedToken,
   csrfToken: null,
-  isAuthenticated: false,
+  isAuthenticated: !!savedUser,
   mustChangePassword: false,
+
+  setToken: (token: string | null) => {
+    if (token) {
+      sessionStorage.setItem('rg_token', token)
+    } else {
+      sessionStorage.removeItem('rg_token')
+    }
+    set({ token })
+  },
+
+  setUser: (user: User | null) => {
+    if (user) {
+      sessionStorage.setItem('rg_user', JSON.stringify(user))
+    } else {
+      sessionStorage.removeItem('rg_user')
+    }
+    set({ user, isAuthenticated: !!user })
+  },
 
   // Mock login (giữ cho dev khi BE chưa sẵn sàng)
   login: (role: RoleCode) => {
     const user = mockUsers.find((u) => u.role === role) || mockUsers[0]
-    set({
-      user: { ...user },
-      isAuthenticated: true,
-    })
+    get().setUser(user)
   },
 
-  setUserAndToken: (user: User) => {
-    set({
-      user: { ...user },
-      isAuthenticated: true,
-    })
+  setUserAndToken: (user: User, token?: string | null) => {
+    if (token) {
+      get().setToken(token)
+    }
+    get().setUser(user)
   },
 
   setCsrfToken: (token: string) => {
@@ -118,6 +155,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    sessionStorage.removeItem('rg_token')
+    sessionStorage.removeItem('rg_user')
+    try {
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+      })
+    } catch {}
     const csrfToken = get().csrfToken
     if (!USE_MOCK && csrfToken) {
       try {
@@ -128,6 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({
       user: null,
+      token: null,
       csrfToken: null,
       isAuthenticated: false,
       mustChangePassword: false,

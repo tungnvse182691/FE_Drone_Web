@@ -47,6 +47,8 @@ export interface AssignedProjectOption {
   id: string
   code: string
   name: string
+  region?: string
+  location_detail?: string
   stationOriginText: string
   stationOriginKm: number
   endKm: number

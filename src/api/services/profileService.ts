@@ -1,4 +1,5 @@
 import { RoleCode } from '../../types/enums'
+import { authService } from './authService'
 
 export interface UserProfile {
   id: string
@@ -156,6 +157,15 @@ export const profileService = {
     currentPass: string,
     newPass: string
   ): Promise<{ success: boolean; message: string }> {
+    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+    if (!isMock) {
+      await authService.changePassword({ tempPassword: currentPass, newPassword: newPass })
+      return {
+        success: true,
+        message: 'Mật khẩu đã được thay đổi thành công qua hệ thống bảo mật.'
+      }
+    }
+
     await new Promise((r) => setTimeout(r, 250))
     if (!currentPass) {
       throw new Error('Vui lòng nhập mật khẩu hiện tại.')

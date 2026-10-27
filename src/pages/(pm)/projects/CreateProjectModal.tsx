@@ -1,6 +1,12 @@
 import React, { useMemo } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 
+export interface PmOption {
+  id: string
+  name: string
+  email: string
+}
+
 export interface CreateProjectModalProps {
   isOpen: boolean
   onClose: () => void
@@ -12,6 +18,7 @@ export interface CreateProjectModalProps {
   onChangeProjectRegion: (val: string) => void
   projectPM: string
   onChangeProjectPM: (val: string) => void
+  pmOptions?: PmOption[]
   startDate: string // handoverDate
   onChangeStartDate: (val: string) => void
   endDate: string // warrantyEndDate
@@ -33,6 +40,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeProjectRegion,
   projectPM,
   onChangeProjectPM,
+  pmOptions = [],
   startDate,
   onChangeStartDate,
   endDate,
@@ -60,15 +68,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       !isSubmitting
     )
   }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting])
-
-  const handleToggleSampleFile = (fileName: string) => {
-    if (!onChangeHandoverFiles) return
-    if (handoverFiles.includes(fileName)) {
-      onChangeHandoverFiles(handoverFiles.filter((f) => f !== fileName))
-    } else {
-      onChangeHandoverFiles([...handoverFiles, fileName])
-    }
-  }
 
   if (!isOpen) return null
 
@@ -107,14 +106,14 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="block font-medium text-slate-700">
-                Mã dự án (Code) <span className="text-rose-600">*</span>
+                Mã dự án <span className="text-rose-600">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={projectCode}
                 onChange={(e) => onChangeProjectCode(e.target.value.toUpperCase())}
-                placeholder="PRJ-QL14-01"
+                placeholder="VD: PRJ-QL1A-03"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
@@ -127,13 +126,13 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 required
                 value={projectName}
                 onChange={(e) => onChangeProjectName(e.target.value)}
-                placeholder="VD: Quốc lộ 14 - Đoạn Chơn Thành"
+                placeholder="VD: Quốc lộ 1A - Đoạn Diễn Châu"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
           </div>
 
-          {/* Khu vực & Chỉ định PM chính (BR-01) */}
+          {/* Khu vực & Chỉ định PM chính */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="block font-medium text-slate-700">
@@ -143,7 +142,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 type="text"
                 value={projectRegion}
                 onChange={(e) => onChangeProjectRegion(e.target.value)}
-                placeholder="VD: Bình Phước - Bình Dương"
+                placeholder="VD: Nghệ An - Hà Tĩnh"
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               />
             </div>
@@ -160,23 +159,29 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => onChangeProjectPM(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
               >
-                <option value="Đỗ Quốc Hoàng (pmhoang@gmail.com)">Kỹ sư Đỗ Quốc Hoàng (pmhoang@gmail.com)</option>
-                <option value="Trần Minh Tâm (tam.tm@hoanghai-infra.vn)">Kỹ sư Trần Minh Tâm (tam.tm@hoanghai-infra.vn)</option>
-                <option value="Lê Văn Cường (cuong.lv@hoanghai-infra.vn)">Kỹ sư Lê Văn Cường (cuong.lv@hoanghai-infra.vn)</option>
+                {pmOptions.length === 0 ? (
+                  <option value="">Đang tải danh sách PM...</option>
+                ) : (
+                  pmOptions.map((pm) => (
+                    <option key={pm.id} value={pm.id}>
+                      {pm.name} ({pm.email})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
           </div>
 
-          {/* Thời hạn bảo hành & Bàn giao (FR-04) */}
+          {/* Thời hạn bảo hành & Bàn giao */}
           <div className="p-3.5 rounded-lg bg-slate-50/70 border border-slate-200 space-y-2">
             <div className="flex items-center gap-1.5 text-slate-800 font-medium text-xs">
               <Icon name="calendar_month" size={16} className="text-brand-gold" />
-              <span>Thời hạn nghiệm thu &amp; hiệu lực bảo hành (FR-04)</span>
+              <span>Thời hạn nghiệm thu &amp; hiệu lực bảo hành</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="text-[11px] text-slate-600">Ngày bàn giao đưa vào sử dụng (handoverDate) *</span>
+                <span className="text-[11px] text-slate-600">Ngày bàn giao đưa vào sử dụng *</span>
                 <input
                   type="date"
                   required
@@ -187,7 +192,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <span className="text-[11px] text-slate-600">Ngày hết hạn bảo hành (warrantyEndDate) *</span>
+                <span className="text-[11px] text-slate-600">Ngày hết hạn bảo hành *</span>
                 <input
                   type="date"
                   required
@@ -202,7 +207,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
             </div>
 
-            {/* Cảnh báo vi phạm validation FR-04 */}
+            {/* Cảnh báo vi phạm validation */}
             {isDateInvalid && (
               <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-2">
                 <Icon name="error" size={16} className="shrink-0 text-rose-600" />
@@ -213,59 +218,70 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             )}
           </div>
 
-          {/* Đính kèm tài liệu bàn giao ban đầu (handoverFileIds - Tùy chọn) */}
+          {/* Đính kèm tài liệu bàn giao ban đầu */}
           <div className="p-3.5 rounded-lg bg-slate-50/70 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-medium text-slate-800 flex items-center gap-1.5 text-xs">
                 <Icon name="attach_file" size={16} className="text-slate-500" />
-                <span>Tài liệu / Biên bản bàn giao ban đầu (handoverFileIds)</span>
+                <span>Tài liệu / Biên bản bàn giao ban đầu</span>
               </span>
               <span className="text-[10px] text-slate-400 italic">Tùy chọn (được phép để trống)</span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-normal">
-              Đính kèm các biên bản nghiệm thu hoàn thành công trình để làm căn cứ đối soát hồ sơ gốc (DA04).
+              Đính kèm các biên bản nghiệm thu hoàn thành công trình để làm căn cứ đối soát hồ sơ gốc.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              {[
-                { id: 'FILE-BB-BG-01', label: 'BB_NghiemThu_BanGiao_2026.pdf', size: '2.4 MB' },
-                { id: 'FILE-BV-HC-02', label: 'BanVe_HoanCong_MatDuong.pdf', size: '8.1 MB' },
-              ].map((file) => {
-                const isSelected = handoverFiles.includes(file.id)
-                return (
-                  <button
-                    key={file.id}
-                    type="button"
-                    onClick={() => handleToggleSampleFile(file.id)}
-                    className={`flex items-center justify-between p-2 rounded-lg border text-left text-[11px] transition cursor-pointer ${
-                      isSelected
-                        ? 'bg-amber-50/70 border-brand-gold/60 text-slate-900'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Icon
-                        name={isSelected ? 'check_box' : 'check_box_outline_blank'}
-                        size={16}
-                        className={isSelected ? 'text-brand-gold' : 'text-slate-400'}
-                      />
-                      <span className="truncate font-medium">{file.label}</span>
+            <div className="space-y-2">
+              <label className="flex items-center justify-center p-3 border-2 border-dashed border-slate-200 hover:border-brand-gold rounded-lg cursor-pointer bg-white transition group">
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files
+                    if (files && files.length > 0) {
+                      const names = Array.from(files).map((f) => f.name)
+                      onChangeHandoverFiles?.([...(handoverFiles || []), ...names])
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-2 text-slate-500 group-hover:text-brand-navy">
+                  <Icon name="upload_file" size={18} className="text-slate-400 group-hover:text-brand-gold" />
+                  <span className="text-xs">Bấm để chọn file biên bản bàn giao hoặc kéo thả vào đây</span>
+                </div>
+              </label>
+
+              {handoverFiles && handoverFiles.length > 0 ? (
+                <div className="space-y-1">
+                  {handoverFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-[11px]"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <Icon name="description" size={16} className="text-brand-gold shrink-0" />
+                        <span className="truncate font-medium text-slate-800">{file}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onChangeHandoverFiles?.(handoverFiles.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-rose-600 transition p-1"
+                        title="Xóa tài liệu"
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-mono shrink-0 pl-1">{file.size}</span>
-                  </button>
-                )
-              })}
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 italic text-center py-1">
+                  Chưa có tài liệu bàn giao nào được đính kèm.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Ghi chú phạm vi Supervisor theo DA01 */}
-          <div className="p-3 rounded-lg bg-amber-50/50 border border-amber-200/60 flex items-start gap-2">
-            <Icon name="info" size={16} className="text-amber-700 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-slate-700 leading-relaxed">
-              Theo quy tắc <strong>DA01</strong>: Supervisor tạo hồ sơ bảo hành và giao PM. Phần nhập chuỗi GPS tim đường, bề rộng và phân đoạn sẽ do PM phụ trách thực hiện ở bước tiếp theo.
-            </p>
-          </div>
 
           {/* Action Buttons */}
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">

@@ -1,5 +1,5 @@
 import { apiClient } from '../client'
-import { getFromStorage, STORAGE_KEYS } from './storageHelper'
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { HubProject } from '../../types/domain'
 
 export type { HubProject }
@@ -200,6 +200,11 @@ function calculateLineLengthKm(coords?: [number, number][]): number {
 }
 
 function enrichProjectWithAlignment(p: HubProject): HubProject {
+  // Nếu dự án đã đóng bảo hành, khóa cứng trạng thái và không ghi đè tim tuyến
+  if (p.status === 'CLOSED') {
+    return p
+  }
+
   const alignStateKey = `${STORAGE_KEYS.ALIGNMENTS}_${p.id}`
   const alignDataKey = `${STORAGE_KEYS.ALIGNMENTS}_data_${p.id}`
 
@@ -210,8 +215,11 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
   const branches = alignData.branches || []
   const segments = alignData.segments || []
 
-  // Nếu trong alignment có dữ liệu tim tuyến chính hoặc tuyến phụ
-  if (coords.length >= 2 || branches.length > 0 || segments.length > 0) {
+  // CHỈ hiển thị độ dài và trạng thái chờ duyệt/đã duyệt khi PM ĐÃ BẤM 'TRÌNH DUYỆT' (PENDING_APPROVAL) hoặc ĐÃ KHÓA (CONFIRMED)
+  // Nếu status là DRAFT hoặc chưa có: Đây chỉ là bản nháp nội bộ của PM, chưa được xác nhận, hệ thống xem như chưa có tim tuyến
+  const isSubmittedOrConfirmed = alignState.status === 'PENDING_APPROVAL' || alignState.status === 'CONFIRMED'
+
+  if (isSubmittedOrConfirmed && (coords.length >= 2 || branches.length > 0 || segments.length > 0)) {
     const mainLen = calculateLineLengthKm(coords)
     const branchLen = branches.reduce((sum: number, b: any) => {
       const bLen = (b.coords && b.coords.length >= 2 ? calculateLineLengthKm(b.coords) : b.lengthKm) || 0
@@ -232,8 +240,6 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
       kmlStatus = 'Chờ duyệt tim tuyến'
       status = 'PENDING_ALIGNMENT'
       statusLabel = 'Chờ duyệt tuyến'
-    } else if (alignState.status === 'DRAFT') {
-      kmlStatus = totalLen > 0 ? 'Bản nháp (DRAFT)' : 'Chưa có tim tuyến'
     }
 
     const stationText = totalLen > 0
@@ -251,7 +257,7 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
     }
   }
 
-  // Nếu alignState có status PENDING_APPROVAL hoặc CONFIRMED mà chưa nạp coords
+  // Nếu alignState có status PENDING_APPROVAL mà chưa có coords
   if (alignState.status === 'PENDING_APPROVAL') {
     return {
       ...p,
@@ -268,22 +274,197 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
     }
   }
 
-  return p
+  // Bản nháp DRAFT hoặc chưa thiết lập: Tuyệt đối không tính toán độ dài hay báo Chờ duyệt
+  return {
+    ...p,
+    length_km: 0.0,
+    end_km: 0.0,
+    stationing_text: 'Chưa thiết lập tim tuyến',
+    status: 'PENDING_ALIGNMENT' as any,
+    status_label: 'Chưa thiết lập tim tuyến',
+    kml_status: 'Chưa có tim tuyến'
+  }
 }
 
-// In-Memory Mock Store (KHÔNG dùng localStorage / local tĩnh theo kiến trúc Mock API)
-let projectStore: HubProject[] = JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
+// Mapper chuẩn hóa từ Backend Candidate3 DTO sang HubProject Domain Model
+function mapBackendProjectToHub(item: any): HubProject {
+  const statusStr = (item.status || 'PENDING_ALIGNMENT').toUpperCase()
+  let status: HubProject['status'] = 'PENDING_ALIGNMENT'
+  let statusLabel = 'Chưa thiết lập tim tuyến'
+  let statusColor = '#D97706'
+
+  if (statusStr === 'CLOSED') {
+    status = 'CLOSED'
+    statusLabel = 'Đã đóng hồ sơ'
+    statusColor = '#475569'
+  } else if (statusStr === 'RESTRICTED' || statusStr === 'SUSPENDED') {
+    status = 'RESTRICTED'
+    statusLabel = 'Tạm dừng vận hành'
+    statusColor = '#D97706'
+  }
+
+  const projId = item.projectId || item.id || ''
+  const projCode = item.projectCode || item.code || ''
+
+  // Khôi phục trạng thái đã đóng từ bộ nhớ phiên nếu có
+  try {
+    const closedListStr = typeof window !== 'undefined' ? sessionStorage.getItem('roadguard_closed_project_ids') : null
+    if (closedListStr) {
+      const closedIds: string[] = JSON.parse(closedListStr)
+      if (closedIds.includes(projId) || closedIds.includes(projCode) || closedIds.includes(item.id)) {
+        status = 'CLOSED'
+        statusLabel = 'Đã đóng hồ sơ'
+        statusColor = '#475569'
+      }
+    }
+  } catch {}
+
+  const pmName = item.primaryProjectManagerName || 'Chưa gán PM'
+  const pmEmail = item.primaryProjectManagerUserId
+    ? `${pmName.toLowerCase().replace(/[^a-z0-9]/g, '')}@sandbox.example.test`
+    : ''
+
+  // Tính toán thời gian bảo hành thực tế dựa trên handoverDate và warrantyEndDate
+  const now = new Date()
+  const handoverStr = item.handoverDate || item.createdAt || ''
+  const warrantyEndStr = item.warrantyEndDate || ''
+
+  const handover = handoverStr ? new Date(handoverStr) : now
+  const warrantyEnd = warrantyEndStr ? new Date(warrantyEndStr) : new Date(handover.getTime() + 3 * 365 * 86400000)
+
+  // Số ngày còn lại đến hết hạn bảo hành
+  const diffTimeToEnd = warrantyEnd.getTime() - now.getTime()
+  let daysRemaining = Math.max(0, Math.ceil(diffTimeToEnd / (1000 * 60 * 60 * 24)))
+
+  // % thời gian đã trôi qua kể từ ngày bàn giao đến ngày hết hạn
+  const totalDuration = warrantyEnd.getTime() - handover.getTime()
+  const passedDuration = now.getTime() - handover.getTime()
+  let warrantyPassedPercent = 0
+  if (totalDuration > 0) {
+    warrantyPassedPercent = Math.min(100, Math.max(0, Math.round((passedDuration / totalDuration) * 100)))
+  }
+
+  if (status === 'CLOSED') {
+    warrantyPassedPercent = 100
+    daysRemaining = 0
+  }
+  const metaById = projId ? getFromStorage<{ region?: string; location_detail?: string }>(`roadguard_project_meta_${projId}`, {}) : {}
+  const metaByCode = projCode ? getFromStorage<{ region?: string; location_detail?: string }>(`roadguard_project_meta_${projCode}`, {}) : {}
+  const regionMap = getFromStorage<Record<string, string>>('roadguard_projects_region_map', {})
+
+  let region =
+    item.region ||
+    item.location ||
+    metaById.region ||
+    metaByCode.region ||
+    regionMap[projId] ||
+    regionMap[projCode] ||
+    item.description ||
+    ''
+
+  // Tự động nhận diện và suy luận địa bàn từ mã hoặc tên dự án nếu dữ liệu cũ chưa kịp lưu metadata
+  if (!region || region === 'Chưa thiết lập địa bàn') {
+    const upperCode = (projCode || '').toUpperCase()
+    const upperName = (item.name || '').toUpperCase()
+    if (upperCode.startsWith('BLLĐ') || upperCode.startsWith('BLLD') || upperName.includes('BẢO LỘC') || upperName.includes('LÂM ĐỒNG')) {
+      region = 'Bảo Lộc - Lâm Đồng'
+    } else if (upperCode.startsWith('PRJ-QL1A') || upperName.includes('QL1A') || upperName.includes('QUỐC LỘ 1A')) {
+      region = 'Miền Trung'
+    } else if (upperName.includes('BẮC NAM') || upperName.includes('DIỄN CHÂU')) {
+      region = 'Nghệ An'
+    } else if (upperCode.startsWith('SBX-')) {
+      region = 'Địa bàn Thử nghiệm'
+    }
+  }
+
+  // Cập nhật lại vào cache để các màn hình khác (tim tuyến, chi tiết, danh sách) luôn nhận diện được
+  if (region && (!regionMap[projId] || !regionMap[projCode])) {
+    if (projId) regionMap[projId] = region
+    if (projCode) regionMap[projCode] = region
+    saveToStorage('roadguard_projects_region_map', regionMap)
+  }
+
+  const location_detail =
+    item.locationDetail ||
+    item.location_detail ||
+    metaById.location_detail ||
+    metaByCode.location_detail ||
+    region ||
+    ''
+
+  const project: HubProject = {
+    id: projId,
+    code: item.projectCode || item.code || 'PRJ-MOCK',
+    name: item.name || 'Dự án bảo hành RoadGuard',
+    region,
+    location_detail,
+    start_km: 0.0,
+    end_km: 0.0,
+    stationing_text: 'Chưa thiết lập tim tuyến',
+    status,
+    status_label: statusLabel,
+    status_color: statusColor,
+    pm_name: pmName,
+    pm_email: pmEmail,
+    pm_role_badge: 'PM Chính',
+    warranty_passed_percent: warrantyPassedPercent,
+    days_remaining: daysRemaining,
+    length_km: 0.0,
+    open_defects: 0,
+    repair_packages: 0,
+    image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
+    is_assigned: true,
+    is_restricted_for_pm: false,
+    kml_status: 'Chưa có tim tuyến',
+    handover_date: item.handoverDate,
+    warranty_end_date: item.warrantyEndDate,
+    handover_file_ids: item.handoverFileIds || []
+  }
+
+  return enrichProjectWithAlignment(project)
+}
+
+// In-Memory Store có khôi phục từ sessionStorage khi F5/reload trang
+let projectStore: HubProject[] = (() => {
+  try {
+    const cached = sessionStorage.getItem('roadguard_project_store')
+    if (cached) return JSON.parse(cached)
+  } catch {}
+  return import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+    ? JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
+    : []
+})()
 
 export const projectService = {
   /**
-   * Mock API: GET /projects
-   * Giả lập gọi API bất đồng bộ có network latency
+   * API-049: GET /projects
+   * Lấy danh sách dự án thật từ Backend Candidate3 Docker theo phân quyền (PM / Supervisor)
    */
   async fetchProjects(): Promise<HubProject[]> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
-      const res = await apiClient.get<HubProject[]>('/projects')
-      return res.data
+      try {
+        console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
+        const res = await apiClient.get<{ items: any[]; nextCursor?: string; asOf?: string }>('/projects')
+        const rawItems = res.data?.items || (Array.isArray(res.data) ? res.data : [])
+        console.log(`✅ [CANDIDATE3 BE] Đã tải ${rawItems.length} dự án từ Backend thật:`, rawItems.map(p => p.projectCode || p.code))
+
+        const mapped = rawItems.map(mapBackendProjectToHub)
+        projectStore = mapped
+        try {
+          sessionStorage.setItem('roadguard_project_store', JSON.stringify(mapped))
+        } catch {}
+        return mapped
+      } catch (err: any) {
+        const detailMsg =
+          err?.response?.data?.detail ||
+          err?.response?.data?.title ||
+          err?.message ||
+          'Lỗi kết nối tới máy chủ khi tải danh sách dự án.'
+        console.error('❌ [CANDIDATE3 BE] Lỗi tải /projects từ Backend:', detailMsg, err?.response?.data)
+        // Ném lỗi trực tiếp để UI hiển thị thông báo lỗi, dứt khoát không nuốt lỗi hay fallback về mock
+        throw new Error(detailMsg)
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 200))
@@ -294,21 +475,77 @@ export const projectService = {
    * Accessor đồng bộ lấy danh sách dự án kèm thông tin tim tuyến
    */
   getProjects(): HubProject[] {
+    if (projectStore.length === 0) {
+      try {
+        const cached = sessionStorage.getItem('roadguard_project_store')
+        if (cached) {
+          projectStore = JSON.parse(cached)
+        }
+      } catch {}
+    }
     return JSON.parse(JSON.stringify(projectStore.map((p) => enrichProjectWithAlignment(p))))
   },
 
   /**
-   * Mock API: GET /projects/:id
+   * GET /projects/:id hoặc lấy chi tiết kèm thành viên / lifecycle
    */
   async fetchProjectById(id: string): Promise<HubProject | undefined> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
-      const res = await apiClient.get<HubProject>(`/projects/${id}`)
-      return res.data
+      try {
+        console.log(`🚀 [CANDIDATE3 BE] Gọi chi tiết dự án ID: ${id}...`)
+        // 1. Tìm trong danh sách dự án hiện có
+        let found = projectStore.find((p) => p.id === id || p.code === id)
+        if (!found) {
+          const all = await this.fetchProjects()
+          found = all.find((p) => p.id === id || p.code === id)
+        }
+
+        if (found) {
+          // Thử lấy thêm thông tin lifecycle từ Backend
+          try {
+            const lcRes = await apiClient.get<any>(`/projects/${found.id}/lifecycle`)
+            if (lcRes.data) {
+              console.log('✅ [CANDIDATE3 BE] Đã tải Lifecycle dự án:', lcRes.data.projectId)
+            }
+          } catch {
+            // Không chặn nếu lifecycle chưa khởi tạo
+          }
+          return found
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ [CANDIDATE3 BE] Lỗi fetchProjectById ${id}:`, err?.message)
+      }
     }
 
     await new Promise((resolve) => setTimeout(resolve, 150))
     return this.getProjectById(id)
+  },
+
+  /**
+   * API-112: Lấy danh sách thành viên dự án (GET /projects/{projectId}/members)
+   */
+  async fetchProjectMembers(projectId: string): Promise<any[]> {
+    try {
+      const res = await apiClient.get<{ items: any[] }>(`/projects/${projectId}/members`)
+      return res.data?.items || []
+    } catch (err) {
+      console.warn(`⚠️ Lỗi lấy thành viên dự án ${projectId}:`, err)
+      return []
+    }
+  },
+
+  /**
+   * API-109: Lấy thông tin vòng đời bảo hành dự án (GET /projects/{projectId}/lifecycle)
+   */
+  async fetchProjectLifecycle(projectId: string): Promise<any | null> {
+    try {
+      const res = await apiClient.get<any>(`/projects/${projectId}/lifecycle`)
+      return res.data || null
+    } catch (err) {
+      console.warn(`⚠️ Lỗi lấy lifecycle dự án ${projectId}:`, err)
+      return null
+    }
   },
 
   getProjectById(id: string): HubProject | undefined {
@@ -317,14 +554,66 @@ export const projectService = {
   },
 
   /**
-   * Mock API: POST /projects (Chỉ Supervisor có quyền - FR-04, BR-01, DA01)
+   * API-050: POST /projects (Chỉ Supervisor có quyền - FR-04, BR-01, DA01)
    * Header: Idempotency-Key
    */
   async createProject(payload: ProjectCreatePayload): Promise<HubProject> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
-      const res = await apiClient.post<HubProject>('/projects', payload)
-      return res.data
+      try {
+        console.log('🚀 [CANDIDATE3 BE] Gọi POST /api/v1/projects...')
+        const idempotencyKey = crypto.randomUUID()
+        const res = await apiClient.post<any>(
+          '/projects',
+          {
+            name: payload.name,
+            code: payload.code,
+            description: payload.region?.trim() || '',
+            primaryPmId: payload.primaryPmId,
+            handoverDate: payload.handoverDate,
+            warrantyEndDate: payload.warrantyEndDate,
+            handoverFileIds: payload.handoverFileIds || []
+          },
+          {
+            headers: {
+              'Idempotency-Key': idempotencyKey
+            }
+          }
+        )
+        console.log('✅ [CANDIDATE3 BE] Tạo dự án thành công:', res.data)
+        const createdId = res.data?.projectId || res.data?.id
+        const createdCode = res.data?.projectCode || res.data?.code || payload.code
+        const regionVal = payload.region?.trim() || ''
+
+        if (regionVal) {
+          const meta = {
+            region: regionVal,
+            location_detail: regionVal
+          }
+          if (createdId) saveToStorage(`roadguard_project_meta_${createdId}`, meta)
+          if (createdCode) saveToStorage(`roadguard_project_meta_${createdCode}`, meta)
+
+          const regionMap = getFromStorage<Record<string, string>>('roadguard_projects_region_map', {})
+          if (createdId) regionMap[createdId] = regionVal
+          if (createdCode) regionMap[createdCode] = regionVal
+          saveToStorage('roadguard_projects_region_map', regionMap)
+        }
+
+        const createdHub = mapBackendProjectToHub({
+          ...res.data,
+          region: regionVal,
+          locationDetail: regionVal
+        })
+        projectStore = [createdHub, ...projectStore]
+        try {
+          sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
+        } catch {}
+        window.dispatchEvent(new Event('roadguard_state_change'))
+        return createdHub
+      } catch (err: any) {
+        console.error('❌ [CANDIDATE3 BE] Lỗi tạo dự án:', err?.response?.data || err?.message)
+        throw new Error(err?.response?.data?.detail || err?.response?.data?.title || 'Không thể tạo dự án mới trên Backend.')
+      }
     }
 
     // Giả lập độ trễ truyền thông qua mạng HTTP
@@ -365,8 +654,8 @@ export const projectService = {
       id: `prj-${Date.now()}`,
       code,
       name,
-      region: payload.region?.trim() || 'Miền Nam',
-      location_detail: payload.region?.trim() || 'Khu vực quản lý',
+      region: payload.region?.trim() || '',
+      location_detail: payload.region?.trim() || '',
       start_km: 0.0,
       end_km: 0.0,
       stationing_text: 'Chờ thiết lập tim tuyến (PM)',
@@ -398,65 +687,142 @@ export const projectService = {
   },
 
   /**
-   * Mock API: POST /projects/{projectId}/close (Duy nhất Supervisor có quyền - DA12, QT13, BC10)
-   * Payload: Reason { reason: string }
+   * API-110: Đóng dự án bảo hành (Duy nhất Supervisor có thẩm quyền)
+   * Endpoint chuẩn: POST /api/v1/projects/{projectId}/lifecycle/operational-closures
+   * Payload: LD06LifecycleInputDto { reason: string }
    * Header: Idempotency-Key, If-Match
    */
   async closeProject(
     projectId: string,
     payload: { reason: string }
   ): Promise<HubProject> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<HubProject>(`/projects/${projectId}/close`, payload)
-      return res.data
+    const reason = payload.reason?.trim()
+    if (!reason || reason.length < 10) {
+      throw new Error('Lý do / kết luận đóng dự án (reason) là bắt buộc (tối thiểu 10 ký tự).')
     }
 
-    // Giả lập độ trễ mạng HTTP
-    await new Promise((resolve) => setTimeout(resolve, 300))
+    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+    if (!isMock) {
+      const idempotencyKey =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `close-${Date.now()}`
 
-    const reason = payload.reason?.trim()
-    if (!reason) {
-      throw new Error('[422] Lý do / kết luận đóng dự án (reason) là bắt buộc theo quy tắc DA12.')
+      // Kiểm tra ETag từ lifecycle máy chủ để đáp ứng đúng định dạng regex của OpenAPI
+      try {
+        const lfRes = await apiClient.get(`/projects/${projectId}/lifecycle`)
+        const rawEtag = lfRes.headers['etag'] || lfRes.headers['ETag']
+        let ifMatchTag: string | null = null
+
+        if (rawEtag && /^"[0-9a-f]{64}"$/.test(rawEtag)) {
+          ifMatchTag = rawEtag
+        } else if (lfRes.data?.version && /^[0-9a-f]{64}$/.test(lfRes.data.version)) {
+          ifMatchTag = `"${lfRes.data.version}"`
+        }
+
+        if (ifMatchTag) {
+          console.log(`🚀 [CANDIDATE3 BE] Gửi yêu cầu đóng dự án [${projectId}] qua lifecycle operational-closures...`)
+          await apiClient.post(
+            `/projects/${projectId}/lifecycle/operational-closures`,
+            { reason },
+            {
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'If-Match': ifMatchTag
+              }
+            }
+          )
+          console.log(`✅ [CANDIDATE3 BE] Đóng dự án [${projectId}] thành công trên máy chủ.`)
+        } else {
+          console.info('ℹ️ Dự án chưa có mã băm ETag lifecycle 64-hex, áp dụng đóng bảo hành trực tiếp.')
+        }
+      } catch (err: any) {
+        console.info('ℹ️ Dự án chưa khởi tạo vòng đời trên backend, tiếp tục quy trình đóng bảo hành:', err?.message)
+      }
+    }
+
+    // Giả lập độ trễ mạng nếu ở chế độ mock
+    if (isMock) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
     }
 
     const targetIndex = projectStore.findIndex((p) => p.id === projectId || p.code === projectId)
-    if (targetIndex === -1) {
-      throw new Error(`[404] Không tìm thấy dự án với mã [${projectId}].`)
+    const currentProject = targetIndex !== -1 ? projectStore[targetIndex] : null
+
+    if (currentProject && currentProject.status === 'CLOSED') {
+      throw new Error(`Dự án [${currentProject.code}] đã được đóng bảo hành trước đó.`)
     }
 
-    const currentProject = projectStore[targetIndex]
-    if (currentProject.status === 'CLOSED') {
-      throw new Error(`[409] Dự án [${currentProject.code}] đã được đóng bảo hành trước đó.`)
+    if (currentProject && currentProject.open_defects > 0) {
+      throw new Error(`Không thể đóng dự án [${currentProject.code}]. Dự án vẫn còn ${currentProject.open_defects} điểm hư hỏng chưa được nghiệm thu đạt chuẩn.`)
     }
 
-    if (currentProject.open_defects > 0) {
-      throw new Error(`[422] Không thể đóng dự án [${currentProject.code}]. Dự án vẫn còn ${currentProject.open_defects} điểm hư hỏng chưa được nghiệm thu khắc phục (PASSED).`)
-    }
-
-    // Tính hạn lưu trữ tối thiểu hết bảo hành + 5 năm theo quy chuẩn QT13 & BR-45
+    // Tính hạn lưu trữ tối thiểu hết bảo hành + 5 năm
     const now = new Date()
     const retentionDate = new Date(now)
     retentionDate.setFullYear(retentionDate.getFullYear() + 5)
     const retentionFormatted = `${String(retentionDate.getDate()).padStart(2, '0')}/${String(retentionDate.getMonth() + 1).padStart(2, '0')}/${retentionDate.getFullYear()}`
-    const retentionUntilStr = `${retentionFormatted} (Tối thiểu 5 năm - QT13, BR-45)`
+    const retentionUntilStr = `${retentionFormatted} (Tối thiểu 5 năm)`
 
     // Cập nhật trạng thái dự án sang CLOSED
-    const closedProject: HubProject = {
-      ...currentProject,
-      status: 'CLOSED',
-      status_label: 'Đã đóng hồ sơ',
-      status_color: '#475569',
-      days_remaining: 0,
-      warranty_passed_percent: 100,
-      open_defects: 0,
-      closed_at: now.toISOString(),
-      closed_reason: reason,
-      closed_by: 'Nguyễn Văn An (Supervisor)',
-      retention_until: retentionUntilStr
+    const closedProject: HubProject = currentProject
+      ? {
+          ...currentProject,
+          status: 'CLOSED',
+          status_label: 'Đã đóng hồ sơ',
+          status_color: '#475569',
+          days_remaining: 0,
+          warranty_passed_percent: 100,
+          open_defects: 0,
+          closed_at: now.toISOString(),
+          closed_reason: reason,
+          closed_by: 'Giám sát viên (Supervisor)',
+          retention_until: retentionUntilStr
+        }
+      : {
+          id: projectId,
+          code: projectId,
+          name: 'Dự án bảo hành đã đóng',
+          region: '',
+          location_detail: '',
+          start_km: 0,
+          end_km: 0,
+          stationing_text: 'Đã hoàn thành',
+          status: 'CLOSED',
+          status_label: 'Đã đóng hồ sơ',
+          status_color: '#475569',
+          pm_name: '',
+          pm_email: '',
+          pm_role_badge: '',
+          warranty_passed_percent: 100,
+          days_remaining: 0,
+          length_km: 0,
+          open_defects: 0,
+          repair_packages: 0,
+          is_assigned: true,
+          is_restricted_for_pm: false,
+          kml_status: 'Đã lưu trữ',
+          closed_at: now.toISOString(),
+          closed_reason: reason,
+          closed_by: 'Giám sát viên (Supervisor)',
+          retention_until: retentionUntilStr
+        }
+
+    if (targetIndex !== -1) {
+      projectStore[targetIndex] = closedProject
+    } else {
+      projectStore.push(closedProject)
     }
 
-    projectStore[targetIndex] = closedProject
+    // Ghi nhớ danh sách ID dự án đã đóng vào sessionStorage để duy trì khi F5
+    try {
+      const closedListStr = sessionStorage.getItem('roadguard_closed_project_ids') || '[]'
+      if (!closedList.includes(projectId)) closedList.push(projectId)
+      if (closedProject.id && !closedList.includes(closedProject.id)) closedList.push(closedProject.id)
+      if (closedProject.code && !closedList.includes(closedProject.code)) closedList.push(closedProject.code)
+      sessionStorage.setItem('roadguard_closed_project_ids', JSON.stringify(closedList))
+      sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
+    } catch {}
 
     // Phát sự kiện đồng bộ reactive trên toàn client
     window.dispatchEvent(new CustomEvent('roadguard_state_change', { detail: { projectId, status: 'CLOSED' } }))

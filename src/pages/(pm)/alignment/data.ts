@@ -1446,21 +1446,25 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
   const lengthKm = p.length_km || 0.0
   const endKm = p.end_km || parseFloat((startKm + lengthKm).toFixed(3))
 
-  const stationText = p.stationing_text ? p.stationing_text.split('➔')[0].trim() : `Km ${startKm}+000`
+  const stationText = p.stationing_text && p.stationing_text !== 'Chưa thiết lập tim tuyến'
+    ? p.stationing_text.split('➔')[0].trim()
+    : 'Chưa thiết lập tim tuyến'
 
   return {
     id: p.id,
     code: p.code,
     name: p.name,
-    stationOriginText: `${stationText} (${Math.round(startKm * 1000)}m)`,
+    region: p.region || p.location_detail || '',
+    location_detail: p.location_detail || p.region || '',
+    stationOriginText: stationText,
     stationOriginKm: startKm,
     endKm: endKm,
     crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: 0.0, // Dự án mới chưa có tọa độ thực tế, chiều dài ban đầu là 0
-    defaultCoords: [], // Dự án mới CHƯA có tọa độ tim tuyến (không sinh tọa độ giả)
-    defaultKmPoints: [], // Chưa có mốc lý trình
-    defaultSegments: [], // Chưa có phân đoạn (PM tự chia bằng nút "Áp dụng chia đoạn tự động" hoặc nạp tệp)
-    defaultBranches: [], // Chưa có nhánh rẽ mặc định
+    lengthKm: lengthKm,
+    defaultCoords: [],
+    defaultKmPoints: [],
+    defaultSegments: [],
+    defaultBranches: [],
     defaultManualText: ''
   }
 }
@@ -1469,19 +1473,14 @@ export function getAvailableAssignedProjects(): AssignedProjectOption[] {
   const storedProjects = projectService.getProjects()
   const list: AssignedProjectOption[] = []
 
-  // 1. Duyệt qua tất cả dự án trong projectService
+  // 1. Chỉ lấy các dự án thực tế đang quản lý trong hệ thống (từ Backend API thật)
   for (const p of storedProjects) {
-    const existing = PM_ASSIGNED_PROJECTS.find((op) => op.id === p.id || op.code === p.code)
-    if (existing) {
-      list.push({ ...existing, id: p.id, code: p.code, name: p.name })
-    } else {
-      list.push(buildDynamicProjectAlignment(p))
-    }
+    list.push(buildDynamicProjectAlignment(p))
   }
 
-  // 2. Thêm bất kỳ preset nào trong PM_ASSIGNED_PROJECTS chưa có trong list
-  for (const op of PM_ASSIGNED_PROJECTS) {
-    if (!list.some((item) => item.id === op.id)) {
+  // 2. Chỉ khi bật chế độ VITE_USE_MOCK_PROJECTS='true' VÀ danh sách rỗng mới fallback về mock
+  if (list.length === 0 && import.meta.env.VITE_USE_MOCK_PROJECTS === 'true') {
+    for (const op of PM_ASSIGNED_PROJECTS) {
       list.push(op)
     }
   }

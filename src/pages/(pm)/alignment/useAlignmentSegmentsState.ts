@@ -58,11 +58,11 @@ export function useAlignmentSegmentsState({
   const [customSplitKm, setCustomSplitKm] = useState<number>(1022.5)
 
   const handleApplyAutoSplit = () => {
-    const totalKm = importedLengthKm || (currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0]) || 25.0
-    const startBaseKm = currentKmPoints && currentKmPoints.length > 0 && currentKmPoints[0] !== undefined
-      ? currentKmPoints[0]
-      : 0.0
-    const dist = Math.max(0.01, Math.min(splitDistance, totalKm))
+    const totalKm = importedLengthKm || (currentKmPoints.length >= 2 ? currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0] : 0.0)
+    if (totalKm <= 0) {
+      showToast('Chưa có dữ liệu chiều dài tim tuyến để chia đoạn.')
+      return
+    }
 
     const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
     const validated = checkAndEnrichSegmentsContinuity(newSegments)

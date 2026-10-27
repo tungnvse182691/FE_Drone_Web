@@ -60,7 +60,7 @@ export const ProjectOverview: React.FC = () => {
     try {
       const closed = await projectService.closeProject(project.id, { reason })
       setProject(closed)
-      showToast(`Đã đóng thành công dự án [${closed.code}] và lưu trữ hồ sơ theo quy chuẩn (DA12, QT13)!`)
+      showToast(`Đã đóng thành công dự án [${closed.code}] và chuyển sang lưu trữ hồ sơ!`)
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
@@ -118,37 +118,56 @@ export const ProjectOverview: React.FC = () => {
           setSegments(mappedSegments)
         }
 
-        // 2. Cơ cấu nhân sự động bám sát PM phụ trách theo BR-01
-        if (data.id === 'prj-ql1a-02') {
+        // 2. Cơ cấu nhân sự từ API Backend thật (API-112: GET /projects/{projectId}/members)
+        try {
+          const rawMembers = await projectService.fetchProjectMembers(data.id)
+          if (rawMembers && rawMembers.length > 0) {
+            const mappedMembers: ProjectMember[] = rawMembers.map((m: any) => ({
+              id: m.membershipId || m.userId,
+              name: m.displayName || 'Nhân sự dự án',
+              role_code: m.role || 'MEMBER',
+              role_title: m.role === 'PM' ? 'Chỉ huy trưởng dự án (Project Manager)' : m.role === 'OPERATOR' ? 'Phi công Drone (Operator)' : m.role === 'CREW' ? 'Đội trưởng thi công (Crew)' : 'Giám sát viên (Supervisor)',
+              role_badge: m.isPrimary ? 'PM CHÍNH' : m.role,
+              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+              is_online: m.status === 'ACTIVE',
+              authority: m.role === 'PM' ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)' : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
+              contact: `${(m.displayName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')}@sandbox.example.test • Đang trực tuyến`,
+              unit: m.role === 'PM' ? 'Ban Chỉ huy Công trường' : 'Đội ngũ Kỹ thuật & Khảo sát'
+            }))
+            setMembers(mappedMembers)
+          } else if (data.id === 'prj-ql1a-02') {
+            setMembers(INITIAL_MEMBERS)
+          } else {
+            const dynamicMembers: ProjectMember[] = [
+              {
+                id: 'mem-sup-01',
+                name: 'Nguyễn Văn An',
+                role_code: 'SUPERVISOR',
+                role_title: 'Giám sát trưởng (Supervisor)',
+                role_badge: 'SUPERVISOR',
+                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+                is_online: true,
+                authority: 'Khởi tạo dự án, thẩm duyệt hồ sơ & ký số đóng đợt bảo hành',
+                contact: 'an.nv@hoanghai-infra.vn • 0912.888.666',
+                unit: 'Ban Giám sát Hoàng Hải / Chủ đầu tư'
+              },
+              {
+                id: `mem-pm-${data.id}`,
+                name: data.pm_name || 'Đỗ Quốc Hoàng',
+                role_code: 'PM',
+                role_title: 'Chỉ huy trưởng dự án (Project Manager)',
+                role_badge: 'PM CHÍNH',
+                avatar: data.pm_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+                is_online: true,
+                authority: 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)',
+                contact: `${data.pm_email || 'pmhoang@gmail.com'} • Đang trực tuyến`,
+                unit: 'Ban Chỉ huy Công trường'
+              }
+            ]
+            setMembers(dynamicMembers)
+          }
+        } catch {
           setMembers(INITIAL_MEMBERS)
-        } else {
-          const dynamicMembers: ProjectMember[] = [
-            {
-              id: 'mem-sup-01',
-              name: 'Nguyễn Văn An',
-              role_code: 'SUPERVISOR',
-              role_title: 'Giám sát trưởng (Supervisor)',
-              role_badge: 'SUPERVISOR',
-              avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-              is_online: true,
-              authority: 'Khởi tạo dự án, thẩm duyệt hồ sơ & ký số đóng đợt bảo hành (DA01)',
-              contact: 'an.nv@hoanghai-infra.vn • 0912.888.666',
-              unit: 'Ban Giám sát Hoàng Hải / Chủ đầu tư'
-            },
-            {
-              id: `mem-pm-${data.id}`,
-              name: data.pm_name || 'Đỗ Quốc Hoàng',
-              role_code: 'PM',
-              role_title: 'Chỉ huy trưởng dự án (Project Manager)',
-              role_badge: 'PM CHÍNH',
-              avatar: data.pm_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-              is_online: true,
-              authority: 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)',
-              contact: `${data.pm_email || 'pmhoang@gmail.com'} • Đang trực tuyến`,
-              unit: 'Ban Chỉ huy Công trường'
-            }
-          ]
-          setMembers(dynamicMembers)
         }
       } else {
         // Fallback an toàn nếu không tìm thấy ID
@@ -195,7 +214,6 @@ export const ProjectOverview: React.FC = () => {
         basePath={basePath}
         isSupervisor={isSupervisor}
         onNavigate={navigate}
-        onUpdateInfo={() => showToast('Mở màn hình cập nhật thông tin dự án...')}
         onCloseProject={() => setIsCloseModalOpen(true)}
         mainlineLengthKm={alignmentDetail.mainlineLengthKm}
         branchesLengthKm={alignmentDetail.branchesLengthKm}
@@ -217,6 +235,7 @@ export const ProjectOverview: React.FC = () => {
           <ProjectTimelineStepper
             project={project}
             basePath={basePath}
+            isSupervisor={isSupervisor}
             onNavigate={navigate}
           />
 
@@ -241,6 +260,7 @@ export const ProjectOverview: React.FC = () => {
           <ProjectMapPreviewCard
             project={project}
             basePath={basePath}
+            isSupervisor={isSupervisor}
             onNavigate={navigate}
             activeTab={activeAlignmentTab}
           />

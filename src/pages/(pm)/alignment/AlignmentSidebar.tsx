@@ -139,9 +139,6 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           >
             <Sliders className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Bề rộng (m)</span>
-            <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-              v2.2
-            </span>
           </button>
           <button
             type="button"
@@ -154,9 +151,6 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           >
             <Grid className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Tấm & Khe</span>
-            <span className="bg-amber-100 text-amber-800 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-              TCVN
-            </span>
           </button>
         </div>
 

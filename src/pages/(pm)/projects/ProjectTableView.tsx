@@ -39,9 +39,14 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                 <tr key={prj.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3 px-4 font-mono font-bold text-brand-goldMuted">{prj.code}</td>
                   <td className="py-3 px-4 font-bold text-slate-900">{prj.name}</td>
-                  <td className="py-3 px-4 text-slate-600">
-                    <div>{prj.region} ({prj.location_detail})</div>
-                    <div className="font-mono text-[11px] text-slate-400">{prj.stationing_text}</div>
+                  <td className="py-3 px-4 text-slate-700">
+                    <div className="flex items-center gap-1 font-medium">
+                      <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+                      <span className={prj.region || prj.location_detail ? 'font-bold text-slate-900' : 'text-slate-400 italic'}>
+                        {prj.region || prj.location_detail || 'Chưa thiết lập địa bàn'}
+                      </span>
+                    </div>
+                    <div className="font-mono text-[11px] text-slate-400 mt-0.5">{prj.stationing_text}</div>
                   </td>
                   <td className="py-3 px-4">
                     {prj.is_assigned ? (
@@ -108,7 +113,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                           {isSupervisor && onOpenCloseModal && (
                             <button
                               type="button"
-                              title="Đóng dự án khi hết hạn bảo hành (DA12)"
+                              title="Đóng dự án khi kết thúc bảo hành"
                               onClick={() => onOpenCloseModal(prj)}
                               className="p-1.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 rounded-lg text-xs font-semibold transition border border-slate-200 hover:border-rose-200 cursor-pointer"
                             >

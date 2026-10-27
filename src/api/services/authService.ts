@@ -1,5 +1,15 @@
 import { RoleCode } from '../../types/enums'
 import { User } from '../../types/domain'
+import {
+  fetchCsrfToken,
+  loginApi,
+  logoutApi,
+  changePasswordApi,
+  getSessionApi,
+  SessionResponse,
+} from '../auth'
+import { useAuthStore } from '../../store/authStore'
+import { apiClient } from '../client'
 
 interface MockUser extends User {
   password_hash: string
@@ -88,9 +98,63 @@ export interface ChangePasswordPayload {
 
 export const authService = {
   /**
-   * Đăng nhập hệ thống (Bất đồng bộ - Giả lập Mock REST API)
+   * Đăng nhập hệ thống (Hỗ trợ gọi Backend Candidate3 hoặc Mock Fallback)
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+    if (!isMock) {
+      console.log(`🚀 [CANDIDATE3 BE] Gửi đăng nhập tới Backend cho: ${credentials.email}...`)
+      try {
+        const res = await apiClient.post<{
+          accessToken: string
+          refreshToken?: string
+          mustChangePassword?: boolean
+          user: {
+            id: string
+            displayName?: string
+            fullName?: string
+            role: string
+            version?: string
+          }
+        }>('/auth/android/login', {
+          email: credentials.email,
+          password: credentials.password
+        })
+
+        const data = res.data
+        const token = data.accessToken
+        useAuthStore.getState().setToken(token)
+
+        const rawUser = data.user
+        const roleStr = (rawUser.role || '').toUpperCase().replace(/[^A-Z]/g, '')
+        let role = RoleCode.PROJECT_MANAGER
+        if (roleStr.includes('SUPERVISOR')) role = RoleCode.SUPERVISOR
+        else if (roleStr.includes('DRONE') || roleStr.includes('OPERATOR')) role = RoleCode.DRONE_OPERATOR
+        else if (roleStr.includes('CREW')) role = RoleCode.REPAIR_CREW
+
+        const user: User = {
+          id: rawUser.id,
+          username: credentials.email,
+          email: credentials.email,
+          full_name: rawUser.displayName || rawUser.fullName || credentials.email,
+          role,
+          must_change_password: data.mustChangePassword || false
+        }
+
+        useAuthStore.getState().setUser(user)
+        currentSessionUser = { ...user }
+
+        console.log('✅ [CANDIDATE3 BE] Đăng nhập thành công! Vai trò:', user.role)
+        return {
+          user,
+          token
+        }
+      } catch (err: any) {
+        console.error('❌ [CANDIDATE3 BE] Đăng nhập thất bại:', err?.response?.data || err?.message)
+        throw err
+      }
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 350))
 
     const normalizedEmail = credentials.email.trim().toLowerCase()
@@ -115,9 +179,40 @@ export const authService = {
   },
 
   /**
-   * Đổi mật khẩu lần đầu / Cập nhật mật khẩu bảo mật
+   * Đổi mật khẩu lần đầu / Cập nhật mật khẩu bảo mật (API-004)
    */
   async changePassword(payload: ChangePasswordPayload): Promise<{ success: boolean; user: User }> {
+    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+    if (!isMock) {
+      console.log('🚀 [CANDIDATE3 BE] Gửi yêu cầu đổi mật khẩu POST /api/v1/auth/change-password...')
+      let csrfToken = useAuthStore.getState().csrfToken
+      if (!csrfToken) {
+        const csrf = await fetchCsrfToken()
+        csrfToken = csrf.requestToken
+        useAuthStore.getState().setCsrfToken(csrfToken)
+      }
+
+      await changePasswordApi(
+        {
+          currentPassword: payload.tempPassword,
+          newPassword: payload.newPassword,
+        },
+        csrfToken
+      )
+
+      if (currentSessionUser) {
+        currentSessionUser.must_change_password = false
+      }
+      useAuthStore.getState().updateUser({ must_change_password: false })
+
+      console.log('✅ [CANDIDATE3 BE] Đổi mật khẩu thành công!')
+      const updatedUser = useAuthStore.getState().user || currentSessionUser!
+      return {
+        success: true,
+        user: updatedUser
+      }
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 400))
 
     if (!currentSessionUser) {
@@ -167,19 +262,45 @@ export const authService = {
   },
 
   /**
-   * Đăng xuất phiên làm việc hiện tại
+   * Đăng xuất phiên làm việc hiện tại (API-015)
    */
   async logout(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
+    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+    if (!isMock) {
+      console.log('🚀 [CANDIDATE3 BE] Đăng xuất POST /api/v1/auth/web/logout...')
+      const csrfToken = useAuthStore.getState().csrfToken
+      if (csrfToken) {
+        try {
+          await logoutApi(csrfToken)
+        } catch (e) {
+          console.warn('Logout BE warning (clearing client state):', e)
+        }
+      }
+      useAuthStore.getState().logout()
+    }
     currentSessionUser = null
   },
 
   /**
-   * Lấy người dùng phiên hiện tại
+   * Lấy người dùng phiên hiện tại (API-017)
    */
   async getCurrentUser(): Promise<User | null> {
+    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
+    if (!isMock) {
+      const storeUser = useAuthStore.getState().user
+      if (storeUser) return storeUser
+      try {
+        const session = await getSessionApi()
+        useAuthStore.getState().setSession(session)
+        currentSessionUser = useAuthStore.getState().user
+        return currentSessionUser
+      } catch {
+        return null
+      }
+    }
     return currentSessionUser ? { ...currentSessionUser } : null
   },
+
 
   /**
    * Xác thực mã lời mời thành viên mới

@@ -69,23 +69,31 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           <span className="text-slate-300">•</span>
 
           {/* Trạng thái tim tuyến Badge */}
-          {alignmentStatus === 'DRAFT' && (
-            <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-              DRAFT v1.2 • Đang chỉnh sửa đỉnh
+          {displayTotalKm <= 0 && (!currentCoords || currentCoords.length === 0) ? (
+            <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 text-slate-600 font-semibold text-[11px]">
+              Chưa có tim tuyến
             </span>
-          )}
-          {alignmentStatus === 'PENDING_APPROVAL' && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 text-blue-800 font-semibold text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              PENDING_APPROVAL • Chờ Supervisor duyệt tim tuyến
-            </span>
-          )}
-          {alignmentStatus === 'CONFIRMED' && (
-            <span className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-emerald-800 font-bold text-[11px]">
-              <Icon name="verified_user" size={14} className="text-emerald-600" />
-              CONFIRMED • Đã khóa tim tuyến SHA-256
-            </span>
+          ) : (
+            <>
+              {alignmentStatus === 'DRAFT' && (
+                <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  Bản nháp
+                </span>
+              )}
+              {alignmentStatus === 'PENDING_APPROVAL' && (
+                <span className="inline-flex items-center gap-1.5 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 text-blue-800 font-semibold text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                  Chờ duyệt
+                </span>
+              )}
+              {alignmentStatus === 'CONFIRMED' && (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                  <Icon name="verified_user" size={14} className="text-emerald-600" />
+                  Đã duyệt
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -105,12 +113,25 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
               onChange={(e) => onSwitchProject(e.target.value)}
               className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer hover:text-[#8F7212] transition-colors"
             >
-              {assignedProjects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  [{p.code}] {p.name}
-                </option>
-              ))}
+              {assignedProjects.length === 0 ? (
+                <option value="">Đang tải dự án...</option>
+              ) : (
+                assignedProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    [{p.code}] {p.name}
+                  </option>
+                ))
+              )}
             </select>
+          </div>
+
+          {/* Hiển thị địa bàn quản lý của dự án */}
+          <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
+            <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />
+            <span className="text-[11px] font-semibold text-slate-600">Địa bàn:</span>
+            <span className={activeProject?.region ? 'text-xs font-bold text-slate-900' : 'text-xs text-slate-400 italic'}>
+              {activeProject?.region || 'Chưa thiết lập địa bàn'}
+            </span>
           </div>
 
           {displayTotalKm > 0 ? (
@@ -195,16 +216,39 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         {isSupervisor && (
           <button
             onClick={onLockAlignment}
-            disabled={alignmentStatus === 'CONFIRMED'}
+            disabled={
+              alignmentStatus === 'CONFIRMED' ||
+              (displayTotalKm === 0 && currentCoords.length === 0) ||
+              alignmentStatus === 'DRAFT'
+            }
+            title={
+              alignmentStatus === 'CONFIRMED'
+                ? 'Tim tuyến đã được phê duyệt và khóa bất biến'
+                : displayTotalKm === 0 && currentCoords.length === 0
+                ? 'Dự án chưa có tim tuyến, không thể phê duyệt'
+                : alignmentStatus === 'DRAFT'
+                ? 'Hồ sơ tim tuyến đang ở bản nháp của PM, chờ PM trình duyệt'
+                : 'Xác nhận và khóa mốc lý trình tim tuyến'
+            }
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-emerald-600 text-white opacity-90 cursor-default'
+                : (displayTotalKm === 0 && currentCoords.length === 0) || alignmentStatus === 'DRAFT'
+                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 : 'bg-brand-gold hover:bg-[#B38E1F] text-white cursor-pointer active:scale-98'
             }`}
             type="button"
           >
             <Icon name="lock" size={14} />
-            <span>{alignmentStatus === 'CONFIRMED' ? 'Đã khóa tim tuyến' : 'Xác nhận & Khóa tim tuyến'}</span>
+            <span>
+              {alignmentStatus === 'CONFIRMED'
+                ? 'Đã khóa tim tuyến'
+                : displayTotalKm === 0 && currentCoords.length === 0
+                ? 'Chưa có tim tuyến'
+                : alignmentStatus === 'DRAFT'
+                ? 'Chờ PM trình duyệt'
+                : 'Xác nhận & Khóa tim tuyến'}
+            </span>
           </button>
         )}
       </div>
