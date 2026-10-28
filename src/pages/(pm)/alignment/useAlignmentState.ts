@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
-import { alignmentService, projectService } from '../../../api/services'
+import { alignmentService, projectService, wgs84ToUtm48N } from '../../../api/services'
 import { SegmentItem, AssignedProjectOption } from './types'
 import { PM_ASSIGNED_PROJECTS, SEGMENT_COLORS, getAvailableAssignedProjects } from './data'
 import {
@@ -53,9 +53,58 @@ export function useAlignmentState() {
     return alignmentService.getAlignmentState(selectedProjectId).status
   })
 
+  // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
+  const loadAlignmentPackage = async (prjId: string) => {
+    if (!prjId) return
+    try {
+      const pkg = await alignmentService.fetchGeometryPackage(prjId)
+      if (pkg && pkg.route) {
+        alignmentService.syncWithGeometryPackage(prjId, pkg)
+        const wgsCoords = (pkg.route.wgs84Centerline?.coordinates || []) as [number, number][]
+        const totalKm = parseFloat(((pkg.route.lengthMeters || 0) / 1000).toFixed(3))
+        setCurrentCoords(wgsCoords)
+        setImportedLengthKm(totalKm)
+        setAlignmentStatus('CONFIRMED')
+        if (pkg.segmentSet?.segments && pkg.segmentSet.segments.length > 0) {
+          const mapped = pkg.segmentSet.segments.map((s, idx) => ({
+            id: s.segmentId || `seg-${prjId}-${idx + 1}`,
+            code: `Phân đoạn #${String(idx + 1).padStart(2, '0')}`,
+            startKm: parseFloat(((s.startStationMeters || 0) / 1000).toFixed(3)),
+            endKm: parseFloat(((s.endStationMeters || 0) / 1000).toFixed(3)),
+            lengthKm: parseFloat(((s.lengthMeters || 0) / 1000).toFixed(3)),
+            roadWidthM: s.widthMeters || 8.0,
+            status: 'VALID' as const,
+            statusText: 'HỢP LỆ',
+            laneCount: 4,
+            surfaceMaterial: 'Mặt BTN C12.5',
+            color: SEGMENT_COLORS[idx % SEGMENT_COLORS.length]
+          }))
+          const validated = checkAndEnrichSegmentsContinuity(mapped)
+          segmentsState.setSegments(validated)
+          segmentsState.setSlabs(generateMockSlabs(validated.length))
+        }
+      } else {
+        // Backend chưa có tim tuyến duyệt: kiểm tra xem có bản nháp đang chờ duyệt không
+        const state = alignmentService.getAlignmentState(prjId)
+        if (state.status === 'PENDING_APPROVAL') {
+          setAlignmentStatus('PENDING_APPROVAL')
+        } else {
+          setCurrentCoords([])
+          setCurrentKmPoints([])
+          setImportedLengthKm(0)
+          segmentsState.setSegments([])
+          segmentsState.setSlabs([])
+          setAlignmentStatus('DRAFT')
+        }
+      }
+    } catch (err: any) {
+      console.error('Lỗi tải gói tim tuyến:', err)
+      showToast(`Lỗi nạp tim tuyến từ CSDL: ${err.response?.data?.detail || err.message}`)
+    }
+  }
+
   useEffect(() => {
-    const state = alignmentService.getAlignmentState(selectedProjectId)
-    setAlignmentStatus(state.status)
+    loadAlignmentPackage(selectedProjectId)
   }, [selectedProjectId])
 
   useEffect(() => {
@@ -71,21 +120,26 @@ export function useAlignmentState() {
 
   // Khôi phục danh sách dự án từ Backend khi F5 tải lại trang
   useEffect(() => {
-    projectService.fetchProjects().then(() => {
-      const list = getAvailableAssignedProjects()
-      if (list.length > 0) {
-        setAssignedProjects(list)
-        const targetId = (urlProjectId && list.some((p) => p.id === urlProjectId))
-          ? urlProjectId
-          : (selectedProjectId || list[0].id)
-        if (targetId && targetId !== selectedProjectId) {
-          handleSwitchProject(targetId)
+    projectService
+      .fetchProjects()
+      .then(() => {
+        const list = getAvailableAssignedProjects()
+        if (list.length > 0) {
+          setAssignedProjects(list)
+          const targetId =
+            urlProjectId && list.some((p) => p.id === urlProjectId)
+              ? urlProjectId
+              : selectedProjectId || list[0].id
+          if (targetId && targetId !== selectedProjectId) {
+            handleSwitchProject(targetId)
+          }
         }
-      }
-    }).catch((err) => {
-      console.warn('Lỗi nạp dự án tim tuyến:', err)
-    })
+      })
+      .catch((err) => {
+        console.warn('Lỗi nạp dự án tim tuyến:', err)
+      })
   }, [urlProjectId])
+
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
@@ -351,60 +405,12 @@ export function useAlignmentState() {
     if (!target) return
     setSelectedProjectId(prjId)
 
-    const state = alignmentService.getAlignmentState(prjId)
-    setAlignmentStatus(state.status)
-
-    // Nếu Giám sát xem dự án đang DRAFT (chưa trình duyệt), không hiển thị bản nháp đang sửa của PM
-    const isDraftForSupervisor = isSupervisor && state.status === 'DRAFT'
-    const saved = alignmentService.getAlignmentData(prjId)
-    const coords = (!isDraftForSupervisor && saved.coords !== undefined)
-      ? saved.coords
-      : (!isDraftForSupervisor ? (target.defaultCoords || []) : [])
-    const kmPoints = (!isDraftForSupervisor && saved.kmPoints !== undefined)
-      ? saved.kmPoints
-      : (!isDraftForSupervisor ? (target.defaultKmPoints || []) : [])
-    const branchesData = (!isDraftForSupervisor && saved.branches !== undefined)
-      ? saved.branches
-      : (!isDraftForSupervisor ? (target.defaultBranches || []) : [])
-    const segsData = (!isDraftForSupervisor && saved.segments !== undefined)
-      ? saved.segments
-      : (!isDraftForSupervisor ? (target.defaultSegments || []) : [])
-    const calcLen = coords.length >= 2
-      ? calculateCoordsLengthKm(coords)
-      : (!isDraftForSupervisor && target.defaultCoords.length >= 2 ? target.lengthKm : 0)
-
-    setCurrentCoords(coords)
-    setCurrentKmPoints(kmPoints)
-    setBranches(branchesData)
-    setSelectedTargetType('MAINLINE')
-    setImportedLengthKm(calcLen)
-    importState.setManualCoordsText(coords.length > 0 ? coords.map((c) => `${c[0]}, ${c[1]}`).join('\n') : '')
-
-    const validated = checkAndEnrichSegmentsContinuity(segsData)
-    segmentsState.setSegments(validated)
-    segmentsState.setSlabs(generateMockSlabs(validated.length))
-    segmentsState.setSelectedSegmentId(validated[0]?.id || null)
-    segmentsState.setNewSegForm({
-      code: '',
-      startKm: target.stationOriginKm,
-      endKm: target.stationOriginKm + (calcLen > 0 ? Math.min(5.0, calcLen) : 5.0),
-      roadWidthM: 8.0,
-      laneCount: 4,
-      surfaceMaterial: 'Mặt BTN C12.5',
-      color: SEGMENT_COLORS[0]
-    })
+    // Nạp dữ liệu tim tuyến chính thức từ CSDL Backend Candidate3
+    loadAlignmentPackage(prjId)
 
     showToast(`Đã chuyển sang dự án [${target.code}] ${target.name}`)
-    if (mapState.mapRef.current) {
-      if (coords.length > 0) {
-        const bounds = new maplibregl.LngLatBounds()
-        coords.forEach((c) => bounds.extend(c))
-        mapState.mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
-      } else {
-        mapState.handleFitBounds([])
-      }
-    }
   }
+
 
   useEffect(() => {
     if (urlProjectId && urlProjectId !== selectedProjectId) {
@@ -646,7 +652,11 @@ export function useAlignmentState() {
     showToast('Đã xóa tuyến nhánh thành công! Bạn có thể tạo lại tuyến nhánh mới.')
   }
 
-  const handleSubmitAlignment = () => {
+  const handleSubmitAlignment = async () => {
+    if (currentCoords.length < 2) {
+      showToast('Cảnh báo: Tuyến đường chưa có tọa độ tim tuyến! Vui lòng nhập hoặc nạp tệp tọa độ trước khi trình duyệt.')
+      return
+    }
     if (segmentsState.segments.length === 0) {
       showToast('Cảnh báo: Tuyến đường chưa có phân đoạn nào! Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động" (hoặc nạp tệp tọa độ) trước khi trình duyệt.')
       return
@@ -656,28 +666,90 @@ export function useAlignmentState() {
       showToast('Cảnh báo: Tuyến đường còn phân đoạn bị hở hoặc chồng lấn (GAP_WARNING)! Vui lòng bấm "Nối tiếp giáp" trước khi trình duyệt.')
       return
     }
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches
-    })
-    alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
-    setAlignmentStatus('PENDING_APPROVAL')
-    showToast('Đã gửi hồ sơ thiết lập tim tuyến sang Supervisor để thẩm duyệt & ký số!')
+
+    try {
+      showToast('Đang khởi tạo hồ sơ CRS và bản nháp tim tuyến lên máy chủ...')
+      // 1. Đảm bảo cấu hình CRS UTM Zone 48N (API-065)
+      await alignmentService.ensureUtm48NCrsProfile(selectedProjectId)
+
+      // 2. Chuyển đổi tọa độ WGS84 sang UTM Zone 48N (SRID 32648)
+      const utmCoords = currentCoords.map((c) => wgs84ToUtm48N(c[0], c[1]))
+
+      // 3. Tạo profile bề rộng đường theo phân đoạn
+      const originKm = activeProject.stationOriginKm || 0
+      const widthProfile = segmentsState.segments.map((seg) => ({
+        fromOffsetMeters: Math.max(0, parseFloat(((seg.startKm - originKm) * 1000).toFixed(2))),
+        toOffsetMeters: Math.max(10, parseFloat(((seg.endKm - originKm) * 1000).toFixed(2))),
+        widthMeters: seg.roadWidthM || 12.0
+      }))
+
+      // 4. Tạo bản thảo tim tuyến mới trên Backend (API-177)
+      const draftRes = await alignmentService.createGeometryDraft(selectedProjectId, {
+        sourceKind: 'COORDINATES',
+        sourceCrs: 32648,
+        stationOriginMeters: originKm * 1000,
+        coordinates: utmCoords,
+        widthProfile,
+        surveyWidthMeters: 14.0,
+        changeReason: 'PM trình duyệt phương án tim tuyến và phân đoạn lý trình mới'
+      })
+
+      // 5. Kiểm tra preview trước khi trình (API-181)
+      if (draftRes.data?.id) {
+        await alignmentService.previewGeometryDraft(selectedProjectId, draftRes.data.id)
+      }
+
+      alignmentService.saveAlignmentData(selectedProjectId, {
+        coords: currentCoords,
+        kmPoints: currentKmPoints,
+        segments: segmentsState.segments,
+        branches
+      })
+      alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
+      setAlignmentStatus('PENDING_APPROVAL')
+      showToast('Đã tạo bản nháp tim tuyến trên CSDL và gửi sang Supervisor thẩm duyệt thành công!')
+    } catch (err: any) {
+      console.error('Lỗi trình duyệt tim tuyến:', err)
+      const detail = err.response?.data?.detail || err.response?.data?.title || err.message
+      showToast(`Lỗi trình duyệt tim tuyến từ CSDL: ${detail}`)
+    }
   }
 
-  const handleLockAlignment = () => {
-    alignmentService.saveAlignmentData(selectedProjectId, {
-      coords: currentCoords,
-      kmPoints: currentKmPoints,
-      segments: segmentsState.segments,
-      branches
-    })
-    alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor', totalProjectLengthKm)
-    setAlignmentStatus('CONFIRMED')
-    showToast('Dự án đã chính thức xác nhận và khóa tim tuyến thành công!')
+  const handleLockAlignment = async () => {
+    try {
+      const draftInfo = alignmentService.getActiveDraftInfo(selectedProjectId)
+      if (draftInfo?.draftId) {
+        showToast('Đang gửi lệnh Supervisor phê duyệt khóa tim tuyến chính thức (API-180)...')
+        await alignmentService.confirmGeometryDraft(
+          selectedProjectId,
+          draftInfo.draftId,
+          {
+            effectiveFrom: new Date().toISOString(),
+            reason: 'Supervisor phê duyệt khóa tim tuyến chính thức'
+          },
+          draftInfo.etag
+        )
+      }
+
+      alignmentService.saveAlignmentData(selectedProjectId, {
+        coords: currentCoords,
+        kmPoints: currentKmPoints,
+        segments: segmentsState.segments,
+        branches
+      })
+      alignmentService.confirmAlignment(selectedProjectId, user?.full_name || 'Supervisor', totalProjectLengthKm)
+      
+      // Tải lại gói dữ liệu tim tuyến chính thức đã được confirm
+      await loadAlignmentPackage(selectedProjectId)
+      setAlignmentStatus('CONFIRMED')
+      showToast('Dự án đã chính thức được phê duyệt và khóa tim tuyến trên CSDL thành công!')
+    } catch (err: any) {
+      console.error('Lỗi phê duyệt tim tuyến:', err)
+      const detail = err.response?.data?.detail || err.response?.data?.title || err.message
+      showToast(`Lỗi phê duyệt tim tuyến từ CSDL: ${detail}`)
+    }
   }
+
 
   // Xóa toàn bộ tim tuyến chính và các phân đoạn để PM nhập hoặc vẽ lại từ đầu
   const handleClearMainline = () => {

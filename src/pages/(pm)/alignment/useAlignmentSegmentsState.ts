@@ -64,6 +64,8 @@ export function useAlignmentSegmentsState({
       return
     }
 
+    const dist = splitDistance || 5.0
+    const startBaseKm = currentKmPoints.length > 0 ? currentKmPoints[0] : 0.0
     const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
     const validated = checkAndEnrichSegmentsContinuity(newSegments)
     setSegments(validated)

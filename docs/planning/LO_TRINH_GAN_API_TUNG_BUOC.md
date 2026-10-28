@@ -140,8 +140,8 @@
   5. `POST /api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/preview` (`API-181`): Xem trước tim tuyến trước khi trình.
   6. `POST /api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/confirm` (`API-180`): **Supervisor phê duyệt khóa tim tuyến chính thức**.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Bản đồ MapLibre load tuyến đường vẽ trên bản đồ từ response của `geometry-package`.
-  - [ ] Supervisor bấm duyệt tim tuyến (`API-180`), trạng thái KML chuyển thành `Đã phê duyệt` và dự án chuyển sang `ACTIVE`.
+  - [x] Bản đồ MapLibre load tuyến đường vẽ trên bản đồ từ response của `geometry-package`.
+  - [x] Supervisor bấm duyệt tim tuyến (`API-180`), trạng thái KML chuyển thành `Đã phê duyệt` và dự án chuyển sang `ACTIVE`.
 
 ---
 

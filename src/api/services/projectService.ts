@@ -805,7 +805,8 @@ export const projectService = {
           closed_at: now.toISOString(),
           closed_reason: reason,
           closed_by: 'Giám sát viên (Supervisor)',
-          retention_until: retentionUntilStr
+          retention_until: retentionUntilStr,
+          image_url: ''
         }
 
     if (targetIndex !== -1) {
@@ -817,6 +818,7 @@ export const projectService = {
     // Ghi nhớ danh sách ID dự án đã đóng vào sessionStorage để duy trì khi F5
     try {
       const closedListStr = sessionStorage.getItem('roadguard_closed_project_ids') || '[]'
+      const closedList: string[] = JSON.parse(closedListStr)
       if (!closedList.includes(projectId)) closedList.push(projectId)
       if (closedProject.id && !closedList.includes(closedProject.id)) closedList.push(closedProject.id)
       if (closedProject.code && !closedList.includes(closedProject.code)) closedList.push(closedProject.code)

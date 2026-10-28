@@ -1473,16 +1473,9 @@ export function getAvailableAssignedProjects(): AssignedProjectOption[] {
   const storedProjects = projectService.getProjects()
   const list: AssignedProjectOption[] = []
 
-  // 1. Chỉ lấy các dự án thực tế đang quản lý trong hệ thống (từ Backend API thật)
+  // Chỉ lấy 100% các dự án thực tế từ CSDL Backend API (Không fallback mock)
   for (const p of storedProjects) {
     list.push(buildDynamicProjectAlignment(p))
-  }
-
-  // 2. Chỉ khi bật chế độ VITE_USE_MOCK_PROJECTS='true' VÀ danh sách rỗng mới fallback về mock
-  if (list.length === 0 && import.meta.env.VITE_USE_MOCK_PROJECTS === 'true') {
-    for (const op of PM_ASSIGNED_PROJECTS) {
-      list.push(op)
-    }
   }
 
   return list
