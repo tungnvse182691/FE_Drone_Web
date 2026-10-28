@@ -89,42 +89,43 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
                     )
                     if (found) return found
 
-                    // Fallback từ cluster_duplicates nếu case con chưa tồn tại dưới dạng TriageCase độc lập
+                    // Fallback hiển thị thông tin báo cáo đã gộp nếu chưa có bản ghi case độc lập
                     const dup = item.cluster_duplicates?.find(
                       (d) => d.code === code || d.code.replace(/^#/, '') === cleanCode
                     )
-                    if (dup) {
-                      return {
-                        id: `child-${cleanCode}`,
-                        code: dup.code.startsWith('#') ? dup.code : `#${dup.code}`,
-                        source: 'CITIZEN' as const,
-                        source_label: dup.source || 'Citizen App',
-                        source_detail: 'Phản ánh người dân lân cận đã được gộp vào hồ sơ',
-                        reporter_name: dup.reporter || 'Người dân báo',
-                        project_id: item.project_id,
-                        project_name: item.project_name,
-                        stationing: item.stationing,
-                        lane: item.lane,
-                        defect_title: `Phản ánh người dân lân cận (${dup.distance_m}m)`,
-                        defect_type: item.defect_type,
-                        severity: item.severity,
-                        urgency: item.urgency,
-                        time_ago: 'Đã gộp',
-                        created_at: item.created_at,
-                        status: 'MERGED' as const,
-                        status_label: 'Đã gộp trùng',
-                        master_case_id: item.id,
-                        image_url: item.image_url,
-                        gps: item.gps,
-                        ai_confidence: 0,
-                        area_sqm: item.area_sqm,
-                        ai_area_sqm: item.ai_area_sqm,
-                        max_depth_cm: item.max_depth_cm,
-                        ai_depth_cm: item.ai_depth_cm,
-                        pm_notes: `Bằng chứng lân cận đã gộp vào ${item.code}`
-                      }
+                    return {
+                      id: `child-${cleanCode}`,
+                      code: dup?.code
+                        ? dup.code.startsWith('#') ? dup.code : `#${dup.code}`
+                        : `#REP-${cleanCode.slice(0, 8).toUpperCase()}`,
+                      source: 'CITIZEN' as const,
+                      source_label: dup?.source || 'Ứng dụng Người dân',
+                      source_detail: 'Phản ánh người dân lân cận đã được gộp vào hồ sơ',
+                      reporter_name: dup?.reporter || 'Người dân phản ánh',
+                      project_id: item.project_id,
+                      project_name: item.project_name,
+                      stationing: item.stationing,
+                      lane: item.lane,
+                      defect_title: dup
+                        ? `Phản ánh người dân lân cận (${dup.distance_m}m)`
+                        : `Báo cáo hiện trường (${cleanCode.slice(0, 8)})`,
+                      defect_type: item.defect_type,
+                      severity: item.severity,
+                      urgency: item.urgency,
+                      time_ago: 'Đã gộp',
+                      created_at: item.created_at,
+                      status: 'MERGED' as const,
+                      status_label: 'Đã gộp trùng',
+                      master_case_id: item.id,
+                      image_url: item.image_url,
+                      gps: item.gps,
+                      ai_confidence: 0,
+                      area_sqm: 0,
+                      ai_area_sqm: 0,
+                      max_depth_cm: 0,
+                      ai_depth_cm: 0,
+                      pm_notes: `Bằng chứng lân cận đã gộp vào ${item.code}`
                     }
-                    return null
                   })
                   .filter((c): c is TriageCase => Boolean(c))
               : []

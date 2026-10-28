@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { mockProjects } from '../../../data/mockData'
 import { TriageCase } from './types'
+import { triageService } from '../../../api/services/triageService'
+import { projectService } from '../../../api/services/projectService'
 
 export interface UseAIReviewLinkActionsProps {
   cases: TriageCase[]
@@ -107,47 +109,24 @@ export const useAIReviewLinkActions = ({
     )
   }
 
-  // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31)
-  const handleUnlinkReport = (secondaryIdentifier: string, e?: React.MouseEvent) => {
+  // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31, API-023)
+  const handleUnlinkReport = async (secondaryIdentifier: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
     const target = cases.find((c) => c.id === secondaryIdentifier || c.code === secondaryIdentifier)
     const targetCode = target ? target.code : secondaryIdentifier
     const targetId = target ? target.id : secondaryIdentifier
+    const masterId = target?.master_case_id || selectedCaseId
 
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === targetId || c.code === targetCode) {
-          return {
-            ...c,
-            status: 'PENDING',
-            status_label: 'Chờ xử lý',
-            master_case_id: undefined,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[TÁCH HỒ SƠ] Đã tách khỏi hồ sơ gốc, chuyển về hàng đợi độc lập.`
-          }
-        }
-        const isThisMaster =
-          c.id === selectedCaseId ||
-          (c.linked_report_ids && (c.linked_report_ids.includes(targetCode) || c.linked_report_ids.includes(targetId))) ||
-          (target?.master_case_id && c.id === target.master_case_id)
-
-        if (isThisMaster) {
-          const updatedDups = (c.cluster_duplicates || []).map((dup) =>
-            dup.code === targetCode ? { ...dup, is_merged: false, selected: false } : dup
-          )
-          const updatedLinked = (c.linked_report_ids || []).filter(
-            (code) => code !== targetCode && code !== targetId
-          )
-          return {
-            ...c,
-            linked_report_ids: updatedLinked,
-            cluster_duplicates: updatedDups,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[TÁCH HỒ SƠ] Đã gỡ bỏ phản ánh ${targetCode} khỏi cụm liên kết.`
-          }
-        }
-        return c
-      })
-    )
-    showToast(`Đã tách phản ánh [${targetCode}] thành hồ sơ độc lập thành công!`)
+    try {
+      await triageService.unlinkReport(targetId, masterId)
+      // Tải lại 100% dữ liệu từ Backend CSDL
+      const refreshed = await triageService.getCases()
+      setCases(refreshed)
+      showToast(`Đã tách phản ánh [${targetCode.slice(0, 8)}] thành hồ sơ độc lập trong CSDL thành công!`)
+    } catch (err: any) {
+      console.error('❌ Lỗi khi tách hồ sơ qua API:', err)
+      showToast(`❌ Lỗi tách hồ sơ: ${err?.message || 'Không thể tách báo cáo khỏi hồ sơ'}`)
+    }
   }
 
   // Triage Project Assignment Modal (PA03)
@@ -158,13 +137,24 @@ export const useAIReviewLinkActions = ({
     setIsTriageProjectModalOpen(true)
   }
 
-  const handleConfirmTriageProject = (
+  const handleConfirmTriageProject = async (
     verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' = 'FIELD',
     reason: string = ''
   ) => {
     if (!targetTriageCase) return
-    const project = mockProjects.find((p) => p.id === selectedProjectId)
-    const projectName = project ? project.name : 'Dự án đã chỉ định'
+
+    let projectName = 'Dự án đã chỉ định'
+    try {
+      const realProjects = projectService.getProjects()
+      const found = realProjects.find(
+        (p) => p.id === selectedProjectId || p.code === selectedProjectId
+      )
+      if (found) projectName = found.name
+      else {
+        const mockProj = mockProjects.find((p) => p.id === selectedProjectId)
+        if (mockProj) projectName = mockProj.name
+      }
+    } catch {}
 
     const targetIds =
       selectedReportIds.includes(targetTriageCase.id) && selectedReportIds.length > 1
@@ -177,26 +167,43 @@ export const useAIReviewLinkActions = ({
       EXISTING_EVIDENCE: 'Thẩm định bằng chứng hiện có (EXISTING_EVIDENCE)'
     }
 
-    setCases((prev) =>
-      prev.map((c) => {
-        if (targetIds.includes(c.id)) {
-          return {
-            ...c,
-            project_id: selectedProjectId,
-            project_name: projectName,
-            is_assigned: true,
-            status: 'PENDING',
-            status_label: 'Chờ PM thẩm định',
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN API-024] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
-          }
-        }
-        return c
-      })
-    )
+    // Gọi API Candidate3 /api/v1/cases/{caseId}/triage (API-024)
+    try {
+      for (const id of targetIds) {
+        const item = cases.find((c) => c.id === id) || targetTriageCase
+        await triageService.triageCase(id, {
+          projectId: selectedProjectId,
+          verificationMethod,
+          reason: reason.trim() || undefined,
+          version: item?.version
+        })
+      }
 
-    setIsTriageProjectModalOpen(false)
-    setSelectedReportIds([])
-    showToast(`Đã điều phối ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
+      setCases((prev) =>
+        prev.map((c) => {
+          if (targetIds.includes(c.id)) {
+            return {
+              ...c,
+              project_id: selectedProjectId,
+              project_name: projectName,
+              is_assigned: true,
+              status: 'PENDING',
+              status_label: 'Chờ PM thẩm định',
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN API-024] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
+            }
+          }
+          return c
+        })
+      )
+
+      setIsTriageProjectModalOpen(false)
+      setSelectedReportIds([])
+      showToast(`Đã điều phối ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
+    } catch (err: any) {
+      console.error('❌ Lỗi khi điều phối ca tới backend:', err)
+      const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi gọi API-024 điều phối ca'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
+    }
   }
 
   return {

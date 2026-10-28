@@ -75,29 +75,34 @@ export const useAIReviewActions = ({
       pm_notes: currentNotes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'
     }
 
-    setCases((prev) =>
-      prev.map((item) =>
-        item.id === target.id || item.code === target.code
-          ? {
-              ...item,
-              ...updates
-            }
-          : item
-      )
-    )
-
     try {
-      await triageService.updateCase(target.id, updates)
-    } catch (e) {
-      console.warn('Could not sync updateCase to triageService', e)
+      const res = await triageService.concludeCase(target.id, {
+        outcome: 'CONFIRMED',
+        reason: updates.pm_notes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.',
+        version: target.version
+      })
+
+      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
+      setCases((prev) =>
+        prev.map((item) =>
+          item.id === target.id || item.code === target.code
+            ? {
+                ...item,
+                ...updates,
+                version: res.version || item.version
+              }
+            : item
+        )
+      )
+
+      showToast(
+        `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
+      )
+    } catch (e: any) {
+      console.error('❌ Lỗi khi gửi xác minh tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi xác minh tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
-
-    // Đóng drawer modal và trả về bảng danh sách
-    setIsDetailModalOpen?.(false)
-
-    showToast(
-      `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
-    )
   }
 
   const handleOpenNoDefectModal = (c?: TriageCase) => {
@@ -140,30 +145,38 @@ export const useAIReviewActions = ({
       pm_notes: `[NO_DEFECT - BR-39] ${finalReason}`
     }
 
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === targetId || c.code === targetCode
-          ? {
-              ...c,
-              ...updates
-            }
-          : c
-      )
-    )
-
     try {
-      await triageService.updateCase(targetId, updates)
-    } catch (e) {
-      console.warn('Could not sync updateCase to triageService', e)
+      const res = await triageService.concludeCase(targetId, {
+        outcome: 'NO_DEFECT',
+        reason: finalReason,
+        version: targetTriageCase?.version || selectedCase.version
+      })
+
+      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === targetId || c.code === targetCode
+            ? {
+                ...c,
+                ...updates,
+                version: res.version || c.version
+              }
+            : c
+        )
+      )
+
+      // Đóng modal lý do từ chối và đóng luôn modal/drawer thẩm định để trả về danh sách
+      setIsNoDefectModalOpen(false)
+      setIsDetailModalOpen?.(false)
+
+      showToast(
+        `Đã ghi nhận kết luận Từ chối (Không có khiếm khuyết) cho hồ sơ [${targetCode}]!`
+      )
+    } catch (e: any) {
+      console.error('❌ Lỗi khi gửi kết luận tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
-
-    // Đóng modal lý do từ chối và đóng luôn modal/drawer thẩm định để trả về danh sách
-    setIsNoDefectModalOpen(false)
-    setIsDetailModalOpen?.(false)
-
-    showToast(
-      `Đã ghi nhận kết luận Từ chối (Không có khiếm khuyết) cho hồ sơ [${targetCode}]!`
-    )
   }
 
   // OUT_OF_SCOPE Conclusion
@@ -178,27 +191,35 @@ export const useAIReviewActions = ({
         '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
     }
 
-    setCases((prev) =>
-      prev.map((item) =>
-        item.id === target.id || item.code === target.code
-          ? {
-              ...item,
-              ...updates
-            }
-          : item
-      )
-    )
-
     try {
-      await triageService.updateCase(target.id, updates)
-    } catch (e) {
-      console.warn('Could not sync updateCase to triageService', e)
+      const res = await triageService.concludeCase(target.id, {
+        outcome: 'NO_DEFECT',
+        reason: updates.conclusion_reason,
+        version: target.version
+      })
+
+      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
+      setCases((prev) =>
+        prev.map((item) =>
+          item.id === target.id || item.code === target.code
+            ? {
+                ...item,
+                ...updates,
+                version: res.version || item.version
+              }
+            : item
+        )
+      )
+
+      // Đóng modal/drawer thẩm định và trả về danh sách
+      setIsDetailModalOpen?.(false)
+
+      showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
+    } catch (e: any) {
+      console.error('❌ Lỗi khi gửi kết luận ngoài phạm vi tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
-
-    // Đóng modal/drawer thẩm định và trả về danh sách
-    setIsDetailModalOpen?.(false)
-
-    showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
   }
 
   // Reset conclusion to PENDING for re-evaluating
@@ -230,28 +251,42 @@ export const useAIReviewActions = ({
     setIsPublishModalOpen(true)
   }
 
-  const handleConfirmPublishResult = () => {
+  const handleConfirmPublishResult = async () => {
     const target = targetTriageCase || selectedCase
     const nowTime =
       new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
       ', ' +
       new Date().toLocaleDateString('vi-VN')
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === target.id
-          ? {
-              ...c,
-              is_published: true,
-              published_at: nowTime,
-              public_notice: publishPublicNote
-            }
-          : c
+
+    try {
+      await triageService.publishCase(target.id, {
+        summary: publishPublicNote,
+        reportIds: target.linked_report_ids,
+        version: target.version
+      })
+
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === target.id
+            ? {
+                ...c,
+                is_published: true,
+                published_at: nowTime,
+                public_notice: publishPublicNote
+              }
+            : c
+        )
       )
-    )
-    showToast(
-      `Đã công bố kết quả tiếp nhận & tiến độ xử lý hồ sơ [${target.code}] lên Ứng dụng Di động Citizen (PA07)!`
-    )
-    setIsPublishModalOpen(false)
+
+      showToast(
+        `Đã công bố kết quả tiếp nhận & tiến độ xử lý hồ sơ [${target.code}] lên Ứng dụng Di động Citizen (PA07)!`
+      )
+      setIsPublishModalOpen(false)
+    } catch (e: any) {
+      console.error('❌ Lỗi khi xuất bản kết quả tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi xuất bản kết quả tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
+    }
   }
 
   const handleExecuteMerge = () => {

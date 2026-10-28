@@ -14,7 +14,7 @@ export interface ReviewModalsProps {
   targetTriageCase: TriageCase | null
   cases: TriageCase[]
   selectedReportIds: string[]
-  mockProjects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
 
   // Modal 1: Merge
   isMergeModalOpen: boolean
@@ -84,7 +84,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   targetTriageCase,
   cases,
   selectedReportIds,
-  mockProjects,
+  projects,
   isMergeModalOpen,
   setIsMergeModalOpen,
   onExecuteMerge,
@@ -174,7 +174,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         isOpen={isTriageProjectModalOpen}
         onClose={() => setIsTriageProjectModalOpen(false)}
         targetTriageCase={targetTriageCase}
-        mockProjects={mockProjects}
+        projects={projects}
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
         onConfirmTriageProject={onConfirmTriageProject}

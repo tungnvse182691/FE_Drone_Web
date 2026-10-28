@@ -13,8 +13,8 @@ export interface ReviewDetailDrawerProps {
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
-  detailViewMode: 'PHOTO' | 'GIS_MAP'
-  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP') => void
+  detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
+  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
   drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
   currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void

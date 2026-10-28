@@ -41,7 +41,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
         </nav>
         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium bg-white px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Đồng bộ cảm biến GIS: 25/08/2026</span>
+          <span>Đồng bộ CSDL: Trực tuyến</span>
         </div>
       </div>
 

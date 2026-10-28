@@ -103,7 +103,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
             type="button"
             onClick={(e) => onUnlinkReport(child.id, e)}
             className="px-2 py-1 rounded bg-white hover:bg-red-50 text-red-600 hover:border-red-300 border border-slate-200 text-[10px] font-semibold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-            title="Tách khỏi Master Case thành hồ sơ riêng"
+            title="Tách khỏi hồ sơ gốc thành ca độc lập"
           >
             <Icon name="link_off" size={12} />
             <span>Tách</span>

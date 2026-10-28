@@ -33,3 +33,6 @@ dist-ssr
 
 # Vite cache
 .vite
+
+# Scratch directory
+scratch/

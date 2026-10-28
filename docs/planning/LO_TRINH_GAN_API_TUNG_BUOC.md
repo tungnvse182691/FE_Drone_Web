@@ -156,11 +156,11 @@
   1. `GET /api/v1/cases` (`API-018`): Danh sách ca phản ánh kèm bộ lọc trạng thái (`UNASSIGNED`, `ASSIGNED_TO_PROJECT`).
   2. `GET /api/v1/cases/{caseId}` (`API-019`): Chi tiết ca phản ánh, ảnh chụp và tọa độ GPS.
   3. `POST /api/v1/cases/{caseId}/triage` (`API-024`): **Duy nhất Supervisor** điều phối ca vào dự án và chọn phương thức xác minh (`FIELD`/`DRONE`).
-  4. `POST /api/v1/cases/{caseId}/conclusion` (`API-020`): PM nhập kết luận đánh giá hư hỏng.
-  5. `POST /api/v1/cases/{caseId}/publish` (`API-023`): Xuất bản thông báo xử lý phản ánh cho người dân.
+  4. `POST /api/v1/cases/{caseId}/conclusions` (`API-020`): PM nhập kết luận đánh giá hư hỏng.
+  5. `POST /api/v1/cases/{caseId}/publications` (`API-023`): Xuất bản thông báo xử lý phản ánh cho người dân.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Đăng nhập Supervisor: Thấy các ca chưa gán (`UNASSIGNED`), bấm nút **Điều phối dự án** (`API-024`) gán thành công.
-  - [ ] Đăng nhập PM: Ca xuất hiện trong inbox của PM, nút Triage bị ẩn; PM nhập kết luận thẩm định thành công.
+  - [x] Đăng nhập Supervisor: Thấy các ca chưa gán (`UNASSIGNED`), bấm nút **Điều phối dự án** (`API-024`) gán thành công.
+  - [x] Đăng nhập PM: Ca xuất hiện trong inbox của PM, nút Triage bị ẩn; PM nhập kết luận thẩm định thành công.
 
 ---
 

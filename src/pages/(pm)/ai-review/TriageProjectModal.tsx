@@ -6,7 +6,7 @@ export interface TriageProjectModalProps {
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
-  mockProjects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
   onConfirmTriageProject: (
@@ -19,7 +19,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   isOpen,
   onClose,
   targetTriageCase,
-  mockProjects,
+  projects,
   selectedProjectId,
   setSelectedProjectId,
   onConfirmTriageProject,
@@ -29,7 +29,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
 
   if (!isOpen || !targetTriageCase) return null
 
-  const selectedProj = mockProjects.find((p) => p.id === selectedProjectId) || mockProjects[0]
+  const selectedProj = projects.find((p) => p.id === selectedProjectId) || projects[0]
 
   const handleConfirm = () => {
     onConfirmTriageProject(verificationMethod, reason)
@@ -120,7 +120,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
-              {mockProjects.map((p) => {
+              {projects.map((p) => {
                 // Kiểm tra nếu p.name đã chứa chuỗi Km thì không nối thêm tránh lặp chuỗi
                 const hasKmInName = p.name.includes('Km')
                 const displayLabel = hasKmInName

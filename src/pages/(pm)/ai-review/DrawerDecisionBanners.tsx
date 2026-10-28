@@ -21,6 +21,22 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
   const navigate = useNavigate()
   const basePath = isSupervisor ? '/sup' : '/pm'
 
+  const severityLabel =
+    selectedCase.severity === 'CRITICAL'
+      ? 'Khẩn cấp'
+      : selectedCase.severity === 'HIGH'
+      ? 'Nghiêm trọng'
+      : selectedCase.severity === 'MEDIUM'
+      ? 'Vừa'
+      : 'Nhẹ'
+
+  const urgencyLabel =
+    selectedCase.urgency === 'EMERGENCY'
+      ? 'Đặc biệt khẩn cấp'
+      : selectedCase.urgency === 'URGENT'
+      ? 'Khẩn cấp (24-48h)'
+      : 'Bình thường'
+
   return (
     <>
       {selectedCase.master_case_id && (
@@ -28,7 +44,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-center gap-2">
             <Icon name="link" size={20} className="text-purple-600 shrink-0" />
             <div>
-              <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO MASTER CASE</span>
+              <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO HỒ SƠ CHÍNH</span>
               <span className="text-[11px] text-purple-700">
                 Dữ liệu được hợp nhất để không tạo trùng lệnh thi công.
               </span>
@@ -40,7 +56,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
               onClick={() => setSelectedCaseId(selectedCase.master_case_id!)}
               className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
             >
-              <span>Xem Case Gốc</span>
+              <span>Xem hồ sơ gốc</span>
               <Icon name="arrow_forward" size={14} />
             </button>
             {!isSupervisor && (
@@ -62,10 +78,12 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-center gap-2">
             <Icon name="check_circle" size={20} className="text-emerald-600 shrink-0" />
             <div>
-              <span className="font-bold text-xs block">KẾT LUẬN: ĐÃ XÁC MINH CÓ KHIẾM KHUYẾT (DEFECT_FOUND)</span>
+              <span className="font-bold text-xs block">KẾT LUẬN: ĐÃ XÁC MINH CÓ KHIẾM KHUYẾT (HỢP LỆ)</span>
               <span className="text-[11px] text-emerald-700">
-                Mức độ: <strong>{selectedCase.severity}</strong> • Khẩn cấp: <strong>{selectedCase.urgency}</strong> • S:{' '}
-                <strong>{selectedCase.area_sqm} m²</strong>
+                Mức độ: <strong>{severityLabel}</strong> • Khẩn cấp: <strong>{urgencyLabel}</strong>
+                {selectedCase.area_sqm > 0 && (
+                  <> • S: <strong>{selectedCase.area_sqm} m²</strong></>
+                )}
               </span>
             </div>
           </div>
@@ -128,7 +146,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-start gap-2">
             <Icon name="warning" size={20} className="text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-xs block">KẾT LUẬN: NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE)</span>
+              <span className="font-bold text-xs block">KẾT LUẬN: NGOÀI PHẠM VI BẢO HÀNH</span>
               <p className="text-[11px] text-amber-800 mt-0.5">
                 Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.
               </p>
@@ -158,8 +176,8 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
                 <span className="text-[11px] text-blue-700">
                   {selectedCase.survey_assignment
                     ? selectedCase.survey_assignment.mode === 'MEASURE_ONLY'
-                      ? '📐 Đo đạc hiện trường bằng thước chuyên dụng (MEASURE_ONLY)'
-                      : '🛸 Bay quét Drone chụp bổ sung (DRONE_RESURVEY)'
+                      ? '📐 Đo đạc hiện trường bằng thước chuyên dụng'
+                      : '🛸 Bay quét Drone chụp bổ sung'
                     : 'Đã chuyển sang hàng đợi nhiệm vụ khảo sát thực địa.'}
                 </span>
               </div>

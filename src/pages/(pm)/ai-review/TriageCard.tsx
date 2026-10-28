@@ -353,7 +353,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               onClick={() => onSelectCase(item)}
               className="px-3.5 py-1.5 rounded-xl bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
-              <span>{isSupervisor ? 'Xem hồ sơ' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
           </div>

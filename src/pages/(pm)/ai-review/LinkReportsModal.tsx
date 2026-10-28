@@ -55,7 +55,7 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
           {/* Pick Master Case */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700 block">
-              1. Chọn Hồ Sơ Tiếp Nhận Chính (Master Case):
+              1. Chọn Hồ Sơ Tiếp Nhận Chính (Hồ sơ gốc):
             </label>
             <div className="space-y-1.5 max-h-40 overflow-y-auto">
               {cases

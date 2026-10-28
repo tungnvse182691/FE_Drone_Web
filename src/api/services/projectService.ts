@@ -352,9 +352,17 @@ function mapBackendProjectToHub(item: any): HubProject {
   } catch {}
 
   const pmName = item.primaryProjectManagerName || 'Chưa gán PM'
-  const pmEmail = item.primaryProjectManagerUserId
-    ? `${pmName.toLowerCase().replace(/[^a-z0-9]/g, '')}@sandbox.example.test`
-    : ''
+  let pmEmail = ''
+  if (item.primaryProjectManagerUserId) {
+    const lowerName = pmName.toLowerCase()
+    if (lowerName.includes('pm-a')) {
+      pmEmail = 'pm-a@sandbox.example.test'
+    } else if (lowerName.includes('pm-b')) {
+      pmEmail = 'pm-b@sandbox.example.test'
+    } else {
+      pmEmail = `${lowerName.replace(/[^a-z0-9]/g, '')}@sandbox.example.test`
+    }
+  }
 
   // Tính toán thời gian bảo hành thực tế dựa trên handoverDate và warrantyEndDate
   const now = new Date()
@@ -438,6 +446,7 @@ function mapBackendProjectToHub(item: any): HubProject {
     status_color: statusColor,
     pm_name: pmName,
     pm_email: pmEmail,
+    pm_user_id: item.primaryProjectManagerUserId,
     pm_role_badge: 'PM Chính',
     warranty_passed_percent: warrantyPassedPercent,
     days_remaining: daysRemaining,

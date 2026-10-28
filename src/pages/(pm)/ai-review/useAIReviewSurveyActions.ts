@@ -80,9 +80,16 @@ export const useAIReviewSurveyActions = ({
     )
 
     try {
-      await triageService.updateCase(targetId, updates)
-    } catch (e) {
-      console.warn('Could not sync updateCase to triageService', e)
+      await triageService.concludeCase(targetId, {
+        outcome: 'NEEDS_EVIDENCE',
+        reason: finalReason,
+        version: targetTriageCase?.version || selectedCase.version
+      })
+    } catch (e: any) {
+      console.error('❌ Lỗi khi gửi yêu cầu đo đạc tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi yêu cầu đo đạc tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
+      return
     }
 
     try {

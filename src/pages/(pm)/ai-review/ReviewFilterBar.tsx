@@ -136,8 +136,8 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả phạm vi</option>
-            <option value="MAIN_LINE">[Trục chính] Tuyến QL1A</option>
-            <option value="BRANCH_LINE">[Tuyến nhánh] Nhánh Hải Vân</option>
+            <option value="MAIN_LINE">Tuyến trục chính</option>
+            <option value="BRANCH_LINE">Tuyến nhánh phụ</option>
           </select>
         </div>
 
@@ -166,9 +166,17 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả dự án</option>
-            <option value="QL1A - Giai đoạn 2 (Km 1020 - Km 1045)">QL1A - Giai đoạn 2</option>
-            <option value="Cao tốc Bắc Nam">Cao tốc Bắc Nam</option>
-            <option value="QL1A - Tuyến mở rộng">QL1A - Tuyến mở rộng</option>
+            {Array.from(
+              new Set(
+                cases
+                  .map((c) => c.project_name)
+                  .filter((name) => name && name !== 'Chưa phân công dự án')
+              )
+            ).map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
         </div>
 

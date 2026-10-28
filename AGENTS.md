@@ -9,7 +9,7 @@
 
 Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commitment), **tưởng tượng thay vì chạy thật**, và **đoán tên/API/field thay vì tra cứu**.
 
-### 5 Nguyên Tắc Vàng
+### 6 Nguyên Tắc Vàng
 1. **Evidence trước, edit sau:** Chỉ sửa file sau khi đã đọc file đó + các file liên quan (caller, type, mock, config).
 2. **Spec v2.2 là source of truth, Stitch chỉ để tham khảo bố trí & mã màu:**
    - **Tài liệu `v2.2`** là căn cứ duy nhất về nghiệp vụ, logic, quy tắc (BR), chức năng (FR), trường dữ liệu và nội dung.
@@ -17,6 +17,10 @@ Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commit
 3. **Đừng tưởng tượng — hãy kiểm chứng:** Sau khi viết code, chạy build hoặc kiểm tra import/type, không phán đoán mơ hồ.
 4. **Mọi tên đều phải có căn cứ:** Tên hàm, field, endpoint, mã màn — mỗi cái phải trỏ được về một nơi đã đọc trong `src/types/domain.ts` hoặc spec `v2.2`. Không trỏ được = bịa = CẤM.
 5. **Không chắc → hỏi Hoàng, không tự chế:** Thiếu thông tin hoặc phát hiện mâu thuẫn thì dừng lại hỏi Hoàng ngay, không tự lấp chỗ trống.
+6. **Đã gắn API = BẮT BUỘC trả dữ liệu Database thật — Lỗi thì báo lỗi, CẤM tự ý trả mock data:**
+   - Khi một chức năng/màn hình đã chuyển sang gắn API, dữ liệu hiển thị lên giao diện **bắt buộc phải lấy từ CSDL Backend (Docker)**.
+   - Nếu gọi API bị lỗi (4xx, 5xx, timeout, sai DTO, thiếu quyền), **bắt buộc phải ném lỗi / hiển thị thông báo lỗi (Toast/Alert/Error state)** rõ ràng để Hoàng biết nguyên nhân và sửa.
+   - **TUYỆT ĐỐI CẤM** hành vi âm thầm catch error rồi fallback trả về `mock data` giả vờ chạy thành công. Không đánh lừa người dùng bằng dữ liệu giả khi đang kiểm thử API. Nếu Database rỗng thì hiển thị Empty State ("Không có dữ liệu trong CSDL").
 
 ### Checklist Chống Bịa (Kiểm tra trước mỗi lần sinh code)
 - [ ] **Đường dẫn file:** Đã kiểm tra file tồn tại trong cấu trúc phẳng `src/pages/(pm)/` hoặc `src/pages/(sup)/`.
@@ -24,6 +28,7 @@ Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commit
 - [ ] **Nội dung & Dữ liệu chuẩn v2.2:** Nghiệp vụ, field dữ liệu, nhãn hiển thị đối chiếu 100% theo tài liệu `v2.2`, `src/types/domain.ts` và `src/types/enums.ts`.
 - [ ] **Màu sắc & Phông chữ:** Dùng đúng tokens trong `src/design-tokens.ts` (Vàng đồng `#C9A227`, Navy `#2D3748`, Dark `#1A1D20`).
 - [ ] **Không scope creep & không suy luận thêm:** Chỉ sửa/tạo đúng màn hình hoặc tính năng Hoàng yêu cầu, spec không có thì không tự vẽ ra.
+- [ ] **100% Dữ liệu Database thật khi gắn API:** Không âm thầm nuốt lỗi rồi trả mock data giả mạo. API lỗi thì báo lỗi rõ ràng, CSDL rỗng thì hiển thị trạng thái rỗng (Empty state), tuyệt đối không tự chèn mock data vào.
 
 ---
 
@@ -110,10 +115,15 @@ Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Rout
    - **Idempotency-Key:** Bắt buộc cho các lệnh ghi/tạo mới tài nguyên (sinh UUID ngẫu nhiên v4).
    - **If-Match:** Bắt buộc khi cập nhật tài nguyên có rowVersion / ETag (lấy từ ETag của response GET trước đó).
 4. **Xử lý Optional Fields đúng Candidate3:**
-   - Các trường như conclusion (Case) hoặc ccessPoint (Survey) có thể bị omit (trả về undefined thay vì 
-ull). Code FE phải dùng safe navigation (item?.conclusion) và hiển thị empty state phù hợp.
+   - Các trường như conclusion (Case) hoặc accessPoint (Survey) có thể bị omit (trả về undefined thay vì null). Code FE phải dùng safe navigation (item?.conclusion) và hiển thị empty state phù hợp.
 
 ### 3. Môi trường kết nối:
 - Backend Docker chạy tại: http://localhost:18081.
-- Vite Dev Server chạy tại: http://localhost:5173 với reverse proxy /api trỏ về http://localhost:18081 (được cấu hình trong ite.config.ts).
+- Vite Dev Server chạy tại: http://localhost:5173 với reverse proxy /api trỏ về http://localhost:18081 (được cấu hình trong vite.config.ts).
 - Web Auth sử dụng cookie WebSession với withCredentials: true. Không lưu JWT vào localStorage cho Web.
+
+### 4. KỶ LUẬT BẤT BIẾN: ĐÃ GẮN API THÌ 100% DATABASE THẬT, CẤM TRẢ MOCK DATA, LỖI PHẢI BÁO LỖI:
+- **Đã gắn API là phải lấy dữ liệu thật 100%:** Khi một màn hình hoặc service được đánh dấu gắn API, toàn bộ dữ liệu trả về cho UI phải đến từ CSDL Backend thông qua API tương ứng.
+- **Báo lỗi minh bạch, cấm nuốt lỗi:** Nếu API gọi thất bại (400, 401, 403, 404, 422, 500, Network error), service PHẢI ném lỗi (throw error) hoặc UI PHẢI hiển thị thông báo lỗi rõ ràng (qua Toast / Error Alert / Banner) để Hoàng biết backend đang phản hồi lỗi gì và kịp thời sửa.
+- **TUYỆT ĐỐI CẤM fallback mock data:** Không bao giờ được dùng cú pháp `catch (err) { return mockData; }` để tạo cảm giác giả vờ thành công. 
+- **Database rỗng thì hiển thị Empty State:** Nếu CSDL thật chưa có bản ghi nào, UI phải hiển thị danh sách rỗng kèm trạng thái trống (ví dụ: "Chưa có dữ liệu trong CSDL"), tuyệt đối không được tự ý lấp đầy bằng mock data.

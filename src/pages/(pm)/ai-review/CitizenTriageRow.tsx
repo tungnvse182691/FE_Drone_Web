@@ -170,7 +170,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                     : 'bg-blue-50 text-blue-700 border-blue-200'
                 }`}
               >
-                {item.stationing?.includes('Nhánh') ? '[Nhánh Hải Vân]' : '[Trục chính]'}
+                {item.stationing?.includes('Nhánh') ? '[Tuyến nhánh]' : '[Trục chính]'}
               </span>
               <span className="font-mono text-xs font-semibold text-slate-800">
                 {item.stationing?.replace(/\[.*?\]\s*/, '')}
@@ -250,7 +250,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
               onClick={() => onSelectCase(item)}
               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
             >
-              <span>{isSupervisor ? 'Xem hồ sơ' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
             {!isSupervisor && item.cluster_duplicates &&

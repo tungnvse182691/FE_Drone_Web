@@ -8,11 +8,19 @@ import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
-  // Dữ liệu hồ sơ tiếp nhận từ Mock API Service bất đồng bộ
+  // Dữ liệu hồ sơ tiếp nhận từ Candidate3 Backend CSDL
   const [cases, setCases] = useState<TriageCase[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('')
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  // Nạp dữ liệu từ Mock API khi khởi tạo
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    setTimeout(() => setToastMessage(null), 3800)
+  }
+
+  // Nạp dữ liệu từ Backend CSDL khi khởi tạo
   useEffect(() => {
     let isMounted = true
     const loadCases = async () => {
@@ -21,12 +29,15 @@ export const useAIReviewState = () => {
         const data = await triageService.getCases()
         if (isMounted) {
           setCases(data)
-          if (data.length > 0 && !selectedCaseId) {
+          if (data.length > 0) {
             setSelectedCaseId(data[0].id)
           }
         }
-      } catch (err) {
-        console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API:', err)
+      } catch (err: any) {
+        console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
+        if (isMounted) {
+          showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
+        }
       } finally {
         if (isMounted) setIsLoading(false)
       }
@@ -46,15 +57,12 @@ export const useAIReviewState = () => {
     }
   }, [])
 
-  // Selected Case for Right Detail Panel
-  const [selectedCaseId, setSelectedCaseId] = useState<string>('cas-01')
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
   const selectedCase = useMemo(() => {
     return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
   }, [cases, selectedCaseId])
 
   // Thu gọn / Mở rộng nhóm báo cáo trùng (Accordion)
-  const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>(['cas-01'])
+  const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>([])
   const [collapseMergedRows, setCollapseMergedRows] = useState<boolean>(true)
 
   const handleToggleExpandMaster = (id: string, e?: React.MouseEvent) => {
@@ -62,13 +70,6 @@ export const useAIReviewState = () => {
     setExpandedMasterIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     )
-  }
-
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const showToast = (msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3800)
   }
 
   // Form states for selected case editing

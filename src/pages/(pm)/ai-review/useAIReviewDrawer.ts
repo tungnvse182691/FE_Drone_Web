@@ -7,8 +7,8 @@ export interface UseAIReviewDrawerProps {
 }
 
 export const useAIReviewDrawer = ({ selectedCase }: UseAIReviewDrawerProps) => {
-  // View Mode for right drawer photo card: 'PHOTO' or 'GIS_MAP'
-  const [detailViewMode, setDetailViewMode] = useState<'PHOTO' | 'GIS_MAP'>('PHOTO')
+  // View Mode for right drawer photo card: 'PHOTO', 'GIS_MAP', or 'SIDE_BY_SIDE'
+  const [detailViewMode, setDetailViewMode] = useState<'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'>('PHOTO')
   const [modalMapType, setModalMapType] = useState<'SATELLITE' | 'STREET'>('SATELLITE')
 
   // Modals state
@@ -33,7 +33,7 @@ export const useAIReviewDrawer = ({ selectedCase }: UseAIReviewDrawerProps) => {
 
   // Effect: Khởi tạo MapLibre mini trong panel Drawer khi người dùng bấm tab Bản đồ
   useEffect(() => {
-    if (detailViewMode !== 'GIS_MAP' || !drawerMapContainerRef.current) return
+    if ((detailViewMode !== 'GIS_MAP' && detailViewMode !== 'SIDE_BY_SIDE') || !drawerMapContainerRef.current) return
     const { cleanup } = initReviewDrawerMap(drawerMapContainerRef.current, selectedCase)
     return () => cleanup()
   }, [detailViewMode, selectedCase])

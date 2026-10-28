@@ -1,7 +1,7 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { mockProjects } from '../../data/mockData'
+import { projectService } from '../../api/services/projectService'
 import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
@@ -17,6 +17,43 @@ export const AIReviewInbox: React.FC = () => {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
+
+  const activeProjects = React.useMemo(() => {
+    try {
+      const real = projectService.getProjects()
+      if (real && real.length > 0) {
+        const scoped = isSupervisor
+          ? real
+          : real.filter((p) => {
+              if (!user) return false
+              const userId = user.id
+              const userEmail = (user.email || '').toLowerCase()
+              const userName = (user.full_name || (user as any).name || '').toLowerCase()
+              const pmUserId = p.pm_user_id
+              const pmEmail = (p.pm_email || '').toLowerCase()
+              const pmName = (p.pm_name || '').toLowerCase()
+
+              if (userId && pmUserId && userId === pmUserId) return true
+              if (pmEmail && userEmail && pmEmail === userEmail) return true
+              if (pmName && userName && (pmName === userName || pmName.includes(userName) || userName.includes(pmName))) return true
+              if (userEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
+              if (userEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
+              return false
+            })
+
+        return scoped.map((p) => ({
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          start_km: p.start_km || 0,
+          end_km: p.end_km || 0
+        }))
+      }
+    } catch (err) {
+      console.error('Lỗi khi nạp danh sách dự án CSDL:', err)
+    }
+    return []
+  }, [isSupervisor, user])
 
   const state = useAIReviewState()
   const {
@@ -169,7 +206,7 @@ export const AIReviewInbox: React.FC = () => {
         targetTriageCase={targetTriageCase}
         cases={cases}
         selectedReportIds={selectedReportIds}
-        mockProjects={mockProjects}
+        projects={activeProjects}
         isMergeModalOpen={isMergeModalOpen}
         setIsMergeModalOpen={setIsMergeModalOpen}
         onExecuteMerge={handleExecuteMerge}

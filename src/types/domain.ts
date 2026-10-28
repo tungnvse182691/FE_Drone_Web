@@ -577,6 +577,7 @@ export interface HubProject {
   pm_name: string
   pm_email: string
   pm_role_badge: string
+  pm_user_id?: string
   pm_avatar?: string
   warranty_passed_percent: number
   days_remaining: number
@@ -652,6 +653,8 @@ export interface TriageCase {
   linked_report_ids?: string[]
   master_case_id?: string
   is_assigned?: boolean
+  version?: string
+  etag?: string
   is_published?: boolean
   published_at?: string
   public_notice?: string

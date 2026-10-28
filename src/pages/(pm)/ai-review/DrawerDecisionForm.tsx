@@ -116,18 +116,26 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
           <label className="text-[11px] font-medium text-slate-600 mb-1">Diện tích hư hại</label>
           <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
             <input
-              type="number"
+              type={isSupervisor ? 'text' : 'number'}
               step="0.01"
               disabled={isSupervisor}
-              value={currentArea}
+              value={
+                isSupervisor
+                  ? currentArea > 0
+                    ? `${currentArea} m²`
+                    : 'Chưa có số đo'
+                  : currentArea > 0
+                  ? currentArea
+                  : ''
+              }
+              placeholder="Chưa có số đo"
               onChange={(e) => setCurrentArea(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none disabled:text-slate-700"
             />
-            <span className="text-xs text-slate-500 font-semibold ml-1">m²</span>
+            {currentArea > 0 && !isSupervisor && (
+              <span className="text-xs text-slate-500 font-semibold ml-1">m²</span>
+            )}
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5">
-            AI ước tính: {selectedCase.ai_area_sqm} m²
-          </span>
         </div>
 
         <div className="flex flex-col">
@@ -152,12 +160,12 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
                 isSupervisor
                   ? currentDepth > 0
                     ? `${currentDepth} cm`
-                    : 'Chưa có số đo (Chờ đo thực địa)'
+                    : 'Chưa có số đo'
                   : currentDepth > 0
                   ? currentDepth
                   : ''
               }
-              placeholder={isSupervisor ? 'Chưa đo thực địa' : 'Chưa có số đo (Nhập sau khi đo thước)'}
+              placeholder="Chưa có số đo"
               onChange={(e) => setCurrentDepth(parseFloat(e.target.value) || 0)}
               className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none disabled:text-slate-600"
             />
@@ -165,11 +173,6 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               <span className="text-xs text-slate-500 font-semibold ml-1">cm</span>
             )}
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5">
-            {currentDepth > 0
-              ? 'Số liệu do Kỹ sư đo thực địa bằng thước rãnh'
-              : 'Drone AI chỉ quét ảnh 2D • Chưa có số đo độ sâu'}
-          </span>
         </div>
       </div>
 
@@ -243,64 +246,103 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             Theo quy định Spec 17_10, phản ánh từ người dân phải được Giám sát điều phối gán vào dự án cụ thể trước khi Chỉ huy trưởng (PM) có thẩm quyền kết luận và phát hành công khai.
           </p>
         </div>
+      ) : selectedCase.conclusion ? (
+        /* Khi hồ sơ đã có kết luận thẩm định: Hiển thị trạng thái đã kết luận rõ ràng, tránh gửi kết luận đè lên hồ sơ đã đóng */
+        <div className="space-y-3 pt-1">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+              <span>Kết luận thẩm định kỹ thuật</span>
+              <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                Đã ghi nhận CSDL
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedCase.conclusion === 'DEFECT_FOUND' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 w-full">
+                  <Icon name="check_circle" size={16} className="text-emerald-600" />
+                  <span>Xác minh có khiếm khuyết (Hợp lệ)</span>
+                </div>
+              )}
+              {selectedCase.conclusion === 'NO_DEFECT' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200 w-full">
+                  <Icon name="cancel" size={16} className="text-red-600" />
+                  <span>Không có khiếm khuyết (Báo sai)</span>
+                </div>
+              )}
+              {selectedCase.conclusion === 'OUT_OF_SCOPE' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 w-full">
+                  <Icon name="warning" size={16} className="text-amber-600" />
+                  <span>Ngoài phạm vi bảo hành Hoàng Hải</span>
+                </div>
+              )}
+            </div>
+
+            {(selectedCase.conclusion_reason || selectedCase.pm_notes) && (
+              <div className="text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200/80 leading-relaxed">
+                <span className="font-semibold text-slate-900 block text-[11px] mb-0.5">Lý do thẩm định ghi nhận:</span>
+                {selectedCase.conclusion_reason || selectedCase.pm_notes}
+              </div>
+            )}
+          </div>
+
+          {/* Công bố thông báo người dân (API-021) */}
+          <button
+            type="button"
+            onClick={() => onOpenPublishModal(selectedCase)}
+            className={`w-full py-2.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer border ${
+              selectedCase.is_published
+                ? 'bg-sky-50 text-sky-800 border-sky-300 font-bold'
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-2xs'
+            }`}
+          >
+            <Icon name="campaign" size={16} className="text-blue-600" />
+            <span>
+              {selectedCase.is_published
+                ? `Đã công bố tiến độ cho người dân (${selectedCase.published_at || 'Hôm nay'})`
+                : 'Công bố tiến độ cho người dân (API-021)'}
+            </span>
+          </button>
+        </div>
       ) : (
+        /* Khi hồ sơ chưa thẩm định: Hiển thị bộ nút thao tác thẩm định cho PM */
         <div className="space-y-2 pt-1">
           <button
             type="button"
             onClick={() => onVerifyDefect(selectedCase)}
-            className={`w-full py-2.5 px-4 rounded-lg text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
-              selectedCase.conclusion === 'DEFECT_FOUND'
-                ? 'bg-emerald-600 hover:bg-emerald-700 ring-2 ring-emerald-400'
-                : 'bg-brand-gold hover:bg-[#B38E1F]'
-            }`}
+            className="w-full py-2.5 px-4 rounded-lg text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-brand-gold hover:bg-[#B38E1F]"
           >
             <Icon name="check_circle" size={16} />
-            <span>
-              {selectedCase.conclusion === 'DEFECT_FOUND'
-                ? '✓ Đã xác minh có khiếm khuyết (Bấm để cập nhật lại)'
-                : 'Xác minh có khiếm khuyết (Hợp lệ)'}
-            </span>
+            <span>Xác minh có khiếm khuyết (Hợp lệ)</span>
           </button>
 
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => onOpenNoDefectModal(selectedCase)}
-              className={`border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                selectedCase.conclusion === 'NO_DEFECT'
-                  ? 'bg-red-600 text-white border-red-700'
-                  : 'bg-white border-slate-200 hover:bg-red-50 text-red-600'
-              }`}
+              className="border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer bg-white border-slate-200 hover:bg-red-50 text-red-600"
               title="Không có khiếm khuyết (Bắt buộc ghi rõ lý do giải trình)"
             >
               <Icon name="close" size={14} />
-              <span>{selectedCase.conclusion === 'NO_DEFECT' ? 'Đã báo sai' : 'Không có lỗi'}</span>
+              <span>Không có lỗi</span>
             </button>
             <button
               type="button"
               onClick={() => onConclusionOutOfScope(selectedCase)}
-              className={`border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                selectedCase.conclusion === 'OUT_OF_SCOPE'
-                  ? 'bg-amber-600 text-white border-amber-700'
-                  : 'bg-white border-slate-200 hover:bg-amber-50 text-amber-700'
-              }`}
+              className="border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer bg-white border-slate-200 hover:bg-amber-50 text-amber-700"
               title="Ngoài phạm vi bảo hành Hoàng Hải"
             >
               <Icon name="warning" size={14} />
-              <span>{selectedCase.conclusion === 'OUT_OF_SCOPE' ? 'Đã loại trừ' : 'Ngoài phạm vi'}</span>
+              <span>Ngoài phạm vi</span>
             </button>
             <button
               type="button"
               onClick={() => onOpenRequestSurveyModal(selectedCase)}
-              className={`border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer ${
-                selectedCase.status === 'NEED_SURVEY'
-                  ? 'bg-blue-600 text-white border-blue-700'
-                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-              }`}
-              title="Yêu cầu khảo sát lại hiện trường hoặc bay drone bù"
+              className="border px-2.5 py-2 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1 shadow-2xs cursor-pointer bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+              title="Yêu cầu khảo sát, đo đạc hiện trường bổ sung"
             >
               <Icon name="photo_camera" size={14} />
-              <span>{selectedCase.status === 'NEED_SURVEY' ? 'Đã giao đo lại' : 'Yêu cầu đo lại'}</span>
+              <span>Yêu cầu đo đạc</span>
             </button>
           </div>
 
@@ -339,7 +381,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             className="py-2 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
           >
             <Icon name="visibility" size={14} className="text-brand-gold" />
-            <span>Thẩm định BBox &amp; Đa kỳ</span>
+            <span>Thẩm định khung nhận diện &amp; Đa kỳ</span>
           </button>
           {isEligibleEmergency && (
             <button
