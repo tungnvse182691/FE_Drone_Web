@@ -205,11 +205,43 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
     return p
   }
 
-  const alignStateKey = `${STORAGE_KEYS.ALIGNMENTS}_${p.id}`
-  const alignDataKey = `${STORAGE_KEYS.ALIGNMENTS}_data_${p.id}`
+  const getRawAlignState = (keyId?: string | null) => {
+    if (!keyId) return null
+    try {
+      const v1 = localStorage.getItem(`roadguard_alignment_state_${keyId}`)
+      if (v1) {
+        const parsed = JSON.parse(v1)
+        if (parsed && parsed.status) return parsed
+      }
+      const v2 = localStorage.getItem(`${STORAGE_KEYS.ALIGNMENTS}_${keyId}`)
+      if (v2) {
+        const parsed = JSON.parse(v2)
+        if (parsed && parsed.status) return parsed
+      }
+    } catch {}
+    return null
+  }
 
-  const alignState = getFromStorage<{ status?: string }>(alignStateKey, {})
-  const alignData = getFromStorage<{ coords?: [number, number][]; branches?: any[]; segments?: any[] }>(alignDataKey, {})
+  const getRawAlignData = (keyId?: string | null) => {
+    if (!keyId) return null
+    try {
+      const v1 = localStorage.getItem(`roadguard_alignment_data_${keyId}`)
+      if (v1) {
+        const parsed = JSON.parse(v1)
+        if (parsed && (parsed.coords?.length || parsed.segments?.length || parsed.branches?.length)) return parsed
+      }
+      const v2 = localStorage.getItem(`${STORAGE_KEYS.ALIGNMENTS}_data_${keyId}`)
+      if (v2) {
+        const parsed = JSON.parse(v2)
+        if (parsed && (parsed.coords?.length || parsed.segments?.length || parsed.branches?.length)) return parsed
+      }
+    } catch {}
+    return null
+  }
+
+  // Tra cứu theo cả ID (UUID) và Mã dự án (Code: SBX-A, BLL0-SPC-1...)
+  const alignState = getRawAlignState(p.id) || getRawAlignState(p.code) || {}
+  const alignData = getRawAlignData(p.id) || getRawAlignData(p.code) || {}
 
   const coords = alignData.coords || []
   const branches = alignData.branches || []
@@ -918,12 +950,24 @@ export const projectService = {
     let updatedProj: HubProject | null = null
     projectStore = projectStore.map((p) => {
       if (p.id === id || p.code === id) {
-        updatedProj = { ...p, ...data }
+        let statusLabel = p.status_label
+        let statusColor = p.status_color
+        if (data.kml_status === 'Chờ duyệt tim tuyến' || data.status === 'PENDING_ALIGNMENT') {
+          statusLabel = 'Chờ duyệt tuyến'
+          statusColor = '#D97706'
+        } else if (data.kml_status === 'Đã phê duyệt' || data.status === 'ACTIVE') {
+          statusLabel = 'Đang bảo hành'
+          statusColor = '#1B5E20'
+        }
+        updatedProj = { ...p, ...data, status_label: statusLabel, status_color: statusColor }
         return updatedProj
       }
       return p
     })
     if (updatedProj) {
+      try {
+        sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
+      } catch {}
       window.dispatchEvent(new Event('roadguard_state_change'))
     }
     return updatedProj

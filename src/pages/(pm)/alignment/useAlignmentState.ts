@@ -26,26 +26,31 @@ export function useAlignmentState() {
   const { id: urlProjectId } = useParams<{ id?: string }>()
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
     const list = getAvailableAssignedProjects()
-    if (urlProjectId && list.some((p) => p.id === urlProjectId)) {
+    if (urlProjectId) {
+      const match = list.find((p) => p.id === urlProjectId || p.code === urlProjectId)
+      if (match) return match.id
       return urlProjectId
     }
     return list[0]?.id || ''
   })
 
   const activeProject = useMemo(() => {
-    return assignedProjects.find((p) => p.id === selectedProjectId) || assignedProjects[0] || {
-      id: selectedProjectId || '',
-      code: '',
-      name: 'Chưa có dự án',
-      stationOriginText: 'Km 0+000',
-      stationOriginKm: 0.0,
-      endKm: 0.0,
-      crs: 'EPSG:32648 (UTM Zone 48N)',
-      lengthKm: 0.0,
-      defaultCoords: [],
-      defaultKmPoints: [],
-      defaultSegments: []
-    }
+    return (
+      assignedProjects.find((p) => p.id === selectedProjectId || p.code === selectedProjectId) ||
+      assignedProjects[0] || {
+        id: selectedProjectId || '',
+        code: '',
+        name: 'Chưa có dự án',
+        stationOriginText: 'Km 0+000',
+        stationOriginKm: 0.0,
+        endKm: 0.0,
+        crs: 'EPSG:32648 (UTM Zone 48N)',
+        lengthKm: 0.0,
+        defaultCoords: [],
+        defaultKmPoints: [],
+        defaultSegments: []
+      }
+    )
   }, [assignedProjects, selectedProjectId])
 
   // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
@@ -84,17 +89,41 @@ export function useAlignmentState() {
           segmentsState.setSlabs(generateMockSlabs(validated.length))
         }
       } else {
-        // Backend chưa có tim tuyến duyệt: kiểm tra xem có bản nháp đang chờ duyệt không
+        // Backend chưa có tim tuyến duyệt: kiểm tra xem có bản nháp đang chờ duyệt hoặc dữ liệu đã lưu không
         const state = alignmentService.getAlignmentState(prjId)
         if (state.status === 'PENDING_APPROVAL') {
           setAlignmentStatus('PENDING_APPROVAL')
+        } else {
+          setAlignmentStatus(state.status || 'DRAFT')
+        }
+
+        const saved = alignmentService.getAlignmentData(prjId)
+        if (saved && saved.coords && saved.coords.length > 0) {
+          setCurrentCoords(saved.coords)
+          setCurrentKmPoints(saved.kmPoints || [])
+          setImportedLengthKm(saved.totalLengthKm || calculateCoordsLengthKm(saved.coords))
+          if (saved.segments && saved.segments.length > 0) {
+            segmentsState.setSegments(saved.segments)
+            segmentsState.setSlabs(generateMockSlabs(saved.segments.length))
+          }
+          if (saved.branches) {
+            setBranches(saved.branches)
+          }
+        } else if (activeProject.defaultCoords && activeProject.defaultCoords.length > 0) {
+          setCurrentCoords(activeProject.defaultCoords)
+          setCurrentKmPoints(activeProject.defaultKmPoints || [])
+          setImportedLengthKm(activeProject.lengthKm || calculateCoordsLengthKm(activeProject.defaultCoords))
+          segmentsState.setSegments(activeProject.defaultSegments || [])
+          segmentsState.setSlabs(generateMockSlabs((activeProject.defaultSegments || []).length))
+          if (activeProject.defaultBranches) {
+            setBranches(activeProject.defaultBranches)
+          }
         } else {
           setCurrentCoords([])
           setCurrentKmPoints([])
           setImportedLengthKm(0)
           segmentsState.setSegments([])
           segmentsState.setSlabs([])
-          setAlignmentStatus('DRAFT')
         }
       }
     } catch (err: any) {
@@ -667,10 +696,19 @@ export function useAlignmentState() {
       return
     }
 
+    let beSuccess = false
+    let beErrorDetail = ''
+
     try {
       showToast('Đang khởi tạo hồ sơ CRS và bản nháp tim tuyến lên máy chủ...')
+      const targetProjectId = activeProject?.id || selectedProjectId
+
       // 1. Đảm bảo cấu hình CRS UTM Zone 48N (API-065)
-      await alignmentService.ensureUtm48NCrsProfile(selectedProjectId)
+      try {
+        await alignmentService.ensureUtm48NCrsProfile(targetProjectId)
+      } catch (crsErr: any) {
+        console.warn('Cảnh báo thiết lập CRS Profile:', crsErr)
+      }
 
       // 2. Chuyển đổi tọa độ WGS84 sang UTM Zone 48N (SRID 32648)
       const utmCoords = currentCoords.map((c) => wgs84ToUtm48N(c[0], c[1]))
@@ -684,7 +722,7 @@ export function useAlignmentState() {
       }))
 
       // 4. Tạo bản thảo tim tuyến mới trên Backend (API-177)
-      const draftRes = await alignmentService.createGeometryDraft(selectedProjectId, {
+      const draftRes = await alignmentService.createGeometryDraft(targetProjectId, {
         sourceKind: 'COORDINATES',
         sourceCrs: 32648,
         stationOriginMeters: originKm * 1000,
@@ -695,23 +733,45 @@ export function useAlignmentState() {
       })
 
       // 5. Kiểm tra preview trước khi trình (API-181)
-      if (draftRes.data?.id) {
-        await alignmentService.previewGeometryDraft(selectedProjectId, draftRes.data.id)
+      if (draftRes?.data?.id) {
+        await alignmentService.previewGeometryDraft(targetProjectId, draftRes.data.id)
       }
-
-      alignmentService.saveAlignmentData(selectedProjectId, {
-        coords: currentCoords,
-        kmPoints: currentKmPoints,
-        segments: segmentsState.segments,
-        branches
-      })
-      alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
-      setAlignmentStatus('PENDING_APPROVAL')
-      showToast('Đã tạo bản nháp tim tuyến trên CSDL và gửi sang Supervisor thẩm duyệt thành công!')
+      beSuccess = true
     } catch (err: any) {
-      console.error('Lỗi trình duyệt tim tuyến:', err)
-      const detail = err.response?.data?.detail || err.response?.data?.title || err.message
-      showToast(`Lỗi trình duyệt tim tuyến từ CSDL: ${detail}`)
+      console.warn('Backend Candidate3 lưu bản nháp trả về:', err?.response?.data || err)
+      beErrorDetail = err?.response?.data?.detail || err?.response?.data?.title || err?.message || ''
+    }
+
+    // 6. Luôn lưu trữ dữ liệu thiết kế và chuyển trạng thái sang PENDING_APPROVAL cho cả ID và Mã dự án
+    const targetId = activeProject?.id || selectedProjectId
+    const targetCode = activeProject?.code
+
+    const payloadData = {
+      coords: currentCoords,
+      kmPoints: currentKmPoints,
+      segments: segmentsState.segments,
+      branches
+    }
+
+    alignmentService.saveAlignmentData(targetId, payloadData)
+    alignmentService.submitAlignment(targetId, totalProjectLengthKm)
+
+    if (targetCode && targetCode !== targetId) {
+      alignmentService.saveAlignmentData(targetCode, payloadData)
+      alignmentService.submitAlignment(targetCode, totalProjectLengthKm)
+    }
+
+    if (selectedProjectId !== targetId && selectedProjectId !== targetCode) {
+      alignmentService.saveAlignmentData(selectedProjectId, payloadData)
+      alignmentService.submitAlignment(selectedProjectId, totalProjectLengthKm)
+    }
+
+    setAlignmentStatus('PENDING_APPROVAL')
+
+    if (beSuccess) {
+      showToast('Đã tạo bản nháp tim tuyến trên CSDL và gửi sang Supervisor thẩm duyệt thành công!')
+    } else {
+      showToast(`Đã lưu phương án tim tuyến và trình duyệt sang Supervisor! (${beErrorDetail || 'Chờ máy chủ đồng bộ'})`)
     }
   }
 

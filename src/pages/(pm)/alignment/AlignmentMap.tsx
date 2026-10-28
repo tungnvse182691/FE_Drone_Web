@@ -5,8 +5,6 @@ import {
   Grid,
   Plus,
   Minus,
-  Ruler,
-  Maximize2,
   ChevronDown,
   ChevronUp,
   MapPin,
@@ -85,7 +83,6 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
   // Trạng thái thu gọn/mở rộng bảng Mặt cắt ngang & Thông số kỹ thuật
   const [isCrossSectionMinimized, setIsCrossSectionMinimized] = useState<boolean>(false)
   const pickedLenKm = calculateCoordsLengthKm(pickedCoords)
-  const hasActualGeometry = importedLengthKm > 0 || (segments && segments.length > 0)
 
   return (
     <div className="xl:col-span-8 flex flex-col gap-2">
@@ -144,7 +141,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
             <span className="text-amber-300 font-bold">{cursorPos.station}</span>
           </div>
 
-          {/* GIS Map Tools (Bộ nút điều khiển duy nhất) */}
+          {/* GIS Map Tools */}
           <div className="pointer-events-auto flex items-center gap-0.5 bg-slate-900/90 backdrop-blur-md p-1 rounded-lg shadow-lg text-white border border-slate-700/60">
             <button
               onClick={() => mapRef.current?.zoomIn()}
@@ -159,22 +156,6 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               title="Thu nhỏ"
             >
               <Minus className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onToggleRuler}
-              className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer ${
-                rulerActive ? 'bg-brand-gold text-white' : 'hover:bg-slate-700'
-              }`}
-              title="Đo khoảng cách (Ruler)"
-            >
-              <Ruler className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={onSelectAllRoute}
-              className="w-7 h-7 rounded hover:bg-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="Xem toàn tuyến / Vừa khung hình"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -257,9 +238,8 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
         {/* MAPLIBRE GL JS CONTAINER */}
         <div ref={mapContainerRef} className="absolute inset-0 z-10 w-full h-full" />
 
-        {/* MAP FLOATING BOTTOM OVERLAYS: Ẩn cả 2 bảng chú thích khi chưa có tim tuyến, hiện cả 2 khi đã có tim tuyến */}
-        {hasActualGeometry && (
-          <div className="relative z-30 p-3 flex flex-col md:flex-row items-end justify-between gap-3 pointer-events-none">
+        {/* MAP FLOATING BOTTOM OVERLAYS: Luôn luôn hiển thị 2 bảng chú thích và thông số mặt cắt */}
+        <div className="relative z-30 p-3 flex flex-col md:flex-row items-end justify-between gap-3 pointer-events-none">
             {/* Bottom Left: Engineering Cross-Section & Slabs HUD */}
             <div className="pointer-events-auto bg-slate-950/90 backdrop-blur-md p-3 rounded-xl text-white shadow-2xl flex flex-col gap-2 max-w-sm md:max-w-md w-full border border-slate-700/80 text-xs transition-all">
               {(() => {
@@ -506,8 +486,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           {/* Bottom Right: GIS Map Legend */}
           <AlignmentMapLegend />
         </div>
-      )}
-    </div>
+      </div>
   </div>
   )
 }

@@ -20,6 +20,9 @@ export function getMapLibreStyle(
   type: 'SATELLITE' | 'STREETS' | 'VECTOR' | 'HYBRID' = 'SATELLITE'
 ): maplibregl.StyleSpecification {
   const isSatellite = type === 'SATELLITE' || type === 'HYBRID'
+  const isHybrid = type === 'HYBRID'
+  // lyrs=y: Vệ tinh có địa danh/nhãn; lyrs=s: Ảnh vệ tinh quang học thuần túy
+  const lyrs = isHybrid ? 'y' : 's'
 
   return {
     version: 8,
@@ -29,15 +32,20 @@ export function getMapLibreStyle(
       'google-satellite': {
         type: 'raster',
         tiles: [
-          'https://mt0.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-          'https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+          `https://mt0.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
+          `https://mt1.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
+          `https://mt2.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
+          `https://mt3.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`
         ],
         tileSize: 256,
-        maxzoom: 20, // Tự động overscale khi zoom > 20
+        // maxzoom của source trong MapLibre tương đương maxNativeZoom.
+        // Tại VN, ảnh vệ tinh phân giải gốc tối đa ở mức z=18.
+        // Khai báo maxzoom=18 để MapLibre không gửi request z>=19 lên Google (tránh lỗi 'Map data not yet available' hay 404),
+        // thay vào đó MapLibre sẽ tự động overscale (nội suy phóng to) từ tile z=18 lên đến maxzoom 24 của layer một cách mượt mà.
+        maxzoom: 18,
         attribution: '&copy; Google Satellite Imagery | MapLibre'
       },
+
       'osm-tiles': {
         type: 'raster',
         tiles: [
@@ -59,7 +67,11 @@ export function getMapLibreStyle(
           visibility: isSatellite ? 'visible' : 'none'
         },
         minzoom: 0,
-        maxzoom: 24
+        maxzoom: 24,
+        paint: {
+          'raster-resampling': 'linear',
+          'raster-opacity': 1
+        }
       },
       {
         id: OSM_LAYER_ID,
@@ -69,7 +81,11 @@ export function getMapLibreStyle(
           visibility: !isSatellite ? 'visible' : 'none'
         },
         minzoom: 0,
-        maxzoom: 24
+        maxzoom: 24,
+        paint: {
+          'raster-resampling': 'linear',
+          'raster-opacity': 1
+        }
       }
     ]
   }

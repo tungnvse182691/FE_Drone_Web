@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { SegmentItem } from './types'
-import { SEGMENT_COLORS } from './data'
+import { SEGMENT_COLORS, ROUTE_COORDINATES, ROUTE_KM_POINTS } from './data'
 import {
   checkAndEnrichSegmentsContinuity,
   generateMockSlabs
@@ -149,6 +149,10 @@ export function useAlignmentImportState({
     setSplitDistance(dist)
     setIsImportModalOpen(false)
 
+    setCurrentCoords(ROUTE_COORDINATES)
+    setCurrentKmPoints(ROUTE_KM_POINTS)
+    setImportedLengthKm(25.0)
+
     const count = Math.ceil(25.0 / dist)
     const newSegs: SegmentItem[] = []
     let cur = 1020.0
@@ -173,9 +177,19 @@ export function useAlignmentImportState({
     setSegments(validated)
     setSlabs(generateMockSlabs(validated.length))
     setSelectedSegmentId(validated[0]?.id || null)
-    setImportedLengthKm(25.0)
+
+    if (mapRef.current) {
+      const map = mapRef.current
+      const bounds = new maplibregl.LngLatBounds()
+      ROUTE_COORDINATES.forEach((c) => bounds.extend(c))
+      map.fitBounds(bounds, { padding: 80, speed: 1.2 })
+      syncMap(validated, validated[0]?.id || null, ROUTE_COORDINATES, ROUTE_KM_POINTS)
+    }
+
     showToast(`Đã nạp thành công bộ dữ liệu "${name}"! Bản đồ đã tải lại hoàn toàn.`)
-    handleFitBounds()
+    if (onAutoSave) {
+      onAutoSave(ROUTE_COORDINATES, ROUTE_KM_POINTS, validated)
+    }
   }
 
   return {

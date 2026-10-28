@@ -325,7 +325,7 @@ export function generateRoadRibbonPolygon(
       voutY = (denseCoords[1][1] - pt[1]) * metersPerDegLat
     } else if (j === K - 1) {
       vinX = (pt[0] - denseCoords[j - 1][0]) * metersPerDegLng
-      vinY = (pt[1] - denseCoords[j - 1][0]) * metersPerDegLat
+      vinY = (pt[1] - denseCoords[j - 1][1]) * metersPerDegLat
       if (nextPoint) {
         voutX = (nextPoint[0] - pt[0]) * metersPerDegLng
         voutY = (nextPoint[1] - pt[1]) * metersPerDegLat
@@ -335,7 +335,7 @@ export function generateRoadRibbonPolygon(
       }
     } else {
       vinX = (pt[0] - denseCoords[j - 1][0]) * metersPerDegLng
-      vinY = (pt[1] - denseCoords[j - 1][0]) * metersPerDegLat
+      vinY = (pt[1] - denseCoords[j - 1][1]) * metersPerDegLat
       voutX = (denseCoords[j + 1][0] - pt[0]) * metersPerDegLng
       voutY = (denseCoords[j + 1][1] - pt[1]) * metersPerDegLat
     }
@@ -816,7 +816,7 @@ export function buildSlabsAndJointsGeoJSON(
           widthM: Number(h0.toFixed(1)),
           thicknessCm: activeThick,
           edgeOffset: `Mép Trái: -${h0.toFixed(1)}m`,
-          status: i % 11 === 0 ? 'CRACKED' : 'GOOD'
+          status: 'GOOD'
         },
         geometry: {
           type: 'Polygon',
@@ -838,7 +838,7 @@ export function buildSlabsAndJointsGeoJSON(
           widthM: Number(h0.toFixed(1)),
           thicknessCm: activeThick,
           edgeOffset: `Mép Phải: +${h0.toFixed(1)}m`,
-          status: i % 13 === 0 ? 'CRACKED' : 'GOOD'
+          status: 'GOOD'
         },
         geometry: {
           type: 'Polygon',
@@ -1091,7 +1091,7 @@ export function buildSlabsAndJointsGeoJSON(
             widthM: Number(h0.toFixed(1)),
             thicknessCm: activeThick,
             edgeOffset: `Mép Trái: -${h0.toFixed(1)}m`,
-            status: i % 11 === 0 ? 'CRACKED' : 'GOOD'
+            status: 'GOOD'
           },
           geometry: {
             type: 'Polygon',
@@ -1115,7 +1115,7 @@ export function buildSlabsAndJointsGeoJSON(
             widthM: Number(h0.toFixed(1)),
             thicknessCm: activeThick,
             edgeOffset: `Mép Phải: +${h0.toFixed(1)}m`,
-            status: i % 13 === 0 ? 'CRACKED' : 'GOOD'
+            status: 'GOOD'
           },
           geometry: {
             type: 'Polygon',
@@ -1450,6 +1450,8 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
     ? p.stationing_text.split('➔')[0].trim()
     : 'Chưa thiết lập tim tuyến'
 
+  const staticMatch = PM_ASSIGNED_PROJECTS.find((m) => m.id === p.id || m.code === p.code)
+
   return {
     id: p.id,
     code: p.code,
@@ -1460,12 +1462,12 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
     stationOriginKm: startKm,
     endKm: endKm,
     crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: lengthKm,
-    defaultCoords: [],
-    defaultKmPoints: [],
-    defaultSegments: [],
-    defaultBranches: [],
-    defaultManualText: ''
+    lengthKm: lengthKm || staticMatch?.lengthKm || 0.0,
+    defaultCoords: staticMatch?.defaultCoords || [],
+    defaultKmPoints: staticMatch?.defaultKmPoints || [],
+    defaultSegments: staticMatch?.defaultSegments || [],
+    defaultBranches: staticMatch?.defaultBranches || [],
+    defaultManualText: staticMatch?.defaultManualText || ''
   }
 }
 

@@ -24,6 +24,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('segments-surface-source')) {
     map.addSource('segments-surface-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildSegmentsSurfaceGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -32,6 +35,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('segments-source')) {
     map.addSource('segments-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildSegmentsGeoJSON(segments, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -40,6 +46,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('planning-corridor-source')) {
     map.addSource('planning-corridor-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildPlanningCorridorGeoJSON(currentCoords)
     })
   }
@@ -56,6 +65,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('slabs-source')) {
     map.addSource('slabs-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: slabsGeoJSON
     })
   }
@@ -63,6 +75,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('joints-source')) {
     map.addSource('joints-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: jointsGeoJSON
     })
   }
@@ -70,6 +85,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('edges-source')) {
     map.addSource('edges-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: edgesGeoJSON
     })
   }
@@ -191,6 +209,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('branches-surface-source')) {
     map.addSource('branches-surface-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildBranchesSurfaceGeoJSON(branches, currentCoords, currentKmPoints, selectedSegmentId)
     })
   }
@@ -224,6 +245,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('branches-source')) {
     map.addSource('branches-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: buildBranchesGeoJSON(branches, currentCoords, currentKmPoints)
     })
   }
@@ -281,6 +305,9 @@ export function setupAlignmentSourcesAndLayers(
   if (!map.getSource('pick-coords-source')) {
     map.addSource('pick-coords-source', {
       type: 'geojson',
+      maxzoom: 24,
+      tolerance: 0,
+      buffer: 128,
       data: { type: 'FeatureCollection', features: [] }
     })
   }

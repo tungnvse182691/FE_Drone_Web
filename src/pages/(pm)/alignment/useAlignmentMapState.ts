@@ -149,7 +149,7 @@ export function useAlignmentMapState({
       center: initialCenter,
       zoom: 11.2,
       minZoom: 4,
-      maxZoom: 20,
+      maxZoom: 22,
       maxPitch: 60,
       pitch: 32,
       bearing: -18
