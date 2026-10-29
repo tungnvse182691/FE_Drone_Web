@@ -67,6 +67,7 @@ export const DroneMissionAIReview: React.FC = () => {
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
+    handleResetDetection,
     handleSubmitReFlight,
     handleLockBaseline,
     selectedItem
@@ -321,6 +322,7 @@ export const DroneMissionAIReview: React.FC = () => {
           onSelectDetection={handleSelectDetection}
           onApproveDetection={handleApproveDetection}
           onRejectDetection={handleRejectDetection}
+          onResetDetection={handleResetDetection}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           totalCount={totalCount}

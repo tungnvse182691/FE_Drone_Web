@@ -110,70 +110,37 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
         </div>
       </div>
 
-      {/* Area & Depth Dimensions */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col">
-          <label className="text-[11px] font-medium text-slate-600 mb-1">Diện tích hư hại</label>
-          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
-            <input
-              type={isSupervisor ? 'text' : 'number'}
-              step="0.01"
-              disabled={isSupervisor}
-              value={
-                isSupervisor
-                  ? currentArea > 0
-                    ? `${currentArea} m²`
-                    : 'Chưa có số đo'
-                  : currentArea > 0
-                  ? currentArea
-                  : ''
-              }
-              placeholder="Chưa có số đo"
-              onChange={(e) => setCurrentArea(parseFloat(e.target.value) || 0)}
-              className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none disabled:text-slate-700"
-            />
-            {currentArea > 0 && !isSupervisor && (
-              <span className="text-xs text-slate-500 font-semibold ml-1">m²</span>
-            )}
-          </div>
+      {/* Thông số kỹ thuật từ CSDL Candidate3 */}
+      <div className="bg-white border border-slate-200 rounded-lg p-2.5 grid grid-cols-2 gap-2 text-[11px]">
+        <div>
+          <span className="text-slate-400 block">Nguồn tiếp nhận:</span>
+          <span className="font-semibold text-slate-800">{selectedCase.source_label}</span>
         </div>
-
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[11px] font-medium text-slate-600">Độ sâu lớn nhất</label>
-            <span
-              className={`text-[9px] px-1.5 py-0.2 rounded border font-semibold ${
-                currentDepth > 0
-                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}
-            >
-              {currentDepth > 0 ? 'Đã đo thực địa' : 'Chưa đo đạc'}
+        <div>
+          <span className="text-slate-400 block">Phân loại / Độ tin cậy:</span>
+          <span className="font-bold text-slate-800">
+            {selectedCase.defect_type === 'POTHOLE'
+              ? 'Ổ gà mặt đường'
+              : selectedCase.defect_type === 'CRACK'
+              ? 'Vết nứt mặt đường'
+              : selectedCase.defect_type}
+            {selectedCase.ai_confidence > 0 ? ` • ${selectedCase.ai_confidence}%` : ''}
+          </span>
+        </div>
+        {selectedCase.fixture_version && (
+          <div>
+            <span className="text-slate-400 block">Mô hình nhận diện AI:</span>
+            <span className="font-mono text-slate-700">{selectedCase.fixture_version}</span>
+          </div>
+        )}
+        {selectedCase.linked_defect_id && (
+          <div>
+            <span className="text-slate-400 block">Hồ sơ khiếm khuyết CSDL:</span>
+            <span className="font-mono font-bold text-emerald-700">
+              #DEF-{selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}
             </span>
           </div>
-          <div className="flex items-center bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg focus-within:ring-1 focus-within:ring-brand-gold focus-within:border-brand-gold">
-            <input
-              type={isSupervisor ? 'text' : 'number'}
-              step="0.1"
-              disabled={isSupervisor}
-              value={
-                isSupervisor
-                  ? currentDepth > 0
-                    ? `${currentDepth} cm`
-                    : 'Chưa có số đo'
-                  : currentDepth > 0
-                  ? currentDepth
-                  : ''
-              }
-              placeholder="Chưa có số đo"
-              onChange={(e) => setCurrentDepth(parseFloat(e.target.value) || 0)}
-              className="w-full bg-transparent font-mono text-xs font-bold text-slate-800 focus:outline-none disabled:text-slate-600"
-            />
-            {currentDepth > 0 && !isSupervisor && (
-              <span className="text-xs text-slate-500 font-semibold ml-1">cm</span>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* PM Notes */}
@@ -282,6 +249,32 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               <div className="text-xs text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200/80 leading-relaxed">
                 <span className="font-semibold text-slate-900 block text-[11px] mb-0.5">Lý do thẩm định ghi nhận:</span>
                 {selectedCase.conclusion_reason || selectedCase.pm_notes}
+              </div>
+            )}
+
+            {/* Cho phép PM đổi lại quyết định đối với ứng viên AI Drone khi chưa khóa mốc chuẩn */}
+            {selectedCase.source === 'DRONE_AI' && (
+              <div className="pt-2 border-t border-slate-200/80 flex items-center gap-2">
+                {selectedCase.conclusion !== 'DEFECT_FOUND' && (
+                  <button
+                    type="button"
+                    onClick={() => onVerifyDefect(selectedCase)}
+                    className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Icon name="check_circle" size={14} />
+                    <span>Đổi sang Hợp lệ</span>
+                  </button>
+                )}
+                {selectedCase.conclusion !== 'NO_DEFECT' && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenNoDefectModal(selectedCase)}
+                    className="flex-1 py-1.5 px-2.5 rounded-lg bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold text-[11px] flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Icon name="cancel" size={14} />
+                    <span>Đổi sang Báo sai</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

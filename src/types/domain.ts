@@ -60,6 +60,26 @@ export interface Defect {
   status: DefectStatus
   image_url: string
   previous_epoch_image_url?: string // Ảnh kỳ trước để so sánh đa kỳ (Verify B)
+  previous_epoch_frame_id?: string | null
+  previous_epoch_bbox?: BoundingBox
+  previous_epoch_label?: string
+  current_epoch_label?: string
+  source_kind?: 'AI_DETECTION' | 'DEFECT'
+  run_id?: string | null
+  fixture_version?: string | null
+  frame_file_id?: string | null
+  timestamp_ms?: number | null
+  source_version?: string | null
+  geometry_version?: string | null
+  route_version_id?: string | null
+  disposition_id?: string | null
+  disposition_version?: string | null
+  decision_kind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
+  linked_defect_id?: string | null
+  version?: string | null
+  etag?: string | null
+  verification_status?: string | null
+  lifecycle_status?: string | null
   bounding_box: BoundingBox
   length_m?: number
   width_m?: number
@@ -658,6 +678,17 @@ export interface TriageCase {
   is_published?: boolean
   published_at?: string
   public_notice?: string
+  run_id?: string | null
+  fixture_version?: string | null
+  frame_file_id?: string | null
+  timestamp_ms?: number | null
+  source_version?: string | null
+  geometry_version?: string | null
+  route_version_id?: string | null
+  disposition_id?: string | null
+  disposition_version?: string | null
+  decision_kind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
+  linked_defect_id?: string | null
   survey_assignment?: {
     mode: 'MEASURE_ONLY' | 'DRONE_RESURVEY'
     reason: string

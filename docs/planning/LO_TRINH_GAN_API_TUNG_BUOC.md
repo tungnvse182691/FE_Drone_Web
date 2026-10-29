@@ -141,7 +141,8 @@
   6. `POST /api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/confirm` (`API-180`): **Supervisor phê duyệt khóa tim tuyến chính thức**.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
   - [x] Bản đồ MapLibre load tuyến đường vẽ trên bản đồ từ response của `geometry-package`.
-  - [x] Supervisor bấm duyệt tim tuyến (`API-180`), trạng thái KML chuyển thành `Đã phê duyệt` và dự án chuyển sang `ACTIVE`.
+  - [x] Supervisor bấm duyệt tim tuyến (`API-180`), trạng thái KML chuyển thành `Đã phê
+  duyệt` và dự án chuyển sang `ACTIVE`.
 
 ---
 
@@ -205,8 +206,11 @@
   4. `PUT /api/v1/projects/{projectId}/defects/{defectId}` (`API-072`): Cập nhật thông tin phân loại khiếm khuyết.
   5. `POST /api/v1/projects/{projectId}/defects/{defectId}/verify` (`API-073`): Chốt xác minh khiếm khuyết đạt chuẩn.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Bấm `KEEP_NEW` trên UI, backend trả về mã Defect chính thức (`DEF-2026-XXXX`).
-  - [ ] Màn hình Verify hiển thị BBox và ảnh đa kỳ so sánh side-by-side đúng với metadata ảnh từ BE.
+  - [x] Bấm `KEEP_NEW` trên UI, backend trả về mã Defect chính thức (`DEF-2026-XXXX`).
+  - [x] Màn hình Verify hiển thị BBox và ảnh đa kỳ so sánh side-by-side đúng với metadata ảnh từ BE.
+  - [x] Thẩm định 3 trạng thái loại trừ lẫn nhau (`KEEP_NEW`, `LINK_EXISTING`, `REJECT`) với cơ chế Optimistic UI phản hồi tức thì 0ms.
+  - [x] Khóa trạng thái khi đã gom hoặc duyệt; nút Hủy gom / Mở lại đưa ứng viên về trạng thái Chờ duyệt mượt mà.
+  - [x] Phân quyền Supervisor chỉ xem (Read-only), ẩn các nút thẩm định của PM.
 
 ---
 

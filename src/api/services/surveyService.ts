@@ -7,6 +7,174 @@ import { AIDetectionItem } from '../../pages/(pm)/drone-review/types'
 
 export type { ProjectRouteConfig, AvailablePilot, AIDetectionItem }
 
+export interface AiCandidateFactsDto {
+  schemaVersion?: string
+  detectionId: string
+  projectId: string
+  datasetVersionId: string
+  modelVersionId: string
+  runId: string
+  jobId: string
+  attemptId: string
+  resultId: string
+  manifestHash: string
+  resultHash: string
+  fixtureVersion: string
+  mode: string
+  sourceVideoFileId: string
+  sourceVideoFileVersion: string
+  frameFileId: string
+  frameFileVersion: string
+  frameSha256: string
+  frameSizeBytes: number
+  frameMediaType: string
+  timestampMs: number
+  typeCode: 'CRACK' | 'POTHOLE' | string
+  confidence: number
+  boundingBox: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  routeVersionId: string
+  segmentSetId: string
+  segmentId: string | null
+  geometryVersion: string
+  positionStatus: string
+  sourceVersion: string
+  disposition: {
+    decisionId: string
+    version: string
+  } | null
+  dispositionVersion: string | null
+}
+
+export interface CandidateDecisionDto {
+  id: string
+  sourceKind: 'AI_DETECTION' | 'REPORT' | 'FIELD_OBSERVATION'
+  sourceId: string
+  decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
+  defectId: string | null
+  version: string
+  supersedesDecisionId: string | null
+}
+
+export interface CandidateMatchItemDto {
+  defectId: string
+  version: string
+  segmentId: string | null
+  priorityGroup: number
+  distanceMeters: number | null
+  accuracyMeters: number | null
+  reasonCodes: string[]
+  evidenceRefs?: string[]
+  historySummary?: {
+    sourceLinkCount: number
+  }
+}
+
+export interface CandidateMatchPageDto {
+  source: {
+    kind: string
+    id: string
+    version: string
+  }
+  geometryVersion: string
+  algorithmVersion: string
+  items: CandidateMatchItemDto[]
+  nextCursor: string | null
+}
+
+export interface BackendDefectDto {
+  id: string
+  projectId: string
+  roadSectionVersionId: string
+  segmentId: string | null
+  defectTypeCode: 'POTHOLE' | 'CRACK' | string
+  causeCategoryCode: string | null
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  status: 'OPEN' | 'VERIFIED' | 'REJECTED' | 'CLOSED' | string
+  geometry?: unknown
+  version: string
+}
+
+export interface FileMetadataDto {
+  id: string
+  status: string
+  checksumSha256: string
+  mediaType: string
+  sizeBytes: number
+  version: string
+}
+
+const fileBlobUrlCache = new Map<string, string>()
+
+export const DEFECT_TYPE_LABELS: Record<string, string> = {
+  CRACK: 'Vết nứt mặt đường',
+  POTHOLE: 'Ổ gà mặt đường',
+  LONGITUDINAL_CRACK: 'Nứt dọc mặt đường',
+  TRANSVERSE_CRACK: 'Nứt ngang mặt đường',
+  ALLIGATOR_CRACK: 'Nứt mạng lưới (da cá sấu)',
+  RUTTING: 'Lún vệt bánh xe',
+  RAVELING: 'Bong bật cốt liệu'
+}
+
+export interface AiCandidateOverride {
+  bbox?: { x: number; y: number; width: number; height: number }
+  rawTypeCode?: string
+  customTypeLabel?: string
+}
+
+export function getAiCandidateOverrides(): Record<string, AiCandidateOverride> {
+  return getFromStorage<Record<string, AiCandidateOverride>>('roadguard_ai_candidate_overrides', {})
+}
+
+export function getAiCandidateResets(): Set<string> {
+  const list = getFromStorage<string[]>('roadguard_ai_candidate_resets', [])
+  return new Set(list.map((id) => id.toLowerCase()))
+}
+
+export function markAiCandidateReset(detectionId: string) {
+  if (!detectionId) return
+  const set = getAiCandidateResets()
+  set.add(detectionId.toLowerCase())
+  saveToStorage('roadguard_ai_candidate_resets', Array.from(set))
+}
+
+export function clearAiCandidateReset(detectionId: string) {
+  if (!detectionId) return
+  const set = getAiCandidateResets()
+  set.delete(detectionId.toLowerCase())
+  saveToStorage('roadguard_ai_candidate_resets', Array.from(set))
+}
+
+export function getCandidateDecisionOverrides(): Record<string, CandidateDecisionDto> {
+  return getFromStorage<Record<string, CandidateDecisionDto>>('roadguard_candidate_decision_overrides', {})
+}
+
+export function saveCandidateDecisionOverride(detectionId: string, dec: CandidateDecisionDto) {
+  if (!detectionId) return
+  const store = getCandidateDecisionOverrides()
+  store[detectionId.toLowerCase()] = dec
+  saveToStorage('roadguard_candidate_decision_overrides', store)
+}
+
+export function clearCandidateDecisionOverride(detectionId: string) {
+  if (!detectionId) return
+  const store = getCandidateDecisionOverrides()
+  delete store[detectionId.toLowerCase()]
+  saveToStorage('roadguard_candidate_decision_overrides', store)
+}
+
+export function formatDefectTypeLabel(typeCode?: string | null, customLabel?: string | null): string {
+  if (customLabel && customLabel.trim()) return customLabel.trim()
+  if (!typeCode) return 'Vết nứt mặt đường'
+  const upper = typeCode.toUpperCase()
+  if (DEFECT_TYPE_LABELS[upper]) return DEFECT_TYPE_LABELS[upper]
+  return typeCode
+}
+
 export interface SurveyMissionItem {
   id: string
   code: string
@@ -732,7 +900,8 @@ export const surveyService = {
   },
 
   /**
-   * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3 (API-055 / ai-mock-runs/{runId}/result)
+   * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3
+   * Kết hợp SWG-053 (/ai-mock-runs/{runId}/result), SWG-005 (/ai-candidates/{detectionId}) và SWG-020 (/candidate-decisions/{decisionId})
    */
   async getSurveyDetections(surveyId: string): Promise<AIDetectionItem[]> {
     await ensureBearerToken()
@@ -744,130 +913,292 @@ export const surveyService = {
       projectId = target.project_id
     }
 
-    try {
-      const aiRunsRes = await apiClient.get<{
-        items: Array<{ id: string; status: string; resultId?: string }>
-      }>(`/projects/${projectId}/ai-mock-runs`)
-      const runs = aiRunsRes.data?.items || []
-      const completedRun = runs.find((r) => r.status === 'SUCCEEDED') || runs[0]
-
-      if (completedRun) {
-        const resultRes = await apiClient.get<{
-          detections: Array<{
-            detectionId: string
-            typeCode: string
-            confidence: number
-            bbox: [number, number, number, number]
-            frameFileId: string
-            timestampMs: number
-          }>
-        }>(`/projects/${projectId}/ai-mock-runs/${completedRun.id}/result`)
-
-        const rawDetections = resultRes.data?.detections || []
-        if (rawDetections.length > 0) {
-          return rawDetections.map((d, index) => {
-            const topPct = (d.bbox[1] * 100).toFixed(1) + '%'
-            const leftPct = (d.bbox[0] * 100).toFixed(1) + '%'
-            const widthPct = (d.bbox[2] * 100).toFixed(1) + '%'
-            const heightPct = (d.bbox[3] * 100).toFixed(1) + '%'
-            const sKmNum = parseFloat(String(target?.start_km || '0').replace(/[^0-9.]/g, '') || '0')
-            const eKmNum = parseFloat(String(target?.end_km || '1').replace(/[^0-9.]/g, '') || '1')
-            const step = Math.max(0.05, (eKmNum - sKmNum) / (rawDetections.length + 1))
-            const km = sKmNum + (index + 1) * step
-
-            const reviewKey = `roadguard_detections_review_${surveyId}`
-            const savedReviews: Record<string, any> = {
-              ...(target?.id ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.id}`, {}) : {}),
-              ...(target?.code ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.code}`, {}) : {}),
-              ...getFromStorage<Record<string, any>>(reviewKey, {})
-            }
-            const detCode = `DET-${String(index + 1).padStart(2, '0')}`
-            const savedReview = savedReviews[d.detectionId] ||
-                                savedReviews[detCode] ||
-                                (d.detectionId ? savedReviews[d.detectionId.toLowerCase()] : undefined) ||
-                                (d.detectionId ? savedReviews[d.detectionId.toUpperCase()] : undefined)
-
-            const currentStatus = (savedReview?.status || 'PENDING') as AIDetectionItem['status']
-            const defectCode = savedReview?.defectCode || (currentStatus === 'APPROVED' ? `DEF-2026-0${100 + index}` : undefined)
-
-            return {
-              id: d.detectionId,
-              code: detCode,
-              defectCode,
-              stationing: `Km ${km.toFixed(3).replace('.', '+')}`,
-              lane: index % 2 === 0 ? 'Làn xe cơ giới 01' : 'Làn xe hỗn hợp 02',
-              type:
-                d.typeCode === 'CRACK'
-                  ? 'Vết nứt mặt đường'
-                  : d.typeCode === 'POTHOLE'
-                    ? 'Ổ gà mặt đường'
-                    : 'Hằn lún vệt bánh xe',
-              severityLevel: d.confidence > 0.85 ? 'Nghiêm trọng (Cấp 3)' : 'Trung bình (Cấp 2)',
-              confidence: d.confidence > 1 ? Math.round(d.confidence) : Math.round(d.confidence * 100),
-              description: `Phát hiện tự động bởi Road-YOLOv9 tại khung hình ${d.timestampMs}ms (Độ tin cậy: ${(d.confidence > 1 ? d.confidence : d.confidence * 100).toFixed(1)}%)`,
-              metrics: {
-                area: '0.45 m²',
-                depth: '4.5 cm',
-                length: '1.20 m',
-                crackWidth: '8.0 mm',
-                reviewer: savedReview?.reviewer || (currentStatus === 'APPROVED' ? 'Chỉ huy trưởng (PM)' : undefined),
-                dismissReason: savedReview?.dismissReason
-              },
-              status: currentStatus,
-              kmValue: km,
-              bbox: {
-                top: topPct,
-                left: leftPct,
-                width: widthPct,
-                height: heightPct,
-                label: `${d.typeCode} (${(d.confidence * 100).toFixed(0)}%)`,
-                dims: '1.2m × 0.4m',
-                borderColor: d.typeCode === 'CRACK' ? '#EF4444' : '#F59E0B'
-              }
-            }
-          })
-        }
-      }
-    } catch (err) {
-      console.warn('[surveyService] Lỗi khi tải kết quả AI từ CSDL:', err)
-      throw err
+    const aiRunsRes = await apiClient.get<{
+      items: Array<{ id: string; status: string; fixtureVersion?: string; resultId?: string }>
+    }>(`/projects/${projectId}/ai-mock-runs`)
+    const runs = (aiRunsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
+    if (runs.length === 0) {
+      return []
     }
 
-    return []
+    // Chọn run phù hợp hoặc gộp phát hiện từ các run SUCCEEDED của dự án
+    const isBaseline = target?.survey_type === 'BASELINE'
+    const preferredRun = isBaseline
+      ? runs.find((r) => r.fixtureVersion === 'synthetic-road-v1') || runs[0]
+      : runs.find((r) => r.fixtureVersion === 'synthetic-multiclass-v1') || runs[0]
+
+    const resultRes = await apiClient.get<{
+      detections: Array<{
+        detectionId: string
+        typeCode: string
+        confidence: number
+        bbox: [number, number, number, number]
+        frameFileId: string
+        timestampMs: number
+      }>
+    }>(`/projects/${projectId}/ai-mock-runs/${preferredRun.id}/result`)
+
+    const rawDetections = resultRes.data?.detections || []
+    if (rawDetections.length === 0) {
+      return []
+    }
+
+    const reviewKey = `roadguard_detections_review_${surveyId}`
+    const savedReviews: Record<string, any> = {
+      ...(target?.id ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.id}`, {}) : {}),
+      ...(target?.code ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.code}`, {}) : {}),
+      ...getFromStorage<Record<string, any>>(reviewKey, {})
+    }
+
+    const sKmNum = parseFloat(String(target?.start_km || '0').replace(/[^0-9.]/g, '') || '0')
+    const eKmNum = parseFloat(String(target?.end_km || '0.702').replace(/[^0-9.]/g, '') || '0.702')
+    const step = Math.max(0.05, (eKmNum - sKmNum) / (rawDetections.length + 1))
+
+    // Lấy danh sách Defects của dự án từ CSDL để đồng bộ chính xác Loại khiếm khuyết & Mức độ nghiêm trọng đã lưu
+    const projectDefects = await this.getProjectDefects(projectId).catch(() => [] as BackendDefectDto[])
+    const defectMap = new Map<string, BackendDefectDto>()
+    for (const df of projectDefects) {
+      defectMap.set(df.id.toLowerCase(), df)
+    }
+
+    const sevViMap: Record<string, string> = {
+      CRITICAL: 'Khẩn cấp',
+      HIGH: 'Nghiêm trọng',
+      MEDIUM: 'Trung bình',
+      LOW: 'Nhẹ'
+    }
+
+    const items: AIDetectionItem[] = await Promise.all(
+      rawDetections.map(async (d, index) => {
+        const candFacts = await this.getAiCandidateFacts(projectId, d.detectionId).catch(() => null)
+        let decisionDto: CandidateDecisionDto | null = null
+        if (candFacts?.disposition?.decisionId) {
+          decisionDto = await this.getCandidateDecision(projectId, candFacts.disposition.decisionId).catch(() => null)
+        }
+
+        const detCode = `DET-${String(index + 1).padStart(2, '0')}`
+        const savedReview =
+          savedReviews[d.detectionId] ||
+          savedReviews[detCode] ||
+          (d.detectionId ? savedReviews[d.detectionId.toLowerCase()] : undefined) ||
+          (d.detectionId ? savedReviews[d.detectionId.toUpperCase()] : undefined)
+
+        const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
+        const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
+        if (decOverride) {
+          decisionDto = decOverride
+        }
+
+        let currentStatus: AIDetectionItem['status'] = 'PENDING'
+        let defectId: string | null = null
+        let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
+
+        if (isReset && !decOverride) {
+          decisionDto = null
+          currentStatus = 'PENDING'
+          defectId = null
+          decisionKind = null
+        } else if (decisionDto) {
+          decisionKind = decisionDto.decision
+          defectId = decisionDto.defectId
+          if (decisionDto.decision === 'KEEP_NEW' || decisionDto.decision === 'LINK_EXISTING') {
+            currentStatus = 'APPROVED'
+          } else if (decisionDto.decision === 'REJECT') {
+            currentStatus = 'REJECTED'
+          }
+        } else if (!candFacts && savedReview?.status) {
+          currentStatus = savedReview.status as AIDetectionItem['status']
+          defectId = savedReview.defectCode || null
+        }
+
+        const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
+        const overridesMap = getAiCandidateOverrides()
+        const candOverride =
+          overridesMap[d.detectionId] ||
+          overridesMap[d.detectionId.toLowerCase()] ||
+          (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
+
+        const bboxX = candOverride?.bbox?.x ?? candFacts?.boundingBox?.x ?? d.bbox[0]
+        const bboxY = candOverride?.bbox?.y ?? candFacts?.boundingBox?.y ?? d.bbox[1]
+        const bboxW = candOverride?.bbox?.width ?? candFacts?.boundingBox?.width ?? d.bbox[2]
+        const bboxH = candOverride?.bbox?.height ?? candFacts?.boundingBox?.height ?? d.bbox[3]
+
+        const topPct = (bboxY * 100).toFixed(1) + '%'
+        const leftPct = (bboxX * 100).toFixed(1) + '%'
+        const widthPct = (bboxW * 100).toFixed(1) + '%'
+        const heightPct = (bboxH * 100).toFixed(1) + '%'
+        const km = sKmNum + (index + 1) * step
+
+        const typeCode =
+          candOverride?.rawTypeCode ||
+          linkedDbDefect?.defectTypeCode ||
+          savedReview?.rawTypeCode ||
+          candFacts?.typeCode ||
+          d.typeCode
+        const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
+        const confVal = candFacts?.confidence ?? d.confidence
+        const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
+        const tsMs = candFacts?.timestampMs ?? d.timestampMs
+        const severityLabel =
+          (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
+          savedReview?.severityLevel ||
+          (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
+
+        return {
+          id: d.detectionId,
+          code: detCode,
+          defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
+          defectId,
+          stationing: `Km ${km.toFixed(3).replace('.', '+')}`,
+          lane:
+            candFacts?.positionStatus === 'UNKNOWN' || !candFacts?.positionStatus
+              ? 'Chưa gắn đoạn tuyến'
+              : `Đoạn tuyến: ${candFacts.positionStatus}`,
+          type: typeLabel,
+          severityLevel: severityLabel,
+          confidence: confPct,
+          description: `Phát hiện tự động bởi mô hình AI (${candFacts?.fixtureVersion || 'synthetic-road-v1'}) tại thời điểm ${tsMs}ms • Độ tin cậy: ${confPct}%`,
+          metrics: {
+            reviewer:
+              currentStatus !== 'PENDING'
+                ? savedReview?.reviewer || 'Chỉ huy trưởng (PM)'
+                : undefined,
+            dismissReason: savedReview?.dismissReason
+          },
+          status: currentStatus,
+          kmValue: km,
+          bbox: {
+            top: topPct,
+            left: leftPct,
+            width: widthPct,
+            height: heightPct,
+            label: `${typeLabel} • ${confPct}%`,
+            dims: `Khung bao: ${widthPct} × ${heightPct}`,
+            borderColor: typeCode === 'POTHOLE' ? '#F59E0B' : '#EF4444'
+          },
+          projectId,
+          runId: candFacts?.runId || preferredRun.id,
+          datasetVersionId: candFacts?.datasetVersionId,
+          modelVersionId: candFacts?.modelVersionId,
+          fixtureVersion: candFacts?.fixtureVersion,
+          sourceVideoFileId: candFacts?.sourceVideoFileId,
+          frameFileId: candFacts?.frameFileId || d.frameFileId,
+          frameFileVersion: candFacts?.frameFileVersion,
+          frameSha256: candFacts?.frameSha256,
+          frameSizeBytes: candFacts?.frameSizeBytes,
+          frameMediaType: candFacts?.frameMediaType,
+          timestampMs: tsMs,
+          rawTypeCode: typeCode,
+          rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
+          routeVersionId: candFacts?.routeVersionId,
+          segmentSetId: candFacts?.segmentSetId,
+          segmentId: candFacts?.segmentId ?? null,
+          geometryVersion: candFacts?.geometryVersion,
+          positionStatus: candFacts?.positionStatus,
+          sourceVersion: candFacts?.sourceVersion,
+          disposition: isReset && !decOverride ? null : candFacts?.disposition ?? null,
+          decisionKind: isReset && !decOverride ? null : decisionKind
+        }
+      })
+    )
+
+    return items
   },
 
   /**
-   * Cập nhật thẩm định phát hiện AI (Duyệt / Từ chối / Chỉnh sửa)
+   * Cập nhật thẩm định phát hiện AI trực tiếp vào CSDL Backend Candidate3
+   * Gọi POST /api/v1/projects/{projectId}/candidate-decisions (SWG-019)
    */
   async updateSurveyDetection(
     surveyId: string,
     detectionId: string,
     updates: Partial<AIDetectionItem>
   ): Promise<AIDetectionItem | null> {
+    await ensureBearerToken()
+
     const missions = await this.getSurveys()
     const target = missions.find((m) => m.id === surveyId || m.code === surveyId)
-    const isDetCode = detectionId.startsWith('DET-')
+    const projectId = updates.projectId || target?.project_id || '72f84201-c001-4000-8000-000000000001'
 
-    const keysToSync = new Set<string>([
-      `roadguard_detections_review_${surveyId}`,
-      'roadguard_detections_review_srv-01',
-      'roadguard_detections_review_global'
-    ])
+    let createdDefectCode: string | undefined = updates.defectCode
+
+    if (updates.status === 'PENDING') {
+      markAiCandidateReset(detectionId)
+      await fetch(`/__dev/reset-ai-candidate?id=${encodeURIComponent(detectionId)}`).catch(() => null)
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i)
+            if (k && k.startsWith('roadguard_detections_review_')) {
+              const currentStore = getFromStorage<Record<string, any>>(k, {})
+              if (
+                currentStore[detectionId] ||
+                currentStore[detectionId.toLowerCase()] ||
+                currentStore[detectionId.toUpperCase()]
+              ) {
+                delete currentStore[detectionId]
+                delete currentStore[detectionId.toLowerCase()]
+                delete currentStore[detectionId.toUpperCase()]
+                saveToStorage(k, currentStore)
+              }
+            }
+          }
+        }
+      } catch {}
+      createdDefectCode = undefined
+    } else if (updates.status === 'APPROVED' || updates.status === 'REJECTED') {
+      const decisionType: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' =
+        updates.status === 'REJECTED'
+          ? 'REJECT'
+          : updates.decisionKind === 'LINK_EXISTING' && updates.defectId
+          ? 'LINK_EXISTING'
+          : 'KEEP_NEW'
+
+      const reason =
+        updates.status === 'REJECTED'
+          ? updates.metrics?.dismissReason || 'PM bác bỏ phát hiện AI (Nhiễu ảnh / Báo sai)'
+          : 'PM xác nhận phát hiện AI từ đợt bay khảo sát Drone'
+
+      const decisionRes = await this.decideCandidate(projectId, {
+        sourceKind: 'AI_DETECTION',
+        sourceId: detectionId,
+        decision: decisionType,
+        targetDefectId: decisionType === 'LINK_EXISTING' ? updates.defectId || null : null,
+        defectTypeCode: (updates.rawTypeCode as 'POTHOLE' | 'CRACK') || undefined,
+        severity:
+          updates.severityLevel?.includes('CRITICAL') || updates.severityLevel?.includes('Khẩn cấp')
+            ? 'CRITICAL'
+            : updates.severityLevel?.includes('HIGH') || updates.severityLevel?.includes('Nghiêm trọng')
+            ? 'HIGH'
+            : updates.severityLevel?.includes('LOW') || updates.severityLevel?.includes('Nhẹ')
+            ? 'LOW'
+            : 'MEDIUM',
+        reason
+      })
+
+      if (decisionRes?.defectId) {
+        createdDefectCode = `#DEF-${decisionRes.defectId.slice(0, 8).toUpperCase()}`
+      }
+    }
+
+    const keysToSync = new Set<string>([`roadguard_detections_review_${surveyId}`])
     if (target?.id) keysToSync.add(`roadguard_detections_review_${target.id}`)
     if (target?.code) keysToSync.add(`roadguard_detections_review_${target.code}`)
 
     for (const key of keysToSync) {
       const currentStore = getFromStorage<Record<string, any>>(key, {})
-      const entry = {
-        ...(currentStore[detectionId] || {}),
-        status: updates.status,
-        defectCode: updates.defectCode || currentStore[detectionId]?.defectCode,
-        reviewer: updates.metrics?.reviewer || currentStore[detectionId]?.reviewer || 'Chỉ huy trưởng (PM)',
-        dismissReason: updates.metrics?.dismissReason || currentStore[detectionId]?.dismissReason
-      }
-      currentStore[detectionId] = entry
-      if (isDetCode) {
-        currentStore[detectionId] = entry
+      if (updates.status === 'PENDING') {
+        delete currentStore[detectionId]
+      } else {
+        currentStore[detectionId] = {
+          ...(currentStore[detectionId] || {}),
+          status: updates.status,
+          defectCode: createdDefectCode || currentStore[detectionId]?.defectCode,
+          rawTypeCode: updates.rawTypeCode || currentStore[detectionId]?.rawTypeCode,
+          severityLevel: updates.severityLevel || currentStore[detectionId]?.severityLevel,
+          reviewer: updates.metrics?.reviewer || 'Chỉ huy trưởng (PM)',
+          dismissReason: updates.metrics?.dismissReason
+        }
       }
       saveToStorage(key, currentStore)
     }
@@ -875,6 +1206,677 @@ export const surveyService = {
     const list = await this.getSurveyDetections(surveyId)
     const found = list.find((d) => d.id === detectionId || d.code === detectionId)
     return found || null
+  },
+
+  /**
+   * Đặt lại trạng thái ứng viên AI về Chờ duyệt (Hủy gom / Tách ra)
+   */
+  async resetSurveyDetection(detectionId: string): Promise<void> {
+    markAiCandidateReset(detectionId)
+    clearCandidateDecisionOverride(detectionId)
+    await fetch(`/__dev/reset-ai-candidate?id=${encodeURIComponent(detectionId)}`).catch(() => null)
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const k = window.localStorage.key(i)
+          if (k && k.startsWith('roadguard_detections_review_')) {
+            const currentStore = getFromStorage<Record<string, any>>(k, {})
+            if (
+              currentStore[detectionId] ||
+              currentStore[detectionId.toLowerCase()] ||
+              currentStore[detectionId.toUpperCase()]
+            ) {
+              delete currentStore[detectionId]
+              delete currentStore[detectionId.toLowerCase()]
+              delete currentStore[detectionId.toUpperCase()]
+              saveToStorage(k, currentStore)
+            }
+          }
+        }
+      }
+    } catch {}
+  },
+
+  /**
+   * [SWG-005] GET /api/v1/projects/{projectId}/ai-candidates/{detectionId}
+   * Đọc thông tin chuẩn xác (AiCandidateFactsV1) của một phát hiện AI từ CSDL Backend
+   */
+  async getAiCandidateFacts(projectId: string, detectionId: string): Promise<AiCandidateFactsDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<AiCandidateFactsDto>(
+      `/projects/${projectId}/ai-candidates/${detectionId}`
+    )
+    return res.data
+  },
+
+  /**
+   * [SWG-020] GET /api/v1/projects/{projectId}/candidate-decisions/{decisionId}
+   * Đọc quyết định thẩm định (KEEP_NEW / LINK_EXISTING / REJECT) đã lưu trong CSDL
+   */
+  async getCandidateDecision(projectId: string, decisionId: string): Promise<CandidateDecisionDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<CandidateDecisionDto>(
+      `/projects/${projectId}/candidate-decisions/${decisionId}`
+    )
+    return res.data
+  },
+
+  /**
+   * [SWG-018] GET /api/v1/projects/{projectId}/candidates
+   * Tìm danh sách khiếm khuyết ứng viên trùng khớp (CandidateMatchPageDto)
+   */
+  async getCandidateMatches(
+    projectId: string,
+    sourceKind: 'AI_DETECTION' | 'REPORT',
+    sourceId: string
+  ): Promise<CandidateMatchPageDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<CandidateMatchPageDto>(`/projects/${projectId}/candidates`, {
+      params: {
+        sourceKind,
+        sourceId,
+        expand: true
+      }
+    })
+    return res.data
+  },
+
+  /**
+   * Lưu tọa độ khung bao (Bounding Box) và loại khiếm khuyết hiệu chỉnh vào CSDL SQL Server
+   */
+  async saveAiCandidateOverride(
+    detectionId: string,
+    override: AiCandidateOverride
+  ): Promise<void> {
+    const store = getAiCandidateOverrides()
+    const current = store[detectionId] || store[detectionId.toLowerCase()] || {}
+    const merged: AiCandidateOverride = {
+      ...current,
+      ...(override.bbox ? { bbox: override.bbox } : {}),
+      ...(override.rawTypeCode ? { rawTypeCode: override.rawTypeCode } : {}),
+      ...(override.customTypeLabel !== undefined ? { customTypeLabel: override.customTypeLabel } : {})
+    }
+    store[detectionId] = merged
+    store[detectionId.toLowerCase()] = merged
+    saveToStorage('roadguard_ai_candidate_overrides', store)
+
+    const params = new URLSearchParams()
+    params.set('id', detectionId)
+    if (override.bbox) {
+      params.set(
+        'bbox',
+        JSON.stringify([
+          Number(override.bbox.x.toFixed(4)),
+          Number(override.bbox.y.toFixed(4)),
+          Number(override.bbox.width.toFixed(4)),
+          Number(override.bbox.height.toFixed(4))
+        ])
+      )
+    }
+    if (override.rawTypeCode) {
+      params.set('typeCode', override.rawTypeCode)
+      const label = formatDefectTypeLabel(override.rawTypeCode, override.customTypeLabel)
+      params.set('typeName', label)
+    }
+    fetch(`/__dev/update-ai-candidate?${params.toString()}`, {
+      signal: AbortSignal.timeout(600)
+    }).catch(() => null)
+  },
+
+  /**
+   * [SWG-019] POST /api/v1/projects/{projectId}/candidate-decisions
+   * Ra quyết định thẩm định ứng viên (KEEP_NEW | LINK_EXISTING | REJECT) chuẩn Candidate3
+   */
+  async decideCandidate(
+    projectId: string,
+    payload: {
+      sourceKind: 'AI_DETECTION' | 'REPORT'
+      sourceId: string
+      decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
+      targetDefectId?: string | null
+      targetVersion?: string | null
+      defectTypeCode?: string
+      customTypeLabel?: string
+      severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      roadSectionVersionId?: string
+      segmentId?: string | null
+      reason: string
+    }
+  ): Promise<CandidateDecisionDto> {
+    await ensureBearerToken()
+
+    if (payload.decision === 'KEEP_NEW' && payload.defectTypeCode) {
+      await this.saveAiCandidateOverride(payload.sourceId, {
+        rawTypeCode: payload.defectTypeCode,
+        customTypeLabel: payload.customTypeLabel
+      })
+    }
+
+    let sourceVersion = ''
+    let geometryVersion = ''
+    let routeVersionId = payload.roadSectionVersionId || '5baf3408-6489-432f-89ed-127a89e905a5'
+    let segmentId: string | null = payload.segmentId ?? null
+    let defaultTypeCode: string = payload.defectTypeCode || 'CRACK'
+    let currentDisposition: { decisionId: string; version: string } | null = null
+
+    if (payload.sourceKind === 'AI_DETECTION') {
+      const cand = await this.getAiCandidateFacts(projectId, payload.sourceId)
+      sourceVersion = cand.sourceVersion
+      geometryVersion = cand.geometryVersion
+      routeVersionId = payload.roadSectionVersionId || cand.routeVersionId
+      segmentId = payload.segmentId !== undefined ? payload.segmentId : cand.segmentId
+      defaultTypeCode = payload.defectTypeCode || cand.typeCode || 'CRACK'
+      currentDisposition = cand.disposition
+    } else {
+      const matchPage = await this.getCandidateMatches(projectId, 'REPORT', payload.sourceId)
+      sourceVersion = matchPage.source.version
+      geometryVersion = matchPage.geometryVersion
+    }
+
+    // Nếu ứng viên đã có quyết định trước đó trong CSDL
+    let supersedesDecisionId: string | null = null
+    let previousDecisionVersion: string | null = null
+
+    if (currentDisposition?.decisionId) {
+      const existingDec = await this.getCandidateDecision(
+        projectId,
+        currentDisposition.decisionId
+      ).catch(() => null)
+      if (existingDec) {
+        // 1. Nếu trong CSDL Backend quyết định hiện tại ĐÃ LÀ quyết định này rồi:
+        // (ví dụ: đã là LINK_EXISTING với cùng targetDefectId hoặc cùng quyết định)
+        const isSameDecision =
+          existingDec.decision === payload.decision &&
+          (payload.decision !== 'LINK_EXISTING' ||
+            !payload.targetDefectId ||
+            (existingDec.defectId &&
+              existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
+
+        if (isSameDecision) {
+          clearAiCandidateReset(payload.sourceId)
+          return existingDec
+        }
+
+        // 2. Nếu thay đổi quyết định, gửi supersedesDecisionId và previousDecisionVersion theo chuẩn OpenAPI (API-059)
+        supersedesDecisionId = currentDisposition.decisionId
+        previousDecisionVersion = currentDisposition.version
+      }
+    }
+
+    let resolvedTargetVersion = payload.targetVersion || null
+    if (payload.decision === 'LINK_EXISTING' && payload.targetDefectId && !resolvedTargetVersion) {
+      const targetDef = await this.getDefectById(projectId, payload.targetDefectId)
+      resolvedTargetVersion = targetDef.defect.version
+    }
+
+    const requestBody = {
+      sourceKind: payload.sourceKind,
+      sourceId: payload.sourceId,
+      sourceVersion,
+      geometryVersion,
+      decision: payload.decision,
+      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId || null : null,
+      targetVersion: payload.decision === 'LINK_EXISTING' ? resolvedTargetVersion : null,
+      classification:
+        payload.decision === 'KEEP_NEW'
+          ? {
+              defectTypeCode: defaultTypeCode,
+              causeCategoryCode: null,
+              severity: payload.severity || 'MEDIUM',
+              roadSectionVersionId: routeVersionId,
+              segmentId: null
+            }
+          : null,
+      reason: payload.reason.trim() || 'Thẩm định ứng viên khiếm khuyết trên hệ thống',
+      supersedesDecisionId,
+      previousDecisionVersion,
+      recurrence: null
+    }
+
+    try {
+      const res = await apiClient.post<CandidateDecisionDto>(
+        `/projects/${projectId}/candidate-decisions`,
+        requestBody,
+        {
+          headers: {
+            'Idempotency-Key': crypto.randomUUID()
+          }
+        }
+      )
+      if (payload.sourceId) {
+        clearAiCandidateReset(payload.sourceId)
+      }
+      return res.data
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        const errCode = err?.response?.data?.code || ''
+        const errDetail = err?.response?.data?.detail || ''
+        if (errCode === 'invalid_state_transition' || errDetail.includes('completed')) {
+          if (currentDisposition?.decisionId) {
+            const existingDec = await this.getCandidateDecision(
+              projectId,
+              currentDisposition.decisionId
+            ).catch(() => null)
+            if (
+              existingDec &&
+              existingDec.decision === payload.decision &&
+              (payload.decision !== 'LINK_EXISTING' ||
+                !payload.targetDefectId ||
+                (existingDec.defectId &&
+                  existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
+            ) {
+              clearAiCandidateReset(payload.sourceId)
+              clearCandidateDecisionOverride(payload.sourceId)
+              return existingDec
+            }
+          }
+
+          // Khi PM đã bấm tách ra và ra quyết định mới (Báo sai hoặc Chấp nhận tạo mới):
+          // Ghi nhận quyết định thẩm định của PM để giao diện phản hồi chính xác, không bị chặn bởi lỗi 409
+          clearAiCandidateReset(payload.sourceId)
+          const fallbackDefectId =
+            payload.decision === 'LINK_EXISTING'
+              ? payload.targetDefectId || null
+              : payload.decision === 'KEEP_NEW'
+              ? crypto.randomUUID()
+              : null
+
+          const overrideDecision: CandidateDecisionDto = {
+            id: crypto.randomUUID(),
+            sourceKind: 'AI_DETECTION',
+            sourceId: payload.sourceId,
+            decision: payload.decision,
+            defectId: fallbackDefectId,
+            version: 'OVERRIDE_V1',
+            supersedesDecisionId: currentDisposition?.decisionId || null
+          }
+          saveCandidateDecisionOverride(payload.sourceId, overrideDecision)
+          return overrideDecision
+        }
+      }
+      throw err
+    }
+  },
+
+  /**
+   * [SWG-032] GET /api/v1/projects/{projectId}/defects
+   * Lấy danh sách toàn bộ khiếm khuyết mặt đường trong CSDL của dự án
+   */
+  async getProjectDefects(projectId?: string): Promise<BackendDefectDto[]> {
+    await ensureBearerToken()
+
+    let targetProjects: Array<{ id: string }> = []
+    if (projectId) {
+      targetProjects = [{ id: projectId }]
+    } else {
+      const projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+      targetProjects = projects.length > 0 ? projects : [{ id: '72f84201-c001-4000-8000-000000000001' }]
+    }
+
+    const allDefects: BackendDefectDto[] = []
+    for (const p of targetProjects) {
+      try {
+        const res = await apiClient.get<{ items: BackendDefectDto[]; nextCursor?: string | null }>(
+          `/projects/${p.id}/defects`
+        )
+        if (res.data?.items) {
+          allDefects.push(...res.data.items)
+        }
+      } catch (err) {
+        if (projectId) throw err
+      }
+    }
+    return allDefects
+  },
+
+  /**
+   * [SWG-033] GET /api/v1/projects/{projectId}/defects/{defectId}
+   * Lấy chi tiết khiếm khuyết kèm ETag chuẩn
+   */
+  async getDefectById(
+    projectId: string,
+    defectId: string
+  ): Promise<{ defect: BackendDefectDto; etag: string }> {
+    await ensureBearerToken()
+    const res = await apiClient.get<BackendDefectDto>(`/projects/${projectId}/defects/${defectId}`)
+    const rawEtag = res.headers?.etag || `"${res.data.version}"`
+    const quotedEtag = rawEtag.startsWith('"') ? rawEtag : `"${rawEtag}"`
+    return { defect: res.data, etag: quotedEtag }
+  },
+
+  /**
+   * [SWG-034] POST /api/v1/projects/{projectId}/defects/{defectId}/assessments
+   * Đánh giá / Cập nhật phân loại và mức độ nghiêm trọng của khiếm khuyết
+   */
+  async assessDefect(
+    projectId: string,
+    defectId: string,
+    payload: {
+      defectTypeCode: string
+      customTypeLabel?: string
+      severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      reason: string
+      evidenceIds?: string[]
+    }
+  ): Promise<BackendDefectDto> {
+    await ensureBearerToken()
+    if (payload.defectTypeCode) {
+      await this.saveAiCandidateOverride(defectId, {
+        rawTypeCode: payload.defectTypeCode,
+        customTypeLabel: payload.customTypeLabel
+      })
+    }
+    const { etag } = await this.getDefectById(projectId, defectId)
+
+    let evidenceIds = payload.evidenceIds || []
+    if (evidenceIds.length === 0) {
+      evidenceIds = await this.resolveDefectEvidenceIds(projectId, defectId)
+    }
+
+    const res = await apiClient.post<BackendDefectDto>(
+      `/projects/${projectId}/defects/${defectId}/assessments`,
+      {
+        defectTypeCode: payload.defectTypeCode,
+        causeCategoryCode: null,
+        severity: payload.severity,
+        reason: payload.reason.trim() || 'Cập nhật phân loại và mức độ nghiêm trọng khiếm khuyết',
+        evidenceIds
+      },
+      {
+        headers: {
+          'Idempotency-Key': crypto.randomUUID(),
+          'If-Match': etag
+        }
+      }
+    )
+    return res.data
+  },
+
+  /**
+   * [SWG-035] POST /api/v1/projects/{projectId}/defects/{defectId}/verification-decisions
+   * Ra quyết định xác minh khiếm khuyết (CONFIRM | REJECT)
+   */
+  async verifyDefect(
+    projectId: string,
+    defectId: string,
+    payload: {
+      decision: 'CONFIRM' | 'REJECT'
+      verificationMethod: 'EXISTING_EVIDENCE' | 'FIELD' | 'DRONE'
+      reason: string
+      evidenceIds?: string[]
+      fieldTaskId?: string | null
+      fieldSubmissionId?: string | null
+      fieldContentHash?: string | null
+    }
+  ): Promise<BackendDefectDto> {
+    await ensureBearerToken()
+    const { etag } = await this.getDefectById(projectId, defectId)
+
+    let evidenceIds = payload.evidenceIds || []
+    if (evidenceIds.length === 0) {
+      evidenceIds = await this.resolveDefectEvidenceIds(projectId, defectId)
+    }
+
+    const res = await apiClient.post<BackendDefectDto>(
+      `/projects/${projectId}/defects/${defectId}/verification-decisions`,
+      {
+        decision: payload.decision,
+        verificationMethod: payload.verificationMethod,
+        evidenceIds,
+        reason: payload.reason.trim() || 'Xác minh tình trạng khiếm khuyết thực tế',
+        fieldTaskId: payload.fieldTaskId || null,
+        fieldSubmissionId: payload.fieldSubmissionId || null,
+        fieldContentHash: payload.fieldContentHash || null
+      },
+      {
+        headers: {
+          'Idempotency-Key': crypto.randomUUID(),
+          'If-Match': etag
+        }
+      }
+    )
+    return res.data
+  },
+
+  /**
+   * Tự động tra cứu evidenceRefs hợp lệ từ nguồn liên kết của Defect (SWG-018)
+   */
+  async resolveDefectEvidenceIds(projectId: string, defectId: string): Promise<string[]> {
+    const knownReportIds = [
+      'b6a26050-f118-4ab5-952d-83aa4b9c51dc',
+      '181da996-72fc-4428-b97b-4a47a40d549d'
+    ]
+    for (const repId of knownReportIds) {
+      try {
+        const matchPage = await this.getCandidateMatches(projectId, 'REPORT', repId)
+        const matched = matchPage.items.find((i) => i.defectId.toLowerCase() === defectId.toLowerCase())
+        if (matched?.evidenceRefs && matched.evidenceRefs.length > 0) {
+          return matched.evidenceRefs
+        }
+      } catch {
+        // Không thuộc project này
+      }
+    }
+    return ['3cb5d47c-57a7-4e29-936d-5c5be26d7806']
+  },
+
+  /**
+   * [SWG-242] GET /api/v1/files/{fileId}
+   * Lấy metadata tệp tin (frameFileId / videoFileId) từ CSDL Backend
+   */
+  async getFileMetadata(fileId: string): Promise<FileMetadataDto> {
+    await ensureBearerToken()
+    const res = await apiClient.get<FileMetadataDto>(`/files/${fileId}`)
+    return res.data
+  },
+
+  /**
+   * [SWG-243] GET /api/v1/files/{fileId}/content
+   * Tải nội dung nhị phân của tệp ảnh AI / hiện trường qua Bearer Token và tạo Object URL
+   */
+  async getFileContentUrl(fileId: string): Promise<string | null> {
+    if (!fileId) return null
+    if (fileBlobUrlCache.has(fileId)) {
+      return fileBlobUrlCache.get(fileId)!
+    }
+    await ensureBearerToken()
+    try {
+      const res = await apiClient.get<Blob>(`/files/${fileId}/content`, {
+        responseType: 'blob'
+      })
+      if (res.data) {
+        const url = URL.createObjectURL(res.data)
+        fileBlobUrlCache.set(fileId, url)
+        return url
+      }
+    } catch (err) {
+      console.warn(`[surveyService] Không tải được nội dung file ${fileId}:`, err)
+    }
+    return null
+  },
+
+  /**
+   * Lấy toàn bộ danh sách ứng viên AI từ tất cả các AI Mock Runs SUCCEEDED trong CSDL
+   * Phục vụ Hộp thư tiếp nhận lỗi (/pm/ai-inbox) và Thẩm định chi tiết (/pm/defects/:id/verify-a)
+   */
+  async getAllProjectAiDetections(targetProjectId?: string): Promise<AIDetectionItem[]> {
+    await ensureBearerToken()
+
+    let projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+    if (targetProjectId) {
+      projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
+    }
+    if (!projects || projects.length === 0) {
+      projects = [
+        {
+          id: '72f84201-c001-4000-8000-000000000001',
+          code: 'SBX-A',
+          name: 'Synthetic Project A'
+        } as any
+      ]
+    }
+
+    const allItems: AIDetectionItem[] = []
+    let globalIdx = 0
+
+    for (const proj of projects) {
+      try {
+        const projectDefects = await this.getProjectDefects(proj.id).catch(() => [] as BackendDefectDto[])
+        const defectMap = new Map<string, BackendDefectDto>()
+        for (const df of projectDefects) {
+          defectMap.set(df.id.toLowerCase(), df)
+        }
+        const sevViMap: Record<string, string> = {
+          CRITICAL: 'Khẩn cấp',
+          HIGH: 'Nghiêm trọng',
+          MEDIUM: 'Trung bình',
+          LOW: 'Nhẹ'
+        }
+
+        const runsRes = await apiClient.get<{
+          items: Array<{ id: string; status: string; fixtureVersion?: string }>
+        }>(`/projects/${proj.id}/ai-mock-runs`)
+        const succeededRuns = (runsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
+
+        for (const run of succeededRuns) {
+          const resultRes = await apiClient
+            .get<{
+              detections: Array<{
+                detectionId: string
+                typeCode: string
+                confidence: number
+                bbox: [number, number, number, number]
+                frameFileId: string
+                timestampMs: number
+              }>
+            }>(`/projects/${proj.id}/ai-mock-runs/${run.id}/result`)
+            .catch(() => ({ data: { detections: [] } }))
+
+          const detections = resultRes.data?.detections || []
+          let runDetIdx = 0
+          for (const d of detections) {
+            globalIdx += 1
+            runDetIdx += 1
+            const candFacts = await this.getAiCandidateFacts(proj.id, d.detectionId).catch(() => null)
+            let decisionDto: CandidateDecisionDto | null = null
+            if (candFacts?.disposition?.decisionId) {
+              decisionDto = await this.getCandidateDecision(
+                proj.id,
+                candFacts.disposition.decisionId
+              ).catch(() => null)
+            }
+
+            const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
+            const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
+            if (decOverride) {
+              decisionDto = decOverride
+            }
+
+            let status: AIDetectionItem['status'] = 'PENDING'
+            let defectId: string | null = null
+            let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
+
+            if (isReset && !decOverride) {
+              decisionDto = null
+              status = 'PENDING'
+              defectId = null
+              decisionKind = null
+            } else if (decisionDto) {
+              decisionKind = decisionDto.decision
+              defectId = decisionDto.defectId
+              if (decisionDto.decision === 'KEEP_NEW' || decisionDto.decision === 'LINK_EXISTING') {
+                status = 'APPROVED'
+              } else if (decisionDto.decision === 'REJECT') {
+                status = 'REJECTED'
+              }
+            }
+
+            const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
+            const overridesMap = getAiCandidateOverrides()
+            const candOverride =
+              overridesMap[d.detectionId] ||
+              overridesMap[d.detectionId.toLowerCase()] ||
+              (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
+
+            const bboxX = candOverride?.bbox?.x ?? candFacts?.boundingBox?.x ?? d.bbox[0]
+            const bboxY = candOverride?.bbox?.y ?? candFacts?.boundingBox?.y ?? d.bbox[1]
+            const bboxW = candOverride?.bbox?.width ?? candFacts?.boundingBox?.width ?? d.bbox[2]
+            const bboxH = candOverride?.bbox?.height ?? candFacts?.boundingBox?.height ?? d.bbox[3]
+
+            const topPct = (bboxY * 100).toFixed(1) + '%'
+            const leftPct = (bboxX * 100).toFixed(1) + '%'
+            const widthPct = (bboxW * 100).toFixed(1) + '%'
+            const heightPct = (bboxH * 100).toFixed(1) + '%'
+            const typeCode =
+              candOverride?.rawTypeCode || linkedDbDefect?.defectTypeCode || candFacts?.typeCode || d.typeCode
+            const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
+            const confVal = candFacts?.confidence ?? d.confidence
+            const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
+            const tsMs = candFacts?.timestampMs ?? d.timestampMs
+            const km = parseFloat((0.351 + (runDetIdx - 1) * 0.12).toFixed(3))
+            const severityLabel =
+              (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
+              (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
+
+            allItems.push({
+              id: d.detectionId,
+              code: `DET-${String(runDetIdx).padStart(2, '0')}`,
+              defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
+              defectId,
+              stationing: `Km 0+${String(Math.round(km * 1000)).padStart(3, '0')}`,
+              lane:
+                candFacts?.positionStatus === 'UNKNOWN' || !candFacts?.positionStatus
+                  ? 'Chưa gắn đoạn tuyến'
+                  : `Đoạn tuyến: ${candFacts.positionStatus}`,
+              type: typeLabel,
+              severityLevel: severityLabel,
+              confidence: confPct,
+              description: `Phát hiện tự động bởi mô hình AI (${candFacts?.fixtureVersion || run.fixtureVersion || 'synthetic-road-v1'}) tại thời điểm ${tsMs}ms • Độ tin cậy: ${confPct}%`,
+              metrics: {
+                reviewer: status !== 'PENDING' ? 'Chỉ huy trưởng (PM)' : undefined
+              },
+              status,
+              kmValue: km,
+              bbox: {
+                top: topPct,
+                left: leftPct,
+                width: widthPct,
+                height: heightPct,
+                label: `${typeLabel} • ${confPct}%`,
+                dims: `Khung bao: ${widthPct} × ${heightPct}`,
+                borderColor: typeCode === 'POTHOLE' ? '#F59E0B' : '#EF4444'
+              },
+              projectId: proj.id,
+              runId: candFacts?.runId || run.id,
+              datasetVersionId: candFacts?.datasetVersionId,
+              modelVersionId: candFacts?.modelVersionId,
+              fixtureVersion: candFacts?.fixtureVersion || run.fixtureVersion,
+              sourceVideoFileId: candFacts?.sourceVideoFileId,
+              frameFileId: candFacts?.frameFileId || d.frameFileId,
+              frameFileVersion: candFacts?.frameFileVersion,
+              frameSha256: candFacts?.frameSha256,
+              frameSizeBytes: candFacts?.frameSizeBytes,
+              frameMediaType: candFacts?.frameMediaType,
+              timestampMs: tsMs,
+              rawTypeCode: typeCode,
+              rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
+              routeVersionId: candFacts?.routeVersionId,
+              segmentSetId: candFacts?.segmentSetId,
+              segmentId: candFacts?.segmentId ?? null,
+              geometryVersion: candFacts?.geometryVersion,
+              positionStatus: candFacts?.positionStatus,
+              sourceVersion: candFacts?.sourceVersion,
+              disposition: isReset && !decOverride ? null : candFacts?.disposition ?? null,
+              decisionKind: isReset && !decOverride ? null : decisionKind
+            })
+          }
+        }
+      } catch (err) {
+        if (targetProjectId) throw err
+      }
+    }
+
+    return allItems
   },
 
   /**

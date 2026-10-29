@@ -240,32 +240,81 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     }
   }, [viewerMode, selectedDetectionId, detections])
 
-  const handleApproveDetection = async (detId: string, reason?: string) => {
-    const defectCodeGenerated = `DEF-2026-0${Math.floor(100 + Math.random() * 900)}`
-    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-      status: 'APPROVED',
-      defectCode: defectCodeGenerated,
-      metrics: {
-        reviewer: 'KS. Đỗ Quốc Hoàng',
-        dismissReason: undefined
+  const handleApproveDetection = async (
+    detId: string,
+    reason?: string,
+    customTypeCode?: 'POTHOLE' | 'CRACK',
+    customSeverityLevel?: string
+  ) => {
+    try {
+      const targetDet = detections.find((d) => d.id === detId)
+      const effectiveTypeCode = customTypeCode || (targetDet?.rawTypeCode as 'POTHOLE' | 'CRACK') || 'CRACK'
+      const effectiveSeverity = customSeverityLevel || targetDet?.severityLevel || 'Nghiêm trọng'
+      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
+        status: 'APPROVED',
+        projectId: targetDet?.projectId || currentSurvey?.project_id,
+        rawTypeCode: effectiveTypeCode,
+        severityLevel: effectiveSeverity,
+        metrics: {
+          reviewer: 'Chỉ huy trưởng (PM)',
+          dismissReason: reason
+        }
+      })
+      if (updated) {
+        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
+        showToast(
+          `Đã lưu phân loại (${updated.type} • Mức độ: ${updated.severityLevel}) → Mã khiếm khuyết ${updated.defectCode || ''} trong CSDL!`
+        )
       }
-    })
-    if (updated) {
-      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-      showToast(`Đã phê duyệt ${detId}! Hệ thống đã tự động khởi tạo Hồ sơ khiếm khuyết mã ${defectCodeGenerated}.`)
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.response?.data?.code ||
+        err?.message ||
+        'Lỗi khi lưu quyết định thẩm định AI'
+      showToast(`Lỗi máy chủ: ${msg}`)
     }
   }
 
   const handleRejectDetection = async (detId: string, reason?: string) => {
-    const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-      status: 'REJECTED',
-      metrics: {
-        dismissReason: reason || 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.'
+    try {
+      const targetDet = detections.find((d) => d.id === detId)
+      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
+        status: 'REJECTED',
+        projectId: targetDet?.projectId || currentSurvey?.project_id,
+        metrics: {
+          dismissReason: reason || 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.'
+        }
+      })
+      if (updated) {
+        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
+        showToast(`Đã ghi nhận từ chối (Báo sai AI) vào CSDL cho phát hiện #${detId.slice(0, 8)}.`)
       }
-    })
-    if (updated) {
-      setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-      showToast(`Đã đánh dấu ${detId} là Báo sai (False Positive). Dữ liệu này được gửi ngược về huấn luyện Road-YOLOv9.`)
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        err?.response?.data?.code ||
+        err?.message ||
+        'Lỗi khi bác bỏ phát hiện AI'
+      showToast(`Lỗi máy chủ: ${msg}`)
+    }
+  }
+
+  const handleResetDetection = async (detId: string) => {
+    try {
+      const targetDet = detections.find((d) => d.id === detId)
+      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
+        status: 'PENDING',
+        projectId: targetDet?.projectId || currentSurvey?.project_id
+      })
+      if (updated) {
+        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
+        showToast(`Đã mở lại trạng thái chờ rà soát cho phát hiện #${detId.slice(0, 8)}.`)
+      }
+    } catch (err: any) {
+      showToast(`Không thể mở lại rà soát: ${err?.message || 'Lỗi kết nối CSDL'}`)
     }
   }
 
@@ -380,6 +429,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
+    handleResetDetection,
     handleSubmitReFlight,
     handleLockBaseline,
     selectedItem

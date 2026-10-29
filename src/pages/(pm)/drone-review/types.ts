@@ -31,4 +31,28 @@ export interface AIDetectionItem {
     borderColor: string
     isDashed?: boolean
   }
+  // Canonical Backend Candidate3 fields (AiCandidateFactsV1 & CandidateDecisionResponseDto)
+  projectId?: string
+  runId?: string
+  datasetVersionId?: string
+  modelVersionId?: string
+  fixtureVersion?: string
+  sourceVideoFileId?: string
+  frameFileId?: string
+  frameFileVersion?: string
+  frameSha256?: string
+  frameSizeBytes?: number
+  frameMediaType?: string
+  timestampMs?: number
+  rawTypeCode?: 'CRACK' | 'POTHOLE' | string
+  rawBbox?: { x: number; y: number; width: number; height: number }
+  routeVersionId?: string
+  segmentSetId?: string
+  segmentId?: string | null
+  geometryVersion?: string
+  positionStatus?: string
+  sourceVersion?: string
+  disposition?: { decisionId: string; version: string } | null
+  decisionKind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
+  defectId?: string | null
 }

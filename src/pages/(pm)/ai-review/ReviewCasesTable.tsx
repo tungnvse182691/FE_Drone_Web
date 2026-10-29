@@ -101,7 +101,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
                     title="Đặt lại dữ liệu mẫu ban đầu qua API"
                   >
                     <Icon name="refresh" size={13} />
-                    <span>Đặt lại dữ liệu</span>
+                    <span>Tải lại từ CSDL</span>
                   </button>
                 </>
               )}

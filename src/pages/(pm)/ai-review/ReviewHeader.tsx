@@ -65,14 +65,6 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
 
         {/* Right Quick Actions */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          <button
-            onClick={() => showToast('Đang xuất danh sách hồ sơ Triage ra file Excel TCVN...')}
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Icon name="download" size={16} className="text-slate-500" />
-            <span>Xuất báo cáo Excel</span>
-          </button>
           {selectedReportIds.length >= 2 && !isSupervisor && (
             <button
               onClick={onOpenLinkReportsModal}

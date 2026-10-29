@@ -2,6 +2,7 @@ import { apiClient } from '../client'
 import { TriageCase } from '../../types/domain'
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { projectService } from './projectService'
+import { surveyService } from './surveyService'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 
@@ -106,11 +107,11 @@ function mapBackendCaseToDomain(
     const outcome = item.conclusion.outcome
     if (outcome === 'CONFIRMED') {
       status = 'VERIFIED'
-      status_label = 'Đã xác minh (Verified)'
+      status_label = 'Đã xác minh (Hợp lệ)'
       conclusion = 'DEFECT_FOUND'
     } else if (outcome === 'NO_DEFECT') {
       status = 'REJECTED'
-      status_label = 'Báo sai (No Defect)'
+      status_label = 'Báo sai (Không có lỗi)'
       conclusion = 'NO_DEFECT'
     } else if (outcome === 'NEEDS_EVIDENCE') {
       status = 'NEED_SURVEY'
@@ -122,7 +123,7 @@ function mapBackendCaseToDomain(
     status_label = 'Đã kết luận'
   } else if (item.status === 'REJECTED') {
     status = 'REJECTED'
-    status_label = 'Báo sai (No Defect)'
+    status_label = 'Báo sai (Không có lỗi)'
   }
 
   const version = item.version || undefined
@@ -316,7 +317,87 @@ export const triageService = {
       const items = Array.from(uniqueMap.values())
       console.log(`✅ [CANDIDATE3 BE] [${isSupervisor ? 'SUPERVISOR' : 'PM'}] Nhận về ${items.length} ca phản ánh thật từ CSDL qua API-018`)
 
-      return items.map((item) => mapBackendCaseToDomain(item, projectMap))
+      const citizenCases = items.map((item) => mapBackendCaseToDomain(item, projectMap))
+
+      // Nạp thêm danh sách ứng viên AI từ Drone (GET /api/v1/projects/{projectId}/ai-candidates/{detectionId})
+      const targetProjects =
+        params?.projectId && params.projectId !== 'ALL'
+          ? allowedProjects.filter((p) => p.id === params.projectId || p.code === params.projectId)
+          : allowedProjects
+
+      const aiCases: TriageCase[] = []
+      const seenDetIds = new Set<string>()
+      for (const proj of targetProjects) {
+        try {
+          const detections = await surveyService.getAllProjectAiDetections(proj.id)
+          for (const det of detections) {
+            if (seenDetIds.has(det.id)) continue
+            seenDetIds.add(det.id)
+
+            const isApproved = det.status === 'APPROVED'
+            const isRejected = det.status === 'REJECTED'
+
+            aiCases.push({
+              id: det.id,
+              code: det.code,
+              source: 'DRONE_AI',
+              source_label: `Drone AI (${det.fixtureVersion || 'Road-YOLOv9'})`,
+              source_detail: `Đợt #${(det.runId || '').slice(0, 8).toUpperCase()}${det.timestampMs != null ? ` • Khung hình ${det.timestampMs}ms` : ''}`,
+              project_id: proj.id,
+              project_name: proj.name,
+              stationing: det.stationing,
+              lane: det.lane || 'Tuyến khảo sát',
+              defect_title: `${det.type} (${det.confidence}%)`,
+              defect_type: det.rawTypeCode === 'POTHOLE' ? 'Ổ gà mặt đường' : 'Vết nứt mặt đường',
+              severity: det.confidence >= 85 ? 'CRITICAL' : det.confidence >= 75 ? 'HIGH' : 'MEDIUM',
+              urgency: det.confidence >= 85 ? 'EMERGENCY' : 'URGENT',
+              time_ago: 'Đợt chạy AI CSDL',
+              created_at: new Date().toLocaleDateString('vi-VN'),
+              status: isApproved ? 'VERIFIED' : isRejected ? 'REJECTED' : 'PENDING',
+              status_label: isApproved
+                ? det.decisionKind === 'LINK_EXISTING'
+                  ? `Đã gom vào hồ sơ cũ (${det.defectCode || ''})`
+                  : `Đã duyệt tạo khiếm khuyết (${det.defectCode || ''})`
+                : isRejected
+                ? 'Đã từ chối (Báo sai AI)'
+                : 'Chờ PM thẩm định AI',
+              image_url: det.frameFileId ? `/api/v1/files/${det.frameFileId}/content` : '',
+              gps: {
+                lat: 16.0582,
+                lng: 108.2045,
+                altitude_m: 0,
+                resolution_cm_px: 0
+              },
+              ai_confidence: det.confidence,
+              area_sqm: 0,
+              ai_area_sqm: 0,
+              max_depth_cm: 0,
+              ai_depth_cm: 0,
+              pm_notes: det.metrics?.dismissReason || det.metrics?.reviewer || '',
+              conclusion: isApproved ? 'DEFECT_FOUND' : isRejected ? 'NO_DEFECT' : null,
+              conclusion_reason: det.metrics?.dismissReason || det.metrics?.reviewer || undefined,
+              is_assigned: true,
+              is_published: false,
+              version: det.sourceVersion || undefined,
+              run_id: det.runId,
+              fixture_version: det.fixtureVersion,
+              frame_file_id: det.frameFileId,
+              timestamp_ms: det.timestampMs,
+              source_version: det.sourceVersion,
+              geometry_version: det.geometryVersion,
+              route_version_id: det.routeVersionId,
+              disposition_id: det.disposition?.decisionId || null,
+              disposition_version: det.disposition?.version || null,
+              decision_kind: det.decisionKind,
+              linked_defect_id: det.defectId
+            })
+          }
+        } catch (aiErr) {
+          console.warn(`⚠️ Không thể tải AI detections cho dự án ${proj.id}:`, aiErr)
+        }
+      }
+
+      return [...citizenCases, ...aiCases]
     } catch (err: any) {
       console.error('❌ [CANDIDATE3 BE] Lỗi khi nạp ca từ backend (/cases):', err?.response?.data || err?.message)
       throw new Error(
@@ -547,6 +628,41 @@ export const triageService = {
       status = 'NEED_SURVEY'
       status_label = 'Cần đo đạc bổ sung'
       conclusion = 'NEED_SURVEY'
+    }
+
+    // Nếu là ứng viên AI từ Drone (DRONE_AI), gọi chuẩn API POST /api/v1/projects/{projectId}/candidate-decisions (SWG-019)
+    if (currentCase?.source === 'DRONE_AI') {
+      const projId = currentCase.project_id || '72f84201-c001-4000-8000-000000000001'
+      const isPothole =
+        currentCase.defect_type === 'POTHOLE' ||
+        (currentCase.defect_type || '').toLowerCase().includes('ổ gà')
+      const decisionRes = await surveyService.decideCandidate(projId, {
+        sourceKind: 'AI_DETECTION',
+        sourceId: caseId,
+        decision: payload.outcome === 'CONFIRMED' ? 'KEEP_NEW' : 'REJECT',
+        defectTypeCode: isPothole ? 'POTHOLE' : 'CRACK',
+        severity: currentCase.severity || 'HIGH',
+        reason: payload.reason || 'Thẩm định ứng viên AI từ Hộp thư tiếp nhận'
+      })
+
+      const defectCode = decisionRes.defectId ? `#DEF-${decisionRes.defectId.slice(0, 8).toUpperCase()}` : ''
+      const aiUpdates: Partial<TriageCase> = {
+        status,
+        status_label:
+          payload.outcome === 'CONFIRMED'
+            ? `Đã duyệt tạo khiếm khuyết (${defectCode})`
+            : 'Đã từ chối (Báo sai AI)',
+        conclusion,
+        conclusion_reason: payload.reason || undefined,
+        disposition_id: decisionRes.id,
+        disposition_version: decisionRes.version,
+        decision_kind: decisionRes.decision,
+        linked_defect_id: decisionRes.defectId,
+        pm_notes: payload.reason
+          ? `[Thẩm định AI: ${payload.outcome === 'CONFIRMED' ? 'Chấp nhận' : 'Từ chối'}] ${payload.reason}`
+          : currentCase.pm_notes || ''
+      }
+      return this.updateCase(caseId, aiUpdates)
     }
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)
