@@ -4,6 +4,7 @@ import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
 export interface MissionScrubberProps {
+  onSelectGisMap?: () => void;
   currentFrame: number
   setCurrentFrame: React.Dispatch<React.SetStateAction<number>>
   totalFrames: number
@@ -17,6 +18,7 @@ export interface MissionScrubberProps {
 }
 
 export const MissionScrubber: React.FC<MissionScrubberProps> = ({
+  onSelectGisMap,
   currentFrame,
   setCurrentFrame,
   totalFrames,
@@ -30,12 +32,13 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
 }) => {
   return (
     <div className="p-3 bg-white flex flex-col gap-2 border-t border-slate-200">
-      <div className="flex items-center justify-between font-mono text-xs text-slate-500">
-        <span className="text-slate-800 font-bold">02:14</span>
+      <div className="flex items-center justify-between font-mono text-xs text-slate-600">
         <span className="text-xs">
-          Đang xem: <strong>{selectedItem?.stationing || 'Toàn tuyến'}</strong> (Frame {currentFrame} / {totalFrames})
+          Đang xem: <strong>{selectedItem ? `Mục ${selectedItem.code} (${selectedItem.stationing})` : 'Toàn tuyến'}</strong>
         </span>
-        <span>03:45</span>
+        <span className="text-slate-400 text-[11px]">
+          {selectedItem?.type || 'Trắc địa Drone'}
+        </span>
       </div>
 
       {/* Scrubber track */}
@@ -54,7 +57,10 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
 
         {/* Defect marker dots along timeline */}
         {detections.map((d) => {
-          const percent = ((d.kmValue - 1024) / (1030 - 1024)) * 100
+          const minKm = Math.min(...detections.map((x) => x.kmValue), 0)
+          const maxKm = Math.max(...detections.map((x) => x.kmValue), 1)
+          const range = Math.max(0.01, maxKm - minKm)
+          const percent = Math.max(0, Math.min(100, ((d.kmValue - minKm) / range) * 100))
           const dotColor =
             d.status === 'APPROVED'
               ? 'bg-emerald-500'
@@ -123,16 +129,7 @@ export const MissionScrubber: React.FC<MissionScrubberProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            to="/pm/projects/prj-ql1a-02/alignment"
-            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 shadow-2xs flex items-center gap-1 transition-colors"
-          >
-            <Icon name="map" size={14} className="text-brand-gold" />
-            <span>Xem trên GIS (MapLibre)</span>
-          </Link>
         </div>
-      </div>
     </div>
   )
 }

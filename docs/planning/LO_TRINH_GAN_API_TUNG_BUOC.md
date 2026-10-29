@@ -174,15 +174,15 @@
 * **File Service phụ trách:**
   - `src/api/services/surveyService.ts`
 * **Danh sách API kết nối:**
-  1. `GET /api/v1/projects/{projectId}/survey-plans` (`API-223`): Danh sách kế hoạch bay khảo sát.
+  1. `GET /api/v1/projects/{projectId}/survey-plans` (`ADD-05` / `API-223`): Danh sách kế hoạch bay khảo sát từ CSDL.
   2. `POST /api/v1/projects/{projectId}/survey-plans` (`API-201`): PM tạo kế hoạch bay kèm tham số trắc địa GSD, độ cao bay.
-  3. `POST /api/v1/projects/{projectId}/survey-plans/{planId}/dispatch` (`API-228`): Giao kế hoạch bay cho Operator.
-  4. `GET /api/v1/ai-processing-runs/{runId}` (`API-045`): Thăm dò trạng thái tiến trình xử lý Road-YOLOv9.
-  5. `POST /api/v1/ai-processing-runs` (`API-044`): Kích hoạt lệnh chạy nhận diện AI trên tập ảnh/video.
-  6. `POST /api/v1/projects/{projectId}/baseline-lock` (`API-057`): Khóa mốc chuẩn bảo hành công trình.
+  3. `POST /api/v1/projects/{projectId}/survey-tasks` (`API-203`): Giao kế hoạch bay cho phi công Operator UAV.
+  4. `GET /api/v1/projects/{projectId}/ai-mock-runs` (`ADD-01`) & `GET .../ai-mock-runs/{runId}/result` (`API-055`): Thăm dò trạng thái và kết quả tiến trình xử lý Road-YOLOv9.
+  5. `POST /api/v1/projects/{projectId}/ai-mock-runs` (`API-053`): Kích hoạt lệnh chạy nhận diện AI trên tập ảnh/video.
+  6. `POST /api/v1/projects/{projectId}/baseline-selections` (`API-057`): Khóa mốc chuẩn bảo hành công trình.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Tạo kế hoạch bay từ Web FE xuất hiện trong cơ sở dữ liệu `survey-plans`.
-  - [ ] Tiến trình AI HUD hiển thị % xử lý đồng bộ từ backend run ID.
+  - [x] Tạo kế hoạch bay từ Web FE xuất hiện trong cơ sở dữ liệu `survey-plans`.
+  - [x] Tiến trình AI HUD hiển thị % xử lý đồng bộ từ backend run ID.
 
 ---
 

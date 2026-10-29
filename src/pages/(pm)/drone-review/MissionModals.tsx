@@ -2,12 +2,20 @@ import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
+export interface ReFlightPayload {
+  pilot: string
+  surveyType?: 'AD_HOC' | 'PERIODIC'
+  dueDate: string
+  note: string
+  range: string
+}
+
 export interface MissionModalsProps {
   isReFlightModalOpen: boolean
   setIsReFlightModalOpen: (open: boolean) => void
   pilotNote: string
   setPilotNote: (note: string) => void
-  onSubmitReFlight: (pilot?: string) => void
+  onSubmitReFlight: (payload: ReFlightPayload) => void
   selectedItem?: AIDetectionItem
   currentSurveyCode?: string
   currentSurveyRange?: string
@@ -20,7 +28,7 @@ export interface MissionModalsProps {
   totalCount?: number
 }
 
-type ReFlightTargetMode = 'BLINDSPOT' | 'CUSTOM'
+
 
 export const MissionModals: React.FC<MissionModalsProps> = ({
   isReFlightModalOpen,
@@ -30,34 +38,31 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
   onSubmitReFlight,
   selectedItem: _selectedItem,
   currentSurveyCode = '#MS-2026-0924',
-  currentSurveyRange = 'Km 1024 - 1030',
-  coveragePercentage = 87,
+  currentSurveyRange = 'Toàn tuyến',
+  coveragePercentage = 100,
   isBaselineModalOpen = false,
   setIsBaselineModalOpen,
   onConfirmBaseline,
   onOpenReFlightFromBaseline,
-  reviewedCount = 8,
-  totalCount = 8
+  reviewedCount = 0,
+  totalCount = 0
 }) => {
-  const [targetMode, setTargetMode] = useState<ReFlightTargetMode>('BLINDSPOT')
-  const [customRange, setCustomRange] = useState<string>('Km 1026+500 → Km 1027+500')
-  const [cameraAngle, setCameraAngle] = useState<'45' | '60' | '90'>('45')
-  const [droneModel, setDroneModel] = useState<string>('DJI Matrice 300 RTK')
-  const [gsdReq, setGsdReq] = useState<string>('≤ 0.35 cm/pixel')
-  const [selectedPilot, setSelectedPilot] = useState<string>('Lê Hoàng Long (Phi công thiết bị bay chính)')
+    const [customRange, setCustomRange] = useState<string>(currentSurveyRange)
+    
+  
+  const [selectedPilot, setSelectedPilot] = useState<string>('Synthetic operator-a (Phi công UAV)')
+  const [dueDate, setDueDate] = useState<string>(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 2)
+    return d.toISOString().split('T')[0]
+  })
 
-  // Tự động sinh nội dung chỉ dẫn kỹ thuật khi đổi đối tượng quét
+  // Tự động gợi ý nội dung chỉ dẫn kỹ thuật theo đoạn lý trình
   useEffect(() => {
-    if (targetMode === 'BLINDSPOT') {
-      setPilotNote(
-        `Bay quét bù dải phân cách giữa tại lý trình Km 1027+100 bằng góc nghiêng Oblique ${cameraAngle}°, bù đắp dữ liệu bị khuất bóng râm và rào chắn.`
-      )
-    } else if (targetMode === 'CUSTOM') {
-      setPilotNote(
-        `Bay quét bổ sung đoạn lý trình ${customRange} với góc camera ${cameraAngle}° nhằm kiểm tra hiện trạng mặt đường theo chỉ đạo của Chỉ huy trưởng.`
-      )
-    }
-  }, [targetMode, cameraAngle, customRange, setPilotNote])
+    setPilotNote(
+      `Bay quét bổ sung đoạn lý trình ${customRange} nhằm hoàn thiện dữ liệu trắc địa bề mặt mặt đường phục vụ thẩm định Baseline.`
+    )
+  }, [customRange, setPilotNote])
 
   if (!isReFlightModalOpen && !isBaselineModalOpen) return null
 
@@ -88,156 +93,54 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           </button>
         </div>
 
-        {/* Căn cứ kỹ thuật trắc địa */}
-        <div className="bg-amber-50/80 border border-amber-200/90 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
-          <Icon name="info" size={18} className="text-amber-700 shrink-0 mt-0.5" />
-          <div className="leading-relaxed">
-            <strong className="block mb-0.5">Cơ sở kỹ thuật trắc địa (TCVN):</strong>
-            <span>
-              Độ phủ ảnh trực giao của đợt bay hiện tại đạt <strong>{coveragePercentage}%</strong> (chưa đạt ngưỡng tối thiểu <strong>95%</strong> để Khóa Baseline số). Phát lệnh bay bù Oblique giúp bổ sung dữ liệu góc nghiêng tại khu vực bị khuất bóng râm, cây cối hoặc rào chắn.
-            </span>
-          </div>
-        </div>
+        
 
-        {/* 1. Chọn Đối tượng / Phạm vi bay bù */}
+        {/* 1. Phạm vi lý trình cần bay bổ sung */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-700 block">
-            1. Phạm vi lý trình cần bay bổ sung:
+            Phạm vi lý trình cần bay bổ sung:
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-            {/* Lựa chọn 1: Điểm mù trắc địa đợt bay */}
-            <button
-              type="button"
-              onClick={() => setTargetMode('BLINDSPOT')}
-              className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
-                targetMode === 'BLINDSPOT'
-                  ? 'bg-amber-50/60 border-brand-gold ring-1 ring-brand-gold text-slate-900'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <Icon
-                  name={targetMode === 'BLINDSPOT' ? 'radio_button_checked' : 'radio_button_unchecked'}
-                  size={15}
-                  className={targetMode === 'BLINDSPOT' ? 'text-brand-gold' : 'text-slate-400'}
-                />
-                <span>Điểm mù trắc địa</span>
-              </div>
-              <span className="text-[11px] text-slate-500 pl-5">
-                Km 1027+100 (Độ phủ 68%)
-              </span>
-            </button>
-
-            {/* Lựa chọn 2: Tùy chỉnh phạm vi */}
-            <button
-              type="button"
-              onClick={() => setTargetMode('CUSTOM')}
-              className={`p-2.5 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
-                targetMode === 'CUSTOM'
-                  ? 'bg-amber-50/60 border-brand-gold ring-1 ring-brand-gold text-slate-900'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 font-bold text-xs">
-                <Icon
-                  name={targetMode === 'CUSTOM' ? 'radio_button_checked' : 'radio_button_unchecked'}
-                  size={15}
-                  className={targetMode === 'CUSTOM' ? 'text-brand-gold' : 'text-slate-400'}
-                />
-                <span>Tùy chỉnh lý trình</span>
-              </div>
-              <span className="text-[11px] text-slate-500 pl-5">
-                Chỉ định tự do
-              </span>
-            </button>
-          </div>
-
-          {targetMode === 'CUSTOM' && (
-            <div className="pt-1.5 animate-in fade-in">
-              <input
-                type="text"
-                value={customRange}
-                onChange={(e) => setCustomRange(e.target.value)}
-                placeholder="Ví dụ: Km 1025+000 → Km 1026+500"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
-            </div>
-          )}
+          <input
+            type="text"
+            value={customRange}
+            onChange={(e) => setCustomRange(e.target.value)}
+            placeholder="Ví dụ: Km 0+000 → Km 0+702"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          />
         </div>
 
-        {/* 2. Cấu hình góc máy và thiết bị */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <div>
-            <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-              Góc nghiêng Gimbal:
-            </label>
-            <select
-              value={cameraAngle}
-              onChange={(e) => setCameraAngle(e.target.value as '45' | '60' | '90')}
-              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-            >
-              <option value="45">Oblique 45° (Bù góc khuất vật cản)</option>
-              <option value="60">Oblique 60° (Soi sâu khe rãnh dọc)</option>
-              <option value="90">Nadir 90° (Quét phẳng trực giao)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-              Thiết bị Drone:
-            </label>
-            <select
-              value={droneModel}
-              onChange={(e) => setDroneModel(e.target.value)}
-              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-            >
-              <option value="DJI Matrice 300 RTK">DJI Matrice 300 RTK</option>
-              <option value="DJI Mavic 3 Enterprise">DJI Mavic 3 Enterprise</option>
-              <option value="Autel EVO II Dual RTK">Autel EVO II Dual RTK</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-[11px] font-semibold text-slate-600 block mb-1">
-              Độ phân giải GSD yêu cầu:
-            </label>
-            <select
-              value={gsdReq}
-              onChange={(e) => setGsdReq(e.target.value)}
-              className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-            >
-              <option value="≤ 0.35 cm/pixel">≤ 0.35 cm/pixel (Siêu chi tiết)</option>
-              <option value="≤ 0.50 cm/pixel">≤ 0.50 cm/pixel (Tiêu chuẩn)</option>
-            </select>
-          </div>
+        {/* Hạn hoàn thành nhiệm vụ */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-slate-700 block">
+            Hạn hoàn thành nhiệm vụ bay bù:
+          </label>
+          <input
+            type="date"
+            value={dueDate}
+            min={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+          />
         </div>
 
-        {/* 3. Chỉ định phi công thiết bị bay (Quy tắc BR-43) */}
+        {/* Phi công thiết bị bay */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-700 block">
-            3. Chỉ định phi công thiết bị bay (Quy tắc BR-43):
+            Phi công thiết bị bay phụ trách:
           </label>
           <select
             value={selectedPilot}
             onChange={(e) => setSelectedPilot(e.target.value)}
             className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
           >
-            <option value="Lê Hoàng Long (Phi công thiết bị bay chính)">Lê Hoàng Long (Phi công thiết bị bay chính - Sẵn sàng)</option>
-            <option value="Hoàng Quốc Bảo (Phi công RTK cấp 3)">Hoàng Quốc Bảo (Phi công RTK cấp 3)</option>
-            <option value="Trần Quang Khải (Phi công chuyên gia đo quét)">Trần Quang Khải (Phi công chuyên gia đo quét)</option>
-            <option value="Nguyễn Văn An (Đội bay Hoàng Hải 02)">Nguyễn Văn An (Đội bay Hoàng Hải 02)</option>
+            <option value="Synthetic operator-a (Phi công UAV)">Synthetic operator-a (Phi công UAV)</option>
           </select>
-          <p className="text-[10px] text-slate-500 italic">
-            * Theo quy tắc BR-43, PM xác nhận phạm vi bay bổ sung và có toàn quyền chỉ định hoặc thay đổi phi công thiết bị bay.
-          </p>
         </div>
 
-        {/* 4. Chỉ dẫn kỹ thuật cho Phi công */}
+        {/* Chỉ dẫn kỹ thuật cho Phi công */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-slate-700">
-              4. Chỉ dẫn kỹ thuật cho Phi công Drone (Có thể chỉnh sửa):
-            </label>
+            <label className="text-xs font-semibold text-slate-700">Chỉ dẫn kỹ thuật cho Phi công Drone:</label>
             <span className="text-[11px] text-slate-400">Tự động gợi ý theo phạm vi</span>
           </div>
           <textarea
@@ -251,7 +154,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
         {/* Modal Footer Actions */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
           <span className="text-[11px] text-slate-500">
-            * Sau khi bay bù hoàn tất, độ phủ ảnh sẽ tự động cập nhật lên ≥ 95%.
+            
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -263,7 +166,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => onSubmitReFlight(selectedPilot)}
+              onClick={() => onSubmitReFlight({ pilot: selectedPilot, surveyType: 'AD_HOC', dueDate, note: pilotNote, range: customRange })}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-gold hover:bg-[#B38E1F] text-white shadow-xs transition-all active:scale-98 cursor-pointer flex items-center gap-1.5"
             >
               <Icon name="flight_takeoff" size={16} />
@@ -377,7 +280,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
                 Phát lệnh bay bổ sung trước khi khóa toàn tuyến
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                Bay bù Oblique tại Km 1027+100 để nâng tỷ lệ độ phủ lên ≥ 98% toàn dải Km 1024 - 1030 rồi mới khóa toàn bộ.
+                Bay bù Oblique để hoàn thiện tỷ lệ bao phủ dữ liệu toàn dải ${currentSurveyRange} trước khi khóa Baseline số.
               </p>
             </div>
           </button>

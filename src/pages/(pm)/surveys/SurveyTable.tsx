@@ -1,9 +1,10 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import { type SurveyMissionItem as SurveyMission } from '../../../api/services'
+import { type SurveyMissionItem as SurveyMission, type HubProject } from '../../../api/services'
 import { SurveyCard } from './SurveyCard'
 
 interface SurveyTableProps {
+  projects?: HubProject[]
   missions: SurveyMission[]
   filteredMissions: SurveyMission[]
   activeTab: 'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'
@@ -11,6 +12,7 @@ interface SurveyTableProps {
   selectedRouteFilter: string
   setSelectedRouteFilter: (route: string) => void
   searchQuery: string
+  highlightedCode?: string | null
   setSearchQuery: (query: string) => void
   basePath: string
   onNavigate: (path: string) => void
@@ -18,6 +20,7 @@ interface SurveyTableProps {
 }
 
 export const SurveyTable: React.FC<SurveyTableProps> = ({
+  projects = [],
   missions,
   filteredMissions,
   activeTab,
@@ -26,6 +29,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
   setSelectedRouteFilter,
   searchQuery,
   setSearchQuery,
+  highlightedCode,
   basePath,
   onNavigate,
   onOpenSimulator
@@ -36,17 +40,26 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
 
   // Danh mục Tuyến đường / Dự án trích xuất động theo BR-32 & DA05
   const routeOptions = React.useMemo(() => {
-    const map = new Map<string, string>()
-    missions.forEach((m) => {
-      if (m.project_id && !map.has(m.project_id)) {
-        map.set(m.project_id, m.project_name)
-      }
-    })
-    return [
-      { value: 'ALL', label: 'Toàn bộ tuyến đường' },
-      ...Array.from(map.entries()).map(([value, label]) => ({ value, label }))
+    const list = [
+      { value: 'ALL', label: 'Toàn bộ tuyến đường' }
     ]
-  }, [missions])
+    if (projects.length > 0) {
+      projects.forEach((p) => {
+        list.push({ value: p.id, label: `[${p.code}] ${p.name}` })
+      })
+    } else {
+      const map = new Map<string, string>()
+      missions.forEach((m) => {
+        if (m.project_id && !map.has(m.project_id)) {
+          map.set(m.project_id, m.project_name)
+        }
+      })
+      map.forEach((label, value) => {
+        list.push({ value, label })
+      })
+    }
+    return list
+  }, [projects, missions])
 
   return (
     <div className="space-y-4">
@@ -166,6 +179,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
             <SurveyCard
               key={survey.id}
               survey={survey}
+              isHighlighted={highlightedCode ? survey.code.includes(highlightedCode.replace('#', '')) || survey.id.includes(highlightedCode) : false}
               basePath={basePath}
               onNavigate={onNavigate}
               onOpenSimulator={onOpenSimulator}

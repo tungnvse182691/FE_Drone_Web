@@ -3,6 +3,7 @@ import { type SurveyMissionItem as SurveyMission } from '../../../api/services'
 
 interface SurveyCardProps {
   survey: SurveyMission
+  isHighlighted?: boolean
   basePath: string
   onNavigate: (path: string) => void
   onOpenSimulator: (mission: SurveyMission) => void
@@ -10,6 +11,7 @@ interface SurveyCardProps {
 
 export const SurveyCard: React.FC<SurveyCardProps> = ({
   survey,
+  isHighlighted = false,
   basePath,
   onNavigate,
   onOpenSimulator
@@ -79,9 +81,9 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       className="rounded-[20px] overflow-hidden flex flex-col justify-between cursor-pointer select-none"
       style={{
-        border: `1.5px solid ${isHovered ? styleConfig.dot : styleConfig.border}`,
+        border: isHighlighted ? '2px solid #C9A227' : `1.5px solid ${isHovered ? styleConfig.dot : styleConfig.border}`,
         background: styleConfig.bgTint,
-        boxShadow: isHovered ? styleConfig.hoverShadow : '0 2px 8px rgba(0, 0, 0, 0.05)',
+        boxShadow: isHighlighted ? '0 0 0 3px rgba(201, 162, 39, 0.35), 0 8px 20px rgba(0, 0, 0, 0.08)' : isHovered ? styleConfig.hoverShadow : '0 2px 8px rgba(0, 0, 0, 0.05)',
         transform: isHovered ? 'translateY(-4px)' : 'none',
         transition: 'all 0.3s ease'
       }}
@@ -104,6 +106,23 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
             <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight font-sansation">
               {survey.title}
             </h3>
+            {survey.survey_type && (
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 border ${
+                  survey.survey_type === 'BASELINE'
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : survey.survey_type === 'AD_HOC'
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                }`}
+              >
+                {survey.survey_type === 'BASELINE'
+                  ? 'Cơ sở'
+                  : survey.survey_type === 'AD_HOC'
+                  ? 'Đột xuất'
+                  : 'Định kỳ'}
+              </span>
+            )}
           </div>
           <span
             className="rounded-full text-[11px] font-bold px-[14px] py-[5px] whitespace-nowrap shrink-0"
@@ -129,20 +148,42 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
 
         {/* Hàng 3: Mô tả ngắn (độ phủ ảnh %, số khiếm khuyết, số ảnh) */}
         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-          Độ phủ ảnh {survey.coverage_percent}% toàn tuyến • Ghi nhận {survey.ai_defects_count} khiếm khuyết AI • Khối lượng {survey.total_photos.toLocaleString()} ảnh chụp độ phân giải GSD {survey.gsd_resolution.replace(' cm/pixel', 'cm')}.
+          Nhiệm vụ bay khảo sát trắc địa mặt đường • Ghi nhận {survey.ai_defects_count} khiếm khuyết AI • Thiết bị: {survey.drone_model}.
         </p>
 
-        {/* Khối chỉ số kỹ thuật nhanh */}
+        {/* Khối chỉ số nghiệp vụ thực tế */}
         <div className="flex items-center gap-2 flex-wrap pt-0.5">
-          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-            {survey.total_photos > 0 ? `${survey.total_photos.toLocaleString()} ảnh` : 'Chờ nạp ảnh'}
+          <span
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
+              survey.status === 'BASELINE_LOCKED'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : (survey.reviewed_count || 0) >= survey.ai_defects_count && survey.ai_defects_count > 0
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                : survey.status === 'PENDING_AI_REVIEW'
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-slate-100 text-slate-700 border-slate-200'
+            }`}
+          >
+            {survey.status === 'BASELINE_LOCKED'
+              ? 'Đã khóa Baseline'
+              : (survey.reviewed_count || 0) >= survey.ai_defects_count && survey.ai_defects_count > 0
+              ? 'Đã thẩm định 100%'
+              : survey.status === 'PENDING_AI_REVIEW'
+              ? 'Chờ thẩm định AI'
+              : 'Chờ thực hiện bay'}
           </span>
-          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono">
-            GSD: {survey.gsd_resolution.replace(' cm/pixel', 'cm')}
-          </span>
-          {survey.ai_defects_count > 0 && (
+
+          {(survey.approved_count || 0) > 0 ? (
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-100/70 text-emerald-800 border border-emerald-300">
+              {survey.approved_count} khiếm khuyết hợp lệ
+            </span>
+          ) : survey.ai_defects_count > 0 ? (
             <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
               {survey.ai_defects_count} khiếm khuyết AI
+            </span>
+          ) : (
+            <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
+              0 phát hiện AI
             </span>
           )}
         </div>
@@ -162,7 +203,7 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
                 e.stopPropagation()
                 onOpenSimulator(survey)
               }}
-              className="px-4 py-2 rounded-xl bg-[#1A1D20] hover:bg-[#2D3748] text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
             >
               Theo dõi trực tiếp
             </button>
@@ -184,7 +225,7 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
                 e.stopPropagation()
                 onNavigate(`${basePath}/surveys/${survey.id}/review`)
               }}
-              className="px-4 py-2 rounded-xl bg-white border border-[#E2E5E9] hover:bg-slate-50 text-slate-800 text-xs font-semibold transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
             >
               Xem chi tiết
             </button>

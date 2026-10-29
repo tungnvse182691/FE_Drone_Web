@@ -35,8 +35,8 @@ export const DroneMissionAIReview: React.FC = () => {
     totalFrames,
     isCanvasFullscreen,
     setIsCanvasFullscreen,
-    kmFilter,
-    setKmFilter,
+    statusFilter,
+    setStatusFilter,
     selectedDetectionId,
     coveragePercentage,
     hasBlindspot,
@@ -70,7 +70,7 @@ export const DroneMissionAIReview: React.FC = () => {
     handleSubmitReFlight,
     handleLockBaseline,
     selectedItem
-  } = useDroneMissionReview(id || 'srv-01')
+  } = useDroneMissionReview(id || 'srv-01', currentSurvey)
 
   // Tải dữ liệu đợt bay từ Mock API Service
   useEffect(() => {
@@ -267,8 +267,9 @@ export const DroneMissionAIReview: React.FC = () => {
       {/* Breadcrumb, Topbar, Data Quality Assessment, AI Job Progress */}
       <MissionHeader
         basePath={basePath}
-        missionCode={currentSurvey?.code || '#MS-2026-0924'}
-        missionTitle={currentSurvey?.title || 'Khảo sát Drone: Đợt bay quét QL1A (Đoạn Km 1024 - 1030)'}
+        missionCode={currentSurvey?.code || '#MS-2026-0000'}
+        missionTitle={currentSurvey?.title || 'Nhiệm vụ bay khảo sát trắc địa'}
+        missionStatus={currentSurvey?.status}
         setCurrentFrame={setCurrentFrame}
         showToast={showToast}
         coveragePercentage={coveragePercentage}
@@ -278,6 +279,14 @@ export const DroneMissionAIReview: React.FC = () => {
         pendingCount={pendingCount}
         onOpenReFlightModal={() => setIsReFlightModalOpen(true)}
         onLockBaseline={handleLockBaseline}
+        droneModel={currentSurvey?.drone_model}
+        totalPhotos={currentSurvey?.total_photos}
+        aiDetectionsCount={detections.length}
+        reviewedCount={reviewedCount}
+        totalCount={totalCount}
+        approvedCount={approvedCount}
+        rejectedCount={rejectedCount}
+        reviewProgressPercent={reviewProgressPercent}
       />
 
       {/* Interactive AI Review Workspace (60/40 Split) */}
@@ -312,8 +321,8 @@ export const DroneMissionAIReview: React.FC = () => {
           onSelectDetection={handleSelectDetection}
           onApproveDetection={handleApproveDetection}
           onRejectDetection={handleRejectDetection}
-          kmFilter={kmFilter}
-          setKmFilter={setKmFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
           totalCount={totalCount}
           approvedCount={approvedCount}
           rejectedCount={rejectedCount}
@@ -321,6 +330,8 @@ export const DroneMissionAIReview: React.FC = () => {
           reviewedCount={reviewedCount}
           reviewProgressPercent={reviewProgressPercent}
           showToast={showToast}
+          surveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : undefined}
+          isBaselineLocked={isBaselineLocked || currentSurvey?.status === 'BASELINE_LOCKED'}
         />
       </div>
     </div>

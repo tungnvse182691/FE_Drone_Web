@@ -14,6 +14,8 @@ export interface ProjectRouteConfig {
   endKm: number
   defaultCoords: [number, number][]
   defaultKmPoints: number[]
+  hasAlignment?: boolean
+  alignmentStatusText?: string
 }
 
 export interface AvailablePilot {

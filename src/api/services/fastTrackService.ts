@@ -170,7 +170,12 @@ export const fastTrackService = {
       itemId = param2
     }
 
-    const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || !import.meta.env.VITE_API_URL
+    const isGuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)
+    const USE_MOCK =
+      import.meta.env.VITE_USE_MOCK_AUTH === 'true' ||
+      !import.meta.env.VITE_API_URL ||
+      !isGuid(projectId) ||
+      !isGuid(packageId)
 
     if (USE_MOCK) {
       // Mock fallback: dùng cờ isFastTrackEligible từ data

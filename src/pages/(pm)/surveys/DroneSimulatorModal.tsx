@@ -151,12 +151,12 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               <div className={`p-3 rounded-xl border text-xs transition-all ${
                 simStep === 'INGESTING'
                   ? 'bg-amber-50/60 border-amber-300 ring-1 ring-amber-200'
-                  : simPhotosCount === 1920
+                  : simPhotosCount === 100
                   ? 'bg-emerald-50/60 border-emerald-200 text-slate-700'
                   : 'bg-[#F8F9FA] border-[#E2E5E9] text-slate-400'
               }`}>
                 <div className="flex items-center gap-2 font-bold mb-1">
-                  {simPhotosCount === 1920 ? (
+                  {simPhotosCount === 100 ? (
                     <Icon name="check_circle" size={16} className="text-[#2F9E44]" />
                   ) : simStep === 'INGESTING' ? (
                     <Icon name="sync" size={16} className="text-[#C9A227] animate-spin" />
@@ -172,7 +172,7 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-2">
                     <div
                       className="bg-[#C9A227] h-full transition-all duration-150"
-                      style={{ width: `${(simPhotosCount / 1920) * 100}%` }}
+                      style={{ width: `${(simPhotosCount / 100) * 100}%` }}
                     ></div>
                   </div>
                 )}
@@ -246,7 +246,7 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
               <button
                 type="button"
                 onClick={onRunSimulation}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#2D3748] hover:bg-[#1A1D20] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
               >
                 <Icon name="play_arrow" size={16} className="text-white" />
                 <span>Bắt Đầu Mô Phỏng Bay Ngay</span>

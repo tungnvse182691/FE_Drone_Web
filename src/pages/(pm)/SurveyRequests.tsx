@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { surveyService, type SurveyMissionItem as SurveyMission } from '../../api/services'
+import { surveyService, projectService, type SurveyMissionItem as SurveyMission, type HubProject } from '../../api/services'
 import { SurveyHeader } from './surveys/SurveyHeader'
 import { SurveyKpiCards } from './surveys/SurveyKpiCards'
 import { SurveyTable } from './surveys/SurveyTable'
@@ -21,10 +21,13 @@ export const SurveyRequests: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'SCHEDULED' | 'COMPLETED'>('ALL')
   const [selectedRouteFilter, setSelectedRouteFilter] = useState<string>('ALL')
-  const [searchQuery, setSearchQuery] = useState(highlightCode || '')
+  const [searchQuery, setSearchQuery] = useState('')
   const [missions, setMissions] = useState<SurveyMission[]>([])
+  const [projects, setProjects] = useState<HubProject[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [toastMessage, setToastMessage] = useState<string | null>(location.state?.successMessage || null)
+
+  const [highlightedCode, setHighlightedCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (location.state?.successMessage) {
@@ -36,8 +39,10 @@ export const SurveyRequests: React.FC = () => {
 
   useEffect(() => {
     if (highlightCode) {
-      setSearchQuery(highlightCode)
+      setHighlightedCode(highlightCode)
       setActiveTab('ALL')
+      setSelectedRouteFilter('ALL')
+      setSearchQuery('')
     }
   }, [highlightCode])
 
@@ -45,8 +50,12 @@ export const SurveyRequests: React.FC = () => {
   const fetchMissions = useCallback(async () => {
     try {
       setIsLoading(true)
-      const data = await surveyService.getSurveys()
+      const [data, projs] = await Promise.all([
+        surveyService.getSurveys(),
+        projectService.fetchProjects().catch(() => projectService.getProjects())
+      ])
       setMissions(data)
+      setProjects(projs)
     } catch (err) {
       console.error('Lỗi khi tải danh sách nhiệm vụ bay:', err)
     } finally {
@@ -56,6 +65,16 @@ export const SurveyRequests: React.FC = () => {
 
   useEffect(() => {
     fetchMissions()
+
+    const handleStorageSync = () => {
+      fetchMissions()
+    }
+    window.addEventListener('roadguard_state_change', handleStorageSync)
+    window.addEventListener('storage', handleStorageSync)
+    return () => {
+      window.removeEventListener('roadguard_state_change', handleStorageSync)
+      window.removeEventListener('storage', handleStorageSync)
+    }
   }, [fetchMissions])
 
   const sim = useDroneSimulator(fetchMissions)
@@ -97,7 +116,7 @@ export const SurveyRequests: React.FC = () => {
       />
 
       {/* 2. KPI Metrics Summary Cards */}
-      <SurveyKpiCards />
+      <SurveyKpiCards missions={missions} />
 
       {/* 3. Table of Survey Missions */}
       {isLoading ? (
@@ -107,6 +126,7 @@ export const SurveyRequests: React.FC = () => {
         </div>
       ) : (
         <SurveyTable
+          projects={projects}
           missions={missions}
           filteredMissions={filteredMissions}
           activeTab={activeTab}
@@ -115,6 +135,7 @@ export const SurveyRequests: React.FC = () => {
           setSelectedRouteFilter={setSelectedRouteFilter}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
+          highlightedCode={highlightedCode}
           basePath={basePath}
           onNavigate={navigate}
           onOpenSimulator={sim.handleOpenSimulator}

@@ -50,10 +50,10 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
           <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 z-10 pointer-events-none shadow-lg">
             <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
               <Icon name="flight_takeoff" size={14} />
-              <span>Hành lang bay Drone 6.0 km (Km 1024+000 → Km 1030+000)</span>
+              <span>Hành lang bay Drone ({activeItem?.stationing ? `Lý trình ${activeItem.stationing}` : "Toàn tuyến"})</span>
             </div>
             <div className="text-slate-300 text-[10px] mt-0.5">
-              8 điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
+              {detections.length} điểm phát hiện AI được ghim trực tiếp theo tọa độ WGS84 • Bấm marker để xem chi tiết
             </div>
           </div>
         </div>
@@ -190,18 +190,12 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
             </div>
           </div>
 
-          {/* Telemetry HUD Overlay góc dưới bên trái */}
-          <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2.5 text-[11px] font-mono pointer-events-none shadow-md border border-slate-700/60">
-            <span className="flex items-center gap-1 text-sky-300">
-              <Icon name="place" size={13} />
-              16.0544° N, 108.2022° E
-            </span>
-            <span className="text-slate-500">|</span>
+          {/* Thông tin trích xuất trắc địa góc dưới bên trái */}
+          <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2 text-[11px] font-mono pointer-events-none shadow-md border border-slate-700/60">
+            <Icon name="place" size={13} className="text-[#C9A227]" />
             <span className="text-slate-200">{activeItem.stationing}</span>
-            <span className="text-slate-500">|</span>
-            <span>AGL: 45.0m</span>
-            <span className="text-slate-500">|</span>
-            <span className="text-[#FEF08A] font-bold">GSD: 0.35 cm/px</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-300">{activeItem.lane}</span>
           </div>
         </>
       ) : (

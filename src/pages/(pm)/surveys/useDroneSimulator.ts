@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { surveyService, type SurveyMissionItem as SurveyMission } from '../../../api/services'
 
 export function useDroneSimulator(onMissionUpdated: () => void) {
@@ -11,9 +11,17 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
   const [simAltitude, setSimAltitude] = useState(65.0)
   const [simSpeed, setSimSpeed] = useState(5.4)
   const [simBattery, setSimBattery] = useState(96)
-  const [simTimerId, setSimTimerId] = useState<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const clearCurrentTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }
 
   const handleOpenSimulator = (mission: SurveyMission) => {
+    clearCurrentTimer()
     setSelectedMissionForSim(mission)
     setSimStep('IDLE')
     setSimFlightProgress(0)
@@ -27,10 +35,13 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
 
   const handleRunSimulation = () => {
     if (!selectedMissionForSim) return
+    clearCurrentTimer()
     setSimStep('FLYING')
     setSimFlightProgress(5)
 
+    const targetMissionId = selectedMissionForSim.id
     let p = 5
+
     const flyInterval = setInterval(() => {
       p += 15
       if (p >= 100) {
@@ -40,46 +51,55 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
 
         let ph = 0
         const ingestInterval = setInterval(() => {
-          ph += 240
-          if (ph >= 1920) {
-            ph = 1920
+          ph += 25
+          if (ph >= 100) {
+            ph = 100
             clearInterval(ingestInterval)
-            setSimPhotosCount(1920)
+            setSimPhotosCount(100)
             setSimStep('AI_SCANNING')
 
-            let def = 0
-            const aiInterval = setInterval(async () => {
-              def += 2
-              if (def >= 8) {
-                def = 8
+            let scanStep = 0
+            const aiInterval = setInterval(() => {
+              scanStep += 1
+              if (scanStep >= 2) {
                 clearInterval(aiInterval)
-                setSimDefectCount(8)
+                timerRef.current = null
+                setSimDefectCount(1)
                 setSimStep('COMPLETED')
 
-                const updated = await surveyService.simulateDroneFlightCompletion(selectedMissionForSim.id)
-                onMissionUpdated()
-                if (updated) {
-                  setSelectedMissionForSim(updated)
-                }
+                surveyService
+                  .simulateDroneFlightCompletion(targetMissionId)
+                  .then((updated) => {
+                    if (updated) {
+                      setSelectedMissionForSim(updated)
+                      setSimDefectCount(updated.ai_defects_count || 1)
+                    }
+                    onMissionUpdated()
+                  })
+                  .catch((err) => {
+                    console.error('Lỗi khi hoàn tất mô phỏng bay:', err)
+                  })
               } else {
-                setSimDefectCount(def)
+                setSimDefectCount(1)
               }
-            }, 350)
+            }, 300)
+            timerRef.current = aiInterval
           } else {
             setSimPhotosCount(ph)
           }
         }, 150)
+        timerRef.current = ingestInterval
       } else {
         setSimFlightProgress(p)
         setSimBattery((prev) => Math.max(82, prev - 1))
       }
     }, 200)
 
-    setSimTimerId(flyInterval)
+    timerRef.current = flyInterval
   }
 
   const handleCloseSimulator = () => {
-    if (simTimerId) clearInterval(simTimerId)
+    clearCurrentTimer()
     setIsSimulatorOpen(false)
   }
 

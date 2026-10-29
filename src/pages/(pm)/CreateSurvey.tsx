@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { surveyService, INITIAL_SURVEY_ROUTES, INITIAL_PILOTS } from '../../api/services'
+import { surveyService } from '../../api/services'
 import { getSubLineCoordinates } from './create-survey/mockData'
 import { CreateSurveyHeader } from './create-survey/CreateSurveyHeader'
 import { CreateSurveyForm } from './create-survey/CreateSurveyForm'
 import { FlightCorridorMap } from './create-survey/FlightCorridorMap'
 import { ProjectRouteConfig, AvailablePilot } from './create-survey/types'
 import { Icon } from '../../components/ui/Icon'
+import { useToastStore } from '../../store/toastStore'
 
 export const CreateSurvey: React.FC = () => {
   const navigate = useNavigate()
@@ -16,16 +17,18 @@ export const CreateSurvey: React.FC = () => {
   const queryStartKm = searchParams.get('startKm')
   const queryEndKm = searchParams.get('endKm')
 
-  // State nạp từ Mock API (Khởi tạo sẵn với đầy đủ Tuyến chính & Tuyến phụ)
-  const [routes, setRoutes] = useState<ProjectRouteConfig[]>(INITIAL_SURVEY_ROUTES)
-  const [pilots, setPilots] = useState<AvailablePilot[]>(INITIAL_PILOTS)
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  // State nạp trực tiếp 100% từ CSDL Backend Candidate3 Docker
+  const [routes, setRoutes] = useState<ProjectRouteConfig[]>([])
+  const [pilots, setPilots] = useState<AvailablePilot[]>([])
+  const [existingMissions, setExistingMissions] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  // State dự án và lý trình (Ưu tiên nạp từ query parameters nếu được chuyển tiếp từ RPT-06)
-  const [projectId, setProjectId] = useState<string>(queryProject || INITIAL_SURVEY_ROUTES[0]?.id || 'prj-ql1a-02')
-  const [startKm, setStartKm] = useState<string>(queryStartKm || '1020.0')
-  const [endKm, setEndKm] = useState<string>(queryEndKm || '1025.0')
-  const [date, setDate] = useState<string>('2026-10-15')
+  // State dự án và lý trình
+  const [projectId, setProjectId] = useState<string>('')
+  const [startKm, setStartKm] = useState<string>('0.0')
+  const [endKm, setEndKm] = useState<string>('0.702')
+  const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0])
+  const [surveyType, setSurveyType] = useState<'PERIODIC' | 'AD_HOC' | 'BASELINE'>('PERIODIC')
 
   // Phi công chỉ định
   const [pilotId, setPilotId] = useState<string>('')
@@ -36,31 +39,27 @@ export const CreateSurvey: React.FC = () => {
   const [customAltitude, setCustomAltitude] = useState<string>('65')
 
   // Độ phủ chồng ảnh
+  const [overlapMode, setOverlapMode] = useState<'preset' | 'custom'>('preset')
   const [overlap, setOverlap] = useState<string>('80')
+  const [customOverlapForward, setCustomOverlapForward] = useState<string>('80')
+  const [customOverlapSide, setCustomOverlapSide] = useState<string>('70')
   const [showOverlapHelp, setShowOverlapHelp] = useState<boolean>(false)
 
-  // Ghi chú
-  const [notes, setNotes] = useState<string>(() => {
-    if (queryStartKm && queryEndKm) {
-      return `Bay khảo sát rà soát nứt lún suy thoái đoạn Km ${queryStartKm} - Km ${queryEndKm} theo cảnh báo RPT-06. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
-    }
-    return 'Khảo sát định kỳ quý IV sau mùa bão lũ. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.'
-  })
+  // Ghi chú kỹ thuật
+  const [notes, setNotes] = useState<string>(
+    'Khảo sát định kỳ trắc địa mặt đường. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.'
+  )
 
-  // Nạp dữ liệu Tuyến đường & Phi công từ Mock API bất đồng bộ
+  // Nạp dữ liệu Tuyến đường & Phi công từ CSDL Backend
   useEffect(() => {
     let isMounted = true
-    const loadMockApiData = async () => {
+    const loadBackendData = async () => {
       try {
         setIsLoading(true)
-        const [routesData, pilotsData] = await Promise.all([
-          surveyService.getSurveyRoutes(),
-          surveyService.getAvailablePilots()
-        ])
+        const routesData = await surveyService.getSurveyRoutes()
         if (!isMounted) return
 
         setRoutes(routesData)
-        setPilots(pilotsData)
 
         if (routesData.length > 0) {
           const matchedRoute = queryProject
@@ -69,108 +68,231 @@ export const CreateSurvey: React.FC = () => {
           const activeRoute = matchedRoute || routesData[0]
           setProjectId(activeRoute.id)
 
-          if (queryStartKm) {
-            setStartKm(queryStartKm)
-          } else if (!matchedRoute) {
-            setStartKm(activeRoute.startKm.toFixed(1))
+          const sVal = queryStartKm !== null ? queryStartKm : activeRoute.startKm.toFixed(activeRoute.startKm % 1 !== 0 ? 3 : 1)
+          const eVal = queryEndKm !== null ? queryEndKm : activeRoute.endKm.toFixed(activeRoute.endKm % 1 !== 0 ? 3 : 1)
+          setStartKm(sVal)
+          setEndKm(eVal)
+
+          setNotes(
+            `Khảo sát định kỳ trắc địa tuyến [${activeRoute.code}] ${activeRoute.name} đoạn Km ${sVal} - Km ${eVal}. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
+          )
+
+          // Nạp phi công của dự án đang chọn từ CSDL
+          try {
+            const pilotsData = await surveyService.getAvailablePilots(activeRoute.id)
+            if (isMounted) {
+              setPilots(pilotsData)
+              if (pilotsData.length > 0) {
+                setPilotId(pilotsData[0].id)
+              }
+            }
+          } catch (pilotErr) {
+            console.warn('Lỗi khi tải phi công dự án:', pilotErr)
           }
 
-          if (queryEndKm) {
-            setEndKm(queryEndKm)
-          } else if (!matchedRoute) {
-            setEndKm(Math.min(activeRoute.startKm + 5.0, activeRoute.endKm).toFixed(1))
-          }
+          // Nạp các đợt bay hiện có của dự án để kiểm tra trùng lặp
+          try {
+            const missionsData = await surveyService.getSurveys(activeRoute.id)
+            if (isMounted) setExistingMissions(missionsData)
+          } catch {}
         }
-
-        if (pilotsData.length > 0) {
-          setPilotId(pilotsData[0].id)
-        }
-      } catch (err) {
-        console.error('Lỗi khi tải danh mục tuyến & phi công từ Mock API:', err)
+      } catch (err: any) {
+        console.error('Lỗi khi tải danh mục dự án từ CSDL Backend:', err)
       } finally {
         if (isMounted) setIsLoading(false)
       }
     }
 
-    loadMockApiData()
+    loadBackendData()
     return () => {
       isMounted = false
     }
   }, [queryProject, queryStartKm, queryEndKm])
 
   const currentProject = useMemo(() => {
-    return (
-      routes.find((p) => p.id === projectId) ||
-      INITIAL_SURVEY_ROUTES.find((p) => p.id === projectId) ||
-      routes[0] ||
-      INITIAL_SURVEY_ROUTES[0]
-    )
+    return routes.find((p) => p.id === projectId) || routes[0]
   }, [routes, projectId])
 
-  const handleProjectChange = (newPrjId: string) => {
+  // Xử lý khi người dùng đổi Dự án khảo sát
+  const handleProjectChange = async (newPrjId: string) => {
     setProjectId(newPrjId)
-    const targetPrj =
-      routes.find((p) => p.id === newPrjId) ||
-      INITIAL_SURVEY_ROUTES.find((p) => p.id === newPrjId)
+    const targetPrj = routes.find((p) => p.id === newPrjId)
     if (!targetPrj) return
 
-    if (targetPrj.type === 'BRANCH') {
-      // Tuyến phụ: Tự động khởi tạo từ Km 0.0 đến hết chiều dài nhánh
-      setStartKm(targetPrj.startKm.toFixed(2))
-      setEndKm(targetPrj.endKm.toFixed(2))
-      setNotes(
-        `Khảo sát chuyên đề tuyến phụ [${targetPrj.code}] ${targetPrj.name} (${targetPrj.branchStationText || ''}). Yêu cầu bay trần 50-65m kiểm tra nứt lún bề mặt.`
-      )
+    if (!targetPrj.hasAlignment) {
+      setStartKm('0.0')
+      setEndKm('0.0')
+      setNotes(`Dự án [${targetPrj.code}] ${targetPrj.name} chưa được thiết lập tim tuyến kỹ thuật.`)
     } else {
-      // Tuyến chính
-      setStartKm(targetPrj.startKm.toFixed(1))
-      setEndKm(Math.min(targetPrj.startKm + 5.0, targetPrj.endKm).toFixed(1))
+      const sVal = targetPrj.startKm.toFixed(targetPrj.startKm % 1 !== 0 ? 3 : 1)
+      const eVal = targetPrj.endKm.toFixed(targetPrj.endKm % 1 !== 0 ? 3 : 1)
+      setStartKm(sVal)
+      setEndKm(eVal)
       setNotes(
-        `Khảo sát định kỳ tuyến chính [${targetPrj.code}] ${targetPrj.name}. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
+        `Khảo sát định kỳ trắc địa tuyến [${targetPrj.code}] ${targetPrj.name} đoạn Km ${sVal} - Km ${eVal}. Yêu cầu bay trần 65m, tốc độ chụp 4m/s, định vị RTK liên tục.`
       )
     }
+
+    // Tải lại phi công của dự án mới từ CSDL
+    try {
+      const pilotsData = await surveyService.getAvailablePilots(newPrjId)
+      setPilots(pilotsData)
+      if (pilotsData.length > 0) {
+        setPilotId(pilotsData[0].id)
+      }
+    } catch (err) {
+      console.warn('Lỗi khi cập nhật phi công cho dự án:', err)
+    }
+
+    // Tải lại đợt bay hiện có của dự án mới để kiểm tra trùng lặp
+    try {
+      const missionsData = await surveyService.getSurveys(newPrjId)
+      setExistingMissions(missionsData)
+    } catch {}
   }
 
   const actualAltitude = altitudeMode === 'custom' ? parseFloat(customAltitude) || 65 : parseFloat(presetAltitude) || 65
   const gsdCmPx = (actualAltitude * 0.0215).toFixed(1)
 
-  const sKm = parseFloat(startKm) || currentProject.startKm
-  const eKm = parseFloat(endKm) || Math.min(currentProject.startKm + 5.0, currentProject.endKm)
-  const flightDistanceKm = Math.max(0.2, Math.abs(eKm - sKm))
-  const estimatedDurationMinutes = Math.round(flightDistanceKm * 3.8 + 4)
-  const estimatedBatteries = Math.ceil(flightDistanceKm / 2.8)
+  const sKm = parseFloat(startKm) || currentProject?.startKm || 0
+  const eKm = parseFloat(endKm) || currentProject?.endKm || 0
+  const flightDistanceKm = currentProject?.hasAlignment ? Math.max(0.1, Math.abs(eKm - sKm)) : 0
 
-  const fullRouteCoords = currentProject.defaultCoords
+  const fullRouteCoords = currentProject?.defaultCoords || []
   const surveySegmentCoords = useMemo(() => {
-    return getSubLineCoordinates(sKm, eKm, currentProject.defaultCoords, currentProject.defaultKmPoints)
+    if (!currentProject?.hasAlignment || !currentProject?.defaultCoords?.length) return []
+    return getSubLineCoordinates(
+      sKm,
+      eKm,
+      currentProject.defaultCoords,
+      currentProject.defaultKmPoints || []
+    )
   }, [sKm, eKm, currentProject])
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const toast = useToastStore()
+
+  // Kiểm tra tính hợp lệ và trùng lặp theo quy chuẩn an toàn bay trắc địa
+  const hasBaseline = useMemo(() => {
+    return existingMissions.some((m) => m.survey_type === 'BASELINE')
+  }, [existingMissions])
+
+  const hasActivePeriodic = useMemo(() => {
+    return existingMissions.some(
+      (m) => m.survey_type === 'PERIODIC' && m.status !== 'BASELINE_LOCKED'
+    )
+  }, [existingMissions])
+
+  const hasActiveAdHoc = useMemo(() => {
+    return existingMissions.some(
+      (m) => m.survey_type === 'AD_HOC' && m.status !== 'BASELINE_LOCKED'
+    )
+  }, [existingMissions])
+
+  const conflictReason = useMemo(() => {
+    if (!currentProject?.hasAlignment) return null
+    if (surveyType === 'BASELINE' && hasBaseline) {
+      return 'Đã có đợt bay Cơ sở (Baseline) cho tuyến đường này.'
+    }
+    if (surveyType === 'PERIODIC' && hasActivePeriodic) {
+      return 'Đã có đợt bay Định kỳ chưa hoàn thành.'
+    }
+    if (surveyType === 'AD_HOC' && hasActiveAdHoc) {
+      return 'Đã có đợt bay Đột xuất chưa hoàn thành.'
+    }
+    return null
+  }, [currentProject, surveyType, hasBaseline, hasActivePeriodic, hasActiveAdHoc])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const selectedPilot = pilots.find((p) => p.id === pilotId)
+    if (isSubmitting || !currentProject) return
+    if (!currentProject.hasAlignment) {
+      toast.error(`Dự án [${currentProject.code}] chưa có tim tuyến kỹ thuật được phê duyệt. Vui lòng thiết lập tim tuyến trước!`)
+      return
+    }
+    if (conflictReason) {
+      toast.error(conflictReason)
+      return
+    }
+    setIsSubmitting(true)
+    setSubmitError(null)
+    const selectedPilot = pilots.find((p) => p.id === pilotId) || pilots[0]
 
-    const newSurvey = await surveyService.createSurvey({
-      project_id: currentProject.id,
-      project_name: currentProject.name,
-      start_km: `Km ${sKm.toFixed(currentProject.type === 'BRANCH' ? 2 : 1)}`,
-      end_km: `Km ${eKm.toFixed(currentProject.type === 'BRANCH' ? 2 : 1)}`,
-      pilot_name: selectedPilot?.name || 'Lê Hoàng Long',
-      drone_model: selectedPilot?.device || 'DJI Matrice 350 RTK',
-      notes
-    })
+    const overlapText =
+      overlapMode === 'custom'
+        ? `${customOverlapForward}% Dọc / ${customOverlapSide}% Ngang`
+        : overlap === '80'
+        ? '80% Dọc / 70% Ngang'
+        : overlap === '85'
+        ? '85% Dọc / 75% Ngang'
+        : '75% Dọc / 65% Ngang'
+    const fullNotes = `[Thông số bay trắc địa: Trần bay ${actualAltitude}m (GSD ~${gsdCmPx} cm/px) - Phủ ảnh ${overlapText}]. ${notes}`
 
-    navigate(`/pm/surveys?highlightCode=${encodeURIComponent(newSurvey.code)}`, {
-      state: {
-        successMessage: `Đã ban hành Lệnh bay khảo sát [${newSurvey.code}] thành công! Trạng thái: Lên lịch bay.`
-      }
-    })
+    try {
+      const newSurvey = await surveyService.createSurvey({
+        project_id: currentProject.id,
+        project_name: currentProject.name,
+        start_km: `Km ${sKm.toFixed(sKm % 1 !== 0 ? 3 : 1)}`,
+        end_km: `Km ${eKm.toFixed(eKm % 1 !== 0 ? 3 : 1)}`,
+        pilot_name: selectedPilot?.name || 'Synthetic operator-a',
+        drone_model: selectedPilot?.device || 'DJI Matrice 350 RTK',
+        flight_date: date,
+        survey_type: surveyType,
+        notes: fullNotes
+      })
+
+      navigate(`/pm/surveys?highlightCode=${encodeURIComponent(newSurvey.code)}`, {
+        state: {
+          successMessage: `Đã ban hành Lệnh bay khảo sát [${newSurvey.code}] thành công! Trạng thái: Lên lịch bay.`
+        }
+      })
+    } catch (err: any) {
+      console.error('Lỗi khi ban hành kế hoạch bay:', err)
+      const msg =
+        err?.message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.title ||
+        'Không thể tạo kế hoạch bay khảo sát'
+      setSubmitError(msg)
+      toast.error(msg)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  if (isLoading) {
+  if (isLoading && !currentProject) {
     return (
       <div className="w-full max-w-6xl mx-auto p-12 flex flex-col items-center justify-center space-y-3 bg-white border border-[#E2E5E9] rounded-xl shadow-2xs min-h-[360px]">
         <Icon name="sync" size={32} className="text-[#C9A227] animate-spin" />
-        <p className="text-xs text-slate-500 font-medium">Đang tải danh mục Tuyến chính & Tuyến phụ từ máy chủ...</p>
+        <p className="text-xs text-slate-500 font-medium">Đang tải danh mục dự án từ CSDL máy chủ...</p>
+      </div>
+    )
+  }
+
+  if (!currentProject) {
+    return (
+      <div className="w-full max-w-6xl mx-auto p-12 flex flex-col items-center justify-center space-y-3 bg-white border border-[#E2E5E9] rounded-xl shadow-2xs min-h-[360px] text-center">
+        <Icon name="wrong_location" size={48} className="text-amber-500" />
+        <p className="text-base font-bold text-[#1A1D20]">Chưa có dự án nào được phê duyệt tim tuyến kỹ thuật</p>
+        <p className="text-xs text-slate-500 max-w-md">
+          Theo quy chuẩn kỹ thuật bay trắc địa mặt đường UAV, dự án cần được Chỉ huy trưởng (PM) lập tim tuyến và được Giám sát (Supervisor) phê duyệt trước khi ban hành lệnh bay.
+        </p>
+        <div className="flex items-center gap-3 mt-4">
+          <button
+            onClick={() => navigate('/pm/projects')}
+            className="px-4 py-2 bg-[#C9A227] text-white text-xs font-semibold rounded-lg hover:bg-[#b08d20] transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Icon name="route" size={15} />
+            <span>Đến thiết lập tim tuyến dự án</span>
+          </button>
+          <button
+            onClick={() => navigate('/pm/surveys')}
+            className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-200 transition-colors cursor-pointer"
+          >
+            Quay lại danh sách khảo sát
+          </button>
+        </div>
       </div>
     )
   }
@@ -201,15 +323,29 @@ export const CreateSurvey: React.FC = () => {
             gsdCmPx={gsdCmPx}
             overlap={overlap}
             setOverlap={setOverlap}
+            overlapMode={overlapMode}
+            setOverlapMode={setOverlapMode}
+            customOverlapForward={customOverlapForward}
+            setCustomOverlapForward={setCustomOverlapForward}
+            customOverlapSide={customOverlapSide}
+            setCustomOverlapSide={setCustomOverlapSide}
             showOverlapHelp={showOverlapHelp}
             setShowOverlapHelp={setShowOverlapHelp}
             date={date}
             setDate={setDate}
+            surveyType={surveyType}
+            setSurveyType={setSurveyType}
             pilots={pilots}
             pilotId={pilotId}
             setPilotId={setPilotId}
             notes={notes}
             setNotes={setNotes}
+            hasBaseline={hasBaseline}
+            hasActivePeriodic={hasActivePeriodic}
+            hasActiveAdHoc={hasActiveAdHoc}
+            conflictReason={conflictReason}
+            errorMessage={submitError}
+            onClearError={() => setSubmitError(null)}
             onSubmit={handleSubmit}
             onCancel={() => navigate('/pm/surveys')}
           />
@@ -224,8 +360,6 @@ export const CreateSurvey: React.FC = () => {
             sKm={sKm}
             eKm={eKm}
             flightDistanceKm={flightDistanceKm}
-            estimatedDurationMinutes={estimatedDurationMinutes}
-            estimatedBatteries={estimatedBatteries}
           />
         </div>
       </div>

@@ -31,18 +31,9 @@ export function getMapLibreStyle(
     sources: {
       'google-satellite': {
         type: 'raster',
-        tiles: [
-          `https://mt0.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
-          `https://mt1.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
-          `https://mt2.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`,
-          `https://mt3.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}`
-        ],
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
         tileSize: 256,
-        // maxzoom của source trong MapLibre tương đương maxNativeZoom.
-        // Tại VN, ảnh vệ tinh phân giải gốc tối đa ở mức z=18.
-        // Khai báo maxzoom=18 để MapLibre không gửi request z>=19 lên Google (tránh lỗi 'Map data not yet available' hay 404),
-        // thay vào đó MapLibre sẽ tự động overscale (nội suy phóng to) từ tile z=18 lên đến maxzoom 24 của layer một cách mượt mà.
-        maxzoom: 18,
+        maxzoom: 19,
         attribution: '&copy; Google Satellite Imagery | MapLibre'
       },
 

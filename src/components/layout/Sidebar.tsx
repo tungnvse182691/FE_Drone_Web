@@ -66,14 +66,7 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         {
-          label: 'Đợt bay Drone',
-          path: '/pm/surveys',
-          icon: PlaneTakeoff,
-          children: [
-            { label: 'Danh sách đợt bay', path: '/pm/surveys' },
-            { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' }
-          ]
-        },
+          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff },
         { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },
         { label: 'Điều phối nhanh', path: '/pm/fast-track', icon: Zap }
       ]

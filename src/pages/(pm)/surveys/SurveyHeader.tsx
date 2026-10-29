@@ -41,21 +41,13 @@ export const SurveyHeader: React.FC<SurveyHeaderProps> = ({
 
         {/* Quick Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-          <button
-            onClick={() => onNavigate(`${basePath}/surveys/srv-01/review`)}
-            type="button"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
-          >
-            <Icon name="auto_awesome" size={16} className="text-white" />
-            <span>Mở Khung Hình Thẩm Định AI</span>
-          </button>
           {!isSupervisor && (
             <button
               onClick={() => onNavigate('/pm/surveys/create')}
               type="button"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-[#E2E5E9] text-[#1A1D20] text-xs font-semibold hover:bg-[#F8F9FA] transition-colors shadow-2xs cursor-pointer active:scale-95 whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              <Icon name="add_circle" size={16} className="text-slate-500" />
+              <Icon name="add_circle" size={16} className="text-white" />
               <span>Tạo Yêu Cầu Bay</span>
             </button>
           )}
