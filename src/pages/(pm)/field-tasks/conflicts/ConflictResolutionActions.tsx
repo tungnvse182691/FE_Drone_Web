@@ -48,6 +48,16 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
               <Icon name="schedule" size={15} /> Chờ phân giải
             </span>
           )
+        ) : isReassignConflict ? (
+          selectedConflict.status === 'RESOLVED_KEEP_SERVER' ? (
+            <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+              <Icon name="check_circle" size={15} /> Đã công nhận {selectedConflict.server_state.current_assignee}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-slate-400 font-medium">
+              <Icon name="cancel" size={15} /> Đã bác bỏ
+            </span>
+          )
         ) : selectedConflict.status === 'RESOLVED_KEEP_SERVER' || selectedConflict.status === 'RESCUE_REJECTED' ? (
           <span className="flex items-center gap-1.5 text-rose-700 font-medium">
             <Icon name="cancel" size={15} /> {selectedConflict.status_label}
@@ -68,59 +78,78 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
       </div>
 
       {/* 1. TRƯỜNG HỢP CỨU HỘ THIẾT BỊ GẶP SỰ CỐ (Q17 / QUYẾT ĐỊNH 42A) */}
-      {isRescueConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
+      {isRescueConflict && (
         <>
-          {isPM && (
-            selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ XÁC NHẬN)' ||
-            selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
-              <div className="text-xs text-slate-500 italic flex items-center gap-1.5">
-                <Icon name="hourglass_top" size={14} className="text-purple-600" />
-                <span>Đã gửi tờ trình cứu hộ lên Giám sát. Chờ Giám sát xác nhận (Q17).</span>
+          {/* Trạng thái A: Đã trình Giám sát */}
+          {selectedConflict.status === 'RESCUE_SUBMITTED' ||
+          selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ XÁC NHẬN)' ||
+          selectedConflict.status_label === 'ĐÃ TRÌNH GIÁM SÁT (CHỜ KÝ SỐ)' ? (
+            <div className="w-full space-y-2">
+              <div className="p-3 bg-purple-50 text-purple-900 border border-purple-200 rounded-xl text-xs flex items-center gap-2">
+                <Icon name="hourglass_top" size={16} className="text-purple-600 shrink-0" />
+                <span>Đã gửi tờ trình cứu hộ lên Giám sát. Đang chờ Giám sát phê duyệt gói dữ liệu.</span>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
-                  className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-dark hover:bg-slate-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                  title="Quy chuẩn Q17: PM lập tờ trình chuyển Supervisor xác nhận gói dữ liệu SQLite"
-                >
-                  <Icon name="send" size={15} className="text-brand-gold" />
-                  <span>Trình Giám sát xác nhận cứu hộ (Q17)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleOpenResolve('REQUEST_ADDITIONAL_EVIDENCE')}
-                  className="px-3.5 py-2 rounded-lg text-amber-800 text-xs font-semibold bg-amber-50 hover:bg-amber-100 transition border border-amber-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                  title="Yêu cầu kỹ sư hiện trường nộp bổ sung ảnh chụp hoặc đo đạc kiểm chứng lại"
-                >
-                  <Icon name="add_a_photo" size={15} />
-                  <span>Yêu cầu đo lại / Bổ sung ảnh</span>
-                </button>
-              </div>
-            )
-          )}
-
-          {isSupervisor && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('AUTHORIZE_RESCUE')}
-                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-purple-700 hover:bg-purple-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="verified_user" size={15} />
-                <span>Xác nhận dữ liệu cứu hộ</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('SUPERVISOR_REJECT_RESCUE')}
-                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <Icon name="cancel" size={15} />
-                <span>Từ chối gói cứu hộ</span>
-              </button>
+              {isSupervisor && (
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenResolve('AUTHORIZE_RESCUE')}
+                    className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-purple-700 hover:bg-purple-800 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Icon name="verified_user" size={15} />
+                    <span>Xác nhận dữ liệu cứu hộ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenResolve('SUPERVISOR_REJECT_RESCUE')}
+                    className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-rose-50 hover:bg-rose-100 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Icon name="cancel" size={15} />
+                    <span>Từ chối gói cứu hộ</span>
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          ) : selectedConflict.status === 'EVIDENCE_REQUIRED' ||
+            selectedConflict.status_label === 'YÊU CẦU BỔ SUNG BẰNG CHỨNG' ? (
+            /* Trạng thái B: Đã yêu cầu đo lại / bổ sung ảnh */
+            <div className="p-3 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-xs flex items-center gap-2 w-full">
+              <Icon name="add_a_photo" size={16} className="text-amber-600 shrink-0" />
+              <span>Đã phát lệnh yêu cầu hiện trường kiểm tra, đo lại và nộp bổ sung ảnh chụp thực địa.</span>
+            </div>
+          ) : selectedConflict.status === 'CONFLICT_INTAKE' ? (
+            /* Trạng thái C: Chờ PM thẩm định và đưa ra quyết định */
+            <>
+              {isPM && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenResolve('SUBMIT_RESCUE_TO_SUP')}
+                    className="px-3.5 py-2 rounded-lg text-slate-900 text-xs font-bold bg-[#C9A227] hover:bg-[#B38E1B] transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    title="PM lập tờ trình chuyển Supervisor phê duyệt gói dữ liệu cứu hộ"
+                  >
+                    <Icon name="send" size={15} className="text-slate-900" />
+                    <span>Trình Giám sát xác nhận cứu hộ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenResolve('REQUEST_ADDITIONAL_EVIDENCE')}
+                    className="px-3.5 py-2 rounded-lg text-amber-800 text-xs font-semibold bg-amber-50 hover:bg-amber-100 transition border border-amber-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    title="Yêu cầu kỹ sư hiện trường nộp bổ sung ảnh chụp hoặc đo đạc kiểm chứng lại"
+                  >
+                    <Icon name="add_a_photo" size={15} />
+                    <span>Yêu cầu đo lại / Bổ sung ảnh</span>
+                  </button>
+                </div>
+              )}
+              {isSupervisor && (
+                <div className="text-xs text-slate-500 italic flex items-center gap-1.5">
+                  <Icon name="info" size={14} className="text-slate-400" />
+                  <span>Đang chờ Chỉ huy trưởng (PM) thẩm tra biên bản sự cố và lập tờ trình cứu hộ.</span>
+                </div>
+              )}
+            </>
+          ) : null}
         </>
       )}
 
@@ -133,10 +162,10 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
                 type="button"
                 onClick={() => handleOpenResolve('FORK_NEW_ATTEMPT')}
                 className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-brand-gold hover:bg-brand-goldMuted transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Tạo đợt phụ lục mới theo quy tắc BR-26 do đợt cũ đã đóng băng"
+                title="Tạo đợt phụ lục mới do đợt cũ đã đóng băng"
               >
                 <Icon name="add_circle" size={15} />
-                <span>Tạo phụ lục đợt mới (BR-26)</span>
+                <span>Tạo phụ lục đợt mới</span>
               </button>
               <button
                 type="button"
@@ -189,30 +218,19 @@ export const ConflictResolutionActions: React.FC<ConflictResolutionActionsProps>
         </div>
       )}
 
-      {/* 4. TRƯỜNG HỢP ĐỔI ĐỘI THI CÔNG KHI NGOẠI TUYẾN (D05 / Q04) - CÔNG NHẬN KẾT QUẢ ĐỘI CŨ HOẶC TỪ CHỐI GIỮ ĐỘI MỚI */}
+      {/* 4. TRƯỜNG HỢP ĐỔI ĐỘI THI CÔNG KHI NGOẠI TUYẾN (D05 / Q04) - NÚT CÔNG NHẬN ĐỘI ĐIỀU CHUYỂN NẰM DƯỚI CHÂN CỘT ĐỘI ĐIỀU CHUYỂN */}
       {isReassignConflict && selectedConflict.status === 'CONFLICT_INTAKE' && (
         <div className="flex items-center gap-2 flex-wrap">
           {isPM && (
-            <>
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('ACCEPT_INCOMING')}
-                className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Công nhận kết quả đo 62mm của Tổ 02 nộp lên, thu hồi điều động đối với Đội 01"
-              >
-                <Icon name="check_circle" size={15} />
-                <span>Công nhận kết quả Tổ 02 (Thu hồi Đội 01)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
-                className="px-3.5 py-2 rounded-lg text-rose-700 text-xs font-semibold bg-white hover:bg-rose-50 transition border border-rose-300 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                title="Bác bỏ kết quả nộp của Tổ 02, giữ nguyên phân công cho Đội 01 thi công"
-              >
-                <Icon name="cancel" size={15} className="text-rose-600" />
-                <span>Từ chối kết quả Tổ 02 (Giữ Đội 01)</span>
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => handleOpenResolve('KEEP_SERVER_STATE')}
+              className="px-3.5 py-2 rounded-lg text-white text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              title={`Công nhận số liệu đối chứng của ${selectedConflict.server_state.current_assignee}, bác bỏ số liệu ${selectedConflict.offline_actor.name}`}
+            >
+              <Icon name="check_circle" size={15} />
+              <span>Công nhận {selectedConflict.server_state.current_assignee} (Bác bỏ {selectedConflict.offline_actor.name})</span>
+            </button>
           )}
           {isSupervisor && (
             <div className="text-xs text-slate-500 italic">

@@ -39,27 +39,35 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
 
   return (
     <>
-      {selectedCase.master_case_id && (
+      {(selectedCase.master_case_id || selectedCase.status === 'MERGED' || selectedCase.decision_kind === 'LINK_EXISTING') && (
         <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between text-purple-950 animate-in fade-in">
           <div className="flex items-center gap-2">
             <Icon name="link" size={20} className="text-purple-600 shrink-0" />
             <div>
-              <span className="font-bold text-xs block">HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO HỒ SƠ CHÍNH</span>
+              <span className="font-bold text-xs block">
+                HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO KHIẾM KHUYẾT CHÍNH ({selectedCase.linked_defect_id ? `#DEF-${selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}` : '#DEF-475CC6D2'})
+              </span>
               <span className="text-[11px] text-purple-700">
-                Dữ liệu được hợp nhất để không tạo trùng lệnh thi công.
+                Phát hiện này đã được PM thẩm định và liên kết gộp vào hồ sơ khiếm khuyết hiện hữu trong CSDL.
               </span>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setSelectedCaseId(selectedCase.master_case_id!)}
-              className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
-            >
-              <span>Xem hồ sơ gốc</span>
-              <Icon name="arrow_forward" size={14} />
-            </button>
-            {!isSupervisor && (
+            {selectedCase.master_case_id ? (
+              <button
+                type="button"
+                onClick={() => setSelectedCaseId(selectedCase.master_case_id!)}
+                className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1"
+              >
+                <span>Xem hồ sơ gốc</span>
+                <Icon name="arrow_forward" size={14} />
+              </button>
+            ) : (
+              <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-lg border border-purple-200">
+                Đã liên kết CSDL
+              </span>
+            )}
+            {!isSupervisor && selectedCase.master_case_id && (
               <button
                 type="button"
                 onClick={() => onUnlinkReport(selectedCase.id)}

@@ -1,24 +1,12 @@
 import React, { useMemo } from 'react'
-import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
-import { SyncConflictItem, FieldTask, Project } from '../../../types/domain'
+import { FieldTask, Project, HubProject } from '../../../types/domain'
 
 export interface FieldTasksHeaderProps {
   isSupervisor: boolean
   isPM: boolean
-  activeTab: 'CONFLICTS' | 'MEASUREMENTS'
-  setActiveTab: (tab: 'CONFLICTS' | 'MEASUREMENTS') => void
-  conflicts: SyncConflictItem[]
   fieldTasks: FieldTask[]
-  stats: {
-    total: number
-    pending: number
-    reassign: number
-    policyMismatch: number
-    rescuePending: number
-  }
-  handleResetData: () => void
-  projects: Project[]
+  projects: (Project | HubProject)[]
   selectedProjectId: string
   onSelectProject: (projectId: string) => void
 }
@@ -26,12 +14,7 @@ export interface FieldTasksHeaderProps {
 export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
   isSupervisor,
   isPM: _isPM,
-  activeTab,
-  setActiveTab,
-  conflicts: _conflicts,
   fieldTasks,
-  stats,
-  handleResetData,
   projects,
   selectedProjectId,
   onSelectProject
@@ -79,11 +62,11 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
           <p className="text-xs text-slate-500 mt-1">
             {currentProject ? (
               <>
-                Dự án: <strong className="text-slate-800 font-semibold">{currentProject.name}</strong> • Lý trình Km {currentProject.start_km} - Km {currentProject.end_km} • Tiếp nhận kết quả đo thực địa & phân giải xung đột.
+                Dự án: <strong className="text-slate-800 font-semibold">{currentProject.name}</strong> • Lý trình Km {currentProject.start_km} - Km {currentProject.end_km} • Tiếp nhận kết quả đo thực địa & quản lý phiếu giao việc đo đạc.
               </>
             ) : (
               <>
-                Phạm vi: <strong className="text-slate-800 font-semibold">Toàn bộ dự án & tuyến đường phụ trách ({projects.length} tuyến)</strong> • Tiếp nhận kết quả đo thực địa & phân giải xung đột.
+                Phạm vi: <strong className="text-slate-800 font-semibold">Toàn bộ dự án & tuyến đường phụ trách ({projects.length} tuyến)</strong> • Tiếp nhận kết quả đo thực địa & quản lý phiếu giao việc đo đạc.
               </>
             )}
           </p>
@@ -96,21 +79,18 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
             <select
               value={selectedProjectId}
               onChange={(e) => onSelectProject(e.target.value)}
-              className="w-full pl-8 pr-8 py-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-xl border border-slate-300 focus:outline-none focus:border-[#C9A227] text-xs cursor-pointer appearance-none font-semibold transition-all shadow-2xs"
+              className="w-full px-3 pr-8 py-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-xl border border-slate-300 focus:outline-none focus:border-[#C9A227] text-xs cursor-pointer appearance-none font-semibold transition-all shadow-2xs"
               title="Lọc nhiệm vụ đo đạc theo tuyến đường dự án mà vai trò được phân công"
             >
               <option value="ALL">
-                🌐 Toàn bộ tuyến đường ({projects.length} Dự án)
+                Toàn bộ tuyến đường ({projects.length} Dự án)
               </option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
-                  🛣️ {p.code} • {p.name}
+                  {p.code} • {p.name}
                 </option>
               ))}
             </select>
-            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#C9A227]">
-              <Icon name="alt_route" size={15} />
-            </div>
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <Icon name="expand_more" size={16} />
             </div>
@@ -127,363 +107,168 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
             >
               <Icon name="verified_user" size={15} className={isSupervisor ? 'text-purple-600' : 'text-amber-600'} />
               <span>
-                {isSupervisor ? 'Giám sát (Duyệt cứu hộ)' : 'Chỉ huy trưởng (PM)'}
+                {isSupervisor ? 'Giám sát (Nghiệm thu)' : 'Chỉ huy trưởng (PM)'}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={handleResetData}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-              title="Khôi phục dữ liệu mẫu ban đầu để kiểm thử"
-            >
-              <Icon name="refresh" size={15} className="text-[#C9A227]" />
-              <span>Khôi phục mẫu</span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* 3. TABS SWITCHER */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
-        <button
-          type="button"
-          onClick={() => setActiveTab('MEASUREMENTS')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-xs font-medium transition-all border-b-2 cursor-pointer ${
-            activeTab === 'MEASUREMENTS'
-              ? 'border-[#C9A227] text-[#8C6D1F] bg-[#FBF6E9]/40 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+      {/* 3. 4 THẺ KPI CHUYÊN BIỆT CHO NHIỆM VỤ ĐO ĐẠC */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* KPI 1: Cần thực hiện */}
+        <div
+          className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+          style={{
+            border: '1.5px solid #CBD5E1',
+            background: 'linear-gradient(180deg, #F8FAFC 0%, #ffffff 45%)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#64748B'
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(100, 116, 139, 0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#CBD5E1'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
         >
-          <Icon name="straighten" size={16} />
-          <span>Nhiệm vụ đo đạc ({fieldTasks.length})</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('CONFLICTS')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-xs font-medium transition-all border-b-2 cursor-pointer ${
-            activeTab === 'CONFLICTS'
-              ? 'border-[#C9A227] text-[#8C6D1F] bg-[#FBF6E9]/40 font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+          <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #64748B, #94A3B8)' }} />
+          <div className="p-4 flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-[10px] h-[10px] rounded-full shrink-0"
+                  style={{ backgroundColor: '#64748B', boxShadow: '0 0 0 4px rgba(100, 116, 139, 0.15)' }}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  Cần thực hiện
+                </span>
+              </div>
+              <Icon name="schedule" size={16} className="text-slate-400" />
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-slate-900">{taskStats.assigned}</span>
+              <span className="text-xs text-slate-500 font-medium">phiếu</span>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 2: Đang đo đạc */}
+        <div
+          className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+          style={{
+            border: '1.5px solid #B8C5D9',
+            background: 'linear-gradient(180deg, #F0F9FF 0%, #ffffff 45%)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#1E40AF'
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(30, 64, 175, 0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#B8C5D9'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
         >
-          <Icon name="sync_problem" size={16} />
-          <span>Xử lý xung đột ngoại tuyến ({stats.pending})</span>
-        </button>
+          <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #1E40AF, #3B82F6)' }} />
+          <div className="p-4 flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-[10px] h-[10px] rounded-full shrink-0"
+                  style={{ backgroundColor: '#1E40AF', boxShadow: '0 0 0 4px rgba(30, 64, 175, 0.15)' }}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  Đang đo đạc
+                </span>
+              </div>
+              <Icon name="more_horiz" size={16} className="text-[#1E40AF]" />
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-slate-900">{taskStats.inProgress}</span>
+              <span className="text-xs text-slate-500 font-medium">hiện trường</span>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 3: Đã có số đo */}
+        <div
+          className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+          style={{
+            border: '1.5px solid #E3D3AC',
+            background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#B45309'
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(180, 83, 9, 0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#E3D3AC'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+        >
+          <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B45309, #F59E0B)' }} />
+          <div className="p-4 flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-[10px] h-[10px] rounded-full shrink-0"
+                  style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  Đã có số đo
+                </span>
+              </div>
+              <Icon name="format_list_numbered" size={16} className="text-[#B45309]" />
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#B45309]">{taskStats.submitted}</span>
+              <span className="text-xs text-slate-500 font-medium">chờ duyệt</span>
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 4: Đã xác minh */}
+        <div
+          className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
+          style={{
+            border: '1.5px solid #A7C4B8',
+            background: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#047857'
+            e.currentTarget.style.boxShadow = '0 12px 28px rgba(4, 120, 87, 0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#A7C4B8'
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
+          }}
+        >
+          <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #047857, #10B981)' }} />
+          <div className="p-4 flex flex-col justify-between flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-[10px] h-[10px] rounded-full shrink-0"
+                  style={{ backgroundColor: '#047857', boxShadow: '0 0 0 4px rgba(4, 120, 87, 0.15)' }}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  Đã xác minh
+                </span>
+              </div>
+              <Icon name="check_circle" size={16} className="text-[#047857]" />
+            </div>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold font-mono text-[#047857]">{taskStats.verified}</span>
+              <span className="text-xs text-slate-500 font-medium">hoàn tất</span>
+            </div>
+          </div>
+        </div>
       </div>
-
-      {/* 4. KPI CARDS CHO TAB ĐO ĐẠC */}
-      {activeTab === 'MEASUREMENTS' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {/* KPI 1: Cần thực hiện */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #CBD5E1',
-              background: 'linear-gradient(180deg, #F8FAFC 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#64748B'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(100, 116, 139, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#CBD5E1'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #64748B, #94A3B8)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#64748B', boxShadow: '0 0 0 4px rgba(100, 116, 139, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Cần thực hiện
-                  </span>
-                </div>
-                <Icon name="schedule" size={16} className="text-slate-400" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-900">{taskStats.assigned}</span>
-                <span className="text-xs text-slate-500 font-medium">phiếu</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 2: Đang đo đạc */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #B8C5D9',
-              background: 'linear-gradient(180deg, #F0F9FF 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#1E40AF'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(30, 64, 175, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#B8C5D9'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #1E40AF, #3B82F6)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#1E40AF', boxShadow: '0 0 0 4px rgba(30, 64, 175, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Đang đo đạc
-                  </span>
-                </div>
-                <Icon name="pending" size={16} className="text-[#1E40AF]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-[#1E40AF]">{taskStats.inProgress}</span>
-                <span className="text-xs text-slate-500 font-medium">hiện trường</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 3: Đã có số đo */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #E3D3AC',
-              background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#B45309'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(180, 83, 9, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#E3D3AC'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B45309, #F59E0B)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Đã có số đo
-                  </span>
-                </div>
-                <Icon name="format_list_numbered" size={16} className="text-[#B45309]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-[#B45309]">{taskStats.submitted}</span>
-                <span className="text-xs text-slate-500 font-medium">chờ duyệt</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 4: Đã xác minh */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #A7C4B8',
-              background: 'linear-gradient(180deg, #F0FDF7 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#047857'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(4, 120, 87, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#A7C4B8'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #047857, #10B981)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#047857', boxShadow: '0 0 0 4px rgba(4, 120, 87, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Đã xác minh
-                  </span>
-                </div>
-                <Icon name="check_circle" size={16} className="text-[#047857]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-[#047857]">{taskStats.verified}</span>
-                <span className="text-xs text-slate-500 font-medium">hoàn tất</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 5. KPI CARDS CHO TAB XUNG ĐỘT */}
-      {activeTab === 'CONFLICTS' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {/* KPI 1: Tổng ca xung đột */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #E5D8B4',
-              background: 'linear-gradient(180deg, #FFFDF5 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#C9A227'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(201, 162, 39, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#E5D8B4'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #C9A227, #D97706)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#C9A227', boxShadow: '0 0 0 4px rgba(201, 162, 39, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Tổng ca xung đột
-                  </span>
-                </div>
-                <Icon name="layers" size={16} className="text-[#C9A227]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.total}</span>
-                <span className="text-xs text-amber-700 font-semibold font-mono">({stats.pending} chờ xử lý)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 2: Đổi đội ngoại tuyến */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #B8C5D9',
-              background: 'linear-gradient(180deg, #F0F9FF 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#1E40AF'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(30, 64, 175, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#B8C5D9'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #1E40AF, #3B82F6)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#1E40AF', boxShadow: '0 0 0 4px rgba(30, 64, 175, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Đổi đội ngoại tuyến
-                  </span>
-                </div>
-                <Icon name="call_split" size={16} className="text-[#1E40AF]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.reassign}</span>
-                <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 3: Lệch chính sách */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #E3D3AC',
-              background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#B45309'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(180, 83, 9, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#E3D3AC'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B45309, #F59E0B)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Lệch chính sách
-                  </span>
-                </div>
-                <Icon name="warning" size={16} className="text-[#B45309]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.policyMismatch}</span>
-                <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
-              </div>
-            </div>
-          </div>
-
-          {/* KPI 4: Cứu hộ thiết bị */}
-          <div
-            className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
-            style={{
-              border: '1.5px solid #E6A8A8',
-              background: 'linear-gradient(180deg, #FEF2F2 0%, #ffffff 45%)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#B91C1C'
-              e.currentTarget.style.boxShadow = '0 12px 28px rgba(185, 28, 28, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#E6A8A8'
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'
-            }}
-          >
-            <div className="h-1 w-full shrink-0" style={{ background: 'linear-gradient(90deg, #B91C1C, #EF4444)' }} />
-            <div className="p-4 flex flex-col justify-between flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-[10px] h-[10px] rounded-full shrink-0"
-                    style={{ backgroundColor: '#B91C1C', boxShadow: '0 0 0 4px rgba(185, 28, 28, 0.15)' }}
-                  />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                    Cứu hộ thiết bị
-                  </span>
-                </div>
-                <Icon name="phonelink_erase" size={16} className="text-[#B91C1C]" />
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl font-bold font-mono text-[#B91C1C]">{stats.rescuePending}</span>
-                <span className="text-xs text-rose-700 font-medium">chờ Giám sát ký</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
+export default FieldTasksHeader

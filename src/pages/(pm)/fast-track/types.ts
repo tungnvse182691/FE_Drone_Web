@@ -42,6 +42,8 @@ export interface PolicyHistoryItem {
   maxArea: number
   maxDepth: number
   maxPerimeter?: number
+  crackWidthMm?: number
+  crackLengthM?: number
   slaHours: number
 }
 

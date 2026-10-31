@@ -38,12 +38,23 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   const isUnassigned = !item.project_id || item.project_id === ''
 
   const isCritical = item.severity === 'CRITICAL' || item.urgency === 'EMERGENCY'
+  const isMerged = item.status === 'MERGED'
   const isVerified = item.status === 'VERIFIED'
   const isNeedSurvey = item.status === 'NEED_SURVEY'
   const isPending = item.status === 'PENDING' || item.severity === 'HIGH'
 
   // Bảng màu viền / thanh gradient / chấm / nền tint (tông trầm, ĐÃ DUYỆT)
   const styleConfig = (() => {
+    if (isMerged) {
+      return {
+        border: '#D8B4FE',
+        gradient: 'linear-gradient(90deg, #7E22CE 0%, #6B21A8 100%)',
+        dot: '#7E22CE',
+        halo: 'rgba(126, 34, 206, 0.15)',
+        bgTint: 'linear-gradient(180deg, #FAF5FF 0%, #ffffff 45%)',
+        hoverShadow: '0 12px 28px rgba(126, 34, 206, 0.15)'
+      }
+    }
     if (isCritical) {
       return {
         border: '#E3B8B8',

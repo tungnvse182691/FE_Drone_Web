@@ -5,7 +5,7 @@ import { SyncConflictItem } from '../../../types/domain'
 export interface ConflictResolveModalProps {
   isResolveModalOpen: boolean
   setIsResolveModalOpen: (open: boolean) => void
-  selectedConflict: SyncConflictItem
+  selectedConflict: SyncConflictItem | null
   pendingDecision:
     | 'ACCEPT_INCOMING'
     | 'KEEP_SERVER_STATE'
@@ -18,6 +18,9 @@ export interface ConflictResolveModalProps {
   resolutionReason: string
   setResolutionReason: (reason: string) => void
   handleExecuteResolution: (e: React.FormEvent) => void
+  isSubmitting?: boolean
+  errorMessage?: string | null
+  onClearError?: () => void
 }
 
 export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
@@ -27,7 +30,10 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
   pendingDecision,
   resolutionReason,
   setResolutionReason,
-  handleExecuteResolution
+  handleExecuteResolution,
+  isSubmitting = false,
+  errorMessage = null,
+  onClearError
 }) => {
   if (!isResolveModalOpen) return null
 
@@ -44,13 +50,31 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
           <button
             type="button"
             onClick={() => setIsResolveModalOpen(false)}
-            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 flex items-center justify-center cursor-pointer"
+            disabled={isSubmitting}
+            className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 flex items-center justify-center cursor-pointer disabled:opacity-50"
           >
             <Icon name="close" size={18} />
           </button>
         </div>
 
         <form onSubmit={handleExecuteResolution} className="p-5 space-y-4">
+          {/* Thông báo lỗi đơn giản, không chèn icon */}
+          {errorMessage && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between">
+              <span>{errorMessage}</span>
+              {onClearError && (
+                <button
+                  type="button"
+                  onClick={onClearError}
+                  className="text-rose-500 hover:text-rose-700 cursor-pointer ml-2 text-xs font-bold"
+                  aria-label="Đóng"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-slate-500">Mã xung đột:</span>
@@ -65,30 +89,30 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
               <span className="font-bold text-brand-goldMuted">
                 {pendingDecision === 'ACCEPT_INCOMING' &&
                   (selectedConflict?.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                    ? 'Công nhận kết quả Tổ 02 (Thu hồi Đội 01)'
+                    ? `Công nhận ${selectedConflict.offline_actor.name} (Bác bỏ ${selectedConflict.server_state.current_assignee})`
                     : selectedConflict?.conflict_type === 'POLICY_VERSION_MISMATCH'
-                    ? 'Đặc cách duyệt xử lý nhanh (v1.8)'
+                    ? 'Công nhận số đo hiện trường'
                     : selectedConflict?.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
-                    ? 'Chọn bản Máy chính (38mm)'
+                    ? 'Chọn bản Máy chính'
                     : 'Chấp thuận bản Hiện trường')}
                 {pendingDecision === 'KEEP_SERVER_STATE' &&
                   (selectedConflict?.conflict_type === 'ASSIGNMENT_REASSIGNED'
-                    ? 'Từ chối kết quả Tổ 02 (Giữ Đội 01)'
+                    ? `Công nhận ${selectedConflict.server_state.current_assignee} (Bác bỏ ${selectedConflict.offline_actor.name})`
                     : selectedConflict?.conflict_type === 'POLICY_VERSION_MISMATCH'
-                    ? 'Từ chối xử lý nhanh (Chuyển duyệt đợt v2.2)'
+                    ? 'Giữ nguyên chính sách máy chủ'
                     : selectedConflict?.conflict_type === 'DUPLICATE_WORK_ATTEMPT'
-                    ? 'Chọn bản Máy phụ (45mm)'
+                    ? 'Chọn bản Máy phụ'
                     : selectedConflict?.conflict_type === 'AGGREGATE_VERSION_CONFLICT'
-                    ? 'Từ chối số liệu nộp muộn (BR-26)'
+                    ? 'Từ chối số liệu nộp muộn'
                     : 'Từ chối bản Hiện trường')}
                 {pendingDecision === 'FORK_NEW_ATTEMPT' &&
                   (selectedConflict?.conflict_type === 'AGGREGATE_VERSION_CONFLICT'
-                    ? 'Tạo phụ lục đợt mới (BR-26)'
-                    : 'Hợp nhất thủ công (Manual Merge)')}
-                {pendingDecision === 'SUBMIT_RESCUE_TO_SUP' && 'Trình Giám sát xác nhận cứu hộ (Q17 / Quyết định 42A)'}
-                {pendingDecision === 'AUTHORIZE_RESCUE' && 'Xác nhận dữ liệu cứu hộ (Q17)'}
+                    ? 'Tạo phụ lục đợt mới'
+                    : 'Hợp nhất thủ công')}
+                {pendingDecision === 'SUBMIT_RESCUE_TO_SUP' && 'Trình Giám sát xác nhận cứu hộ'}
+                {pendingDecision === 'AUTHORIZE_RESCUE' && 'Xác nhận dữ liệu cứu hộ'}
                 {pendingDecision === 'SUPERVISOR_REJECT_RESCUE' && 'Từ chối gói cứu hộ'}
-                {pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE' && 'Yêu cầu đo lại & Bổ sung ảnh bằng chứng (Q05)'}
+                {pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE' && 'Yêu cầu đo lại & Bổ sung ảnh bằng chứng'}
               </span>
             </div>
           </div>
@@ -214,14 +238,25 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Lý do phân giải kỹ thuật <span className="text-rose-500">*</span>:
+              {pendingDecision === 'SUBMIT_RESCUE_TO_SUP'
+                ? 'Nội dung tờ trình gửi Giám sát'
+                : pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE'
+                ? 'Lý do & chỉ đạo kỹ thuật cho hiện trường'
+                : 'Lý do phân giải kỹ thuật'}{' '}
+              <span className="text-rose-500">*</span>:
             </label>
             <textarea
               required
               rows={3}
               value={resolutionReason}
               onChange={(e) => setResolutionReason(e.target.value)}
-              placeholder="Nhập lý do phân giải..."
+              placeholder={
+                pendingDecision === 'SUBMIT_RESCUE_TO_SUP'
+                  ? 'Ví dụ: Đã đối soát chip nhớ máy hỏng, số liệu vết nứt nguyên bản khớp TCVN, kính trình Giám sát phê duyệt hợp thức hóa...'
+                  : pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE'
+                  ? 'Ví dụ: Ảnh trích xuất bị lóa sáng không rõ vạch thước, yêu cầu tổ đo dùng máy dự phòng đo lại tại Km...'
+                  : 'Nhập lý do phân giải...'
+              }
               className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-gold leading-relaxed"
             />
           </div>
@@ -229,21 +264,33 @@ export const ConflictResolveModal: React.FC<ConflictResolveModalProps> = ({
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setIsResolveModalOpen(false)}
-              className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
             >
               Hủy
             </button>
             <button
               type="submit"
-              disabled={!resolutionReason.trim()}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition shadow-2xs ${
-                !resolutionReason.trim()
+              disabled={!resolutionReason.trim() || isSubmitting}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition shadow-2xs flex items-center gap-1.5 ${
+                !resolutionReason.trim() || isSubmitting
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-brand-gold hover:bg-brand-goldMuted text-white cursor-pointer'
               }`}
             >
-              Xác nhận
+              {isSubmitting && (
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>
+                {isSubmitting
+                  ? 'Đang ghi nhận CSDL...'
+                  : pendingDecision === 'SUBMIT_RESCUE_TO_SUP'
+                  ? 'Gửi tờ trình'
+                  : pendingDecision === 'REQUEST_ADDITIONAL_EVIDENCE'
+                  ? 'Phát lệnh đo lại'
+                  : 'Xác nhận'}
+              </span>
             </button>
           </div>
         </form>

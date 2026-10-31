@@ -17,7 +17,8 @@ import {
   History,
   Sliders,
   ChevronDown,
-  Users
+  Users,
+  GitCompare
 } from 'lucide-react'
 
 interface NavNestedChild {
@@ -78,7 +79,8 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Gói sửa chữa', path: '/pm/proposals', icon: Boxes },
         { label: 'Nghiệm thu', path: '/pm/acceptance', icon: ShieldCheck },
-        { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList }
+        { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
+        { label: 'Xử lý xung đột ngoại tuyến', path: '/pm/conflicts', icon: GitCompare }
       ]
     },
     {
@@ -126,7 +128,8 @@ export const Sidebar: React.FC = () => {
       items: [
         { label: 'Phê duyệt gói', path: '/sup/proposals', icon: Boxes },
         { label: 'Nghiệm thu đóng đợt', path: '/sup/acceptance', icon: ShieldCheck },
-        { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList }
+        { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList },
+        { label: 'Xử lý xung đột ngoại tuyến', path: '/sup/conflicts', icon: GitCompare }
       ]
     },
     {

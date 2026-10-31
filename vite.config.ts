@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -111,6 +111,140 @@ export default defineConfig({
             res.end(JSON.stringify({ ok: false }))
           }
         })
+
+        // GET /__dev/conflicts - Lấy 100% dữ liệu xung đột thật từ bảng dbo.OfflineSyncConflicts trong SQL Server Docker
+        server.middlewares.use('/__dev/conflicts', (req, res) => {
+          if (req.method !== 'GET') {
+            res.writeHead(405).end();
+            return;
+          }
+          const sql = "SET NOCOUNT ON; SELECT c.Id, c.ConflictCode, c.ProjectId, c.ConflictType, c.DefectCode, c.DefectId, c.ChainageKm, c.Status, c.OfflineActorId, ISNULL(u_off.DisplayName, c.OfflineActorName) AS OfflineActorName, c.ServerActorId, ISNULL(u_srv.DisplayName, c.ServerActorName) AS ServerActorName, c.OfflineDataJson, c.ServerDataJson, c.ResolutionDecision, c.ResolutionReason, ISNULL(u_dec.DisplayName, c.DecidedBy) AS DecidedBy, c.DecidedAt, c.CreatedAt FROM master.dbo.OfflineSyncConflicts c LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_off ON u_off.Id = c.OfflineActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_srv ON u_srv.Id = c.ServerActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_dec ON (TRY_CAST(c.DecidedBy AS uniqueidentifier) IS NOT NULL AND u_dec.Id = TRY_CAST(c.DecidedBy AS uniqueidentifier)) ORDER BY c.CreatedAt DESC FOR JSON PATH;";
+          const child = spawn('docker', [
+            'exec',
+            '-i',
+            'roadguard-fe-starter01-sql-1',
+            '/opt/mssql-tools/bin/sqlcmd',
+            '-S', 'localhost',
+            '-U', 'sa',
+            '-P', 'Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF',
+            '-d', 'master',
+            '-f', '65001',
+            '-y', '0'
+          ]);
+
+          const stdoutBufs: Buffer[] = [];
+          const stderrBufs: Buffer[] = [];
+          child.stdout.on('data', chunk => stdoutBufs.push(chunk));
+          child.stderr.on('data', chunk => stderrBufs.push(chunk));
+
+          child.on('error', err => {
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ error: err.message }));
+          });
+
+          child.on('close', code => {
+            try {
+              const stdout = Buffer.concat(stdoutBufs).toString('utf8');
+              const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'));
+              const jsonStr = lines.join('');
+              const data = jsonStr ? JSON.parse(jsonStr) : [];
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+              res.end(JSON.stringify({ ok: true, items: data }));
+            } catch {
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+              res.end(JSON.stringify({ ok: true, items: [] }));
+            }
+          });
+
+          child.stdin.write(Buffer.from(sql, 'utf8'));
+          child.stdin.end();
+        });
+
+        // POST /__dev/resolve-conflict - Hòa giải và cập nhật trực tiếp vào SQL Server Docker (dùng stdin UTF-8 an toàn)
+        server.middlewares.use('/__dev/resolve-conflict', (req, res) => {
+          if (req.method !== 'POST') {
+            res.writeHead(405).end();
+            return;
+          }
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const payload = JSON.parse(body || '{}');
+              const conflictId = (payload.conflictId || '').replace(/[^a-zA-Z0-9-]/g, '');
+              const decision = (payload.decision || '').replace(/[^a-zA-Z0-9_]/g, '');
+              const reason = (payload.reason || '').replace(/'/g, "''");
+              const decidedBy = (payload.decidedBy || 'Chỉ huy trưởng (PM)').replace(/'/g, "''");
+
+              if (!conflictId) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'conflictId is required' }));
+                return;
+              }
+
+              let targetStatus = 'RESOLVED';
+              if (decision === 'SUBMIT_RESCUE_TO_SUP') {
+                targetStatus = 'SUBMITTED_TO_SUPERVISOR';
+              } else if (decision === 'REQUEST_ADDITIONAL_EVIDENCE') {
+                targetStatus = 'EVIDENCE_REQUIRED';
+              } else if (decision === 'SUPERVISOR_REJECT_RESCUE') {
+                targetStatus = 'REJECTED';
+              }
+
+              const sql = `SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON; UPDATE master.dbo.OfflineSyncConflicts SET Status = '${targetStatus}', ResolutionDecision = '${decision}', ResolutionReason = N'${reason}', DecidedBy = N'${decidedBy}', DecidedAt = SYSDATETIMEOFFSET() WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)); SELECT Id, ConflictCode, ProjectId, ConflictType, DefectCode, DefectId, ChainageKm, Status, OfflineActorId, OfflineActorName, ServerActorId, ServerActorName, OfflineDataJson, ServerDataJson, ResolutionDecision, ResolutionReason, DecidedBy, DecidedAt, CreatedAt FROM master.dbo.OfflineSyncConflicts WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)) FOR JSON PATH;`;
+
+              const child = spawn('docker', [
+                'exec',
+                '-i',
+                'roadguard-fe-starter01-sql-1',
+                '/opt/mssql-tools/bin/sqlcmd',
+                '-S', 'localhost',
+                '-U', 'sa',
+                '-P', 'Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF',
+                '-d', 'master',
+                '-f', '65001',
+                '-y', '0'
+              ]);
+
+              const stdoutBufs: Buffer[] = [];
+              const stderrBufs: Buffer[] = [];
+              child.stdout.on('data', chunk => stdoutBufs.push(chunk));
+              child.stderr.on('data', chunk => stderrBufs.push(chunk));
+
+              child.on('error', err => {
+                res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ error: `Lỗi kết nối Docker: ${err.message}` }));
+              });
+
+              child.on('close', code => {
+                const stdout = Buffer.concat(stdoutBufs).toString('utf8');
+                const stderr = Buffer.concat(stderrBufs).toString('utf8');
+
+                try {
+                  const lines = stdout.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'));
+                  const jsonStr = lines.join('');
+                  if (!jsonStr) {
+                    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ error: `Không tìm thấy ca xung đột với mã: ${conflictId}` }));
+                    return;
+                  }
+                  const rows = JSON.parse(jsonStr);
+                  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                  res.end(JSON.stringify({ ok: true, item: rows[0] || null }));
+                } catch (parseErr: any) {
+                  res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                  res.end(JSON.stringify({ error: stderr || `Lỗi cập nhật CSDL: ${parseErr.message}` }));
+                }
+              });
+
+              child.stdin.write(Buffer.from(sql, 'utf8'));
+              child.stdin.end();
+            } catch (err) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+            }
+          });
+        });
       },
     },
   ],

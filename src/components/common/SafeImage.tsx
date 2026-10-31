@@ -21,6 +21,23 @@ export const SafeImage: React.FC<{
   chainage,
   value,
 }) => {
+  const [hasError, setHasError] = useState(false)
+  const isPlaceholder = !src || src.includes('placeholder') || src === ''
+
+  // Nếu có ảnh chụp thật và tải thành công, ưu tiên hiển thị ảnh chụp thật từ Camera / MinIO S3
+  if (!isPlaceholder && !hasError) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setHasError(true)}
+        className={`w-full h-full object-cover ${className}`}
+        loading="lazy"
+      />
+    )
+  }
+
+  // Khi chưa có ảnh chụp thật (hoặc ảnh lỗi), hiển thị đồ họa vector mô phỏng thước đo hiện trường
   if (vectorType) {
     return (
       <RoadDefectImage
@@ -33,42 +50,28 @@ export const SafeImage: React.FC<{
     )
   }
 
-  const [hasError, setHasError] = useState(false)
-
-  if (!src || hasError) {
-    return (
-      <div
-        className={`w-full h-full bg-linear-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center p-3 text-center border border-slate-700/60 select-none relative overflow-hidden ${className}`}
-      >
-        <div
-          className="absolute inset-0 opacity-15 pointer-events-none"
-          style={{
-            backgroundImage:
-              'radial-gradient(#C9A227 1px, transparent 1px), radial-gradient(#C9A227 1px, transparent 1px)',
-            backgroundSize: '16px 16px',
-            backgroundPosition: '0 0, 8px 8px',
-          }}
-        />
-        <div className="w-10 h-10 rounded-xl bg-brand-gold/15 border border-brand-gold/30 flex items-center justify-center text-brand-gold mb-1.5 shadow-xs z-10">
-          <FallbackIcon className="w-5 h-5" />
-        </div>
-        <span className="text-[11px] font-bold text-white font-sansation z-10 tracking-wide uppercase">
-          {fallbackLabel}
-        </span>
-        <span className="text-[9px] font-mono text-[#F1E5C6]/70 z-10 mt-0.5">
-          HOÀNG HẢI ROADGUARD • CHỨNG CỨ SỐ
-        </span>
-      </div>
-    )
-  }
-
   return (
-    <img
-      src={src}
-      alt={alt}
-      onError={() => setHasError(true)}
-      className={`w-full h-full object-cover ${className}`}
-      loading="lazy"
-    />
+    <div
+      className={`w-full h-full bg-linear-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center p-3 text-center border border-slate-700/60 select-none relative overflow-hidden ${className}`}
+    >
+      <div
+        className="absolute inset-0 opacity-15 pointer-events-none"
+        style={{
+          backgroundImage:
+            'radial-gradient(#C9A227 1px, transparent 1px), radial-gradient(#C9A227 1px, transparent 1px)',
+          backgroundSize: '16px 16px',
+          backgroundPosition: '0 0, 8px 8px',
+        }}
+      />
+      <div className="w-10 h-10 rounded-xl bg-brand-gold/15 border border-brand-gold/30 flex items-center justify-center text-brand-gold mb-1.5 shadow-xs z-10">
+        <FallbackIcon className="w-5 h-5" />
+      </div>
+      <span className="text-[11px] font-bold text-white font-sansation z-10 tracking-wide uppercase">
+        {fallbackLabel}
+      </span>
+      <span className="text-[9px] font-mono text-[#F1E5C6]/70 z-10 mt-0.5">
+        HOÀNG HẢI ROADGUARD • CHỨNG CỨ SỐ
+      </span>
+    </div>
   )
 }

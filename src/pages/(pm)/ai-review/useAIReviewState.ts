@@ -140,18 +140,6 @@ export const useAIReviewState = () => {
     setIsDetailModalOpen
   })
 
-  // Reset dữ liệu mẫu qua Mock API Service
-  const handleResetTriageData = async () => {
-    try {
-      const freshData = await triageService.resetCases()
-      setCases(freshData)
-      linkActions.setSelectedReportIds([])
-      showToast('Đã đặt lại dữ liệu phản ánh & triage về mặc định ban đầu qua API!')
-    } catch (err) {
-      showToast('Không thể đặt lại dữ liệu phản ánh')
-    }
-  }
-
   // Thao tác hàng loạt (Bulk Actions): Xác nhận hàng loạt & Đánh dấu kiểm tra lại
   const handleBulkVerify = () => {
     const ids = linkActions.selectedReportIds
@@ -223,7 +211,6 @@ export const useAIReviewState = () => {
     setCurrentDepth,
     currentNotes,
     setCurrentNotes,
-    handleResetTriageData,
     handleSelectCase,
     handleToggleClusterItem,
 

@@ -228,7 +228,8 @@ async function ensureBearerToken(): Promise<string | null> {
   const currentUser = useAuthStore.getState().user
   if (currentUser) {
     try {
-      const email = currentUser.email || 'supervisor@sandbox.example.test'
+      const rawEmail = currentUser.email || 'supervisor@sandbox.example.test'
+      const email = rawEmail.replace(/^synthetic-/, '')
       let password = 'Rg1!1YpbfL2fpPP1JWp3t1HdkXpTPZVdUJ2OrWllT8iNLvBPaZq3MMU5g3XT7VFUCwDv'
       if (email.includes('pm-a') || email.includes('pm')) {
         password = 'Rg1!6NDP3wctfXKjXNzvYjSeg-grQxza2t_BGNxmH_DDlyfjEr7oZFEMtLmnssW7Meed'
@@ -239,6 +240,9 @@ async function ensureBearerToken(): Promise<string | null> {
       })
       if (res.data?.accessToken) {
         useAuthStore.getState().setToken(res.data.accessToken)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('rg_token', res.data.accessToken)
+        }
         return res.data.accessToken
       }
     } catch {
@@ -1820,7 +1824,7 @@ export const surveyService = {
 
             allItems.push({
               id: d.detectionId,
-              code: `DET-${String(runDetIdx).padStart(2, '0')}`,
+              code: `DET-${String(globalIdx).padStart(2, '0')}`,
               defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
               defectId,
               stationing: `Km 0+${String(Math.round(km * 1000)).padStart(3, '0')}`,

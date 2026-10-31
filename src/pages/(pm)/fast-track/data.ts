@@ -65,56 +65,64 @@ export const ROUTE_CONFIGS: Record<string, RouteConfig> = {
 // 2. CHÍNH SÁCH ĐIỀU PHỐI (POLICY)
 // ==========================================
 export const INITIAL_POLICY: PolicyThresholdConfig = {
-  version: 'Chính sách v2.1',
+  version: 'POL-TCVN-2026-V2',
   status: 'ACTIVE',
   maxAreaM2: 0.5,
   maxDepthCm: 5.0,
   maxPerimeterM: 3.0,
+  crackWidthMm: 1.5,
+  crackLengthM: 3.0,
   allowedSeverities: ['LOW', 'MEDIUM'],
   slaHours: 24,
-  activatedBy: 'Kỹ sư Nguyễn Văn Hoàng (PM)',
-  activatedAt: '08:30 • 15/08/2026',
-  appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
-  description: 'Quy chuẩn kích hoạt tự động: 3/3 Tiêu chí bắt buộc phải thỏa mãn để tự động mở luồng xử lý nhanh.'
+  activatedBy: 'Giám sát trưởng (Supervisor)',
+  activatedAt: '08:15 • 30/10/2026',
+  appliedRoute: 'QL1A (Km 1020 - Km 1045) • PK-04',
+  description: 'Quy chuẩn kỹ thuật xử lý nhanh TCVN 8864 & TCVN 8819:2011: Thống nhất định mức đo đạc Ổ gà (Diện tích ≤ 0.5 m², Sâu ≤ 5 cm) và Khe nứt BTXM (Rộng ≤ 1.5 mm, Dài ≤ 3.0 m).'
 }
 
 export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
   {
-    id: 'pol-21',
-    version: 'Chính sách v2.1',
-    displayName: 'Chính sách v2.1 (Hiện hành)',
+    id: 'pol-tcvn-2026-v2',
+    version: 'POL-TCVN-2026-V2',
+    displayName: 'POL-TCVN-2026-V2 (Hiện hành)',
     status: 'ACTIVE',
-    activatedBy: 'PM Hoàng',
-    activatedAt: '08:30 15/08/2026',
-    route: 'Áp dụng toàn tuyến QL1A (Km 1000 - Km 1080)',
+    activatedBy: 'Giám sát trưởng (Supervisor)',
+    activatedAt: '08:15 30/10/2026',
+    route: 'Áp dụng toàn tuyến QL1A (Km 1020 - Km 1045)',
     maxArea: 0.5,
     maxDepth: 5.0,
+    crackWidthMm: 1.5,
+    crackLengthM: 3.0,
     slaHours: 24,
     maxPerimeter: 3.0
   },
   {
-    id: 'pol-20',
-    version: 'Chính sách v2.0',
-    displayName: 'Chính sách v2.0 (Lưu trữ)',
+    id: 'pol-tcvn-2024-v1',
+    version: 'POL-TCVN-2024-V1',
+    displayName: 'POL-TCVN-2024-V1 (Lưu trên Tablet Mobile)',
     status: 'ARCHIVED',
-    activatedBy: 'PGĐ Trần Nam',
-    activatedAt: '10:15 01/06/2026',
-    route: 'Ngưỡng diện tích 0.4 m² • Độ sâu ≤ 4.5 cm',
-    maxArea: 0.4,
-    maxDepth: 4.5,
+    activatedBy: 'Giám sát viên (Kỳ 2024)',
+    activatedAt: '08:00 15/01/2024',
+    route: 'Quy chuẩn cũ: Vết nứt Rộng ≤ 2.0 mm, Dài ≤ 5.0 m • Ổ gà ≤ 0.6 m²',
+    maxArea: 0.6,
+    maxDepth: 6.0,
+    crackWidthMm: 2.0,
+    crackLengthM: 5.0,
     slaHours: 24,
-    maxPerimeter: 2.8
+    maxPerimeter: 3.5
   },
   {
-    id: 'pol-19',
-    version: 'Chính sách v1.9',
-    displayName: 'Chính sách v1.9 (Lưu trữ)',
+    id: 'pol-tcvn-2023-v0',
+    version: 'POL-TCVN-2023-V0',
+    displayName: 'POL-TCVN-2023-V0 (Hết hiệu lực)',
     status: 'ARCHIVED',
-    activatedBy: 'PM Hoàng',
-    activatedAt: '14:00 12/01/2026',
-    route: 'Ngưỡng diện tích 0.3 m² • Thử nghiệm thí điểm',
-    maxArea: 0.3,
+    activatedBy: 'PM Hoàng Hải',
+    activatedAt: '14:00 12/01/2023',
+    route: 'Giai đoạn nghiệm thu bàn giao ban đầu',
+    maxArea: 0.4,
     maxDepth: 4.0,
+    crackWidthMm: 1.8,
+    crackLengthM: 4.0,
     slaHours: 36,
     maxPerimeter: 2.5
   }
@@ -122,14 +130,14 @@ export const INITIAL_POLICY_HISTORY: PolicyHistoryItem[] = [
 
 export const INITIAL_AUDIT_LOGS: AuditLogItem[] = [
   {
-    title: 'Cập nhật Chính sách v2.1 (HIỆU LỰC)',
+    title: 'Cập nhật Quy chuẩn POL-TCVN-2026-V2 (HIỆU LỰC)',
     time: '15/08/2026 08:30:12',
     user: 'Nguyễn Văn Hoàng (PM)',
     hash: 'sha256:7f8a9b...c41e',
-    note: 'Nâng ngưỡng diện tích từ 0.4 m² lên 0.5 m² để phù hợp điều kiện thời tiết mùa mưa.'
+    note: 'Siết chặt định mức xử lý nhanh vết nứt BTXM (Rộng ≤ 1.5 mm, Dài ≤ 3.0 m) và ổ gà (≤ 0.5 m²) theo TCVN 8864.'
   },
   {
-    title: 'Kích hoạt Chính sách v2.0',
+    title: 'Kích hoạt Quy chuẩn POL-TCVN-2024-V1',
     time: '01/06/2026 10:15:45',
     user: 'Trần Nam (PGĐ Dự án)',
     hash: 'sha256:2b4c6e...a991',

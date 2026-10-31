@@ -66,7 +66,9 @@ export function useFastTrackPolicy(
 
 
   // Form states cho Modal Tạo chính sách mới
-  const [formVersionName, setFormVersionName] = useState('Policy v2.2')
+  const [formVersionName, setFormVersionName] = useState('POL-TCVN-2026-V3')
+  const [formCrackWidth, setFormCrackWidth] = useState('1.5')
+  const [formCrackLength, setFormCrackLength] = useState('3.0')
   const [formMaxArea, setFormMaxArea] = useState('0.60')
   const [formMaxDepth, setFormMaxDepth] = useState('5.5')
   const [formSlaHours, setFormSlaHours] = useState('24')
@@ -93,11 +95,13 @@ export function useFastTrackPolicy(
         maxAreaM2: area,
         maxDepthCm: depth,
         maxPerimeterM: perimeter,
+        crackWidthMm: parseFloat(formCrackWidth) || 1.5,
+        crackLengthM: parseFloat(formCrackLength) || 3.0,
         allowedSeverities: ['LOW', 'MEDIUM'],
         slaHours: sla,
         activatedBy: 'Kỹ sư Nguyễn Văn Hoàng (PM)',
         activatedAt: `${nowTime} • ${nowDate}`,
-        appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
+        appliedRoute: 'QL1A (Km 1020 - Km 1045) • PK-04',
         description: `Quy chuẩn kích hoạt tự động ${formVersionName}: Diện tích ≤ ${area}m², Độ sâu ≤ ${depth}cm.`
       }
 

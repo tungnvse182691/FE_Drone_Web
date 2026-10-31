@@ -24,7 +24,6 @@ export interface ReviewCasesTableProps {
   onOpenLinkReportsModal: () => void
   onUnlinkReport: (childId: string, e: React.MouseEvent) => void
   onOpenMergeModal: (c: TriageCase) => void
-  onResetTriageData: () => void
   onClearSelectedReports: () => void
   onBulkVerify?: () => void
   onBulkNeedSurvey?: () => void
@@ -50,7 +49,6 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
   onOpenLinkReportsModal,
   onUnlinkReport,
   onOpenMergeModal,
-  onResetTriageData,
   onClearSelectedReports,
   onBulkVerify,
   onBulkNeedSurvey
@@ -93,16 +91,6 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
                     />
                     <span>Gộp báo cáo trùng theo cây</span>
                   </label>
-                  <span>•</span>
-                  <button
-                    type="button"
-                    onClick={onResetTriageData}
-                    className="text-slate-500 hover:text-brand-dark hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                    title="Đặt lại dữ liệu mẫu ban đầu qua API"
-                  >
-                    <Icon name="refresh" size={13} />
-                    <span>Tải lại từ CSDL</span>
-                  </button>
                 </>
               )}
             </div>

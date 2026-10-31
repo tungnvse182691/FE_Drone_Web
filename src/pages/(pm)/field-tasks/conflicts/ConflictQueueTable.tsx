@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../../components/ui/Icon'
 import { SyncConflictItem } from '../../../../types/domain'
+import { formatConflictDateTime } from '../../../../utils/date'
 
 export interface ConflictQueueTableProps {
   filteredConflicts: SyncConflictItem[]
-  selectedConflict: SyncConflictItem
+  selectedConflict: SyncConflictItem | null
   setSelectedConflictId: (id: string) => void
   onOpenDetail?: (id: string) => void
 }
@@ -158,6 +159,10 @@ const ConflictCard: React.FC<ConflictCardProps> = ({
               className={`inline-flex items-center px-[14px] py-[5px] rounded-full text-[11px] font-bold ${
                 item.status === 'CONFLICT_INTAKE'
                   ? 'bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]'
+                  : item.status === 'RESCUE_SUBMITTED'
+                  ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                  : item.status === 'EVIDENCE_REQUIRED'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
                   : item.status === 'RESCUE_AUTHORIZED'
                   ? 'bg-purple-50 text-purple-800 border border-purple-200'
                   : item.status === 'RESOLVED_KEEP_SERVER' || item.status === 'RESCUE_REJECTED'
@@ -180,27 +185,15 @@ const ConflictCard: React.FC<ConflictCardProps> = ({
               <Icon name="engineering" size={15} className="text-slate-400 shrink-0" />
               <div>
                 <span className="font-semibold text-slate-800">{item.offline_actor.name}</span>
-                <span className="text-slate-500 ml-1">({item.offline_actor.team})</span>
               </div>
             </div>
 
-            {/* Thời gian bắt lại mạng */}
+            {/* Thời gian ghi nhận / bắt lại mạng */}
             <div className="flex items-center gap-2 font-mono">
               <Icon name="schedule" size={15} className="text-[#C9A227] shrink-0" />
               <div>
-                <span className="font-semibold text-slate-800">{item.offline_actor.captured_at}</span>
-                <span className="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/70 ml-1.5">
-                  Mất: {item.offline_actor.offline_duration}
-                </span>
+                <span className="font-semibold text-slate-800">{formatConflictDateTime(item.offline_actor.captured_at)}</span>
               </div>
-            </div>
-
-            {/* Mã băm SHA-256 */}
-            <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
-              <Icon name="tag" size={14} className="text-slate-400 shrink-0" />
-              <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                SHA: {item.incoming_data.sha256_hash.substring(0, 10)}...
-              </span>
             </div>
           </div>
 
@@ -215,10 +208,10 @@ const ConflictCard: React.FC<ConflictCardProps> = ({
                   onOpenDetail(item.id)
                 }
               }}
-              className="px-3.5 py-2 rounded-xl border text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer bg-white text-slate-800 border-[#E2E5E9] hover:bg-[#1A1D20] hover:text-[#F1E5C6] hover:border-[#1A1D20] shadow-2xs"
+              className="px-3.5 py-2 rounded-xl border text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer bg-white text-slate-800 border-[#E2E5E9] hover:bg-[#C9A227] hover:text-slate-900 hover:border-[#C9A227] shadow-2xs"
               title="Mở tab đối chiếu chi tiết và phân giải"
             >
-              <Icon name="compare_arrows" size={15} className="text-[#C9A227]" />
+              <Icon name="compare_arrows" size={15} className="text-[#C9A227] group-hover:text-slate-900" />
               <span>Xem đối chiếu</span>
             </button>
           </div>

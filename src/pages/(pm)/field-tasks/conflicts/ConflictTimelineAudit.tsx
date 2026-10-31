@@ -2,6 +2,7 @@ import React from 'react'
 import { Card } from '../../../../components/ui/Card'
 import { Icon } from '../../../../components/ui/Icon'
 import { SyncConflictItem } from '../../../../types/domain'
+import { formatConflictDateTime } from '../../../../utils/date'
 
 export interface ConflictTimelineAuditProps {
   selectedConflict: SyncConflictItem
@@ -20,9 +21,9 @@ export const ConflictTimelineAudit: React.FC<ConflictTimelineAuditProps> = ({
           </h2>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-brand-dark text-[#F1E5C6] font-mono text-[11px] font-bold shadow-xs">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FBF6E9] text-[#8C6D1F] border border-[#F1E5C6] font-mono text-[11px] font-bold shadow-xs">
             <Icon name="schedule" size={14} className="text-brand-gold shrink-0" />
-            <span>Ngoại tuyến sync: {selectedConflict.offline_actor.captured_at}</span>
+            <span>Đồng bộ lúc: {formatConflictDateTime(selectedConflict.offline_actor.captured_at)}</span>
           </span>
           <span className="text-xs text-slate-500 font-mono">
             Mã nhiệm vụ: <strong className="text-slate-800">{selectedConflict.task_code}</strong> | Tuyến:{' '}
@@ -66,19 +67,21 @@ export const ConflictTimelineAudit: React.FC<ConflictTimelineAuditProps> = ({
                       <Icon name="schedule" size={12} className="text-brand-gold shrink-0" />
                       {step.time}
                     </span>
-                    <span
-                      className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-2xs ${
-                        step.type === 'alert'
-                          ? 'bg-rose-200 text-rose-900 border border-rose-300'
-                          : step.type === 'warning'
-                          ? 'bg-amber-200 text-amber-900 border border-amber-300'
-                          : step.type === 'success'
-                          ? 'bg-emerald-200 text-emerald-900 border border-emerald-300'
-                          : 'bg-blue-200 text-blue-900 border border-blue-300'
-                      }`}
-                    >
-                      {step.badge}
-                    </span>
+                    {step.badge && (
+                      <span
+                        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shadow-2xs ${
+                          step.type === 'alert'
+                            ? 'bg-rose-200 text-rose-900 border border-rose-300'
+                            : step.type === 'warning'
+                            ? 'bg-amber-200 text-amber-900 border border-amber-300'
+                            : step.type === 'success'
+                            ? 'bg-emerald-200 text-emerald-900 border border-emerald-300'
+                            : 'bg-blue-200 text-blue-900 border border-blue-300'
+                        }`}
+                      >
+                        {step.badge}
+                      </span>
+                    )}
                   </div>
                   <div className="font-bold text-xs text-slate-900 mb-1 flex items-center gap-1.5">
                     <span className="w-4 h-4 rounded-full bg-slate-900 text-white text-[9px] font-mono flex items-center justify-center font-bold shrink-0">

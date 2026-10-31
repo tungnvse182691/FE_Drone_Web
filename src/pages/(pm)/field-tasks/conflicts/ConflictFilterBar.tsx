@@ -33,7 +33,7 @@ export const ConflictFilterBar: React.FC<ConflictFilterBarProps> = ({
           onClick={() => setFilterType('ALL')}
           className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
             filterType === 'ALL'
-              ? 'bg-[#C9A227] text-white shadow-2xs'
+              ? 'bg-[#C9A227] text-slate-900 shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           }`}
         >

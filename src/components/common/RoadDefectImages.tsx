@@ -182,7 +182,7 @@ export const RoadDefectImage: React.FC<RoadDefectImageProps> = ({
             {/* Khoảng cách đo khe nứt 4.8mm */}
             <rect x="194" y="90" width="16" height="60" fill="#EF4444" fillOpacity="0.25" stroke="#EF4444" strokeWidth="1" strokeDasharray="3 2" />
             <text x="200" y="80" fill="#EF4444" fontSize="13" fontWeight="bold" fontFamily="monospace" textAnchor="middle">
-              {value || '4.8 mm'}
+              {value ? value.replace(/Rộng\\s*/i, '').split(',')[0].trim() : '1.8 mm'}
             </text>
 
             {/* Nhãn kính phóng đại */}

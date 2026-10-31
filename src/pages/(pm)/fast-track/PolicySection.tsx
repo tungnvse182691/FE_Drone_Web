@@ -142,109 +142,171 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           </div>
         )}
 
-        {/* 2. BODY: 4 THẺ CHỈ SỐ KỸ THUẬT ĐỐI XỨNG CÂN ĐỐI (1 HÀNG 4 CỘT) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 2. BODY: CÁC THẺ ĐỊNH MỨC KỸ THUẬT THỐNG NHẤT THEO SPEC 17_10 & TCVN */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Icon name="straighten" size={15} className="text-brand-gold" />
+              <span>Định mức đo đạc kỹ thuật xử lý nhanh (TCVN 8864 / TCVN 8819:2011)</span>
+            </span>
+            <span className="font-mono text-[10px] text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+              Quy chuẩn: {currentPolicy.version}
+            </span>
+          </div>
 
-          {/* Card 1: Ngưỡng Diện Tích */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Ngưỡng diện tích tối đa
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
-                <Icon name="tune" size={16} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {/* Card 1: Bề rộng vết nứt */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2.5 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Bề rộng vết nứt
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-700 shrink-0">
+                  <Icon name="linear_scale" size={16} />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
+                  ≤ {currentPolicy.crackWidthMm ?? 1.5} <span className="text-sm font-normal text-slate-500 font-sans">mm</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Khoảng chuẩn: 0 – {currentPolicy.crackWidthMm ?? 1.5} mm • Đo quang học
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  <Icon name="check_circle" size={12} className="text-blue-600" />
+                  Khe nứt BTXM &amp; Asphalt
+                </span>
               </div>
             </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.maxAreaM2} <span className="text-sm font-normal text-slate-500 font-sans">m²</span>
+
+            {/* Card 2: Chiều dài vết nứt */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2.5 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Chiều dài vết nứt
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-700 shrink-0">
+                  <Icon name="straighten" size={16} />
+                </div>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Chu vi biên dạng khép kín &lt; {currentPolicy.maxPerimeterM} m
-              </p>
+              <div>
+                <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
+                  ≤ {currentPolicy.crackLengthM ?? 3.0} <span className="text-sm font-normal text-slate-500 font-sans">m</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Khoảng chuẩn: 0 – {currentPolicy.crackLengthM ?? 3.0} m • Thước trắc địa
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                  <Icon name="check_circle" size={12} className="text-blue-600" />
+                  Nứt dọc / nứt ngang
+                </span>
+              </div>
             </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                <Icon name="check_circle" size={12} className="text-sky-600" />
-                AI &amp; Tuần tra xác thực
-              </span>
+
+            {/* Card 3: Ngưỡng Diện Tích Ổ Gà (AREA) */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2.5 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Ngưỡng diện tích ổ gà (AREA)
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
+                  <Icon name="tune" size={16} />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
+                  ≤ {currentPolicy.maxAreaM2} <span className="text-sm font-normal text-slate-500 font-sans">m²</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Chu vi biên dạng khép kín &lt; {currentPolicy.maxPerimeterM} m
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  <Icon name="check_circle" size={12} className="text-sky-600" />
+                  AI &amp; Tuần tra xác thực
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Ngưỡng Độ Sâu Ổ Gà (DEPTH) */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-2.5 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  Ngưỡng độ sâu ổ gà (DEPTH)
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
+                  <Icon name="balance" size={16} />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
+                  ≤ {currentPolicy.maxDepthCm} <span className="text-sm font-normal text-slate-500 font-sans">cm</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Độ lệch mặt đường đo laser / thước
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                  <Icon name="check_circle" size={12} className="text-sky-600" />
+                  Kiểm tra đo đạc thước
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Card 2: Ngưỡng Độ Sâu */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Ngưỡng độ sâu tối đa
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-brand-gold shrink-0">
-                <Icon name="balance" size={16} />
+          {/* Hàng điều kiện phụ: Mức độ nghiêm trọng cho phép & SLA thời gian hoàn tất */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            {/* Card 5: Mức Nghiêm Trọng Cho Phép */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shrink-0">
+                  <Icon name="warning" size={18} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Mức độ hư hỏng cho phép
+                  </span>
+                  <div className="text-base font-bold text-slate-900 mt-0.5">
+                    Thấp / Trung bình (LOW &amp; MEDIUM)
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    Cấm tự duyệt lỗi Nặng (HIGH) hoặc Nguy hiểm (CRITICAL)
+                  </span>
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.maxDepthCm} <span className="text-sm font-normal text-slate-500 font-sans">cm</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Độ lệch mặt đường đo laser/thước
-              </p>
-            </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                <Icon name="check_circle" size={12} className="text-sky-600" />
-                Kiểm tra đo đạc thước
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Mức Nghiêm Trọng */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Mức độ cho phép
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-amber-600 shrink-0">
-                <Icon name="warning" size={16} />
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                Thấp / Trung bình
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Hư hỏng nhẹ, không gây ách tắc
-              </p>
-            </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
                 <Icon name="lock" size={12} className="text-amber-600" />
-                Cấm tự duyệt lỗi Nặng
+                Ràng buộc an toàn
               </span>
             </div>
-          </div>
 
-          {/* Card 4: Cam Kết Thời Gian SLA */}
-          <div className="bg-slate-50/70 hover:bg-slate-50 rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col justify-between space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Thời hạn hoàn tất SLA
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shrink-0">
-                <Icon name="schedule" size={16} />
+            {/* Card 6: Cam Kết Thời Gian SLA Hoàn Tất */}
+            <div className="bg-slate-50/80 hover:bg-slate-50 rounded-xl p-3.5 border border-slate-200 shadow-2xs flex items-center justify-between transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-emerald-600 shrink-0">
+                  <Icon name="schedule" size={18} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Thời hạn hoàn tất xử lý (SLA Window)
+                  </span>
+                  <div className="text-base font-bold text-slate-900 mt-0.5 font-mono">
+                    ≤ {currentPolicy.slaHours} giờ (Original Window 24h)
+                  </div>
+                  <span className="text-[10px] text-slate-500 block">
+                    Tính từ khi phát lệnh điều phối đến nghiệm thu đạt
+                  </span>
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-brand-dark tracking-tight font-mono">
-                ≤ {currentPolicy.slaHours} <span className="text-sm font-normal text-slate-500 font-sans">giờ</span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Từ phát lệnh đến vá nguội hoàn tất
-              </p>
-            </div>
-            <div className="pt-2 border-t border-slate-200/60">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
                 <Icon name="schedule" size={12} className="text-emerald-600" />
-                SLA SLA-FT-24H
+                SLA-FT-24H
               </span>
             </div>
           </div>

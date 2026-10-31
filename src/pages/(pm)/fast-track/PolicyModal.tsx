@@ -69,7 +69,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="text"
               value={formVersionName}
               onChange={(e) => setFormVersionName(e.target.value)}
-              placeholder="Ví dụ: Chính sách v2.2"
+              placeholder="Ví dụ: POL-TCVN-2026-V3"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
           </div>

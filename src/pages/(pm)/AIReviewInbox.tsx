@@ -72,8 +72,7 @@ export const AIReviewInbox: React.FC = () => {
     isPhotoZoomModalOpen, setIsPhotoZoomModalOpen, modalMapContainerRef, drawerMapContainerRef,
     currentSeverity, setCurrentSeverity, currentUrgency, setCurrentUrgency, currentArea, setCurrentArea,
     currentDepth, setCurrentDepth, currentNotes, setCurrentNotes, filteredCases, pendingCount,
-    criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount,
-    handleResetTriageData, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
+    criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
     handleOpenRequestSurveyModal, handleConfirmRequestSurvey, handleNavigateFastTrack,
     handleToggleSelectReport, handleSelectAllReports, handleOpenLinkReportsModal,
     handleConfirmLinkReports, handleUnlinkReport, handleOpenTriageProject, handleConfirmTriageProject,
@@ -154,7 +153,6 @@ export const AIReviewInbox: React.FC = () => {
             handleSelectCase(c)
             setIsMergeModalOpen(true)
           }}
-          onResetTriageData={handleResetTriageData}
           onClearSelectedReports={() => setSelectedReportIds([])}
           onBulkVerify={handleBulkVerify}
           onBulkNeedSurvey={handleBulkNeedSurvey}

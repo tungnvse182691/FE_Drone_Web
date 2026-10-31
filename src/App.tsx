@@ -27,6 +27,7 @@ import { DefectDetailVerify } from './pages/(pm)/DefectDetailVerify'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
+import { OfflineConflicts } from './pages/(pm)/OfflineConflicts'
 import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
 import { RepairProposals } from './pages/(pm)/RepairProposals'
 import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
@@ -87,7 +88,8 @@ export const App: React.FC = () => {
             <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
             <Route path="repair-batches/assign" element={<AssignCrew />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="conflicts" element={<OfflineConflicts />} />
+            <Route path="conflict-center" element={<OfflineConflicts />} />
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="proposals" element={<RepairProposals />} />
@@ -138,7 +140,8 @@ export const App: React.FC = () => {
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflict-center" element={<FieldTasks />} />
+            <Route path="conflicts" element={<OfflineConflicts />} />
+            <Route path="conflict-center" element={<OfflineConflicts />} />
             <Route path="proposals" element={<RepairProposals />} />
             <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
             <Route path="work-packages" element={<RepairProposals />} />
