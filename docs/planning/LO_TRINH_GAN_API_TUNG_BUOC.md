@@ -231,8 +231,9 @@
   5. `GET /api/v1/sync/conflicts` (`API-126`): Danh sách các xung đột dữ liệu ngoại tuyến (Offline sync).
   6. `POST /api/v1/sync/conflicts/{conflictId}/resolve` (`API-127`): Hòa giải xung đột phiên bản.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Bấm duyệt "Tái sử dụng ảnh" gửi payload `API-084` thành công, bảng hiện badge `Reused Evidence`.
-  - [ ] Thử tạo xung đột version, Conflict Center hiển thị thông tin 2 bản ghi và cho phép giải quyết.
+  - [x] Bấm duyệt "Tái sử dụng ảnh" gửi payload `API-084` thành công, bảng hiện badge `Reused Evidence`.
+  - [x] Thử tạo xung đột version, Conflict Center hiển thị thông tin đối chiếu thực tế và cho phép giải quyết lưu trực tiếp vào CSDL Docker.
+  - [x] Xử lý xung đột Đổi đội ngoại tuyến (`ASSIGNMENT_REASSIGNED`), Lệch chính sách kỹ thuật (`POLICY_VERSION_MISMATCH`) và Cứu hộ thiết bị (`DEVICE_RESCUE_PENDING`) chuẩn nghiệp vụ 2 lớp bảo mật (PM lập tờ trình $\rightarrow$ Supervisor phê duyệt).
 
 ---
 
