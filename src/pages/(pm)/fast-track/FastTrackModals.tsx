@@ -1,9 +1,7 @@
 import React from 'react'
 import {
   PolicyThresholdConfig,
-  RouteConfig,
   DefectItem,
-  WorkMode,
   CrewTeam,
   AuditLogItem
 } from './types'
@@ -15,20 +13,16 @@ import { FastTrackDispatchModal } from './FastTrackDispatchModal'
 interface FastTrackModalsProps {
   isPolicyModalOpen: boolean
   setIsPolicyModalOpen: (open: boolean) => void
-  currentPolicy: PolicyThresholdConfig
+  currentPolicy: PolicyThresholdConfig | null
   formVersionName: string
   setFormVersionName: (v: string) => void
   formMaxArea: string
   setFormMaxArea: (v: string) => void
   formMaxDepth: string
   setFormMaxDepth: (v: string) => void
-  formSlaHours: string
-  setFormSlaHours: (v: string) => void
-  formMaxPerimeter: string
-  setFormMaxPerimeter: (v: string) => void
   formPolicyNote: string
   setFormPolicyNote: (v: string) => void
-  handleApplyPolicy: (action: 'DRAFT' | 'ACTIVATE') => void
+  handleApplyPolicy: (shouldPublish: boolean) => void
   isAuditModalOpen: boolean
   setIsAuditModalOpen: (open: boolean) => void
   auditLogs: AuditLogItem[]
@@ -36,10 +30,7 @@ interface FastTrackModalsProps {
   setDetailDefect: (defect: DefectItem | null) => void
   isDispatchModalOpen: boolean
   setIsDispatchModalOpen: (open: boolean) => void
-  workMode: WorkMode
-  currentRouteConfig: RouteConfig
   selectedDefectIds: string[]
-  surveyDistanceM: number
   selectedItems: DefectItem[]
   selectedDispatchCrew: string
   setSelectedDispatchCrew: (crew: string) => void
@@ -59,10 +50,6 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
   setFormMaxArea,
   formMaxDepth,
   setFormMaxDepth,
-  formSlaHours,
-  setFormSlaHours,
-  formMaxPerimeter,
-  setFormMaxPerimeter,
   formPolicyNote,
   setFormPolicyNote,
   handleApplyPolicy,
@@ -73,10 +60,7 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
   setDetailDefect,
   isDispatchModalOpen,
   setIsDispatchModalOpen,
-  workMode,
-  currentRouteConfig,
   selectedDefectIds,
-  surveyDistanceM,
   selectedItems,
   selectedDispatchCrew,
   setSelectedDispatchCrew,
@@ -87,24 +71,22 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
 }) => {
   return (
     <>
-      <PolicyModal
-        isOpen={isPolicyModalOpen}
-        onClose={() => setIsPolicyModalOpen(false)}
-        currentPolicy={currentPolicy}
-        formVersionName={formVersionName}
-        setFormVersionName={setFormVersionName}
-        formMaxArea={formMaxArea}
-        setFormMaxArea={setFormMaxArea}
-        formMaxDepth={formMaxDepth}
-        setFormMaxDepth={setFormMaxDepth}
-        formSlaHours={formSlaHours}
-        setFormSlaHours={setFormSlaHours}
-        formMaxPerimeter={formMaxPerimeter}
-        setFormMaxPerimeter={setFormMaxPerimeter}
-        formPolicyNote={formPolicyNote}
-        setFormPolicyNote={setFormPolicyNote}
-        handleApplyPolicy={handleApplyPolicy}
-      />
+      {currentPolicy && (
+        <PolicyModal
+          isOpen={isPolicyModalOpen}
+          onClose={() => setIsPolicyModalOpen(false)}
+          currentPolicy={currentPolicy}
+          formVersionName={formVersionName}
+          setFormVersionName={setFormVersionName}
+          formMaxArea={formMaxArea}
+          setFormMaxArea={setFormMaxArea}
+          formMaxDepth={formMaxDepth}
+          setFormMaxDepth={setFormMaxDepth}
+          formPolicyNote={formPolicyNote}
+          setFormPolicyNote={setFormPolicyNote}
+          handleApplyPolicy={(action) => handleApplyPolicy(action === 'ACTIVATE')}
+        />
+      )}
 
       <AuditModal
         isOpen={isAuditModalOpen}
@@ -120,10 +102,7 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
       <FastTrackDispatchModal
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
-        workMode={workMode}
-        currentRouteConfig={currentRouteConfig}
         selectedDefectIds={selectedDefectIds}
-        surveyDistanceM={surveyDistanceM}
         selectedItems={selectedItems}
         selectedDispatchCrew={selectedDispatchCrew}
         setSelectedDispatchCrew={setSelectedDispatchCrew}

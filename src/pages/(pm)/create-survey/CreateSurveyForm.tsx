@@ -445,9 +445,9 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
           <div>
-            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5 whitespace-nowrap">
               Loại Hình Khảo Sát
             </label>
             <select
@@ -456,20 +456,20 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 setSurveyType(e.target.value as any)
                 onClearError?.()
               }}
-              className={`w-full px-3.5 py-2 text-sm bg-white border rounded-[10px] focus:outline-none focus:ring-1 font-medium cursor-pointer text-[#1A1D20] ${
+              className={`w-full h-10 px-3.5 py-2 text-sm bg-white border rounded-[10px] focus:outline-none focus:ring-1 font-medium cursor-pointer text-[#1A1D20] ${
                 conflictReason
                   ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500'
                   : 'border-[#E2E5E9] focus:ring-[#C9A227] focus:border-[#C9A227]'
               }`}
             >
               <option value="PERIODIC">
-                Định kỳ (PERIODIC) {hasActivePeriodic ? '— Đã có đợt bay chưa xong' : ''}
+                Định kỳ {hasActivePeriodic ? '— Đã có đợt bay chưa xong' : ''}
               </option>
               <option value="AD_HOC">
-                Đột xuất / Sự cố (AD_HOC) {hasActiveAdHoc ? '— Đã có đợt bay chưa xong' : ''}
+                Đột xuất / Sự cố {hasActiveAdHoc ? '— Đã có đợt bay chưa xong' : ''}
               </option>
               <option value="BASELINE" disabled={hasBaseline}>
-                Khảo sát cơ sở (BASELINE) {hasBaseline ? '— Đã thiết lập mốc Baseline' : ''}
+                Khảo sát cơ sở {hasBaseline ? '— Đã thiết lập mốc Baseline' : ''}
               </option>
             </select>
             {conflictReason ? (
@@ -478,16 +478,16 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                 <span>{conflictReason}</span>
               </span>
             ) : (
-              <span className="text-[10px] text-slate-500 mt-1 block">
+              <span className="text-[10px] text-slate-500 mt-1.5 block">
                 {surveyType === 'PERIODIC' && 'Khảo sát định kỳ theo dõi nứt lún.'}
-                {surveyType === 'AD_HOC' && 'Khảo sát đột xuất, kiểm tra đột xuất hiện trường.'}
+                {surveyType === 'AD_HOC' && 'Khảo sát đột xuất hiện trường.'}
                 {surveyType === 'BASELINE' && 'Khảo sát mốc dữ liệu mặt đường ban đầu.'}
               </span>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5 whitespace-nowrap">
               Ngày Bay Dự Kiến
             </label>
             <input
@@ -495,25 +495,31 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="w-full px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] text-[#1A1D20]"
+              className="w-full h-10 px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] text-[#1A1D20]"
             />
+            <span className="text-[10px] text-slate-500 mt-1.5 block">
+              Thời gian cất cánh ngoài thực địa.
+            </span>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5">
-              Chỉ định phi công thiết bị bay
+            <label className="block text-xs font-semibold text-[#2D3748] uppercase tracking-wider mb-1.5 whitespace-nowrap">
+              Phi công điều khiển Drone
             </label>
             <select
               value={pilotId}
               onChange={(e) => setPilotId(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] font-medium cursor-pointer text-[#1A1D20]"
+              className="w-full h-10 px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] font-medium cursor-pointer text-[#1A1D20]"
             >
               {pilots.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.roleLabel})
+                  {p.name}
                 </option>
               ))}
             </select>
+            <span className="text-[10px] text-slate-500 mt-1.5 block">
+              Cán bộ vận hành thiết bị bay UAV.
+            </span>
           </div>
         </div>
       </div>

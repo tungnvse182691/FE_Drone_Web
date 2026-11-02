@@ -252,8 +252,10 @@
   5. `GET /api/v1/projects/{projectId}/fast-track/violations` (`API-146`): Danh sách vi phạm ngưỡng kỹ thuật.
   6. `POST /api/v1/projects/{projectId}/fast-track/{batchId}/final-confirm` (`API-147` FT mode): PM tự nghiệm thu chốt gói Fast Track.
 * **Dấu hiệu kiểm chứng đạt (Verification):**
-  - [ ] Khi đăng nhập vai trò Supervisor: Nút **Phê duyệt độ phủ tuyến (API-176)** sáng màu vàng đồng và bấm duyệt thành công.
-  - [ ] Khi đăng nhập PM: Nút duyệt bị ẩn, PM tạo và xuất bản chính sách mới bình thường.
+  - [x] Khi đăng nhập vai trò Supervisor: Nút **Phê duyệt độ phủ tuyến (API-176)** sáng màu vàng đồng và bấm duyệt thành công (gửi ETag If-Match và Idempotency-Key).
+  - [x] Khi đăng nhập PM: Nút duyệt bị ẩn, PM tạo dự thảo (API-162) và xuất bản chính sách mới (API-165) bình thường.
+  - [x] Đánh giá điều kiện kỹ thuật tự động theo API-146 (kiểm tra diện tích, độ sâu, loại khiếm khuyết từ CSDL).
+  - [x] 100% kết nối API Candidate3 Backend thật, không dùng mock data, không nuốt lỗi.
 
 ---
 

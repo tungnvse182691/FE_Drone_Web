@@ -20,6 +20,7 @@ import { DefectBoundingBoxViewer, BoundingBoxCoords } from './defect-verify/Defe
 import { DefectTemporalComparison } from './defect-verify/DefectTemporalComparison'
 import { DefectGisMapViewer } from './defect-verify/DefectGisMapViewer'
 import { DefectVerifyForm } from './defect-verify/DefectVerifyForm'
+import { getDefectGpsCoordinates } from '../../utils/projectGeodesy'
 
 const STANDARD_DEFECT_CODES = new Set<string>([
   DefectType.LONGITUDINAL_CRACK,
@@ -87,8 +88,8 @@ function mapDetectionToDefect(
     project_id: projectId,
     project_name: projectName,
     chainage_km: kmVal,
-    gps_lat: parseFloat((16.0582 + kmVal * 0.004).toFixed(5)),
-    gps_lng: parseFloat((108.2045 + kmVal * 0.004).toFixed(5)),
+    gps_lat: getDefectGpsCoordinates(projectId, kmVal).lat,
+    gps_lng: getDefectGpsCoordinates(projectId, kmVal).lng,
     defect_type: defectType,
     severity,
     confidence_score: (item.confidence || 80) / 100,
@@ -151,8 +152,8 @@ function mapBackendDefectDtoToDomain(
     project_id: projectId,
     project_name: projectName,
     chainage_km: 0.351,
-    gps_lat: 16.0582,
-    gps_lng: 108.2045,
+    gps_lat: getDefectGpsCoordinates(projectId, 0.351).lat,
+    gps_lng: getDefectGpsCoordinates(projectId, 0.351).lng,
     defect_type: resolveDomainDefectType(ov?.rawTypeCode || dto.defectTypeCode),
     severity: sevMap[dto.severity || 'HIGH'] || Severity.HIGH,
     confidence_score: 1.0,
@@ -255,8 +256,40 @@ export const DefectDetailVerify: React.FC = () => {
       }
 
       const rawTargetId = (id || '').toLowerCase()
-      const isDirectDet = detEntries.some((e) => e.item.id.toLowerCase() === rawTargetId)
+      const isDirectDet = detEntries.some(
+        (e) =>
+          e.item.id.toLowerCase() === rawTargetId ||
+          ((e.item as any).legacyId && (e.item as any).legacyId.toLowerCase() === rawTargetId) ||
+          e.item.code.toLowerCase() === rawTargetId ||
+          rawTargetId.startsWith(e.item.id.toLowerCase()) ||
+          e.item.id.toLowerCase().startsWith(rawTargetId)
+      )
       const isDirectDef = defEntries.some((e) => e.dto.id.toLowerCase() === rawTargetId)
+
+      if (rawTargetId && !isDirectDet && !isDirectDef) {
+        try {
+          const allSurveys = await surveyService.getSurveys().catch(() => [])
+          for (const srv of allSurveys) {
+            const srvDets = await surveyService.getSurveyDetections(srv.id).catch(() => [])
+            const matched = srvDets.find(
+              (sd) =>
+                sd.id.toLowerCase() === rawTargetId ||
+                ((sd as any).legacyId && (sd as any).legacyId.toLowerCase() === rawTargetId) ||
+                sd.code.toLowerCase() === rawTargetId ||
+                rawTargetId.startsWith(sd.id.toLowerCase()) ||
+                sd.id.toLowerCase().startsWith(rawTargetId)
+            )
+            if (matched) {
+              detEntries.push({
+                item: matched,
+                projectId: srv.project_id,
+                projectName: srv.project_name
+              })
+              break
+            }
+          }
+        } catch {}
+      }
 
       if (rawTargetId && !isDirectDet && !isDirectDef && /^[0-9a-f-]{36}$/i.test(rawTargetId)) {
         try {
@@ -298,7 +331,12 @@ export const DefectDetailVerify: React.FC = () => {
 
   const activeRecord = useMemo(() => {
     const matchedDet = allDetections.find(
-      (d) => d.item.id.toLowerCase() === targetId || d.item.code.toLowerCase() === targetId
+      (d) =>
+        d.item.id.toLowerCase() === targetId ||
+        ((d.item as any).legacyId && (d.item as any).legacyId.toLowerCase() === targetId) ||
+        d.item.code.toLowerCase() === targetId ||
+        targetId.startsWith(d.item.id.toLowerCase()) ||
+        d.item.id.toLowerCase().startsWith(targetId)
     )
     if (matchedDet) {
       const companion = allDetections.find(

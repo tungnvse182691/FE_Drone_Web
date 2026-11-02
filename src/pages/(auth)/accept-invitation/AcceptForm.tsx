@@ -1,6 +1,5 @@
 import React from 'react'
 import {
-  User,
   Lock,
   Eye,
   EyeOff,
@@ -8,15 +7,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Circle,
-  ArrowRight,
-  HelpCircle
+  ArrowRight
 } from 'lucide-react'
 import { PasswordRules, PasswordStrength } from './types'
-import { useToastStore } from '../../../store/toastStore'
 
 export interface AcceptFormProps {
-  fullName: string
-  setFullName: (val: string) => void
+  fullName?: string
+  setFullName?: (val: string) => void
   password: string
   setPassword: (val: string) => void
   showPassword: boolean
@@ -59,30 +56,27 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
   onSubmit,
   onReject
 }) => {
-  const toast = useToastStore()
   return (
     <>
       <form onSubmit={onSubmit} className="space-y-4">
-        {/* Field 1: Full Name */}
+        {/* Field 0: Họ và tên của nhân sự */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-slate-700">
             Họ và tên hiển thị trong hệ thống <span className="text-rose-600">*</span>
           </label>
           <div className="relative rounded-lg shadow-2xs">
-            <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-              <User className="w-4 h-4" />
-            </div>
             <input
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
               required
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold transition"
+              value={fullName || ''}
+              onChange={(e) => setFullName?.(e.target.value)}
+              placeholder="Nhập họ và tên đầy đủ của bạn..."
+              className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-brand-gold transition"
             />
           </div>
         </div>
 
-        {/* Field 2: Password */}
+        {/* Field 1: Mật khẩu mới */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="block text-xs font-semibold text-slate-700">
@@ -119,48 +113,49 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
             </button>
           </div>
 
-          {/* Password Strength Indicator */}
-          <div className="pt-1.5 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className={`flex items-center gap-1.5 font-semibold transition-colors ${strength.color}`}>
-                {strength.score >= 3 ? <CheckCircle2 className="w-3.5 h-3.5" /> : strength.score > 0 ? <AlertCircle className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5 text-slate-300" />}
-                <span>Mức độ: {strength.label}</span>
+          {/* Password Strength Meter */}
+          {password && (
+            <div className="pt-1.5 space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-500 flex items-center gap-1 font-medium">
+                  Mức độ: <strong className={strength.color}>{strength.label}</strong>
+                </span>
+                <span className="text-slate-400 font-mono text-[10px]">
+                  Yêu cầu: Khá mạnh
+                </span>
               </div>
-              <span className="text-[11px] text-slate-500">
-                {strength.score === 4 ? 'Đạt chuẩn an ninh Ban QLDA' : 'Yêu cầu tối thiểu: Khá mạnh'}
-              </span>
+              <div className="grid grid-cols-4 gap-1.5 h-1.5">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      step <= strength.score ? strength.barColor : 'bg-slate-200'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* 4-Segment Progress Bar */}
-            <div className="grid grid-cols-4 gap-1.5 h-1.5 w-full">
-              {[1, 2, 3, 4].map((level) => (
-                <div
-                  key={level}
-                  className={`h-full rounded-full transition-all duration-300 ${strength.score >= level ? strength.barColor : 'bg-slate-200'}`}
-                />
-              ))}
+          {/* Rules Check list */}
+          <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+            <div className={`flex items-center gap-1.5 ${rules.length ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+              {rules.length ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Circle className="w-3.5 h-3.5 text-slate-300" />}
+              <span>Tối thiểu 8 ký tự</span>
             </div>
-
-            {/* 3 Checklist Items */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 pt-1 text-[11px]">
-              <div className={`flex items-center gap-1 transition-colors ${rules.length ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                {rules.length ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                <span>Tối thiểu 8 ký tự</span>
-              </div>
-              <div className={`flex items-center gap-1 transition-colors ${rules.case ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                {rules.case ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                <span>Chữ hoa &amp; thường</span>
-              </div>
-              <div className={`flex items-center gap-1 transition-colors ${rules.special ? 'text-emerald-700 font-semibold' : 'text-slate-400'}`}>
-                {rules.special ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> : <Circle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                <span>Số &amp; ký tự đặc biệt</span>
-              </div>
+            <div className={`flex items-center gap-1.5 ${rules.case ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+              {rules.case ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Circle className="w-3.5 h-3.5 text-slate-300" />}
+              <span>Chữ hoa &amp; thường</span>
+            </div>
+            <div className={`flex items-center gap-1.5 ${rules.special ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+              {rules.special ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Circle className="w-3.5 h-3.5 text-slate-300" />}
+              <span>Số &amp; ký tự đặc biệt</span>
             </div>
           </div>
         </div>
 
-        {/* Field 3: Confirm Password */}
-        <div className="space-y-1.5 pt-1">
+        {/* Field 2: Xác nhận mật khẩu */}
+        <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-slate-700">
             Xác nhận mật khẩu mới <span className="text-rose-600">*</span>
           </label>
@@ -174,7 +169,11 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               placeholder="Nhập lại chính xác mật khẩu..."
-              className="w-full pl-10 pr-11 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-brand-gold transition"
+              className={`w-full pl-10 pr-11 py-2.5 bg-white border rounded-lg text-sm text-slate-800 font-mono tracking-wider focus:outline-none focus:ring-2 transition ${
+                confirmPassword.length > 0 && !isMatched
+                  ? 'border-rose-400 focus:ring-rose-400'
+                  : 'border-slate-200 focus:ring-brand-gold'
+              }`}
             />
             <button
               type="button"
@@ -184,89 +183,65 @@ export const AcceptForm: React.FC<AcceptFormProps> = ({
               {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {confirmPassword.length > 0 && (
-            <div className="pt-0.5">
-              {isMatched ? (
-                <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Mật khẩu trùng khớp
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-[11px] text-rose-500 font-medium">
-                  <AlertCircle className="w-3.5 h-3.5" /> Mật khẩu xác nhận chưa trùng khớp
-                </span>
-              )}
-            </div>
+          {confirmPassword.length > 0 && !isMatched && (
+            <p className="text-[11px] text-rose-600 flex items-center gap-1 font-medium">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>Mật khẩu xác nhận không khớp</span>
+            </p>
           )}
         </div>
 
-        {/* Legal Checkbox */}
+        {/* Agreement Checkbox */}
         <div className="pt-2">
-          <label className="flex items-start gap-3 cursor-pointer select-none p-3 rounded-xl bg-slate-100/70 hover:bg-slate-100 transition-colors">
+          <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={agreementChecked}
               onChange={(e) => setAgreementChecked(e.target.checked)}
-              required
-              className="mt-0.5 w-4 h-4 rounded text-brand-gold focus:ring-brand-gold accent-brand-gold cursor-pointer"
+              className="mt-0.5 w-4 h-4 rounded text-brand-gold focus:ring-brand-gold border-slate-300 cursor-pointer"
             />
-            <span className="text-xs text-slate-600 leading-snug">
-              Tôi cam kết tuân thủ quy chế bảo mật số liệu công trình,{' '}
-              <strong className="text-slate-900">Nghị định 130/2018/NĐ-CP</strong> và tính toàn vẹn của chuỗi bằng chứng pháp lý (
-              <span className="font-mono font-semibold">Nhật ký kiểm toán</span>).
+            <span className="leading-relaxed">
+              Tôi cam kết tuân thủ quy chế bảo mật số liệu công trình, Nghị định 130/2018/NĐ-CP và tính toàn vẹn của chuỗi bằng chứng pháp lý (Nhật ký kiểm toán).
             </span>
           </label>
         </div>
 
-        {/* Action Buttons */}
-        <div className="pt-4 space-y-3">
+        {/* Action Buttons Row */}
+        <div className="pt-4 flex flex-col sm:flex-row items-center gap-3">
           <button
             type="submit"
-            disabled={isSubmitting || !isFormValid}
-            className="w-full py-3.5 px-6 rounded-xl bg-brand-gold hover:bg-brand-goldMuted text-white text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.99] transition shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!isFormValid || isSubmitting}
+            className={`w-full sm:flex-1 py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
+              isFormValid && !isSubmitting
+                ? 'bg-[#C9A227] hover:bg-[#B38E1F] text-white'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+            }`}
           >
             {isSubmitting ? (
-              <span>Đang kích hoạt tài khoản...</span>
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>Đang kích hoạt tài khoản...</span>
+              </>
             ) : (
               <>
-                <span>Chấp thuận lời mời &amp; Vào không gian dự án</span>
+                <span>Kích hoạt tài khoản &amp; Đăng nhập</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 text-xs">
-            <button
-              type="button"
-              onClick={onReject}
-              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-300 transition cursor-pointer"
-            >
-              Từ chối lời mời
-            </button>
-            <button
-              type="button"
-              onClick={() => toast.info('Vui lòng liên hệ Giám sát trưởng Nguyễn Văn An hoặc Ban Chỉ huy dự án Hoàng Hải: 1900-6868')}
-              className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-goldMuted transition underline underline-offset-4 cursor-pointer"
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Cần hỗ trợ từ Giám sát viên?</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onReject}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto py-3 px-5 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+          >
+            Từ chối lời mời
+          </button>
         </div>
       </form>
-
-      {/* Micro Tech Footer inside card */}
-      <div className="mt-6 -mx-6 sm:-mx-8 md:-mx-9 -mb-6 sm:-mb-8 md:-mb-9 px-6 sm:px-9 py-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-slate-500 text-[11px]">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-          <span>Mã hóa End-to-End TLS 1.3</span>
-        </div>
-        <div className="flex items-center gap-2 font-mono">
-          <span>TCVN 8819:2011</span>
-          <span>•</span>
-          <span>Đã xác thực SHA-256</span>
-        </div>
-      </div>
     </>
   )
 }
+
 export default AcceptForm

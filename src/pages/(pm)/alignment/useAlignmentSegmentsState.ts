@@ -4,7 +4,8 @@ import { SEGMENT_COLORS } from './data'
 import {
   interpolateCoordAtKm,
   checkAndEnrichSegmentsContinuity,
-  generateMockSlabs
+  generateMockSlabs,
+  calculatePavementSlabs
 } from './alignmentGeometryHelpers'
 import {
   computeAutoSplitSegments,
@@ -37,7 +38,7 @@ export function useAlignmentSegmentsState({
   handleFitBounds
 }: UseAlignmentSegmentsStateParams) {
   const [segments, setSegments] = useState<SegmentItem[]>(initialSegments)
-  const [slabs, setSlabs] = useState<SlabItem[]>(generateMockSlabs(initialSegments.length))
+  const [slabs, setSlabs] = useState<SlabItem[]>(() => calculatePavementSlabs(initialSegments))
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>('seg-1')
 
   const [splitDistance, setSplitDistance] = useState<number>(5.0)
@@ -69,7 +70,7 @@ export function useAlignmentSegmentsState({
     const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
     const validated = checkAndEnrichSegmentsContinuity(newSegments)
     setSegments(validated)
-    setSlabs(generateMockSlabs(validated.length))
+    setSlabs(calculatePavementSlabs(validated))
     setSelectedSegmentId(validated[0]?.id || null)
 
     syncMap(validated, validated[0]?.id || null)

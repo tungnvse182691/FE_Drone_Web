@@ -1,14 +1,7 @@
-import React from 'react'
-import { UserPlus, X, Mail, UserCheck, Send } from 'lucide-react'
+import React, { useState } from 'react'
+import { UserPlus, X, Mail, UserCheck, Send, CheckSquare, Square, FolderKanban, AlertCircle, Lock } from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
-
-export const SYSTEM_PROJECTS = [
-  { id: 'PRJ-QL1A-02', name: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)' },
-  { id: 'PRJ-QL1A-01', name: 'QL1A - Giai đoạn 1 (Km 1000 - Km 1025)' },
-  { id: 'PRJ-CT-BN', name: 'Đường nối Cao tốc Bắc - Nam (Km 0 - Km 12)' },
-  { id: 'PRJ-PT-DG', name: 'Cao tốc Phan Thiết - Dầu Giây (Km 45 - Km 65)' },
-]
 
 export interface AddPersonnelModalProps {
   showAddPersonnelModal: boolean
@@ -23,15 +16,22 @@ export interface AddPersonnelModalProps {
   setNewPersonnelPhone: (val: string) => void
   newPersonnelRole: RoleCode
   setNewPersonnelRole: (val: RoleCode) => void
-  newPersonnelProject: string
-  setNewPersonnelProject: (val: string) => void
-  newPersonnelCert: string
-  setNewPersonnelCert: (val: string) => void
+  newPersonnelProjectIds: string[]
+  toggleNewPersonnelProject: (id: string) => void
+  selectAllNewPersonnelProjects: () => void
+  clearAllNewPersonnelProjects: () => void
   assignExistingUserId: string
   setAssignExistingUserId: (val: string) => void
-  assignExistingProject: string
-  setAssignExistingProject: (val: string) => void
+  assignExistingProjectIds: string[]
+  toggleAssignExistingProject: (id: string) => void
+  selectAllAssignExistingProjects: () => void
+  clearAllAssignExistingProjects: () => void
   usersList: SystemUserAccount[]
+  projectsList: Array<{ id: string; name: string; code?: string; pm_user_id?: string; pm_name?: string }>
+  assignEffectiveFrom?: string
+  setAssignEffectiveFrom?: (val: string) => void
+  assignReason?: string
+  setAssignReason?: (val: string) => void
   handleAddPersonnelSubmit: (e: React.FormEvent) => void
 }
 
@@ -48,36 +48,80 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   setNewPersonnelPhone,
   newPersonnelRole,
   setNewPersonnelRole,
-  newPersonnelProject,
-  setNewPersonnelProject,
-  newPersonnelCert,
-  setNewPersonnelCert,
+  newPersonnelProjectIds,
+  toggleNewPersonnelProject,
+  selectAllNewPersonnelProjects,
+  clearAllNewPersonnelProjects,
   assignExistingUserId,
   setAssignExistingUserId,
-  assignExistingProject,
-  setAssignExistingProject,
+  assignExistingProjectIds,
+  toggleAssignExistingProject,
+  selectAllAssignExistingProjects,
+  clearAllAssignExistingProjects,
   usersList,
+  projectsList,
+  assignEffectiveFrom,
+  setAssignEffectiveFrom,
+  assignReason,
+  setAssignReason,
   handleAddPersonnelSubmit,
 }) => {
   if (!showAddPersonnelModal) return null
 
+  const isPmRole = newPersonnelRole === RoleCode.PROJECT_MANAGER
+
+  // Kiểm tra dự án có bị PM khác nắm giữ hay không (cho form mời nhân sự mới)
+  const isProjectLockedForNewPm = (p: { pm_user_id?: string; pm_name?: string }) => {
+    if (!isPmRole) return false
+    return Boolean(
+      p.pm_user_id &&
+      p.pm_name &&
+      !p.pm_name.toLowerCase().includes('chưa')
+    )
+  }
+
+  // Chọn tất cả các dự án hợp lệ cho nhân sự mới (bỏ qua những dự án đã có PM)
+  const handleSelectAllValidNewProjects = () => {
+    if (isPmRole) {
+      const validIds = projectsList.filter((p) => !isProjectLockedForNewPm(p)).map((p) => p.id)
+      validIds.forEach((id) => {
+        if (!newPersonnelProjectIds.includes(id)) toggleNewPersonnelProject(id)
+      })
+    } else {
+      selectAllNewPersonnelProjects()
+    }
+  }
+
+  // Tìm thông tin của nhân sự đang được chọn trong tab Điều chuyển
+  const selectedExistingUser = usersList.find((u) => u.id === assignExistingUserId)
+  const isAssigningPm = selectedExistingUser?.role === RoleCode.PROJECT_MANAGER
+
+  // Tìm dự án được chọn trong tab Điều chuyển PM
+  const selectedTargetProject = projectsList.find((p) => p.id === assignExistingProjectIds[0])
+  const targetProjectHasPm = Boolean(
+    selectedTargetProject?.pm_user_id &&
+    selectedTargetProject?.pm_name &&
+    !selectedTargetProject.pm_name.toLowerCase().includes('chưa')
+  )
+
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-gold/15 text-[#8C6D15] flex items-center justify-center font-bold">
-              <UserPlus className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/15 text-[#8C6D15] flex items-center justify-center font-bold">
+              <UserPlus className="w-5 h-5 text-[#C9A227]" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 leading-tight">
-                {addPersonnelTab === 'NEW' ? 'Gửi Lời Mời Nhân Sự Mới' : 'Điều Chuyển Nhân Sự Dự Án'}
+                {addPersonnelTab === 'NEW'
+                  ? 'Gửi Thư Mời Kích Hoạt Nhân Sự Mới (API-032)'
+                  : 'Điều Chuyển / Bàn Giao Dự Án (API-113)'}
               </h3>
               <p className="text-xs text-slate-500">
                 {addPersonnelTab === 'NEW'
-                  ? 'Phát hành thư mời qua Email công vụ để nhân sự kích hoạt tài khoản'
-                  : 'Phân công lại phạm vi dự án bảo hành cho nhân sự hiện có'}
+                  ? 'Cấp quyền truy cập hệ thống bảo hành & sửa chữa đường bộ'
+                  : 'Gán tuyến quản lý phụ trách cho nhân sự đang làm việc'}
               </p>
             </div>
           </div>
@@ -90,32 +134,32 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
           </button>
         </div>
 
-        {/* Tab switch */}
-        <div className="p-4 pb-0 bg-white">
-          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl">
+        {/* Tab Switcher */}
+        <div className="px-6 pt-4 pb-1 border-b border-slate-100 bg-white">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setAddPersonnelTab('NEW')}
-              className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`pb-2 text-xs font-bold border-b-2 flex items-center gap-1.5 transition cursor-pointer ${
                 addPersonnelTab === 'NEW'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'border-[#C9A227] text-[#8C6D15]'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
               <Mail className="w-3.5 h-3.5" />
-              <span>1. Gửi lời mời nhân sự mới</span>
+              <span>Gửi thư mời nhân sự mới</span>
             </button>
             <button
               type="button"
               onClick={() => setAddPersonnelTab('ASSIGN')}
-              className={`py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`pb-2 text-xs font-bold border-b-2 flex items-center gap-1.5 transition cursor-pointer ${
                 addPersonnelTab === 'ASSIGN'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'border-[#C9A227] text-[#8C6D15]'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
               <UserCheck className="w-3.5 h-3.5" />
-              <span>2. Điều chuyển nhân sự hiện có</span>
+              <span>Điều chuyển nhân sự hiện có</span>
             </button>
           </div>
         </div>
@@ -135,7 +179,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="VD: Kỹ sư Nguyễn Văn Nam"
                     value={newPersonnelName}
                     onChange={(e) => setNewPersonnelName(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                   />
                 </div>
                 <div className="space-y-1">
@@ -148,7 +192,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="nam.nguyen@hoanghai-infra.vn"
                     value={newPersonnelEmail}
                     onChange={(e) => setNewPersonnelEmail(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                   />
                 </div>
               </div>
@@ -161,7 +205,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     placeholder="0912.xxx.xxx"
                     value={newPersonnelPhone}
                     onChange={(e) => setNewPersonnelPhone(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                   />
                 </div>
                 <div className="space-y-1">
@@ -171,7 +215,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   <select
                     value={newPersonnelRole}
                     onChange={(e) => setNewPersonnelRole(e.target.value as RoleCode)}
-                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                   >
                     <option value={RoleCode.PROJECT_MANAGER}>PROJECT_MANAGER (Chỉ huy trưởng PM)</option>
                     <option value={RoleCode.DRONE_OPERATOR}>DRONE_OPERATOR (Phi công UAV / Kỹ sư Drone)</option>
@@ -180,36 +224,112 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700">
-                  Dự án bảo hành phụ trách: <span className="text-slate-400 font-normal">(Tùy chọn)</span>
-                </label>
-                <select
-                  value={newPersonnelProject}
-                  onChange={(e) => setNewPersonnelProject(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
-                >
-                  <option value="">-- Để trống (Chưa phân công dự án - Có thể gán sau) --</option>
-                  {SYSTEM_PROJECTS.map((p) => (
-                    <option key={p.id} value={p.name}>
-                      {p.id} — {p.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-slate-500 italic">
-                  * Có thể để trống nếu nhân sự mới chưa nhận dự án. Supervisor có thể phân công dự án bổ sung bất cứ lúc nào.
-                </p>
-              </div>
+              {/* Phân công dự án ban đầu (Khóa dự án đã có PM) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <FolderKanban className="w-3.5 h-3.5 text-[#C9A227]" />
+                    <label className="font-semibold text-slate-800">
+                      Dự án bảo hành phụ trách ban đầu:
+                    </label>
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+                      {isPmRole
+                        ? `Đã chọn: ${newPersonnelProjectIds.length} dự án (1 PM / Dự án - BR-01)`
+                        : `Đã chọn: ${newPersonnelProjectIds.length} / ${projectsList.length} dự án`}
+                    </span>
+                  </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700">Chứng chỉ hành nghề / Chuyên môn:</label>
-                <input
-                  type="text"
-                  placeholder="VD: CCHN Chỉ huy trưởng Hạng I / Chứng chỉ bay UAV CAAV"
-                  value={newPersonnelCert}
-                  onChange={(e) => setNewPersonnelCert(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
+                  {projectsList.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllValidNewProjects}
+                        className="text-[11px] text-[#8C6D15] hover:text-[#5F490E] font-bold hover:underline cursor-pointer"
+                      >
+                        Chọn tất cả
+                      </button>
+                      <span className="text-slate-300">|</span>
+                      <button
+                        type="button"
+                        onClick={clearAllNewPersonnelProjects}
+                        className="text-[11px] text-slate-500 hover:text-slate-700 font-semibold hover:underline cursor-pointer"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {projectsList.length === 0 ? (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-center text-[11px]">
+                    Đang tải danh sách dự án...
+                  </div>
+                ) : (
+                  <>
+                    <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 space-y-1.5 divide-y divide-slate-100">
+                      {projectsList.map((p) => {
+                        const isChecked = newPersonnelProjectIds.includes(p.id)
+                        const isLocked = isProjectLockedForNewPm(p)
+
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              if (!isLocked) toggleNewPersonnelProject(p.id)
+                            }}
+                            className={`flex items-start gap-2.5 p-2 rounded-lg transition ${
+                              isLocked
+                                ? 'bg-slate-100/80 border border-slate-200/70 opacity-60 cursor-not-allowed'
+                                : isChecked
+                                ? 'bg-amber-50/80 border border-amber-200 cursor-pointer'
+                                : 'bg-white hover:bg-slate-100 border border-transparent cursor-pointer'
+                            }`}
+                          >
+                            <div className="pt-0.5 text-[#C9A227]">
+                              {isLocked ? (
+                                <Lock className="w-4 h-4 text-slate-400" />
+                              ) : isChecked ? (
+                                <CheckSquare className="w-4 h-4 text-[#C9A227]" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {p.code && (
+                                  <span className="font-mono font-bold text-slate-900 text-[11px]">
+                                    {p.code}
+                                  </span>
+                                )}
+                                <span className="text-slate-700 font-medium truncate">
+                                  {p.name}
+                                </span>
+                                {isLocked ? (
+                                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-medium">
+                                    ⛔ Đã có PM: {p.pm_name} (Khóa)
+                                  </span>
+                                ) : isPmRole && !p.pm_user_id ? (
+                                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                                    ✓ Trống PM
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {isPmRole && (
+                      <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
+                        <Lock className="w-4 h-4 text-[#C9A227] shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Quy tắc BR-01:</strong> Một Chỉ huy trưởng (PM) có thể kiêm nhiệm nhiều dự án bảo hành, nhưng mỗi dự án chỉ có duy nhất 1 PM chính. Các dự án đã có PM khác phụ trách sẽ bị <strong>khóa cứng</strong> để chống gán nhầm. Nếu cần thay thế PM của dự án đã có người quản lý, vui lòng chuyển sang tab <strong>"Điều chuyển nhân sự hiện có"</strong>.
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
@@ -217,50 +337,192 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   info
                 </span>
                 <span>
-                  Hệ thống sẽ phát hành mã thư mời kích hoạt gửi đến Email công vụ. Nhân sự truy cập đường link kích hoạt để xác nhận thông tin cá nhân và thiết lập mật khẩu ban đầu.
+                  Hệ thống sẽ phát hành mã thư mời kích hoạt gửi đến Email công vụ (thu thập tại Mailpit <code>localhost:18026</code>). Nhân sự truy cập đường link để xác nhận thông tin và tạo mật khẩu.
                 </span>
               </div>
             </>
           ) : (
+            /* TAB ĐIỀU CHUYỂN NHÂN SỰ HIỆN CÓ */
             <>
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">
-                  Chọn nhân sự cần điều chuyển / phân công: <span className="text-rose-600">*</span>
+                  Chọn nhân sự TIẾP QUẢN / NHẬN DỰ ÁN MỚI: <span className="text-rose-600">*</span>
                 </label>
                 <select
                   value={assignExistingUserId}
                   onChange={(e) => setAssignExistingUserId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                 >
-                  {usersList.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} ({u.email}) — Hiện tại: {u.project_scope}
-                    </option>
-                  ))}
+                  <option value="">-- Chọn Chỉ huy trưởng (PM) cần điều chuyển --</option>
+                  {usersList
+                    .filter((u) => u.role === RoleCode.PROJECT_MANAGER)
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name} (PM) — Hiện tại: {u.project_scope}
+                      </option>
+                    ))}
                 </select>
+                <p className="text-[11px] text-slate-500 italic mt-1.5">
+                  💡 <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (giúp PM đó trở về trạng thái &quot;Chưa phân công&quot;), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
+                </p>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700">
-                  Dự án điều chuyển sang phụ trách: <span className="text-rose-600">*</span>
-                </label>
-                <select
-                  value={assignExistingProject}
-                  onChange={(e) => setAssignExistingProject(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
-                >
-                  <option value="Chưa phân công dự án">-- Thu hồi dự án (Chờ phân công sau) --</option>
-                  {SYSTEM_PROJECTS.map((p) => (
-                    <option key={p.id} value={p.name}>
-                      {p.id} — {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Nếu nhân sự là PM: Điều chuyển tiếp quản làm PM chính (API-113) */}
+              {isAssigningPm ? (
+                <div className="space-y-3 p-3 bg-amber-50/60 rounded-xl border border-amber-200">
+                  <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+                    <AlertCircle className="w-4 h-4 text-[#C9A227]" />
+                    <span>Quy trình điều chuyển &amp; bàn giao Chỉ huy trưởng chính (API-113)</span>
+                  </div>
 
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 leading-relaxed">
-                Sau khi điều chuyển, quyền hạn truy cập của nhân sự sẽ tự động chuyển sang phạm vi dự án mới, cập nhật danh bạ điều hành công trường.
-              </div>
+                  <div className="space-y-1">
+                    <label className="font-semibold text-slate-700">
+                      Dự án tiếp quản làm PM chính: <span className="text-rose-600">*</span>
+                    </label>
+                    <select
+                      required
+                      value={assignExistingProjectIds[0] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        if (val) {
+                          assignExistingProjectIds.length = 0
+                          toggleAssignExistingProject(val)
+                        } else {
+                          clearAllAssignExistingProjects()
+                        }
+                      }}
+                      className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        -- Chọn dự án cần bàn giao cho PM này tiếp quản * --
+                      </option>
+                      {projectsList.map((p) => {
+                        const isAlreadyPmOfThisProject = p.pm_user_id === selectedExistingUser?.id
+                        if (isAlreadyPmOfThisProject) {
+                          return (
+                            <option key={p.id} value={p.id} disabled className="text-slate-400 bg-slate-100 font-normal">
+                              {p.code ? `${p.code} — ` : ''}{p.name} (Đang do nhân sự này phụ trách — Đã là PM chính)
+                            </option>
+                          )
+                        }
+
+                        const hasPm = Boolean(
+                          p.pm_user_id && p.pm_name && !p.pm_name.toLowerCase().includes('chưa')
+                        )
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.code ? `${p.code} — ` : ''}{p.name}{' '}
+                            {hasPm ? `(Đang do: ${p.pm_name} phụ trách ➔ Sẽ bàn giao thay thế)` : '(Trống PM)'}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+
+                  {targetProjectHasPm && (
+                    <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
+                      <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Cảnh báo bàn giao thay thế:</strong> Dự án này hiện đang do PM <strong>{selectedTargetProject?.pm_name}</strong> phụ trách. Khi xác nhận điều chuyển, hệ thống sẽ <strong>thu hồi quyền PM của {selectedTargetProject?.pm_name}</strong> và chuyển giao quyền Chỉ huy trưởng chính duy nhất cho PM <strong>{selectedExistingUser?.full_name}</strong>.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="font-semibold text-slate-700">Ngày hiệu lực bàn giao:</label>
+                      <input
+                        type="date"
+                        value={assignEffectiveFrom || new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setAssignEffectiveFrom?.(e.target.value)}
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-semibold text-slate-700">Lý do điều chuyển PM:</label>
+                      <input
+                        type="text"
+                        value={assignReason || ''}
+                        onChange={(e) => setAssignReason?.(e.target.value)}
+                        placeholder="VD: Quyết định điều chuyển tuyến của Ban giám đốc"
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Nếu nhân sự là Drone Operator / Repair Crew: Cho phép tích chọn nhiều dự án */
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <FolderKanban className="w-3.5 h-3.5 text-[#C9A227]" />
+                      <label className="font-semibold text-slate-800">
+                        Dự án điều chuyển sang phụ trách:
+                      </label>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
+                        Đã chọn: {assignExistingProjectIds.length} / {projectsList.length} dự án
+                      </span>
+                    </div>
+
+                    {projectsList.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={selectAllAssignExistingProjects}
+                          className="text-[11px] text-[#8C6D15] hover:text-[#5F490E] font-bold hover:underline cursor-pointer"
+                        >
+                          Chọn tất cả
+                        </button>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={clearAllAssignExistingProjects}
+                          className="text-[11px] text-slate-500 hover:text-slate-700 font-semibold hover:underline cursor-pointer"
+                        >
+                          Bỏ chọn
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 space-y-1.5 divide-y divide-slate-100">
+                    {projectsList.map((p) => {
+                      const isChecked = assignExistingProjectIds.includes(p.id)
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => toggleAssignExistingProject(p.id)}
+                          className={`flex items-start gap-2.5 p-2 rounded-lg cursor-pointer transition ${
+                            isChecked
+                              ? 'bg-amber-50/80 border border-amber-200'
+                              : 'bg-white hover:bg-slate-100 border border-transparent'
+                          }`}
+                        >
+                          <div className="pt-0.5 text-[#C9A227]">
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-[#C9A227]" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {p.code && (
+                                <span className="font-mono font-bold text-slate-900 text-[11px]">
+                                  {p.code}
+                                </span>
+                              )}
+                              <span className="text-slate-700 font-medium truncate">
+                                {p.name}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -274,7 +536,20 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              disabled={
+                addPersonnelTab === 'ASSIGN' &&
+                (!assignExistingUserId ||
+                  (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&
+                    assignExistingProjectIds.length === 0))
+              }
+              className={`px-4 py-2 text-white rounded-lg font-bold shadow-xs transition flex items-center gap-1.5 ${
+                addPersonnelTab === 'ASSIGN' &&
+                (!assignExistingUserId ||
+                  (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&
+                    assignExistingProjectIds.length === 0))
+                  ? 'bg-slate-300 cursor-not-allowed opacity-60'
+                  : 'bg-[#C9A227] hover:bg-[#B38E1F] cursor-pointer'
+              }`}
             >
               {addPersonnelTab === 'NEW' ? (
                 <>

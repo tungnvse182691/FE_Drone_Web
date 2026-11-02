@@ -9,6 +9,7 @@ import { PM_ASSIGNED_PROJECTS, SEGMENT_COLORS, getAvailableAssignedProjects } fr
 import {
   checkAndEnrichSegmentsContinuity,
   generateMockSlabs,
+  calculatePavementSlabs,
   calculateCoordsLengthKm
 } from './alignmentGeometryHelpers'
 import { computeSplitSegmentPair } from './alignmentSplitHelpers'
@@ -86,7 +87,7 @@ export function useAlignmentState() {
           }))
           const validated = checkAndEnrichSegmentsContinuity(mapped)
           segmentsState.setSegments(validated)
-          segmentsState.setSlabs(generateMockSlabs(validated.length))
+          segmentsState.setSlabs(calculatePavementSlabs(validated, slabLengthM, slabThicknessCm))
         }
       } else {
         // Backend chưa có tim tuyến duyệt: kiểm tra xem có bản nháp đang chờ duyệt hoặc dữ liệu đã lưu không
@@ -104,7 +105,7 @@ export function useAlignmentState() {
           setImportedLengthKm(saved.totalLengthKm || calculateCoordsLengthKm(saved.coords))
           if (saved.segments && saved.segments.length > 0) {
             segmentsState.setSegments(saved.segments)
-            segmentsState.setSlabs(generateMockSlabs(saved.segments.length))
+            segmentsState.setSlabs(calculatePavementSlabs(saved.segments, slabLengthM, slabThicknessCm))
           }
           if (saved.branches) {
             setBranches(saved.branches)
@@ -114,7 +115,7 @@ export function useAlignmentState() {
           setCurrentKmPoints(activeProject.defaultKmPoints || [])
           setImportedLengthKm(activeProject.lengthKm || calculateCoordsLengthKm(activeProject.defaultCoords))
           segmentsState.setSegments(activeProject.defaultSegments || [])
-          segmentsState.setSlabs(generateMockSlabs((activeProject.defaultSegments || []).length))
+          segmentsState.setSlabs(calculatePavementSlabs(activeProject.defaultSegments || [], slabLengthM, slabThicknessCm))
           if (activeProject.defaultBranches) {
             setBranches(activeProject.defaultBranches)
           }
@@ -293,6 +294,17 @@ export function useAlignmentState() {
     popupRef: { current: null },
     handleFitBounds: () => mapState.handleFitBounds()
   })
+  // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
+  useEffect(() => {
+    if (segmentsState.segments && segmentsState.segments.length > 0) {
+      segmentsState.setSlabs(
+        calculatePavementSlabs(segmentsState.segments, slabLengthM, slabThicknessCm)
+      )
+    } else {
+      segmentsState.setSlabs([])
+    }
+  }, [slabLengthM, slabThicknessCm, segmentsState.segments])
+
 
   // Refs theo dõi danh sách tuyến nhánh và phân đoạn mới nhất để tránh stale closure khi click trên map
   const branchesRef = useRef<any[]>(branches)

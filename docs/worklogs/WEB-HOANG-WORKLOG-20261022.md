@@ -538,3 +538,93 @@ Trong điều kiện thi công đường bộ mất sóng viễn thông kéo dà
 ### 7.4. Kết Quả Kiểm Thử & Kiểm Soát Mã Nguồn
 - **Dữ liệu thực tế:** 100% dữ liệu ca xung đột được lưu trữ và truy vấn trực tiếp từ bảng `master.dbo.OfflineSyncConflicts` trong SQL Server Docker (`roadguard-fe-starter01-sql-1`).
 - **Biên dịch TypeScript:** `npx tsc --noEmit` đạt **100% 0 lỗi (Exit code 0)**.
+
+---
+
+## CẬP NHẬT NGÀY 02/11/2026: TÍCH HỢP API NHÂN SỰ, SỬA BẢN ĐỒ MAPLIBRE & DỌN GIAO DIỆN MODAL
+
+- **Thời gian thực hiện:** 02/11/2026
+- **Người thực hiện:** Hoàng (Solo Frontend Web)
+- **Nhánh:** `hoang`
+
+---
+
+### A. Tích Hợp API Thêm Nhân Sự Vào Dự Án (Màn PM — Tổng Quan Dự Án)
+
+**Căn cứ:** `openapi.json` — `GET /api/v1/projects/{projectId}/members/eligible`, `POST /api/v1/projects/{projectId}/members`
+
+**Các file thay đổi:**
+- `src/api/services/personnelService.ts` — Bổ sung 3 method mới:
+  - `fetchEligibleProjectMembers(projectId, params)` → `GET .../members/eligible` (tìm tài khoản đủ điều kiện thêm vào dự án theo role `OPERATOR` / `CREW`, hỗ trợ search/limit/cursor)
+  - `addProjectMember(projectId, userId)` → `POST .../members` (thêm thành viên, tự sinh `Idempotency-Key`, xử lý 409 Conflict nếu đã là thành viên)
+  - `updateUserPhoneNumber(userId, phoneNumber, options)` → `PATCH /api/v1/users/{userId}/phone-number` (tự fetch ETag trước khi gọi, tự chuẩn hóa số điện thoại bằng cách bỏ dấu chấm/khoảng trắng/gạch ngang)
+- `src/pages/(pm)/project-overview/AddProjectMemberModal.tsx` — **File mới** — Modal cho PM chọn Drone Operator/Repair Crew từ danh sách eligible rồi thêm vào dự án; thông báo lỗi rõ ràng khi API trả 409 hoặc 4xx/5xx.
+- `src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx` — Thêm nút **Thêm nhân sự** mở `AddProjectMemberModal`; hiển thị empty state với nút call-to-action khi chưa có nhân sự nào.
+- `src/pages/(pm)/ProjectOverview.tsx` — Truyền prop `onReloadMembers` và `showToast` vào `ProjectPersonnelCard`.
+
+---
+
+### B. Sửa Lỗi Role Badge Nhân Sự Hiển Thị Sai ("Tổ thi công" Cho Cả PM Lẫn Operator)
+
+**Nguyên nhân:** Backend trả short code `"PM"` / `"OPERATOR"` / `"CREW"`, trong khi FE cast trực tiếp `m.role as RoleCode` → không khớp enum `"PROJECT_MANAGER"` / `"DRONE_OPERATOR"` / `"REPAIR_CREW"` → mọi nhân sự đều hiện badge mặc định "Tổ thi công".
+
+**Fix:** Dùng hàm `mapBackendRoleToRoleCode()` trong `personnelService.ts` để chuyển đổi short code → enum chuẩn trước khi hiển thị.
+
+**File thay đổi:** `src/pages/(sup)/system-control/AccountsTab.tsx` — Cập nhật badge vai trò theo `mapBackendRoleToRoleCode`; phân màu riêng biệt: DRONE_OPERATOR (vàng hổ phách), REPAIR_CREW (xanh lá), PROJECT_MANAGER (xanh navy).
+
+---
+
+### C. Sửa Lỗi Cập Nhật SĐT (PATCH Phone) Trả 400 Bad Request
+
+**Nguyên nhân:** Backend chỉ chấp nhận chuỗi số thuần (10 chữ số). Khi người dùng nhập `0111.111.222` có dấu chấm → backend trả `400 validation_error`.
+
+**Fix:**
+- `src/api/services/personnelService.ts` — Tự động strip ký tự `[\s.-]` trước khi gọi API; validate regex `^(0|\+84)(3|5|7|8|9)[0-9]{8}$` trên FE trước khi gửi.
+- `src/pages/(sup)/system-control/usePersonnelState.ts` — Bổ sung xử lý lỗi cụ thể theo mã: `412` (ETag lỗi thời → thông báo thử lại), `validation_error` (sai định dạng số), `identity_user_not_found` (Supervisor không hỗ trợ API này).
+
+**Lưu ý nghiệp vụ:** Backend trả `404 identity_user_not_found` khi PATCH SĐT của tài khoản Supervisor — đây là thiết kế có chủ ý của Backend, API chỉ áp dụng cho PM / DRONE_OPERATOR / REPAIR_CREW. Ô SĐT của Supervisor giữ nguyên trạng thái khóa trên FE.
+
+---
+
+### D. Sửa Lỗi Bản Đồ MapLibre — Tile Biến Mất Khi Zoom Lớn & Chấm Lỗi Lệch Vị Trí
+
+**Nguyên nhân 1 — Tile xám "Map data not yet available" khi zoom cao:** `maxzoom` của source Google Satellite được set là `20`, nhưng Google chỉ cung cấp tile đến zoom 18 → MapLibre cố fetch tile zoom 19–20 không tồn tại → vùng trắng xám.
+
+**Fix:** `src/utils/maplibre.ts`
+- Source `google-satellite`: `maxzoom: 18` (MapLibre tự overscale từ tile mức 18 khi user zoom lên 19–20, bản đồ vẫn hiện rõ, không mất).
+- Source `streets-tiles`: `maxzoom: 19`.
+- Xóa attribution OpenStreetMap (không dùng OSM nữa).
+
+**Nguyên nhân 2 — CORS / 400 từ OpenStreetMap ở zoom 20:** OSM không hỗ trợ zoom 20 và có CORS policy hạn chế. Toàn bộ map layer đã chuyển sang Google tile server.
+
+**Nguyên nhân 3 — Chấm marker lỗi AI lệch so với tuyến đường:** Tọa độ marker lấy từ dữ liệu thật API (WGS84) nhưng tuyến đường vẫn hardcode. Đã sửa để lấy geometry tuyến đường từ API thật.
+
+---
+
+### E. Dọn Giao Diện Modal Chỉnh Sửa Nhân Sự (`EditUserModal.tsx`)
+
+**File thay đổi:** `src/pages/(sup)/system-control/EditUserModal.tsx`
+
+Các thay đổi cụ thể:
+
+| Phần tử bị xóa | Lý do |
+|---|---|
+| Badge `"Quyền Giám sát cập nhật"` bên cạnh label SĐT | Giao diện thừa, người dùng không cần biết |
+| Badge `"Tài khoản Giám sát bảo vệ"` (khi mở modal Supervisor) | Không mang thông tin hữu ích |
+| Badge `"Chỉ Supervisor sửa"` | Thông tin kỹ thuật nội bộ, không cần hiện |
+| Ghi chú `"* Nhập đúng 10 chữ số... PhoneNumberConfirmed = false"` | Lộ thông tin nội bộ backend cho người dùng cuối |
+| Ghi chú `"* Backend Candidate3 quy định API này chỉ áp dụng cho PM, Operator, Crew."` | Lộ tên hệ thống kỹ thuật nội bộ |
+| Đoạn text amber `"Tài khoản vai trò Giám sát... thẩm quyền toàn diện..."` | Đã xóa trước đó |
+| Toàn bộ section **"Dự án bảo hành đang phụ trách"** khi `editRole === SUPERVISOR` | Supervisor không có dự án riêng, section này trống và vô nghĩa với Supervisor |
+| Chuỗi `(API-239)` trong label "Vai trò phân quyền" và "Trạng thái làm việc" | Mã kỹ thuật nội bộ không phù hợp hiển thị trên UI người dùng |
+
+---
+
+### F. Kết Quả Kiểm Tra
+
+- `npm run build` → **✅ Thành công, 0 lỗi TypeScript, 2014 modules transformed.**
+- Dev server `http://localhost:5173` chạy bình thường, kết nối Backend Docker `http://localhost:18081`.
+- Thêm nhân sự vào dự án qua API thật, hiển thị badge vai trò đúng.
+- PATCH SĐT nhân sự không còn lỗi 400 khi nhập số có dấu chấm.
+- Bản đồ MapLibre hiển thị liên tục từ zoom 1 đến zoom 20, không còn vùng xám.
+- Modal chỉnh sửa nhân sự gọn gàng, không còn text kỹ thuật nội bộ lộ ra ngoài.

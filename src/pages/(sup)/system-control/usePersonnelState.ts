@@ -1,47 +1,156 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
-import { mockSystemUserAccounts } from '../../../api/mock/data'
-import { authService } from '../../../api/services'
+import { personnelService, mapBackendRoleToRoleCode, getRoleLabel } from '../../../api/services/personnelService'
+import { projectService } from '../../../api/services/projectService'
+import { userDirectory } from '../../../api/services/userDirectory'
+import { useAuthStore } from '../../../store/authStore'
 
 export function usePersonnelState(triggerNotice: (msg: string) => void) {
-  const [usersList, setUsersList] = useState<SystemUserAccount[]>(mockSystemUserAccounts)
+  const { user } = useAuthStore()
+  const triggerNoticeRef = useRef(triggerNotice)
+  useEffect(() => {
+    triggerNoticeRef.current = triggerNotice
+  }, [triggerNotice])
+
+  const [usersList, setUsersList] = useState<SystemUserAccount[]>([])
+  const [projectsList, setProjectsList] = useState<
+    Array<{ id: string; name: string; code?: string; pm_user_id?: string; pm_name?: string }>
+  >([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
   const [userRoleFilter, setUserRoleFilter] = useState<string>('all')
   const [userSearchTerm, setUserSearchTerm] = useState<string>('')
 
   // Modal Đình chỉ
   const [showSuspendModal, setShowSuspendModal] = useState<boolean>(false)
   const [userToSuspend, setUserToSuspend] = useState<SystemUserAccount | null>(null)
-  const [handoffAssignee, setHandoffAssignee] = useState<string>('usr-01')
+  const [suspendReason, setSuspendReason] = useState<string>('Đình chỉ quyền truy cập tài khoản theo yêu cầu quản trị')
 
-  // Modal Đặt lại mật khẩu (CN10 / operation_catalog.md L19)
+  // Modal Đặt lại mật khẩu (API-240 / CN10)
   const [userToResetPassword, setUserToResetPassword] = useState<SystemUserAccount | null>(null)
   const [showResetPasswordModal, setShowResetPasswordModal] = useState<boolean>(false)
 
   // Modal Chi tiết
   const [selectedUserDetail, setSelectedUserDetail] = useState<SystemUserAccount | null>(null)
 
-  // Modal Sửa
+  // Modal Sửa nhân sự
   const [userToEdit, setUserToEdit] = useState<SystemUserAccount | null>(null)
   const [editFullName, setEditFullName] = useState<string>('')
   const [editEmail, setEditEmail] = useState<string>('')
   const [editPhone, setEditPhone] = useState<string>('')
   const [editRole, setEditRole] = useState<RoleCode>(RoleCode.PROJECT_MANAGER)
   const [editProjectScope, setEditProjectScope] = useState<string>('')
-  const [editCertificate, setEditCertificate] = useState<string>('')
+  const [editSelectedProjectIds, setEditSelectedProjectIds] = useState<string[]>([])
   const [editStatus, setEditStatus] = useState<'ACTIVE' | 'SUSPENDED'>('ACTIVE')
 
-  // Modal Thêm nhân sự
+  // Modal Thêm nhân sự / Gửi thư mời / Điều chuyển
   const [showAddPersonnelModal, setShowAddPersonnelModal] = useState<boolean>(false)
   const [addPersonnelTab, setAddPersonnelTab] = useState<'NEW' | 'ASSIGN'>('NEW')
   const [newPersonnelName, setNewPersonnelName] = useState<string>('')
   const [newPersonnelEmail, setNewPersonnelEmail] = useState<string>('')
   const [newPersonnelPhone, setNewPersonnelPhone] = useState<string>('')
   const [newPersonnelRole, setNewPersonnelRole] = useState<RoleCode>(RoleCode.PROJECT_MANAGER)
-  const [newPersonnelProject, setNewPersonnelProject] = useState<string>('')
-  const [newPersonnelCert, setNewPersonnelCert] = useState<string>('')
-  const [assignExistingUserId, setAssignExistingUserId] = useState<string>('usr-04')
-  const [assignExistingProject, setAssignExistingProject] = useState<string>('QL1A - Giai đoạn 2 (Km 1024 - 1045)')
+  const [newPersonnelProjectIds, setNewPersonnelProjectIds] = useState<string[]>([])
+  const [assignExistingUserId, setAssignExistingUserId] = useState<string>('')
+  const [assignExistingProjectIds, setAssignExistingProjectIds] = useState<string[]>([])
+  const [assignEffectiveFrom, setAssignEffectiveFrom] = useState<string>(new Date().toISOString().split('T')[0])
+  const [assignReason, setAssignReason] = useState<string>('Điều chuyển nhân sự theo quyết định của Ban điều hành')
+
+  // Tải danh sách nhân sự từ Database thật (API-237 cho Supervisor, API-111 cho PM)
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      if (user?.role === RoleCode.SUPERVISOR) {
+        // Supervisor: Xem toàn bộ nhân sự công ty (API-237: GET /api/v1/users)
+        const users = await personnelService.fetchUsers()
+        setUsersList(users)
+      } else {
+        // PM: Lấy thành viên ban điều hành & tổ đội thi công của các dự án PM quản lý (API-111: GET /api/v1/projects/{projectId}/members)
+        const myProjects = await projectService.fetchProjects()
+        if (myProjects.length === 0) {
+          setUsersList([])
+        } else {
+          const membersPromises = myProjects.map(async (prj) => {
+            const members = await projectService.fetchProjectMembers(prj.id)
+            return members.map((m: any) => {
+              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
+              const email = matchedUser?.email || m.email || ''
+              const phone = matchedUser?.phone || m.phone || ''
+              const roleCode = mapBackendRoleToRoleCode(m.role || matchedUser?.role)
+              const roleLabel = getRoleLabel(roleCode)
+
+              return {
+                id: m.userId || matchedUser?.id || m.membershipId || crypto.randomUUID(),
+                full_name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
+                email: email || `${(m.displayName || 'nhansu').toLowerCase().replace(/[^a-z0-9]/g, '')}@hoanghai.vn`,
+                role: roleCode,
+                role_label: roleLabel,
+                phone: phone || '—',
+                status: (m.status === 'ACTIVE' || m.status === 1 ? 'ACTIVE' : 'SUSPENDED') as 'ACTIVE' | 'SUSPENDED',
+                project_scope: `${prj.code ? `${prj.code} • ` : ''}${prj.name}`,
+                assigned_project_ids: [prj.id],
+                device_info: 'Ứng dụng Web / Mobile RoadGuard',
+                ip_address: 'Hệ thống nội bộ',
+                last_active: 'Vừa hoạt động',
+                created_at: m.validFrom || new Date().toISOString()
+              }
+            })
+          })
+          const allMembersArrays = await Promise.all(membersPromises)
+          const flatMembers = allMembersArrays.flat()
+
+          // DEDUPLICATE theo user id để tránh trùng lặp key trong React Virtual DOM và gộp danh sách dự án
+          const userMap = new Map<string, SystemUserAccount>()
+          for (const member of flatMembers) {
+            const existing = userMap.get(member.id)
+            if (!existing) {
+              userMap.set(member.id, { ...member })
+            } else {
+              const projectIds = new Set([
+                ...(existing.assigned_project_ids || []),
+                ...(member.assigned_project_ids || [])
+              ])
+              existing.assigned_project_ids = Array.from(projectIds)
+              if (member.project_scope && !existing.project_scope?.includes(member.project_scope)) {
+                existing.project_scope = `${existing.project_scope}, ${member.project_scope}`
+              }
+            }
+          }
+          setUsersList(Array.from(userMap.values()))
+        }
+      }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi truy vấn danh sách nhân sự từ CSDL Backend'
+      setError(errMsg)
+      triggerNoticeRef.current(`❌ ${errMsg}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user?.role])
+
+  // Tải danh mục dự án thật từ Database (API-134: GET /api/v1/projects)
+  const loadProjects = useCallback(async () => {
+    try {
+      const projects = await projectService.fetchProjects()
+      const mapped = projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        pm_user_id: p.pm_user_id,
+        pm_name: p.pm_name
+      }))
+      setProjectsList(mapped)
+    } catch (err: any) {
+      console.warn('Không thể tải danh sách dự án cho dropdown nhân sự:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadUsers()
+    loadProjects()
+  }, [loadUsers, loadProjects])
 
   const filteredUsers = useMemo(() => {
     return usersList.filter((u) => {
@@ -57,30 +166,43 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     })
   }, [usersList, userRoleFilter, userSearchTerm])
 
-  const handleConfirmSuspend = () => {
+  // Đình chỉ tài khoản thật trên CSDL Backend (API-239: PATCH /api/v1/users/{userId})
+  const handleConfirmSuspend = async () => {
     if (!userToSuspend) return
-    setUsersList((prev) =>
-      prev.map((u) =>
-        u.id === userToSuspend.id
-          ? {
-              ...u,
-              status: 'SUSPENDED',
-              device_info: 'Thu hồi toàn bộ token & quyền truy cập',
-              last_active: `Đình chỉ lúc: ${new Date().toLocaleDateString('vi-VN')}`
-            }
-          : u
-      )
-    )
-    setShowSuspendModal(false)
-    setUserToSuspend(null)
-    triggerNotice(`Đã đình chỉ tài khoản ${userToSuspend.full_name} và bàn giao công việc thành công!`)
+    try {
+      await personnelService.updateUser(userToSuspend.id, {
+        status: 'SUSPENDED',
+        role: userToSuspend.role,
+        reason: suspendReason || 'Đình chỉ tài khoản theo lệnh của Giám sát'
+      })
+      await loadUsers()
+      setShowSuspendModal(false)
+      setUserToSuspend(null)
+      triggerNotice(`Đã đình chỉ tài khoản ${userToSuspend.full_name} trên CSDL Backend thành công!`)
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi khi đình chỉ tài khoản'
+      triggerNotice(`❌ ${errMsg}`)
+      throw err
+    }
   }
 
-  const handleRestoreUser = (userId: string) => {
-    setUsersList((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, status: 'ACTIVE', device_info: 'Đã khôi phục phiên' } : u))
-    )
-    triggerNotice('Đã khôi phục trạng thái hoạt động cho tài khoản!')
+  // Khôi phục tài khoản hoạt động trên CSDL Backend (API-239: PATCH /api/v1/users/{userId})
+  const handleRestoreUser = async (userId: string) => {
+    const targetUser = usersList.find((u) => u.id === userId)
+    if (!targetUser) return
+    try {
+      await personnelService.updateUser(userId, {
+        status: 'ACTIVE',
+        role: targetUser.role,
+        reason: 'Khôi phục trạng thái hoạt động cho tài khoản'
+      })
+      await loadUsers()
+      triggerNotice(`Đã khôi phục trạng thái hoạt động cho tài khoản ${targetUser.full_name} trên CSDL Backend!`)
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi khi khôi phục tài khoản'
+      triggerNotice(`❌ ${errMsg}`)
+      throw err
+    }
   }
 
   const handleOpenEdit = (u: SystemUserAccount) => {
@@ -90,116 +212,255 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setEditPhone(u.phone || '')
     setEditRole(u.role)
     setEditProjectScope(u.project_scope)
-    setEditCertificate(u.certificate || '')
+
+    // Khởi tạo danh sách dự án đã được phân công
+    if (u.assigned_project_ids && u.assigned_project_ids.length > 0) {
+      setEditSelectedProjectIds(u.assigned_project_ids)
+    } else {
+      const matched = projectsList
+        .filter((p) => u.project_scope?.includes(p.name) || (p.code && u.project_scope?.includes(p.code)))
+        .map((p) => p.id)
+      setEditSelectedProjectIds(matched)
+    }
+
     setEditStatus(u.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE')
   }
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  // Toggle dự án trong Edit Modal
+  const toggleEditProject = (projectId: string) => {
+    setEditSelectedProjectIds((prev) =>
+      prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
+    )
+  }
+
+  const selectAllEditProjects = () => {
+    setEditSelectedProjectIds(projectsList.map((p) => p.id))
+  }
+
+  const clearAllEditProjects = () => {
+    setEditSelectedProjectIds([])
+  }
+
+  // Toggle dự án trong Add/Invite Modal
+  const toggleNewPersonnelProject = (projectId: string) => {
+    setNewPersonnelProjectIds((prev) =>
+      prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
+    )
+  }
+
+  const selectAllNewPersonnelProjects = () => {
+    setNewPersonnelProjectIds(projectsList.map((p) => p.id))
+  }
+
+  const clearAllNewPersonnelProjects = () => {
+    setNewPersonnelProjectIds([])
+  }
+
+  // Toggle dự án trong Assign Modal
+  const toggleAssignExistingProject = (projectId: string) => {
+    setAssignExistingProjectIds((prev) =>
+      prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
+    )
+  }
+
+  const selectAllAssignExistingProjects = () => {
+    setAssignExistingProjectIds(projectsList.map((p) => p.id))
+  }
+
+  const clearAllAssignExistingProjects = () => {
+    setAssignExistingProjectIds([])
+  }
+
+  // Cập nhật thông tin / chức vụ nhân sự trên CSDL Backend (API-239: PATCH /api/v1/users/{userId} & PATCH /phone-number)
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!userToEdit) return
+    try {
+      let phoneUpdated = false
+      const trimmedPhone = editPhone.trim()
+      const sanitizedPhone = trimmedPhone.replace(/[\s.-]/g, '')
+      const oldPhone = (userToEdit.phone || '').trim().replace(/[\s.-]/g, '')
 
-    const updatedRoleLabel =
-      editRole === RoleCode.PROJECT_MANAGER
-        ? 'PROJECT MANAGER (CHỈ HUY TRƯỞNG)'
-        : editRole === RoleCode.SUPERVISOR
-        ? 'SUPERVISOR (GIÁM SÁT TRƯỞNG)'
-        : editRole === RoleCode.DRONE_OPERATOR
-        ? 'DRONE OPERATOR (PHI CÔNG KHẢO SÁT)'
-        : 'CREW LEAD (ĐỘI TRƯỞNG THI CÔNG)'
+      // Kiểm tra xem số điện thoại có thay đổi không
+      if (sanitizedPhone !== oldPhone && sanitizedPhone.length > 0) {
+        // Validate định dạng số điện thoại di động Việt Nam (10 chữ số, bắt đầu bằng 03, 05, 07, 08, 09)
+        const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/
+        if (!phoneRegex.test(sanitizedPhone)) {
+          triggerNotice('❌ Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại chuẩn gồm 10 chữ số (VD: 0903111222, 0901234567)!')
+          return
+        }
 
-    const updatedUser: SystemUserAccount = {
-      ...userToEdit,
-      full_name: editFullName,
-      email: editEmail,
-      phone: editPhone,
-      role: editRole,
-      role_label: updatedRoleLabel,
-      project_scope: editProjectScope.trim() === '' ? 'Chưa phân công dự án' : editProjectScope,
-      certificate: editCertificate,
-      status: editStatus,
-      device_info: editStatus === 'SUSPENDED' ? 'Thu hồi quyền truy cập' : userToEdit.device_info,
-      ip_address: editStatus === 'SUSPENDED' ? 'Đình chỉ phiên' : userToEdit.ip_address
+        const isEligibleRole =
+          userToEdit.role === RoleCode.PROJECT_MANAGER ||
+          userToEdit.role === RoleCode.DRONE_OPERATOR ||
+          userToEdit.role === RoleCode.REPAIR_CREW
+
+        if (isEligibleRole && userToEdit.status === 'ACTIVE') {
+          console.log(`📱 [SUPERVISOR] Cập nhật số điện thoại cho nhân sự ${userToEdit.id}: ${sanitizedPhone}`)
+          await personnelService.updateUserPhoneNumber(userToEdit.id, sanitizedPhone)
+          phoneUpdated = true
+        }
+      }
+
+      // Cập nhật vai trò / trạng thái nếu có thay đổi
+      const roleChanged = editRole !== userToEdit.role
+      const statusChanged = editStatus !== userToEdit.status
+
+      if (roleChanged || statusChanged || !phoneUpdated) {
+        await personnelService.updateUser(userToEdit.id, {
+          status: editStatus,
+          role: editRole,
+          reason: `Cập nhật thông tin tài khoản (Vai trò: ${editRole}, Trạng thái: ${editStatus})`
+        })
+      }
+
+      await loadUsers()
+      setUserToEdit(null)
+      triggerNotice(
+        phoneUpdated
+          ? `Đã cập nhật số điện thoại [${sanitizedPhone}] và hồ sơ nhân sự [${editFullName}] vào CSDL Backend thành công!`
+          : `Đã cập nhật thông tin nhân sự [${editFullName}] vào CSDL Backend thành công!`
+      )
+    } catch (err: any) {
+      if (err?.response?.status === 412) {
+        triggerNotice(`❌ Lỗi xung đột phiên bản (412 Concurrency Conflict): Dữ liệu nhân sự đã thay đổi, hệ thống đang tự làm mới...`)
+        await loadUsers()
+        return
+      }
+      if (err?.response?.data?.code === 'validation_error') {
+        triggerNotice(`❌ Số điện thoại không đúng định dạng quy chuẩn của Backend (VD: 0903111222, 0901234567)!`)
+        return
+      }
+      if (err?.response?.data?.code === 'identity_user_not_found') {
+        triggerNotice(`❌ Backend chỉ cho phép cập nhật số điện thoại cho nhân sự vai trò PM, Operator, Crew!`)
+        return
+      }
+      const data = err?.response?.data
+      let errMsg = data?.detail || data?.title || err?.message || 'Lỗi khi cập nhật thông tin nhân sự'
+      if (data?.errors && typeof data.errors === 'object') {
+        const fieldErrors = Object.entries(data.errors)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+          .join(' | ')
+        errMsg = `${errMsg} (${fieldErrors})`
+      }
+      triggerNotice(`❌ ${errMsg}`)
+      throw err
     }
-
-    setUsersList((prev) => prev.map((u) => (u.id === userToEdit.id ? updatedUser : u)))
-    if (selectedUserDetail?.id === userToEdit.id) {
-      setSelectedUserDetail(updatedUser)
-    }
-    setUserToEdit(null)
-    triggerNotice(`Đã cập nhật thông tin nhân sự [${editFullName}] thành công!`)
   }
 
-  const handleAddPersonnelSubmit = (e: React.FormEvent) => {
+  // Gửi lời mời nhân sự mới hoặc điều chuyển dự án trên CSDL Backend
+  const handleAddPersonnelSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (addPersonnelTab === 'NEW') {
-      if (!newPersonnelName || !newPersonnelEmail) return
+      if (!newPersonnelEmail) return
+      try {
+        await personnelService.createInvitation({
+          email: newPersonnelEmail.trim().toLowerCase(),
+          role: newPersonnelRole,
+          projectIds: newPersonnelProjectIds
+        })
 
-      const roleLabel =
-        newPersonnelRole === RoleCode.PROJECT_MANAGER
-          ? 'PROJECT MANAGER (CHỈ HUY TRƯỞNG)'
-          : newPersonnelRole === RoleCode.SUPERVISOR
-          ? 'SUPERVISOR (GIÁM SÁT TRƯỞNG)'
-          : newPersonnelRole === RoleCode.DRONE_OPERATOR
-          ? 'DRONE OPERATOR (PHI CÔNG KHẢO SÁT)'
-          : 'CREW LEAD (ĐỘI TRƯỞNG THI CÔNG)'
+        // Lưu thông tin phục vụ trang chấp nhận lời mời (setup-password)
+        try {
+          const emailKey = newPersonnelEmail.trim().toLowerCase()
+          if (newPersonnelName) {
+            localStorage.setItem('pending_invite_name', newPersonnelName)
+            localStorage.setItem(`pending_invite_name_${emailKey}`, newPersonnelName)
+          }
+          const matched = projectsList.filter((p) => newPersonnelProjectIds.includes(p.id))
+          if (matched.length > 0) {
+            const projStr = matched.map((p) => p.name).join(', ')
+            localStorage.setItem('pending_invite_project', projStr)
+            localStorage.setItem(`pending_invite_project_${emailKey}`, projStr)
+          }
+        } catch {}
 
-      const finalScope = newPersonnelProject.trim() === '' ? 'Chưa phân công dự án' : newPersonnelProject
-
-      const newUser: SystemUserAccount = {
-        id: `usr-${Date.now()}`,
-        full_name: newPersonnelName.trim(),
-        email: newPersonnelEmail.trim().toLowerCase(),
-        phone: newPersonnelPhone.trim() || 'Chưa cập nhật',
-        role: newPersonnelRole,
-        role_label: roleLabel,
-        project_scope: finalScope,
-        device_info: 'Chưa kích hoạt tài khoản',
-        ip_address: 'Chưa có phiên',
-        status: 'INVITED', // Chuẩn Spec 17_10: Trạng thái chờ kích hoạt qua link email
-        last_active: 'Chờ kích hoạt',
-        certificate: newPersonnelCert.trim() || 'Hồ sơ nhân sự lưu trữ nội bộ',
-        joined_date: new Date().toLocaleDateString('vi-VN')
+        await Promise.all([loadUsers(), loadProjects()])
+        setShowAddPersonnelModal(false)
+        setNewPersonnelName('')
+        setNewPersonnelEmail('')
+        setNewPersonnelPhone('')
+        setNewPersonnelProjectIds([])
+        triggerNotice(`Đã phát hành thư mời kích hoạt tài khoản qua Backend cho: [${newPersonnelEmail}]!`)
+      } catch (err: any) {
+        const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi khi gửi lời mời nhân sự mới'
+        triggerNotice(`❌ ${errMsg}`)
+        throw err
       }
-
-      setUsersList([newUser, ...usersList])
-      setShowAddPersonnelModal(false)
-      setNewPersonnelName('')
-      setNewPersonnelEmail('')
-      setNewPersonnelPhone('')
-      setNewPersonnelCert('')
-      setNewPersonnelProject('')
-      triggerNotice(
-        newPersonnelProject.trim() === ''
-          ? `Đã phát hành thư mời kích hoạt đến [${newPersonnelEmail}] cho nhân sự [${newPersonnelName}]!`
-          : `Đã phát hành thư mời kích hoạt đến [${newPersonnelEmail}] cho nhân sự [${newPersonnelName}] (${newPersonnelProject})!`
-      )
     } else {
+      // Điều chuyển nhân sự hiện có
       if (!assignExistingUserId) return
       const targetUser = usersList.find((u) => u.id === assignExistingUserId)
-      if (!targetUser) return
 
-      const updatedUser: SystemUserAccount = {
-        ...targetUser,
-        project_scope: assignExistingProject
-      }
+      try {
+        if (targetUser?.role === RoleCode.PROJECT_MANAGER) {
+          if (!assignExistingProjectIds || assignExistingProjectIds.length === 0) {
+            triggerNotice('❌ Nghiệp vụ BR-01: Dự án luôn phải có Chỉ huy trưởng phụ trách. Vui lòng chọn dự án cần tiếp quản để bàn giao!')
+            return
+          }
+          // Nếu điều chuyển PM: gọi API-113 (Reassign Primary PM)
+          const targetProjectId = assignExistingProjectIds[0]
+          await personnelService.reassignPrimaryProjectManager(targetProjectId, {
+            primaryProjectManagerUserId: targetUser.id,
+            effectiveFrom: assignEffectiveFrom || new Date().toISOString().split('T')[0],
+            reason: assignReason || `Bàn giao quyền Chỉ huy trưởng chính cho ${targetUser.full_name}`
+          })
+          triggerNotice(`Đã hoàn tất bàn giao Chỉ huy trưởng chính dự án cho PM [${targetUser.full_name}] (API-113)!`)
+        } else if (
+          targetUser?.role === RoleCode.DRONE_OPERATOR ||
+          targetUser?.role === RoleCode.REPAIR_CREW
+        ) {
+          if (!assignExistingProjectIds || assignExistingProjectIds.length === 0) {
+            triggerNotice('❌ Vui lòng chọn ít nhất 1 dự án để phân công nhân sự!')
+            return
+          }
+          for (const prjId of assignExistingProjectIds) {
+            await personnelService.addProjectMember(prjId, targetUser.id)
+          }
+          triggerNotice(`Đã phân công thành công nhân sự [${targetUser.full_name}] vào ${assignExistingProjectIds.length} dự án!`)
+        } else {
+          triggerNotice(`❌ Nhân sự vai trò [${targetUser?.role}] có thẩm quyền giám sát toàn diện hoặc không phân công theo dự án riêng lẻ.`)
+          return
+        }
 
-      setUsersList((prev) => prev.map((u) => (u.id === assignExistingUserId ? updatedUser : u)))
-      if (selectedUserDetail?.id === assignExistingUserId) {
-        setSelectedUserDetail(updatedUser)
+        await Promise.all([loadUsers(), loadProjects()])
+        setShowAddPersonnelModal(false)
+        setAssignExistingUserId('')
+        setAssignExistingProjectIds([])
+      } catch (err: any) {
+        const data = err?.response?.data
+        let errMsg = data?.detail || data?.title || err?.message || 'Lỗi khi thực hiện điều chuyển nhân sự'
+        if (data?.errors && typeof data.errors === 'object') {
+          const fieldErrors = Object.entries(data.errors)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+            .join(' | ')
+          errMsg = `${errMsg} (${fieldErrors})`
+        }
+        console.error('❌ [API-113 ERROR DETAIL]:', data || err)
+        triggerNotice(`❌ ${errMsg}`)
+        throw err
       }
-      setShowAddPersonnelModal(false)
-      triggerNotice(`Đã điều chuyển nhân sự [${targetUser.full_name}] sang phụ trách [${assignExistingProject}]!`)
     }
   }
 
+  // Đặt lại mật khẩu tạm qua API-240: POST /api/v1/users/{userId}/password-reset
   const handleConfirmResetPassword = async (userId: string, tempPassword: string) => {
-    // Gọi mock API Service bất đồng bộ (CN10 / operation_catalog.md L19)
-    await authService.adminResetPassword(userId, tempPassword)
-    triggerNotice(`Đã đặt lại mật khẩu tạm thành công cho nhân sự! Đã kích hoạt buộc đổi mật khẩu ở lần đăng nhập tiếp theo.`)
+    try {
+      await personnelService.adminResetPassword(userId, tempPassword)
+      triggerNotice(`Đã đặt lại mật khẩu tạm thành công cho nhân sự trên CSDL Backend!`)
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi khi đặt lại mật khẩu'
+      triggerNotice(`❌ ${errMsg}`)
+      throw err
+    }
   }
 
   return {
     usersList,
+    projectsList,
+    isLoading,
+    error,
+    loadUsers,
     setUsersList,
     userRoleFilter,
     setUserRoleFilter,
@@ -210,8 +471,8 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setShowSuspendModal,
     userToSuspend,
     setUserToSuspend,
-    handoffAssignee,
-    setHandoffAssignee,
+    suspendReason,
+    setSuspendReason,
     userToResetPassword,
     setUserToResetPassword,
     showResetPasswordModal,
@@ -231,8 +492,10 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setEditRole,
     editProjectScope,
     setEditProjectScope,
-    editCertificate,
-    setEditCertificate,
+    editSelectedProjectIds,
+    toggleEditProject,
+    selectAllEditProjects,
+    clearAllEditProjects,
     editStatus,
     setEditStatus,
     showAddPersonnelModal,
@@ -247,14 +510,21 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setNewPersonnelPhone,
     newPersonnelRole,
     setNewPersonnelRole,
-    newPersonnelProject,
-    setNewPersonnelProject,
-    newPersonnelCert,
-    setNewPersonnelCert,
+    newPersonnelProjectIds,
+    toggleNewPersonnelProject,
+    selectAllNewPersonnelProjects,
+    clearAllNewPersonnelProjects,
     assignExistingUserId,
     setAssignExistingUserId,
-    assignExistingProject,
-    setAssignExistingProject,
+    assignExistingProjectIds,
+    setAssignExistingProjectIds,
+    assignEffectiveFrom,
+    setAssignEffectiveFrom,
+    assignReason,
+    setAssignReason,
+    toggleAssignExistingProject,
+    selectAllAssignExistingProjects,
+    clearAllAssignExistingProjects,
     handleConfirmSuspend,
     handleRestoreUser,
     handleOpenEdit,

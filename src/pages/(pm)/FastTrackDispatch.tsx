@@ -8,12 +8,8 @@ import { PolicySection } from './fast-track/PolicySection'
 import { DispatchSection } from './fast-track/DispatchSection'
 import { FastTrackModals } from './fast-track/FastTrackModals'
 import { FastTrackHeader } from './fast-track/FastTrackHeader'
-import { FastTrackBanner } from './fast-track/FastTrackBanner'
 import { RoadCoverageConfirmModal } from './fast-track/RoadCoverageConfirmModal'
 import { useFastTrackState } from './fast-track/useFastTrackState'
-
-export type { RouteConfig } from './fast-track/types'
-export { ROUTE_CONFIGS } from './fast-track/mockData'
 
 export const FastTrackDispatch: React.FC = () => {
   const navigate = useNavigate()
@@ -22,8 +18,13 @@ export const FastTrackDispatch: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const {
-    autoDispatchedSourceCase,
-    setAutoDispatchedSourceCase,
+    projects,
+    selectedProjectId,
+    handleProjectChange,
+    toastMessage,
+    setToastMessage,
+    showToast,
+    // Policy states
     currentPolicy,
     policyHistory,
     auditLogs,
@@ -37,28 +38,23 @@ export const FastTrackDispatch: React.FC = () => {
     setFormMaxArea,
     formMaxDepth,
     setFormMaxDepth,
-    formSlaHours,
-    setFormSlaHours,
-    formMaxPerimeter,
-    setFormMaxPerimeter,
     formPolicyNote,
     setFormPolicyNote,
-    handleApplyPolicy,
-    handleActivateDraft,
-    crewTeams,
-    defects,
-    selectedDefectIds,
-    setSelectedDefectIds,
-    workMode,
-    routeFilter,
-    crewFilter,
-    setCrewFilter,
-    statusFilter,
-    setStatusFilter,
     isPolicyModalOpen,
     setIsPolicyModalOpen,
     isAuditModalOpen,
     setIsAuditModalOpen,
+    handleApplyPolicy,
+    handleActivateDraft,
+    // Dispatch states
+    crewTeams,
+    defects,
+    selectedDefectIds,
+    setSelectedDefectIds,
+    crewFilter,
+    setCrewFilter,
+    statusFilter,
+    setStatusFilter,
     isDispatchModalOpen,
     setIsDispatchModalOpen,
     selectedDispatchCrew,
@@ -67,37 +63,34 @@ export const FastTrackDispatch: React.FC = () => {
     setDispatchNotes,
     detailDefect,
     setDetailDefect,
-    toastMessage,
-    setToastMessage,
-    showToast,
-    currentRouteConfig,
-    handleRouteChange,
-    mapContainerRef,
-    mapLayer,
-    setMapLayer,
     filteredDefects,
     selectedItems,
     hasViolationItem,
-    surveyDistanceM,
     handleToggleSelect,
     handleSelectAll,
     handleRemoveViolationItems,
-    handleChangeWorkMode,
     handleAssignCrew,
-    handleDispatchBatch,
-    handleRepairDirect,
-    handleEmergencyDispatch,
-    handleExecuteDispatch
+    handleExecuteDispatch,
+    coverageError,
+    isSubmittingCoverage
   } = useFastTrackState(isSupervisor)
 
   return (
     <div className="space-y-6">
-      {/* Toast Notification */}
+      {/* Toast Notification (z-[9999] để luôn nổi trên tất cả các Modal) */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom-5">
-          <Icon name="check_circle" size={20} className="text-emerald-400 shrink-0" />
-          <span className="text-xs font-medium">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white cursor-pointer">
+        <div className={`fixed bottom-6 right-6 z-[9999] px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border animate-in slide-in-from-bottom-5 ${
+          toastMessage.toLowerCase().includes('lỗi')
+            ? 'bg-red-950 text-white border-red-800'
+            : 'bg-slate-900 text-white border-slate-700'
+        }`}>
+          <Icon
+            name={toastMessage.toLowerCase().includes('lỗi') ? 'error' : 'check_circle'}
+            size={20}
+            className={toastMessage.toLowerCase().includes('lỗi') ? 'text-red-400 shrink-0' : 'text-emerald-400 shrink-0'}
+          />
+          <span className="text-xs font-medium max-w-md break-words">{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white cursor-pointer ml-1">
             <Icon name="close" size={16} />
           </button>
         </div>
@@ -115,63 +108,47 @@ export const FastTrackDispatch: React.FC = () => {
         }}
       />
 
-      {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH FAST TRACK ÁP DỤNG */}
+      {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection
         currentPolicy={currentPolicy}
         policyHistory={policyHistory}
+        auditLogs={auditLogs}
         isSupervisor={isSupervisor}
         roadCoverage={roadCoverage}
         onOpenRoadCoverageModal={() => setIsRoadCoverageModalOpen(true)}
         onActivateDraft={handleActivateDraft}
-        onOpenAuditModal={() => setIsAuditModalOpen(true)}
         onOpenPolicyModal={() => setIsPolicyModalOpen(true)}
       />
 
-
-      {/* Banner thông báo tự động điều phối khiếm khuyết từ Triage Inbox (Chỉ dành riêng cho PM) */}
-      {!isSupervisor && (
-        <FastTrackBanner
-          sourceCase={autoDispatchedSourceCase}
-          onClose={() => setAutoDispatchedSourceCase(null)}
-        />
-      )}
-
-      {/* 3. SECTION B: ĐIỀU PHỐI & GIAO VIỆC ĐO ĐẠC HIỆN TRƯỜNG */}
+      {/* 3. SECTION B: ĐIỀU PHỐI & THEO DÕI KHIẾM KHUYẾT THỰC TẾ TRONG CSDL */}
       <DispatchSection
-        isSupervisor={isSupervisor}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={handleProjectChange}
+        crews={crewTeams}
         defects={defects}
         filteredDefects={filteredDefects}
         selectedDefectIds={selectedDefectIds}
-        workMode={workMode}
-        routeFilter={routeFilter}
         crewFilter={crewFilter}
         statusFilter={statusFilter}
         currentPolicy={currentPolicy}
-        currentRouteConfig={currentRouteConfig}
-        mapLayer={mapLayer}
-        mapContainerRef={mapContainerRef}
         hasViolationItem={hasViolationItem}
-        surveyDistanceM={surveyDistanceM}
         selectedItems={selectedItems}
-        handleChangeWorkMode={handleChangeWorkMode}
-        handleRouteChange={handleRouteChange}
         setCrewFilter={setCrewFilter}
         setStatusFilter={setStatusFilter}
         handleSelectAll={handleSelectAll}
         handleToggleSelect={handleToggleSelect}
         handleAssignCrew={handleAssignCrew}
         setDetailDefect={setDetailDefect}
-        setMapLayer={setMapLayer}
         setSelectedDefectIds={setSelectedDefectIds}
         showToast={showToast}
-        handleDispatchBatch={handleDispatchBatch}
-        handleRepairDirect={handleRepairDirect}
-        handleEmergencyDispatch={handleEmergencyDispatch}
         onRemoveViolationItems={handleRemoveViolationItems}
         onNavigateProposals={() => {
           showToast('⚡ Chuyển sang trang Gói sửa chữa để gom đợt thi công trình Giám sát duyệt!')
           navigate(`${basePath}/proposals`)
         }}
+        onOpenDispatchModal={() => setIsDispatchModalOpen(true)}
+        isSupervisor={isSupervisor}
       />
 
       {/* MODALS */}
@@ -185,10 +162,6 @@ export const FastTrackDispatch: React.FC = () => {
         setFormMaxArea={setFormMaxArea}
         formMaxDepth={formMaxDepth}
         setFormMaxDepth={setFormMaxDepth}
-        formSlaHours={formSlaHours}
-        setFormSlaHours={setFormSlaHours}
-        formMaxPerimeter={formMaxPerimeter}
-        setFormMaxPerimeter={setFormMaxPerimeter}
         formPolicyNote={formPolicyNote}
         setFormPolicyNote={setFormPolicyNote}
         handleApplyPolicy={handleApplyPolicy}
@@ -199,10 +172,7 @@ export const FastTrackDispatch: React.FC = () => {
         setDetailDefect={setDetailDefect}
         isDispatchModalOpen={isDispatchModalOpen}
         setIsDispatchModalOpen={setIsDispatchModalOpen}
-        workMode={workMode}
-        currentRouteConfig={currentRouteConfig}
         selectedDefectIds={selectedDefectIds}
-        surveyDistanceM={surveyDistanceM}
         selectedItems={selectedItems}
         selectedDispatchCrew={selectedDispatchCrew}
         setSelectedDispatchCrew={setSelectedDispatchCrew}
@@ -219,9 +189,10 @@ export const FastTrackDispatch: React.FC = () => {
           onClose={() => setIsRoadCoverageModalOpen(false)}
           roadCoverage={roadCoverage}
           onConfirm={handleConfirmRoadCoverage}
+          errorMessage={coverageError}
+          isSubmitting={isSubmittingCoverage}
         />
       )}
     </div>
   )
-
 }

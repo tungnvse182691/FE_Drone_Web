@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { apiClient } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { ShieldCheck } from 'lucide-react'
@@ -10,14 +11,30 @@ import { ExpiredInvitationView } from './accept-invitation/ExpiredInvitationView
 
 export const AcceptInvitation: React.FC = () => {
   const navigate = useNavigate()
-  const { token } = useParams<{ token?: string }>()
+  const [searchParams] = useSearchParams()
+  const { token: paramToken } = useParams<{ token?: string }>()
+  const activeToken = searchParams.get('token') || paramToken || ''
   const { login } = useAuthStore()
 
   // Chế độ xem Demo: 'valid' (Token hợp lệ) hoặc 'expired' (Token hết hạn)
   const [demoState, setDemoState] = useState<InvitationDemoState>('valid')
 
   // Form state
-  const [fullName, setFullName] = useState('Đỗ Quốc Hoàng')
+  const [fullName, setFullName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('pending_invite_name') || ''
+    } catch {
+      return ''
+    }
+  })
+  const [projectName] = useState(() => {
+    try {
+      return localStorage.getItem('pending_invite_project') || ''
+    } catch {
+      return ''
+    }
+  })
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -57,7 +74,7 @@ export const AcceptInvitation: React.FC = () => {
 
   const strength = getStrength()
   const isMatched = confirmPassword.length > 0 && password === confirmPassword
-  const isFormValid = rules.length && rules.case && rules.special && isMatched && agreementChecked
+  const isFormValid = Boolean(fullName.trim()) && rules.length && rules.case && rules.special && isMatched && agreementChecked
 
   const handleFillStrongPassword = () => {
     const strongPass = 'RoadGuard@2026Secure'
@@ -65,16 +82,52 @@ export const AcceptInvitation: React.FC = () => {
     setConfirmPassword(strongPass)
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isFormValid) return
 
+    if (!activeToken) {
+      alert('Không tìm thấy token kích hoạt trong đường dẫn thư mời.')
+      return
+    }
+
     setIsSubmitting(true)
-    setTimeout(() => {
+    setStatusMessage(null)
+
+    try {
+      // Gọi API SWG-087: POST /api/v1/invitations/accept
+      await apiClient.post(
+        '/invitations/accept',
+        {
+          invitationToken: activeToken,
+          displayName: fullName.trim(),
+          password: password,
+        },
+        {
+          headers: {
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+        }
+      )
+
+      alert(`🎉 Kích hoạt tài khoản thành công cho [${fullName}]! Vui lòng đăng nhập với mật khẩu vừa tạo.`)
+      navigate('/login')
+    } catch (err: any) {
+      const data = err?.response?.data
+      let errMsg = data?.detail || data?.title || err?.message || 'Không thể kích hoạt tài khoản'
+      if (data?.errors) {
+        const details = Object.entries(data.errors)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+          .join(' | ')
+        errMsg = `${errMsg} (${details})`
+      }
+      setStatusMessage(`❌ ${errMsg}`)
+      if (err?.response?.status === 404 || err?.response?.status === 410) {
+        setDemoState('expired')
+      }
+    } finally {
       setIsSubmitting(false)
-      login(RoleCode.PROJECT_MANAGER)
-      navigate('/pm/dashboard')
-    }, 900)
+    }
   }
 
   return (
@@ -173,7 +226,12 @@ export const AcceptInvitation: React.FC = () => {
                 style={{ background: 'linear-gradient(90deg, #C9A227 0%, #B38E1F 50%, #E8D385 100%)' }}
               />
               <div className="p-6 sm:p-8 md:p-9 flex flex-col">
-                <InvitationCard token={token} />
+                {statusMessage && (
+                  <div className="p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                    {statusMessage}
+                  </div>
+                )}
+                <InvitationCard token={activeToken} projectName={projectName} />
                 <AcceptForm
                   fullName={fullName}
                   setFullName={setFullName}

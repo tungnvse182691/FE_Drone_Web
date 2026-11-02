@@ -1,7 +1,8 @@
 import React from 'react'
-import { Edit3, X, CheckCircle2, XCircle, Check } from 'lucide-react'
+import { Edit3, X, CheckCircle2, XCircle, Check, FolderKanban, Lock, Phone } from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
+import { useAuthStore } from '../../../store/authStore'
 
 export interface EditUserModalProps {
   userToEdit: SystemUserAccount | null
@@ -16,10 +17,13 @@ export interface EditUserModalProps {
   setEditRole: (val: RoleCode) => void
   editProjectScope: string
   setEditProjectScope: (val: string) => void
-  editCertificate: string
-  setEditCertificate: (val: string) => void
+  editSelectedProjectIds: string[]
+  toggleEditProject: (projectId: string) => void
+  selectAllEditProjects: () => void
+  clearAllEditProjects: () => void
   editStatus: 'ACTIVE' | 'SUSPENDED'
   setEditStatus: (val: 'ACTIVE' | 'SUSPENDED') => void
+  projectsList: Array<{ id: string; name: string; code?: string; pm_user_id?: string; pm_name?: string }>
   handleSaveEdit: (e: React.FormEvent) => void
 }
 
@@ -36,28 +40,67 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   setEditRole,
   editProjectScope,
   setEditProjectScope,
-  editCertificate,
-  setEditCertificate,
+  editSelectedProjectIds,
+  toggleEditProject,
+  selectAllEditProjects,
+  clearAllEditProjects,
   editStatus,
   setEditStatus,
+  projectsList,
   handleSaveEdit,
 }) => {
   if (!userToEdit) return null
 
+  const currentUser = useAuthStore((s) => s.user)
+  const isSupervisorUser = currentUser?.role === RoleCode.SUPERVISOR
+  // Áp dụng cho tài khoản active có role PM, OPERATOR, CREW
+  const targetRoleAllowsPhoneEdit =
+    userToEdit.role === RoleCode.PROJECT_MANAGER ||
+    userToEdit.role === RoleCode.DRONE_OPERATOR ||
+    userToEdit.role === RoleCode.REPAIR_CREW
+  const canEditPhone = isSupervisorUser && targetRoleAllowsPhoneEdit && userToEdit.status === 'ACTIVE'
+
+  const isSupervisorRole = editRole === RoleCode.SUPERVISOR
+  const isPmRole = editRole === RoleCode.PROJECT_MANAGER
+
+  // Kiểm tra dự án có bị PM khác nắm giữ hay không
+  const isProjectLockedForPm = (p: { pm_user_id?: string; pm_name?: string }) => {
+    if (!isPmRole) return false
+    return Boolean(
+      p.pm_user_id &&
+      p.pm_user_id !== userToEdit.id &&
+      p.pm_name &&
+      !p.pm_name.toLowerCase().includes('chưa')
+    )
+  }
+
+  // Chọn tất cả các dự án hợp lệ (bỏ qua những dự án đã có PM khác)
+  const handleSelectAllValidProjects = () => {
+    if (isPmRole) {
+      const validIds = projectsList.filter((p) => !isProjectLockedForPm(p)).map((p) => p.id)
+      validIds.forEach((id) => {
+        if (!editSelectedProjectIds.includes(id)) toggleEditProject(id)
+      })
+    } else {
+      selectAllEditProjects()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl border border-brand-border max-w-xl w-full flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Modal Header */}
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand-gold/15 text-[#8C6D15] flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-xl bg-[#C9A227]/15 text-[#8C6D15] flex items-center justify-center font-bold">
               <Edit3 className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 leading-tight">
-                Chỉnh sửa nhân sự trong dự án
+                Chỉnh sửa nhân sự trong CSDL Backend
               </h3>
               <p className="text-xs text-slate-500">
-                Cập nhật chức vụ, tuyến phụ trách và trạng thái tài khoản
+                Cập nhật vai trò chuyên môn, phân công dự án và trạng thái hoạt động
               </p>
             </div>
           </div>
@@ -70,47 +113,76 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-3.5 text-xs">
+        {/* Modal Form */}
+        <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Họ và tên nhân sự: <span className="text-rose-600">*</span></label>
+              <label className="font-semibold text-slate-700">
+                Họ và tên nhân sự:
+              </label>
               <input
                 type="text"
-                required
+                disabled
                 value={editFullName}
                 onChange={(e) => setEditFullName(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-slate-100 text-xs text-slate-600 focus:outline-none cursor-not-allowed"
+                title="Họ và tên do nhân sự tự quản lý trong hồ sơ cá nhân"
               />
             </div>
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Email công vụ: <span className="text-rose-600">*</span></label>
+              <label className="font-semibold text-slate-700">
+                Email công vụ:
+              </label>
               <input
                 type="email"
-                required
+                disabled
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-slate-100 text-xs text-slate-600 font-mono focus:outline-none cursor-not-allowed"
+                title="Email tài khoản được cố định theo thư mời định danh"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Số điện thoại liên hệ:</label>
+              <label className="font-semibold text-slate-700 flex items-center gap-1">
+                <Phone className="w-3.5 h-3.5 text-[#C9A227]" />
+                <span>Số điện thoại công vụ:</span>
+              </label>
               <input
-                type="text"
+                type="tel"
+                disabled={!canEditPhone}
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                placeholder="0912.xxx.xxx"
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                placeholder="VD: 0901234567"
+                onChange={(e) => {
+                  // Tự động chuẩn hóa: chỉ giữ chữ số và dấu + ở đầu (loại bỏ dấu chấm, khoảng trắng)
+                  const cleaned = e.target.value.replace(/[^\d+]/g, '')
+                  setEditPhone(cleaned)
+                }}
+                className={`w-full h-9 px-3 rounded-lg border text-xs font-mono transition-colors ${
+                  canEditPhone
+                    ? 'border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C9A227] focus:border-[#C9A227]'
+                    : 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
+                }`}
+                title={
+                  canEditPhone
+                    ? 'Supervisor có thẩm quyền đặt/sửa số điện thoại liên lạc công vụ'
+                    : userToEdit.role === RoleCode.SUPERVISOR
+                    ? 'Theo nghiệp vụ bảo mật Backend Candidate3, tài khoản Giám sát viên không thể đổi số điện thoại qua API này'
+                    : 'Chỉ Supervisor mới có quyền cập nhật số điện thoại cho PM, Operator, Crew'
+                }
               />
+
             </div>
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Vai trò phân quyền: <span className="text-rose-600">*</span></label>
+              <label className="font-semibold text-slate-700">
+                Vai trò phân quyền: <span className="text-rose-600">*</span>
+              </label>
               <select
                 value={editRole}
                 onChange={(e) => setEditRole(e.target.value as RoleCode)}
-                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+                className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
               >
                 <option value={RoleCode.PROJECT_MANAGER}>PROJECT_MANAGER (Chỉ huy trưởng PM)</option>
                 <option value={RoleCode.SUPERVISOR}>SUPERVISOR (Giám sát / Chủ đầu tư)</option>
@@ -120,38 +192,49 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Tuyến / Dự án phân công phụ trách: <span className="text-slate-400 font-normal">(Tùy chọn)</span></label>
-            <select
-              value={editProjectScope}
-              onChange={(e) => setEditProjectScope(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
-            >
-              <option value="">-- Để trống (Chưa phân công dự án) --</option>
-              <option value="Chưa phân công dự án">-- Chưa phân công dự án --</option>
-              <option value="QL1A - Giai đoạn 2 (Km 1024 - 1045)">QL1A - Giai đoạn 2 (Km 1024 - 1045)</option>
-              <option value="QL1A - Giai đoạn 1 (Km 990 - 1024)">QL1A - Giai đoạn 1 (Km 990 - 1024)</option>
-              <option value="Cao tốc Bắc - Nam (Km 45 - 80)">Cao tốc Bắc - Nam (Km 45 - 80)</option>
-              <option value="Cao tốc Bắc Nam - Đoạn Diễn Châu">Cao tốc Bắc Nam - Đoạn Diễn Châu</option>
-              <option value="Cao tốc La Sơn - Túy Loan">Cao tốc La Sơn - Túy Loan</option>
-              <option value="Quốc lộ 14 - Đoạn Chơn Thành">Quốc lộ 14 - Đoạn Chơn Thành</option>
-              <option value="Toàn hệ thống dự án & Ban QLDA 7">Toàn hệ thống dự án &amp; Ban QLDA 7</option>
-              <option value="Cục Đường bộ Việt Nam">Cục Đường bộ Việt Nam</option>
-              <option value="Đội Bay Trắc Địa Không Ảnh 01">Đội Bay Trắc Địa Không Ảnh 01</option>
-              <option value="Tổ thi công Asphalt Hoàng Hải 01">Tổ thi công Asphalt Hoàng Hải 01</option>
-            </select>
-          </div>
+          {/* Thông tin dự án đang phụ trách trong CSDL - chỉ hiện cho non-Supervisor */}
+          {!isSupervisorRole && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <FolderKanban className="w-3.5 h-3.5 text-[#C9A227]" />
+              <label className="font-semibold text-slate-800">
+                Dự án bảo hành đang phụ trách (CSDL):
+              </label>
+            </div>
 
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Chứng chỉ hành nghề / Chuyên môn:</label>
-            <input
-              type="text"
-              value={editCertificate}
-              onChange={(e) => setEditCertificate(e.target.value)}
-              placeholder="VD: CCHN Giám sát thi công Hạng I, Bằng phi công UAV..."
-              className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-            />
+            {!isSupervisorRole && userToEdit.assigned_project_ids && userToEdit.assigned_project_ids.length > 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {projectsList
+                    .filter((p) => userToEdit.assigned_project_ids?.includes(p.id))
+                    .map((p) => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-semibold text-xs"
+                      >
+                        <span className="font-mono text-[#8C6D15]">{p.code || 'PRJ'}</span>
+                        <span>{p.name}</span>
+                        {isPmRole && (
+                          <span className="text-[10px] text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-300 font-bold">
+                            Chỉ huy trưởng chính
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                </div>
+                {isPmRole && (
+                  <p className="text-[11px] text-slate-500 italic leading-relaxed pt-1 border-t border-slate-200">
+                    💡 <strong>Lưu ý nghiệp vụ:</strong> Phân công hoặc bàn giao dự án cho Chỉ huy trưởng (PM) phải thực hiện qua quy trình pháp lý tại nút <strong>"Điều chuyển &amp; Bàn giao dự án"</strong> (API-113) ngoài danh bạ, không thể tự ý gỡ bỏ qua form cập nhật thông tin chung.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 text-[11px]">
+                Nhân sự hiện chưa được phân công quản lý dự án nào trong CSDL.
+              </div>
+            )}
           </div>
+          )}
 
           <div className="space-y-1">
             <label className="font-semibold text-slate-700">Trạng thái làm việc:</label>
@@ -193,7 +276,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-brand-gold hover:bg-brand-goldMuted text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
               <span>Lưu cập nhật nhân sự</span>

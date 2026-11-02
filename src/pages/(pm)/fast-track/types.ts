@@ -1,34 +1,43 @@
-import { PolicyThresholdConfig } from '../../../types/domain'
+// ==========================================
+// ROADGUARD FAST TRACK (W08) - DOMAIN TYPES
+// 100% Theo quy chuẩn Spec 17_10 & OpenAPI Canonical
+// ==========================================
 
-export type { PolicyThresholdConfig }
-
-export interface RouteConfig {
+export interface ProjectOption {
   id: string
   name: string
-  code: string
-  stationRange: string
-  center: [number, number]
-  zoom: number
-  coords: [number, number][]
+  projectCode: string
 }
 
 export interface DefectItem {
   id: string
   code: string
-  routeId: string
-  routeName?: string
-  stationing: string
-  kmValue: number
-  lane: string
-  type: string
-  areaM2: number
-  depthCm: number
+  projectId: string
+  projectName?: string
+  defectTypeCode: string
+  severity: string
+  status: string
+  reportedAt?: string
+  version?: string
   isFastTrackEligible: boolean
   violationReason?: string
-  assignedCrew: string
-  gps: { lat: number; lng: number }
-  image: string
-  aiConfidence: number
+  assignedCrew?: string
+}
+
+export interface PolicyThresholdConfig {
+  id?: string
+  version: string
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
+  maxAreaM2: number
+  maxDepthCm: number
+  allowedSeverities: string[]
+  activatedBy: string
+  activatedAt: string
+  appliedRoute: string
+  description: string
+  defectTypeCode?: string
+  stopConditions?: string[]
+  revision?: number
 }
 
 export interface PolicyHistoryItem {
@@ -41,20 +50,13 @@ export interface PolicyHistoryItem {
   route: string
   maxArea: number
   maxDepth: number
-  maxPerimeter?: number
-  crackWidthMm?: number
-  crackLengthM?: number
-  slaHours: number
 }
-
-export type WorkMode = 'MEASURE_ONLY' | 'INSPECT_AND_REPAIR' | 'EMERGENCY'
 
 export interface CrewTeam {
   id: string
   name: string
   leader: string
-  memberCount: number
-  equipment: string
+  role?: string
   isAvailable: boolean
 }
 
@@ -88,14 +90,27 @@ export interface RoadCoverageFact {
   projectId: string
   projectName: string
   scopeObligationId: string
+  scopeHash?: string
   fromKm: number
   toKm: number
   sourceKind: 'WARRANTY' | 'MAINTENANCE_BASIS'
+  hasWarrantySource?: boolean
+  handoverDocumentId?: string
   handoverVersion: string
+  documentNo?: string
   applicableFromUtc: string
   applicableToUtc: string
   status: 'CONFIRMED' | 'PENDING'
   confirmedBy?: string
   confirmedAt?: string
   reason?: string
+  sourceId?: string
+  sourceVersion?: string
+  etag?: string
+}
+
+export interface DispatchPayload {
+  defectIds: string[]
+  crewName: string
+  notes?: string
 }

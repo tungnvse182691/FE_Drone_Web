@@ -41,6 +41,18 @@ apiClient.interceptors.response.use(
       _retry?: boolean
     }
 
+    const requestUrl = originalRequest?.url || ''
+    const isAuthRequest =
+      requestUrl.includes('/auth/android/login') ||
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/web/login') ||
+      requestUrl.includes('/invitations/accept')
+
+    // Nếu chính request đăng nhập bị 401 (sai thông tin xác thực), trả lỗi ngay để UI hiển thị thông báo, không reload trang!
+    if (isAuthRequest) {
+      return Promise.reject(error)
+    }
+
     // 401: thử renew 1 lần rồi retry (chỉ cho request idempotent hoặc chưa retry)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
@@ -63,7 +75,7 @@ apiClient.interceptors.response.use(
       } catch {
         // Renew fail -> logout
         useAuthStore.getState().logout()
-        window.location.href = '/login'
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') { window.location.href = '/login' }
       }
     }
 

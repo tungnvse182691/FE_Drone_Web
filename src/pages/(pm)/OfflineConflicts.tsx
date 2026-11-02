@@ -99,11 +99,19 @@ export const OfflineConflicts: React.FC = () => {
     }, 4000)
   }
 
-  // Lọc tập dữ liệu theo Tuyến đường / Dự án được chọn
+  // Lọc tập dữ liệu theo phân quyền vai trò và Tuyến đường / Dự án được chọn
   const projectScopedConflicts = useMemo(() => {
-    if (selectedProjectId === 'ALL') return conflicts
-    return conflicts.filter((c) => (c.project_id || '').toLowerCase() === selectedProjectId.toLowerCase())
-  }, [conflicts, selectedProjectId])
+    // 1. Phân quyền nghiệp vụ BR-16: PM chỉ xem các xung đột thuộc các dự án mà mình quản lý
+    let baseConflicts = conflicts
+    if (!isSupervisor) {
+      const pmProjectIds = availableProjects.map((p) => p.id.toLowerCase())
+      baseConflicts = conflicts.filter((c) => pmProjectIds.includes((c.project_id || '').toLowerCase()))
+    }
+
+    // 2. Lọc theo bộ chọn tuyến đường / dự án
+    if (selectedProjectId === 'ALL') return baseConflicts
+    return baseConflicts.filter((c) => (c.project_id || '').toLowerCase() === selectedProjectId.toLowerCase())
+  }, [conflicts, selectedProjectId, isSupervisor, availableProjects])
 
   // Tìm item đang được chọn để soi chi tiết Side-by-side
   const selectedConflict = useMemo(() => {
@@ -282,7 +290,11 @@ export const OfflineConflicts: React.FC = () => {
                 title="Lọc ca xung đột theo tuyến đường dự án"
               >
                 <option value="ALL">
-                  Toàn bộ tuyến đường ({availableProjects.length} Dự án)
+                  {isSupervisor
+                    ? `Toàn bộ tuyến đường (${availableProjects.length} Dự án)`
+                    : availableProjects.length > 0
+                    ? `Tất cả dự án của tôi (${availableProjects.length} Dự án)`
+                    : 'Chưa được phân công dự án (0 Dự án)'}
                 </option>
                 {availableProjects.map((p) => (
                   <option key={p.id} value={p.id}>

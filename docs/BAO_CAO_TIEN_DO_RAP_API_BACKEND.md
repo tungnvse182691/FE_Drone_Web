@@ -131,7 +131,14 @@
 
 ### 2. Kế hoạch triển khai các phân hệ tiếp theo:
 - ✅ **Giai đoạn 7 (ĐÃ HOÀN THÀNH 31/10/2026):** Nhiệm vụ đo đạc hiện trường, Tạo nhiệm vụ bổ sung, Tái sử dụng ảnh phản ánh (`API-084`) & Xử lý xung đột đồng bộ ngoại tuyến (`API-126`, `API-127` / Cứu hộ thiết bị Q17, Đổi đội, Lệch chính sách).
-1. **Giai đoạn 8 (TIẾP THEO):** Cơ chế Xử lý khẩn cấp Fast Track (`API-162`, `API-163`, `API-165`, `API-176`).
-2. **Giai đoạn 9:** Gom đợt sửa chữa kỹ thuật (Zero Money), Trình duyệt & Phân công đội thi công (`API-139`, `API-140`, `API-142`, `API-143`, `API-144`).
-3. **Giai đoạn 10:** Nghiệm thu hiện trường, Ký số đóng đợt và Báo cáo kiểm toán hệ thống (`API-147`, `API-158`, `API-036`, `API-038`).
+- ✅ **Giai đoạn 8 (ĐÃ HOÀN THÀNH 31/10/2026):** Cơ chế Xử lý khẩn cấp Fast Track (W08):
+  * `GET /api/v1/projects/{projectId}/road-coverage` (`API-175`): Lấy hiện trạng độ phủ tuyến bảo hành.
+  * `POST /api/v1/projects/{projectId}/road-coverage` (`API-176`): Supervisor phê duyệt phân đoạn tuyến áp dụng Fast Track với ETag If-Match và Idempotency-Key.
+  * `POST /api/v1/projects/{projectId}/repair-policies/drafts` (`API-162`): PM lập dự thảo chính sách Fast Track khẩn cấp.
+  * `GET /api/v1/projects/{projectId}/repair-policies/drafts/{draftId}` (`API-163`): Lấy chi tiết bản dự thảo chính sách.
+  * `POST /api/v1/projects/{projectId}/repair-policies/drafts/{draftId}/publish` (`API-165`): PM xuất bản chính sách chính thức có hiệu lực.
+  * `GET /api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/eligibility` (`API-146`): Đánh giá điều kiện đủ chuẩn hay vi phạm vượt ngưỡng.
+  * `NotificationSupervisor` (`ADD-13..15`): Thông báo chuyển trạng thái cho Supervisor.
+1. **Giai đoạn 9 (TIẾP THEO):** Gom đợt sửa chữa kỹ thuật (Zero Money), Trình duyệt & Phân công đội thi công (`API-139`, `API-140`, `API-142`, `API-143`, `API-144`).
+2. **Giai đoạn 10:** Nghiệm thu hiện trường, Ký số đóng đợt và Báo cáo kiểm toán hệ thống (`API-147`, `API-158`, `API-036`, `API-038`).
 

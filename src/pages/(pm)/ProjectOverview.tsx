@@ -7,7 +7,7 @@ import { alignmentService } from '../../api/services/alignmentService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { Segment, ProjectMember } from './project-overview/types'
-import { INITIAL_SEGMENTS, INITIAL_MEMBERS } from './project-overview/mockData'
+import { userDirectory } from '../../api/services/userDirectory'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
 import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
@@ -96,78 +96,64 @@ export const ProjectOverview: React.FC = () => {
           branches: branchesList
         })
 
-        if (data.id === 'prj-ql1a-02') {
-          setSegments(INITIAL_SEGMENTS)
-        } else {
-          const storedSegments = (alignmentData.segments as any[]) || []
-          const mappedSegments: Segment[] = storedSegments.map((s: any, idx: number) => {
-            const start = s.startKm !== undefined ? s.startKm : (s.start_km ?? 0)
-            const end = s.endKm !== undefined ? s.endKm : (s.end_km ?? 0)
-            const len = s.lengthKm !== undefined ? s.lengthKm : (s.length_km ?? parseFloat((end - start).toFixed(3)))
-            const stationText = s.stationing || `Km ${start.toFixed(3).replace('.', '+')} → Km ${end.toFixed(3).replace('.', '+')}`
-            return {
-              code: s.code || `Đoạn #${String(idx + 1).padStart(2, '0')}`,
-              stationing: stationText,
-              length_km: len,
-              status_label: s.statusText || s.status_label || 'Hợp lệ',
-              status_type: s.status === 'GAP_WARNING' ? 'WARNING' : 'GOOD',
-              open_defects: s.open_defects || '0 điểm',
-              defects_count: s.defects_count || 0
-            }
-          })
-          setSegments(mappedSegments)
-        }
+                const storedSegments = (alignmentData.segments as any[]) || []
+        const mappedSegments: Segment[] = storedSegments.map((s: any, idx: number) => {
+          const start = s.startKm !== undefined ? s.startKm : (s.start_km ?? 0)
+          const end = s.endKm !== undefined ? s.endKm : (s.end_km ?? 0)
+          const len = s.lengthKm !== undefined ? s.lengthKm : (s.length_km ?? parseFloat((end - start).toFixed(3)))
+          const stationText = s.stationing || `Km ${start.toFixed(3).replace('.', '+')} → Km ${end.toFixed(3).replace('.', '+')}`
+          return {
+            code: s.code || `Đoạn #${String(idx + 1).padStart(2, '0')}`,
+            stationing: stationText,
+            length_km: len,
+            status_label: s.statusText || s.status_label || 'Hợp lệ',
+            status_type: s.status === 'GAP_WARNING' ? 'WARNING' : 'GOOD',
+            open_defects: s.open_defects || '0 điểm',
+            defects_count: s.defects_count || 0
+          }
+        })
+        setSegments(mappedSegments)
 
         // 2. Cơ cấu nhân sự từ API Backend thật (API-112: GET /projects/{projectId}/members)
         try {
           const rawMembers = await projectService.fetchProjectMembers(data.id)
           if (rawMembers && rawMembers.length > 0) {
-            const mappedMembers: ProjectMember[] = rawMembers.map((m: any) => ({
-              id: m.membershipId || m.userId,
-              name: m.displayName || 'Nhân sự dự án',
-              role_code: m.role || 'MEMBER',
-              role_title: m.role === 'PM' ? 'Chỉ huy trưởng dự án (Project Manager)' : m.role === 'OPERATOR' ? 'Phi công Drone (Operator)' : m.role === 'CREW' ? 'Đội trưởng thi công (Crew)' : 'Giám sát viên (Supervisor)',
-              role_badge: m.isPrimary ? 'PM CHÍNH' : m.role,
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-              is_online: m.status === 'ACTIVE',
-              authority: m.role === 'PM' ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)' : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
-              contact: `${(m.displayName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')}@sandbox.example.test • Đang trực tuyến`,
-              unit: m.role === 'PM' ? 'Ban Chỉ huy Công trường' : 'Đội ngũ Kỹ thuật & Khảo sát'
-            }))
-            setMembers(mappedMembers)
-          } else if (data.id === 'prj-ql1a-02') {
-            setMembers(INITIAL_MEMBERS)
-          } else {
-            const dynamicMembers: ProjectMember[] = [
-              {
-                id: 'mem-sup-01',
-                name: 'Nguyễn Văn An',
-                role_code: 'SUPERVISOR',
-                role_title: 'Giám sát trưởng (Supervisor)',
-                role_badge: 'SUPERVISOR',
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-                is_online: true,
-                authority: 'Khởi tạo dự án, thẩm duyệt hồ sơ & ký số đóng đợt bảo hành',
-                contact: 'an.nv@hoanghai-infra.vn • 0912.888.666',
-                unit: 'Ban Giám sát Hoàng Hải / Chủ đầu tư'
-              },
-              {
-                id: `mem-pm-${data.id}`,
-                name: data.pm_name || 'Đỗ Quốc Hoàng',
-                role_code: 'PM',
-                role_title: 'Chỉ huy trưởng dự án (Project Manager)',
-                role_badge: 'PM CHÍNH',
-                avatar: data.pm_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-                is_online: true,
-                authority: 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)',
-                contact: `${data.pm_email || 'pmhoang@gmail.com'} • Đang trực tuyến`,
-                unit: 'Ban Chỉ huy Công trường'
+            const mappedMembers: ProjectMember[] = rawMembers.map((m: any) => {
+              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
+              const email = matchedUser?.email || m.email || ''
+              const phone = matchedUser?.phone || ''
+              const contact = email ? `${email}${phone ? ` • ${phone}` : ''}` : 'Chưa thiết lập email'
+
+              return {
+                id: m.membershipId || m.userId,
+                name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
+                role_code: m.role || matchedUser?.role || 'MEMBER',
+                role_title: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
+                  ? 'Chỉ huy trưởng dự án (Project Manager)'
+                  : m.role === 'OPERATOR' || m.role === 'DRONE_OPERATOR'
+                  ? 'Phi công Drone (Operator)'
+                  : m.role === 'CREW' || m.role === 'REPAIR_CREW'
+                  ? 'Đội trưởng thi công (Crew)'
+                  : 'Giám sát viên (Supervisor)',
+                role_badge: m.isPrimary ? 'PM CHÍNH' : m.role,
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+                is_online: m.status === 'ACTIVE' || m.status === 1,
+                authority: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
+                  ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)'
+                  : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
+                contact,
+                unit: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
+                  ? 'Ban Chỉ huy Công trường'
+                  : 'Đội ngũ Kỹ thuật & Khảo sát'
               }
-            ]
-            setMembers(dynamicMembers)
+            })
+            setMembers(mappedMembers)
+          } else {
+            setMembers([])
           }
-        } catch {
-          setMembers(INITIAL_MEMBERS)
+        } catch (err) {
+          console.error('[ProjectOverview] Lỗi tải thành viên dự án:', err)
+          setMembers([])
         }
       } else {
         // Fallback an toàn nếu không tìm thấy ID
@@ -255,7 +241,12 @@ export const ProjectOverview: React.FC = () => {
 
         {/* RIGHT COLUMN: 4 COLS */}
         <div className="lg:col-span-4 space-y-6">
-          <ProjectPersonnelCard members={members} project={project} />
+          <ProjectPersonnelCard
+            members={members}
+            project={project}
+            onReloadMembers={loadProjectData}
+            showToast={showToast}
+          />
 
           <ProjectMapPreviewCard
             project={project}

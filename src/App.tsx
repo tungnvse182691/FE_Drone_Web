@@ -58,6 +58,8 @@ export const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/accept-invitation" element={<AcceptInvitation />} />
           <Route path="/invite/:token" element={<AcceptInvitation />} />
+          <Route path="/auth/setup-password" element={<AcceptInvitation />} />
+          <Route path="/setup-password" element={<AcceptInvitation />} />
         </Route>
 
         {/* Force password change route */}

@@ -558,6 +558,7 @@ export interface SystemUserAccount {
   role_label: string
   project_scope: string
   project_id?: string
+  assigned_project_ids?: string[]
   device_info: string
   ip_address: string
   status: 'ACTIVE' | 'SUSPENDED' | 'INVITED'

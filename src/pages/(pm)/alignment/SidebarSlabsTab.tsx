@@ -230,35 +230,37 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
           </span>
         </div>
 
-        <div className="flex flex-col gap-1.5 max-h-[320px] overflow-y-auto pr-0.5">
-          {slabs.map((slab) => (
-            <div
-              key={slab.id}
-              className="p-2 rounded-lg border border-slate-200 bg-white hover:border-amber-300 flex items-center justify-between text-xs transition-all"
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-brand-gold/80 shrink-0" />
-                <div className="flex flex-col">
-                  <span className="font-mono font-bold text-brand-dark text-xs">{slab.id}</span>
-                  <span className="text-[10px] text-slate-500">{slab.segmentCode} • {slab.stationing}</span>
+        {slabs.length === 0 ? (
+          <div className="p-6 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 flex flex-col items-center justify-center text-center">
+            <span className="material-symbols-outlined text-[24px] text-slate-300 mb-1">grid_off</span>
+            <span className="text-xs font-semibold text-slate-600">Chưa có dữ liệu phân tấm BTXM</span>
+            <span className="text-[11px] text-slate-400 mt-0.5 max-w-[260px]">
+              Vui lòng thiết lập tim tuyến để hệ thống tự động tính toán lưới tấm BTXM theo số liệu thực tế của tuyến đường.
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 max-h-[320px] overflow-y-auto pr-0.5">
+            {slabs.map((slab) => (
+              <div
+                key={slab.id}
+                className="p-2 rounded-lg border border-slate-200 bg-white hover:border-amber-300 flex items-center justify-between text-xs transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-brand-gold/80 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="font-mono font-bold text-brand-dark text-xs">{slab.id}</span>
+                    <span className="text-[10px] text-slate-500">{slab.segmentCode} • {slab.stationing}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                    Dài {slab.lengthM}m × Rộng {slab.widthM}m
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    slab.status === 'GOOD'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : slab.status === 'CRACKED'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}
-                >
-                  {slab.status === 'GOOD' ? 'Tốt' : slab.status === 'CRACKED' ? 'Nứt' : 'Lún'}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

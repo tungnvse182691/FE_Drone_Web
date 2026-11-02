@@ -53,7 +53,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     let isMounted = true
     const loadDefects = async () => {
       try {
-        const pId = selectedProjectId !== 'ALL' ? selectedProjectId : (projects[0]?.id || '72f84201-c001-4000-8000-000000000001')
+        const pId = selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id
+        if (!pId) {
+          setAvailableDefects([])
+          return
+        }
         const rawDfs = await surveyService.getProjectDefects(pId).catch(() => [])
         if (!isMounted) return
         const mapped: Defect[] = rawDfs.map((d: any, index: number) => {
@@ -290,7 +294,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       const effectiveProjectId =
         selectedProjectId !== 'ALL'
           ? selectedProjectId
-          : targetDefect?.project_id || projects[0]?.id || '72f84201-c001-4000-8000-000000000001'
+          : targetDefect?.project_id || projects[0]?.id
+
+      if (!effectiveProjectId) {
+        throw new Error('Chưa có dự án nào được chọn hoặc tài khoản chưa được phân công dự án.')
+      }
 
       const isReportDefect = (selectedDefectId || '').toLowerCase() === 'a3e894a5-2d58-4912-949f-889794739b29'
       const payload: CreateFieldTaskPayload = {
@@ -328,7 +336,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     setActionLoadingId(taskId)
     try {
       const task = fieldTasks.find((t) => t.id === taskId);
-      const pId = task?.project_id || selectedProjectId || '72f84201-c001-4000-8000-000000000001';
+      const pId = task?.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id);
+      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.');
       await fieldTaskService.startMeasuring(pId, taskId)
       await onRefreshTasks()
       notify(`Đã chuyển phiếu [${code}] sang trạng thái ĐANG ĐO ĐẠC ngoài hiện trường`, 'info')
@@ -354,7 +363,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
     setActionLoadingId(selectedTaskToSubmit.id)
     try {
-      const pId = selectedTaskToSubmit.project_id || selectedProjectId || '72f84201-c001-4000-8000-000000000001'
+      const pId = selectedTaskToSubmit.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
+      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
       await fieldTaskService.recordMeasurement(
         pId,
         selectedTaskToSubmit.id,
@@ -380,7 +390,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     setActionLoadingId(taskId)
     try {
       const task = fieldTasks.find((t) => t.id === taskId)
-      const pId = task?.project_id || selectedProjectId || '72f84201-c001-4000-8000-000000000001'
+      const pId = task?.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
+      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
       await fieldTaskService.verifyTask(pId, taskId)
       await onRefreshTasks()
       notify(`✅ Đã xác minh số liệu cho phiếu [${code}] và chốt vào hồ sơ sửa chữa CSDL!`, 'success')
@@ -410,7 +421,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     if (!taskForReuse) return
     setIsSubmittingReuse(true)
     try {
-      const pId = taskForReuse.project_id || selectedProjectId || '72f84201-c001-4000-8000-000000000001'
+      const pId = taskForReuse.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
+      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
       // Bằng chứng và file ảnh gốc lưu trong CSDL Backend Candidate3
       const payload: FieldEvidenceReuseInput = {
         fileId: 'b58915d3-bc67-4056-a62a-003576faf286',

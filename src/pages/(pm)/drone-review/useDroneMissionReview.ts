@@ -1,30 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
+import { getProjectCorridorCoords, getDefectGpsCoordinates } from '../../../utils/projectGeodesy'
 import { AIDetectionItem } from './types'
-// No mock data
 import { surveyService } from '../../../api/services'
 import { getFromStorage } from '../../../api/services/storageHelper'
-
-import { INITIAL_SURVEY_ROUTES } from '../../../api/services/surveyService'
-
-function getCorridorCoordsForSurvey(projectId?: string): [number, number][] {
-  try {
-    const alignData = getFromStorage<any>(`roadguard_alignment_data_${projectId}`, null)
-    if (alignData?.coords && Array.isArray(alignData.coords) && alignData.coords.length >= 2) {
-      return alignData.coords
-    }
-  } catch {}
-
-  // Tuyến đường bộ đô thị thực tế của SBX-A (dài 0.702 km, đi qua điểm lỗi DET-01 tại Km 0+351)
-  return [
-    [108.1940, 16.0490], // Km 0+000 (accessPoint)
-    [108.1952, 16.0505], // Km 0+175
-    [108.1965, 16.0520], // Km 0+351 (Vị trí khiếm khuyết DET-01)
-    [108.1978, 16.0535], // Km 0+525
-    [108.1990, 16.0550]  // Km 0+702
-  ]
-}
 
 import type { SurveyMissionItem } from '../../../api/services'
 
@@ -157,14 +137,15 @@ const handleSelectDetection = (item: AIDetectionItem) => {
       corridorMapInstanceRef.current = null
     }
 
-    const corridorCoords = getCorridorCoordsForSurvey(currentSurvey?.project_id)
+    const effProjectId = currentSurvey?.project_id || detections[0]?.projectId
+    const corridorCoords = getProjectCorridorCoords(effProjectId)
     const map = new maplibregl.Map({
       container: corridorMapContainerRef.current,
       style: getMapLibreStyle('SATELLITE'),
-      center: corridorCoords[Math.floor(corridorCoords.length / 2)] || [108.0825, 16.2731],
-      zoom: 14.5,
+      center: corridorCoords[Math.floor(corridorCoords.length / 2)] || [108.274, 16.093],
+      zoom: 16,
       minZoom: 10,
-      maxZoom: 20,
+      maxZoom: 22,
       pitch: 35,
       bearing: -20
     })
@@ -197,25 +178,37 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         paint: { 'line-color': '#C9A227', 'line-width': 5 }
       })
 
-      detections.forEach((det, idx) => {
-        const pt = corridorCoords[Math.min(idx, corridorCoords.length - 1)] || corridorCoords[0]
+      detections.forEach((det) => {
+        const { lng, lat } = getDefectGpsCoordinates(
+          effProjectId,
+          det.kmValue
+        )
+        const pt: [number, number] = [lng, lat]
         const isCurrent = det.id === selectedDetectionId
+        const size = isCurrent ? 24 : 18
+        const dotColor = det.severityLevel?.includes('Khẩn cấp')
+          ? '#DC2626'
+          : det.severityLevel?.includes('Nghiêm trọng')
+          ? '#D97706'
+          : '#2563EB'
+
         const el = document.createElement('div')
         el.className = 'cursor-pointer'
         el.innerHTML = `
-          <div style="display:flex; flex-direction:column; align-items:center;">
-            <div style="background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); margin-bottom:2px; white-space:nowrap; border:1px solid #fff;">
+          <div style="position:relative; width:${size}px; height:${size}px; display:flex; align-items:center; justify-content:center;">
+            <div style="position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:${isCurrent ? '#C9A227' : '#1E293B'}; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.4); white-space:nowrap; border:1px solid #fff; pointer-events:none; z-index:10;">
               ${det.code || det.id} (${det.stationing})
             </div>
-            <div style="width:${isCurrent ? '20px' : '14px'}; height:${isCurrent ? '20px' : '14px'}; background:${det.severityLevel?.includes('Khẩn cấp') ? '#DC2626' : det.severityLevel?.includes('Nghiêm trọng') ? '#D97706' : '#2563EB'}; border:2px solid #fff; border-radius:50%; box-shadow:${isCurrent ? '0 0 10px #C9A227' : 'none'};"></div>
+            ${isCurrent ? `<div style="position:absolute; width:${size + 14}px; height:${size + 14}px; border-radius:50%; background:rgba(201,162,39,0.3); border:1.5px solid #C9A227; animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>` : ''}
+            <div style="position:relative; width:${size}px; height:${size}px; background:${dotColor}; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 8px rgba(0,0,0,0.6); z-index:2;"></div>
           </div>
         `
         el.onclick = () => {
           handleSelectDetection(det)
-          map.flyTo({ center: pt, zoom: 17, speed: 1.2 })
+          map.flyTo({ center: pt, zoom: 17.5, speed: 1.2 })
         }
 
-        new maplibregl.Marker({ element: el })
+        new maplibregl.Marker({ element: el, anchor: 'center' })
           .setLngLat(pt)
           .setPopup(
             new maplibregl.Popup({ offset: 25 }).setHTML(`
@@ -351,7 +344,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     }
 
     try {
-      const success = await surveyService.lockBaseline(surveyId)
+      const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
       if (success) {
         setIsLockedSuccess(true)
         setLockedBaselineRange(`${currentSurvey?.start_km || ''} → ${currentSurvey?.end_km || ''} (Toàn tuyến)`)
@@ -365,7 +358,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
 
   const handleConfirmBaseline = async (isPartial: boolean) => {
     try {
-      const success = await surveyService.lockBaseline(surveyId)
+      const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
       if (success) {
         setIsLockedSuccess(true)
         setIsBaselineModalOpen(false)

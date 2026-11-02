@@ -12,8 +12,8 @@ interface SystemControlModalsProps {
   showSuspendModal: boolean
   setShowSuspendModal: (show: boolean) => void
   userToSuspend: SystemUserAccount | null
-  handoffAssignee: string
-  setHandoffAssignee: (val: string) => void
+  suspendReason?: string
+  setSuspendReason?: (val: string) => void
   handleConfirmSuspend: () => void
 
   // 2. Deletion Request Modal
@@ -49,8 +49,10 @@ interface SystemControlModalsProps {
   setEditRole: (val: RoleCode) => void
   editProjectScope: string
   setEditProjectScope: (val: string) => void
-  editCertificate: string
-  setEditCertificate: (val: string) => void
+  editSelectedProjectIds?: string[]
+  toggleEditProject?: (id: string) => void
+  selectAllEditProjects?: () => void
+  clearAllEditProjects?: () => void
   editStatus: 'ACTIVE' | 'SUSPENDED'
   setEditStatus: (val: 'ACTIVE' | 'SUSPENDED') => void
   handleSaveEdit: (e: React.FormEvent) => void
@@ -68,15 +70,22 @@ interface SystemControlModalsProps {
   setNewPersonnelPhone: (val: string) => void
   newPersonnelRole: RoleCode
   setNewPersonnelRole: (val: RoleCode) => void
-  newPersonnelProject: string
-  setNewPersonnelProject: (val: string) => void
-  newPersonnelCert: string
-  setNewPersonnelCert: (val: string) => void
+  newPersonnelProjectIds?: string[]
+  toggleNewPersonnelProject?: (id: string) => void
+  selectAllNewPersonnelProjects?: () => void
+  clearAllNewPersonnelProjects?: () => void
   assignExistingUserId: string
   setAssignExistingUserId: (val: string) => void
-  assignExistingProject: string
-  setAssignExistingProject: (val: string) => void
+  assignExistingProjectIds?: string[]
+  toggleAssignExistingProject?: (id: string) => void
+  selectAllAssignExistingProjects?: () => void
+  clearAllAssignExistingProjects?: () => void
+  assignEffectiveFrom?: string
+  setAssignEffectiveFrom?: (val: string) => void
+  assignReason?: string
+  setAssignReason?: (val: string) => void
   usersList: SystemUserAccount[]
+  projectsList?: Array<{ id: string; name: string; code?: string; pm_user_id?: string; pm_name?: string }>
   handleAddPersonnelSubmit: (e: React.FormEvent) => void
 }
 
@@ -84,8 +93,8 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
   showSuspendModal,
   setShowSuspendModal,
   userToSuspend,
-  handoffAssignee,
-  setHandoffAssignee,
+  suspendReason,
+  setSuspendReason,
   handleConfirmSuspend,
 
   showCreateDeletionRequestModal,
@@ -118,8 +127,10 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
   setEditRole,
   editProjectScope,
   setEditProjectScope,
-  editCertificate,
-  setEditCertificate,
+  editSelectedProjectIds = [],
+  toggleEditProject = () => {},
+  selectAllEditProjects = () => {},
+  clearAllEditProjects = () => {},
   editStatus,
   setEditStatus,
   handleSaveEdit,
@@ -136,15 +147,22 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
   setNewPersonnelPhone,
   newPersonnelRole,
   setNewPersonnelRole,
-  newPersonnelProject,
-  setNewPersonnelProject,
-  newPersonnelCert,
-  setNewPersonnelCert,
+  newPersonnelProjectIds = [],
+  toggleNewPersonnelProject = () => {},
+  selectAllNewPersonnelProjects = () => {},
+  clearAllNewPersonnelProjects = () => {},
   assignExistingUserId,
   setAssignExistingUserId,
-  assignExistingProject,
-  setAssignExistingProject,
+  assignExistingProjectIds = [],
+  toggleAssignExistingProject = () => {},
+  selectAllAssignExistingProjects = () => {},
+  clearAllAssignExistingProjects = () => {},
+  assignEffectiveFrom,
+  setAssignEffectiveFrom,
+  assignReason,
+  setAssignReason,
   usersList,
+  projectsList = [],
   handleAddPersonnelSubmit
 }) => {
   return (
@@ -153,8 +171,8 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
         showSuspendModal={showSuspendModal}
         setShowSuspendModal={setShowSuspendModal}
         userToSuspend={userToSuspend}
-        handoffAssignee={handoffAssignee}
-        setHandoffAssignee={setHandoffAssignee}
+        suspendReason={suspendReason}
+        setSuspendReason={setSuspendReason}
         handleConfirmSuspend={handleConfirmSuspend}
       />
 
@@ -193,10 +211,13 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
         setEditRole={setEditRole}
         editProjectScope={editProjectScope}
         setEditProjectScope={setEditProjectScope}
-        editCertificate={editCertificate}
-        setEditCertificate={setEditCertificate}
+        editSelectedProjectIds={editSelectedProjectIds}
+        toggleEditProject={toggleEditProject}
+        selectAllEditProjects={selectAllEditProjects}
+        clearAllEditProjects={clearAllEditProjects}
         editStatus={editStatus}
         setEditStatus={setEditStatus}
+        projectsList={projectsList}
         handleSaveEdit={handleSaveEdit}
       />
 
@@ -213,15 +234,22 @@ export const SystemControlModals: React.FC<SystemControlModalsProps> = ({
         setNewPersonnelPhone={setNewPersonnelPhone}
         newPersonnelRole={newPersonnelRole}
         setNewPersonnelRole={setNewPersonnelRole}
-        newPersonnelProject={newPersonnelProject}
-        setNewPersonnelProject={setNewPersonnelProject}
-        newPersonnelCert={newPersonnelCert}
-        setNewPersonnelCert={setNewPersonnelCert}
+        newPersonnelProjectIds={newPersonnelProjectIds}
+        toggleNewPersonnelProject={toggleNewPersonnelProject}
+        selectAllNewPersonnelProjects={selectAllNewPersonnelProjects}
+        clearAllNewPersonnelProjects={clearAllNewPersonnelProjects}
         assignExistingUserId={assignExistingUserId}
         setAssignExistingUserId={setAssignExistingUserId}
-        assignExistingProject={assignExistingProject}
-        setAssignExistingProject={setAssignExistingProject}
+        assignExistingProjectIds={assignExistingProjectIds}
+        toggleAssignExistingProject={toggleAssignExistingProject}
+        selectAllAssignExistingProjects={selectAllAssignExistingProjects}
+        clearAllAssignExistingProjects={clearAllAssignExistingProjects}
+        assignEffectiveFrom={assignEffectiveFrom}
+        setAssignEffectiveFrom={setAssignEffectiveFrom}
+        assignReason={assignReason}
+        setAssignReason={setAssignReason}
         usersList={usersList}
+        projectsList={projectsList}
         handleAddPersonnelSubmit={handleAddPersonnelSubmit}
       />
     </>

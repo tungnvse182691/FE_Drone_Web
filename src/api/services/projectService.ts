@@ -1,6 +1,9 @@
 import { apiClient } from '../client'
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { HubProject } from '../../types/domain'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
+import { userDirectory } from './userDirectory'
 
 export type { HubProject }
 
@@ -319,7 +322,72 @@ function enrichProjectWithAlignment(p: HubProject): HubProject {
 }
 
 // Mapper chuẩn hóa từ Backend Candidate3 DTO sang HubProject Domain Model
-function mapBackendProjectToHub(item: any): HubProject {
+interface UserLookupInfo {
+  userId: string
+  displayName: string
+  email: string
+  role: string
+}
+
+async function getUsersLookup(): Promise<Map<string, UserLookupInfo>> {
+  const map = new Map<string, UserLookupInfo>()
+  // Nạp sẵn toàn bộ danh bạ từ userDirectory
+  userDirectory.getAllUsers().forEach((u) => {
+    const info: UserLookupInfo = {
+      userId: u.id,
+      displayName: u.displayName,
+      email: u.email,
+      role: u.role || ''
+    }
+    map.set(u.id.toLowerCase(), info)
+    if (u.displayName) {
+      map.set(u.displayName.trim().toLowerCase(), info)
+    }
+  })
+
+  // Chỉ gọi /api/v1/users nếu người dùng hiện tại là SUPERVISOR (PM gọi sẽ bị 403)
+  const currentUser = useAuthStore.getState().user
+  if (currentUser?.role === RoleCode.SUPERVISOR) {
+    try {
+      const res = await apiClient.get<any>('/users', { params: { limit: 100 } })
+      const items = res.data?.items || []
+      const entries: any[] = []
+      items.forEach((u: any) => {
+        if (u.userId) {
+          const info: UserLookupInfo = {
+            userId: u.userId,
+            displayName: u.displayName || '',
+            email: u.email || '',
+            role: u.role || ''
+          }
+          entries.push({
+            id: u.userId,
+            displayName: u.displayName || '',
+            email: u.email || '',
+            role: u.role || '',
+            phone: u.phoneNumber
+          })
+          map.set(u.userId.toLowerCase(), info)
+          if (u.displayName) {
+            map.set(u.displayName.trim().toLowerCase(), info)
+          }
+        }
+      })
+      if (entries.length > 0) {
+        userDirectory.registerUsers(entries)
+      }
+    } catch (err) {
+      console.warn('[projectService] Không thể tải /users từ máy chủ:', err)
+    }
+  }
+  return map
+}
+
+function mapBackendProjectToHub(
+  item: any,
+  usersMap?: Map<string, UserLookupInfo>,
+  statsMap?: Map<string, { openDefects: number; repairPackages: number }>
+): HubProject {
   const statusStr = (item.status || 'PENDING_ALIGNMENT').toUpperCase()
   let status: HubProject['status'] = 'PENDING_ALIGNMENT'
   let statusLabel = 'Chưa thiết lập tim tuyến'
@@ -351,18 +419,26 @@ function mapBackendProjectToHub(item: any): HubProject {
     }
   } catch {}
 
-  const pmName = item.primaryProjectManagerName || 'Chưa gán PM'
+  const pmUserId = item.primaryProjectManagerUserId ? String(item.primaryProjectManagerUserId).toLowerCase() : ''
+  let pmName = item.primaryProjectManagerName || ''
   let pmEmail = ''
-  if (item.primaryProjectManagerUserId) {
-    const lowerName = pmName.toLowerCase()
-    if (lowerName.includes('pm-a')) {
-      pmEmail = 'pm-a@sandbox.example.test'
-    } else if (lowerName.includes('pm-b')) {
-      pmEmail = 'pm-b@sandbox.example.test'
-    } else {
-      pmEmail = `${lowerName.replace(/[^a-z0-9]/g, '')}@sandbox.example.test`
+
+  const matched = userDirectory.findUser(pmUserId, pmName)
+  if (matched) {
+    pmName = matched.displayName || pmName
+    pmEmail = matched.email || ''
+  } else if (usersMap) {
+    const userMatch = pmUserId ? usersMap.get(pmUserId) : (pmName ? usersMap.get(pmName.trim().toLowerCase()) : undefined)
+    if (userMatch) {
+      pmName = userMatch.displayName || pmName
+      pmEmail = userMatch.email || ''
     }
   }
+
+  if (!pmName) {
+    pmName = 'Chưa gán PM'
+  }
+
 
   // Tính toán thời gian bảo hành thực tế dựa trên handoverDate và warrantyEndDate
   const now = new Date()
@@ -451,8 +527,8 @@ function mapBackendProjectToHub(item: any): HubProject {
     warranty_passed_percent: warrantyPassedPercent,
     days_remaining: daysRemaining,
     length_km: 0.0,
-    open_defects: 0,
-    repair_packages: 0,
+    open_defects: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.openDefects : 0,
+    repair_packages: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.repairPackages : 0,
     image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
     is_assigned: true,
     is_restricted_for_pm: false,
@@ -486,11 +562,54 @@ export const projectService = {
     if (!isMock) {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
-        const res = await apiClient.get<{ items: any[]; nextCursor?: string; asOf?: string }>('/projects')
+        const [res, usersMap] = await Promise.all([
+          apiClient.get<{ items: any[]; nextCursor?: string; asOf?: string }>('/projects'),
+          getUsersLookup()
+        ])
         const rawItems = res.data?.items || (Array.isArray(res.data) ? res.data : [])
         console.log(`✅ [CANDIDATE3 BE] Đã tải ${rawItems.length} dự án từ Backend thật:`, rawItems.map(p => p.projectCode || p.code))
 
-        const mapped = rawItems.map(mapBackendProjectToHub)
+        const currentUser = useAuthStore.getState().user
+        const isPM = currentUser?.role === RoleCode.PROJECT_MANAGER
+        const statsMap = new Map<string, { openDefects: number; repairPackages: number }>()
+        await Promise.all(
+          rawItems.map(async (item) => {
+            const pId = item.projectId || item.id
+            if (!pId) return
+            try {
+              let openDefects = 0
+              let repairPackages = 0
+              if (isPM) {
+                // PM: Được phép gọi /projects/{pId}/defects (API-070)
+                const [defectsRes, packagesRes] = await Promise.all([
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/defects`).catch(() => ({ data: { items: [] } })),
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`).catch(() => ({ data: { items: [] } }))
+                ])
+                const defects = defectsRes.data?.items || []
+                openDefects = defects.filter((d: any) => {
+                  const s = (d.status || d.verificationStatus || '').toUpperCase()
+                  return s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'PASSED'
+                }).length
+                repairPackages = (packagesRes.data?.items || []).length
+              } else {
+                // Supervisor: Không gọi /defects để tránh 403 Forbidden; dùng API-140 repair-packages & API-078 defect-statistics
+                const [statsRes, packagesRes] = await Promise.all([
+                  apiClient.get<any>(`/projects/${pId}/defect-statistics`).catch(() => null),
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`).catch(() => ({ data: { items: [] } }))
+                ])
+                if (statsRes?.data?.statistics) {
+                  openDefects = statsRes.data.statistics.openDefectsCount || 0
+                }
+                repairPackages = (packagesRes.data?.items || []).length
+              }
+              statsMap.set(pId.toLowerCase(), { openDefects, repairPackages })
+            } catch {
+              statsMap.set(pId.toLowerCase(), { openDefects: 0, repairPackages: 0 })
+            }
+          })
+        )
+
+        const mapped = rawItems.map((item) => mapBackendProjectToHub(item, usersMap, statsMap))
         projectStore = mapped
         try {
           sessionStorage.setItem('roadguard_project_store', JSON.stringify(mapped))

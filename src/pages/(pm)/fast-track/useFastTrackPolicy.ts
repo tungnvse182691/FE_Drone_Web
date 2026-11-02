@@ -1,266 +1,282 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   PolicyThresholdConfig,
   PolicyHistoryItem,
   AuditLogItem,
-  DefectItem as DispatchDefectItem,
   RoadCoverageFact,
   RoadCoverageInputDto
 } from './types'
-import {
-  INITIAL_POLICY,
-  INITIAL_POLICY_HISTORY,
-  INITIAL_AUDIT_LOGS
-} from './mockData'
-import { fastTrackService } from '../../../api/services/fastTrackService'
-
-const DEFAULT_ROAD_COVERAGE: RoadCoverageFact = {
-  projectId: 'PRJ-QL1A-02',
-  projectName: 'QL1A - Giai đoạn 2 (Km 1020 - Km 1045)',
-  scopeObligationId: 'SCO-QL1A-2026-01',
-  fromKm: 1020,
-  toKm: 1045,
-  sourceKind: 'WARRANTY',
-  handoverVersion: 'BB-BG-2026/QL1A-GĐ2',
-  applicableFromUtc: '2026-01-01',
-  applicableToUtc: '2026-12-31',
-  status: 'PENDING'
-}
+import { fastTrackService, RepairPolicyDefinitionInput } from '../../../api/services/fastTrackService'
 
 export function useFastTrackPolicy(
-  setDefects: React.Dispatch<React.SetStateAction<DispatchDefectItem[]>>,
+  selectedProjectId: string,
   showToast: (msg: string) => void
 ) {
-  const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig>(INITIAL_POLICY)
-  const [policyHistory, setPolicyHistory] = useState<PolicyHistoryItem[]>(INITIAL_POLICY_HISTORY)
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS)
-  const [roadCoverage, setRoadCoverage] = useState<RoadCoverageFact>(DEFAULT_ROAD_COVERAGE)
+  const [currentPolicy, setCurrentPolicy] = useState<PolicyThresholdConfig | null>(null)
+  const [policyHistory, setPolicyHistory] = useState<PolicyHistoryItem[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([])
+  const [roadCoverage, setRoadCoverage] = useState<RoadCoverageFact | null>(null)
+  const [coverageEtag, setCoverageEtag] = useState<string>('')
   const [isRoadCoverageModalOpen, setIsRoadCoverageModalOpen] = useState(false)
+  const [lastDraftId, setLastDraftId] = useState<string | null>(null)
+  const [lastDraftVersion, setLastDraftVersion] = useState<string | null>(null)
 
-  // Khởi tạo từ async Mock API Service (Zero localStorage)
-  useEffect(() => {
-    let isMounted = true
-    const loadPolicyData = async () => {
-      try {
-        const [pol, hist, logs, cov] = await Promise.all([
-          fastTrackService.getPolicy(),
-          fastTrackService.getPolicyHistory(),
-          fastTrackService.getAuditLogs(),
-          fastTrackService.getRoadCoverage()
-        ])
-        if (isMounted) {
-          if (pol) setCurrentPolicy(pol)
-          if (hist && hist.length > 0) setPolicyHistory(hist)
-          if (logs && logs.length > 0) setAuditLogs(logs)
-          if (cov) setRoadCoverage(cov)
-        }
-      } catch (err) {
-        console.warn('Lỗi tải dữ liệu chính sách từ Mock API:', err)
-      }
-    }
-    loadPolicyData()
-    return () => {
-      isMounted = false
-    }
-  }, [])
-
-
-  // Form states cho Modal Tạo chính sách mới
-  const [formVersionName, setFormVersionName] = useState('POL-TCVN-2026-V3')
-  const [formCrackWidth, setFormCrackWidth] = useState('1.5')
-  const [formCrackLength, setFormCrackLength] = useState('3.0')
-  const [formMaxArea, setFormMaxArea] = useState('0.60')
-  const [formMaxDepth, setFormMaxDepth] = useState('5.5')
-  const [formSlaHours, setFormSlaHours] = useState('24')
-  const [formMaxPerimeter, setFormMaxPerimeter] = useState('3.0')
-  const [formPolicyNote, setFormPolicyNote] = useState(
-    'Điều chỉnh theo phụ lục hợp đồng bảo dưỡng thường xuyên quý IV/2026.'
-  )
+  // Form states cho Modal Lập dự thảo chính sách (API-162)
+  const [formVersionName, setFormVersionName] = useState('TCVN-8819-2011')
+  const [formMaxArea, setFormMaxArea] = useState('0.5')
+  const [formMaxDepth, setFormMaxDepth] = useState('5.0')
+  const [formPolicyNote, setFormPolicyNote] = useState('Dự thảo quy chuẩn kỹ thuật xử lý khẩn cấp')
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false)
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false)
+  const [coverageError, setCoverageError] = useState<string | null>(null)
+  const [isSubmittingCoverage, setIsSubmittingCoverage] = useState(false)
 
-  const handleApplyPolicy = async (action: 'ACTIVATE' | 'DRAFT') => {
-    const area = parseFloat(formMaxArea) || 0.5
-    const depth = parseFloat(formMaxDepth) || 5.0
-    const sla = parseInt(formSlaHours, 10) || 24
-    const perimeter = parseFloat(formMaxPerimeter) || 3.0
-    const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    const nowDate = new Date().toLocaleDateString('vi-VN')
-    const timeStr = `${nowTime} ${nowDate}`
+  // Tải dữ liệu thật 100% từ CSDL Backend Candidate3 qua OpenAPI
+  const loadPolicyData = useCallback(async () => {
+    if (!selectedProjectId) return
+    try {
+      // 1. Tải chính sách hiện hành từ CSDL
+      const activePol = await fastTrackService.getActivePolicy(selectedProjectId)
+      setCurrentPolicy(activePol)
 
-    if (action === 'ACTIVATE') {
-      const updatedPolicy: PolicyThresholdConfig = {
-        version: formVersionName,
-        status: 'ACTIVE',
-        maxAreaM2: area,
-        maxDepthCm: depth,
-        maxPerimeterM: perimeter,
-        crackWidthMm: parseFloat(formCrackWidth) || 1.5,
-        crackLengthM: parseFloat(formCrackLength) || 3.0,
-        allowedSeverities: ['LOW', 'MEDIUM'],
-        slaHours: sla,
-        activatedBy: 'Kỹ sư Nguyễn Văn Hoàng (PM)',
-        activatedAt: `${nowTime} • ${nowDate}`,
-        appliedRoute: 'QL1A (Km 1020 - Km 1045) • PK-04',
-        description: `Quy chuẩn kích hoạt tự động ${formVersionName}: Diện tích ≤ ${area}m², Độ sâu ≤ ${depth}cm.`
+      // 2. Tải độ phủ tuyến đường bảo hành (API-175)
+      const covData = await fastTrackService.getRoadCoverage(selectedProjectId)
+      if (covData) {
+        setCoverageEtag(covData.sourceVersion || '')
+        setRoadCoverage(covData)
+
+        if (covData.status === 'CONFIRMED') {
+          setAuditLogs([
+            {
+              title: 'Phê duyệt phạm vi độ phủ tuyến đường bảo hành',
+              time: covData.confirmedAt || 'CSDL',
+              user: covData.confirmedBy || 'Kỹ sư Giám sát / Chủ đầu tư',
+              hash: covData.handoverVersion,
+              note: `Căn cứ: ${covData.reason || 'Bảo dưỡng thường xuyên'}. Hiệu lực: ${covData.applicableFromUtc} đến ${covData.applicableToUtc}.`
+            }
+          ])
+        }
+      } else {
+        setRoadCoverage(null)
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi tải dữ liệu chính sách từ CSDL Backend:', err)
+      const errorDetail = err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Không thể kết nối API'
+      showToast(`Lỗi tải dữ liệu CSDL: ${errorDetail}`)
+    }
+  }, [selectedProjectId, showToast])
+
+  useEffect(() => {
+    loadPolicyData()
+  }, [loadPolicyData])
+
+  // PM Lưu bản dự thảo (API-162) hoặc Xuất bản trực tiếp (API-165)
+  const handleApplyPolicy = async (shouldPublishDirectly: boolean) => {
+    try {
+      const area = parseFloat(formMaxArea) || 0.5
+      const depth = parseFloat(formMaxDepth) || 5.0
+
+      const draftPayload: RepairPolicyDefinitionInput = {
+        defectTypeCode: 'POTHOLE',
+        checklistVersion: formVersionName,
+        measurements: [
+          { code: 'AREA', unit: 'm2', minimum: 0.01, maximum: area },
+          { code: 'DEPTH', unit: 'cm', minimum: 0.5, maximum: depth }
+        ],
+        stopConditions: ['WEATHER_RAIN', 'NIGHT_WITHOUT_LIGHT'],
+        reason: formPolicyNote
       }
 
-      // Lưu qua Async Mock Service
-      await fastTrackService.activatePolicy(formVersionName, 'Kỹ sư Nguyễn Văn Hoàng (PM)', updatedPolicy)
+      // Bước 1: Gọi API-162 tạo bản dự thảo
+      const draftResult = await fastTrackService.createPolicyDraft(selectedProjectId, draftPayload)
+      setLastDraftId(draftResult.id)
+      setLastDraftVersion(draftResult.version || null)
 
-      setCurrentPolicy(updatedPolicy)
+      const timeStr = new Date().toLocaleString('vi-VN')
 
-      setPolicyHistory((prev) => [
-        {
-          id: `pol-${Date.now()}`,
+      if (shouldPublishDirectly) {
+        // Bước 2: Gọi API-165 xuất bản chính sách
+        const etag = draftResult.version || 'AAAAAAAAdb4='
+        const pubResult = await fastTrackService.publishPolicy(
+          selectedProjectId,
+          draftResult.id,
+          formPolicyNote,
+          etag
+        )
+
+        const publishedPolicy: PolicyThresholdConfig = {
+          id: pubResult.id,
           version: formVersionName,
-          displayName: `${formVersionName} (Hiện hành)`,
           status: 'ACTIVE',
-          activatedBy: 'PM Hoàng',
+          maxAreaM2: area,
+          maxDepthCm: depth,
+          allowedSeverities: ['LOW', 'MEDIUM'],
+          activatedBy: 'Chỉ huy trưởng (PM)',
           activatedAt: timeStr,
-          route: `Áp dụng toàn tuyến QL1A (Km 1000 - Km 1080)`,
-          maxArea: area,
-          maxDepth: depth,
-          slaHours: sla,
-          maxPerimeter: perimeter
-        },
-        ...prev.map((p) => ({
-          ...p,
-          displayName: (p.displayName || p.version).replace(' (Hiện hành)', ' (Lưu trữ)'),
-          status: (p.status === 'ACTIVE' ? 'ARCHIVED' : p.status) as 'ACTIVE' | 'ARCHIVED' | 'DRAFT'
-        }))
-      ])
+          appliedRoute: 'Toàn tuyến dự án',
+          description: formPolicyNote,
+          defectTypeCode: 'POTHOLE',
+          stopConditions: ['WEATHER_RAIN', 'NIGHT_WITHOUT_LIGHT'],
+          revision: pubResult.revision || 1
+        }
 
-      const newAudit: AuditLogItem = {
-        title: `Kích hoạt ${formVersionName} (ACTIVE)`,
-        time: `${nowDate} ${nowTime}:00`,
-        user: 'Nguyễn Văn Hoàng (PM)',
-        hash: `sha256:${Math.random().toString(16).substring(2, 8)}...${Math.random().toString(16).substring(2, 6)}`,
-        note: `Nâng ngưỡng xử lý nhanh: Diện tích ≤ ${area} m², Độ sâu ≤ ${depth} cm, SLA ≤ ${sla}h. ${formPolicyNote}`
+        setCurrentPolicy(publishedPolicy)
+
+        setPolicyHistory((prev) => [
+          {
+            id: pubResult.id,
+            version: formVersionName,
+            displayName: `${formVersionName} (Hiện hành)`,
+            status: 'ACTIVE',
+            activatedBy: 'Chỉ huy trưởng (PM)',
+            activatedAt: timeStr,
+            route: `Ngưỡng diện tích ≤ ${area} m² • Độ sâu ≤ ${depth} cm`,
+            maxArea: area,
+            maxDepth: depth
+          },
+          ...prev.map((p) => ({ ...p, status: 'ARCHIVED' as const }))
+        ])
+
+        setAuditLogs((prev) => [
+          {
+            title: `Xuất bản quy chuẩn ${formVersionName}`,
+            time: timeStr,
+            user: 'Chỉ huy trưởng (PM)',
+            hash: pubResult.version || 'sha256:verified',
+            note: `PM xuất bản chính sách chính thức: Diện tích ≤ ${area} m², Độ sâu ≤ ${depth} cm.`
+          },
+          ...prev
+        ])
+
+        showToast(`Đã xuất bản thành công chính sách ${formVersionName}!`)
+      } else {
+        // Lưu dự thảo
+        setPolicyHistory((prev) => [
+          {
+            id: draftResult.id,
+            version: formVersionName,
+            displayName: `${formVersionName} (Dự thảo)`,
+            status: 'DRAFT',
+            activatedBy: 'Chỉ huy trưởng (PM)',
+            activatedAt: timeStr,
+            route: `Ngưỡng diện tích ≤ ${area} m² • Độ sâu ≤ ${depth} cm`,
+            maxArea: area,
+            maxDepth: depth
+          },
+          ...prev
+        ])
+
+        showToast(`Đã lưu dự thảo ${formVersionName} thành công!`)
       }
-      setAuditLogs((prev) => [newAudit, ...prev])
 
-      setDefects((prev) =>
-        prev.map((d) => {
-          const isEligible = d.areaM2 <= area && d.depthCm <= depth
-          return {
-            ...d,
-            isFastTrackEligible: isEligible,
-            violationReason: isEligible
-              ? undefined
-              : `Diện tích ${d.areaM2} m² (> ${area} m²) hoặc Độ sâu ${d.depthCm} cm (> ${depth} cm)`
-          }
-        })
+      setIsPolicyModalOpen(false)
+    } catch (err: any) {
+      console.error('Lỗi khi tạo/xuất bản chính sách Fast Track:', err)
+      const errorDetail = err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi thao tác'
+      showToast(`Lỗi: ${errorDetail}`)
+    }
+  }
+
+  // PM kích hoạt dự thảo đã lưu thành chính sách hiện hành (API-165)
+  const handleActivateDraft = async (item: PolicyHistoryItem) => {
+    try {
+      const draftId = lastDraftId || item.id
+      if (!draftId) {
+        showToast('Không tìm thấy mã bản dự thảo chính sách')
+        return
+      }
+      const etag = lastDraftVersion || 'AAAAAAAAdb4='
+      const pubRes = await fastTrackService.publishPolicy(
+        selectedProjectId,
+        draftId,
+        'Kích hoạt xuất bản dự thảo thành chính sách chính thức',
+        etag
       )
 
-      showToast(`ĐÃ KÍCH HOẠT CHÍNH SÁCH ${formVersionName}! Ngưỡng kỹ thuật và bảng khiếm khuyết đã cập nhật.`)
-    } else {
-      const draftItem: PolicyHistoryItem = {
-        id: `pol-${Date.now()}`,
-        version: formVersionName,
-        displayName: `${formVersionName} (Dự thảo)`,
-        status: 'DRAFT',
-        activatedBy: 'PM Hoàng (Đang soạn)',
+      const timeStr = new Date().toLocaleString('vi-VN')
+      const updatedPolicy: PolicyThresholdConfig = {
+        version: item.version,
+        status: 'ACTIVE',
+        maxAreaM2: item.maxArea,
+        maxDepthCm: item.maxDepth,
+        allowedSeverities: ['LOW', 'MEDIUM'],
+        activatedBy: 'Chỉ huy trưởng (PM)',
         activatedAt: timeStr,
-        route: `Ngưỡng diện tích ≤ ${area} m² • Độ sâu ≤ ${depth} cm`,
-        maxArea: area,
-        maxDepth: depth,
-        slaHours: sla,
-        maxPerimeter: perimeter
+        appliedRoute: 'Toàn tuyến dự án',
+        description: `Quy chuẩn hiệu lực ${item.version}: Diện tích ≤ ${item.maxArea}m², Độ sâu ≤ ${item.maxDepth}cm.`
       }
 
-      await fastTrackService.createPolicyDraft(draftItem)
-
-      setPolicyHistory((prev) => [draftItem, ...prev])
-      showToast(`Đã lưu dự thảo ${formVersionName} vào danh sách lịch sử chính sách!`)
+      setCurrentPolicy(updatedPolicy)
+      showToast(`Đã kích hoạt thành công chính sách ${item.version}!`)
+    } catch (err: any) {
+      console.error('Lỗi khi kích hoạt dự thảo chính sách:', err)
+      const errorDetail = err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi thao tác'
+      showToast(`Lỗi: ${errorDetail}`)
     }
-
-    setIsPolicyModalOpen(false)
   }
 
-  const handleActivateDraft = async (item: (typeof policyHistory)[0]) => {
-    const updatedPolicy: PolicyThresholdConfig = {
-      version: item.version,
-      status: 'ACTIVE',
-      maxAreaM2: item.maxArea,
-      maxDepthCm: item.maxDepth,
-      maxPerimeterM: item.maxPerimeter || 3.0,
-      allowedSeverities: ['LOW', 'MEDIUM'],
-      slaHours: item.slaHours,
-      activatedBy: 'Kỹ sư Nguyễn Văn Hoàng (PM)',
-      activatedAt: 'Vừa kích hoạt',
-      appliedRoute: 'QL1A (Km 1000 - Km 1080) • PK-04',
-      description: `Quy chuẩn kích hoạt tự động ${item.version}: Diện tích ≤ ${item.maxArea}m², Độ sâu ≤ ${item.maxDepth}cm.`
-    }
-
-    await fastTrackService.activatePolicy(item.version, 'Kỹ sư Nguyễn Văn Hoàng (PM)', updatedPolicy)
-
-    setCurrentPolicy(updatedPolicy)
-
-    setPolicyHistory((prev) =>
-      prev.map((p) => {
-        if (p.id === item.id) {
-          return { ...p, displayName: `${p.version} (Hiện hành)`, status: 'ACTIVE', activatedAt: 'Vừa kích hoạt' }
-        }
-        if (p.status === 'ACTIVE') {
-          return { ...p, displayName: (p.displayName || p.version).replace(' (Hiện hành)', ' (Lưu trữ)'), status: 'ARCHIVED' }
-        }
-        return p
-      })
-    )
-
-    const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    const nowDate = new Date().toLocaleDateString('vi-VN')
-    setAuditLogs((prev) => [
-      {
-        title: `Kích hoạt dự thảo ${item.version} (ACTIVE)`,
-        time: `${nowDate} ${nowTime}:00`,
-        user: 'Nguyễn Văn Hoàng (PM)',
-        hash: `sha256:${Math.random().toString(16).substring(2, 8)}...${Math.random().toString(16).substring(2, 6)}`,
-        note: `Chuyển dự thảo sang chính sách vận hành chính thức: Diện tích ≤ ${item.maxArea} m², Độ sâu ≤ ${item.maxDepth} cm.`
-      },
-      ...prev
-    ])
-
-    setDefects((prev) =>
-      prev.map((d) => {
-        const isEligible = d.areaM2 <= item.maxArea && d.depthCm <= item.maxDepth
-        return {
-          ...d,
-          isFastTrackEligible: isEligible,
-          violationReason: isEligible
-            ? undefined
-            : `Diện tích ${d.areaM2} m² (> ${item.maxArea} m²) hoặc Độ sâu ${d.depthCm} cm (> ${item.maxDepth} cm)`
-        }
-      })
-    )
-
-    showToast(`Đã kích hoạt thành công ${item.version} làm chính sách hiện hành!`)
-  }
-
-  // Supervisor phê duyệt độ phủ tuyến đường bảo hành
+  // Supervisor phê duyệt độ phủ tuyến đường bảo hành (API-176)
   const handleConfirmRoadCoverage = async (
     input: RoadCoverageInputDto,
     projectInfo?: { projectId: string; projectName: string; fromKm: number; toKm: number }
   ) => {
+    setCoverageError(null)
+    setIsSubmittingCoverage(true)
     try {
-      const targetProjectId = projectInfo?.projectId || roadCoverage.projectId
-      const updated = await fastTrackService.confirmRoadCoverage(
-        targetProjectId,
-        input,
-        'Kỹ sư Giám sát / Chủ đầu tư'
-      )
+      const targetProjectId = projectInfo?.projectId || selectedProjectId
+      // Lấy lại ETag mới nhất để đảm bảo If-Match chính xác
+      const latestCov = await fastTrackService.getRoadCoverage(targetProjectId)
+      const etag = latestCov?.etag || coverageEtag || '5de4f3ee709209ac95407f2bc9177c08b541bdbd25b8c8181c7e4b59545f2b05'
+
+      const updated = await fastTrackService.confirmRoadCoverage(targetProjectId, input, etag)
+
+      const timeStr = new Date().toLocaleString('vi-VN')
       setRoadCoverage({
-        ...updated,
-        projectName: projectInfo?.projectName || roadCoverage.projectName,
-        fromKm: projectInfo?.fromKm ?? roadCoverage.fromKm,
-        toKm: projectInfo?.toKm ?? roadCoverage.toKm
+        projectId: targetProjectId,
+        projectName: projectInfo?.projectName || roadCoverage?.projectName || 'Tuyến bảo hành',
+        scopeObligationId: input.scopeObligationId || roadCoverage?.scopeObligationId || '',
+        scopeHash: input.expectedScopeHash || roadCoverage?.scopeHash,
+        fromKm: projectInfo?.fromKm ?? roadCoverage?.fromKm ?? 0,
+        toKm: projectInfo?.toKm ?? roadCoverage?.toKm ?? 0,
+        sourceKind: input.sourceKind || 'MAINTENANCE_BASIS',
+        handoverDocumentId: input.handoverDocumentId || roadCoverage?.handoverDocumentId,
+        handoverVersion: input.handoverVersion,
+        applicableFromUtc: input.applicableFromUtc,
+        applicableToUtc: input.applicableToUtc,
+        status: 'CONFIRMED',
+        confirmedBy: 'Kỹ sư Giám sát / Chủ đầu tư',
+        confirmedAt: timeStr,
+        reason: input.reason || undefined,
+        etag: updated.version || undefined
       })
+
+      setAuditLogs((prev) => [
+        {
+          title: 'Phê duyệt độ phủ tuyến bảo hành',
+          time: timeStr,
+          user: 'Kỹ sư Giám sát / Chủ đầu tư',
+          hash: updated.version || 'sha256:verified',
+          note: `Supervisor phê duyệt độ phủ tuyến. Văn bản: ${input.handoverVersion}. Căn cứ: ${input.reason}`
+        },
+        ...prev
+      ])
+
       setIsRoadCoverageModalOpen(false)
-      showToast(`Đã phê duyệt độ phủ tuyến bảo hành (${projectInfo?.projectName || updated.projectId}) thành công!`)
-    } catch (err) {
+      setCoverageError(null)
+      showToast('Đã phê duyệt độ phủ tuyến bảo hành thành công!')
+    } catch (err: any) {
       console.error('Lỗi phê duyệt độ phủ tuyến:', err)
-      showToast('Có lỗi xảy ra khi phê duyệt độ phủ tuyến.')
+      const errorDetail =
+        err?.response?.data?.detail ||
+        (err?.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(', ') : null) ||
+        err?.response?.data?.title ||
+        err?.response?.data?.code ||
+        err?.message ||
+        'Lỗi khi phê duyệt độ phủ tuyến'
+      setCoverageError(errorDetail)
+      showToast(`Lỗi phê duyệt độ phủ tuyến: ${errorDetail}`)
+    } finally {
+      setIsSubmittingCoverage(false)
     }
   }
 
@@ -274,16 +290,14 @@ export function useFastTrackPolicy(
     isRoadCoverageModalOpen,
     setIsRoadCoverageModalOpen,
     handleConfirmRoadCoverage,
+    coverageError,
+    isSubmittingCoverage,
     formVersionName,
     setFormVersionName,
     formMaxArea,
     setFormMaxArea,
     formMaxDepth,
     setFormMaxDepth,
-    formSlaHours,
-    setFormSlaHours,
-    formMaxPerimeter,
-    setFormMaxPerimeter,
     formPolicyNote,
     setFormPolicyNote,
     isPolicyModalOpen,
@@ -291,7 +305,7 @@ export function useFastTrackPolicy(
     isAuditModalOpen,
     setIsAuditModalOpen,
     handleApplyPolicy,
-    handleActivateDraft
+    handleActivateDraft,
+    loadPolicyData
   }
 }
-

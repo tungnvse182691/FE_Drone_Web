@@ -4,7 +4,8 @@ import { SegmentItem } from './types'
 import { SEGMENT_COLORS, ROUTE_COORDINATES, ROUTE_KM_POINTS } from './data'
 import {
   checkAndEnrichSegmentsContinuity,
-  generateMockSlabs
+  generateMockSlabs,
+  calculatePavementSlabs
 } from './alignmentGeometryHelpers'
 import {
   parseGeoJsonText,
@@ -78,7 +79,7 @@ export function useAlignmentImportState({
 
         const validated = checkAndEnrichSegmentsContinuity(res.segments)
         setSegments(validated)
-        setSlabs(generateMockSlabs(validated.length))
+        setSlabs(calculatePavementSlabs(validated))
         setSelectedSegmentId(validated[0]?.id || null)
         setIsImportModalOpen(false)
 
@@ -123,7 +124,7 @@ export function useAlignmentImportState({
 
       const validated = checkAndEnrichSegmentsContinuity(res.segments)
       setSegments(validated)
-      setSlabs(generateMockSlabs(validated.length))
+      setSlabs(calculatePavementSlabs(validated))
       setSelectedSegmentId(validated[0]?.id || null)
       setIsImportModalOpen(false)
 
@@ -175,7 +176,7 @@ export function useAlignmentImportState({
     }
     const validated = checkAndEnrichSegmentsContinuity(newSegs)
     setSegments(validated)
-    setSlabs(generateMockSlabs(validated.length))
+    setSlabs(calculatePavementSlabs(validated))
     setSelectedSegmentId(validated[0]?.id || null)
 
     if (mapRef.current) {

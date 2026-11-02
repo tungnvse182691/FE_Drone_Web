@@ -12,10 +12,6 @@ export interface PolicyModalProps {
   setFormMaxArea: (v: string) => void
   formMaxDepth: string
   setFormMaxDepth: (v: string) => void
-  formSlaHours: string
-  setFormSlaHours: (v: string) => void
-  formMaxPerimeter: string
-  setFormMaxPerimeter: (v: string) => void
   formPolicyNote: string
   setFormPolicyNote: (v: string) => void
   handleApplyPolicy: (action: 'DRAFT' | 'ACTIVATE') => void
@@ -31,10 +27,6 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   setFormMaxArea,
   formMaxDepth,
   setFormMaxDepth,
-  formSlaHours,
-  setFormSlaHours,
-  formMaxPerimeter,
-  setFormMaxPerimeter,
   formPolicyNote,
   setFormPolicyNote,
   handleApplyPolicy
@@ -47,7 +39,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
-              <Icon name="verified_user" size={18} className="text-brand-gold" />
+              <Icon name="verified_user" size={18} className="text-[#C9A227]" />
             </div>
             <div>
               <h3 className="text-base font-bold text-brand-dark">Lập Dự Thảo &amp; Điều Chỉnh Chính Sách</h3>
@@ -69,7 +61,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               type="text"
               value={formVersionName}
               onChange={(e) => setFormVersionName(e.target.value)}
-              placeholder="Ví dụ: POL-TCVN-2026-V3"
+              placeholder="Ví dụ: TCVN-8819-2011"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
           </div>
@@ -99,30 +91,6 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Thời hạn SLA hoàn thành (giờ)</label>
-              <input
-                type="number"
-                value={formSlaHours}
-                onChange={(e) => setFormSlaHours(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.slaHours} giờ</span>
-            </div>
-            <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Chu vi tối đa (m)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={formMaxPerimeter}
-                onChange={(e) => setFormMaxPerimeter(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxPerimeterM} m</span>
-            </div>
-          </div>
-
           {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
@@ -147,7 +115,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              🔒 <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, xử lý nhanh chỉ áp dụng cho hư hỏng nhỏ/vừa (Thấp &amp; Trung bình). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Giám sát hoặc Đội cứu hộ khẩn cấp.
+              <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, xử lý nhanh chỉ áp dụng cho hư hỏng nhẹ/vừa (Thấp &amp; Trung bình). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Giám sát hoặc đội cứu hộ khẩn cấp.
             </span>
           </div>
 
@@ -163,7 +131,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           </div>
 
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-            <Icon name="info" size={16} className="text-brand-gold shrink-0 mt-0.5" />
+            <Icon name="info" size={16} className="text-[#C9A227] shrink-0 mt-0.5" />
             <span>
               <strong>Thẩm quyền PM:</strong> Chỉ huy trưởng có quyền lập dự thảo, điều chỉnh ngưỡng kỹ thuật và xuất bản chính sách. Khi xuất bản, hệ thống sẽ tự động đánh giá lại tính hợp lệ cho toàn bộ khiếm khuyết trên tuyến.
             </span>
@@ -191,7 +159,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
             <button
               onClick={() => handleApplyPolicy('ACTIVATE')}
               type="button"
-              className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
               title="Xuất bản chính thức áp dụng toàn tuyến"
             >
               <Icon name="check_circle" size={14} />

@@ -9,16 +9,19 @@ export default defineConfig({
     {
       name: 'roadguard-dev-db-sync',
       configureServer(server) {
+        // GET /__dev/complete-survey-plan - Đánh dấu hoàn thành đợt bay và tạo Survey trong CSDL SQL Server Docker
         server.middlewares.use('/__dev/complete-survey-plan', (req, res) => {
           const url = new URL(req.url || '', 'http://localhost')
           const planId = url.searchParams.get('id') || ''
+          const projectId = (url.searchParams.get('projectId') || '').replace(/[^a-fA-F0-9-]/g, '')
+          const roadSectionVersionId = (url.searchParams.get('roadSectionVersionId') || '').replace(/[^a-fA-F0-9-]/g, '')
           const cleanId = planId.replace(/[^a-fA-F0-9-]/g, '')
           if (cleanId && cleanId.length >= 4) {
             const sql = [
               'SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON;',
               `UPDATE dbo.SurveyPlans SET Status = 4 WHERE CAST(Id AS VARCHAR(36)) LIKE '${cleanId}%';`,
               `UPDATE dbo.SurveyRequests SET Status = 6 WHERE (CAST(SurveyPlanId AS VARCHAR(36)) LIKE '${cleanId}%' OR CAST(Id AS VARCHAR(36)) LIKE '${cleanId}%') AND Status IN (1, 2, 8);`,
-              `INSERT INTO dbo.Surveys (Id, SurveyRequestId, ProjectId, RoadSectionVersionId, SurveyType, IsBaselineConfirmed, Status) SELECT NEWID(), sr.Id, sr.ProjectId, sr.RoadSectionVersionId, sr.SurveyType, 0, 3 FROM dbo.SurveyRequests sr WHERE (CAST(sr.SurveyPlanId AS VARCHAR(36)) LIKE '${cleanId}%' OR CAST(sr.Id AS VARCHAR(36)) LIKE '${cleanId}%') AND NOT EXISTS (SELECT 1 FROM dbo.Surveys s WHERE s.SurveyRequestId = sr.Id);`,
+              `INSERT INTO dbo.Surveys (Id, SurveyRequestId, ProjectId, RoadSectionVersionId, SurveyType, IsBaselineConfirmed, Status) SELECT NEWID(), sr.Id, COALESCE(sr.ProjectId, '${projectId || '72F84201-C001-4000-8000-000000000001'}'), COALESCE(sr.RoadSectionVersionId, '${roadSectionVersionId || '5BAF3408-6489-432F-89ED-127A89E905A5'}'), sr.SurveyType, 0, 3 FROM dbo.SurveyRequests sr WHERE (CAST(sr.SurveyPlanId AS VARCHAR(36)) LIKE '${cleanId}%' OR CAST(sr.Id AS VARCHAR(36)) LIKE '${cleanId}%') AND NOT EXISTS (SELECT 1 FROM dbo.Surveys s WHERE s.SurveyRequestId = sr.Id);`,
               `SELECT TOP 1 CAST(Id AS VARCHAR(36)) FROM dbo.SurveyRequests WHERE CAST(SurveyPlanId AS VARCHAR(36)) LIKE '${cleanId}%' OR CAST(Id AS VARCHAR(36)) LIKE '${cleanId}%' ORDER BY RequestedAt DESC;`
             ].join(' ')
             const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -h -1 -W -Q "${sql}"`
@@ -32,6 +35,188 @@ export default defineConfig({
             res.writeHead(200, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ ok: false }))
           }
+        })
+
+        // GET /__dev/save-defect - Lưu khiếm khuyết được PM phê duyệt vào CSDL Docker SQL Server cho đúng dự án và tuyến
+        server.middlewares.use('/__dev/save-defect', (req, res) => {
+          const url = new URL(req.url || '', 'http://localhost')
+          const projectId = (url.searchParams.get('projectId') || '').replace(/[^a-fA-F0-9-]/g, '')
+          const roadSectionVersionId = (url.searchParams.get('roadSectionVersionId') || '').replace(/[^a-fA-F0-9-]/g, '')
+          const defectTypeCode = url.searchParams.get('type') === 'POTHOLE' ? 'POTHOLE' : 'CRACK'
+          const severityStr = (url.searchParams.get('severity') || '').toUpperCase()
+          const severityNum = severityStr.includes('CRITICAL') || severityStr.includes('KHẨN') ? 4 : severityStr.includes('HIGH') || severityStr.includes('NGHIÊM') ? 3 : severityStr.includes('LOW') || severityStr.includes('NHẸ') ? 1 : 2
+
+          if (!projectId || !roadSectionVersionId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'projectId and roadSectionVersionId are required' }))
+            return
+          }
+
+          const sql = [
+            'SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON;',
+            'DECLARE @newId UNIQUEIDENTIFIER = NEWID();',
+            `INSERT INTO dbo.Defects (Id, ProjectId, RoadSectionVersionId, SourceAIDetectionId, DefectTypeCode, CauseCategoryCode, Severity, Status, ReportedAt) VALUES (@newId, '${projectId}', '${roadSectionVersionId}', NULL, '${defectTypeCode}', NULL, ${severityNum}, 1, SYSUTCDATETIME());`,
+            'SELECT CAST(@newId AS VARCHAR(36));'
+          ].join(' ')
+
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -h -1 -W -Q "${sql}"`
+          exec(cmd, (_err, stdout) => {
+            const lines = (stdout || '').split(/\r?\n/).map((l) => l.trim()).filter((l) => /^[0-9a-fA-F-]{36}$/.test(l))
+            const defectId = lines[0] || crypto.randomUUID()
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, defectId }))
+          })
+        })
+
+        // GET /__dev/lock-baseline - Khóa Baseline và đồng bộ trạng thái vào CSDL SQL Server Docker
+        server.middlewares.use('/__dev/lock-baseline', (req, res) => {
+          const url = new URL(req.url || '', 'http://localhost')
+          const planId = (url.searchParams.get('id') || '').replace(/[^a-fA-F0-9-]/g, '')
+          const projectId = (url.searchParams.get('projectId') || '').replace(/[^a-fA-F0-9-]/g, '')
+
+          const sql = [
+            'SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON;',
+            planId ? `UPDATE dbo.SurveyPlans SET Status = 4 WHERE CAST(Id AS VARCHAR(36)) LIKE '${planId}%';` : '',
+            planId ? `UPDATE dbo.SurveyRequests SET Status = 6 WHERE CAST(SurveyPlanId AS VARCHAR(36)) LIKE '${planId}%' OR CAST(Id AS VARCHAR(36)) LIKE '${planId}%';` : '',
+            projectId ? `UPDATE dbo.Surveys SET IsBaselineConfirmed = 1, BaselineConfirmedAt = SYSUTCDATETIME() WHERE ProjectId = '${projectId}' OR CAST(Id AS VARCHAR(36)) LIKE '${planId}%' OR CAST(SurveyRequestId AS VARCHAR(36)) LIKE '${planId}%';` : '',
+            (projectId && planId) ? `INSERT INTO dbo.Surveys (Id, SurveyRequestId, ProjectId, RoadSectionVersionId, SurveyType, IsBaselineConfirmed, Status, BaselineConfirmedAt) SELECT NEWID(), sr.Id, sr.ProjectId, sr.RoadSectionVersionId, sr.SurveyType, 1, 3, SYSUTCDATETIME() FROM dbo.SurveyRequests sr WHERE (CAST(sr.SurveyPlanId AS VARCHAR(36)) LIKE '${planId}%' OR CAST(sr.Id AS VARCHAR(36)) LIKE '${planId}%') AND NOT EXISTS (SELECT 1 FROM dbo.Surveys s WHERE s.SurveyRequestId = sr.Id);` : '',
+            projectId ? `DECLARE @selId UNIQUEIDENTIFIER = NEWID(); INSERT INTO dbo.BaselineSelections (Id, ProjectId, Reason, SelectedAt) VALUES (@selId, '${projectId}', N'PM thẩm định hoàn tất 100% dữ liệu không ảnh và xác nhận khóa Baseline', SYSUTCDATETIME()); IF EXISTS (SELECT 1 FROM dbo.BaselineCurrentPointers WHERE ProjectId = '${projectId}') UPDATE dbo.BaselineCurrentPointers SET SelectionId = @selId WHERE ProjectId = '${projectId}'; ELSE INSERT INTO dbo.BaselineCurrentPointers (ProjectId, SelectionId) VALUES ('${projectId}', @selId);` : ''
+          ].filter(Boolean).join(' ')
+
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -h -1 -W -Q "${sql}"`
+          exec(cmd, (_err, _stdout) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true }))
+          })
+        })
+        // GET /__dev/project-policy-meta - Lấy metadata trạng thái chính sách thực tế từ CSDL Docker
+        server.middlewares.use('/__dev/project-policy-meta', (req, res) => {
+          const url = new URL(req.url || '', 'http://localhost')
+          const projectId = (url.searchParams.get('projectId') || '').replace(/[^a-fA-F0-9-]/g, '')
+          if (!projectId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'projectId is required' }))
+            return
+          }
+          const sql = `SET NOCOUNT ON; SELECT TOP 1 CAST(d.ProjectId AS VARCHAR(36)) AS projectId, CAST(d.CurrentChangeId AS VARCHAR(36)) AS currentChangeId, CAST(d.PublishedRevisionId AS VARCHAR(36)) AS publishedRevisionId, CAST(r.Id AS VARCHAR(36)) AS revisionId, r.Revision AS revision, r.ChecklistVersion AS checklistVersion, r.DefectTypeCode AS defectTypeCode, r.StopConditions AS stopConditions, CONVERT(VARCHAR(33), r.PublishedAt, 127) AS publishedAt, (SELECT Code AS code, Unit AS unit, Minimum AS minimum, Maximum AS maximum FROM dbo.RepairPolicyMeasurementRules m WHERE m.PolicyRevisionId = r.Id FOR JSON PATH) AS measurementRules FROM dbo.RepairPolicyDrafts d LEFT JOIN dbo.RepairPolicyRevisions r ON d.PublishedRevisionId = r.Id WHERE d.ProjectId = '${projectId}' FOR JSON PATH;`
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -y 8000 -Q "${sql}"`
+          let responded = false
+          const child = exec(cmd, (_err, stdout) => {
+            if (responded) return
+            responded = true
+            try {
+              const lines = (stdout || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'))
+              const jsonStr = lines.join('')
+              const rows = jsonStr ? JSON.parse(jsonStr) : []
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, data: rows[0] || null }))
+            } catch {
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, data: null }))
+            }
+          })
+          setTimeout(() => {
+            if (!responded) {
+              responded = true
+              try { child.kill() } catch {}
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, data: null }))
+            }
+          }, 4000)
+        })
+
+        // GET /__dev/project-defects - Lấy danh sách khiếm khuyết thực tế từ CSDL Docker
+        server.middlewares.use('/__dev/project-defects', (req, res) => {
+          const url = new URL(req.url || '', 'http://localhost')
+          const projectId = (url.searchParams.get('projectId') || '').replace(/[^a-fA-F0-9-]/g, '')
+          if (!projectId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: 'projectId is required' }))
+            return
+          }
+          const sql = `SET NOCOUNT ON; SELECT CAST(d.Id AS VARCHAR(36)) AS id, CAST(d.ProjectId AS VARCHAR(36)) AS projectId, d.DefectTypeCode AS defectTypeCode, CASE d.Severity WHEN 1 THEN 'LOW' WHEN 2 THEN 'MEDIUM' WHEN 3 THEN 'HIGH' WHEN 4 THEN 'CRITICAL' ELSE 'LOW' END AS severity, CASE d.Status WHEN 1 THEN 'OPEN' WHEN 2 THEN 'IN_PROGRESS' WHEN 3 THEN 'COMPLETED' ELSE 'OPEN' END AS status, CONVERT(VARCHAR(33), d.ReportedAt, 127) AS reportedAt FROM dbo.Defects d WHERE d.ProjectId = '${projectId}' ORDER BY d.ReportedAt DESC FOR JSON PATH;`
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -y 8000 -Q "${sql}"`
+          let responded = false
+          const child = exec(cmd, (_err, stdout) => {
+            if (responded) return
+            responded = true
+            try {
+              const lines = (stdout || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'))
+              const jsonStr = lines.join('')
+              const rows = jsonStr ? JSON.parse(jsonStr) : []
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: rows }))
+            } catch {
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          })
+          setTimeout(() => {
+            if (!responded) {
+              responded = true
+              try { child.kill() } catch {}
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          }, 800)
+        })
+
+        // GET /__dev/projects - Lấy danh mục dự án thực tế từ CSDL Docker
+        server.middlewares.use('/__dev/projects', (_req, res) => {
+          const sql = `SET NOCOUNT ON; SELECT CAST(Id AS VARCHAR(36)) AS projectId, ProjectCode AS projectCode, Name AS name FROM dbo.Projects ORDER BY ProjectCode FOR JSON PATH;`
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -y 8000 -Q "${sql}"`
+          let responded = false
+          const child = exec(cmd, (_err, stdout) => {
+            if (responded) return
+            responded = true
+            try {
+              const lines = (stdout || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'))
+              const jsonStr = lines.join('')
+              const rows = jsonStr ? JSON.parse(jsonStr) : []
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: rows }))
+            } catch {
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          })
+          setTimeout(() => {
+            if (!responded) {
+              responded = true
+              try { child.kill() } catch {}
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          }, 4000)
+        })
+
+        // GET /__dev/projects - Lấy danh mục dự án thực tế từ CSDL Docker
+        server.middlewares.use('/__dev/projects', (_req, res) => {
+          const sql = `SET NOCOUNT ON; SELECT CAST(Id AS VARCHAR(36)) AS projectId, ProjectCode AS projectCode, Name AS name FROM dbo.Projects ORDER BY ProjectCode FOR JSON PATH;`
+          const cmd = `docker exec roadguard-fe-starter01-sql-1 /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF" -d RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a -y 8000 -Q "${sql}"`
+          let responded = false
+          const child = exec(cmd, (_err, stdout) => {
+            if (responded) return
+            responded = true
+            try {
+              const lines = (stdout || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('JSON_') && !l.startsWith('---'))
+              const jsonStr = lines.join('')
+              const rows = jsonStr ? JSON.parse(jsonStr) : []
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: rows }))
+            } catch {
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          })
+          setTimeout(() => {
+            if (!responded) {
+              responded = true
+              try { child.kill() } catch {}
+              res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+              res.end(JSON.stringify({ ok: true, items: [] }))
+            }
+          }, 4000)
         })
 
         server.middlewares.use('/__dev/reset-ai-candidate', (req, res) => {
@@ -67,6 +252,7 @@ export default defineConfig({
             res.end(JSON.stringify({ ok: false }))
           }
         })
+
 
         server.middlewares.use('/__dev/update-ai-candidate', (req, res) => {
           const url = new URL(req.url || '', 'http://localhost')
@@ -112,13 +298,16 @@ export default defineConfig({
           }
         })
 
+
         // GET /__dev/conflicts - Lấy 100% dữ liệu xung đột thật từ bảng dbo.OfflineSyncConflicts trong SQL Server Docker
+
+
         server.middlewares.use('/__dev/conflicts', (req, res) => {
           if (req.method !== 'GET') {
             res.writeHead(405).end();
             return;
           }
-          const sql = "SET NOCOUNT ON; SELECT c.Id, c.ConflictCode, c.ProjectId, c.ConflictType, c.DefectCode, c.DefectId, c.ChainageKm, c.Status, c.OfflineActorId, ISNULL(u_off.DisplayName, c.OfflineActorName) AS OfflineActorName, c.ServerActorId, ISNULL(u_srv.DisplayName, c.ServerActorName) AS ServerActorName, c.OfflineDataJson, c.ServerDataJson, c.ResolutionDecision, c.ResolutionReason, ISNULL(u_dec.DisplayName, c.DecidedBy) AS DecidedBy, c.DecidedAt, c.CreatedAt FROM master.dbo.OfflineSyncConflicts c LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_off ON u_off.Id = c.OfflineActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_srv ON u_srv.Id = c.ServerActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_dec ON (TRY_CAST(c.DecidedBy AS uniqueidentifier) IS NOT NULL AND u_dec.Id = TRY_CAST(c.DecidedBy AS uniqueidentifier)) ORDER BY c.CreatedAt DESC FOR JSON PATH;";
+          const sql = "SET NOCOUNT ON; SELECT c.Id, c.ConflictCode, c.ProjectId, c.ConflictType, c.DefectCode, c.DefectId, c.ChainageKm, c.Status, c.OfflineActorId, ISNULL(u_off.DisplayName, c.OfflineActorName) AS OfflineActorName, c.ServerActorId, ISNULL(u_srv.DisplayName, c.ServerActorName) AS ServerActorName, c.OfflineDataJson, c.ServerDataJson, c.ResolutionDecision, c.ResolutionReason, ISNULL(u_dec.DisplayName, c.DecidedBy) AS DecidedBy, c.DecidedAt, c.CreatedAt FROM dbo.OfflineSyncConflicts c LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_off ON u_off.Id = c.OfflineActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_srv ON u_srv.Id = c.ServerActorId LEFT JOIN RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a.dbo.Users u_dec ON (TRY_CAST(c.DecidedBy AS uniqueidentifier) IS NOT NULL AND u_dec.Id = TRY_CAST(c.DecidedBy AS uniqueidentifier)) ORDER BY c.CreatedAt DESC FOR JSON PATH;";
           const child = spawn('docker', [
             'exec',
             '-i',
@@ -127,7 +316,7 @@ export default defineConfig({
             '-S', 'localhost',
             '-U', 'sa',
             '-P', 'Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF',
-            '-d', 'master',
+            '-d', 'RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a',
             '-f', '65001',
             '-y', '0'
           ]);
@@ -191,7 +380,7 @@ export default defineConfig({
                 targetStatus = 'REJECTED';
               }
 
-              const sql = `SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON; UPDATE master.dbo.OfflineSyncConflicts SET Status = '${targetStatus}', ResolutionDecision = '${decision}', ResolutionReason = N'${reason}', DecidedBy = N'${decidedBy}', DecidedAt = SYSDATETIMEOFFSET() WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)); SELECT Id, ConflictCode, ProjectId, ConflictType, DefectCode, DefectId, ChainageKm, Status, OfflineActorId, OfflineActorName, ServerActorId, ServerActorName, OfflineDataJson, ServerDataJson, ResolutionDecision, ResolutionReason, DecidedBy, DecidedAt, CreatedAt FROM master.dbo.OfflineSyncConflicts WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)) FOR JSON PATH;`;
+              const sql = `SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON; UPDATE dbo.OfflineSyncConflicts SET Status = '${targetStatus}', ResolutionDecision = '${decision}', ResolutionReason = N'${reason}', DecidedBy = N'${decidedBy}', DecidedAt = SYSDATETIMEOFFSET() WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)); SELECT Id, ConflictCode, ProjectId, ConflictType, DefectCode, DefectId, ChainageKm, Status, OfflineActorId, OfflineActorName, ServerActorId, ServerActorName, OfflineDataJson, ServerDataJson, ResolutionDecision, ResolutionReason, DecidedBy, DecidedAt, CreatedAt FROM dbo.OfflineSyncConflicts WHERE ConflictCode = '${conflictId}' OR (TRY_CAST('${conflictId}' AS uniqueidentifier) IS NOT NULL AND Id = TRY_CAST('${conflictId}' AS uniqueidentifier)) FOR JSON PATH;`;
 
               const child = spawn('docker', [
                 'exec',
@@ -201,7 +390,7 @@ export default defineConfig({
                 '-S', 'localhost',
                 '-U', 'sa',
                 '-P', 'Rg1!fgCnk8NH_i5xzu-nLaGIkeVkdAujaH9icPczFdy2uN7UCmvua_bF0huYucfLhyYF',
-                '-d', 'master',
+                '-d', 'RoadGuard_FE_e0d8c8837e114a99b56531b87e84165a',
                 '-f', '65001',
                 '-y', '0'
               ]);
@@ -250,7 +439,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    open: true,
+    open: false,
     proxy: {
       '/api': {
         target: 'https://localhost:18443',

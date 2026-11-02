@@ -65,39 +65,9 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
       {/* TAB 1: FILE UPLOAD & PRESET */}
       {importTab === 'FILE' && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs text-slate-600">
-            Chọn mẫu tim tuyến chuẩn trắc địa WGS84 hoặc tải lên tệp GeoJSON / KML / GPX từ máy tính:
+          <p className="text-xs text-slate-600 leading-relaxed mb-1">
+            Tải lên tệp trắc địa tim tuyến thực tế (GeoJSON, KML, GPX) từ máy tính:
           </p>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => onLoadPreset('QL1A Đoạn Thừa Thiên Huế - Đà Nẵng (Chuẩn 5km/đoạn)', 5)}
-              className="p-3 rounded-xl border border-slate-200 hover:border-brand-gold hover:bg-amber-50/40 text-left transition-all flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-800">Tuyến QL1A Mở rộng (25.0 km • 5 Phân đoạn)</span>
-                <span className="text-[11px] text-slate-500">Đã kiểm chuẩn tiếp giáp &amp; bán kính cong TCVN</span>
-              </div>
-              <span className="text-[11px] font-bold text-[#8F7212] bg-brand-gold/15 px-2.5 py-1 rounded-lg">
-                Nạp mẫu
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onLoadPreset('Cao tốc Bắc - Nam (Đoạn hầm Hải Vân - Túy Loan)', 2.5)}
-              className="p-3 rounded-xl border border-slate-200 hover:border-brand-gold hover:bg-amber-50/40 text-left transition-all flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-800">Cao tốc Đoạn Hải Vân - Túy Loan (2.5 km/đoạn)</span>
-                <span className="text-[11px] text-slate-500">Mẫu chia nhỏ mật độ dày phục vụ bay quét Flycam độ phân giải cao</span>
-              </div>
-              <span className="text-[11px] font-bold text-[#8F7212] bg-brand-gold/15 px-2.5 py-1 rounded-lg">
-                Nạp mẫu
-              </span>
-            </button>
-          </div>
 
           <div
             onClick={() => fileInputRef.current?.click()}

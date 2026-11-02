@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services'
+import { projectService, personnelService } from '../../api/services'
+import { userDirectory } from '../../api/services/userDirectory'
 import { Icon } from '../../components/ui/Icon'
 import {
   HubProject,
@@ -74,27 +75,57 @@ export const ProjectList: React.FC = () => {
     }, 4000)
   }
 
-  // Danh mục PM thật từ Backend Candidate3 Docker (Seed accounts + Projects đã nạp)
+  // Danh mục PM thật lấy trực tiếp từ CSDL Backend Candidate3
+  const [dbPms, setDbPms] = useState<PmOption[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+    const loadPms = async () => {
+      // Chỉ Supervisor mới có quyền truy cập /api/v1/users (API-237)
+      if (isSupervisor) {
+        try {
+          const users = await personnelService.fetchUsers({ role: 'PM' })
+          if (isMounted && users && users.length > 0) {
+            setDbPms(
+              users.map((u) => ({
+                id: u.id,
+                name: u.full_name,
+                email: u.email
+              }))
+            )
+          }
+        } catch (err) {
+          console.warn('[ProjectList] Lỗi nạp danh sách PM từ CSDL:', err)
+        }
+      } else {
+        // PM: Sử dụng userDirectory tra cứu các tài khoản PM hợp lệ từ CSDL
+        const pms = userDirectory.getAllUsers().filter((u) => u.role === 'PROJECT_MANAGER' || u.role === 'PM')
+        if (isMounted) {
+          setDbPms(
+            pms.map((u) => ({
+              id: u.id,
+              name: u.displayName,
+              email: u.email
+            }))
+          )
+        }
+      }
+    }
+    loadPms()
+    return () => {
+      isMounted = false
+    }
+  }, [isSupervisor])
+
   const availablePms = useMemo<PmOption[]>(() => {
     const map = new Map<string, PmOption>()
-    // Seed PM accounts trong Candidate3 Docker
-    map.set('72f84201-a001-4000-8000-000000000002', {
-      id: '72f84201-a001-4000-8000-000000000002',
-      name: 'Synthetic pm-a',
-      email: 'pm-a@sandbox.example.test'
-    })
-    map.set('72f84201-a001-4000-8000-000000000003', {
-      id: '72f84201-a001-4000-8000-000000000003',
-      name: 'Synthetic pm-b',
-      email: 'pm-b@sandbox.example.test'
-    })
-
+    dbPms.forEach((pm) => map.set(pm.id.toLowerCase(), pm))
     projects.forEach((prj) => {
-      if (prj.pm_name && prj.pm_email && !prj.pm_name.toLowerCase().includes('chưa')) {
-        const found = Array.from(map.values()).some((x) => x.email === prj.pm_email)
-        if (!found) {
-          map.set(prj.pm_email, {
-            id: prj.id,
+      if (prj.pm_user_id && prj.pm_name && prj.pm_email && !prj.pm_name.toLowerCase().includes('chưa')) {
+        const key = prj.pm_user_id.toLowerCase()
+        if (!map.has(key)) {
+          map.set(key, {
+            id: prj.pm_user_id,
             name: prj.pm_name,
             email: prj.pm_email
           })
@@ -102,7 +133,7 @@ export const ProjectList: React.FC = () => {
       }
     })
     return Array.from(map.values())
-  }, [projects])
+  }, [dbPms, projects])
 
   // Modal Khởi tạo dự án mới (Bước SUP-01: DA01, BR-01, FR-04)
   const [isModalOpen, setIsModalOpen] = useState(false)
