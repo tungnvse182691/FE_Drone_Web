@@ -5,10 +5,10 @@ import type { TriageCase } from './types'
 
 export interface DrawerDecisionFormProps {
   selectedCase: TriageCase
-  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
-  currentUrgency?: 'NORMAL' | 'URGENT' | 'EMERGENCY'
-  setCurrentUrgency?: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
+  currentSeverity: TriageCase['severity']
+  setCurrentSeverity: (s: TriageCase['severity']) => void
+  currentUrgency?: TriageCase['urgency']
+  setCurrentUrgency?: (u: TriageCase['urgency']) => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number

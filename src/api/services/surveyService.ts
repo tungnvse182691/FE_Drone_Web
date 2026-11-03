@@ -454,7 +454,7 @@ export const surveyService = {
   async getSurveys(targetProjectId?: string): Promise<SurveyMissionItem[]> {
     await ensureBearerToken()
 
-    let projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+    let projects = await projectService.fetchProjects()
     if (targetProjectId) {
       projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
     }
@@ -479,10 +479,7 @@ export const surveyService = {
                 surveyType?: string | number
               }>
             }>(`/projects/${project.id}/survey-plans`)
-            .catch((err) => {
-              console.warn(`[surveyService] Không tải được survey-plans cho dự án ${project.id}:`, err?.response?.status)
-              return { data: { items: [] } }
-            }),
+            ,
           apiClient
             .get<{
               items: Array<{
@@ -493,10 +490,7 @@ export const surveyService = {
                 planId?: string
               }>
             }>(`/projects/${project.id}/survey-tasks`)
-            .catch((err) => {
-              console.warn(`[surveyService] Không tải được survey-tasks cho dự án ${project.id}:`, err?.response?.status)
-              return { data: { items: [] } }
-            }),
+            ,
           apiClient
             .get<{
               items: Array<{
@@ -507,10 +501,7 @@ export const surveyService = {
                 resultId?: string
               }>
             }>(`/projects/${project.id}/ai-mock-runs`)
-            .catch((err) => {
-              console.warn(`[surveyService] Không tải được ai-mock-runs cho dự án ${project.id}:`, err?.response?.status)
-              return { data: { items: [] } }
-            }),
+            ,
           apiClient
             .get<{
               items: Array<{
@@ -518,7 +509,7 @@ export const surveyService = {
                 segmentId: string
               }>
             }>(`/projects/${project.id}/baseline-selections`)
-            .catch(() => ({ data: { items: [] } }))
+
         ])
 
         const plans = plansRes.data?.items || []
@@ -1169,7 +1160,7 @@ export const surveyService = {
 
     let preferredRunId = 'mock-run-synthetic'
     const isProjectA = projectId.toLowerCase() === '72f84201-c001-4000-8000-000000000001'
-    if (isProjectA) {
+    {
       try {
         const aiRunsRes = await apiClient.get<{
           items: Array<{ id: string; status: string; fixtureVersion?: string; resultId?: string }>
@@ -1194,44 +1185,14 @@ export const surveyService = {
           }>(`/projects/${projectId}/ai-mock-runs/${preferredRun.id}/result`)
           rawDetections = resultRes.data?.detections || []
         }
-      } catch {}
+      } catch (error) { throw error }
     }
 
-    // Với các dự án thực tế / dự án mới (như Synthetic Project C, D, E, test1...):
-    // Cung cấp các phát hiện khiếm khuyết chuẩn gắn liền độc lập với từng dự án và tuyến khảo sát cụ thể
-    if (rawDetections.length === 0) {
-      const roadConfig = getProjectRoadConfig(projectId)
-      const cleanProj = projectId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toLowerCase()
-      const cleanSurvey = (target?.id || surveyId).replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toLowerCase()
-      rawDetections = roadConfig.defects.map((def, idx) => {
-        const slug = def.typeCode.toLowerCase().replace(/[^a-z0-9]/g, '')
-        const legacyId = `det-${cleanProj}-${cleanSurvey}-${slug}`
-        const primaryId = `det-${cleanProj}-${cleanSurvey}-${slug}-${idx + 1}`
-        return {
-          detectionId: primaryId,
-          legacyId,
-          sourceVideoFileId: undefined,
-          frameFileId: undefined,
-          frameFileVersion: undefined,
-          timestampMs: (idx + 1) * 750,
-          typeCode: def.typeCode,
-          confidence: def.confidence,
-          bbox: def.bbox,
-          segmentId: roadConfig.segmentIds[idx % roadConfig.segmentIds.length] || null,
-          positionStatus: 'IN_BOUND',
-          geometry: null,
-          label: def.label,
-          kmRatio: def.kmRatio,
-          severity: def.severity
-        }
-      })
-    }
-
-    const reviewKey = `roadguard_detections_review_${surveyId}`
+    // Empty API results stay empty; do not synthesize detections from road fixtures.
     const savedReviews: Record<string, any> = {
       ...(target?.id ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.id}`, {}) : {}),
       ...(target?.code ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.code}`, {}) : {}),
-      ...getFromStorage<Record<string, any>>(reviewKey, {})
+      ...getFromStorage<Record<string, any>>(`roadguard_detections_review_${surveyId}`, {})
     }
 
     const sKmNum = parseFloat(String(target?.start_km || '0').replace(/[^0-9.]/g, '') || '0')
@@ -1239,7 +1200,7 @@ export const surveyService = {
     const step = Math.max(0.05, (eKmNum - sKmNum) / (rawDetections.length + 1))
 
     // Lấy danh sách Defects của dự án từ CSDL để đồng bộ chính xác Loại khiếm khuyết & Mức độ nghiêm trọng đã lưu
-    const projectDefects = await this.getProjectDefects(projectId).catch(() => [] as BackendDefectDto[])
+    const projectDefects = await this.getProjectDefects(projectId)
     const defectMap = new Map<string, BackendDefectDto>()
     for (const df of projectDefects) {
       defectMap.set(df.id.toLowerCase(), df)
@@ -1254,13 +1215,13 @@ export const surveyService = {
 
     const items: AIDetectionItem[] = await Promise.all(
       rawDetections.map(async (d, index) => {
-        const isRealCandidateUuid = isProjectA && /^[0-9a-fA-F-]{36}$/.test(d.detectionId)
+        const isRealCandidateUuid = /^[0-9a-fA-F-]{36}$/.test(d.detectionId)
         const candFacts = isRealCandidateUuid
-          ? await this.getAiCandidateFacts(projectId, d.detectionId).catch(() => null)
+          ? await this.getAiCandidateFacts(projectId, d.detectionId)
           : null
         let decisionDto: CandidateDecisionDto | null = null
         if (candFacts?.disposition?.decisionId) {
-          decisionDto = await this.getCandidateDecision(projectId, candFacts.disposition.decisionId).catch(() => null)
+          decisionDto = await this.getCandidateDecision(projectId, candFacts.disposition.decisionId)
         }
 
         const detCode = `DET-${String(index + 1).padStart(2, '0')}`
@@ -1272,7 +1233,7 @@ export const surveyService = {
 
         const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
         const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
-        if (decOverride) {
+        if (!candFacts && decOverride) {
           decisionDto = decOverride
         }
 
@@ -1280,7 +1241,7 @@ export const surveyService = {
         let defectId: string | null = null
         let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
 
-        if (isReset && !decOverride) {
+        if (!candFacts && isReset && !decOverride) {
           decisionDto = null
           currentStatus = 'PENDING'
           defectId = null
@@ -1305,10 +1266,10 @@ export const surveyService = {
           overridesMap[d.detectionId.toLowerCase()] ||
           (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
 
-        const bboxX = candOverride?.bbox?.x ?? candFacts?.boundingBox?.x ?? d.bbox[0]
-        const bboxY = candOverride?.bbox?.y ?? candFacts?.boundingBox?.y ?? d.bbox[1]
-        const bboxW = candOverride?.bbox?.width ?? candFacts?.boundingBox?.width ?? d.bbox[2]
-        const bboxH = candOverride?.bbox?.height ?? candFacts?.boundingBox?.height ?? d.bbox[3]
+        const bboxX = candFacts?.boundingBox?.x ?? candOverride?.bbox?.x ?? d.bbox[0]
+        const bboxY = candFacts?.boundingBox?.y ?? candOverride?.bbox?.y ?? d.bbox[1]
+        const bboxW = candFacts?.boundingBox?.width ?? candOverride?.bbox?.width ?? d.bbox[2]
+        const bboxH = candFacts?.boundingBox?.height ?? candOverride?.bbox?.height ?? d.bbox[3]
 
         const topPct = (bboxY * 100).toFixed(1) + '%'
         const leftPct = (bboxX * 100).toFixed(1) + '%'
@@ -1391,8 +1352,8 @@ export const surveyService = {
           geometryVersion: candFacts?.geometryVersion,
           positionStatus: candFacts?.positionStatus || d.positionStatus || 'IN_BOUND',
           sourceVersion: candFacts?.sourceVersion,
-          disposition: isReset && !decOverride ? null : candFacts?.disposition ?? null,
-          decisionKind: isReset && !decOverride ? null : decisionKind
+          disposition: candFacts ? candFacts.disposition : null,
+          decisionKind: decisionKind
         }
       })
     )
@@ -2081,9 +2042,10 @@ export const surveyService = {
    * Phục vụ Hộp thư tiếp nhận lỗi (/pm/ai-inbox) và Thẩm định chi tiết (/pm/defects/:id/verify-a)
    */
   async getAllProjectAiDetections(targetProjectId?: string): Promise<AIDetectionItem[]> {
+    const actor = useAuthStore.getState().user
     await ensureBearerToken()
 
-    let projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+    let projects = await projectService.fetchProjects()
     if (targetProjectId) {
       projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
     }
@@ -2096,7 +2058,7 @@ export const surveyService = {
 
     for (const proj of projects) {
       try {
-        const projectDefects = await this.getProjectDefects(proj.id).catch(() => [] as BackendDefectDto[])
+        const projectDefects = await this.getProjectDefects(proj.id)
         const defectMap = new Map<string, BackendDefectDto>()
         for (const df of projectDefects) {
           defectMap.set(df.id.toLowerCase(), df)
@@ -2113,18 +2075,10 @@ export const surveyService = {
         }>(`/projects/${proj.id}/ai-mock-runs`)
         const succeededRuns = (runsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
 
-        if (succeededRuns.length === 0) {
-          // Các dự án lưu trữ đợt bay drone trong bảng Survey (như Dự án E)
-          const projectSurveys = await this.getSurveys(proj.id).catch(() => [] as SurveyMissionItem[])
-          for (const srv of projectSurveys) {
-            const srvDets = await this.getSurveyDetections(srv.id, srv, proj.id).catch(() => [])
-            for (const sd of srvDets) {
-              if (!allItems.some((existing) => existing.id.toLowerCase() === sd.id.toLowerCase())) {
-                allItems.push(sd)
-              }
-            }
-          }
-        } else {
+        const projectSurveys = await this.getSurveys(proj.id)
+        for (const survey of projectSurveys) {
+          allItems.push(...await this.getSurveyDetections(survey.id, survey, proj.id))
+        }
           for (const run of succeededRuns) {
           const resultRes = await apiClient
             .get<{
@@ -2137,40 +2091,20 @@ export const surveyService = {
                 timestampMs: number
               }>
             }>(`/projects/${proj.id}/ai-mock-runs/${run.id}/result`)
-            .catch(() => ({ data: { detections: [] } }))
+
 
           const detections = resultRes.data?.detections || []
           let runDetIdx = 0
           for (const d of detections) {
             globalIdx += 1
             runDetIdx += 1
-            let decisionDto: CandidateDecisionDto | null = null
-
-            const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
-            const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
-            if (decOverride) {
-              decisionDto = decOverride
-            }
-
-            let status: AIDetectionItem['status'] = 'PENDING'
-            let defectId: string | null = null
-            let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
-
-            if (isReset && !decOverride) {
-              decisionDto = null
-              status = 'PENDING'
-              defectId = null
-              decisionKind = null
-            } else if (decisionDto) {
-              decisionKind = decisionDto.decision
-              defectId = decisionDto.defectId
-              if (decisionDto.decision === 'KEEP_NEW' || decisionDto.decision === 'LINK_EXISTING') {
-                status = 'APPROVED'
-              } else if (decisionDto.decision === 'REJECT') {
-                status = 'REJECTED'
-              }
-            }
-
+            const candFacts = await this.getAiCandidateFacts(proj.id, d.detectionId)
+            const decisionDto = candFacts.disposition?.decisionId
+              ? await this.getCandidateDecision(proj.id, candFacts.disposition.decisionId) : null
+            const decisionKind = decisionDto?.decision || null
+            const defectId = decisionDto?.defectId || null
+            const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
+              : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
             const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
             const overridesMap = getAiCandidateOverrides()
             const candOverride =
@@ -2178,21 +2112,21 @@ export const surveyService = {
               overridesMap[d.detectionId.toLowerCase()] ||
               (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
 
-            const bboxX = candOverride?.bbox?.x ?? d.bbox[0]
-            const bboxY = candOverride?.bbox?.y ?? d.bbox[1]
-            const bboxW = candOverride?.bbox?.width ?? d.bbox[2]
-            const bboxH = candOverride?.bbox?.height ?? d.bbox[3]
+            const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
+            const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
+            const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
+            const bboxH = candFacts.boundingBox?.height ?? d.bbox[3]
 
             const topPct = (bboxY * 100).toFixed(1) + '%'
             const leftPct = (bboxX * 100).toFixed(1) + '%'
             const widthPct = (bboxW * 100).toFixed(1) + '%'
             const heightPct = (bboxH * 100).toFixed(1) + '%'
             const typeCode =
-              candOverride?.rawTypeCode || linkedDbDefect?.defectTypeCode || d.typeCode
+              linkedDbDefect?.defectTypeCode || candFacts.typeCode || d.typeCode
             const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
-            const confVal = d.confidence
+            const confVal = candFacts.confidence ?? d.confidence
             const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
-            const tsMs = d.timestampMs
+            const tsMs = candFacts.timestampMs ?? d.timestampMs
             const km = parseFloat((0.351 + (runDetIdx - 1) * 0.12).toFixed(3))
             const severityLabel =
               (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
@@ -2225,36 +2159,36 @@ export const surveyService = {
               },
               projectId: proj.id,
               runId: run.id,
-              datasetVersionId: undefined,
-              modelVersionId: undefined,
-              fixtureVersion: run.fixtureVersion || 'Road-YOLOv9',
-              sourceVideoFileId: undefined,
-              frameFileId: d.frameFileId,
-              frameFileVersion: undefined,
-              frameSha256: undefined,
-              frameSizeBytes: undefined,
-              frameMediaType: undefined,
+              datasetVersionId: candFacts.datasetVersionId,
+              modelVersionId: candFacts.modelVersionId,
+              fixtureVersion: candFacts.fixtureVersion,
+              sourceVideoFileId: candFacts.sourceVideoFileId,
+              frameFileId: candFacts.frameFileId,
+              frameFileVersion: candFacts.frameFileVersion,
+              frameSha256: candFacts.frameSha256,
+              frameSizeBytes: candFacts.frameSizeBytes,
+              frameMediaType: candFacts.frameMediaType,
               timestampMs: tsMs,
               rawTypeCode: typeCode,
               rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
-              routeVersionId: undefined,
-              segmentSetId: undefined,
-              segmentId: null,
-              geometryVersion: undefined,
-              positionStatus: undefined,
-              sourceVersion: undefined,
-              disposition: null,
-              decisionKind: isReset && !decOverride ? null : decisionKind
+              routeVersionId: candFacts.routeVersionId,
+              segmentSetId: candFacts.segmentSetId,
+              segmentId: candFacts.segmentId,
+              geometryVersion: candFacts.geometryVersion,
+              positionStatus: candFacts.positionStatus,
+              sourceVersion: candFacts.sourceVersion,
+              disposition: candFacts.disposition,
+              decisionKind
             })
           }
         }
-      }
       } catch (err) {
-        if (targetProjectId) throw err
+        throw err
       }
     }
 
-    return allItems
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách AI cũ.')
+    return Array.from(new Map(allItems.map(item => [`${item.projectId}:${item.id}`.toLowerCase(), item])).values())
   },
 
   /**

@@ -692,6 +692,7 @@ export interface TriageCase {
   id: string
   code: string
   source: 'DRONE_AI' | 'CITIZEN' | 'PATROL'
+  verification_method?: string
   source_label: string
   source_detail: string
   project_id: string
@@ -700,16 +701,16 @@ export interface TriageCase {
   lane: string
   defect_title: string
   defect_type: string
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'UNKNOWN'
+  urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY' | 'UNKNOWN'
   time_ago: string
   created_at: string
   status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED' | 'AWAITING_EVIDENCE'
   status_label: string
   image_url: string
   gps: {
-    lat: number
-    lng: number
+    lat: number | null
+    lng: number | null
     altitude_m: number
     resolution_cm_px: number
   }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
@@ -37,6 +37,9 @@ export const useAIReviewActions = ({
 }: UseAIReviewActionsProps) => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const isCurrent = () => mounted.current && useAuthStore.getState().user === user
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
@@ -86,14 +89,15 @@ export const useAIReviewActions = ({
         version: target.version
       })
 
+      if (!isCurrent()) return
       // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
       setCases((prev) =>
         prev.map((item) =>
           item.id === target.id || item.code === target.code
             ? {
                 ...item,
-                ...updates,
-                version: res.version || item.version
+                ...res,
+                project_name: item.project_name
               }
             : item
         )
@@ -101,11 +105,13 @@ export const useAIReviewActions = ({
 
       showToast(
         outcome === 'NEEDS_EVIDENCE'
-          ? `Đã duyệt hợp lệ hồ sơ [${target.code}]! Đã chuyển sang phân hệ Nhiệm vụ đo đạc hiện trường.`
-          : `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
+          ? `Đã ghi nhận yêu cầu bổ sung bằng chứng cho hồ sơ [${target.code}]. Chưa tạo hoặc giao nhiệm vụ đo đạc.`
+          : `Đã ghi nhận kết luận từ server cho hồ sơ [${target.code}].`
       )
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi xác minh tới backend:', e)
+      if (!isCurrent()) return
+      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi xác minh tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
@@ -158,14 +164,15 @@ export const useAIReviewActions = ({
         version: targetTriageCase?.version || selectedCase.version
       })
 
+      if (!isCurrent()) return
       // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
       setCases((prev) =>
         prev.map((c) =>
           c.id === targetId || c.code === targetCode
             ? {
                 ...c,
-                ...updates,
-                version: res.version || c.version
+                ...res,
+                project_name: c.project_name
               }
             : c
         )
@@ -180,6 +187,8 @@ export const useAIReviewActions = ({
       )
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi kết luận tới backend:', e)
+      if (!isCurrent()) return
+      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
@@ -204,14 +213,15 @@ export const useAIReviewActions = ({
         version: target.version
       })
 
+      if (!isCurrent()) return
       // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
       setCases((prev) =>
         prev.map((item) =>
           item.id === target.id || item.code === target.code
             ? {
                 ...item,
-                ...updates,
-                version: res.version || item.version
+                ...res,
+                project_name: item.project_name
               }
             : item
         )
@@ -223,6 +233,8 @@ export const useAIReviewActions = ({
       showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi kết luận ngoài phạm vi tới backend:', e)
+      if (!isCurrent()) return
+      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }

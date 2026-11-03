@@ -1,13 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
 import { triageService } from '../../../api/services/triageService'
-import { STORAGE_KEYS } from '../../../api/services/storageHelper'
+import { useAuthStore } from '../../../store/authStore'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
+  const user = useAuthStore(state => state.user)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   // Dữ liệu hồ sơ tiếp nhận từ Candidate3 Backend CSDL
   const [cases, setCases] = useState<TriageCase[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -23,11 +26,15 @@ export const useAIReviewState = () => {
   // Nạp dữ liệu từ Backend CSDL khi khởi tạo
   useEffect(() => {
     let isMounted = true
+    const actor = user
+    setCases([])
+    setSelectedCaseId('')
+    setLoadError(null)
     const loadCases = async () => {
       try {
         setIsLoading(true)
         const data = await triageService.getCases()
-        if (isMounted) {
+        if (isMounted && useAuthStore.getState().user === actor) {
           setCases(data)
           if (data.length > 0) {
             setSelectedCaseId(data[0].id)
@@ -35,27 +42,18 @@ export const useAIReviewState = () => {
         }
       } catch (err: any) {
         console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
-        if (isMounted) {
+        if (isMounted && useAuthStore.getState().user === actor) {
+          setLoadError(err?.message || 'Không tải được Case')
           showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
         }
       } finally {
-        if (isMounted) setIsLoading(false)
+        if (isMounted && useAuthStore.getState().user === actor) setIsLoading(false)
       }
     }
     loadCases()
 
-    const handleStorageChange = (e: any) => {
-      if (e.detail?.key === STORAGE_KEYS.TRIAGE_CASES && e.detail?.value) {
-        setCases(e.detail.value)
-      }
-    }
-    window.addEventListener('roadguard_state_change', handleStorageChange)
-
-    return () => {
-      isMounted = false
-      window.removeEventListener('roadguard_state_change', handleStorageChange)
-    }
-  }, [])
+    return () => { isMounted = false }
+  }, [user, reload])
 
   const selectedCase = useMemo(() => {
     return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
@@ -189,6 +187,8 @@ export const useAIReviewState = () => {
     cases,
     setCases,
     isLoading,
+    loadError,
+    reloadCases: () => setReload(value => value + 1),
     expandedMasterIds,
     handleToggleExpandMaster,
     collapseMergedRows,

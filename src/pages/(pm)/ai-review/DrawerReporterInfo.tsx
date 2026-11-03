@@ -23,7 +23,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
           <span>{isCitizen ? 'Thông Tin Người Dân Phản Ánh' : 'Thông Tin Tổ Tuần Tra Hiện Trường'}</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {selectedCase.reporter_channel || (isCitizen ? 'Ứng dụng người dân' : 'Tuần tra đường bộ')}
+          {selectedCase.reporter_channel || 'Chưa có dữ liệu kênh tiếp nhận'}
         </span>
       </div>
 
@@ -33,7 +33,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
             {isCitizen ? 'Người phản ánh:' : 'Cán bộ / Tổ tuần tra:'}
           </span>
           <span className="font-semibold text-slate-800">
-            {selectedCase.reporter_name || (isCitizen ? 'Công dân phản ánh (Cổng Dịch vụ công)' : 'Tổ tuần tra bảo dưỡng số 2')}
+            {selectedCase.reporter_name || 'Chưa có dữ liệu người gửi'}
           </span>
         </div>
         <div>
@@ -57,7 +57,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
           {isCitizen ? 'Nội dung phản ánh từ người dân:' : 'Biên bản ghi nhận hiện trường tuần tra:'}
         </span>
         <p className="italic text-slate-800 leading-relaxed">
-          "{selectedCase.description || (isCitizen ? 'Phát hiện khiếm khuyết mặt đường gây nguy hiểm, đề nghị đơn vị bảo trì kiểm tra xử lý.' : 'Ghi nhận hư hỏng mặt đường cần đo đạc lập hồ sơ kỹ thuật.')}"
+          "{selectedCase.description || 'Chưa có dữ liệu nội dung phản ánh'}"
         </p>
       </div>
 

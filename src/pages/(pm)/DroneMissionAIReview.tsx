@@ -48,6 +48,8 @@ export const DroneMissionAIReview: React.FC = () => {
     setToastMessage,
     showToast,
     detections,
+    detectionsError,
+    isLoadingDetections,
     totalCount,
     approvedCount,
     rejectedCount,
@@ -232,6 +234,8 @@ export const DroneMissionAIReview: React.FC = () => {
   // TRƯỜNG HỢP: ĐÃ BAY VÀ SẴN SÀNG THẨM ĐỊNH AI CANVAS
   return (
     <div className="space-y-4">
+      {isLoadingDetections && <p role="status">Đang tải kết quả AI...</p>}
+      {detectionsError && <p role="alert" className="p-3 bg-red-50 text-red-700">{detectionsError}</p>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">

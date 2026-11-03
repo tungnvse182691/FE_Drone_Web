@@ -58,24 +58,28 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
   const [assignReason, setAssignReason] = useState<string>('Điều chuyển nhân sự theo quyết định của Ban điều hành')
 
   // Tải danh sách nhân sự từ Database thật (API-237 cho Supervisor, API-111 cho PM)
+  const loadSequence = useRef(0)
   const loadUsers = useCallback(async () => {
+    const request = ++loadSequence.current
+    const actor = useAuthStore.getState().user
+    const current = () => request === loadSequence.current && useAuthStore.getState().user === actor
     setIsLoading(true)
     setError(null)
     try {
       if (user?.role === RoleCode.SUPERVISOR) {
         // Supervisor: Xem toàn bộ nhân sự công ty và người phản ánh (API-237: GET /api/v1/users)
-        const staffPromise = personnelService.fetchUsers()
-        const reporterPromise = personnelService.fetchUsers({ role: RoleCode.REPORTER }).catch(() => [])
-        const [staffUsers, reporterUsers] = await Promise.all([staffPromise, reporterPromise])
-
-        // Gộp staff + reporter (loại bỏ trùng lặp id)
-        const combined = [...staffUsers]
-        for (const rep of reporterUsers) {
-          if (!combined.some((u) => u.id === rep.id)) {
-            combined.push(rep)
-          }
-        }
-        setUsersList(combined)
+        const results = await Promise.allSettled([
+          personnelService.fetchUsers(), personnelService.fetchUsers({ role: RoleCode.REPORTER })
+        ])
+        if (!current()) return
+        const combined = new Map<string, SystemUserAccount>()
+        results.forEach(result => {
+          if (result.status === 'fulfilled') result.value.forEach(account => combined.set(account.id, account))
+        })
+        setUsersList(Array.from(combined.values()))
+        const failures = results.flatMap((result, index) => result.status === 'rejected'
+          ? [`${index === 0 ? 'Nhân sự' : 'Reporter'} chưa tải được: ${result.reason?.message || 'Lỗi API'}`] : [])
+        if (failures.length) setError(`Danh bạ chưa đầy đủ. ${failures.join('; ')}. Bấm thử lại.`)
       } else {
         // PM: Lấy thành viên ban điều hành & tổ đội thi công của các dự án PM quản lý (API-111: GET /api/v1/projects/{projectId}/members)
         const myProjects = await projectService.fetchProjects()
@@ -128,20 +132,22 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
               }
             }
           }
-          setUsersList(Array.from(userMap.values()))
+          if (current()) setUsersList(Array.from(userMap.values()))
         }
       }
     } catch (err: any) {
+      if (!current()) return
       const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi truy vấn danh sách nhân sự từ CSDL Backend'
       setError(errMsg)
       triggerNoticeRef.current(`❌ ${errMsg}`)
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [user?.role])
+  }, [user?.id, user?.role])
 
   // Tải danh mục dự án thật từ Database (API-134: GET /api/v1/projects)
   const loadProjects = useCallback(async () => {
+    const actor = useAuthStore.getState().user
     try {
       const projects = await projectService.fetchProjects()
       const mapped = projects.map((p) => ({
@@ -151,7 +157,7 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
         pm_user_id: p.pm_user_id,
         pm_name: p.pm_name
       }))
-      setProjectsList(mapped)
+      if (useAuthStore.getState().user === actor) setProjectsList(mapped)
     } catch (err: any) {
       console.warn('Không thể tải danh sách dự án cho dropdown nhân sự:', err)
     }
@@ -160,6 +166,7 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
   useEffect(() => {
     loadUsers()
     loadProjects()
+    return () => { loadSequence.current += 1 }
   }, [loadUsers, loadProjects])
 
   const filteredUsers = useMemo(() => {

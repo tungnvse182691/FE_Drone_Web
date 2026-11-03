@@ -60,7 +60,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             </h2>
             <p className="text-xs text-slate-500">
               {isSupervisor
-                ? 'Quản lý danh sách tài khoản, vai trò chuyên môn và phân công dự án bảo hành (100% CSDL Backend)'
+                ? 'Quản lý danh sách tài khoản, vai trò chuyên môn và phân công dự án bảo hành'
                 : 'Danh sách nhân sự trong ban điều hành dự án (Chế độ xem Chỉ huy trưởng PM)'}
             </p>
           </div>

@@ -558,6 +558,7 @@ export const projectService = {
    * Lấy danh sách dự án thật từ Backend Candidate3 Docker theo phân quyền (PM / Supervisor)
    */
   async fetchProjects(): Promise<HubProject[]> {
+    const actor = useAuthStore.getState().user
     const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
       try {
@@ -610,6 +611,7 @@ export const projectService = {
         )
 
         const mapped = rawItems.map((item) => mapBackendProjectToHub(item, usersMap, statsMap))
+        if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
         projectStore = mapped
         try {
           sessionStorage.setItem('roadguard_project_store', JSON.stringify(mapped))
@@ -786,10 +788,10 @@ export const projectService = {
         let friendlyMessage = ''
 
         // 1. Xử lý lỗi 409 Conflict (Trùng mã dự án hoặc trùng yêu cầu)
-        if (status === 409 || code === 'project_code_conflict') {
+        if (code === 'project_code_conflict') {
           friendlyMessage = `Mã dự án "${inputCode}" đã tồn tại trong cơ sở dữ liệu! Vui lòng chọn một mã dự án khác chưa từng sử dụng.`
         } else if (code === 'duplicate_request') {
-          friendlyMessage = 'Yêu cầu khởi tạo dự án bị trùng lặp. Vui lòng thử lại sau vài giây.'
+          friendlyMessage = 'Yêu cầu trùng lặp (duplicate_request). Hãy đối chiếu kết quả trước khi gửi lệnh mới.'
         }
         // 2. Xử lý lỗi 400 Bad Request (Sai định dạng dữ liệu)
         else if (status === 400 || code === 'validation_error') {
@@ -842,7 +844,7 @@ export const projectService = {
           friendlyMessage = detail || data?.title || err?.message || 'Không thể tạo dự án mới trên Backend.'
         }
 
-        throw new Error(friendlyMessage)
+        throw Object.assign(new Error(friendlyMessage), { response: err?.response, cause: err, code, input: payload })
       }
     }
 

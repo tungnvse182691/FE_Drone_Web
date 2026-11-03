@@ -79,7 +79,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
             <div className="flex items-center gap-1 font-bold text-brand-gold">
               <Icon name="location_on" size={12} className="text-brand-gold" />
               <span>
-                {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+                {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? 'Chưa có tọa độ' : `${selectedCase.gps.lat}°, ${selectedCase.gps.lng}°`}
               </span>
             </div>
             {selectedCase.source === 'DRONE_AI' && selectedCase.gps.altitude_m > 0 && (
@@ -134,16 +134,16 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="absolute bottom-2.5 left-2.5 bg-slate-900/90 text-white px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/20">
               <Icon name="engineering" size={13} className="text-amber-400" />
-              <span>Ghi nhận hiện trường Đội tuần tra</span>
+              <span>{selectedCase.source_label}</span>
             </div>
           )}
         </div>
       ) : (
         /* Live Mini MapLibre in Drawer */
         <div className="w-full h-80 lg:h-[380px] rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
-          <div ref={drawerMapContainerRef} className="w-full h-full" />
+          {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? <p className="p-4 text-sm text-slate-500">Chưa có tọa độ hiện trường.</p> : <div ref={drawerMapContainerRef} className="w-full h-full" />}
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
-            {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+            {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? 'Chưa có tọa độ' : `${selectedCase.gps.lat}°, ${selectedCase.gps.lng}°`}
           </div>
         </div>
       )}

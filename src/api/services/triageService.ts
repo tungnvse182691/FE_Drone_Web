@@ -2,7 +2,6 @@ import { apiClient } from '../client'
 import { TriageCase } from '../../types/domain'
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { projectService } from './projectService'
-import { surveyService } from './surveyService'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 
@@ -77,7 +76,7 @@ let inMemoryTriageCases: TriageCase[] = getFromStorage(STORAGE_KEYS.TRIAGE_CASES
  * Bắt buộc có dấu nháy kép bọc ngoài chuỗi Base64: ^"[A-Za-z0-9+/]{11}="$
  */
 function normalizeETag(version?: string): string {
-  if (!version) return '"AAAAAAAACEw="'
+  if (!version) throw new Error('Thiếu phiên bản hồ sơ; hãy tải lại trước khi gửi lệnh.')
   const trimmed = version.trim()
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     return trimmed
@@ -120,9 +119,9 @@ function mapBackendCaseToDomain(
         conclusion = 'NO_DEFECT'
       }
     } else if (outcome === 'NEEDS_EVIDENCE') {
-      status = 'NEED_SURVEY'
-      status_label = 'Cần đo đạc bổ sung'
-      conclusion = 'NEED_SURVEY'
+      status = 'AWAITING_EVIDENCE'
+      status_label = 'Chờ bổ sung bằng chứng'
+      conclusion = 'NEEDS_EVIDENCE'
     }
   } else if (item.status === 'CONCLUDED') {
     status = 'VERIFIED'
@@ -135,111 +134,36 @@ function mapBackendCaseToDomain(
   const version = item.version || undefined
   const etag = version ? normalizeETag(version) : undefined
 
-  // Phân loại nguồn theo phương thức xác minh & dữ liệu CSDL Candidate3:
-  // - DRONE: Drone AI quét tự động (DRONE_AI)
-  // - FIELD: Biên bản đội tuần tra hiện trường (PATROL)
-  // - EXISTING_EVIDENCE / khác: Phản ánh người dân qua cổng dịch vụ công (CITIZEN)
-  const isDrone = item.verificationMethod === 'DRONE'
-  const isPatrol = item.verificationMethod === 'FIELD'
-  const caseSource: TriageCase['source'] = isDrone ? 'DRONE_AI' : isPatrol ? 'PATROL' : 'CITIZEN'
-
-  const sourceLabel = isDrone
-    ? 'Thiết bị bay quét'
-    : isPatrol
-    ? 'Đội tuần tra hiện trường'
-    : 'Người dân báo'
-
-  const sourceDetail = item.verificationMethod
-    ? `Định hướng xác minh: ${
-        item.verificationMethod === 'FIELD'
-          ? 'Đo đạc tuần tra thực địa'
-          : item.verificationMethod === 'DRONE'
-          ? 'Khảo sát bay Drone'
-          : 'Bằng chứng người dân gửi'
-      }`
-    : 'Bằng chứng người dân gửi'
-
-  // Gán thông tin người gửi chuẩn nghiệp vụ và phân định các ca phản ánh
-  let reporter_name: string | undefined
-  let reporter_phone: string | undefined
-  let reporter_channel: string | undefined
-  let description: string | undefined
-  let defectTitle = 'Vết nứt mặt đường (Dân phản ánh)'
-  let stationing = 'Km 0+310'
-
-  if (caseSource === 'CITIZEN') {
-    reporter_name = 'Synthetic reporter-a'
-    reporter_phone = '0903.001.004'
-    reporter_channel = 'Cổng Dịch vụ công / Ứng dụng người dân'
-    const isFirstCitizen = id.toLowerCase().startsWith('0c98') || id.toLowerCase().endsWith('1')
-    defectTitle = isFirstCitizen
-      ? 'Vết nứt mặt đường (Km 0+310)'
-      : 'Hư hỏng lề đường rạn nứt (Km 0+420)'
-    stationing = isFirstCitizen ? 'Km 0+310' : 'Km 0+420'
-    description = isFirstCitizen
-      ? (item.conclusion?.reason || 'Phát hiện vết nứt rạn chân chim kéo dài tại Km 0+310 gây nguy hiểm cho xe máy.')
-      : 'Người dân phản ánh rạn nứt mặt đường và sụt lún mép rãnh thoát nước Km 0+420.'
-  } else if (caseSource === 'PATROL') {
-    reporter_name = 'Kỹ sư Lê Quốc Tuấn (Tổ tuần tra 01)'
-    reporter_phone = '0903.001.008'
-    reporter_channel = 'Biên bản tuần tra hiện trường'
-    const isFirstPatrol = id.toLowerCase().endsWith('0') || id.toLowerCase().endsWith('2') || id.toLowerCase().endsWith('4') || id.toLowerCase().endsWith('6') || id.toLowerCase().endsWith('8')
-    defectTitle = isFirstPatrol
-      ? 'Ổ gà lún sụt mặt đường (Km 0+580)'
-      : 'Bong bật bê tông nhựa (Km 0+720)'
-    stationing = isFirstPatrol ? 'Km 0+580' : 'Km 0+720'
-    description = isFirstPatrol
-      ? (item.conclusion?.reason || 'Biên bản tuần tra định kỳ phát hiện ổ gà đọng nước mép lề đường tại Km 0+580 cần xử lý gấp.')
-      : 'Biên bản tuần tra ghi nhận bong tróc lớp thảm bê tông nhựa mặt đường Km 0+720 diện tích khoảng 1.8m2.'
-  } else {
-    defectTitle = 'Vết nứt mặt đường (Drone AI)'
-    reporter_name = 'Thiết bị bay Drone AI'
-    reporter_channel = 'Khảo sát bay quét tự động'
-    description = 'Phát hiện khiếm khuyết tự động từ mô hình Drone AI.'
-  }
-
-  const defectType = isDrone ? 'CRACK' : isPatrol ? 'POTHOLE' : 'CRACK'
+  // InternalCaseDto describes report intake; verificationMethod is not source provenance.
 
   return {
     id,
     code,
-    source: caseSource,
-    source_label: sourceLabel,
-    source_detail: sourceDetail,
+    source: 'CITIZEN',
+    source_label: 'Phản ánh',
+    source_detail: item.verificationMethod ? `Phương thức xác minh: ${item.verificationMethod}` : 'Chưa chọn phương thức xác minh',
+    verification_method: item.verificationMethod || undefined,
     project_id: projId,
-    project_name: projName || (isAssigned ? 'Dự án bảo hành' : 'Chưa phân công dự án'),
-    stationing: isAssigned ? stationing : 'Chưa định vị lý trình',
+    project_name: projName || 'Chưa phân công dự án',
+    stationing: 'Chưa có dữ liệu lý trình',
     lane: '',
-    defect_title: item.reportIds?.length && item.reportIds.length > 1
-      ? `${defectTitle} (${item.reportIds.length} báo cáo)`
-      : defectTitle,
-    defect_type: defectType,
-    severity: isPatrol ? 'HIGH' : 'MEDIUM',
-    urgency: isPatrol ? 'URGENT' : 'NORMAL',
-    time_ago: item.createdAt ? 'Tiếp nhận gần đây' : 'Vừa xong',
-    created_at: item.createdAt
-      ? new Date(item.createdAt).toLocaleString('vi-VN')
-      : new Date().toLocaleString('vi-VN'),
+    defect_title: 'Hồ sơ phản ánh',
+    defect_type: '',
+    severity: 'UNKNOWN',
+    urgency: 'UNKNOWN',
+    time_ago: item.createdAt ? 'Ngày tiếp nhận từ hệ thống' : 'Chưa có ngày tiếp nhận',
+    created_at: item.createdAt || '',
     status,
     status_label,
-    image_url:
-      'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80',
-    gps: {
-      lat: isPatrol ? 16.0595 : 16.0582,
-      lng: isPatrol ? 108.206 : 108.2045,
-      altitude_m: 0,
-      resolution_cm_px: 0
-    },
+    image_url: '',
+    gps: { lat: null, lng: null, altitude_m: 0, resolution_cm_px: 0 },
     ai_confidence: 0,
     area_sqm: 0,
     ai_area_sqm: 0,
     max_depth_cm: 0,
     ai_depth_cm: 0,
     pm_notes: item.conclusion?.reason || '',
-    reporter_name,
-    reporter_phone,
-    reporter_channel,
-    description,
+
     conclusion,
     conclusion_reason: item.conclusion?.reason || undefined,
     report_ids: item.reportIds || [],
@@ -250,6 +174,9 @@ function mapBackendCaseToDomain(
     etag
   }
 }
+
+let caseListRequest = 0
+const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
 
 export const triageService = {
   /**
@@ -262,118 +189,52 @@ export const triageService = {
     pageSize?: number
     cursor?: string
   }): Promise<TriageCase[]> {
-    try {
-      console.log('🚀 [CANDIDATE3 BE] Quét ca phản ánh từ CSDL Candidate3...', params)
-
-      // Kiểm tra vai trò của người dùng hiện tại (Supervisor vs Project Manager)
-      const currentUser = useAuthStore.getState().user
-      const isSupervisor = currentUser?.role === RoleCode.SUPERVISOR
-
-      // Lấy danh mục dự án từ CSDL để map tên dự án chính xác
-      const projectMap: Record<string, string> = {}
-      let allProjects: any[] = []
-      try {
-        allProjects = await projectService.fetchProjects()
-        allProjects.forEach((p) => {
-          projectMap[p.id] = p.name
-          projectMap[p.code] = p.name
-        })
-      } catch {
-        allProjects = projectService.getProjects()
-        allProjects.forEach((p) => {
-          projectMap[p.id] = p.name
-          projectMap[p.code] = p.name
-        })
-      }
-
-      // Phân quyền theo vai trò:
-      // - Supervisor: Có thẩm quyền trên toàn tuyến, thấy tất cả các dự án
-      // - PM: Chỉ phụ trách các dự án được phân công cho mình (tránh IDOR / rò rỉ dữ liệu dự án khác)
-      const allowedProjects = isSupervisor
-        ? allProjects
-        : allProjects.filter((p) => {
-            if (!currentUser) return false
-            const userId = currentUser.id
-            const userEmail = (currentUser.email || '').toLowerCase()
-            const userName = (currentUser.full_name || (currentUser as any).name || '').toLowerCase()
-            const pmUserId = p.pm_user_id
-            const pmEmail = (p.pm_email || '').toLowerCase()
-            const pmName = (p.pm_name || '').toLowerCase()
-
-            if (userId && pmUserId && userId === pmUserId) return true
-            if (pmEmail && userEmail && pmEmail === userEmail) return true
-            if (pmName && userName && (pmName === userName || pmName.includes(userName) || userName.includes(pmName))) return true
-            if (userEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
-            if (userEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
-            return false
-          })
-
-      const rawItems: InternalCaseDto[] = []
-
-      if (params?.projectId && params.projectId !== 'ALL') {
-        const res = await apiClient.get<CasePageDto>('/cases', {
-          params: { projectId: params.projectId }
-        })
-        if (res.data?.items) rawItems.push(...res.data.items)
-      } else {
-        // Tối ưu hóa: Gọi GET /cases 1 lần duy nhất cho toàn bộ hệ thống
-        try {
-          const generalRes = await apiClient.get<CasePageDto>('/cases')
-          if (generalRes.data?.items && generalRes.data.items.length > 0) {
-            rawItems.push(...generalRes.data.items)
-          }
-        } catch {
-          // Fallback nếu backend yêu cầu projectId
-        }
-
-        // Nếu gọi chung chưa có hoặc thiếu thì bổ sung theo từng dự án của user
-        if (rawItems.length === 0) {
-          const targetQueryProjects = isSupervisor ? allProjects : allowedProjects
-          const projectQueries = targetQueryProjects.map(async (p) => {
-            try {
-              const res = await apiClient.get<CasePageDto>('/cases', {
-                params: { projectId: p.id }
-              })
-              return res.data?.items || []
-            } catch {
-              return []
-            }
-          })
-          const projectResults = await Promise.all(projectQueries)
-          for (const list of projectResults) {
-            rawItems.push(...list)
-          }
-        }
-      }
-
-      // Khử trùng lặp theo ID và đối chiếu phạm vi quyền
-      const allowedProjectIds = new Set(allowedProjects.map((p) => p.id))
-      const uniqueMap = new Map<string, InternalCaseDto>()
-      for (const item of rawItems) {
-        // Nếu là PM, chỉ nhận ca thuộc dự án mình phụ trách
-        if (!isSupervisor && (!item.projectId || !allowedProjectIds.has(item.projectId))) {
-          continue
-        }
-        if (!uniqueMap.has(item.id)) {
-          uniqueMap.set(item.id, item)
-        }
-      }
-
-      const items = Array.from(uniqueMap.values())
-      console.log(`✅ [CANDIDATE3 BE] [${isSupervisor ? 'SUPERVISOR' : 'PM'}] Nhận về ${items.length} ca phản ánh thật từ CSDL qua API-018`)
-
-      const citizenCases = items.map((item) => mapBackendCaseToDomain(item, projectMap))
-
-      return citizenCases
-    } catch (err: any) {
-      console.error('❌ [CANDIDATE3 BE] Lỗi khi nạp ca từ backend (/cases):', err?.response?.data || err?.message)
-      throw new Error(
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Không thể nạp dữ liệu ca từ CSDL Candidate3 Backend'
-      )
+    const actor = useAuthStore.getState().user
+    if (!actor || ![RoleCode.SUPERVISOR, RoleCode.PROJECT_MANAGER].includes(actor.role)) {
+      throw new Error('Không có quyền đọc danh sách Case.')
     }
+    const projects: Array<{ id: string; name: string }> = []
+    let projectCursor: string | undefined
+    const seenProjectCursors = new Set<string>()
+    do {
+      const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string }>; nextCursor?: string }>('/projects', {
+        params: { cursor: projectCursor }
+      })
+      for (const project of response.data.items || []) {
+        const id = project.projectId || project.id
+        if (id) projects.push({ id, name: project.name })
+      }
+      projectCursor = response.data.nextCursor || undefined
+      if (projectCursor && seenProjectCursors.has(projectCursor)) throw new Error('Cursor dự án bị lặp.')
+      if (projectCursor) seenProjectCursors.add(projectCursor)
+    } while (projectCursor)
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả cũ.')
+    const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
+    const selected = params?.projectId && params.projectId !== 'ALL' ? params.projectId : undefined
+    if (selected && !projects.some(p => p.id === selected)) throw new Error('Dự án không thuộc phạm vi server trả về.')
+    // /projects is server-scoped. Do not infer PM membership from primary PM/name/email.
+    const scopes: Array<string | undefined> = selected ? [selected] : [
+      ...(actor.role === RoleCode.SUPERVISOR ? [undefined] : []), ...projects.map(p => p.id)
+    ]
+    const items = new Map<string, InternalCaseDto>()
+    for (const projectId of scopes) {
+      let cursor: string | undefined
+      const cursors = new Set<string>()
+      do {
+        const response = await apiClient.get<CasePageDto>('/cases', {
+          params: { projectId, status: params?.status, pageSize: params?.pageSize || 100, cursor }
+        })
+        if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả cũ.')
+        for (const item of response.data.items || []) {
+          if (actor.role === RoleCode.PROJECT_MANAGER && item.projectId !== projectId) throw new Error('Case trả về sai phạm vi dự án.')
+          items.set(item.id, item)
+        }
+        cursor = response.data.nextCursor || undefined
+        if (cursor && cursors.has(cursor)) throw new Error('Cursor Case bị lặp.')
+        if (cursor) cursors.add(cursor)
+      } while (cursor)
+    }
+    return Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
   },
 
   /**
@@ -381,6 +242,8 @@ export const triageService = {
    * 100% dữ liệu từ Database Candidate3 BE - Tuân thủ kỷ luật CẤM mock data ngầm khi đã gắn API
    */
   async getCases(params?: TriageFilterParams): Promise<TriageCase[]> {
+    const request = ++caseListRequest
+    const actor = useAuthStore.getState().user
     // 1. Nạp từ Backend Candidate3 (CSDL thật)
     const backendCases = await this.fetchCasesFromBackend({
       projectId: params?.projectId,
@@ -389,6 +252,7 @@ export const triageService = {
       cursor: params?.cursor
     })
 
+    if (request !== caseListRequest || useAuthStore.getState().user !== actor) throw new Error('Bỏ kết quả Case của scope/phiên cũ.')
     // Đồng bộ lại inMemoryTriageCases bằng 100% dữ liệu thật từ Backend (không trộn lẫn mock data)
     inMemoryTriageCases = backendCases
     saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
@@ -435,6 +299,8 @@ export const triageService = {
    * Lấy chi tiết một ca khiếm khuyết theo ID từ Backend Candidate3 (kèm ETag)
    */
   async getCaseById(id: string): Promise<TriageCase | null> {
+    const actor = useAuthStore.getState().user
+    const scopeRequest = caseListRequest
     try {
       console.log(`🚀 [CANDIDATE3 BE] Gọi GET /api/v1/cases/${id}...`)
       const res = await apiClient.get<InternalCaseDto>(`/cases/${id}`)
@@ -454,6 +320,7 @@ export const triageService = {
         domainCase.version = etagHeader.replace(/"/g, '')
       }
 
+      if (useAuthStore.getState().user !== actor || scopeRequest !== caseListRequest) throw new Error('Bỏ chi tiết Case của scope/phiên cũ.')
       // Cập nhật lại vào inMemoryStore
       const idx = inMemoryTriageCases.findIndex((c) => c.id === id || c.code === id)
       if (idx !== -1) {
@@ -578,410 +445,84 @@ export const triageService = {
    * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
    */
   async concludeCase(caseId: string, payload: CaseConclusionInput): Promise<TriageCase> {
-    console.log(`🚀 [CANDIDATE3 BE] Kết luận thẩm định API-020 cho ca [${caseId}]...`, payload)
-
-    const currentCase = inMemoryTriageCases.find((c) => c.id === caseId || c.code === caseId)
-    let etag = normalizeETag(payload.version || currentCase?.etag || currentCase?.version)
-
-    let status: TriageCase['status'] = 'VERIFIED'
-    let status_label = 'Đã xác minh (Verified)'
-    let conclusion: TriageCase['conclusion'] = 'DEFECT_FOUND'
-
-    if (payload.outcome === 'NO_DEFECT') {
-      status = 'REJECTED'
-      status_label = 'Báo sai (No Defect)'
-      conclusion = 'NO_DEFECT'
-    } else if (payload.outcome === 'NEEDS_EVIDENCE') {
-      status = 'AWAITING_EVIDENCE'
-      status_label = 'Chờ đo đạc hiện trường (Awaiting Evidence)'
-      conclusion = 'NEEDS_EVIDENCE'
+    const actor = useAuthStore.getState().user
+    const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; chưa gửi lệnh.')
+    const server = mapBackendCaseToDomain(detail.data, {})
+    if (detail.data.status === 'CONCLUDED') {
+      throw Object.assign(new Error(`Hồ sơ đã có kết luận server: ${detail.data.conclusion?.outcome || 'chưa có dữ liệu'}. Lệnh mới chưa được gửi; hãy đối chiếu lại.`), {
+        code: 'invalid_state_transition', serverCase: server
+      })
     }
-
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)
-    if (isUuid) {
-      let reqBody: any = null
-      try {
-        let detailData: InternalCaseDto | undefined
-        // Luôn fetch ETag tươi và thông tin ca từ CSDL thật thông qua GET /cases/{caseId}
-        try {
-          const detailRes = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`, {
-            params: { _t: Date.now() },
-            headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-          })
-          detailData = detailRes.data
-          const headerEtag = detailRes.headers?.['etag'] || detailRes.headers?.['ETag']
-          if (headerEtag) {
-            etag = normalizeETag(headerEtag)
-          } else if (detailRes.data?.version) {
-            etag = normalizeETag(detailRes.data.version)
-          }
-          console.log('🔍 [CANDIDATE3 BE] Chi tiết ca từ CSDL:', detailData, 'ETag:', etag)
-        } catch (fetchErr) {
-          console.warn('⚠️ Không thể lấy ETag tươi từ GET /cases/' + caseId, fetchErr)
-        }
-
-        // 1. In toàn bộ đối tượng ca từ CSDL để kiểm tra chính xác các trường dữ liệu
-        console.log('🔍 [CANDIDATE3 BE] Chi tiết ca full JSON:', JSON.stringify(detailData, null, 2))
-
-        // 1.1. Kiểm tra trạng thái hiện tại: Nếu ca đã ở trạng thái CONCLUDED trong CSDL thật thì không gọi lại API-020
-        if (detailData?.status === 'CONCLUDED') {
-          console.log('ℹ️ [CANDIDATE3 BE] Ca đã ở trạng thái CONCLUDED trong CSDL thật. Đồng bộ dữ liệu hiển thị.')
-          const updates: Partial<TriageCase> = {
-            status,
-            status_label,
-            conclusion,
-            conclusion_reason: payload.reason || detailData.conclusion?.reason || undefined,
-            etag,
-            version: etag.replace(/"/g, ''),
-            pm_notes: payload.reason
-              ? `[KẾT LUẬN: ${payload.outcome}] ${payload.reason}`
-              : currentCase?.pm_notes || ''
-          }
-          return this.updateCase(caseId, updates)
-        }
-
-        // 1.2. Bỏ tự động ép phương thức xác minh qua API-024:
-        // Tuân thủ đúng trạng thái và phương thức hiện có của ca trong CSDL.
-
-        // 2. Tra cứu & chuẩn hóa evidenceIds:
-        // CSDL Candidate3 quy định API-020 (ConcludeCaseCommand) bắt buộc:
-        // - defectIds: Không được null (gửi [] nếu không có khiếm khuyết hoặc NO_DEFECT)
-        // - evidenceIds: Bắt buộc không rỗng, chứa ít nhất 1 GUID thuộc dbo.ReportOriginalEvidence của chính ca đó
-        const REPORT_EVIDENCE_MAP: Record<string, string> = {
-          'b6a26050-f118-4ab5-952d-83aa4b9c51dc': '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-          'd90e5156-f492-4cdc-a374-5f7d0f8ad3a9': '5f975482-a867-44a9-9fdf-88aba1171fca',
-          '181da996-72fc-4428-b97b-4a47a40d549d': '86750d54-0d3a-4e6e-9832-8a8fbcc487d8',
-          '27fd3ab9-f160-47c8-8d53-c54a41c8ef41': 'f5d620bb-3321-4317-ac24-ab048b9e610e'
-        }
-
-        const CASE_EVIDENCE_MAP: Record<string, string> = {
-          '0c98a61b-4421-4eed-9227-04646993008a': '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-          'e195f31d-99d2-411b-b162-5b8c2f79a8d8': '5f975482-a867-44a9-9fdf-88aba1171fca',
-          '83c79583-1baf-4c6d-bb8f-6e6f7d177d39': '86750d54-0d3a-4e6e-9832-8a8fbcc487d8',
-          '28f287b2-6497-49eb-8567-ffeddbcb4837': 'f5d620bb-3321-4317-ac24-ab048b9e610e'
-        }
-
-        let resolvedEvidenceIds: string[] = payload.evidenceIds ? [...payload.evidenceIds] : []
-
-        if (detailData?.reportIds && detailData.reportIds.length > 0) {
-          for (const repId of detailData.reportIds) {
-            const key = repId.toLowerCase()
-            if (REPORT_EVIDENCE_MAP[key] && !resolvedEvidenceIds.includes(REPORT_EVIDENCE_MAP[key])) {
-              resolvedEvidenceIds.push(REPORT_EVIDENCE_MAP[key])
-            }
-          }
-        }
-
-        // Nếu chưa có từ reportIds, tra theo chính caseId
-        if (resolvedEvidenceIds.length === 0) {
-          const cKey = caseId.toLowerCase()
-          if (CASE_EVIDENCE_MAP[cKey]) {
-            resolvedEvidenceIds.push(CASE_EVIDENCE_MAP[cKey])
-          }
-        }
-
-        // Fallback cuối cùng
-        if (resolvedEvidenceIds.length === 0) {
-          resolvedEvidenceIds.push('f5d620bb-3321-4317-ac24-ab048b9e610e')
-        }
-
-        let resolvedDefectIds: string[] = []
-        if (payload.outcome === 'CONFIRMED') {
-          if (payload.defectIds && payload.defectIds.length > 0) {
-            resolvedDefectIds = [...payload.defectIds]
-          } else if (detailData?.defectIds && detailData.defectIds.length > 0) {
-            resolvedDefectIds = [...detailData.defectIds]
-          } else {
-            // Theo Spec 17_10 P2-07: Ca phản ánh ban đầu (pre-Defect) chưa có khiếm khuyết trong CSDL
-            // không thể kết luận CONFIRMED trực tiếp mà cần chuyển sang NEEDS_EVIDENCE để giao việc đo đạc hiện trường.
-            throw new Error(
-              'Ca phản ánh này chưa có hồ sơ khiếm khuyết nguồn trong CSDL (pre-Defect). Theo quy định Spec 17_10, vui lòng chọn "Yêu cầu đo đạc hiện trường" để tổ chức đo đạc thực địa và lập hồ sơ khiếm khuyết.'
-            )
-          }
-        }
-
-        const idempotencyKey = crypto.randomUUID()
-
-        // Chuẩn hóa body theo đúng DTO CaseConclusionDto & Candidate3 C# Validator:
-        // - Outcome CONFIRMED: defectIds bắt buộc Count > 0
-        // - Outcome NO_DEFECT: defectIds bắt buộc Count <= 0 (gửi [])
-        // - evidenceIds: Bắt buộc Count > 0 (chứa ít nhất 1 GUID bằng chứng gốc)
-        let finalReason = (payload.reason || '').trim()
-        if (!finalReason) {
-          finalReason = payload.outcome === 'NO_DEFECT'
-            ? 'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
-            : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'
-        }
-
-        reqBody = {
-          outcome: payload.outcome,
-          defectIds: payload.outcome === 'CONFIRMED' ? resolvedDefectIds : [],
-          evidenceIds: resolvedEvidenceIds,
-          reason: finalReason
-        }
-
-        console.log('🚀 [CANDIDATE3 BE] Payload gửi lên API-020:', reqBody, 'với ETag:', etag)
-
-        const res = await apiClient.post<InternalCaseDto>(
-          `/cases/${caseId}/conclusions`,
-          reqBody,
-          {
-            headers: {
-              'Idempotency-Key': idempotencyKey,
-              'If-Match': etag
-            }
-          }
-        )
-        console.log('✅ [CANDIDATE3 BE] API-020 Kết luận thành công!', res.data)
-        if (res.data?.version) {
-          etag = normalizeETag(res.data.version)
-        }
-      } catch (err: any) {
-        // Xử lý xung đột optimistic concurrency (412) hoặc conflict trạng thái (409)
-        const status = err?.response?.status
-        if (status === 409 || status === 412) {
-          console.warn(`⚠️ [CANDIDATE3 BE] Phát hiện xung đột (${status}). Đang nạp lại dữ liệu ca mới nhất...`)
-          try {
-            const freshRes = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`, {
-              params: { _t: Date.now() },
-              headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-            })
-            if (freshRes.data?.status === 'CONCLUDED') {
-              console.log('✅ [CANDIDATE3 BE] Ca đã ở trạng thái CONCLUDED trên CSDL sau khi kiểm tra lại.')
-              const freshEtag = normalizeETag(freshRes.headers?.['etag'] || freshRes.data.version || etag)
-              const updates: Partial<TriageCase> = {
-                status,
-                status_label,
-                conclusion,
-                conclusion_reason: payload.reason || freshRes.data.conclusion?.reason || undefined,
-                etag: freshEtag,
-                version: freshEtag.replace(/"/g, ''),
-                pm_notes: payload.reason
-                  ? `[KẾT LUẬN: ${payload.outcome}] ${payload.reason}`
-                  : currentCase?.pm_notes || ''
-              }
-              return this.updateCase(caseId, updates)
-            } else if (freshRes.data?.version) {
-              const freshEtag = normalizeETag(freshRes.headers?.['etag'] || freshRes.data.version)
-              console.log('🔄 [CANDIDATE3 BE] Tự động thử lại API-020 với RowVersion tươi:', freshEtag)
-              const retryRes = await apiClient.post<InternalCaseDto>(
-                `/cases/${caseId}/conclusions`,
-                reqBody,
-                {
-                  headers: {
-                    'Idempotency-Key': crypto.randomUUID(),
-                    'If-Match': freshEtag
-                  }
-                }
-              )
-              console.log('✅ [CANDIDATE3 BE] Thử lại API-020 thành công!', retryRes.data)
-              const finalEtag = normalizeETag(retryRes.headers?.['etag'] || retryRes.data?.version || freshEtag)
-              const updates: Partial<TriageCase> = {
-                status,
-                status_label,
-                conclusion,
-                conclusion_reason: payload.reason || undefined,
-                etag: finalEtag,
-                version: finalEtag.replace(/"/g, ''),
-                pm_notes: payload.reason
-                  ? `[KẾT LUẬN: ${payload.outcome}] ${payload.reason}`
-                  : currentCase?.pm_notes || ''
-              }
-              return this.updateCase(caseId, updates)
-            }
-          } catch {
-            // bỏ qua để fallthrough ném lỗi rõ ràng
-          }
-        }
-        const data = err?.response?.data
-        let validationDetails = ''
-        if (data?.errors && typeof data.errors === 'object') {
-          validationDetails = Object.entries(data.errors)
-            .map(([field, msgs]: [string, any]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join(' | ')
-        }
-        const errorMsg =
-          validationDetails ||
-          data?.message ||
-          data?.detail ||
-          data?.title ||
-          err?.message ||
-          'Gọi API-020 kết luận ca thất bại'
-        console.error('❌ [CANDIDATE3 BE] Gọi API-020 thất bại:', {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: errorMsg
-        })
-        throw new Error(errorMsg)
+    const evidenceIds = [...new Set(payload.evidenceIds || [])]
+    if (payload.outcome !== 'NEEDS_EVIDENCE' && !evidenceIds.length) throw new Error('Thiếu reference bằng chứng được phép đọc cho Case này. Chưa có nguồn chọn bằng chứng trong giao diện; không gửi lệnh (contract gap).')
+    const defectIds = [...new Set(payload.defectIds || detail.data.defectIds || [])]
+    if (payload.outcome === 'CONFIRMED' && !defectIds.length) throw new Error('Chưa có Defect nguồn; không thể kết luận CONFIRMED (P2-07).')
+    const body = { outcome: payload.outcome, reason: payload.reason, evidenceIds, defectIds: payload.outcome === 'CONFIRMED' ? defectIds : [] }
+    const version = normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined)
+    const key = crypto.randomUUID()
+    const pendingKey = `${actor?.id}:conclude:${caseId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả. Hãy tải lại/đối chiếu; không tạo lệnh mới.')
+    pendingCaseCommands.set(pendingKey, { key, body, version })
+    try {
+      const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/conclusions`, body, {
+        headers: { 'Idempotency-Key': key, 'If-Match': version }
+      })
+      pendingCaseCommands.delete(pendingKey)
+      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả lệnh cũ.')
+      const confirmed = mapBackendCaseToDomain(response.data, {})
+      if (response.data.conclusion?.outcome !== payload.outcome) {
+        throw Object.assign(new Error('Kết quả server khác yêu cầu; hãy đối chiếu kết luận.'), { serverCase: confirmed })
       }
+      return confirmed
+    } catch (error: any) {
+      if (error.response && error.response.status < 500) pendingCaseCommands.delete(pendingKey)
+      if (error.serverCase) throw error
+      const status = error.response?.status
+      const code = error.response?.data?.code
+      if (status === 409 || status === 412 || !error.response || status >= 500) {
+        let current: TriageCase | undefined
+        try {
+          const fresh = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+          if (useAuthStore.getState().user === actor) current = mapBackendCaseToDomain(fresh.data, {})
+        } catch { /* Keep original command identity and report reconciliation failure below. */ }
+        const reason = status === 412 ? 'Phiên bản đã thay đổi. Đối chiếu kết quả server, giữ bản nháp và xác nhận lại trước lệnh mới.'
+          : status === 409 ? `Xung đột ${code || 'không rõ mã'}: ${error.response?.data?.detail || 'hãy đối chiếu trạng thái/nguồn.'}`
+          : 'Chưa rõ lệnh đã được ghi nhận hay chưa; đã giữ identity lệnh, không tự gửi lại.'
+        throw Object.assign(new Error(reason + (current ? '' : ' Không tải được kết quả để đối chiếu.')), {
+          cause: error, code, response: error.response, serverCase: current, commandKey: key
+        })
+      }
+      throw error
     }
-
-    const updates: Partial<TriageCase> = {
-      status,
-      status_label,
-      conclusion,
-      conclusion_reason: payload.reason || undefined,
-      etag,
-      version: etag.replace(/"/g, ''),
-      pm_notes: payload.reason
-        ? `[KẾT LUẬN API-020: ${payload.outcome}] ${payload.reason}`
-        : currentCase?.pm_notes || ''
-    }
-
-    return this.updateCase(caseId, updates)
   },
 
-  /**
-   * API-021: POST /api/v1/cases/{caseId}/publications
-   * Chỉ huy trưởng (PM) xuất bản thông báo xử lý phản ánh cho người dân
-   * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
-   */
   async publishCase(caseId: string, payload: CasePublicationInput): Promise<TriageCase> {
-    console.log(`🚀 [CANDIDATE3 BE] Xuất bản kết quả API-021 cho ca [${caseId}]...`, payload)
-
-    const currentCase = inMemoryTriageCases.find((c) => c.id === caseId || c.code === caseId)
-    let etag = normalizeETag(payload.version || currentCase?.etag || currentCase?.version)
-
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)
-    if (isUuid) {
-      try {
-        // Luôn fetch ETag tươi từ CSDL thật thông qua GET /cases/{caseId}
-        let detailData: InternalCaseDto | undefined
-        try {
-          const detailRes = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
-          detailData = detailRes.data
-          const headerEtag = detailRes.headers['etag'] || detailRes.headers['ETag']
-          if (headerEtag) {
-            etag = normalizeETag(headerEtag)
-          } else if (detailRes.data?.version) {
-            etag = normalizeETag(detailRes.data.version)
-          }
-        } catch (fetchErr) {
-          console.warn('⚠️ Không thể lấy ETag tươi từ GET /cases/' + caseId, fetchErr)
-        }
-
-        const REPORT_EVIDENCE_MAP: Record<string, string> = {
-          'b6a26050-f118-4ab5-952d-83aa4b9c51dc': '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-          'd90e5156-f492-4cdc-a374-5f7d0f8ad3a9': '5f975482-a867-44a9-9fdf-88aba1171fca',
-          '181da996-72fc-4428-b97b-4a47a40d549d': '86750d54-0d3a-4e6e-9832-8a8fbcc487d8',
-          '27fd3ab9-f160-47c8-8d53-c54a41c8ef41': 'f5d620bb-3321-4317-ac24-ab048b9e610e'
-        }
-
-        const CASE_EVIDENCE_MAP: Record<string, string> = {
-          '0c98a61b-4421-4eed-9227-04646993008a': '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-          'e195f31d-99d2-411b-b162-5b8c2f79a8d8': '5f975482-a867-44a9-9fdf-88aba1171fca',
-          '83c79583-1baf-4c6d-bb8f-6e6f7d177d39': '86750d54-0d3a-4e6e-9832-8a8fbcc487d8',
-          '28f287b2-6497-49eb-8567-ffeddbcb4837': 'f5d620bb-3321-4317-ac24-ab048b9e610e'
-        }
-
-        const CASE_REPORT_MAP: Record<string, string> = {
-          '0c98a61b-4421-4eed-9227-04646993008a': 'b6a26050-f118-4ab5-952d-83aa4b9c51dc',
-          'e195f31d-99d2-411b-b162-5b8c2f79a8d8': 'd90e5156-f492-4cdc-a374-5f7d0f8ad3a9',
-          '83c79583-1baf-4c6d-bb8f-6e6f7d177d39': '181da996-72fc-4428-b97b-4a47a40d549d',
-          '28f287b2-6497-49eb-8567-ffeddbcb4837': '27fd3ab9-f160-47c8-8d53-c54a41c8ef41'
-        }
-
-        let resolvedEvidenceIds: string[] = payload.evidenceIds ? [...payload.evidenceIds] : []
-        if (detailData?.reportIds && detailData.reportIds.length > 0) {
-          for (const repId of detailData.reportIds) {
-            const key = repId.toLowerCase()
-            if (REPORT_EVIDENCE_MAP[key] && !resolvedEvidenceIds.includes(REPORT_EVIDENCE_MAP[key])) {
-              resolvedEvidenceIds.push(REPORT_EVIDENCE_MAP[key])
-            }
-          }
-        }
-        if (resolvedEvidenceIds.length === 0 && CASE_EVIDENCE_MAP[caseId.toLowerCase()]) {
-          resolvedEvidenceIds.push(CASE_EVIDENCE_MAP[caseId.toLowerCase()])
-        }
-        if (resolvedEvidenceIds.length === 0) {
-          resolvedEvidenceIds.push('f5d620bb-3321-4317-ac24-ab048b9e610e')
-        }
-
-        const isNoDefect = detailData?.conclusion?.outcome === 'NO_DEFECT' ||
-          currentCase?.conclusion === 'OUT_OF_SCOPE' ||
-          currentCase?.conclusion === 'NO_DEFECT'
-
-        let resolvedDefectIds: string[] = []
-        if (!isNoDefect) {
-          if (payload.defectIds && payload.defectIds.length > 0) {
-            resolvedDefectIds = [...payload.defectIds]
-          } else if (detailData?.defectIds && detailData.defectIds.length > 0) {
-            resolvedDefectIds = [...detailData.defectIds]
-          }
-        }
-
-        const resolvedReportIds: string[] = []
-        if (payload.reportIds && payload.reportIds.length > 0) {
-          resolvedReportIds.push(...payload.reportIds)
-        } else if (detailData?.reportIds && detailData.reportIds.length > 0) {
-          resolvedReportIds.push(...detailData.reportIds)
-        } else if (currentCase?.report_ids && currentCase.report_ids.length > 0) {
-          resolvedReportIds.push(...currentCase.report_ids)
-        } else if (CASE_REPORT_MAP[caseId.toLowerCase()]) {
-          resolvedReportIds.push(CASE_REPORT_MAP[caseId.toLowerCase()])
-        }
-
-        if (resolvedReportIds.length === 0) {
-          throw new Error('Không thể xuất bản: Ca này không có báo cáo người dân nào làm người nhận (Recipient report is required).')
-        }
-
-        const idempotencyKey = crypto.randomUUID()
-        const reqBody: any = {
-          summary: (payload.summary || '').trim() || 'Thông báo tiếp nhận và xử lý khiếm khuyết.',
-          reportIds: resolvedReportIds,
-          defectIds: resolvedDefectIds,
-          evidenceIds: resolvedEvidenceIds
-        }
-
-        console.log('🚀 [CANDIDATE3 BE] Payload gửi lên API-021:', reqBody, 'với ETag:', etag)
-
-        const res = await apiClient.post<any>(
-          `/cases/${caseId}/publications`,
-          reqBody,
-          {
-            headers: {
-              'Idempotency-Key': idempotencyKey,
-              'If-Match': etag
-            }
-          }
-        )
-        console.log('✅ [CANDIDATE3 BE] API-021 Xuất bản thành công!', res.data)
-      } catch (err: any) {
-        const data = err?.response?.data
-        let validationDetails = ''
-        if (data?.errors && typeof data.errors === 'object') {
-          validationDetails = Object.entries(data.errors)
-            .map(([field, msgs]: [string, any]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-            .join(' | ')
-        }
-        const errorMsg =
-          validationDetails ||
-          data?.message ||
-          data?.detail ||
-          data?.title ||
-          err?.message ||
-          'Gọi API-021 xuất bản kết quả thất bại'
-        console.error('❌ [CANDIDATE3 BE] Gọi API-021 thất bại:', {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: errorMsg
-        })
-        throw new Error(errorMsg)
-      }
+    const actor = useAuthStore.getState().user
+    const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; chưa gửi publication.')
+    const reportIds = [...new Set(payload.reportIds || [])]
+    if (!reportIds.length || reportIds.some(id => !detail.data.reportIds?.includes(id))) {
+      throw new Error('Thiếu hoặc sai recipient report thuộc Case; chưa gửi publication.')
     }
-
-    const nowTime =
-      new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
-      ', ' +
-      new Date().toLocaleDateString('vi-VN')
-
-    const updates: Partial<TriageCase> = {
-      is_published: true,
-      published_at: nowTime,
-      public_notice: payload.summary || ''
+    // Never expand selected evidence to all evidence in a Case. Server validates each recipient/source.
+    const body = { summary: payload.summary, reportIds, evidenceIds: [...new Set(payload.evidenceIds || [])], defectIds: [...new Set(payload.defectIds || [])] }
+    const version = normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined)
+    const pendingKey = `${actor?.id}:publish:${caseId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Publication trước chưa rõ kết quả; hãy đối chiếu trước khi gửi lệnh mới.')
+    const key = crypto.randomUUID()
+    pendingCaseCommands.set(pendingKey, { key, body, version })
+    try {
+      const response = await apiClient.post<{ version?: string }>(`/cases/${caseId}/publications`, body, {
+        headers: { 'Idempotency-Key': key, 'If-Match': version }
+      })
+      pendingCaseCommands.delete(pendingKey)
+      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả publication cũ.')
+      return { ...mapBackendCaseToDomain(detail.data, {}), is_published: true, public_notice: payload.summary || '', version: response.data.version || detail.data.version || undefined }
+    } catch (error: any) {
+      if (error.response && error.response.status < 500) pendingCaseCommands.delete(pendingKey)
+      throw error
     }
-
-    return this.updateCase(caseId, updates)
   },
 
   /**

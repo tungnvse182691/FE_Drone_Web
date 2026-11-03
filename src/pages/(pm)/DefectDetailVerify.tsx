@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import {
@@ -207,30 +207,16 @@ export const DefectDetailVerify: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000)
   }
 
+  const dataRequest = useRef(0)
   const loadBackendData = useCallback(async (silent: boolean = false) => {
+    const request = ++dataRequest.current
+    const actor = useAuthStore.getState().user
+    const current = () => request === dataRequest.current && useAuthStore.getState().user === actor
     if (!silent) setIsLoading(true)
     setApiError(null)
     try {
-      let projects = projectService.getProjects()
-      if (!projects || projects.length === 0) {
-        projects = await projectService.fetchProjects()
-      }
-
-      const scopedProjects = isSupervisor
-        ? projects
-        : projects.filter((p) => {
-            if (!user) return true
-            const uEmail = (user.email || '').toLowerCase()
-            const pmEmail = (p.pm_email || '').toLowerCase()
-            const pmName = (p.pm_name || '').toLowerCase()
-            if (user.id && p.pm_user_id && user.id === p.pm_user_id) return true
-            if (uEmail && pmEmail && uEmail === pmEmail) return true
-            if (uEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
-            if (uEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
-            return false
-          })
-
-      const targetProjects = scopedProjects.length > 0 ? scopedProjects : projects
+      const projects = await projectService.fetchProjects()
+      const targetProjects = projects
 
       const detEntries: Array<{ item: AIDetectionItem; projectId: string; projectName: string }> = []
       const defEntries: Array<{ dto: BackendDefectDto; projectId: string; projectName: string }> = []
@@ -242,7 +228,7 @@ export const DefectDetailVerify: React.FC = () => {
             detEntries.push({ item: d, projectId: proj.id, projectName: proj.name })
           }
         } catch (err) {
-          console.warn(`Không thể tải AI detections của dự án ${proj.id}:`, err)
+          throw err
         }
 
         try {
@@ -251,7 +237,7 @@ export const DefectDetailVerify: React.FC = () => {
             defEntries.push({ dto: df, projectId: proj.id, projectName: proj.name })
           }
         } catch (err) {
-          console.warn(`Không thể tải Defects của dự án ${proj.id}:`, err)
+          throw err
         }
       }
 
@@ -309,9 +295,11 @@ export const DefectDetailVerify: React.FC = () => {
         } catch {}
       }
 
+      if (!current()) return
       setAllDetections(detEntries)
       setAllDefects(defEntries)
     } catch (err: any) {
+      if (!current()) return
       const msg =
         err?.response?.data?.message ||
         err?.response?.data?.detail ||
@@ -319,12 +307,13 @@ export const DefectDetailVerify: React.FC = () => {
         'Không thể tải dữ liệu khiếm khuyết từ CSDL Backend.'
       setApiError(msg)
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
   }, [id, isSupervisor, user])
 
   useEffect(() => {
     loadBackendData()
+    return () => { dataRequest.current += 1 }
   }, [loadBackendData])
 
   const targetId = (id || '').toLowerCase()

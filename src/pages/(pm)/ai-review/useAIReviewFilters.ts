@@ -82,9 +82,9 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const mergedCount = cases.filter((c) => c.status === 'MERGED').length
   const surveyCount = cases.filter((c) => c.status === 'NEED_SURVEY').length
 
-  const citizenCount = cases.filter((c) => c.source === 'PATROL').length
+  const citizenCount = cases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
   const unassignedCitizenCount = cases.filter(
-    (c) => c.source === 'PATROL' && (!c.project_id || c.project_id === '')
+    (c) => (c.source === 'CITIZEN' || c.source === 'PATROL') && (!c.project_id || c.project_id === '')
   ).length
   const droneAICount = cases.filter((c) => c.source === 'DRONE_AI').length
 

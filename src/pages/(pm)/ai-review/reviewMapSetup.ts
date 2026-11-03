@@ -22,6 +22,7 @@ export const initReviewGisModalMap = (
   selectedCase: TriageCase,
   isSatellite: boolean
 ): { map: maplibregl.Map; cleanup: () => void } => {
+  if (selectedCase.gps.lat == null || selectedCase.gps.lng == null) throw new Error('Chưa có tọa độ hiện trường.')
   const center: [number, number] = [selectedCase.gps.lng, selectedCase.gps.lat]
   const map = new maplibregl.Map({
     container,
@@ -134,6 +135,7 @@ export const initReviewDrawerMap = (
   container: HTMLDivElement,
   selectedCase: TriageCase
 ): { map: maplibregl.Map; cleanup: () => void } => {
+  if (selectedCase.gps.lat == null || selectedCase.gps.lng == null) throw new Error('Chưa có tọa độ hiện trường.')
   const center: [number, number] = [selectedCase.gps.lng, selectedCase.gps.lat]
   const map = new maplibregl.Map({
     container,

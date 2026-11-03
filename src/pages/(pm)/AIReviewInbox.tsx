@@ -22,25 +22,8 @@ export const AIReviewInbox: React.FC = () => {
     try {
       const real = projectService.getProjects()
       if (real && real.length > 0) {
-        const scoped = isSupervisor
-          ? real
-          : real.filter((p) => {
-              if (!user) return false
-              const userId = user.id
-              const userEmail = (user.email || '').toLowerCase()
-              const userName = (user.full_name || (user as any).name || '').toLowerCase()
-              const pmUserId = p.pm_user_id
-              const pmEmail = (p.pm_email || '').toLowerCase()
-              const pmName = (p.pm_name || '').toLowerCase()
-
-              if (userId && pmUserId && userId === pmUserId) return true
-              if (pmEmail && userEmail && pmEmail === userEmail) return true
-              if (pmName && userName && (pmName === userName || pmName.includes(userName) || userName.includes(pmName))) return true
-              if (userEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
-              if (userEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
-              return false
-            })
-
+        // Display server-scoped projects; never infer membership from email/name.
+        const scoped = real
         return scoped.map((p) => ({
           id: p.id,
           code: p.code,
@@ -83,6 +66,9 @@ export const AIReviewInbox: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {state.isLoading && <p role="status">Đang tải hồ sơ...</p>}
+      {state.loadError && <div role="alert" className="p-3 bg-red-50 text-red-700">{state.loadError} <button onClick={state.reloadCases}>Thử lại</button></div>}
+      {!state.isLoading && !state.loadError && cases.length === 0 && <p>Chưa có dữ liệu trong CSDL.</p>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
