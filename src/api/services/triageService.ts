@@ -1,6 +1,7 @@
+import { CanceledError, isCancel } from 'axios'
 import { apiClient } from '../client'
 import { TriageCase } from '../../types/domain'
-import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
+import { saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { projectService } from './projectService'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -69,7 +70,8 @@ export interface TriageFilterParams {
 
 // In-Memory Data Store đồng bộ qua STORAGE_KEYS.TRIAGE_CASES
 // KHÔNG nạp mock data mặc định khi đã tích hợp API Candidate3 Backend (Tuân thủ kỷ luật AGENTS.md)
-let inMemoryTriageCases: TriageCase[] = getFromStorage(STORAGE_KEYS.TRIAGE_CASES, [])
+// Do not restore an unscoped cache belonging to a previous browser session.
+let inMemoryTriageCases: TriageCase[] = []
 
 /**
  * Chuẩn hóa chuỗi ETag theo quy định Candidate3:
@@ -175,7 +177,33 @@ function mapBackendCaseToDomain(
   }
 }
 
-let caseListRequest = 0
+// Request ownership belongs to each consumer (AbortSignal). This counter only
+// arbitrates the shared cache; a newer reader must not cancel another reader.
+let caseCacheRequest = 0
+let caseSessionEpoch = 0
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id || state.user?.role !== previous.user?.role ||
+      state.isAuthenticated !== previous.isAuthenticated || state.token !== previous.token) {
+    caseSessionEpoch += 1
+    caseCacheRequest += 1
+    inMemoryTriageCases = []
+    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, [])
+  }
+})
+
+// Profile updates/renewed cookie DTO objects are not a new authorization session.
+export function getCaseSessionKey(): string {
+  const state = useAuthStore.getState()
+  return JSON.stringify([caseSessionEpoch, state.user?.id, state.user?.role, state.isAuthenticated])
+}
+
+function assertCaseReadActive(session: string, signal?: AbortSignal): void {
+  if (signal?.aborted || session !== getCaseSessionKey()) {
+    throw new CanceledError('Case read is no longer active')
+  }
+}
+
+export const isCaseReadCanceled = isCancel
 const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
 
 export const triageService = {
@@ -188,76 +216,88 @@ export const triageService = {
     status?: string
     pageSize?: number
     cursor?: string
-  }): Promise<TriageCase[]> {
-    const actor = useAuthStore.getState().user
-    if (!actor || ![RoleCode.SUPERVISOR, RoleCode.PROJECT_MANAGER].includes(actor.role)) {
-      throw new Error('Không có quyền đọc danh sách Case.')
-    }
-    const projects: Array<{ id: string; name: string }> = []
-    let projectCursor: string | undefined
-    const seenProjectCursors = new Set<string>()
-    do {
-      const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string }>; nextCursor?: string }>('/projects', {
-        params: { cursor: projectCursor }
-      })
-      for (const project of response.data.items || []) {
-        const id = project.projectId || project.id
-        if (id) projects.push({ id, name: project.name })
+  }, signal?: AbortSignal): Promise<TriageCase[]> {
+    const session = getCaseSessionKey()
+    assertCaseReadActive(session, signal)
+    try {
+      const actor = useAuthStore.getState().user
+      if (!actor || ![RoleCode.SUPERVISOR, RoleCode.PROJECT_MANAGER].includes(actor.role)) {
+        throw new Error('Không có quyền đọc danh sách Case.')
       }
-      projectCursor = response.data.nextCursor || undefined
-      if (projectCursor && seenProjectCursors.has(projectCursor)) throw new Error('Cursor dự án bị lặp.')
-      if (projectCursor) seenProjectCursors.add(projectCursor)
-    } while (projectCursor)
-    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả cũ.')
-    const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
-    const selected = params?.projectId && params.projectId !== 'ALL' ? params.projectId : undefined
-    if (selected && !projects.some(p => p.id === selected)) throw new Error('Dự án không thuộc phạm vi server trả về.')
-    // /projects is server-scoped. Do not infer PM membership from primary PM/name/email.
-    const scopes: Array<string | undefined> = selected ? [selected] : [
-      ...(actor.role === RoleCode.SUPERVISOR ? [undefined] : []), ...projects.map(p => p.id)
-    ]
-    const items = new Map<string, InternalCaseDto>()
-    for (const projectId of scopes) {
-      let cursor: string | undefined
-      const cursors = new Set<string>()
+      const projects: Array<{ id: string; name: string }> = []
+      let projectCursor: string | undefined
+      const seenProjectCursors = new Set<string>()
       do {
-        const response = await apiClient.get<CasePageDto>('/cases', {
-          params: { projectId, status: params?.status, pageSize: params?.pageSize || 100, cursor }
+        const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string }>; nextCursor?: string }>('/projects', {
+          params: { cursor: projectCursor }, signal
         })
-        if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả cũ.')
-        for (const item of response.data.items || []) {
-          if (actor.role === RoleCode.PROJECT_MANAGER && item.projectId !== projectId) throw new Error('Case trả về sai phạm vi dự án.')
-          items.set(item.id, item)
+        assertCaseReadActive(session, signal)
+        for (const project of response.data.items || []) {
+          const id = project.projectId || project.id
+          if (id) projects.push({ id, name: project.name })
         }
-        cursor = response.data.nextCursor || undefined
-        if (cursor && cursors.has(cursor)) throw new Error('Cursor Case bị lặp.')
-        if (cursor) cursors.add(cursor)
-      } while (cursor)
+        projectCursor = response.data.nextCursor || undefined
+        if (projectCursor && seenProjectCursors.has(projectCursor)) throw new Error('Cursor dự án bị lặp.')
+        if (projectCursor) seenProjectCursors.add(projectCursor)
+      } while (projectCursor)
+      assertCaseReadActive(session, signal)
+      const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
+      const selected = params?.projectId && params.projectId !== 'ALL' ? params.projectId : undefined
+      if (selected && !projects.some(p => p.id === selected)) throw new Error('Dự án không thuộc phạm vi server trả về.')
+      // /projects is server-scoped. Do not infer PM membership from primary PM/name/email.
+      const scopes: Array<string | undefined> = selected ? [selected] : [
+        ...(actor.role === RoleCode.SUPERVISOR ? [undefined] : []), ...projects.map(p => p.id)
+      ]
+      const items = new Map<string, InternalCaseDto>()
+      for (const projectId of scopes) {
+        let cursor: string | undefined
+        const cursors = new Set<string>()
+        do {
+          const response = await apiClient.get<CasePageDto>('/cases', {
+            params: { projectId, status: params?.status, pageSize: params?.pageSize || 100, cursor }, signal
+          })
+          assertCaseReadActive(session, signal)
+          for (const item of response.data.items || []) {
+            if (actor.role === RoleCode.PROJECT_MANAGER && item.projectId !== projectId) throw new Error('Case trả về sai phạm vi dự án.')
+            items.set(item.id, item)
+          }
+          cursor = response.data.nextCursor || undefined
+          if (cursor && cursors.has(cursor)) throw new Error('Cursor Case bị lặp.')
+          if (cursor) cursors.add(cursor)
+        } while (cursor)
+      }
+      return Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
+    } catch (error) {
+      assertCaseReadActive(session, signal)
+      throw error
     }
-    return Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
   },
 
   /**
    * Lấy danh sách hồ sơ tiếp nhận Triage (Hộp thư AI & Phản ánh người dân - PA03, W03/W04)
    * 100% dữ liệu từ Database Candidate3 BE - Tuân thủ kỷ luật CẤM mock data ngầm khi đã gắn API
    */
-  async getCases(params?: TriageFilterParams): Promise<TriageCase[]> {
-    const request = ++caseListRequest
-    const actor = useAuthStore.getState().user
+  async getCases(params?: TriageFilterParams, signal?: AbortSignal): Promise<TriageCase[]> {
+    const request = ++caseCacheRequest
+    const session = getCaseSessionKey()
+    assertCaseReadActive(session, signal)
     // 1. Nạp từ Backend Candidate3 (CSDL thật)
     const backendCases = await this.fetchCasesFromBackend({
       projectId: params?.projectId,
       status: params?.status,
       pageSize: params?.pageSize,
       cursor: params?.cursor
-    })
+    }, signal)
 
-    if (request !== caseListRequest || useAuthStore.getState().user !== actor) throw new Error('Bỏ kết quả Case của scope/phiên cũ.')
-    // Đồng bộ lại inMemoryTriageCases bằng 100% dữ liệu thật từ Backend (không trộn lẫn mock data)
-    inMemoryTriageCases = backendCases
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+    assertCaseReadActive(session, signal)
+    // A valid independent consumer still receives its own result. Only the most
+    // recently started list may replace the shared cache (which has one scope).
+    if (request === caseCacheRequest) {
+      inMemoryTriageCases = backendCases
+      saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
+    }
 
-    let list = [...inMemoryTriageCases]
+    let list = [...backendCases]
 
     // 3. Áp dụng bộ lọc
     if (params?.source && params?.source !== 'ALL') {
@@ -298,12 +338,13 @@ export const triageService = {
    * API-019: GET /api/v1/cases/{caseId}
    * Lấy chi tiết một ca khiếm khuyết theo ID từ Backend Candidate3 (kèm ETag)
    */
-  async getCaseById(id: string): Promise<TriageCase | null> {
-    const actor = useAuthStore.getState().user
-    const scopeRequest = caseListRequest
+  async getCaseById(id: string, signal?: AbortSignal): Promise<TriageCase | null> {
+    const session = getCaseSessionKey()
+    const cacheRequest = caseCacheRequest
+    assertCaseReadActive(session, signal)
     try {
       console.log(`🚀 [CANDIDATE3 BE] Gọi GET /api/v1/cases/${id}...`)
-      const res = await apiClient.get<InternalCaseDto>(`/cases/${id}`)
+      const res = await apiClient.get<InternalCaseDto>(`/cases/${id}`, { signal })
       const beItem = res.data
       const etagHeader = res.headers?.['etag'] as string | undefined
 
@@ -320,18 +361,18 @@ export const triageService = {
         domainCase.version = etagHeader.replace(/"/g, '')
       }
 
-      if (useAuthStore.getState().user !== actor || scopeRequest !== caseListRequest) throw new Error('Bỏ chi tiết Case của scope/phiên cũ.')
+      assertCaseReadActive(session, signal)
       // Cập nhật lại vào inMemoryStore
       const idx = inMemoryTriageCases.findIndex((c) => c.id === id || c.code === id)
-      if (idx !== -1) {
+      if (idx !== -1 && cacheRequest === caseCacheRequest) {
         inMemoryTriageCases[idx] = { ...inMemoryTriageCases[idx], ...domainCase }
         saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
       }
 
       return domainCase
     } catch (err: any) {
-      console.error(`❌ [CANDIDATE3 BE] Lỗi tải ca ${id}:`, err?.response?.data || err?.message)
-      throw new Error(err?.response?.data?.message || err?.message || `Không thể tải chi tiết ca ${id} từ CSDL`)
+      assertCaseReadActive(session, signal)
+      throw err // Preserve Axios/ProblemDetails metadata; callers decide how to display it.
     }
   },
 

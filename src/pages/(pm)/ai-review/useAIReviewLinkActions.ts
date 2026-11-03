@@ -12,6 +12,7 @@ export interface UseAIReviewLinkActionsProps {
   setExpandedMasterIds: React.Dispatch<React.SetStateAction<string[]>>
   showToast: (msg: string) => void
   filteredCases: TriageCase[]
+  reloadCases: () => void
 }
 
 export const useAIReviewLinkActions = ({
@@ -21,7 +22,8 @@ export const useAIReviewLinkActions = ({
   setSelectedCaseId,
   setExpandedMasterIds,
   showToast,
-  filteredCases
+  filteredCases,
+  reloadCases
 }: UseAIReviewLinkActionsProps) => {
   // Multi-select cho bảng tiếp nhận phản ánh người dân (Link Reports)
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([])
@@ -120,8 +122,7 @@ export const useAIReviewLinkActions = ({
     try {
       await triageService.unlinkReport(targetId, masterId)
       // Tải lại 100% dữ liệu từ Backend CSDL
-      const refreshed = await triageService.getCases()
-      setCases(refreshed)
+      reloadCases()
       showToast(`Đã tách phản ánh [${targetCode.slice(0, 8)}] thành hồ sơ độc lập trong CSDL thành công!`)
     } catch (err: any) {
       console.error('❌ Lỗi khi tách hồ sơ qua API:', err)

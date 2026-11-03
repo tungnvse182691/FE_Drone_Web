@@ -7,7 +7,7 @@ const ts = require('typescript')
 const { webcrypto } = require('node:crypto')
 const roles = { SUPERVISOR: 'SUPERVISOR', PROJECT_MANAGER: 'PROJECT_MANAGER', REPORTER: 'REPORTER' }
 let actor = { id: 'pm', role: roles.PROJECT_MANAGER }
-const auth = { useAuthStore: Object.assign(() => ({ user: actor }), { getState: () => ({ user: actor, token: 'test-token' }) }) }
+const auth = { useAuthStore: Object.assign(() => ({ user: actor }), { getState: () => ({ user: actor, token: 'test-token' }), subscribe: () => () => {} }) }
 const storage = { getFromStorage: (_, fallback) => fallback, saveToStorage() {}, STORAGE_KEYS: { TRIAGE_CASES: 'cases' } }
 function load(file, mocks = {}) {
   const source = fs.readFileSync(path.resolve(file), 'utf8').replaceAll('import.meta.env', '({VITE_USE_MOCK:false})')
@@ -15,6 +15,7 @@ function load(file, mocks = {}) {
   const module = { exports: {} }
   const requireMock = name => {
     if (name in mocks) return mocks[name]
+    if (name === 'axios') return require('axios')
     if (name.endsWith('/authStore')) return auth
     if (name.endsWith('/enums')) return { RoleCode: roles }
     if (name.endsWith('/storageHelper') || name === './storageHelper') return storage
@@ -22,7 +23,7 @@ function load(file, mocks = {}) {
     if (name === './projectService') return { projectService: { fetchProjects: async () => [{ id: 'p', name: 'P' }], getProjects: () => [] } }
     throw new Error(`Missing mock: ${name} (${file})`)
   }
-  vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: { log() {}, warn() {}, error() {} }, crypto: webcrypto, setTimeout, clearTimeout,
+  vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
     sessionStorage: { getItem: () => null, setItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: undefined, URL, Blob }, { filename: file })
   return module.exports
 }
@@ -38,6 +39,65 @@ function reactMock() {
   let i = 0
   const hooks = { useState(value) { const slot = i++; states[slot] = value; return [value, next => { states[slot] = typeof next === 'function' ? next(states[slot]) : next }] }, useRef: value => ({ current: value }), useCallback: fn => fn, useMemo: fn => fn(), useEffect() {} }
   return { module: { __esModule: true, default: hooks, ...hooks }, states }
+}
+
+// A small hook/effect harness exercises the production loader without installing a framework.
+function caseLifecycleHarness() {
+  const listeners = new Set()
+  let state = { user: { id: 'pm', role: roles.PROJECT_MANAGER }, token: 'test-token', isAuthenticated: true }
+  const store = Object.assign(selector => selector(state), {
+    getState: () => state,
+    subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) }
+  })
+  const changeSession = patch => {
+    const before = state; state = { ...state, ...patch }
+    listeners.forEach(listener => listener(state, before))
+  }
+  const writes = []; const errors = []; const calls = []
+  const stored = { ...storage, saveToStorage: (key, value) => writes.push(json(value)) }
+  const client = { get: (url, config) => {
+    if (url === '/projects') return Promise.resolve(response({ items: [{ id: 'p', name: 'P' }, { id: 'q', name: 'Q' }] }))
+    return new Promise((resolve, reject) => calls.push({ url, config, resolve, reject }))
+  } }
+  const serviceModule = load('src/api/services/triageService.ts', {
+    '../client': { apiClient: client }, '../../store/authStore': { useAuthStore: store }, './storageHelper': stored
+  })
+  const values = []; const effects = []
+  let slot = 0; let hook; let view
+  const hooks = {
+    useState(initial) {
+      const index = slot++
+      if (!(index in values)) values[index] = typeof initial === 'function' ? initial() : initial
+      return [values[index], value => { values[index] = typeof value === 'function' ? value(values[index]) : value }]
+    },
+    useMemo: fn => fn(),
+    useEffect(setup, dependencies) {
+      const index = slot++
+      const previous = effects[index]
+      if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i]))) {
+        effects[index] = { setup, dependencies, cleanup: previous?.cleanup, pending: true }
+      }
+    }
+  }
+  const mockReact = { __esModule: true, default: hooks, ...hooks }
+  hook = load('src/pages/(pm)/ai-review/useAIReviewState.ts', {
+    react: mockReact, '../../../store/authStore': { useAuthStore: store },
+    '../../../api/services/triageService': serviceModule,
+    './useAIReviewFilters': { useAIReviewFilters: ({ cases }) => ({ filteredCases: cases }) },
+    './useAIReviewDrawer': { useAIReviewDrawer: () => ({}) },
+    './useAIReviewActions': { useAIReviewActions: () => ({}) },
+    './useAIReviewLinkActions': { useAIReviewLinkActions: () => ({}) },
+    __console: { log() {}, warn() {}, error: (...args) => errors.push(args) },
+    __setTimeout: () => 0
+  }).useAIReviewState
+  const render = () => { slot = 0; view = hook(); return view }
+  const commit = () => effects.forEach(effect => {
+    if (effect.pending) { effect.cleanup?.(); effect.cleanup = effect.setup(); effect.pending = false }
+  })
+  const unmount = () => effects.forEach(effect => effect.cleanup?.())
+  const strictRestart = () => effects.forEach(effect => { effect.cleanup?.(); effect.cleanup = effect.setup() })
+  const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); return render() }
+  return { serviceModule, calls, writes, errors, changeSession, store, render, commit, unmount, strictRestart, flush }
 }
 ;(async () => {
   await test('CONCLUDED NO_DEFECT conflicts with new intent; no POST', async () => {
@@ -117,18 +177,18 @@ function reactMock() {
       actor = { id: 'different-session', role: roles.SUPERVISOR }
       return response({ items: [detail()] })
     } })
-    await assert.rejects(service.getCases({ projectId: 'p' }), /Phiên đã thay đổi/)
+    await assert.rejects(service.getCases({ projectId: 'p' }), error => require('axios').isCancel(error))
   })
-  await test('old list scope response cannot save over newer list', async () => {
+  await test('independent list consumers complete without canceling each other', async () => {
     let resolveOld; let calls = 0
     const service = triage({ get: async url => {
       if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }] })
       if (++calls === 1) return new Promise(resolve => { resolveOld = resolve })
       return response({ items: [] })
     } })
-    const old = service.getCases({ projectId: 'p' }); const rejected = assert.rejects(old, /scope\/phiên cũ/)
+    const old = service.getCases({ projectId: 'p' })
     while (!resolveOld) await new Promise(resolve => setImmediate(resolve))
-    await service.getCases({ projectId: 'p' }); resolveOld(response({ items: [detail()] })); await rejected
+    await service.getCases({ projectId: 'p' }); resolveOld(response({ items: [detail()] })); assert.equal((await old).length, 1)
   })
   await test('Reporter request failure retains staff and exposes partial/retry error', async () => {
     actor = { id: 'sup', role: roles.SUPERVISOR }
@@ -201,6 +261,114 @@ function reactMock() {
     assert.equal(cases[0].pm_notes, 'server request')
     assert.ok(notices[0].includes('Đã ghi nhận yêu cầu bổ sung bằng chứng'))
     assert.ok(notices[0].includes('Chưa tạo hoặc giao nhiệm vụ'))
+  })
+
+  await test('Case lifecycle: StrictMode setup/cleanup/setup ignores old success without stopping new loading', async () => {
+    const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush()
+    assert.equal(h.calls.length, 1)
+    const oldSignal = h.calls[0].config.signal
+    h.strictRestart(); await h.flush()
+    assert.equal(oldSignal.aborted, true); assert.equal(h.calls.length, 2)
+    // API double ignores signal, just as an already completed transport may still resolve.
+    h.calls[0].resolve(response({ items: [detail({ id: 'old' })] }))
+    let view = await h.flush()
+    assert.equal(view.isLoading, true); assert.equal(h.errors.length, 0); assert.equal(h.writes.length, 0)
+    h.calls[1].resolve(response({ items: [detail({ id: 'new' })] }))
+    // ALL includes both projects, finish q scope too.
+    await h.flush(); h.calls[2].resolve(response({ items: [] }))
+    view = await h.flush()
+    assert.equal(view.cases[0].id, 'new'); assert.equal(view.isLoading, false)
+    assert.equal(view.loadError, null); assert.equal(view.toastMessage, null); assert.equal(h.errors.length, 0)
+    assert.equal(h.writes.length, 1); assert.equal(h.writes[0][0].id, 'new')
+  })
+  await test('Case lifecycle: unmount and late real error is silent/no cache write', async () => {
+    const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush(); h.unmount()
+    h.calls[0].reject(failure(500, 'internal_error')); await h.flush()
+    assert.equal(h.errors.length, 0); assert.equal(h.writes.length, 0)
+    assert.equal(h.render().loadError, null); assert.equal(h.render().toastMessage, null)
+  })
+  await test('Case lifecycle: retry finishes before old request, only new state/store/storage survive', async () => {
+    const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush()
+    h.render().reloadCases(); h.render(); h.commit(); await h.flush()
+    assert.equal(h.calls[0].config.signal.aborted, true)
+    h.calls[1].resolve(response({ items: [detail({ id: 'retry-result' })] })); await h.flush()
+    h.calls[2].resolve(response({ items: [] })); await h.flush()
+    h.calls[0].resolve(response({ items: [detail({ id: 'stale' })] }))
+    const view = await h.flush()
+    assert.equal(view.cases[0].id, 'retry-result'); assert.equal(view.isLoading, false)
+    assert.equal(h.writes.length, 1); assert.equal(h.writes[0][0].id, 'retry-result'); assert.equal(h.errors.length, 0)
+    assert.equal(view.toastMessage, null)
+    await assert.rejects(h.serviceModule.triageService.updateCase('stale', { pm_notes: 'bad' }), /Không tìm thấy/)
+  })
+  await test('Case lifecycle: concurrent scopes and detail reader never invalidate each other', async () => {
+    const h = caseLifecycleHarness(); const service = h.serviceModule.triageService
+    const p = service.getCases({ projectId: 'p' }); const q = service.getCases({ projectId: 'q' })
+    const d = service.getCaseById('detail-only'); await h.flush()
+    const pc = h.calls.find(call => call.config?.params?.projectId === 'p')
+    const qc = h.calls.find(call => call.config?.params?.projectId === 'q')
+    const dc = h.calls.find(call => call.url.endsWith('/detail-only'))
+    qc.resolve(response({ items: [detail({ id: 'q-row', projectId: 'q' })] })); await q
+    pc.resolve(response({ items: [detail({ id: 'p-row' })] })); assert.equal((await p)[0].id, 'p-row')
+    dc.resolve(response(detail({ id: 'detail-only' }))); assert.equal((await d).id, 'detail-only')
+    assert.equal(h.writes.length, 1); assert.equal(h.writes[0][0].id, 'q-row')
+  })
+  await test('Case lifecycle: canceled scope cannot overwrite newer scope cache', async () => {
+    const h = caseLifecycleHarness(); const service = h.serviceModule.triageService
+    const controller = new AbortController()
+    const old = service.getCases({ projectId: 'p' }, controller.signal)
+    const canceled = assert.rejects(old, error => h.serviceModule.isCaseReadCanceled(error))
+    await h.flush(); controller.abort()
+    const fresh = service.getCases({ projectId: 'q' }); await h.flush()
+    h.calls[1].resolve(response({ items: [detail({ id: 'q-row', projectId: 'q' })] })); await fresh
+    h.calls[0].resolve(response({ items: [detail({ id: 'stale-p' })] })); await canceled
+    assert.equal(h.writes.length, 1); assert.equal(h.writes[0][0].id, 'q-row')
+  })
+  await test('Case lifecycle: profile replacement keeps session/request valid', async () => {
+    const h = caseLifecycleHarness(); const session = h.serviceModule.getCaseSessionKey()
+    h.render(); h.commit(); await h.flush()
+    h.changeSession({ user: { ...h.store.getState().user, full_name: 'Changed profile' } })
+    h.render(); h.commit(); assert.equal(h.serviceModule.getCaseSessionKey(), session)
+    assert.equal(h.calls[0].config.signal.aborted, false)
+    h.calls[0].resolve(response({ items: [detail()] })); await h.flush()
+    h.calls[1].resolve(response({ items: [] })); const view = await h.flush()
+    assert.equal(view.cases.length, 1); assert.equal(h.errors.length, 0)
+  })
+  await test('Case lifecycle: logout/login same account invalidates epoch, clears old state/cache', async () => {
+    const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush()
+    const key = h.serviceModule.getCaseSessionKey(); const previous = h.store.getState()
+    h.changeSession({ user: null, isAuthenticated: false, token: null })
+    h.changeSession(previous)
+    assert.notEqual(h.serviceModule.getCaseSessionKey(), key)
+    assert.equal(h.render().cases.length, 0); h.commit(); await h.flush()
+    h.calls[0].reject(failure(403, 'old-session-forbidden')); await h.flush()
+    assert.equal(h.errors.length, 0); assert.equal(h.render().isLoading, true)
+    assert.ok(h.writes.every(rows => rows.length === 0))
+    h.calls[1].resolve(response({ items: [] })); await h.flush(); h.calls[2].resolve(response({ items: [] })); await h.flush()
+    assert.equal(h.render().cases.length, 0); assert.equal(h.render().isLoading, false)
+  })
+  for (const patch of [{ user: { id: 'other', role: roles.PROJECT_MANAGER } }, { user: { id: 'pm', role: roles.SUPERVISOR } }, { token: 'new-test-session' }]) {
+    await test(`Case lifecycle: identity change ${Object.keys(patch).join()} aborts old results`, async () => {
+      const h = caseLifecycleHarness(); const old = h.serviceModule.triageService.getCases({ projectId: 'p' })
+      const canceled = assert.rejects(old, error => h.serviceModule.isCaseReadCanceled(error)); await h.flush()
+      h.changeSession(patch); h.calls[0].resolve(response({ items: [detail()] })); await canceled
+      assert.ok(h.writes.every(rows => rows.length === 0))
+    })
+  }
+  for (const error of [failure(403, 'access_forbidden'), failure(500, 'internal_error'), new Error('Network Error')]) {
+    await test(`Case lifecycle: active ${error.message} remains visible and preserves error identity`, async () => {
+      const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush()
+      h.calls[0].reject(error); const view = await h.flush()
+      assert.equal(view.loadError, error.message); assert.ok(view.toastMessage.includes(error.message))
+      assert.equal(view.isLoading, false); assert.equal(h.errors.length, 1); assert.equal(h.errors[0][1], error)
+      assert.equal(h.writes.length, 0)
+    })
+  }
+  await test('Case lifecycle: successful empty collection is empty, not an API error', async () => {
+    const h = caseLifecycleHarness(); h.render(); h.commit(); await h.flush()
+    h.calls[0].resolve(response({ items: [] })); await h.flush(); h.calls[1].resolve(response({ items: [] }))
+    const view = await h.flush()
+    assert.equal(view.cases.length, 0); assert.equal(view.isLoading, false); assert.equal(view.loadError, null)
+    assert.equal(h.errors.length, 0); assert.equal(h.writes.length, 1)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
-import { triageService } from '../../../api/services/triageService'
+import { triageService, getCaseSessionKey, isCaseReadCanceled } from '../../../api/services/triageService'
 import { useAuthStore } from '../../../store/authStore'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
@@ -8,11 +8,13 @@ import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
-  const user = useAuthStore(state => state.user)
+  const session = useAuthStore(() => getCaseSessionKey())
+  const [loadedSession, setLoadedSession] = useState(session)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
   // Dữ liệu hồ sơ tiếp nhận từ Candidate3 Backend CSDL
-  const [cases, setCases] = useState<TriageCase[]>([])
+  const [caseData, setCases] = useState<TriageCase[]>([])
+  const cases = loadedSession === session ? caseData : []
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [selectedCaseId, setSelectedCaseId] = useState<string>('')
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
@@ -25,35 +27,38 @@ export const useAIReviewState = () => {
 
   // Nạp dữ liệu từ Backend CSDL khi khởi tạo
   useEffect(() => {
-    let isMounted = true
-    const actor = user
+    const controller = new AbortController()
+    const isActive = () => !controller.signal.aborted && session === getCaseSessionKey()
+    setLoadedSession(session)
     setCases([])
     setSelectedCaseId('')
     setLoadError(null)
+    setToastMessage(null)
     const loadCases = async () => {
       try {
         setIsLoading(true)
-        const data = await triageService.getCases()
-        if (isMounted && useAuthStore.getState().user === actor) {
+        const data = await triageService.getCases(undefined, controller.signal)
+        if (isActive()) {
           setCases(data)
           if (data.length > 0) {
             setSelectedCaseId(data[0].id)
           }
         }
       } catch (err: any) {
+        if (!isActive() || isCaseReadCanceled(err)) return
         console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
-        if (isMounted && useAuthStore.getState().user === actor) {
+        if (isActive()) {
           setLoadError(err?.message || 'Không tải được Case')
           showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
         }
       } finally {
-        if (isMounted && useAuthStore.getState().user === actor) setIsLoading(false)
+        if (isActive()) setIsLoading(false)
       }
     }
     loadCases()
 
-    return () => { isMounted = false }
-  }, [user, reload])
+    return () => { controller.abort() }
+  }, [session, reload])
 
   const selectedCase = useMemo(() => {
     return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
@@ -119,7 +124,8 @@ export const useAIReviewState = () => {
     setSelectedCaseId,
     setExpandedMasterIds,
     showToast,
-    filteredCases: filters.filteredCases
+    filteredCases: filters.filteredCases,
+    reloadCases: () => setReload(value => value + 1)
   })
 
   // Sub-hook: Actions (Triage decisions, survey, publish, modals)
@@ -186,8 +192,8 @@ export const useAIReviewState = () => {
   return {
     cases,
     setCases,
-    isLoading,
-    loadError,
+    isLoading: loadedSession !== session || isLoading,
+    loadError: loadedSession === session ? loadError : null,
     reloadCases: () => setReload(value => value + 1),
     expandedMasterIds,
     handleToggleExpandMaster,
