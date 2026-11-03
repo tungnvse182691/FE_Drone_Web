@@ -149,18 +149,20 @@ export const ProjectList: React.FC = () => {
   })
   const [handoverFiles, setHandoverFiles] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
   // Reset form sạch khi mở modal tạo mới (dứt khoát không để mock data)
   const handleOpenCreateModal = () => {
     setNewProjectName('')
     setNewProjectCode('')
     setNewProjectRegion('')
-    setNewProjectPM(availablePms[0]?.id || '72f84201-a001-4000-8000-000000000002')
+    setNewProjectPM(availablePms[0]?.id || '')
     setNewStartDate(new Date().toISOString().split('T')[0])
     const d = new Date()
     d.setFullYear(d.getFullYear() + 3)
     setNewEndDate(d.toISOString().split('T')[0])
     setHandoverFiles([])
+    setCreateErrorMessage(null)
     setIsModalOpen(true)
   }
 
@@ -168,6 +170,7 @@ export const ProjectList: React.FC = () => {
   const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setCreateErrorMessage(null)
     try {
       const created = await projectService.createProject({
         code: newProjectCode,
@@ -183,7 +186,9 @@ export const ProjectList: React.FC = () => {
       setIsModalOpen(false)
       showToast(`Khởi tạo thành công dự án [${created.code}] và phân bổ PM [${created.pm_name}]!`)
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khởi tạo dự án')
+      const msg = err.message || 'Lỗi khởi tạo dự án'
+      setCreateErrorMessage(msg)
+      showToast(msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -348,11 +353,20 @@ export const ProjectList: React.FC = () => {
       {/* MODAL KHỞI TẠO DỰ ÁN (BƯỚC SUP-01: DA01, BR-01, FR-04) */}
       <CreateProjectModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false)
+          setCreateErrorMessage(null)
+        }}
         projectName={newProjectName}
-        onChangeProjectName={setNewProjectName}
+        onChangeProjectName={(val) => {
+          setNewProjectName(val)
+          if (createErrorMessage) setCreateErrorMessage(null)
+        }}
         projectCode={newProjectCode}
-        onChangeProjectCode={setNewProjectCode}
+        onChangeProjectCode={(val) => {
+          setNewProjectCode(val)
+          if (createErrorMessage) setCreateErrorMessage(null)
+        }}
         projectRegion={newProjectRegion}
         onChangeProjectRegion={setNewProjectRegion}
         projectPM={newProjectPM}
@@ -365,6 +379,7 @@ export const ProjectList: React.FC = () => {
         handoverFiles={handoverFiles}
         onChangeHandoverFiles={setHandoverFiles}
         isSubmitting={isSubmitting}
+        errorMessage={createErrorMessage}
         onSubmit={handleCreateProjectSubmit}
       />
 

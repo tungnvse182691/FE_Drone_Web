@@ -81,7 +81,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   const handleClose = onClose || onCloseTab
 
   return (
-    <div className="w-full bg-white flex flex-col h-full max-h-[90vh] overflow-hidden rounded-2xl">
+    <div className="w-full bg-white flex flex-col h-full max-h-[95vh] overflow-hidden rounded-2xl">
       {/* Modal Header */}
       <DrawerHeader
         selectedCase={selectedCase}
@@ -90,7 +90,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
       />
 
       {/* Modal Body - Scrollable */}
-      <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+      <div className="p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT COLUMN: Ảnh, Bản đồ, Người phản ánh, Nhóm gộp trùng */}
           <div className="lg:col-span-7 space-y-4">

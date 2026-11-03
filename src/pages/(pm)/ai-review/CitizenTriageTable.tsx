@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 import { TriageCard } from './TriageCard'
@@ -98,16 +98,16 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
                       code: dup?.code
                         ? dup.code.startsWith('#') ? dup.code : `#${dup.code}`
                         : `#REP-${cleanCode.slice(0, 8).toUpperCase()}`,
-                      source: 'CITIZEN' as const,
-                      source_label: dup?.source || 'Ứng dụng Người dân',
-                      source_detail: 'Phản ánh người dân lân cận đã được gộp vào hồ sơ',
-                      reporter_name: dup?.reporter || 'Người dân phản ánh',
+                      source: 'PATROL' as const,
+                      source_label: dup?.source || 'Đội tuần tra',
+                      source_detail: 'Biên bản tuần tra lân cận đã được gộp vào hồ sơ',
+                      reporter_name: dup?.reporter || 'Tổ tuần tra hiện trường',
                       project_id: item.project_id,
                       project_name: item.project_name,
                       stationing: item.stationing,
                       lane: item.lane,
                       defect_title: dup
-                        ? `Phản ánh người dân lân cận (${dup.distance_m}m)`
+                        ? `Biên bản tuần tra lân cận (${dup.distance_m}m)`
                         : `Báo cáo hiện trường (${cleanCode.slice(0, 8)})`,
                       defect_type: item.defect_type,
                       severity: item.severity,
@@ -154,3 +154,4 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
     </div>
   )
 }
+

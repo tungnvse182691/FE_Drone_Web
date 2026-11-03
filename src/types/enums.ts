@@ -3,6 +3,7 @@ export enum RoleCode {
   SUPERVISOR     = 'SUPERVISOR',
   DRONE_OPERATOR = 'DRONE_OPERATOR',
   REPAIR_CREW    = 'REPAIR_CREW',
+  REPORTER       = 'REPORTER',
 }
 
 export enum DefectStatus {

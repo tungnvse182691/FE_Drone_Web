@@ -30,8 +30,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               <Icon name="send" size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold text-brand-dark">Công Bố Tiến Độ Xử Lý Cho Người Dân (PA07)</h3>
-              <p className="text-xs text-slate-500">Đồng bộ thông báo công khai xuống ứng dụng di động Citizen</p>
+              <h3 className="text-base font-bold text-brand-dark">Công Bố Tiến Độ Xử Lý Cho Người Dân</h3>
+              <p className="text-xs text-slate-500">Đồng bộ thông báo công khai xuống ứng dụng di động người dân</p>
             </div>
           </div>
           <button
@@ -80,7 +80,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="send" size={16} />
-            <span>Công Bố Xuống App Citizen</span>
+            <span>Công Bố Cho Người Dân</span>
           </button>
         </div>
       </div>

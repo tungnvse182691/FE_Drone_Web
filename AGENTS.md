@@ -5,6 +5,34 @@
 
 ---
 
+# Andrej Karpathy Coding Guidelines & Behavior Rules
+
+Bạn là AI Assistant phát triển dự án này. Hãy luôn tuân thủ nghiêm ngặt 4 nguyên tắc sau trong MỌI tác vụ:
+
+## 1. Think Before Coding (Nghĩ trước khi làm)
+- Không tự tiện đoán mò. Không giấu sự mơ hồ hoặc thiếu rõ ràng của yêu cầu.
+- Nếu có nhiều cách hiểu hoặc nhiều phương án thiết kế khác nhau, hãy nêu rõ các lựa chọn và hỏi tôi trước, KHÔNG được tự ý chọn ngầm.
+- Nếu giải pháp của tôi đưa ra có cách làm khác đơn giản hơn nhiều, hãy đề xuất và phản biện.
+
+## 2. Simplicity First (Tối giản là trên hết)
+- Chỉ viết lượng code tối thiểu cần thiết để giải quyết đúng bài toán được yêu cầu. Không phỏng đoán thêm tính năng tương lai.
+- Không tạo các lớp trừu tượng (abstraction), generic wrapper cho các đoạn code chỉ dùng 1 lần.
+- Không thêm các cấu hình, tùy chọn linh hoạt ("flexibility") mà tôi không yêu cầu.
+- Đoạn code nào 50 dòng giải quyết được thì tuyệt đối không viết thành 200 dòng.
+
+## 3. Surgical Changes (Can thiệp chính xác như phẫu thuật)
+- Chỉ chỉnh sửa đúng những file và những dòng code trực tiếp phục vụ yêu cầu.
+- Tuyệt đối không "tiện tay" refactor, format lại code, xóa comment hoặc sửa code ở các vùng xung quanh không liên quan.
+- Giữ nguyên coding style và quy ước đặt tên hiện có của dự án.
+- Nếu thay đổi của bạn tạo ra code thừa (unused import, unused variable do chính bạn tạo ra), hãy tự dọn dẹp. Nhưng KHÔNG xóa dead code cũ của dự án trừ khi được yêu cầu.
+- Mọi dòng code thay đổi trong git diff phải giải thích được là phục vụ trực tiếp cho yêu cầu của tôi.
+
+## 4. Goal-Driven Execution (Lặp cho tới khi nghiệm thu)
+- Luôn xác định tiêu chí thành công (success criteria) rõ ràng trước khi báo hoàn thành (ví dụ: build không lỗi, endpoint trả đúng mã, test pass).
+- Đối với tác vụ phức tạp gồm nhiều bước, hãy kiểm tra và xác nhận từng bước trước khi chuyển sang bước tiếp theo.
+
+---
+
 ## 🛡️ PHẦN A: KỶ LUẬT CHỐNG AI "NGÁO" (BẮT BUỘC TUÂN THỦ 100%)
 
 Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commitment), **tưởng tượng thay vì chạy thật**, và **đoán tên/API/field thay vì tra cứu**.
@@ -44,30 +72,6 @@ Phiên bản Web Dashboard phục vụ **2 vai trò chính tại văn phòng**:
 
 ---
 
-## 🗺️ PHẦN C: BẢNG MAPPING 18 MÀN HÌNH STITCH → ROUTE & FILE
-
-Tổ chức phẳng theo thư mục vai trò (tương tự như Mobile Expo Router):
-
-| STT | Tên màn hình Stitch | Vai trò | Route URL | File Component |
-|:---:|---|:---:|---|---|
-| **01** | Đăng nhập & Đổi mật khẩu lần đầu | Chung | `/login`, `/force-change-password` | `src/pages/(auth)/Login.tsx` |
-| **02** | Dashboard KPI & Lối tắt PM | PM | `/pm/dashboard` | `src/pages/(pm)/PMDashboard.tsx` |
-| **03** | Dashboard KPI & Rủi ro Giám sát | SUP | `/sup/dashboard` | `src/pages/(sup)/SupDashboard.tsx` |
-| **04** | Danh sách dự án bảo hành | Chung | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/ProjectList.tsx` |
-| **05** | Danh sách yêu cầu bay khảo sát | PM | `/pm/surveys` | `src/pages/(pm)/SurveyRequests.tsx` |
-| **06** | Tạo yêu cầu bay khảo sát Drone | PM | `/pm/surveys/create` | `src/pages/(pm)/CreateSurvey.tsx` |
-| **07** | Hộp thư tiếp nhận lỗi do AI phát hiện | PM | `/pm/ai-inbox` | `src/pages/(pm)/AIReviewInbox.tsx` |
-| **08** | Thẩm định chi tiết lỗi AI (Bounding box) | PM | `/pm/defects/:id/verify-a` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **09** | So sánh ảnh hư hỏng đa kỳ (Temporal) | PM | `/pm/defects/:id/verify-b` | `src/pages/(pm)/DefectDetailVerify.tsx` |
-| **10** | Gom đợt sửa chữa & Lập phương án khối lượng kỹ thuật | PM | `/pm/proposals` (alias: `/pm/repair-batches/create`) | `src/pages/(pm)/RepairProposals.tsx` |
-| **11** | Trình duyệt hồ sơ đợt sửa chữa | PM | `/pm/proposals/:id` (alias: `/pm/repair-batches/:id/submit`) | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
-| **12** | Danh sách & Thẩm duyệt đợt sửa chữa | SUP | `/sup/proposals`, `/sup/approvals/:id` | `src/pages/(sup)/ProposalApprovalDetail.tsx` |
-| **13** | Yêu cầu sửa đổi / Từ chối đợt sửa | SUP | `/sup/approvals/:id/reject` | `src/pages/(sup)/BatchRejection.tsx` |
-| **14** | Phân công đội thi công (Repair Crew) | PM | `/pm/repair-batches/assign` | `src/pages/(pm)/AssignCrew.tsx` |
-| **15** | Theo dõi nhiệm vụ đo đạc bổ sung | PM | `/pm/field-tasks` | `src/pages/(pm)/FieldTasks.tsx` |
-| **16** | Nghiệm thu chất lượng ngoài hiện trường | SUP | `/sup/acceptance`, `/sup/acceptance/:batchId` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
-| **17** | Xác nhận hoàn thành công việc | PM | `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` |
-| **18** | Báo cáo phân tích rủi ro & Ký đóng đợt | SUP | `/sup/risk-analytics`, `/sup/signoff` | `src/pages/(sup)/RiskAnalytics.tsx` |
 
 ---
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 
@@ -34,6 +35,20 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   onUnlinkReport
 }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const basePath = isSupervisor ? '/sup' : '/pm'
+
+  const handleOpenDetail = () => {
+    if (item.source === 'DRONE_AI') {
+      navigate(`${basePath}/defects/${item.id}/verify-a`, {
+        state: { from: location.pathname }
+      })
+    } else {
+      onSelectCase(item)
+    }
+  }
+
   const isSelected = item.id === selectedCaseId
   const isUnassigned = !item.project_id || item.project_id === ''
 
@@ -151,13 +166,13 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   // Nguồn tiếp nhận chuẩn hóa tiếng Việt (Xóa icon trang trí thừa)
   const sourceLabel = (() => {
     if (item.source === 'DRONE_AI') return 'Thiết bị bay quét'
-    if (item.source === 'CITIZEN') return item.reporter_name || 'Người dân báo'
-    return 'Đội tuần tra'
+    if (item.source === 'CITIZEN') return item.reporter_name ? `Người dân: ${item.reporter_name}` : 'Người dân báo'
+    return item.reporter_name ? `Tổ tuần tra: ${item.reporter_name}` : 'Đội tuần tra'
   })()
 
   return (
     <div
-      onClick={() => onSelectCase(item)}
+      onClick={handleOpenDetail}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`rounded-[20px] overflow-hidden flex flex-col justify-between cursor-pointer select-none relative ${
@@ -224,12 +239,6 @@ export const TriageCard: React.FC<TriageCardProps> = ({
           <span className="font-mono text-slate-700">
             {item.stationing || 'Lý trình cập nhật'}
           </span>
-          {item.lane && (
-            <>
-              <span>•</span>
-              <span>{item.lane}</span>
-            </>
-          )}
           <span>•</span>
           <span>{item.time_ago}</span>
         </div>
@@ -288,7 +297,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
                         {child.code}
                       </div>
                       <div className="text-[10px] text-slate-500 truncate">
-                        {child.source === 'CITIZEN' ? child.reporter_name || 'Người dân báo' : 'Tuần tra'} • {child.defect_title}
+                        {child.reporter_name || 'Tổ tuần tra'} • {child.defect_title}
                       </div>
                     </div>
                     {!isSupervisor && (
@@ -333,7 +342,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
                 type="button"
                 onClick={(e) => onOpenTriageProject(item, e)}
                 className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5 hover:bg-amber-200 transition-colors cursor-pointer"
-                title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
+                title="Điều phối gán phản ánh vào dự án"
               >
                 Điều phối dự án
               </button>
@@ -361,7 +370,10 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
             <button
               type="button"
-              onClick={() => onSelectCase(item)}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleOpenDetail()
+              }}
               className="px-3.5 py-1.5 rounded-xl bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
               <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>

@@ -26,7 +26,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       setSourceFilter('DRONE_AI')
     } else if (sourceParam === 'citizen') {
       setSourceFilter('CITIZEN')
-    } else if (sourceParam === 'patrol') {
+    } else if (sourceParam === 'patrol' || sourceParam === 'field') {
       setSourceFilter('PATROL')
     }
   }, [sourceParam])
@@ -56,7 +56,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       if (lineTypeFilter === 'BRANCH_LINE' && !c.stationing.includes('Nhánh')) return false
 
       // 5. Dự án & Ưu tiên
-      if (projectFilter !== 'ALL' && c.project_name !== projectFilter) return false
+      if (projectFilter !== 'ALL' && c.project_name !== projectFilter && c.project_id !== projectFilter) return false
       if (priorityFilter !== 'ALL' && c.severity !== priorityFilter) return false
 
       // 6. Search Query
@@ -82,9 +82,9 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const mergedCount = cases.filter((c) => c.status === 'MERGED').length
   const surveyCount = cases.filter((c) => c.status === 'NEED_SURVEY').length
 
-  const citizenCount = cases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
+  const citizenCount = cases.filter((c) => c.source === 'PATROL').length
   const unassignedCitizenCount = cases.filter(
-    (c) => (c.source === 'CITIZEN' || c.source === 'PATROL') && (!c.project_id || c.project_id === '')
+    (c) => c.source === 'PATROL' && (!c.project_id || c.project_id === '')
   ).length
   const droneAICount = cases.filter((c) => c.source === 'DRONE_AI').length
 

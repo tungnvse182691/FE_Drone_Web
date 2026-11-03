@@ -47,9 +47,6 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">Điều Phối Phản Ánh Vào Dự Án</h3>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200 font-bold">
-                  API-024
-                </span>
               </div>
               <p className="text-xs text-slate-500">Phân công tuyến đường bảo hành & định hướng xác minh cho Chỉ huy trưởng</p>
             </div>

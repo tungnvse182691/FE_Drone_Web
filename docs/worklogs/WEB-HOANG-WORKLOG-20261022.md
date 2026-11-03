@@ -628,3 +628,38 @@ Các thay đổi cụ thể:
 - PATCH SĐT nhân sự không còn lỗi 400 khi nhập số có dấu chấm.
 - Bản đồ MapLibre hiển thị liên tục từ zoom 1 đến zoom 20, không còn vùng xám.
 - Modal chỉnh sửa nhân sự gọn gàng, không còn text kỹ thuật nội bộ lộ ra ngoài.
+
+
+---
+
+## Cập nhật 03/11/2026 — Tiếp nhận Case, danh bạ Reporter và tạo dự án
+
+**Nhánh:** `hoang`. **Mốc trước thay đổi:** `5c70aeb`. Bản ghi này tổng hợp diff chưa commit của Hoàng so với mốc đó; không khẳng định mọi phần đã nghiệm thu API. Chỉ bổ sung vào worklog hiện có, không tạo thêm file báo cáo.
+
+### Nội dung thay đổi trong source
+
+- **Tiếp nhận và thẩm định phản ánh:** cập nhật ánh xạ Case, thông tin người gửi/nguồn tiếp nhận, `report_ids`, trạng thái `AWAITING_EVIDENCE` và kết luận `NEEDS_EVIDENCE`. Với nguồn CITIZEN/PATROL, nút xác minh gửi yêu cầu bổ sung bằng chứng thay vì tự coi đã có Defect; chặn CONFIRMED khi chưa tìm được Defect nguồn. Có thay đổi xử lý Case đã CONCLUDED và retry 409/412. Nguồn: `src/api/services/triageService.ts`, `src/types/domain.ts`, `src/pages/(pm)/ai-review/useAIReviewActions.ts`.
+- **Công bố kết quả:** bổ sung resolve recipient report/evidence/defect IDs và truyền report IDs từ hồ sơ; thông báo lỗi khi không xác định được người nhận. Đây là tiến độ tích hợp, còn các ID seed hardcode cần review trước nghiệm thu. Nguồn: `triageService.ts`, `ai-review/PublishModal.tsx`, `useAIReviewActions.ts`.
+- **Giao diện review:** điều chỉnh bộ lọc nguồn/dự án, bảng/card, drawer/modal, thông tin người gửi, ảnh và form quyết định; bỏ một số trường nhập mức độ/khẩn cấp/kích thước ở form tiếp nhận để nhấn mạnh bước đo hiện trường. Nguồn: `src/pages/(pm)/ai-review/`, `AIReviewInbox.tsx`, `defect-verify/DefectVerifyForm.tsx`.
+- **Danh sách AI:** cho `getSurveyDetections` nhận mission/project đã tải, giảm tải lại; khi collection AI run không có kết quả thì đọc theo survey; loại trùng detection, bỏ dự án mẫu mặc định khi không có dự án, rút gọn nhãn/mô tả khung hình. Một số lookup candidate facts/disposition trong vòng lặp tổng hợp bị bỏ và cần kiểm tra hồi quy trạng thái. Nguồn: `src/api/services/surveyService.ts`.
+- **Quản trị Reporter:** thêm RoleCode.REPORTER và mapping/nhãn, tải/gộp danh bạ Reporter với staff, điều chỉnh badge, modal và submit theo loại tài khoản; Reporter không dùng phần phân công dự án/vai trò nội bộ. Đây là quản trị tài khoản trên Web, không tạo khu vực Web dành Reporter. Nguồn: `personnelService.ts`, `src/types/enums.ts`, `src/pages/(sup)/system-control/{AccountsTab,EditUserModal,usePersonnelState}`.
+- **Tạo dự án:** trim tên/mã, viết hoa mã, hiển thị lỗi ngay trong modal, xử lý thông báo validation/quyền/trùng mã, bỏ PM seed mặc định khi mở form không có PM. Nguồn: `projectService.ts`, `src/pages/(pm)/ProjectList.tsx`, `projects/CreateProjectModal.tsx`.
+- **Khác:** điều chỉnh điều kiện vai trò ở `ProfilePage.tsx`; cập nhật nguyên tắc làm việc trong `AGENTS.md`. Giữ nguyên toàn bộ sửa đổi sẵn có của Hoàng, không refactor thêm.
+
+### Kiểm chứng thực chạy trong lần chốt commit
+
+- `npm run build` lần đầu: TypeScript qua; Vite/esbuild dừng vì Windows VirtualAlloc errno=1455 (thiếu bộ nhớ).
+- Chạy lại cùng script với biến môi trường chỉ áp dụng cho tiến trình `GOMAXPROCS=2`, `GOGC=50`: **PASS, exit 0**, 2014 modules; không sửa cấu hình dự án. Còn cảnh báo Tailwind `duration-[250ms]` và chunk JS lớn hơn 500 kB.
+- `git diff --check`: còn whitespace ở `CitizenTriageTable.tsx` (dòng trống EOF) và hai comment trong `useAIReviewActions.ts`; giữ nguyên, không tự format code của Hoàng.
+- Quét mẫu credential/token/private key đã biết trên các dòng thêm: không phát hiện mẫu khớp. Đây không phải chứng nhận toàn repository không có bí mật.
+- FE đã được khởi động trước đó và GET trang gốc trả HTTP 200. Chưa kiểm thử tương tác browser, mutation API, Docker/SQL hoặc toàn bộ luồng phân quyền; không lấy dữ liệu hiển thị làm bằng chứng ghi backend thành công.
+
+### Điểm cần Codex review trước nghiệm thu
+
+1. `triageService.ts`: evidence/report ID hardcode và fallback cuối; nguồn GPS/nội dung mặc định; quyền đọc evidence/recipient đúng Case.
+2. CONCLUDED shortcut có đang lấy kết luận người dùng vừa chọn thay vì outcome thực server không; retry 409/412 tự đổi Idempotency-Key/version có phù hợp contract và có cần người dùng xác nhận lại không.
+3. NEEDS_EVIDENCE chỉ là kết luận/request; toast “đã chuyển sang nhiệm vụ đo” có producer tạo FIELD thực sự hay chưa. Không coi pre-Defect producer đã hoàn tất khi thiếu evidence.
+4. `surveyService.ts`: fallback collection/lookup bị nuốt lỗi; removal candidate facts có làm mất disposition/version hoặc hiển thị pending sai không.
+5. Reporter list/update: guard/DTO backend, lỗi tải Reporter bị chuyển thành [], trường nào được phép sửa; tạo dự án không gom mọi 409 thành trùng mã sai nguyên nhân.
+
+**Trạng thái bàn giao:** commit để review, chưa tự coi review PASS. Frontend đang chuyển mock sang API; mock độc lập là phần đang phát triển, chỉ báo lỗi khi luồng đã tích hợp che thất bại hoặc báo thành công sai. Spec đối chiếu: `docs/specs/17_10/`; wire: `docs/contracts/openapi.json`. Gói PROJECT_HANDOFF.zip nằm ngoài repo, không đưa vào commit này. Chưa thay đổi/chạy backend trong lần chốt commit.

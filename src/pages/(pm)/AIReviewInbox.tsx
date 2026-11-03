@@ -110,6 +110,7 @@ export const AIReviewInbox: React.FC = () => {
       {/* 2. Quick Filter Tabs & Search Controls */}
       <ReviewFilterBar
         cases={cases}
+        projectsList={activeProjects}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         pendingCount={pendingCount}

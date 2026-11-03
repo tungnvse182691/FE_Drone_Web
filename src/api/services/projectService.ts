@@ -723,11 +723,14 @@ export const projectService = {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi POST /api/v1/projects...')
         const idempotencyKey = crypto.randomUUID()
+        const formattedCode = payload.code?.trim().toUpperCase() || ''
+        const formattedName = payload.name?.trim() || ''
+
         const res = await apiClient.post<any>(
           '/projects',
           {
-            name: payload.name,
-            code: payload.code,
+            name: formattedName,
+            code: formattedCode,
             description: payload.region?.trim() || '',
             primaryPmId: payload.primaryPmId,
             handoverDate: payload.handoverDate,
@@ -742,7 +745,7 @@ export const projectService = {
         )
         console.log('✅ [CANDIDATE3 BE] Tạo dự án thành công:', res.data)
         const createdId = res.data?.projectId || res.data?.id
-        const createdCode = res.data?.projectCode || res.data?.code || payload.code
+        const createdCode = res.data?.projectCode || res.data?.code || formattedCode
         const regionVal = payload.region?.trim() || ''
 
         if (regionVal) {
@@ -772,7 +775,74 @@ export const projectService = {
         return createdHub
       } catch (err: any) {
         console.error('❌ [CANDIDATE3 BE] Lỗi tạo dự án:', err?.response?.data || err?.message)
-        throw new Error(err?.response?.data?.detail || err?.response?.data?.title || 'Không thể tạo dự án mới trên Backend.')
+
+        const status = err?.response?.status
+        const data = err?.response?.data
+        const code = data?.code
+        const detail = data?.detail
+        const errors = data?.errors
+        const inputCode = payload.code?.trim().toUpperCase() || ''
+
+        let friendlyMessage = ''
+
+        // 1. Xử lý lỗi 409 Conflict (Trùng mã dự án hoặc trùng yêu cầu)
+        if (status === 409 || code === 'project_code_conflict') {
+          friendlyMessage = `Mã dự án "${inputCode}" đã tồn tại trong cơ sở dữ liệu! Vui lòng chọn một mã dự án khác chưa từng sử dụng.`
+        } else if (code === 'duplicate_request') {
+          friendlyMessage = 'Yêu cầu khởi tạo dự án bị trùng lặp. Vui lòng thử lại sau vài giây.'
+        }
+        // 2. Xử lý lỗi 400 Bad Request (Sai định dạng dữ liệu)
+        else if (status === 400 || code === 'validation_error') {
+          if (errors && typeof errors === 'object') {
+            const errorList: string[] = []
+            for (const [field, messages] of Object.entries(errors)) {
+              const msgArr = Array.isArray(messages) ? messages : [messages]
+              const fieldLower = field.toLowerCase()
+              let fieldNameVi = field
+              if (fieldLower.includes('code')) fieldNameVi = 'Mã dự án'
+              else if (fieldLower.includes('name')) fieldNameVi = 'Tên dự án'
+              else if (fieldLower.includes('pm') || fieldLower.includes('primarypmid')) fieldNameVi = 'Chỉ huy trưởng (PM)'
+              else if (fieldLower.includes('handoverdate')) fieldNameVi = 'Ngày bàn giao'
+              else if (fieldLower.includes('warrantyenddate')) fieldNameVi = 'Ngày hết hạn bảo hành'
+
+              errorList.push(`${fieldNameVi}: ${msgArr.join(', ')}`)
+            }
+            if (errorList.length > 0) {
+              friendlyMessage = `Dữ liệu không hợp lệ: ${errorList.join('; ')}`
+            }
+          }
+          if (!friendlyMessage) {
+            if (detail && detail.toLowerCase().includes('code')) {
+              friendlyMessage = `Mã dự án "${inputCode}" không đúng định dạng quy định (tối đa 50 ký tự, in hoa, số và gạch ngang).`
+            } else {
+              friendlyMessage = detail || 'Thông tin dự án nhập vào không đúng định dạng hoặc thiếu trường bắt buộc.'
+            }
+          }
+        }
+        // 3. Xử lý lỗi 404 Not Found (Không tìm thấy PM hoặc tệp bàn giao)
+        else if (status === 404) {
+          if (code === 'project_primary_pm_not_found') {
+            friendlyMessage = 'Không tìm thấy tài khoản Chỉ huy trưởng (PM) được chỉ định trong CSDL.'
+          } else if (code === 'project_handover_file_not_found') {
+            friendlyMessage = 'Tệp biên bản bàn giao đính kèm không tồn tại trên hệ thống.'
+          } else {
+            friendlyMessage = detail || 'Không tìm thấy tài nguyên yêu cầu trên Backend.'
+          }
+        }
+        // 4. Xử lý lỗi 403 Forbidden (Không có quyền)
+        else if (status === 403 || code === 'access_forbidden') {
+          friendlyMessage = 'Bạn không có quyền khởi tạo dự án. Chức năng này chỉ dành cho tài khoản Giám sát (Supervisor).'
+        }
+        // 5. Xử lý lỗi 401 Unauthorized
+        else if (status === 401 || code === 'auth_unauthorized') {
+          friendlyMessage = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang hoặc đăng nhập lại.'
+        }
+        // 6. Các lỗi còn lại
+        else {
+          friendlyMessage = detail || data?.title || err?.message || 'Không thể tạo dự án mới trên Backend.'
+        }
+
+        throw new Error(friendlyMessage)
       }
     }
 

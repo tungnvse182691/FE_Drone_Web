@@ -45,20 +45,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
             }`}
           >
             <Icon name="location_on" size={14} />
-            <span>Bản đồ số GIS</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setDetailViewMode('SIDE_BY_SIDE')}
-            className={`px-3 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-              detailViewMode === 'SIDE_BY_SIDE'
-                ? 'bg-amber-600 text-white shadow-2xs font-bold'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-            title="So sánh song song ảnh chụp hiện trường và bản đồ số GIS"
-          >
-            <Icon name="compare" size={14} />
-            <span>So sánh song song</span>
+            <span>Vị trí bản đồ GIS</span>
           </button>
         </div>
 
@@ -72,58 +59,21 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
         </button>
       </div>
 
-      {detailViewMode === 'SIDE_BY_SIDE' ? (
-        /* Side-by-Side Dual Viewport: Photo on Left, Live GIS Map on Right */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-60 animate-in fade-in duration-150">
-          {/* Cột trái: Ảnh hiện trường */}
-          <div className="relative w-full h-full rounded-xl overflow-hidden bg-slate-900 shadow-inner group border border-slate-200">
+      {detailViewMode === 'PHOTO' ? (
+        /* Photo Viewport with Telemetry HUD */
+        <div className="relative w-full rounded-xl overflow-hidden bg-slate-900 shadow-inner group h-80 lg:h-[380px]">
+          {selectedCase.image_url ? (
             <img
               src={selectedCase.image_url}
               alt={selectedCase.defect_title}
               className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
             />
-            {/* Top-left Telemetry Tag */}
-            <div className="absolute top-2 left-2 bg-slate-950/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white font-mono text-[10px] flex items-center gap-1.5 border border-white/10">
-              <Icon name="photo_camera" size={12} className="text-brand-gold" />
-              <span>Ảnh hiện trường</span>
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1.5">
+              <Icon name="photo_camera" size={32} />
+              <span className="text-xs">Không có ảnh đính kèm</span>
             </div>
-
-            {/* Quick Zoom Button */}
-            <button
-              onClick={onOpenPhotoZoomModal}
-              type="button"
-              className="absolute bottom-2 right-2 bg-slate-950/80 hover:bg-slate-900 text-white p-1 rounded-full text-xs shadow-md border border-white/10 cursor-pointer"
-              title="Phóng to ảnh"
-            >
-              <Icon name="zoom_in" size={14} />
-            </button>
-
-            {/* Bottom-left Info */}
-            <div className="absolute bottom-2 left-2 bg-slate-900/90 text-white px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/20">
-              <span>{selectedCase.gps.lat}°, {selectedCase.gps.lng}°</span>
-            </div>
-          </div>
-
-          {/* Cột phải: Bản đồ số GIS */}
-          <div className="w-full h-full rounded-xl overflow-hidden border border-slate-200 shadow-inner relative bg-slate-100">
-            <div ref={drawerMapContainerRef} className="w-full h-full" />
-            <div className="absolute top-2 left-2 bg-slate-950/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white font-mono text-[10px] flex items-center gap-1.5 border border-white/10 z-10">
-              <Icon name="location_on" size={12} className="text-brand-gold" />
-              <span>Bản đồ số GIS</span>
-            </div>
-            <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10 z-10">
-              {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
-            </div>
-          </div>
-        </div>
-      ) : detailViewMode === 'PHOTO' ? (
-        /* Photo Viewport with Telemetry HUD */
-        <div className="relative w-full rounded-xl overflow-hidden bg-slate-900 shadow-inner group h-52">
-          <img
-            src={selectedCase.image_url}
-            alt={selectedCase.defect_title}
-            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-          />
+          )}
           {/* Top-left GPS & telemetry overlay */}
           <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
             <div className="flex items-center gap-1 font-bold text-brand-gold">
@@ -144,10 +94,10 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
                 <span className="opacity-90">Res: {selectedCase.gps.resolution_cm_px}cm/px</span>
               </>
             )}
-            {selectedCase.source === 'CITIZEN' && (
+            {selectedCase.source === 'PATROL' && (
               <>
                 <span className="opacity-40">•</span>
-                <span className="opacity-90 text-amber-300">Ảnh chụp thiết bị di động</span>
+                <span className="opacity-90 text-amber-300">Ghi nhận từ thiết bị tuần tra</span>
               </>
             )}
           </div>
@@ -183,16 +133,14 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
             </div>
           ) : (
             <div className="absolute bottom-2.5 left-2.5 bg-slate-900/90 text-white px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/20">
-              <Icon name="person" size={13} className="text-amber-400" />
-              <span>
-                Phản ánh hiện trường người dân • Chờ khảo sát kỹ thuật
-              </span>
+              <Icon name="engineering" size={13} className="text-amber-400" />
+              <span>Ghi nhận hiện trường Đội tuần tra</span>
             </div>
           )}
         </div>
       ) : (
         /* Live Mini MapLibre in Drawer */
-        <div className="w-full h-52 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
+        <div className="w-full h-80 lg:h-[380px] rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
           <div ref={drawerMapContainerRef} className="w-full h-full" />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
             {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E

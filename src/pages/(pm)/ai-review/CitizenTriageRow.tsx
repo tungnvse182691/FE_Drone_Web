@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { TriageCase } from './types'
 import { CitizenTriageChildRow } from './CitizenTriageChildRow'
@@ -37,11 +38,24 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
 }) => {
   const isSelected = item.id === selectedCaseId
   const isUnassigned = !item.project_id || item.project_id === ''
+  const navigate = useNavigate()
+  const location = useLocation()
+  const basePath = isSupervisor ? '/sup' : '/pm'
+
+  const handleOpenDetail = () => {
+    if (item.source === 'DRONE_AI') {
+      navigate(`${basePath}/defects/${item.id}/verify-a`, {
+        state: { from: location.pathname }
+      })
+    } else {
+      onSelectCase(item)
+    }
+  }
 
   return (
     <>
       <tr
-        onClick={() => onSelectCase(item)}
+        onClick={handleOpenDetail}
         className={`cursor-pointer transition-colors ${
           isSelected
             ? 'bg-amber-50/70 border-l-4 border-l-brand-gold'
@@ -97,7 +111,11 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 {item.source === 'DRONE_AI'
                   ? 'Drone AI quét tự động'
                   : item.source === 'CITIZEN'
-                  ? item.reporter_name || 'Người dân báo'
+                  ? item.reporter_name
+                    ? `Người dân: ${item.reporter_name}`
+                    : 'Người dân báo'
+                  : item.reporter_name
+                  ? `Tuần tra: ${item.reporter_name}`
                   : 'Đội tuần đường'}
               </span>
             </span>
@@ -129,7 +147,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                   type="button"
                   onClick={(e) => onOpenTriageProject(item, e)}
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors w-fit cursor-pointer shadow-2xs"
-                  title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
+                  title="Điều phối gán phản ánh vào dự án"
                 >
                   <Icon name="domain" size={13} className="text-amber-800" />
                   <span>Điều phối dự án</span>
@@ -174,9 +192,6 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
               </span>
               <span className="font-mono text-xs font-semibold text-slate-800">
                 {item.stationing?.replace(/\[.*?\]\s*/, '')}
-              </span>
-              <span className="text-[11px] text-slate-500 whitespace-nowrap">
-                • {item.lane || 'Làn cơ giới'}
               </span>
             </div>
           </div>
@@ -247,7 +262,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
           <div className="flex items-center justify-end gap-1.5">
             <button
               type="button"
-              onClick={() => onSelectCase(item)}
+              onClick={handleOpenDetail}
               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
             >
               <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>

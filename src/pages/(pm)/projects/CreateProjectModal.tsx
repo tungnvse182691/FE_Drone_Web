@@ -26,6 +26,7 @@ export interface CreateProjectModalProps {
   handoverFiles?: string[]
   onChangeHandoverFiles?: (files: string[]) => void
   isSubmitting?: boolean
+  errorMessage?: string | null
   onSubmit: (e: React.FormEvent) => void
 }
 
@@ -48,8 +49,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   handoverFiles = [],
   onChangeHandoverFiles,
   isSubmitting = false,
+  errorMessage = null,
   onSubmit,
 }) => {
+  // Tự động chuẩn hóa mã dự án: in hoa, bỏ khoảng trắng
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitized = e.target.value.toUpperCase().replace(/\s+/g, '')
+    onChangeProjectCode(sanitized)
+  }
+
   // Validate rule BR-01 / FR-04: warrantyEndDate >= handoverDate
   const isDateInvalid = useMemo(() => {
     if (!startDate || !endDate) return false
@@ -102,6 +110,17 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={onSubmit} className="p-6 overflow-y-auto space-y-4 text-xs font-body">
+          {/* Thông báo lỗi từ Backend nếu có */}
+          {errorMessage && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
+              <Icon name="error" size={18} className="text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-relaxed">
+                <span className="font-bold text-rose-900 block mb-0.5">Không thể khởi tạo dự án:</span>
+                <span className="text-rose-700 whitespace-pre-line">{errorMessage}</span>
+              </div>
+            </div>
+          )}
+
           {/* Mã dự án & Tên dự án */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
@@ -112,10 +131,17 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 type="text"
                 required
                 value={projectCode}
-                onChange={(e) => onChangeProjectCode(e.target.value.toUpperCase())}
+                onChange={handleCodeChange}
                 placeholder="VD: PRJ-QL1A-03"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-slate-900 font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                className={`w-full px-3 py-2 border font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  errorMessage && errorMessage.toLowerCase().includes('mã dự án')
+                    ? 'border-rose-400 bg-rose-50/20 text-rose-900 focus:ring-rose-400'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-brand-gold'
+                }`}
               />
+              <p className="text-[10.5px] text-slate-500 leading-tight">
+                * Mã in hoa, không dấu (VD: PRJ-QL1A-03, DA-01). Không trùng với dự án đã có.
+              </p>
             </div>
             <div className="md:col-span-2 space-y-1">
               <label className="block font-medium text-slate-700">

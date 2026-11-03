@@ -324,7 +324,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
           {/* 2. Mức Độ Nghiêm Trọng */}
           <div>
             <label className="block font-semibold text-slate-700 uppercase tracking-wider text-[11px] mb-1.5">
-              Mức Độ Nghiêm Trọng
+              Mức Độ Nghiêm Trọng (Cảm quan qua ảnh Drone)
             </label>
             <select
               value={severity}
@@ -337,6 +337,9 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
               <option value={Severity.MEDIUM}>Trung bình</option>
               <option value={Severity.LOW}>Nhẹ / Theo dõi</option>
             </select>
+            <p className="text-[11px] text-slate-500 mt-1 italic leading-tight">
+              * Đánh giá cảm quan qua ảnh Drone để xếp thứ tự ưu tiên. Kích thước thực tế sẽ do Đội tuần tra đo đạc thực địa (Dài x Rộng x Sâu) để hệ thống phân luồng Fast Track hoặc lập Đợt sửa chữa.
+            </p>
           </div>
 
           {/* 3. Thông Số Nhận Diện AI (Đã lược bỏ các mã UUID kỹ thuật nội bộ) */}

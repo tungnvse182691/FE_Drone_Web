@@ -25,17 +25,17 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
     selectedCase.severity === 'CRITICAL'
       ? 'Khẩn cấp'
       : selectedCase.severity === 'HIGH'
-      ? 'Nghiêm trọng'
-      : selectedCase.severity === 'MEDIUM'
-      ? 'Vừa'
-      : 'Nhẹ'
+        ? 'Nghiêm trọng'
+        : selectedCase.severity === 'MEDIUM'
+          ? 'Vừa'
+          : 'Nhẹ'
 
   const urgencyLabel =
     selectedCase.urgency === 'EMERGENCY'
       ? 'Đặc biệt khẩn cấp'
       : selectedCase.urgency === 'URGENT'
-      ? 'Khẩn cấp (24-48h)'
-      : 'Bình thường'
+        ? 'Khẩn cấp (24-48h)'
+        : 'Bình thường'
 
   return (
     <>
@@ -235,7 +235,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           <div className="flex items-center justify-between">
             <span className="font-bold text-xs text-sky-800 flex items-center gap-1.5">
               <Icon name="campaign" size={16} className="text-sky-600" />
-              <span>Đã công bố tiến độ cho người dân (PA07)</span>
+              <span>Đã công bố tiến độ cho người dân</span>
             </span>
             <span className="text-[10px] text-sky-600 font-mono">{selectedCase.published_at}</span>
           </div>

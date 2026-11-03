@@ -704,7 +704,7 @@ export interface TriageCase {
   urgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
   time_ago: string
   created_at: string
-  status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED'
+  status: 'PENDING' | 'MERGED' | 'NEED_SURVEY' | 'VERIFIED' | 'REJECTED' | 'AWAITING_EVIDENCE'
   status_label: string
   image_url: string
   gps: {
@@ -723,8 +723,9 @@ export interface TriageCase {
   reporter_phone?: string
   reporter_channel?: string
   description?: string
-  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | null
+  conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | 'NEEDS_EVIDENCE' | null
   conclusion_reason?: string
+  report_ids?: string[]
   linked_report_ids?: string[]
   master_case_id?: string
   is_assigned?: boolean

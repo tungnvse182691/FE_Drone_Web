@@ -385,14 +385,14 @@ export const PROJECT_ROAD_MAP: Record<string, ProjectRoadConfig> = {
   '1a81e200-6bf8-4a98-a635-a0049de6caa7': {
     roadSectionId: 'e0010001-0000-4000-8000-000000000001',
     roadSectionCode: 'SEC-E-01',
-    roadSectionName: 'Tuyến Synthetic Project E',
+    roadSectionName: 'Phân đoạn 01',
     routeVersionId: 'e0020002-0000-4000-8000-000000000002',
     segmentSetId: 'e0030003-0000-4000-8000-000000000003',
     segmentIds: ['e0040004-0000-4000-8000-000000000004'],
     defects: [
       {
         typeCode: 'CRACK',
-        label: 'Vết nứt dọc dải phân cách (Tuyến E)',
+        label: 'Vết nứt dọc dải phân cách',
         confidence: 0.86,
         bbox: [0.42, 0.28, 0.18, 0.44],
         kmRatio: 0.33,
@@ -400,7 +400,7 @@ export const PROJECT_ROAD_MAP: Record<string, ProjectRoadConfig> = {
       },
       {
         typeCode: 'POTHOLE',
-        label: 'Ổ gà mép biên mặt đường (Tuyến E)',
+        label: 'Ổ gà mép biên mặt đường',
         confidence: 0.93,
         bbox: [0.22, 0.45, 0.24, 0.22],
         kmRatio: 0.68,
@@ -1132,13 +1132,23 @@ export const surveyService = {
    * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3
    * Kết hợp SWG-053 (/ai-mock-runs/{runId}/result), SWG-005 (/ai-candidates/{detectionId}) và SWG-020 (/candidate-decisions/{decisionId})
    */
-  async getSurveyDetections(surveyId: string): Promise<AIDetectionItem[]> {
+  async getSurveyDetections(
+    surveyId: string,
+    preloadedMission?: SurveyMissionItem,
+    preloadedProjectId?: string
+  ): Promise<AIDetectionItem[]> {
     await ensureBearerToken()
 
-    const missions = await this.getSurveys()
-    const target = missions.find((m) => m.id === surveyId || m.code === surveyId)
-    const projects = await projectService.fetchProjects().catch(() => [])
-    const projectId = target?.project_id || projects[0]?.id
+    let target = preloadedMission
+    if (!target) {
+      const missions = await this.getSurveys()
+      target = missions.find((m) => m.id === surveyId || m.code === surveyId)
+    }
+    let projectId = preloadedProjectId || target?.project_id
+    if (!projectId) {
+      const projects = await projectService.fetchProjects().catch(() => [])
+      projectId = target?.project_id || projects[0]?.id
+    }
     if (!projectId) {
       return []
     }
@@ -1327,15 +1337,9 @@ export const surveyService = {
           (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
 
         const currentRoad = getProjectRoadConfig(projectId)
-        const laneStr = target?.project_name
-          ? `Tuyến: ${target.project_name} (${currentRoad.roadSectionCode}) • Làn ${index + 1}`
-          : candFacts?.positionStatus === 'UNKNOWN' || !candFacts?.positionStatus
-          ? `Tuyến: ${currentRoad.roadSectionName} (${currentRoad.roadSectionCode}) • Làn ${index + 1}`
-          : `Đoạn tuyến: ${candFacts.positionStatus}`
+        const laneStr = ''
 
-        const descStr = candFacts?.fixtureVersion
-          ? `Phát hiện tự động bởi mô hình AI (${candFacts.fixtureVersion}) tại thời điểm ${tsMs}ms • Độ tin cậy: ${confPct}%`
-          : `Phát hiện tự động bởi mô hình AI Road-YOLOv9 trên tuyến ${currentRoad.roadSectionName} (${currentRoad.roadSectionCode}) • Độ tin cậy: ${confPct}%`
+        const descStr = `Khung hình trích xuất tại mốc ${tsMs}ms`
 
         return {
           id: d.detectionId,
@@ -2084,13 +2088,7 @@ export const surveyService = {
       projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
     }
     if (!projects || projects.length === 0) {
-      projects = [
-        {
-          id: '72f84201-c001-4000-8000-000000000001',
-          code: 'SBX-A',
-          name: 'Synthetic Project A'
-        } as any
-      ]
+      return []
     }
 
     const allItems: AIDetectionItem[] = []
@@ -2115,7 +2113,19 @@ export const surveyService = {
         }>(`/projects/${proj.id}/ai-mock-runs`)
         const succeededRuns = (runsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
 
-        for (const run of succeededRuns) {
+        if (succeededRuns.length === 0) {
+          // Các dự án lưu trữ đợt bay drone trong bảng Survey (như Dự án E)
+          const projectSurveys = await this.getSurveys(proj.id).catch(() => [] as SurveyMissionItem[])
+          for (const srv of projectSurveys) {
+            const srvDets = await this.getSurveyDetections(srv.id, srv, proj.id).catch(() => [])
+            for (const sd of srvDets) {
+              if (!allItems.some((existing) => existing.id.toLowerCase() === sd.id.toLowerCase())) {
+                allItems.push(sd)
+              }
+            }
+          }
+        } else {
+          for (const run of succeededRuns) {
           const resultRes = await apiClient
             .get<{
               detections: Array<{
@@ -2134,14 +2144,7 @@ export const surveyService = {
           for (const d of detections) {
             globalIdx += 1
             runDetIdx += 1
-            const candFacts = await this.getAiCandidateFacts(proj.id, d.detectionId).catch(() => null)
             let decisionDto: CandidateDecisionDto | null = null
-            if (candFacts?.disposition?.decisionId) {
-              decisionDto = await this.getCandidateDecision(
-                proj.id,
-                candFacts.disposition.decisionId
-              ).catch(() => null)
-            }
 
             const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
             const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
@@ -2175,21 +2178,21 @@ export const surveyService = {
               overridesMap[d.detectionId.toLowerCase()] ||
               (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
 
-            const bboxX = candOverride?.bbox?.x ?? candFacts?.boundingBox?.x ?? d.bbox[0]
-            const bboxY = candOverride?.bbox?.y ?? candFacts?.boundingBox?.y ?? d.bbox[1]
-            const bboxW = candOverride?.bbox?.width ?? candFacts?.boundingBox?.width ?? d.bbox[2]
-            const bboxH = candOverride?.bbox?.height ?? candFacts?.boundingBox?.height ?? d.bbox[3]
+            const bboxX = candOverride?.bbox?.x ?? d.bbox[0]
+            const bboxY = candOverride?.bbox?.y ?? d.bbox[1]
+            const bboxW = candOverride?.bbox?.width ?? d.bbox[2]
+            const bboxH = candOverride?.bbox?.height ?? d.bbox[3]
 
             const topPct = (bboxY * 100).toFixed(1) + '%'
             const leftPct = (bboxX * 100).toFixed(1) + '%'
             const widthPct = (bboxW * 100).toFixed(1) + '%'
             const heightPct = (bboxH * 100).toFixed(1) + '%'
             const typeCode =
-              candOverride?.rawTypeCode || linkedDbDefect?.defectTypeCode || candFacts?.typeCode || d.typeCode
+              candOverride?.rawTypeCode || linkedDbDefect?.defectTypeCode || d.typeCode
             const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
-            const confVal = candFacts?.confidence ?? d.confidence
+            const confVal = d.confidence
             const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
-            const tsMs = candFacts?.timestampMs ?? d.timestampMs
+            const tsMs = d.timestampMs
             const km = parseFloat((0.351 + (runDetIdx - 1) * 0.12).toFixed(3))
             const severityLabel =
               (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
@@ -2201,14 +2204,11 @@ export const surveyService = {
               defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
               defectId,
               stationing: `Km 0+${String(Math.round(km * 1000)).padStart(3, '0')}`,
-              lane:
-                candFacts?.positionStatus === 'UNKNOWN' || !candFacts?.positionStatus
-                  ? 'Chưa gắn đoạn tuyến'
-                  : `Đoạn tuyến: ${candFacts.positionStatus}`,
+              lane: '',
               type: typeLabel,
               severityLevel: severityLabel,
               confidence: confPct,
-              description: `Phát hiện tự động bởi mô hình AI (${candFacts?.fixtureVersion || run.fixtureVersion || 'synthetic-road-v1'}) tại thời điểm ${tsMs}ms • Độ tin cậy: ${confPct}%`,
+              description: `Khung hình trích xuất tại mốc ${tsMs}ms`,
               metrics: {
                 reviewer: status !== 'PENDING' ? 'Chỉ huy trưởng (PM)' : undefined
               },
@@ -2224,43 +2224,31 @@ export const surveyService = {
                 borderColor: typeCode === 'POTHOLE' ? '#F59E0B' : '#EF4444'
               },
               projectId: proj.id,
-              runId: candFacts?.runId || run.id,
-              datasetVersionId: candFacts?.datasetVersionId,
-              modelVersionId: candFacts?.modelVersionId,
-              fixtureVersion: candFacts?.fixtureVersion || run.fixtureVersion,
-              sourceVideoFileId: candFacts?.sourceVideoFileId,
-              frameFileId: candFacts?.frameFileId || d.frameFileId,
-              frameFileVersion: candFacts?.frameFileVersion,
-              frameSha256: candFacts?.frameSha256,
-              frameSizeBytes: candFacts?.frameSizeBytes,
-              frameMediaType: candFacts?.frameMediaType,
+              runId: run.id,
+              datasetVersionId: undefined,
+              modelVersionId: undefined,
+              fixtureVersion: run.fixtureVersion || 'Road-YOLOv9',
+              sourceVideoFileId: undefined,
+              frameFileId: d.frameFileId,
+              frameFileVersion: undefined,
+              frameSha256: undefined,
+              frameSizeBytes: undefined,
+              frameMediaType: undefined,
               timestampMs: tsMs,
               rawTypeCode: typeCode,
               rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
-              routeVersionId: candFacts?.routeVersionId,
-              segmentSetId: candFacts?.segmentSetId,
-              segmentId: candFacts?.segmentId ?? null,
-              geometryVersion: candFacts?.geometryVersion,
-              positionStatus: candFacts?.positionStatus,
-              sourceVersion: candFacts?.sourceVersion,
-              disposition: isReset && !decOverride ? null : candFacts?.disposition ?? null,
+              routeVersionId: undefined,
+              segmentSetId: undefined,
+              segmentId: null,
+              geometryVersion: undefined,
+              positionStatus: undefined,
+              sourceVersion: undefined,
+              disposition: null,
               decisionKind: isReset && !decOverride ? null : decisionKind
             })
           }
         }
-
-        // Bổ sung các phát hiện AI từ các đợt bay khảo sát của dự án (phục vụ xem chi tiết & thẩm định lỗi)
-        const surveys = await this.getSurveys(proj.id).catch(() => [])
-        for (const srv of surveys) {
-          if (srv.status === 'PENDING_AI_REVIEW' || srv.status === 'BASELINE_LOCKED' || srv.ai_defects_count > 0) {
-            const srvDets = await this.getSurveyDetections(srv.id).catch(() => [])
-            for (const sd of srvDets) {
-              if (!allItems.some((existing) => existing.id.toLowerCase() === sd.id.toLowerCase())) {
-                allItems.push(sd)
-              }
-            }
-          }
-        }
+      }
       } catch (err) {
         if (targetProjectId) throw err
       }

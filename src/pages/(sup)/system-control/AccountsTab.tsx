@@ -90,6 +90,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             <option value={RoleCode.PROJECT_MANAGER}>Chỉ huy trưởng (PM)</option>
             <option value={RoleCode.DRONE_OPERATOR}>Kỹ sư Drone</option>
             <option value={RoleCode.REPAIR_CREW}>Đội trưởng thi công</option>
+            <option value={RoleCode.REPORTER}>Người phản ánh (Reporter / Dân)</option>
           </select>
         </div>
       </div>
@@ -171,7 +172,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                               ? 'bg-[#1E40AF]'
                               : normalizedRole === RoleCode.DRONE_OPERATOR
                               ? 'bg-amber-600'
-                              : 'bg-emerald-700'
+                              : normalizedRole === RoleCode.REPAIR_CREW
+                              ? 'bg-emerald-700'
+                              : 'bg-teal-600'
                           }`}
                         >
                           {u.full_name.substring(0, 2).toUpperCase()}
@@ -218,7 +221,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                               ? 'bg-blue-100 text-blue-900 border border-blue-200'
                               : normalizedRole === RoleCode.DRONE_OPERATOR
                               ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                              : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                              : normalizedRole === RoleCode.REPAIR_CREW
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-200'
+                              : 'bg-teal-100 text-teal-900 border border-teal-200'
                           }`}
                         >
                           {normalizedRole === RoleCode.SUPERVISOR
@@ -227,7 +232,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             ? 'Chỉ huy trưởng (PM)'
                             : normalizedRole === RoleCode.DRONE_OPERATOR
                             ? 'Phi công UAV'
-                            : 'Tổ thi công'}
+                            : normalizedRole === RoleCode.REPAIR_CREW
+                            ? 'Tổ thi công'
+                            : 'Người phản ánh (Reporter)'}
                         </span>
                         <span
                           className="text-[11px] text-slate-600 font-medium truncate max-w-[220px] block"

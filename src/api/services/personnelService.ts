@@ -70,7 +70,7 @@ export interface InvitationResponseDto {
 
 export interface UpdateUserPayload {
   status: 'ACTIVE' | 'SUSPENDED'
-  role: 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW'
+  role: 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW' | 'REPORTER'
   reason: string
 }
 
@@ -81,11 +81,12 @@ export function mapBackendRoleToRoleCode(rawRole?: string | null): RoleCode {
   if (normalized === 'PM' || normalized === 'PROJECT_MANAGER') return RoleCode.PROJECT_MANAGER
   if (normalized === 'OPERATOR' || normalized === 'DRONE_OPERATOR') return RoleCode.DRONE_OPERATOR
   if (normalized === 'CREW' || normalized === 'REPAIR_CREW') return RoleCode.REPAIR_CREW
+  if (normalized === 'REPORTER') return RoleCode.REPORTER
   return RoleCode.PROJECT_MANAGER
 }
 
 // Chuyển RoleCode FE sang wire format backend
-export function mapRoleCodeToBackendRole(role: RoleCode): 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW' {
+export function mapRoleCodeToBackendRole(role: RoleCode): 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW' | 'REPORTER' {
   switch (role) {
     case RoleCode.SUPERVISOR:
       return 'SUPERVISOR'
@@ -95,6 +96,8 @@ export function mapRoleCodeToBackendRole(role: RoleCode): 'SUPERVISOR' | 'PM' | 
       return 'OPERATOR'
     case RoleCode.REPAIR_CREW:
       return 'CREW'
+    case RoleCode.REPORTER:
+      return 'REPORTER' as any
     default:
       return 'PM'
   }
@@ -111,6 +114,8 @@ export function getRoleLabel(role: RoleCode): string {
       return 'Kỹ sư Drone'
     case RoleCode.REPAIR_CREW:
       return 'Đội trưởng thi công'
+    case RoleCode.REPORTER:
+      return 'Người phản ánh (Reporter)'
     default:
       return 'Nhân sự kỹ thuật'
   }

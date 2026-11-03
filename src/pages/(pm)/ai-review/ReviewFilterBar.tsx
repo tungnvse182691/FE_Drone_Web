@@ -4,6 +4,7 @@ import type { TriageCase, ActiveTabFilter } from './types'
 
 export interface ReviewFilterBarProps {
   cases: TriageCase[]
+  projectsList?: Array<{ id: string; code: string; name: string }>
   activeTab: ActiveTabFilter
   setActiveTab: (tab: ActiveTabFilter) => void
   pendingCount: number
@@ -24,6 +25,7 @@ export interface ReviewFilterBarProps {
 
 export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
   cases,
+  projectsList,
   activeTab,
   setActiveTab,
   pendingCount,
@@ -120,8 +122,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             onChange={(e) => setSourceFilter(e.target.value)}
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
-            <option value="ALL">Tất cả nguồn</option>
-            <option value="DRONE_AI">Drone AI quét tự động</option>
+            <option value="ALL">Tất cả nguồn tiếp nhận</option>
             <option value="CITIZEN">Người dân phản ánh</option>
             <option value="PATROL">Đội tuần tra hiện trường</option>
           </select>
@@ -166,17 +167,24 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả dự án</option>
-            {Array.from(
-              new Set(
-                cases
-                  .map((c) => c.project_name)
-                  .filter((name) => name && name !== 'Chưa phân công dự án')
-              )
-            ).map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
+            {/* 1. Danh sách dự án thực tế từ CSDL */}
+            {projectsList && projectsList.length > 0
+              ? projectsList.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.name} ({p.code})
+                  </option>
+                ))
+              : Array.from(
+                  new Set(
+                    cases
+                      .map((c) => c.project_name)
+                      .filter((name) => name && name !== 'Chưa phân công dự án')
+                  )
+                ).map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
           </select>
         </div>
 

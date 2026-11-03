@@ -84,7 +84,7 @@ export const useAIReviewLinkActions = ({
           return {
             ...c,
             linked_report_ids: updatedLinkedCodes,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG PA04] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${linkAuditNotes}`
+            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${linkAuditNotes}`
           }
         }
         if (secondaryIds.includes(c.id)) {
@@ -93,7 +93,7 @@ export const useAIReviewLinkActions = ({
             status: 'MERGED',
             status_label: 'Đã gộp trùng',
             master_case_id: master.id,
-            pm_notes: `Đã liên kết báo trùng vào hồ sơ chính ${master.code} (Theo PA04). Ghi chú: ${linkAuditNotes}`
+            pm_notes: `Đã liên kết báo trùng vào hồ sơ chính ${master.code} (Gộp báo trùng). Ghi chú: ${linkAuditNotes}`
           }
         }
         return c
@@ -189,7 +189,7 @@ export const useAIReviewLinkActions = ({
               is_assigned: true,
               status: 'PENDING',
               status_label: 'Chờ PM thẩm định',
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN API-024] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
             }
           }
           return c
@@ -201,7 +201,7 @@ export const useAIReviewLinkActions = ({
       showToast(`Đã điều phối ${targetIds.length} hồ sơ vào dự án "${projectName}" thành công!`)
     } catch (err: any) {
       console.error('❌ Lỗi khi điều phối ca tới backend:', err)
-      const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi gọi API-024 điều phối ca'
+      const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi điều phối ca vào dự án'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
   }

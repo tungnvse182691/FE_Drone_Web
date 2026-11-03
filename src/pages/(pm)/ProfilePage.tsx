@@ -375,7 +375,7 @@ export const ProfilePage: React.FC = () => {
                 info
               </span>
               <div className="leading-relaxed">
-                <strong>Quy định đổi mật khẩu (API-004):</strong> Mật khẩu mới phải có tối thiểu 8 ký tự, bao gồm cả chữ hoa, chữ thường, số và ký tự đặc biệt.
+                <strong>Quy định đổi mật khẩu:</strong> Mật khẩu mới phải có tối thiểu 8 ký tự, bao gồm cả chữ hoa, chữ thường, số và ký tự đặc biệt.
               </div>
             </div>
 

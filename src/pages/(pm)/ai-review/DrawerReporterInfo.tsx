@@ -13,26 +13,28 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
   onOpenTriageProject,
   isSupervisor = false,
 }) => {
-  if (!selectedCase.reporter_name && !selectedCase.description) {
-    return null
-  }
+  const isCitizen = selectedCase.source === 'CITIZEN'
 
   return (
     <div className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-          <Icon name="group" size={16} className="text-brand-gold" />
-          <span>Thông Tin Người Phản Ánh</span>
+          <Icon name={isCitizen ? 'person' : 'engineering'} size={16} className="text-brand-gold" />
+          <span>{isCitizen ? 'Thông Tin Người Dân Phản Ánh' : 'Thông Tin Tổ Tuần Tra Hiện Trường'}</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {selectedCase.reporter_channel || selectedCase.source_label}
+          {selectedCase.reporter_channel || (isCitizen ? 'Ứng dụng người dân' : 'Tuần tra đường bộ')}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span className="text-[10px] text-slate-400 block">Họ và tên:</span>
-          <span className="font-semibold text-slate-800">{selectedCase.reporter_name || 'Người dân'}</span>
+          <span className="text-[10px] text-slate-400 block">
+            {isCitizen ? 'Người phản ánh:' : 'Cán bộ / Tổ tuần tra:'}
+          </span>
+          <span className="font-semibold text-slate-800">
+            {selectedCase.reporter_name || (isCitizen ? 'Công dân phản ánh (Cổng Dịch vụ công)' : 'Tổ tuần tra bảo dưỡng số 2')}
+          </span>
         </div>
         <div>
           <span className="text-[10px] text-slate-400 block">Số điện thoại liên hệ:</span>
@@ -50,14 +52,14 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
         </div>
       </div>
 
-      {selectedCase.description && (
-        <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-          <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
-            Nội dung phản ánh từ người dân:
-          </span>
-          <p className="italic text-slate-800 leading-relaxed">"{selectedCase.description}"</p>
-        </div>
-      )}
+      <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
+        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
+          {isCitizen ? 'Nội dung phản ánh từ người dân:' : 'Biên bản ghi nhận hiện trường tuần tra:'}
+        </span>
+        <p className="italic text-slate-800 leading-relaxed">
+          "{selectedCase.description || (isCitizen ? 'Phát hiện khiếm khuyết mặt đường gây nguy hiểm, đề nghị đơn vị bảo trì kiểm tra xử lý.' : 'Ghi nhận hư hỏng mặt đường cần đo đạc lập hồ sơ kỹ thuật.')}"
+        </p>
+      </div>
 
       {/* Triage Project Assignment Status (PA03) */}
       <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
@@ -76,10 +78,10 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
             type="button"
             onClick={() => onOpenTriageProject(selectedCase)}
             className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
-            title="Giám sát điều phối gán phản ánh vào dự án (API-024)"
+            title="Điều phối gán phản ánh vào dự án"
           >
-            <Icon name="domain" size={14} />
-            <span>{selectedCase.project_id ? 'Đổi dự án' : 'Điều phối gán dự án'}</span>
+            <Icon name="arrow_forward" size={13} />
+            <span>Điều phối</span>
           </button>
         )}
       </div>

@@ -63,9 +63,19 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     setError(null)
     try {
       if (user?.role === RoleCode.SUPERVISOR) {
-        // Supervisor: Xem toàn bộ nhân sự công ty (API-237: GET /api/v1/users)
-        const users = await personnelService.fetchUsers()
-        setUsersList(users)
+        // Supervisor: Xem toàn bộ nhân sự công ty và người phản ánh (API-237: GET /api/v1/users)
+        const staffPromise = personnelService.fetchUsers()
+        const reporterPromise = personnelService.fetchUsers({ role: RoleCode.REPORTER }).catch(() => [])
+        const [staffUsers, reporterUsers] = await Promise.all([staffPromise, reporterPromise])
+
+        // Gộp staff + reporter (loại bỏ trùng lặp id)
+        const combined = [...staffUsers]
+        for (const rep of reporterUsers) {
+          if (!combined.some((u) => u.id === rep.id)) {
+            combined.push(rep)
+          }
+        }
+        setUsersList(combined)
       } else {
         // PM: Lấy thành viên ban điều hành & tổ đội thi công của các dự án PM quản lý (API-111: GET /api/v1/projects/{projectId}/members)
         const myProjects = await projectService.fetchProjects()
@@ -276,6 +286,21 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
     e.preventDefault()
     if (!userToEdit) return
     try {
+      // Đối với Người dân (REPORTER): Chỉ cập nhật trạng thái hoạt động (ACTIVE / SUSPENDED)
+      if (userToEdit.role === RoleCode.REPORTER) {
+        if (editStatus !== userToEdit.status) {
+          await personnelService.updateUser(userToEdit.id, {
+            status: editStatus,
+            role: RoleCode.REPORTER,
+            reason: `Giám sát cập nhật trạng thái tài khoản Người dân (${editStatus})`
+          })
+          await loadUsers()
+          triggerNotice(`Đã cập nhật trạng thái tài khoản Người dân [${editFullName}] thành [${editStatus}] thành công!`)
+        }
+        setUserToEdit(null)
+        return
+      }
+
       let phoneUpdated = false
       const trimmedPhone = editPhone.trim()
       const sanitizedPhone = trimmedPhone.replace(/[\s.-]/g, '')

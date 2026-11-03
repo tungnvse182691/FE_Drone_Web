@@ -47,7 +47,7 @@ export const useAIReviewActions = ({
   const [isNoDefectModalOpen, setIsNoDefectModalOpen] = useState<boolean>(false)
   const [noDefectReason, setNoDefectReason] = useState<string>('')
 
-  // Modal Công bố kết quả sửa chữa cho người dân (PA07)
+  // Modal Công bố kết quả sửa chữa cho người dân 
   const [isPublishModalOpen, setIsPublishModalOpen] = useState<boolean>(false)
   const [publishPublicNote, setPublishPublicNote] = useState<string>('')
 
@@ -64,21 +64,25 @@ export const useAIReviewActions = ({
   // Handlers for Triage Decision Actions
   const handleVerifyDefect = async (c?: TriageCase) => {
     const target = c || selectedCase
+    const isFieldIntake = target.source === 'CITIZEN' || target.source === 'PATROL'
+    const outcome = isFieldIntake ? 'NEEDS_EVIDENCE' : 'CONFIRMED'
+
     const updates: Partial<TriageCase> = {
-      status: 'VERIFIED',
-      status_label: 'Đã xác minh (Verified)',
-      conclusion: 'DEFECT_FOUND',
-      severity: currentSeverity,
-      urgency: currentUrgency,
-      area_sqm: currentArea,
-      max_depth_cm: currentDepth,
-      pm_notes: currentNotes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'
+      status: outcome === 'NEEDS_EVIDENCE' ? 'AWAITING_EVIDENCE' : 'VERIFIED',
+      status_label: outcome === 'NEEDS_EVIDENCE' ? 'Chờ đo đạc hiện trường' : 'Đã xác minh (Verified)',
+      conclusion: outcome === 'NEEDS_EVIDENCE' ? 'NEEDS_EVIDENCE' : 'DEFECT_FOUND',
+      conclusion_reason: currentNotes || (outcome === 'NEEDS_EVIDENCE'
+        ? 'Phản ánh hiện trường hợp lệ. Đã duyệt yêu cầu đo đạc thực tế (Dài x Rộng x Sâu) để lập hồ sơ kỹ thuật.'
+        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'),
+      pm_notes: currentNotes || (outcome === 'NEEDS_EVIDENCE'
+        ? 'Đã duyệt yêu cầu đo đạc hiện trường.'
+        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.')
     }
 
     try {
       const res = await triageService.concludeCase(target.id, {
-        outcome: 'CONFIRMED',
-        reason: updates.pm_notes || 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.',
+        outcome,
+        reason: updates.conclusion_reason,
         version: target.version
       })
 
@@ -96,7 +100,9 @@ export const useAIReviewActions = ({
       )
 
       showToast(
-        `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
+        outcome === 'NEEDS_EVIDENCE'
+          ? `Đã duyệt hợp lệ hồ sơ [${target.code}]! Đã chuyển sang phân hệ Nhiệm vụ đo đạc hiện trường.`
+          : `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
       )
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi xác minh tới backend:', e)
@@ -241,7 +247,7 @@ export const useAIReviewActions = ({
     showToast(`Đã mở lại trạng thái chờ thẩm định cho hồ sơ [${target.code}].`)
   }
 
-  // Publish Public Result (PA07)
+  // Publish Public Result 
   const handleOpenPublishModal = (c?: TriageCase) => {
     const target = c || selectedCase
     setTargetTriageCase(target)
@@ -261,8 +267,8 @@ export const useAIReviewActions = ({
     try {
       await triageService.publishCase(target.id, {
         summary: publishPublicNote,
-        reportIds: target.linked_report_ids,
-        version: target.version
+        version: target.version,
+        reportIds: target.report_ids && target.report_ids.length > 0 ? target.report_ids : undefined
       })
 
       setCases((prev) =>
@@ -279,7 +285,7 @@ export const useAIReviewActions = ({
       )
 
       showToast(
-        `Đã công bố kết quả tiếp nhận & tiến độ xử lý hồ sơ [${target.code}] lên Ứng dụng Di động Citizen (PA07)!`
+        `Đã công bố kết quả tiếp nhận & tiến độ xử lý hồ sơ [${target.code}] cho người dân thành công!`
       )
       setIsPublishModalOpen(false)
     } catch (e: any) {
