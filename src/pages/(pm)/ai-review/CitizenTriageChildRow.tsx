@@ -52,7 +52,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
       <td className="py-2 px-2 text-center">
         <div className="relative w-12 h-9 rounded overflow-hidden bg-slate-800 border border-slate-200 shrink-0 mx-auto">
           <img
-            src={child.image_url}
+            src={child.image_url || undefined}
             alt={child.defect_title}
             className="w-full h-full object-cover"
           />
@@ -82,7 +82,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
       </td>
       <td className="py-2 px-2 text-center whitespace-nowrap">
         <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-          {child.severity === 'CRITICAL'
+          {child.severity === 'UNKNOWN' ? 'Chưa xác định' : child.severity === 'CRITICAL'
             ? 'Khẩn cấp'
             : child.severity === 'HIGH'
             ? 'Cao'

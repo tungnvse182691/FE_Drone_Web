@@ -2,7 +2,7 @@ import { apiClient } from '../client'
 import { FieldTask } from '../../types/domain'
 import { projectService } from './projectService'
 import { surveyService } from './surveyService'
-import { getFromStorage, saveToStorage } from './storageHelper'
+import { saveToStorage } from './storageHelper'
 
 /**
  * ============================================================================
@@ -74,13 +74,13 @@ export interface BackendFieldTaskViewFact {
 function formatMeasurementTypeName(typeNum: number): string {
   switch (typeNum) {
     case 1:
-      return 'Đo chiều rộng vết nứt (m)'
+      return 'Độ sâu lún (DepressionDepth)'
     case 2:
-      return 'Đo chiều sâu vệt lún/ổ gà (cm)'
+      return 'Độ chênh cao tấm (SlabFaultingHeight)'
     case 3:
-      return 'Đo diện tích bong bật/hư hỏng (m²)'
+      return 'Phạm vi xói lề (ShoulderErosionExtent)'
     case 4:
-      return 'Đo chiều dài nứt dọc/ngang (m)'
+      return 'Diện tích (Area)'
     default:
       return 'Đo kích thước hình học hiện trường'
   }
@@ -88,16 +88,18 @@ function formatMeasurementTypeName(typeNum: number): string {
 
 function mapBackendTaskStatus(status?: string | null): FieldTask['status'] {
   const s = String(status || '').toUpperCase()
-  if (s === 'VERIFIED' || s === 'REVIEWED' || s === 'COMPLETED' || s === 'ACCEPTED') {
+  if (s === 'VERIFIED' || s === 'REVIEWED' || s === 'COMPLETED') {
     return 'VERIFIED'
   }
   if (s === 'SUBMITTED' || s === 'INSPECTED') {
     return 'SUBMITTED'
   }
-  if (s === 'IN_PROGRESS' || s === 'STARTED') {
+  if (s === 'IN_PROGRESS' || s === 'INPROGRESS' || s === 'STARTED') {
     return 'IN_PROGRESS'
   }
-  return 'ASSIGNED'
+  if (s === 'NEWASSIGNED' || s === 'NEW_ASSIGNED' || s === 'ASSIGNED' || s === 'ACCEPTED') return 'ASSIGNED'
+  if (s === 'SUPPLEMENTREQUIRED' || s === 'SUPPLEMENT_REQUIRED') return 'SUPPLEMENT_REQUIRED'
+  return 'UNKNOWN'
 }
 
 function generateUuid(): string {
@@ -137,11 +139,7 @@ export const fieldTaskService = {
           )
           return res.data?.items || []
         } catch (err: any) {
-          // Báo lỗi rõ ràng nếu API thất bại (trừ trường hợp 404 project mới rỗng)
-          if (err?.response?.status !== 404) {
-            console.error(`[fieldTaskService] Lỗi tải nhiệm vụ cho project ${pId}:`, err)
-          }
-          return []
+          throw err // API failure is not an empty project.
         }
       })
     )
@@ -149,7 +147,7 @@ export const fieldTaskService = {
     const rawTasks = tasksByProject.flat()
 
     // Lấy thông tin phụ trợ (Tên Dự án, Kỹ sư, Khiếm khuyết) từ DB để ánh xạ đầy đủ
-    const projectsList = await projectService.fetchProjects().catch(() => [])
+    const projectsList = await projectService.fetchProjects()
     const projectMap = new Map(projectsList.map((p) => [p.id.toLowerCase(), p]))
 
     let mappedTasks: FieldTask[] = rawTasks.map((item: BackendFieldTaskViewFact) => {
@@ -158,15 +156,15 @@ export const fieldTaskService = {
       const defectShort = item.defectId ? item.defectId.replace(/-/g, '').slice(0, 8).toUpperCase() : 'UNKNOWN'
 
       let parsedMethod = formatMeasurementTypeName(item.requiredMeasurementType)
-      let parsedLane = 'Làn cơ giới 1'
-      let parsedChainage = proj ? proj.start_km + 0.5 : 1025.4
+      let parsedLane = ''
+      let parsedChainage: number | null = null
 
       if (item.measurementScope) {
         try {
           const scopeData = JSON.parse(item.measurementScope)
           if (scopeData.method) parsedMethod = scopeData.method
           if (scopeData.lane) parsedLane = scopeData.lane
-          if (scopeData.chainage_km) parsedChainage = Number(scopeData.chainage_km)
+          if (scopeData.chainage_km != null) parsedChainage = Number(scopeData.chainage_km)
         } catch {
           // fallback to raw string if not JSON
         }
@@ -183,27 +181,18 @@ export const fieldTaskService = {
         measurement_type: parsedMethod,
         chainage_km: parsedChainage,
         status: mapBackendTaskStatus(item.status),
-        technician_name: item.assignedToUserId ? 'Synthetic crew-a (Đội đo đạc số 1)' : 'Chưa phân công',
-        created_at: item.dueAt ? new Date(item.dueAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        technician_name: item.assignedToUserId ? `Crew (${item.assignedToUserId})` : 'Chưa phân công',
+        created_at: undefined,
         lane: parsedLane,
         notes: item.instructions || item.purpose || 'Đo đạc kiểm tra hiện trường theo chỉ định PM',
         source_origin: (item.sourceKind === 'REPORTER' || item.sourceKind === 'CITIZEN_REPORT') ? 'CITIZEN_REPORT' : 'DRONE',
-        gps_lat: 16.2405,
-        gps_lng: 108.131,
+
         version: item.version || null,
-        defect_photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80',
-        reused_evidence: getFromStorage(`roadguard_reused_evidence_${item.id.toLowerCase()}`, null) || (item.sourceKind === 'REPORTER' ? {
-          file_id: 'b58915d3-bc67-4056-a62a-003576faf286',
-          source_evidence_id: '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-          source_kind: 'REPORTER',
-          checksum_sha256: '6b1048f8a6d40bac0b2954c18fefa40c4ea7a96120fc2e54b7317c0e43c2bbec',
-          reason: 'Ảnh người dân phản ánh có góc chụp rõ nét, tọa độ GPS trùng khớp với vị trí khiếm khuyết (< 1.5m), đủ điều kiện kỹ thuật làm bằng chứng đối chứng trước thi công.',
-          reused_at: item.dueAt || new Date().toISOString(),
-          photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
-        } : undefined),
-        linked_case_code: '#CAS-2026-0839',
-        reporter_name: 'Nguyễn Văn A (0905.123.456)',
-        report_description: 'Vỡ cạnh mép tấm BTXM lân cận, xe máy va quẹt gồ ghề nguy hiểm.'
+        defect_photo_url: undefined,
+        reused_evidence: undefined,
+        linked_case_code: undefined,
+        reporter_name: undefined,
+        report_description: undefined
       }
     })
 
@@ -247,10 +236,10 @@ export const fieldTaskService = {
       defect_code: `#DEF-${defectShort}`,
       defect_name: `Khiếm khuyết mặt đường [#DEF-${defectShort}]`,
       measurement_type: formatMeasurementTypeName(item.requiredMeasurementType),
-      chainage_km: 1025.4,
+      chainage_km: null,
       status: mapBackendTaskStatus(item.status),
-      technician_name: item.assignedToUserId ? 'Tổ đo đạc hiện trường (Synthetic Crew)' : 'Chưa phân công',
-      created_at: item.dueAt ? new Date(item.dueAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      technician_name: item.assignedToUserId ? `Crew (${item.assignedToUserId})` : 'Chưa phân công',
+      created_at: undefined,
       notes: item.instructions || item.purpose || '',
       version: item.version || null
     }
@@ -271,61 +260,27 @@ export const fieldTaskService = {
     let defectVersion = payload.defect_version
 
     if ((!routeVersionId || !defectVersion) && payload.defect_id) {
-      const defects = await surveyService.getProjectDefects(projectId).catch(() => [])
-      const matched = defects.find((d: any) => d.id.toLowerCase() === payload.defect_id.toLowerCase())
-      if (matched) {
-        if (!routeVersionId) {
-          routeVersionId = (matched as any).roadSectionVersionId || (matched as any).road_section_version_id
-        }
-        if (!defectVersion) {
-          defectVersion = (matched as any).version || (matched as any).defectVersion
-        }
-      }
+      const defect = await surveyService.getDefectById(projectId, payload.defect_id)
+      routeVersionId ||= defect.defect.roadSectionVersionId
+      defectVersion ||= defect.defect.version
     }
-
-    if (!routeVersionId) {
-      // Mặc định từ CSDL RoadGuard cho tuyến Synthetic
-      routeVersionId = '5baf3408-6489-432f-89ed-127a89e905a5'
+    if (!routeVersionId || !defectVersion || !payload.defect_id || !payload.assigned_to_user_id) {
+      throw new Error('Thiếu Defect/version/geometry/Crew hợp lệ; chưa tạo FIELD.')
     }
-
-    if (!defectVersion) {
-      defectVersion = 'AAAAAAAAKys='
-    }
-
-    const assignedUserId = payload.assigned_to_user_id || '72f84201-a001-4000-8000-000000000008' // Synthetic crew-a
-
-    // Tự động phân loại typeNum theo phương pháp đo nếu chưa truyền
-    let typeNum = payload.measurement_type_num || 1
-    if (!payload.measurement_type_num && payload.measurement_type) {
-      const mt = payload.measurement_type.toLowerCase()
-      if (mt.includes('sâu') || mt.includes('sụt') || mt.includes('lún') || mt.includes('depth') || mt.includes('pothole')) {
-        typeNum = 2
-      } else if (mt.includes('diện tích') || mt.includes('bóc tách') || mt.includes('bong bật') || mt.includes('area')) {
-        typeNum = 3
-      } else if (mt.includes('dài') || mt.includes('length')) {
-        typeNum = 4
-      } else {
-        typeNum = 1 // Mặc định CRACK_WIDTH (Độ mở rộng vết nứt)
-      }
-    }
-
-    // Phân loại sourceKind ('SURVEY' | 'REPORTER') và gán surveyId theo đúng chuẩn Backend Candidate3
-    const isReportDefect =
-      payload.source_kind === 'REPORTER' ||
-      payload.source_origin === 'CITIZEN_REPORT' ||
-      payload.defect_id.toLowerCase() === 'a3e894a5-2d58-4912-949f-889794739b29'
-
-    const sourceKind: 'SURVEY' | 'REPORTER' = isReportDefect ? 'REPORTER' : 'SURVEY'
-    const surveyId: string | null = isReportDefect
-      ? null
-      : payload.survey_id || 'db73e898-8e30-439c-96a8-09e263c06104'
+    const assignedUserId = payload.assigned_to_user_id
+    const typeNum = payload.measurement_type_num
+    if (!typeNum || ![1, 2, 3, 4].includes(typeNum)) throw new Error('Cần loại đo canonical từ nguồn kỹ thuật; không suy từ tên phương pháp.')
+    const sourceKind = payload.source_kind
+    if (sourceKind !== 'REPORTER' && sourceKind !== 'SURVEY') throw new Error('Thiếu nguồn Defect đã xác minh; không tự phân loại theo UUID.')
+    if (sourceKind === 'SURVEY' && !payload.survey_id) throw new Error('Thiếu Survey nguồn; không dùng Survey mẫu.')
+    const surveyId = sourceKind === 'SURVEY' ? payload.survey_id : null
 
     // measurementScope bắt buộc phải là một chuỗi JSON Object theo chuẩn kiểm định Backend (FieldInspectionTask.ValidateScope)
     const scopeObj = {
       standard: 'TCVN 8819:2011',
       method: payload.measurement_type || 'Đo đạc kích thước hiện trường',
-      lane: payload.lane || 'Làn cơ giới 1',
-      chainage_km: payload.chainage_km || 1025.4
+      lane: payload.lane,
+      chainage_km: payload.chainage_km
     }
 
     const reqBody: any = {
@@ -370,10 +325,10 @@ export const fieldTaskService = {
         defect_code: `#DEF-${defectShort}`,
         defect_name: `Khiếm khuyết mặt đường [#DEF-${defectShort}]`,
         measurement_type: formatMeasurementTypeName(item.requiredMeasurementType),
-        chainage_km: payload.chainage_km || 1025.4,
-        lane: payload.lane || 'Làn cơ giới',
+        chainage_km: payload.chainage_km ?? null,
+        lane: payload.lane || '',
         status: 'ASSIGNED',
-        technician_name: payload.technician_name || 'Tổ đo đạc hiện trường (Synthetic crew-a)',
+        technician_name: payload.technician_name || `Crew (${assignedUserId})`,
         created_at: new Date().toISOString().split('T')[0],
         notes: item.instructions || item.purpose || '',
         source_origin: payload.source_origin || 'DRONE'
@@ -410,17 +365,7 @@ export const fieldTaskService = {
    * Bắt đầu đo đạc - Kỹ sư hiện trường nhận lệnh (POST /api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/start)
    */
   async startMeasuring(projectId: string, taskId: string, rowVersion?: string): Promise<void> {
-    const idempotencyKey = generateUuid()
-    await apiClient.post(
-      `/projects/${projectId}/field-inspection-tasks/${taskId}/start`,
-      {},
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey,
-          ...(rowVersion ? { 'If-Match': rowVersion } : {})
-        }
-      }
-    )
+    throw new Error('Bắt đầu FIELD là lệnh của Crew được giao, cần accept và origin/version. Web PM/Supervisor chỉ theo dõi; chưa gửi lệnh.')
   },
 
   /**
@@ -433,52 +378,23 @@ export const fieldTaskService = {
     notes?: string,
     rowVersion?: string
   ): Promise<void> {
-    const idempotencyKey = generateUuid()
-    const reqBody = {
-      measurements: [
-        {
-          measurementType: 1,
-          value: measuredValue,
-          unit: 'mm',
-          notes: notes || 'Số đo thực tế từ hiện trường'
-        }
-      ],
-      repaired: false,
-      unrepairedReason: 'Chờ thẩm duyệt phương án khối lượng sửa chữa'
-    }
-
-    await apiClient.post(
-      `/projects/${projectId}/field-inspection-tasks/${taskId}/submissions`,
-      reqBody,
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey,
-          ...(rowVersion ? { 'If-Match': rowVersion } : {})
-        }
-      }
-    )
+    throw new Error('Không gửi số đo thay Crew: submission cần origin, first-start, evidence VERIFIED và provenance. Hãy dùng ứng dụng Crew; form Web hiện chưa đủ DTO.')
   },
 
   /**
    * Thẩm định & Xác minh số liệu vào hồ sơ lỗi (POST /api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/reviews)
    */
-  async verifyTask(projectId: string, taskId: string, rowVersion?: string): Promise<void> {
-    const idempotencyKey = generateUuid()
-    const reqBody = {
-      decision: 1, // APPROVE / ACCEPT
-      reason: 'Đã thẩm tra số đo hiện trường đối chiếu tiêu chuẩn kỹ thuật'
-    }
-
-    await apiClient.post(
-      `/projects/${projectId}/field-inspection-tasks/${taskId}/reviews`,
-      reqBody,
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey,
-          ...(rowVersion ? { 'If-Match': rowVersion } : {})
-        }
-      }
-    )
+  async verifyTask(projectId: string, taskId: string, rowVersion?: string, decision: 'ACCEPT' | 'SUPPLEMENT' = 'ACCEPT'): Promise<void> {
+    const root = `/projects/${projectId}/field-inspection-tasks/${taskId}`
+    const task = await apiClient.get<{ latestSubmissionId?: string; version?: string }>(root)
+    if (!task.data.latestSubmissionId) throw new Error('Chưa có submission hiện trường để review.')
+    const submission = await apiClient.get<{ readiness?: string; missingReasons?: string[] }>(`${root}/submissions/${task.data.latestSubmissionId}`)
+    if (decision === 'ACCEPT' && submission.data.readiness !== 'READY') throw new Error(`Submission chưa đủ điều kiện xác nhận: ${(submission.data.missingReasons || []).join(', ') || submission.data.readiness}. Cần Crew bổ sung; không tự xác nhận số đo UNKNOWN.`)
+    const version = rowVersion || task.headers?.etag || task.data.version
+    if (!version) throw new Error('Thiếu version task để review.')
+    await apiClient.post(`${root}/reviews`, {
+      submissionId: task.data.latestSubmissionId, decision, reason: decision === 'SUPPLEMENT' ? `PM yêu cầu Crew bổ sung hồ sơ: ${(submission.data.missingReasons || []).join(', ') || 'Cần kiểm tra lại bằng chứng'}` : 'PM đối chiếu submission và bằng chứng hiện trường đạt yêu cầu'
+    }, { headers: { 'Idempotency-Key': generateUuid(), 'If-Match': version.startsWith('"') ? version : `"${version}"` } })
   },
 
   /**
@@ -524,7 +440,7 @@ export const fieldTaskService = {
         checksum_sha256: payload.expectedChecksum,
         reason: payload.reason,
         reused_at: new Date().toISOString(),
-        photo_url: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
+        photo_url: undefined
       })
     } catch (err: any) {
       const respData = err?.response?.data

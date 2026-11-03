@@ -125,6 +125,9 @@ function mapBackendCaseToDomain(
       status_label = 'Chờ bổ sung bằng chứng'
       conclusion = 'NEEDS_EVIDENCE'
     }
+  } else if (item.status === 'LINKED') {
+    status = 'MERGED'
+    status_label = 'Đã liên kết báo cáo'
   } else if (item.status === 'CONCLUDED') {
     status = 'VERIFIED'
     status_label = 'Đã kết luận'
@@ -153,7 +156,7 @@ function mapBackendCaseToDomain(
     defect_type: '',
     severity: 'UNKNOWN',
     urgency: 'UNKNOWN',
-    time_ago: item.createdAt ? 'Ngày tiếp nhận từ hệ thống' : 'Chưa có ngày tiếp nhận',
+    time_ago: item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : 'Chưa có ngày tiếp nhận',
     created_at: item.createdAt || '',
     status,
     status_label,
@@ -203,6 +206,12 @@ function assertCaseReadActive(session: string, signal?: AbortSignal): void {
   }
 }
 
+export class CaseListReadError extends Error {
+  constructor(public readonly items: TriageCase[], public readonly failures: Array<{ projectId?: string; cause: any }>) {
+    super(`Danh sách chưa đầy đủ: ${failures.map(failure => `${failure.projectId || 'inbox chưa phân dự án'}: ${failure.cause.response?.data?.code || failure.cause.message}`).join('; ')}`)
+  }
+}
+
 export const isCaseReadCanceled = isCancel
 const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
 
@@ -249,7 +258,9 @@ export const triageService = {
         ...(actor.role === RoleCode.SUPERVISOR ? [undefined] : []), ...projects.map(p => p.id)
       ]
       const items = new Map<string, InternalCaseDto>()
+      const failures: Array<{ projectId?: string; cause: any }> = []
       for (const projectId of scopes) {
+        try {
         let cursor: string | undefined
         const cursors = new Set<string>()
         do {
@@ -265,8 +276,18 @@ export const triageService = {
           if (cursor && cursors.has(cursor)) throw new Error('Cursor Case bị lặp.')
           if (cursor) cursors.add(cursor)
         } while (cursor)
+        } catch (cause) {
+          assertCaseReadActive(session, signal)
+          if (actor.role !== RoleCode.SUPERVISOR) throw cause
+          failures.push({ projectId, cause })
+        }
       }
-      return Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
+      const mapped = Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
+      if (failures.length) {
+        if (!mapped.length) throw failures[0].cause
+        throw new CaseListReadError(mapped, failures)
+      }
+      return mapped
     } catch (error) {
       assertCaseReadActive(session, signal)
       throw error
@@ -382,102 +403,14 @@ export const triageService = {
    * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
    */
   async triageCase(caseId: string, payload: CaseTriageInput): Promise<TriageCase> {
-    console.log(`🚀 [CANDIDATE3 BE] Điều phối dự án API-024 cho ca [${caseId}]...`, payload)
-
-    // Xác định ETag hiện tại
-    let currentCase = inMemoryTriageCases.find((c) => c.id === caseId || c.code === caseId)
-    let etag = normalizeETag(payload.version || currentCase?.etag || currentCase?.version)
-
-    // Tìm tên dự án từ projectService
-    let projectName = 'Dự án đã chỉ định'
-    let targetProjectUuid = payload.projectId
-    try {
-      const projects = projectService.getProjects()
-      const found = projects.find(
-        (p) => p.id === payload.projectId || p.code === payload.projectId
-      )
-      if (found) {
-        projectName = found.name
-        targetProjectUuid = found.id
-      }
-    } catch {}
-
-    const methodLabels: Record<string, string> = {
-      FIELD: 'Khảo sát đo đạc hiện trường (FIELD)',
-      DRONE: 'Bay quét Drone bổ sung (DRONE)',
-      EXISTING_EVIDENCE: 'Thẩm định bằng chứng hiện có (EXISTING_EVIDENCE)'
-    }
-
-    const verificationMethod = payload.verificationMethod || 'FIELD'
-    const noteContent = `[ĐIỀU PHỐI DỰ ÁN API-024] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${payload.reason ? `. Chỉ đạo: "${payload.reason}"` : ''}`
-
-    // 1. Thử gửi lệnh tới Backend Candidate3 nếu caseId là UUID
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)
-    if (isUuid) {
-      try {
-        const idempotencyKey = crypto.randomUUID()
-        const res = await apiClient.post<InternalCaseDto>(
-          `/cases/${caseId}/triage`,
-          {
-            projectId: targetProjectUuid,
-            verificationMethod,
-            reason: payload.reason || 'Giám sát điều phối dự án và định hướng xác minh'
-          },
-          {
-            headers: {
-              'Idempotency-Key': idempotencyKey,
-              'If-Match': etag
-            }
-          }
-        )
-
-        console.log('✅ [CANDIDATE3 BE] API-024 Điều phối thành công!', res.data)
-        if (res.data?.version) {
-          etag = normalizeETag(res.data.version)
-        }
-      } catch (err: any) {
-        const errorMsg =
-          err?.response?.data?.message ||
-          err?.response?.data?.detail ||
-          err?.message ||
-          'Gọi API-024 điều phối ca thất bại'
-        console.error('❌ [CANDIDATE3 BE] Gọi API-024 thất bại:', err?.response?.data || err?.message)
-        throw new Error(errorMsg)
-      }
-    }
-
-    // 2. Cập nhật state in-memory và localStorage
-    const updates: Partial<TriageCase> = {
-      project_id: targetProjectUuid,
-      project_name: projectName,
-      is_assigned: true,
-      status: 'PENDING',
-      status_label: 'Chờ PM thẩm định',
-      etag,
-      version: etag.replace(/"/g, ''),
-      pm_notes: currentCase?.pm_notes
-        ? `${currentCase.pm_notes}\n${noteContent}`
-        : noteContent
-    }
-
-    const index = inMemoryTriageCases.findIndex((c) => c.id === caseId || c.code === caseId)
-    if (index !== -1) {
-      inMemoryTriageCases[index] = {
-        ...inMemoryTriageCases[index],
-        ...updates
-      }
-      saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-      return JSON.parse(JSON.stringify(inMemoryTriageCases[index]))
-    }
-
-    if (currentCase) {
-      const updated = { ...currentCase, ...updates }
-      inMemoryTriageCases.unshift(updated)
-      saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-      return updated
-    }
-
-    throw new Error(`Không tìm thấy hồ sơ ca với mã ${caseId}`)
+    if (!/^[0-9a-f-]{36}$/i.test(caseId) || !/^[0-9a-f-]{36}$/i.test(payload.projectId)) throw new Error('Thiếu Case/project UUID hợp lệ; chưa điều phối.')
+    const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+    const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/triage`, {
+      projectId: payload.projectId, verificationMethod: payload.verificationMethod || 'FIELD',
+      reason: payload.reason || 'Giám sát điều phối phạm vi xác minh',
+      routeVersionId: payload.routeVersionId, segmentSetId: payload.segmentSetId, geometryVersion: payload.geometryVersion
+    }, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': normalizeETag(payload.version || current.data.version || undefined) } })
+    return mapBackendCaseToDomain(response.data, {})
   },
 
   /**
@@ -591,45 +524,28 @@ export const triageService = {
     secondaryIds: string[],
     auditNotes: string
   ): Promise<{ success: boolean; master: TriageCase }> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    const masterIndex = inMemoryTriageCases.findIndex(
-      (c) => c.id === masterId || c.code === masterId
-    )
-    if (masterIndex === -1) {
-      throw new Error('Hồ sơ chính không tồn tại')
-    }
-
-    const master = inMemoryTriageCases[masterIndex]
-    const secondaryCodes: string[] = []
-
-    inMemoryTriageCases = inMemoryTriageCases.map((c) => {
-      if (secondaryIds.includes(c.id) || secondaryIds.includes(c.code)) {
-        secondaryCodes.push(c.code)
-        return {
-          ...c,
-          status: 'MERGED',
-          status_label: 'Đã gộp trùng',
-          master_case_id: master.id,
-          pm_notes: `[GỘP TRÙNG PA04] Đã liên kết vào hồ sơ gốc ${master.code}. Ghi chú: ${auditNotes}`
-        }
-      }
-      return c
-    })
-
-    const updatedLinkedCodes = Array.from(
-      new Set([...(master.linked_report_ids || []), ...secondaryCodes])
-    )
-    inMemoryTriageCases[masterIndex] = {
-      ...master,
-      linked_report_ids: updatedLinkedCodes,
-      pm_notes: `${master.pm_notes ? master.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG PA04] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${auditNotes}`
-    }
-
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-
-    return {
-      success: true,
-      master: JSON.parse(JSON.stringify(inMemoryTriageCases[masterIndex]))
+    const session = getCaseSessionKey()
+    const master = await apiClient.get<InternalCaseDto>(`/cases/${masterId}`)
+    const sources = await Promise.all(secondaryIds.map(id => apiClient.get<InternalCaseDto>(`/cases/${id}`)))
+    const reportIds = sources.flatMap(response => response.data.reportIds || [])
+    if (!reportIds.length || sources.some(response => !response.data.version)) throw new Error('Thiếu report ID/version nguồn; chưa liên kết.')
+    assertCaseReadActive(session)
+    const pendingKey = `${useAuthStore.getState().user?.id}:link:${masterId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả; cần tải lại và đối chiếu trước lệnh mới.')
+    const key = crypto.randomUUID()
+    const body = { reportIds: [...new Set(reportIds)], sourceCaseVersions: Object.fromEntries(sources.map(source => [source.data.id, source.data.version])), reason: auditNotes }
+    const version = normalizeETag(master.data.version || undefined)
+    pendingCaseCommands.set(pendingKey, { key, body, version })
+    try {
+      const response = await apiClient.post<InternalCaseDto>(`/cases/${masterId}/report-links`, body, {
+        headers: { 'Idempotency-Key': key, 'If-Match': version }
+      })
+      pendingCaseCommands.delete(pendingKey)
+      assertCaseReadActive(session)
+      return { success: true, master: mapBackendCaseToDomain(response.data, {}) }
+    } catch (error: any) {
+      if (error.response?.status < 500) pendingCaseCommands.delete(pendingKey)
+      throw error
     }
   },
 
@@ -638,80 +554,33 @@ export const triageService = {
    * Chỉ huy trưởng (PM) tách báo cáo đã gộp ra khỏi ca chính (Candidate3 Backend)
    * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
    */
-  async splitReport(caseId: string, reportId: string, reason: string = 'Tách hồ sơ do không trùng lặp'): Promise<void> {
-    console.log(`🚀 [CANDIDATE3 BE] Gọi API-023 tách báo cáo [${reportId}] khỏi ca [${caseId}]...`)
-    const currentCase = inMemoryTriageCases.find((c) => c.id === caseId || c.code === caseId)
-    const etag = normalizeETag(currentCase?.etag || currentCase?.version)
-    const idempotencyKey = crypto.randomUUID()
-
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(caseId)
-    if (isUuid) {
-      try {
-        await apiClient.post(
-          `/cases/${caseId}/report-splits`,
-          {
-            reportIds: [reportId],
-            reason
-          },
-          {
-            headers: {
-              'Idempotency-Key': idempotencyKey,
-              'If-Match': etag
-            }
-          }
-        )
-        console.log(`✅ [CANDIDATE3 BE] API-023 Tách báo cáo thành công!`)
-      } catch (err: any) {
-        const errorMsg =
-          err?.response?.data?.message ||
-          err?.response?.data?.detail ||
-          err?.message ||
-          'Gọi API-023 tách báo cáo thất bại'
-        console.error('❌ [CANDIDATE3 BE] Lỗi API-023:', err?.response?.data || err?.message)
-        throw new Error(errorMsg)
-      }
+  async splitReport(caseId: string, reportId: string, reason = 'Tách báo cáo không trùng lặp'): Promise<void> {
+    const session = getCaseSessionKey()
+    const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+    if (!current.data.reportIds?.includes(reportId)) throw new Error('Report không thuộc Case hiện tại; chưa gửi lệnh tách.')
+    assertCaseReadActive(session)
+    const pendingKey = `${useAuthStore.getState().user?.id}:split:${caseId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả; cần tải lại và đối chiếu trước lệnh mới.')
+    const key = crypto.randomUUID()
+    const body = { reportIds: [reportId], reason }
+    const version = normalizeETag(current.data.version || undefined)
+    pendingCaseCommands.set(pendingKey, { key, body, version })
+    try {
+    await apiClient.post(`/cases/${caseId}/report-splits`, body, {
+      headers: { 'Idempotency-Key': key, 'If-Match': version }
+    })
+    pendingCaseCommands.delete(pendingKey)
+    } catch (error: any) {
+      if (error.response?.status < 500) pendingCaseCommands.delete(pendingKey)
+      throw error
     }
   },
 
-  /**
-   * Tách hồ sơ con khỏi hồ sơ Master khi phát hiện gộp nhầm (Unlink - BR-30)
-   */
-  async unlinkReport(secondaryIdentifier: string, masterCaseId?: string): Promise<{ success: boolean }> {
-    if (masterCaseId) {
-      await this.splitReport(masterCaseId, secondaryIdentifier)
-    }
-
-    inMemoryTriageCases = inMemoryTriageCases.map((c) => {
-      if (c.id === secondaryIdentifier || c.code === secondaryIdentifier) {
-        return {
-          ...c,
-          status: 'PENDING',
-          status_label: 'Chờ thẩm định',
-          master_case_id: undefined,
-          pm_notes: `[TÁCH HỒ SƠ BR-30] Đã tách khỏi hồ sơ gộp nhầm trước đó.`
-        }
-      }
-      return c
-    })
-
-    if (masterCaseId) {
-      const masterIdx = inMemoryTriageCases.findIndex((c) => c.id === masterCaseId)
-      if (masterIdx !== -1) {
-        const master = inMemoryTriageCases[masterIdx]
-        inMemoryTriageCases[masterIdx] = {
-          ...master,
-          linked_report_ids: (master.linked_report_ids || []).filter(
-            (code) => code !== secondaryIdentifier
-          )
-        }
-      }
-    }
-
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-
-    return {
-      success: true
-    }
+  async unlinkReport(reportIdentifier: string, masterCaseId?: string): Promise<{ success: boolean }> {
+    const reportId = reportIdentifier.replace(/^child-/, '')
+    if (!masterCaseId || !/^[0-9a-f-]{36}$/i.test(reportId)) throw new Error('Thiếu Case ID hoặc report ID gốc để tách; không dùng mã hiển thị thay reference.')
+    await this.splitReport(masterCaseId, reportId)
+    return { success: true }
   },
 
   /**

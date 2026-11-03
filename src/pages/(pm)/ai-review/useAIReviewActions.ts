@@ -241,22 +241,8 @@ export const useAIReviewActions = ({
   }
 
   // Reset conclusion to PENDING for re-evaluating
-  const handleResetConclusion = (c?: TriageCase) => {
-    const target = c || selectedCase
-    setCases((prev) =>
-      prev.map((item) =>
-        item.id === target.id
-          ? {
-              ...item,
-              status: 'PENDING',
-              status_label: 'Chờ thẩm định',
-              conclusion: null,
-              conclusion_reason: undefined
-            }
-          : item
-      )
-    )
-    showToast(`Đã mở lại trạng thái chờ thẩm định cho hồ sơ [${target.code}].`)
+  const handleResetConclusion = () => {
+    showToast('Chưa có command mở lại kết luận Case trong contract. Không thay đổi trạng thái server; hãy bổ sung bằng chứng theo quy trình được phép.')
   }
 
   // Publish Public Result 
@@ -277,17 +263,20 @@ export const useAIReviewActions = ({
       new Date().toLocaleDateString('vi-VN')
 
     try {
-      await triageService.publishCase(target.id, {
+      const result = await triageService.publishCase(target.id, {
         summary: publishPublicNote,
         version: target.version,
         reportIds: target.report_ids && target.report_ids.length > 0 ? target.report_ids : undefined
       })
 
+      if (!isCurrent()) return
       setCases((prev) =>
         prev.map((c) =>
           c.id === target.id
             ? {
                 ...c,
+                ...result,
+                project_name: c.project_name,
                 is_published: true,
                 published_at: nowTime,
                 public_notice: publishPublicNote
@@ -308,42 +297,7 @@ export const useAIReviewActions = ({
   }
 
   const handleExecuteMerge = () => {
-    const selectedDups = selectedCase.cluster_duplicates?.filter((d) => d.selected) || []
-    if (selectedDups.length === 0) {
-      showToast('Vui lòng chọn ít nhất 1 hồ sơ trùng lặp để gộp!')
-      return
-    }
-
-    const dupCodes = selectedDups.map((d) => d.code)
-    setCases((prev) =>
-      prev.map((c) => {
-        if (dupCodes.includes(c.code)) {
-          return {
-            ...c,
-            status: 'MERGED',
-            status_label: 'Đã gộp trùng',
-            master_case_id: selectedCase.id,
-            pm_notes: `Đã tự động gộp dữ liệu vào hồ sơ chính ${selectedCase.code}`
-          }
-        }
-        if (c.id === selectedCase.id) {
-          const updatedDups = (c.cluster_duplicates || []).map((dup) =>
-            dupCodes.includes(dup.code) ? { ...dup, selected: false, is_merged: true } : dup
-          )
-          const updatedLinked = Array.from(new Set([...(c.linked_report_ids || []), ...dupCodes]))
-          return {
-            ...c,
-            linked_report_ids: updatedLinked,
-            cluster_duplicates: updatedDups,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[GỘP CỤM SPATIAL] Đã tích hợp bằng chứng từ ${dupCodes.join(', ')}`
-          }
-        }
-        return c
-      })
-    )
-    setExpandedMasterIds((prev) => Array.from(new Set([...prev, selectedCase.id])))
-    setIsMergeModalOpen(false)
-    showToast(`Gộp thành công ${selectedDups.length} phản ánh lân cận vào hồ sơ gốc [${selectedCase.code}]!`)
+    showToast('Gợi ý trùng không tự gộp hồ sơ. Hãy chọn các Case và dùng Liên kết báo cáo để gửi command có version hợp lệ.')
   }
 
   return {

@@ -154,7 +154,8 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             <option value="CRITICAL">Khẩn cấp</option>
             <option value="HIGH">Cao</option>
             <option value="MEDIUM">Vừa</option>
-            <option value="LOW">Bình thường</option>
+            <option value="LOW">Thấp</option>
+            <option value="UNKNOWN">Chưa xác định</option>
           </select>
         </div>
 

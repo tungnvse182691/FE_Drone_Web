@@ -14,7 +14,7 @@ export interface ReviewModalsProps {
   targetTriageCase: TriageCase | null
   cases: TriageCase[]
   selectedReportIds: string[]
-  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
 
   // Modal 1: Merge
   isMergeModalOpen: boolean

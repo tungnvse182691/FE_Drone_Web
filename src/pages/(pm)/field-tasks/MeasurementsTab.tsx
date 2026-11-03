@@ -6,7 +6,6 @@ import { surveyService } from '../../../api/services/surveyService'
 import { SafeImage } from '../../../components/common/SafeImage'
 import {
   fieldTaskService,
-  CreateFieldTaskPayload,
   FieldEvidenceReuseInput
 } from '../../../api/services/fieldTaskService'
 import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModal'
@@ -286,10 +285,6 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     setCreateModalError(null)
     setIsSubmittingCreate(true)
     try {
-      const finalMethod = isCustomMethod
-        ? (customMethodText.trim() || 'Phương pháp đo chuyên dụng theo chỉ định PM')
-        : newMethod
-
       const targetDefect = availableDefects.find((d) => d.id === selectedDefectId)
       const effectiveProjectId =
         selectedProjectId !== 'ALL'
@@ -300,28 +295,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
         throw new Error('Chưa có dự án nào được chọn hoặc tài khoản chưa được phân công dự án.')
       }
 
-      const isReportDefect = (selectedDefectId || '').toLowerCase() === 'a3e894a5-2d58-4912-949f-889794739b29'
-      const payload: CreateFieldTaskPayload = {
-        project_id: effectiveProjectId,
-        defect_id: selectedDefectId && selectedDefectId !== 'CUSTOM' ? selectedDefectId : availableDefects[0]?.id || '475cc6d2-2a01-48c0-8104-10d1209ea5af',
-        defect_version: targetDefect?.version || (isReportDefect ? 'AAAAAAAAKxM=' : 'AAAAAAAAKys='),
-        route_version_id: targetDefect?.route_version_id || '5baf3408-6489-432f-89ed-127a89e905a5',
-        survey_id: isReportDefect ? undefined : (targetDefect?.survey_id || 'db73e898-8e30-439c-96a8-09e263c06104'),
-        source_kind: isReportDefect ? 'REPORTER' : 'SURVEY',
-        defect_code: newDefectCode.trim().toUpperCase(),
-        defect_name: newDefectName || 'Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường',
-        defect_photo_url: newDefectPhoto,
-        chainage_km: Number(newChainage) || 1025.4,
-        lane: newLane,
-        measurement_type: finalMethod,
-        technician_name: newTechnician,
-        assigned_to_user_id: selectedCrewId,
-        notes: newNotes
-      }
-      const created = await fieldTaskService.createTask(payload)
-      setIsCreateModalOpen(false)
-      await onRefreshTasks()
-      notify(`✅ Đã khởi tạo thành công phiếu đo đạc [${created.code}] trên CSDL Backend!`, 'success')
+      throw new Error('Chưa thể tạo FIELD từ form này: thiếu nguồn Defect/Survey và loại đo canonical được API xác nhận. Không dùng ID/version mẫu. P2-07 không hỗ trợ tạo FIELD trực tiếp từ Case chưa có Defect.')
     } catch (err: any) {
       const errMsg = err?.message || 'Lỗi khi tạo nhiệm vụ trên CSDL Backend'
       setCreateModalError(errMsg)
@@ -351,7 +325,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Mở modal nhập số đo
   const handleOpenSubmitModal = (task: FieldTask) => {
     setSelectedTaskToSubmit(task)
-    setInputMeasuredValue(task.measured_value || 42)
+    setInputMeasuredValue(task.measured_value ?? 0)
     setSubmitNotes(task.notes || '')
     setIsSubmitValueModalOpen(true)
   }
@@ -368,7 +342,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       await fieldTaskService.recordMeasurement(
         pId,
         selectedTaskToSubmit.id,
-        Number(inputMeasuredValue) || 40,
+        Number(inputMeasuredValue),
         submitNotes
       )
       const code = selectedTaskToSubmit.code
@@ -386,15 +360,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   }
 
   // Xác minh số liệu vào hồ sơ (chuyển sang VERIFIED)
-  const handleVerifyTask = async (taskId: string, code: string) => {
+  const handleVerifyTask = async (taskId: string, code: string, decision: 'ACCEPT' | 'SUPPLEMENT' = 'ACCEPT') => {
     setActionLoadingId(taskId)
     try {
       const task = fieldTasks.find((t) => t.id === taskId)
       const pId = task?.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
       if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
-      await fieldTaskService.verifyTask(pId, taskId)
+      await fieldTaskService.verifyTask(pId, taskId, task?.version || undefined, decision)
       await onRefreshTasks()
-      notify(`✅ Đã xác minh số liệu cho phiếu [${code}] và chốt vào hồ sơ sửa chữa CSDL!`, 'success')
+      notify(decision === 'SUPPLEMENT' ? `Server đã ghi nhận yêu cầu Crew bổ sung phiếu [${code}].` : `Server đã xác nhận review số liệu phiếu [${code}].`, 'success')
     } catch (err: any) {
       const errMsg = err?.response?.data?.message || err?.message || 'Không thể xác minh'
       notify(`❌ Lỗi: ${errMsg}`, 'error')
@@ -423,13 +397,13 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     try {
       const pId = taskForReuse.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
       if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
-      // Bằng chứng và file ảnh gốc lưu trong CSDL Backend Candidate3
+      const reference = taskForReuse.reused_evidence
+      if (!reference?.file_id || !reference.source_evidence_id || !reference.checksum_sha256 || !taskForReuse.version) {
+        throw new Error('Chưa có nguồn chọn file/evidence/checksum được API cho phép cho task này. Không dùng reference mẫu; chưa gửi lệnh tái sử dụng.')
+      }
       const payload: FieldEvidenceReuseInput = {
-        fileId: 'b58915d3-bc67-4056-a62a-003576faf286',
-        sourceEvidenceId: '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-        sourceKind: 'REPORTER',
-        expectedChecksum: '6b1048f8a6d40bac0b2954c18fefa40c4ea7a96120fc2e54b7317c0e43c2bbec',
-        reason: reuseReason.trim()
+        fileId: reference.file_id, sourceEvidenceId: reference.source_evidence_id,
+        sourceKind: reference.source_kind, expectedChecksum: reference.checksum_sha256, reason: reuseReason.trim()
       }
       await fieldTaskService.reuseEvidence(pId, taskForReuse.id, payload, taskForReuse.version || undefined)
       await onRefreshTasks()
@@ -637,7 +611,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         <div className="text-[11px] text-slate-600 line-clamp-1">{task.defect_name}</div>
                       )}
                       <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                        Km {task.chainage_km} {task.lane ? `• ${task.lane}` : ''}
+                        {task.chainage_km == null ? 'Chưa có lý trình' : `Km ${task.chainage_km}`} {task.lane ? `• ${task.lane}` : ''}
                       </div>
                     </td>
 
@@ -657,7 +631,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : (
                         <span className="font-bold text-slate-900 text-xs font-mono">
-                          {task.measured_value} mm
+                          {task.measured_value == null ? 'Chưa có số đo được xác định' : task.measured_value}
                         </span>
                       )}
                     </td>
@@ -782,11 +756,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : task.status === 'SUBMITTED' ? (
                         <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
-                          ĐÃ CÓ SỐ ĐO
+                          ĐÃ NỘP HỒ SƠ
                         </span>
                       ) : (
                         <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
-                          ĐÃ XÁC MINH
+                          {task.status === 'VERIFIED' ? 'ĐÃ XÁC MINH' : task.status === 'SUPPLEMENT_REQUIRED' ? 'CẦN BỔ SUNG' : 'CHƯA XÁC ĐỊNH'}
                         </span>
                       )}
                     </td>
@@ -841,8 +815,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             <span>Chi tiết & Ảnh</span>
                           </button>
 
-                          {task.status === 'SUBMITTED' && (
-                            <button
+                          {task.status === 'SUBMITTED' && !isSupervisor && (
+                            <><button
                               type="button"
                               onClick={() => handleVerifyTask(task.id, task.code)}
                               className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
@@ -851,6 +825,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               <Icon name="check" size={13} />
                               <span>Xác minh số liệu</span>
                             </button>
+                            <button type="button" onClick={() => handleVerifyTask(task.id, task.code, 'SUPPLEMENT')} className="px-2.5 py-1 rounded-lg border border-amber-300 text-amber-800 text-[11px]">Yêu cầu bổ sung</button></>
                           )}
 
                           {task.status === 'VERIFIED' && (
@@ -1571,7 +1546,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </span>
                     ) : selectedDetailTask.status === 'SUBMITTED' ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                        ĐÃ CÓ SỐ ĐO
+                        ĐÃ NỘP HỒ SƠ
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -1597,7 +1572,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div>
                     <span className="text-slate-500 block text-[11px]">Vị trí lý trình:</span>
                     <span className="font-semibold text-slate-800">
-                      Km {selectedDetailTask.chainage_km} {selectedDetailTask.lane ? `• ${selectedDetailTask.lane}` : ''}
+                      {selectedDetailTask.chainage_km == null ? 'Chưa có lý trình' : `Km ${selectedDetailTask.chainage_km}`} {selectedDetailTask.lane ? `• ${selectedDetailTask.lane}` : ''}
                     </span>
                   </div>
 
@@ -1802,7 +1777,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   />
                   <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 font-semibold">
                     <Icon name="location_on" size={12} className="text-amber-400" />
-                    <span>Km {taskForReuse.chainage_km}</span>
+                    <span>{taskForReuse.chainage_km == null ? 'Chưa có lý trình' : `Km ${taskForReuse.chainage_km}`}</span>
                   </div>
                 </div>
 
@@ -1854,7 +1829,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-amber-800 font-medium">Vị trí:</span>
                     <span className="text-slate-700 font-medium">
-                      Km {taskForReuse.chainage_km} • {taskForReuse.lane || 'Làn cơ giới 1'}
+                      {taskForReuse.chainage_km == null ? 'Chưa có lý trình' : `Km ${taskForReuse.chainage_km}`} • {taskForReuse.lane || 'Làn cơ giới 1'}
                     </span>
                   </div>
                 </div>
@@ -1979,7 +1954,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           secondaryPhotoLabel="Ảnh Khảo Sát Drone"
           measuredValue={lightboxTask.measured_value}
           unit="mm"
-          chainage={lightboxTask.chainage_km}
+          chainage={lightboxTask.chainage_km ?? undefined}
           lane={lightboxTask.lane}
           gpsLat={lightboxTask.gps_lat || 16.2405}
           gpsLng={lightboxTask.gps_lng || 108.1310}
@@ -1998,7 +1973,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </span>
             ) : lightboxTask.status === 'SUBMITTED' ? (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-900/80 text-amber-200">
-                ĐÃ CÓ SỐ ĐO
+                ĐÃ NỘP HỒ SƠ
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-900/80 text-emerald-200">

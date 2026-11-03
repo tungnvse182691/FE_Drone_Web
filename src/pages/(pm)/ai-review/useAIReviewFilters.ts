@@ -45,7 +45,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       // 1. Tab filter
       if (activeTab === 'PENDING' && c.status !== 'PENDING') return false
       if (activeTab === 'MERGED' && c.status !== 'MERGED') return false
-      if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY') return false
+      if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY' && c.status !== 'AWAITING_EVIDENCE') return false
       if (activeTab === 'CRITICAL' && c.severity !== 'CRITICAL') return false
 
       // 3. Dropdown filters: Nguồn tiếp nhận
@@ -80,7 +80,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const pendingCount = cases.filter((c) => c.status === 'PENDING').length
   const criticalCount = cases.filter((c) => c.severity === 'CRITICAL').length
   const mergedCount = cases.filter((c) => c.status === 'MERGED').length
-  const surveyCount = cases.filter((c) => c.status === 'NEED_SURVEY').length
+  const surveyCount = cases.filter((c) => (c.status === 'NEED_SURVEY' || c.status === 'AWAITING_EVIDENCE')).length
 
   const citizenCount = cases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
   const unassignedCitizenCount = cases.filter(

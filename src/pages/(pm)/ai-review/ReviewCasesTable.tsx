@@ -129,27 +129,9 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
       {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 mt-4 border-t border-slate-100 text-xs">
         <span className="text-slate-500">
-          Tổng số {filteredCases.length} hồ sơ khiếm khuyết từ CSDL
+          {filteredCases.length} hồ sơ phản ánh đã tải theo bộ lọc
         </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            disabled
-            className="p-1.5 rounded-lg text-slate-300 transition-colors disabled:opacity-40"
-          >
-            <Icon name="chevron_left" size={16} />
-          </button>
-          <span className="w-7 h-7 rounded-lg text-xs font-bold bg-brand-gold text-white shadow-2xs flex items-center justify-center">
-            1
-          </span>
-          <button
-            type="button"
-            disabled
-            className="p-1.5 rounded-lg text-slate-300 transition-colors disabled:opacity-40"
-          >
-            <Icon name="chevron_right" size={16} />
-          </button>
-        </div>
+        <span className="text-slate-500">Hiển thị tất cả kết quả</span>
       </div>
     </div>
   )

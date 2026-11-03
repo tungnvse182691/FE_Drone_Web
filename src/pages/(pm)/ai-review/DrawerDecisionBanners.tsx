@@ -22,7 +22,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const severityLabel =
-    selectedCase.severity === 'CRITICAL'
+    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.severity === 'CRITICAL'
       ? 'Khẩn cấp'
       : selectedCase.severity === 'HIGH'
         ? 'Nghiêm trọng'
@@ -31,7 +31,7 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
           : 'Nhẹ'
 
   const urgencyLabel =
-    selectedCase.urgency === 'EMERGENCY'
+    selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'
       ? 'Đặc biệt khẩn cấp'
       : selectedCase.urgency === 'URGENT'
         ? 'Khẩn cấp (24-48h)'

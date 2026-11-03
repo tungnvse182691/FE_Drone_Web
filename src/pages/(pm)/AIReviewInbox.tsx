@@ -1,7 +1,8 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services/projectService'
+import { apiClient } from '../../api/client'
+import { getCaseSessionKey, isCaseReadCanceled } from '../../api/services/triageService'
 import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
@@ -18,25 +19,31 @@ export const AIReviewInbox: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
-  const activeProjects = React.useMemo(() => {
-    try {
-      const real = projectService.getProjects()
-      if (real && real.length > 0) {
-        // Display server-scoped projects; never infer membership from email/name.
-        const scoped = real
-        return scoped.map((p) => ({
-          id: p.id,
-          code: p.code,
-          name: p.name,
-          start_km: p.start_km || 0,
-          end_km: p.end_km || 0
-        }))
-      }
-    } catch (err) {
-      console.error('Lỗi khi nạp danh sách dự án CSDL:', err)
+  const session = useAuthStore(() => getCaseSessionKey())
+  const [activeProjects, setActiveProjects] = React.useState<Array<{ id: string; code: string; name: string }>>([])
+  const [projectError, setProjectError] = React.useState<string | null>(null)
+  React.useEffect(() => {
+    const controller = new AbortController()
+    setActiveProjects([])
+    setProjectError(null)
+    const load = async () => {
+      const items: Array<{ id: string; code: string; name: string }> = []
+      let cursor: string | undefined
+      const seen = new Set<string>()
+      do {
+        const response = await apiClient.get<{ items: Array<{ projectId: string; projectCode: string; name: string }>; nextCursor?: string }>('/projects', { params: { cursor }, signal: controller.signal })
+        items.push(...response.data.items.map(project => ({ id: project.projectId, code: project.projectCode, name: project.name })))
+        cursor = response.data.nextCursor || undefined
+        if (cursor && seen.has(cursor)) throw new Error('Cursor dự án bị lặp.')
+        if (cursor) seen.add(cursor)
+      } while (cursor)
+      if (!controller.signal.aborted && session === getCaseSessionKey()) setActiveProjects(items)
     }
-    return []
-  }, [isSupervisor, user])
+    load().catch(error => {
+      if (!controller.signal.aborted && session === getCaseSessionKey() && !isCaseReadCanceled(error)) setProjectError(error.message || 'Không tải được danh mục dự án.')
+    })
+    return () => controller.abort()
+  }, [session])
 
   const state = useAIReviewState()
   const {
@@ -66,6 +73,7 @@ export const AIReviewInbox: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {projectError && <p role="alert">Danh mục dự án chưa tải được: {projectError}</p>}
       {state.isLoading && <p role="status">Đang tải hồ sơ...</p>}
       {state.loadError && <div role="alert" className="p-3 bg-red-50 text-red-700">{state.loadError} <button onClick={state.reloadCases}>Thử lại</button></div>}
       {!state.isLoading && !state.loadError && cases.length === 0 && <p>Chưa có dữ liệu trong CSDL.</p>}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
-import { triageService, getCaseSessionKey, isCaseReadCanceled } from '../../../api/services/triageService'
+import { triageService, getCaseSessionKey, isCaseReadCanceled, CaseListReadError } from '../../../api/services/triageService'
 import { useAuthStore } from '../../../store/authStore'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
@@ -48,6 +48,7 @@ export const useAIReviewState = () => {
         if (!isActive() || isCaseReadCanceled(err)) return
         console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
         if (isActive()) {
+          if (err instanceof CaseListReadError) setCases(err.items)
           setLoadError(err?.message || 'Không tải được Case')
           showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
         }
@@ -77,10 +78,10 @@ export const useAIReviewState = () => {
 
   // Form states for selected case editing
   const [currentSeverity, setCurrentSeverity] = useState<TriageCase['severity']>(
-    selectedCase?.severity || 'CRITICAL'
+    selectedCase?.severity || 'UNKNOWN'
   )
   const [currentUrgency, setCurrentUrgency] = useState<TriageCase['urgency']>(
-    selectedCase?.urgency || 'EMERGENCY'
+    selectedCase?.urgency || 'UNKNOWN'
   )
   const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm || 0)
   const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm || 0)
@@ -146,47 +147,11 @@ export const useAIReviewState = () => {
 
   // Thao tác hàng loạt (Bulk Actions): Xác nhận hàng loạt & Đánh dấu kiểm tra lại
   const handleBulkVerify = () => {
-    const ids = linkActions.selectedReportIds
-    if (ids.length === 0) return
-
-    setCases((prev) =>
-      prev.map((c) =>
-        ids.includes(c.id)
-          ? {
-              ...c,
-              status: 'VERIFIED',
-              status_label: 'Đã xác minh (Verified)',
-              conclusion: 'DEFECT_FOUND',
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_VERIFY] Đã xác nhận hàng loạt ngày ${new Date().toLocaleDateString('vi-VN')}`
-            }
-          : c
-      )
-    )
-    linkActions.setSelectedReportIds([])
-    showToast(`Đã xác nhận hàng loạt ${ids.length} khiếm khuyết thành công! Sẵn sàng đưa vào kế hoạch sửa chữa.`)
+    showToast('Chưa hỗ trợ kết luận hàng loạt: cần kiểm tra source, version và bằng chứng riêng của từng hồ sơ. Chưa gửi lệnh.')
   }
 
   const handleBulkNeedSurvey = () => {
-    const ids = linkActions.selectedReportIds
-    if (ids.length === 0) return
-
-    const surveyCode = `SR-2026-BULK-${Date.now().toString().slice(-4)}`
-    setCases((prev) =>
-      prev.map((c) =>
-        ids.includes(c.id)
-          ? {
-              ...c,
-              status: 'NEED_SURVEY',
-              status_label: 'Cần đo đạc bổ sung',
-              conclusion: null,
-              survey_request_code: surveyCode,
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_SURVEY] Đã yêu cầu đo đạc lại hiện trường (${surveyCode})`
-            }
-          : c
-      )
-    )
-    linkActions.setSelectedReportIds([])
-    showToast(`Đã đánh dấu kiểm tra lại hiện trường cho ${ids.length} hồ sơ! Mã phiếu: ${surveyCode}`)
+    showToast('Chưa hỗ trợ yêu cầu hàng loạt. Hãy mở từng hồ sơ để gửi yêu cầu bổ sung bằng chứng; thao tác này không tạo FIELD.')
   }
 
   return {

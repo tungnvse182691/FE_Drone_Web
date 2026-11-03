@@ -6,7 +6,7 @@ export interface TriageProjectModalProps {
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
-  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
   onConfirmTriageProject: (
@@ -122,7 +122,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                 const hasKmInName = p.name.includes('Km')
                 const displayLabel = hasKmInName
                   ? `${p.code} — ${p.name}`
-                  : `${p.code} — ${p.name} (Km ${p.start_km} → Km ${p.end_km})`
+                  : `${p.code} — ${p.name}`
                 return (
                   <option key={p.id} value={p.id}>
                     {displayLabel}
@@ -132,7 +132,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </select>
             {selectedProj && (
               <span className="text-[10px] text-slate-500 mt-1 pl-1">
-                Phạm vi bảo hành: Km {selectedProj.start_km} đến Km {selectedProj.end_km}
+                {selectedProj.start_km != null && selectedProj.end_km != null ? `Phạm vi bảo hành: Km ${selectedProj.start_km} đến Km ${selectedProj.end_km}` : 'Danh mục dự án chưa cung cấp lý trình.'}
               </span>
             )}
           </div>

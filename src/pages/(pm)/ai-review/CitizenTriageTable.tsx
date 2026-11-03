@@ -98,10 +98,10 @@ export const CitizenTriageTable: React.FC<CitizenTriageTableProps> = ({
                       code: dup?.code
                         ? dup.code.startsWith('#') ? dup.code : `#${dup.code}`
                         : `#REP-${cleanCode.slice(0, 8).toUpperCase()}`,
-                      source: 'PATROL' as const,
-                      source_label: dup?.source || 'Đội tuần tra',
-                      source_detail: 'Biên bản tuần tra lân cận đã được gộp vào hồ sơ',
-                      reporter_name: dup?.reporter || 'Tổ tuần tra hiện trường',
+                      source: 'CITIZEN' as const,
+                      source_label: dup?.source || 'Báo cáo liên kết',
+                      source_detail: 'Report ID được server liên kết vào Case',
+                      reporter_name: dup?.reporter,
                       project_id: item.project_id,
                       project_name: item.project_name,
                       stationing: item.stationing,

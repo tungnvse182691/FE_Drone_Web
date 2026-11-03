@@ -23,7 +23,7 @@ function load(file, mocks = {}) {
     if (name === './projectService') return { projectService: { fetchProjects: async () => [{ id: 'p', name: 'P' }], getProjects: () => [] } }
     throw new Error(`Missing mock: ${name} (${file})`)
   }
-  vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
+  vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, URLSearchParams, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
     sessionStorage: { getItem: () => null, setItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: undefined, URL, Blob }, { filename: file })
   return module.exports
 }
@@ -369,6 +369,84 @@ function caseLifecycleHarness() {
     const view = await h.flush()
     assert.equal(view.cases.length, 0); assert.equal(view.isLoading, false); assert.equal(view.loadError, null)
     assert.equal(h.errors.length, 0); assert.equal(h.writes.length, 1)
+  })
+
+  await test('UNKNOWN card/detail badges never present low/normal priority', async () => {
+    const React = require('react'); const { renderToStaticMarkup } = require('react-dom/server')
+    const componentMocks = { react: { __esModule: true, default: React, ...React }, 'react-router-dom': { useNavigate: () => () => {}, useLocation: () => ({ pathname: '/pm/ai-inbox' }) }, '../../../components/ui/Icon': { Icon: () => null } }
+    const item = { id: 'case', code: '#CAS-TEST', source: 'CITIZEN', source_label: 'Phản ánh', source_detail: '', severity: 'UNKNOWN', urgency: 'UNKNOWN', status: 'PENDING', project_id: 'p', project_name: 'P', stationing: 'Chưa có dữ liệu', gps: { lat: null, lng: null, altitude_m: 0, resolution_cm_px: 0 }, pm_notes: '', image_url: '' }
+    const { TriageCard } = load('src/pages/(pm)/ai-review/TriageCard.tsx', componentMocks)
+    const markup = renderToStaticMarkup(React.createElement(TriageCard, { item, selectedCaseId: '', childReports: [] }))
+    assert.ok(markup.includes('Chưa xác định ưu tiên')); assert.ok(!markup.includes('Ưu tiên Thấp'))
+    const low = renderToStaticMarkup(React.createElement(TriageCard, { item: { ...item, severity: 'LOW' }, selectedCaseId: '', childReports: [] }))
+    assert.ok(low.includes('Ưu tiên Thấp'))
+    const { CitizenTriageChildRow } = load('src/pages/(pm)/ai-review/CitizenTriageChildRow.tsx', componentMocks)
+    const child = renderToStaticMarkup(React.createElement(CitizenTriageChildRow, { child: item, masterCode: 'master', masterProjectName: 'P' }))
+    assert.ok(child.includes('Chưa xác định')); assert.ok(!child.includes('>Thấp<'))
+    const { PhotoZoomModal } = load('src/pages/(pm)/ai-review/PhotoZoomModal.tsx', componentMocks)
+    const photo = renderToStaticMarkup(React.createElement(PhotoZoomModal, { isOpen: true, selectedCase: item }))
+    assert.ok(!photo.includes('Nhẹ (Cấp 1)')); assert.ok(!photo.includes('>Bình thường<'))
+  })
+  await test('UNKNOWN priority and AwaitingEvidence filter/count keep unknown out of known critical KPI', async () => {
+    let index = 0
+    const hooks = { useState: value => [index++ === 4 ? 'UNKNOWN' : value, () => {}], useMemo: fn => fn(), useEffect() {} }
+    const { useAIReviewFilters } = load('src/pages/(pm)/ai-review/useAIReviewFilters.ts', { react: { ...hooks }, 'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}] } })
+    const cases = [{ id: 'unknown', severity: 'UNKNOWN', status: 'AWAITING_EVIDENCE', source: 'CITIZEN', stationing: '' }, { id: 'low', severity: 'LOW', status: 'PENDING', source: 'CITIZEN', stationing: '' }]
+    const filters = useAIReviewFilters({ cases })
+    assert.deepEqual(json(filters.filteredCases.map(item => item.id)), ['unknown']); assert.equal(filters.criticalCount, 0); assert.equal(filters.surveyCount, 1)
+  })
+  await test('link and split use server report references/current versions, never fabricate a local success', async () => {
+    const calls = []
+    const service = triage({ get: async url => response(detail({ id: url.endsWith('source') ? 'source' : 'master', reportIds: url.endsWith('source') ? ['r-source'] : ['r-master', 'r-source'] })), post: async (url, body, options) => { calls.push({ url, body, options }); return response(detail({ id: 'master' })) } })
+    await service.linkDuplicateReports('master', ['source'], 'link test')
+    assert.deepEqual(json(calls[0].body.reportIds), ['r-source']); assert.equal(calls[0].body.sourceCaseVersions.source, 'AAAAAAAAAAE=')
+    await service.splitReport('master', 'r-source', 'split test')
+    assert.deepEqual(json(calls[1].body.reportIds), ['r-source']); assert.equal(calls[1].options.headers['If-Match'], '"AAAAAAAAAAE="')
+    const denied = triage({ get: async () => response(detail()), post: async () => { throw failure(403, 'access_forbidden') } })
+    await assert.rejects(denied.linkDuplicateReports('master', ['source'], 'denial'), error => error.response.status === 403)
+  })
+  await test('FIELD: API error propagates; unknown measurement cannot be accepted and PM cannot submit for Crew', async () => {
+    let posts = 0
+    const { fieldTaskService } = load('src/api/services/fieldTaskService.ts', { '../client': { apiClient: { get: async url => {
+      if (url.endsWith('/field-inspection-tasks')) throw failure(500, 'internal_error')
+      if (url.includes('/submissions/')) return response({ readiness: 'INCOMPLETE', missingReasons: ['MEASUREMENT_VALUE_UNKNOWN'] })
+      return response({ latestSubmissionId: 's', version: 'AAAAAAAAAAE=' })
+    }, post: async () => { posts++ } } }, './surveyService': { surveyService: {} } })
+    await assert.rejects(fieldTaskService.getTasks({ projectId: 'p' }), error => error.response.status === 500)
+    await assert.rejects(fieldTaskService.verifyTask('p', 't'), /MEASUREMENT_VALUE_UNKNOWN/)
+    await assert.rejects(fieldTaskService.startMeasuring('p', 't'), /Crew/)
+    await assert.rejects(fieldTaskService.recordMeasurement('p', 't', 42), /Crew/)
+    assert.equal(posts, 0)
+  })
+
+  await test('Supervisor failed unassigned scope exposes partial data plus diagnostics, never caches it as complete', async () => {
+    const h = caseLifecycleHarness()
+    h.changeSession({ user: { id: 'sup', role: roles.SUPERVISOR } })
+    h.render(); h.commit(); await h.flush()
+    h.calls[0].reject(failure(409, 'reference_scope_conflict')); await h.flush()
+    h.calls[1].resolve(response({ items: [detail()] })); await h.flush()
+    h.calls[2].resolve(response({ items: [] })); const view = await h.flush()
+    assert.equal(view.cases.length, 1); assert.ok(view.loadError.includes('reference_scope_conflict'))
+    assert.equal(view.isLoading, false)
+    assert.ok(h.writes.every(rows => rows.length === 0))
+  })
+  await test('FIELD Accepted is not verified; unknown physical data/evidence do not become seeded facts', async () => {
+    const { fieldTaskService } = load('src/api/services/fieldTaskService.ts', {
+      '../client': { apiClient: { get: async () => response({ items: [{ id: 'task-id', projectId: 'p', defectId: 'd', sourceKind: 'REPORTER', status: 'Accepted', requiredMeasurementType: 4, measurementScope: '{}' }] }) } }, './surveyService': { surveyService: {} }
+    })
+    const result = await fieldTaskService.getTasks({ projectId: 'p' })
+    assert.equal(result[0].status, 'ASSIGNED'); assert.equal(result[0].chainage_km, null)
+    assert.equal(result[0].gps_lat, undefined); assert.equal(result[0].reused_evidence, undefined); assert.equal(result[0].reporter_name, undefined)
+    assert.equal(result[0].measurement_type, 'Diện tích (Area)')
+  })
+  await test('FIELD SUPPLEMENT sends current submission/version without claiming UNKNOWN is accepted', async () => {
+    const sent = []
+    const { fieldTaskService } = load('src/api/services/fieldTaskService.ts', {
+      '../client': { apiClient: { get: async url => response(url.includes('/submissions/') ? { readiness: 'INCOMPLETE', missingReasons: ['LOCATION_UNKNOWN'] } : { latestSubmissionId: 'submission', version: 'AAAAAAAAAAE=' }), post: async (url, body, options) => { sent.push({ body, options }); return response({}) } } }, './surveyService': { surveyService: {} }
+    })
+    await fieldTaskService.verifyTask('p', 'task', undefined, 'SUPPLEMENT')
+    assert.equal(sent[0].body.submissionId, 'submission'); assert.equal(sent[0].body.decision, 'SUPPLEMENT')
+    assert.equal(sent[0].options.headers['If-Match'], '"AAAAAAAAAAE="')
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

@@ -125,8 +125,8 @@ export interface FieldTask {
   defect_name?: string
   defect_photo_url?: string // Ảnh chụp khiếm khuyết từ Drone (Triage)
   measurement_type: string
-  chainage_km: number
-  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED'
+  chainage_km: number | null
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'SUPPLEMENT_REQUIRED' | 'UNKNOWN'
   measured_value?: number
   evidence_photo_url?: string // Ảnh chụp thước đo đối chứng từ hiện trường (Mobile)
   technician_name: string

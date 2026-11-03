@@ -68,47 +68,17 @@ export const useAIReviewLinkActions = ({
     setIsLinkReportsModalOpen(true)
   }
 
-  const handleConfirmLinkReports = () => {
-    if (!linkMasterCaseId) {
-      showToast('Vui lòng chọn hồ sơ gốc tiếp nhận chính!')
-      return
+  const handleConfirmLinkReports = async () => {
+    if (!linkMasterCaseId || selectedReportIds.length < 2) { showToast('Chọn Case chính và ít nhất một Case nguồn.'); return }
+    try {
+      await triageService.linkDuplicateReports(linkMasterCaseId, selectedReportIds.filter(id => id !== linkMasterCaseId), linkAuditNotes)
+      reloadCases()
+      setIsLinkReportsModalOpen(false)
+      setSelectedReportIds([])
+      showToast('Server đã xác nhận liên kết báo cáo. Đang tải lại hồ sơ.')
+    } catch (error: any) {
+      showToast(error?.response?.data?.code || error.message || 'Không thể liên kết; giữ bản nháp để đối chiếu.')
     }
-    const master = cases.find((c) => c.id === linkMasterCaseId)
-    if (!master) return
-
-    const secondaryIds = selectedReportIds.filter((id) => id !== linkMasterCaseId)
-    const secondaryCodes = cases.filter((c) => secondaryIds.includes(c.id)).map((c) => c.code)
-
-    setCases((prev) =>
-      prev.map((c) => {
-        if (c.id === linkMasterCaseId) {
-          const updatedLinkedCodes = Array.from(new Set([...(c.linked_report_ids || []), ...secondaryCodes]))
-          return {
-            ...c,
-            linked_report_ids: updatedLinkedCodes,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${linkAuditNotes}`
-          }
-        }
-        if (secondaryIds.includes(c.id)) {
-          return {
-            ...c,
-            status: 'MERGED',
-            status_label: 'Đã gộp trùng',
-            master_case_id: master.id,
-            pm_notes: `Đã liên kết báo trùng vào hồ sơ chính ${master.code} (Gộp báo trùng). Ghi chú: ${linkAuditNotes}`
-          }
-        }
-        return c
-      })
-    )
-
-    setExpandedMasterIds((prev) => Array.from(new Set([...prev, linkMasterCaseId])))
-    setIsLinkReportsModalOpen(false)
-    setSelectedReportIds([])
-    setSelectedCaseId(linkMasterCaseId)
-    showToast(
-      `Đã liên kết thành công ${secondaryIds.length} phản ánh vào hồ sơ chính [${master.code}]!`
-    )
   }
 
   // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31, API-023)
@@ -180,22 +150,7 @@ export const useAIReviewLinkActions = ({
         })
       }
 
-      setCases((prev) =>
-        prev.map((c) => {
-          if (targetIds.includes(c.id)) {
-            return {
-              ...c,
-              project_id: selectedProjectId,
-              project_name: projectName,
-              is_assigned: true,
-              status: 'PENDING',
-              status_label: 'Chờ PM thẩm định',
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
-            }
-          }
-          return c
-        })
-      )
+      reloadCases()
 
       setIsTriageProjectModalOpen(false)
       setSelectedReportIds([])
