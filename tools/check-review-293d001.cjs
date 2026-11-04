@@ -741,5 +741,82 @@ function caseLifecycleHarness() {
     await service.readConfirmedGeometry('p','road','version')
     assert.deepEqual(calls,['/projects/p/work-package','/projects/p/road-geometry-drafts/draft/readiness','/projects/p/road-sections/road/versions/version/geometry'])
   })
+  function geometryWorkflowHarness(projectGet, readGeometry, options = {}) {
+    const React = require('react'); const values=[]; const effects=[]; let slot=0; let view; let mounted=true; let lateWrites=0
+    const roads=[{roadSectionId:'a',currentVersionId:'va',code:'A',versionNo:1},{roadSectionId:'b',currentVersionId:'vb',code:'B',versionNo:2}]
+    const query=new URLSearchParams(options.projectId === '' ? '' : 'projectId=p');if(options.draftId)query.set('draftId',options.draftId)
+    const hooks={
+      ...React,
+      useState(initial) { const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return [values[i],next=>{if(!mounted)lateWrites++;values[i]=typeof next==='function'?next(values[i]):next}] },
+      useRef(initial) { const i=slot++;if(!(i in values))values[i]={current:initial};return values[i] },
+      useEffect(setup,deps) { const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true} }
+    }
+    const service={readProjectContext:async()=>({projectId:'p',engineeringUtmSrid:32648,roadSections:roads}),fetchCrsProfiles:async()=>[],readConfirmedGeometry:readGeometry,getGeometryDraft:async()=>({data:{id:'draft',status:'DRAFT',version:'v'},etag:'"v"'}),readDraftReadiness:async()=>options.readiness}
+    const {AlignmentGeometryWorkflow:Component}=load('src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx',{
+      react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
+      '../../../api/client':{apiClient:{get:projectGet}},'../../../api/services/alignmentService':{alignmentService:service},
+      '../../../store/authStore':{useAuthStore:selector=>selector({user:{id:'pm',role:options.role || roles.PROJECT_MANAGER}})},'./alignmentImportHelpers':{inspectGeoJsonCenterline:()=>({})}
+    })
+    const render=()=>{slot=0;view=Component();for(const effect of effects)if(effect?.pending){effect.pending=false;effect.cleanup?.();effect.cleanup=effect.setup()}return view}
+    const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}return view}
+    const nodes=()=>{const all=[];const visit=x=>{if(!x||typeof x!=='object')return;if(Array.isArray(x)){x.forEach(visit);return}all.push(x);visit(x.props?.children)};visit(view);return all}
+    const textOf=x=>typeof x==='string'||typeof x==='number'?String(x):Array.isArray(x)?x.map(textOf).join(''):x?.props?textOf(x.props.children):''
+    const select=road=>{nodes().find(n=>n.props?.['aria-label']==='Road geometry').props.onChange({target:{value:road}});render()}
+    const click=label=>{const node=nodes().find(n=>n.type==='button'&&textOf(n)===label);assert.ok(node,label);return node.props.onClick()}
+    render()
+    return {flush,render,select,click,nodes,text:()=>textOf(view),unmount:()=>{mounted=false;effects.forEach(e=>e?.cleanup?.())},lateWrites:()=>lateWrites}
+  }
+  const projectPage=()=>response({items:[{projectId:'p',projectCode:'TEST',name:'Project'}]})
+  const geometryFact=(road,version)=>({projectId:'p',roadSectionId:road,routeVersionId:version,versionNo:1,lengthMeters:100,isCurrent:true})
+  await test('geometry A then B: late A success/error/finally cannot alter B data or loading', async()=>{
+    const calls=[];const h=geometryWorkflowHarness(async()=>projectPage(),(...args)=>new Promise((resolve,reject)=>calls.push({args,resolve,reject})))
+    await h.flush();h.select('a');const a=h.click('Đọc geometry confirmed');h.select('b');const b=h.click('Đọc geometry confirmed')
+    calls[0].resolve(geometryFact('a','va'));await a;await h.flush()
+    assert.ok(!h.text().includes('Geometry máy chủ: va'));assert.ok(h.text().includes('Đang đọc geometry đã chọn'))
+    calls[1].resolve(geometryFact('b','vb'));await b;await h.flush();assert.ok(h.text().includes('Geometry máy chủ: vb'))
+    h.select('a');const old=h.click('Đọc geometry confirmed');h.select('b');calls[2].reject(new Error('OLD ROAD FAILURE'));await old;await h.flush();assert.ok(!h.text().includes('OLD ROAD FAILURE'))
+    h.unmount()
+  })
+  await test('geometry A->B->A and same-selection repeated reads accept only the latest attempt', async()=>{
+    const calls=[];const h=geometryWorkflowHarness(async()=>projectPage(),(...args)=>new Promise(resolve=>calls.push({args,resolve})))
+    await h.flush();h.select('a');const first=h.click('Đọc geometry confirmed');h.select('b');h.select('a');const latest=h.click('Đọc geometry confirmed')
+    calls[1].resolve({...geometryFact('a','va'),lengthMeters:222});await latest;await h.flush()
+    calls[0].resolve({...geometryFact('a','va'),lengthMeters:111});await first;await h.flush()
+    assert.ok(h.text().includes('lengthMeters=222'));assert.ok(!h.text().includes('lengthMeters=111'))
+    const r1=h.click('Đọc geometry confirmed'),r2=h.click('Đọc geometry confirmed');calls[3].resolve({...geometryFact('a','va'),lengthMeters:444});await r2;calls[2].resolve({...geometryFact('a','va'),lengthMeters:333});await r1;await h.flush();assert.ok(h.text().includes('lengthMeters=444'))
+    h.unmount()
+  })
+  await test('geometry wrong project/version is rejected and unmount fences late error/loading writes', async()=>{
+    const calls=[];const h=geometryWorkflowHarness(async()=>projectPage(),(...args)=>new Promise((resolve,reject)=>calls.push({args,resolve,reject})))
+    await h.flush();h.select('a');const wrong=h.click('Đọc geometry confirmed');calls[0].resolve(geometryFact('b','vb'));await wrong;await h.flush();assert.ok(h.text().includes('sai project/road/version'));assert.ok(!h.text().includes('Geometry máy chủ: vb'))
+    const late=h.click('Đọc geometry confirmed');h.unmount();calls[1].reject(new Error('after unmount'));await late;assert.equal(h.lateWrites(),0)
+  })
+  await test('project list failure retries the real paginated reader, preserves selection and does not choose first', async()=>{
+    let mode='fail';const cursors=[];let finish
+    const h=geometryWorkflowHarness(async(_,config)=>{cursors.push(config.params.cursor);if(mode==='fail')throw new Error('PROJECT SOURCE FAILED');if(mode==='pending')return new Promise(resolve=>finish=resolve);return response({items:config.params.cursor?[{projectId:'q',name:'Q'}]:[{projectId:'p',name:'P'}],nextCursor:config.params.cursor?null:'next'})},async()=>geometryFact('a','va'))
+    await h.flush();assert.ok(h.text().includes('Tải danh sách dự án thất bại'));assert.ok(!h.text().includes('không thuộc danh mục'))
+    h.click('Tải lại từ máy chủ');await h.flush();assert.ok(h.text().includes('PROJECT SOURCE FAILED'));assert.ok(cursors.length>=2)
+    mode='success';h.click('Tải lại từ máy chủ');await h.flush();assert.ok(!h.text().includes('PROJECT SOURCE FAILED'));assert.deepEqual(cursors.slice(-2),[undefined,'next'])
+    const select=h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry');assert.equal(select.props.value,'p')
+    mode='fail';h.click('Tải lại từ máy chủ');await h.flush();assert.ok(h.text().includes('PROJECT SOURCE FAILED'));assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'p');assert.ok(!h.text().includes('Không có dự án trong phạm vi'))
+    mode='pending';h.click('Tải lại từ máy chủ');await h.flush();assert.ok(h.text().includes('Đang tải danh sách dự án'));finish(response({items:[]}));await h.flush();assert.ok(h.text().includes('Không có dự án trong phạm vi'));assert.ok(h.text().includes('Dự án không thuộc danh mục API'))
+    assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'p');h.unmount()
+  })
+  await test('project repeated cursor is an error, never partial ready; write blockers name missing handler and permission', async()=>{
+    const h=geometryWorkflowHarness(async()=>response({items:[{projectId:'p',name:'P'}],nextCursor:'repeat'}),async()=>geometryFact('a','va'))
+    await h.flush();assert.ok(h.text().includes('Cursor dự án bị lặp'));assert.ok(!h.text().includes('Không có dự án trong phạm vi'))
+    assert.ok(h.text().includes('Chưa tích hợp handler lưu/sửa draft'));assert.ok(h.text().includes('Chỉ Giám sát được xác nhận'))
+    for(const label of ['Lưu draft','Xác nhận'])assert.equal(h.nodes().find(n=>n.type==='button'&&n.props.children===label).props.disabled,true)
+    h.unmount()
+  })
+  await test('ready Supervisor still sees the unintegrated confirm handler, without false missing-readiness or wrong-role reasons', async()=>{
+    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>geometryFact('a','va'),{role:roles.SUPERVISOR,draftId:'draft',readiness:{ready:true,missingFields:[],errors:[],warnings:[],sampleOnly:false}})
+    await h.flush();assert.ok(h.text().includes('Chưa tích hợp handler confirm'));assert.ok(!h.text().includes('Readiness chưa đạt'));assert.ok(!h.text().includes('Chỉ Giám sát được xác nhận'))
+    assert.equal(h.nodes().find(n=>n.type==='button'&&n.props.children==='Xác nhận').props.disabled,true);h.unmount()
+  })
+  await test('project list success with no selection never silently selects the first project', async()=>{
+    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>geometryFact('a','va'),{projectId:''})
+    await h.flush();assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'');assert.ok(h.text().includes('Chưa chọn dự án.'));h.unmount()
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })
