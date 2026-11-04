@@ -41,8 +41,9 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
               </span>
             )}
           </div>
+          <p className="text-xs font-semibold mt-1">{selectedCase.project_id ? `Đã phân dự án: ${selectedCase.project_name}` : 'Chưa phân dự án — Cần điều phối'} • {selectedCase.status_label}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gửi lúc {selectedCase.created_at} bởi {formattedSourceDetail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
+            Tiếp nhận: {selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleString('vi-VN') : 'API chưa cung cấp'} • {formattedSourceDetail}
           </p>
         </div>
       </div>

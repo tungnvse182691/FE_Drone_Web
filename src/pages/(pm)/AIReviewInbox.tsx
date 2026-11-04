@@ -92,7 +92,7 @@ export const AIReviewInbox: React.FC = () => {
       <ReviewHeader
         basePath={basePath}
         isSupervisor={isSupervisor}
-        cases={cases}
+        cases={state.visibleCases}
         pendingCount={pendingCount}
         selectedReportIds={selectedReportIds}
         selectedCase={selectedCase}
@@ -103,7 +103,10 @@ export const AIReviewInbox: React.FC = () => {
 
       {/* 2. Quick Filter Tabs & Search Controls */}
       <ReviewFilterBar
-        cases={cases}
+        hideAutoTests={state.hideAutoTests}
+        setHideAutoTests={state.setHideAutoTests}
+        autoTestCount={state.autoTestCount}
+        cases={state.visibleCases}
         projectsList={activeProjects}
         activeTab={activeTab}
         setActiveTab={setActiveTab}

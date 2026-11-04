@@ -696,6 +696,8 @@ export interface TriageCase {
   source_label: string
   source_detail: string
   project_id: string
+  project_code?: string
+  report_details_state?: 'UNSUPPORTED' | 'READY' | 'LOADING' | 'ERROR'
   project_name: string
   stationing: string
   lane: string

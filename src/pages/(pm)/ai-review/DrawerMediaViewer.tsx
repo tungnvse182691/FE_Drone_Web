@@ -71,7 +71,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1.5">
               <Icon name="photo_camera" size={32} />
-              <span className="text-xs">Không có ảnh đính kèm</span>
+              <span className="text-xs">{selectedCase.report_details_state === 'UNSUPPORTED' ? 'API Case chưa cung cấp reference/đường đọc ảnh cho vai trò này' : selectedCase.report_details_state === 'ERROR' ? 'Tải ảnh thất bại; hãy thử lại' : selectedCase.report_details_state === 'LOADING' ? 'Đang tải ảnh...' : 'Chưa có dữ liệu ảnh'}</span>
             </div>
           )}
           {/* Top-left GPS & telemetry overlay */}

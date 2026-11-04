@@ -186,6 +186,10 @@ export const useAIReviewState = () => {
     handleToggleClusterItem,
 
     // Spread filters
+    visibleCases: filters.visibleCases,
+    hideAutoTests: filters.hideAutoTests,
+    setHideAutoTests: filters.setHideAutoTests,
+    autoTestCount: filters.autoTestCount,
     viewSourceMode: filters.viewSourceMode,
     handleSetViewSourceMode: filters.handleSetViewSourceMode,
     activeTab: filters.activeTab,

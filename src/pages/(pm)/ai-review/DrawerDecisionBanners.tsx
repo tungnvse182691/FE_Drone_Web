@@ -45,10 +45,10 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
             <Icon name="link" size={20} className="text-purple-600 shrink-0" />
             <div>
               <span className="font-bold text-xs block">
-                HỒ SƠ ĐÃ ĐƯỢC GỘP VÀO KHIẾM KHUYẾT CHÍNH ({selectedCase.linked_defect_id ? `#DEF-${selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}` : '#DEF-475CC6D2'})
+                {selectedCase.decision_kind === 'LINK_EXISTING' && selectedCase.linked_defect_id ? `ĐÃ LIÊN KẾT DEFECT #DEF-${selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}` : 'HỒ SƠ CÓ LIÊN KẾT BÁO CÁO'}
               </span>
               <span className="text-[11px] text-purple-700">
-                Phát hiện này đã được PM thẩm định và liên kết gộp vào hồ sơ khiếm khuyết hiện hữu trong CSDL.
+                Liên kết báo cáo giữa các Case không xác nhận đã liên kết hoặc thẩm định một Defect.
               </span>
             </div>
           </div>

@@ -100,7 +100,7 @@ function mapBackendCaseToDomain(
   const isAssigned = !!projId && item.status !== 'UNASSIGNED'
 
   let status: TriageCase['status'] = 'PENDING'
-  let status_label = isAssigned ? 'Chờ PM thẩm định' : 'Chưa phân công'
+  let status_label = isAssigned ? 'Chờ thẩm định' : 'Chờ tiếp nhận sau điều phối'
   let conclusion: TriageCase['conclusion'] = null
 
   // Xử lý Candidate3 conclusion (safe navigation vì conclusion có thể bị omit theo AGENTS.md)
@@ -125,6 +125,9 @@ function mapBackendCaseToDomain(
       status_label = 'Chờ bổ sung bằng chứng'
       conclusion = 'NEEDS_EVIDENCE'
     }
+  } else if (item.status === 'AWAITING_EVIDENCE') {
+    status = 'AWAITING_EVIDENCE'
+    status_label = 'Chờ bổ sung bằng chứng'
   } else if (item.status === 'LINKED') {
     status = 'MERGED'
     status_label = 'Đã liên kết báo cáo'
@@ -149,6 +152,8 @@ function mapBackendCaseToDomain(
     source_detail: item.verificationMethod ? `Phương thức xác minh: ${item.verificationMethod}` : 'Chưa chọn phương thức xác minh',
     verification_method: item.verificationMethod || undefined,
     project_id: projId,
+    project_code: undefined,
+    report_details_state: 'UNSUPPORTED',
     project_name: projName || 'Chưa phân công dự án',
     stationing: 'Chưa có dữ liệu lý trình',
     lane: '',
@@ -207,8 +212,8 @@ function assertCaseReadActive(session: string, signal?: AbortSignal): void {
 }
 
 export class CaseListReadError extends Error {
-  constructor(public readonly items: TriageCase[], public readonly failures: Array<{ projectId?: string; cause: any }>) {
-    super(`Danh sách chưa đầy đủ: ${failures.map(failure => `${failure.projectId || 'inbox chưa phân dự án'}: ${failure.cause.response?.data?.code || failure.cause.message}`).join('; ')}`)
+  constructor(public readonly items: TriageCase[], public readonly failures: Array<{ projectId?: string; status?: string; cause: any }>) {
+    super(`Danh sách chưa đầy đủ: ${failures.map(failure => `${failure.projectId || 'inbox chưa phân dự án'}${failure.status ? ` [${failure.status}]` : ''}: ${failure.cause.response?.data?.code || failure.cause.message}`).join('; ')}`)
   }
 }
 
@@ -233,17 +238,17 @@ export const triageService = {
       if (!actor || ![RoleCode.SUPERVISOR, RoleCode.PROJECT_MANAGER].includes(actor.role)) {
         throw new Error('Không có quyền đọc danh sách Case.')
       }
-      const projects: Array<{ id: string; name: string }> = []
+      const projects: Array<{ id: string; name: string; code?: string }> = []
       let projectCursor: string | undefined
       const seenProjectCursors = new Set<string>()
       do {
-        const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string }>; nextCursor?: string }>('/projects', {
+        const response = await apiClient.get<{ items: Array<{ id?: string; projectId?: string; name: string; projectCode?: string }>; nextCursor?: string }>('/projects', {
           params: { cursor: projectCursor }, signal
         })
         assertCaseReadActive(session, signal)
         for (const project of response.data.items || []) {
           const id = project.projectId || project.id
-          if (id) projects.push({ id, name: project.name })
+          if (id) projects.push({ id, name: project.name, code: project.projectCode })
         }
         projectCursor = response.data.nextCursor || undefined
         if (projectCursor && seenProjectCursors.has(projectCursor)) throw new Error('Cursor dự án bị lặp.')
@@ -251,21 +256,23 @@ export const triageService = {
       } while (projectCursor)
       assertCaseReadActive(session, signal)
       const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]))
+      const statusFilter = params?.status && params.status !== 'ALL' ? params.status : undefined
       const selected = params?.projectId && params.projectId !== 'ALL' ? params.projectId : undefined
       if (selected && !projects.some(p => p.id === selected)) throw new Error('Dự án không thuộc phạm vi server trả về.')
       // /projects is server-scoped. Do not infer PM membership from primary PM/name/email.
-      const scopes: Array<string | undefined> = selected ? [selected] : [
-        ...(actor.role === RoleCode.SUPERVISOR ? [undefined] : []), ...projects.map(p => p.id)
+      const scopes = selected ? [{ projectId: selected, status: statusFilter }] : [
+        ...(actor.role === RoleCode.SUPERVISOR ? (statusFilter ? [statusFilter] : ['UNASSIGNED', 'OPEN', 'AWAITING_EVIDENCE', 'CONCLUDED', 'LINKED']).map(status => ({ projectId: undefined as string | undefined, status })) : []),
+        ...projects.map(project => ({ projectId: project.id as string | undefined, status: statusFilter }))
       ]
       const items = new Map<string, InternalCaseDto>()
-      const failures: Array<{ projectId?: string; cause: any }> = []
-      for (const projectId of scopes) {
+      const failures: Array<{ projectId?: string; status?: string; cause: any }> = []
+      for (const { projectId, status } of scopes) {
         try {
         let cursor: string | undefined
         const cursors = new Set<string>()
         do {
           const response = await apiClient.get<CasePageDto>('/cases', {
-            params: { projectId, status: params?.status, pageSize: params?.pageSize || 100, cursor }, signal
+            params: { projectId, status, pageSize: params?.pageSize || 100, cursor }, signal
           })
           assertCaseReadActive(session, signal)
           for (const item of response.data.items || []) {
@@ -279,12 +286,11 @@ export const triageService = {
         } catch (cause) {
           assertCaseReadActive(session, signal)
           if (actor.role !== RoleCode.SUPERVISOR) throw cause
-          failures.push({ projectId, cause })
+          failures.push({ projectId, status, cause })
         }
       }
-      const mapped = Array.from(items.values(), item => mapBackendCaseToDomain(item, projectMap))
+      const mapped = Array.from(items.values(), item => ({ ...mapBackendCaseToDomain(item, projectMap), project_code: projects.find(project => project.id === item.projectId)?.code }))
       if (failures.length) {
-        if (!mapped.length) throw failures[0].cause
         throw new CaseListReadError(mapped, failures)
       }
       return mapped
@@ -323,10 +329,6 @@ export const triageService = {
     // 3. Áp dụng bộ lọc
     if (params?.source && params?.source !== 'ALL') {
       list = list.filter((c) => c.source === params.source)
-    }
-
-    if (params?.status && params?.status !== 'ALL') {
-      list = list.filter((c) => c.status === params.status)
     }
 
     if (params?.projectId && params?.projectId !== 'ALL') {

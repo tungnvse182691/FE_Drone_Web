@@ -33,7 +33,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
             {isCitizen ? 'Người phản ánh:' : 'Cán bộ / Tổ tuần tra:'}
           </span>
           <span className="font-semibold text-slate-800">
-            {selectedCase.reporter_name || 'Chưa có dữ liệu người gửi'}
+            {selectedCase.reporter_name || 'API Case chưa hỗ trợ thông tin người gửi'}
           </span>
         </div>
         <div>
@@ -47,7 +47,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
               <span>{selectedCase.reporter_phone}</span>
             </a>
           ) : (
-            <span className="text-slate-400 italic">Không cung cấp</span>
+            <span className="text-slate-400 italic">API Case chưa hỗ trợ SĐT</span>
           )}
         </div>
       </div>
@@ -57,7 +57,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
           {isCitizen ? 'Nội dung phản ánh từ người dân:' : 'Biên bản ghi nhận hiện trường tuần tra:'}
         </span>
         <p className="italic text-slate-800 leading-relaxed">
-          "{selectedCase.description || 'Chưa có dữ liệu nội dung phản ánh'}"
+          "{selectedCase.description || 'API Case chưa hỗ trợ nội dung report gốc'}"
         </p>
       </div>
 

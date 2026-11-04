@@ -39,6 +39,85 @@ function readSql(query) {
 }
 module.exports = { marker, login, request, readSql }
 
+async function supplementUnassignedImages() {
+  assert.ok(process.env.RG_IMAGE_MANIFEST, 'RG_IMAGE_MANIFEST with licensed source images required; no upload performed')
+  const manifest = JSON.parse(fs.readFileSync(process.env.RG_IMAGE_MANIFEST, 'utf8'))
+  assert.equal(manifest.length, 3)
+  // Validate the entire batch before any login/upload. Metadata is attribution,
+  // not proof that a photo depicts an incident at the project.
+  for (const image of manifest) {
+    assert.ok(['CC BY-SA 4.0', 'CC BY 2.0', 'CC0'].includes(image.license))
+    for (const field of ['path', 'title', 'author', 'page']) assert.ok(typeof image[field] === 'string' && image[field].trim(), `Missing image ${field}`)
+    assert.ok(['https:', 'http:'].includes(new URL(image.page).protocol), 'Source page required')
+    const bytes = fs.readFileSync(image.path)
+    assert.ok(bytes.length > 10000 && bytes.length <= 20 * 1024 * 1024 && bytes[0] === 255 && bytes[1] === 216, 'JPEG at most20MiB required')
+  }
+  const reporter = await login('reporter-a')
+  const supervisor = await login('supervisor')
+  const output = []
+  for (let i = 0; i < 3; i++) {
+    const tag = `RG-UNASSIGNED-20261104-01-${i + 1}`
+    const reports = readSql(`SELECT r.Id,l.CaseId FROM Reports r JOIN CaseReportLinks l ON l.ReportId=r.Id AND l.EndedAt IS NULL WHERE r.Description LIKE '${tag}:%'`)
+    assert.equal(reports.length, 1)
+    const { Id: reportId, CaseId: caseId } = reports[0]
+    const incident = (await request(supervisor, '/api/v1/cases/' + caseId)).data
+    assert.equal(incident.status, 'UNASSIGNED'); assert.ok(!incident.projectId)
+    const image = manifest[i]
+    assert.ok(['CC BY-SA 4.0', 'CC BY 2.0', 'CC0'].includes(image.license))
+    const bytes = fs.readFileSync(image.path)
+    assert.ok(bytes.length > 10000 && bytes.length <= 20 * 1024 * 1024 && bytes[0] === 255 && bytes[1] === 216, 'Real JPEG at most20MiB required')
+    const digest = crypto.createHash('sha256').update(bytes).digest('hex')
+    const prefix = tag + '-photo-supplement-v1'
+    const step = async (name, route, body, version) => {
+      const key = `${prefix}-${name}`
+      if (!ledger[key]) { ledger[key] = { key, route, body, version }; saveLedger() }
+      const saved = ledger[key]
+      if (!saved.result) { saved.result = (await request(reporter, saved.route, 'POST', saved.body, key, saved.version)).data; saveLedger() }
+      return saved.result
+    }
+    let own = (await request(reporter, '/api/v1/reports/' + reportId)).data
+    if (!own.supplements.some(item => item.description.startsWith(prefix))) {
+      const upload = await step('upload', '/api/v1/reporter-evidence/uploads', { fileName: `${prefix}.jpg`, mediaType: 'image/jpeg', sizeBytes: bytes.length, checksumSha256: digest })
+      const root = '/api/v1/reporter-evidence/uploads/' + upload.id
+      const current = (await request(reporter, root)).data
+      if (current.status === 'PENDING' || current.status === 'UPLOADING') {
+        // UploadSessionResponseDto supplies admission size; do not assume one part.
+        const partSize = current.partSizeBytes
+        assert.ok(Number.isInteger(partSize) && partSize > 0, 'Missing server partSizeBytes')
+        const partNumbers = Array.from({ length: Math.ceil(bytes.length / partSize) }, (_, index) => index + 1)
+        const urls = (await request(reporter, root + '/part-urls', 'POST', { partNumbers }, `${prefix}-url-${crypto.randomUUID()}`)).data
+        const parts = []
+        for (const partNumber of partNumbers) {
+          const capability = urls.parts.find(part => part.partNumber === partNumber)
+          assert.ok(capability?.url, 'Missing part URL')
+          const put = await fetch(capability.url, { method: 'PUT', body: bytes.subarray((partNumber - 1) * partSize, partNumber * partSize) })
+          assert.ok(put.ok, `Upload part ${partNumber} failed`)
+          const eTag = put.headers.get('etag'); assert.ok(eTag, 'Missing part ETag')
+          parts.push({ partNumber, eTag })
+        }
+        await step('complete', root + '/complete', { parts, checksumSha256: digest }, (await request(reporter, root)).data.version)
+      }
+      let file
+      for (let attempt = 0; attempt < 60; attempt++) {
+        file = (await request(reporter, '/api/v1/reporter-evidence/files/' + upload.fileId)).data
+        if (file.status === 'VERIFIED') break
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      assert.equal(file.status, 'VERIFIED')
+      own = (await request(reporter, '/api/v1/reports/' + reportId)).data
+      await step('report', '/api/v1/reports/' + reportId + '/supplements', {
+        description: `${prefix}: Ảnh mẫu kiểm thử ${['nghi ổ gà', 'nghi vết nứt', 'nghi bong tróc'][i]}, không phải sự kiện tại dự án. ${image.title}; ${image.author}; ${image.license}; ${image.page}. Đã thu nhỏ JPEG, bỏ EXIF. Không có vị trí/thời điểm chụp tin cậy cho hồ sơ này.`,
+        evidence: [{ fileId: upload.fileId, fileVersion: file.version, locationSource: 'UNKNOWN' }]
+      }, own.version)
+    }
+    own = (await request(reporter, '/api/v1/reports/' + reportId)).data
+    const after = (await request(supervisor, '/api/v1/cases/' + caseId)).data
+    assert.equal(after.status, 'UNASSIGNED'); assert.ok(!after.projectId)
+    output.push({ tag, reportId, caseId, supplement: own.supplements.find(item => item.description.startsWith(prefix)), evidence: own.evidence.filter(item => item.supplementId), imageSource: image.page, license: image.license, sha256: digest, bytes: bytes.length })
+  }
+  console.log(JSON.stringify(output, null, 2))
+}
+
 async function prepareUnassignedThree() {
   const batch = 'RG-UNASSIGNED-20261104-01'
   const reporter = await login('reporter-a')
@@ -255,7 +334,7 @@ async function prepareReporterHandoff() {
   console.log(JSON.stringify({ marker, handoffReports: result }, null, 2))
 }
 if (require.main === module) {
-  const run = process.argv[2] === '--prepare-unassigned-three' ? prepareUnassignedThree : process.argv[2] === '--prepare-reporter-handoff' ? prepareReporterHandoff : process.argv[2] === '--prepare-field-handoff' ? prepareFieldHandoff : null
+  const run = process.argv[2] === '--supplement-unassigned-images' ? supplementUnassignedImages : process.argv[2] === '--prepare-unassigned-three' ? prepareUnassignedThree : process.argv[2] === '--prepare-reporter-handoff' ? prepareReporterHandoff : process.argv[2] === '--prepare-field-handoff' ? prepareFieldHandoff : null
   if (!run) throw new Error('Explicit --prepare-unassigned-three, --prepare-reporter-handoff or --prepare-field-handoff required; writes development test data through official APIs.')
   run().catch(error => { console.error(error.message, error.status || '', error.data?.code || ''); process.exitCode = 1 })
 }

@@ -165,7 +165,7 @@ function caseLifecycleHarness() {
       scopes.push(config.params.projectId)
       return response({ items: [detail({ id: config.params.projectId ? 'assigned' : 'unassigned', projectId: config.params.projectId })] })
     } })
-    assert.equal((await service.getCases()).length, 2); assert.deepEqual(scopes, [undefined, 'p'])
+    assert.equal((await service.getCases()).length, 2); assert.deepEqual(scopes, [undefined, undefined, undefined, undefined, undefined, 'p'])
   })
   await test('project source failure is error, never complete empty list', async () => {
     const service = triage({ get: async url => { if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }] }); throw failure(503, 'dependency_unavailable') } })
@@ -389,7 +389,7 @@ function caseLifecycleHarness() {
   })
   await test('UNKNOWN priority and AwaitingEvidence filter/count keep unknown out of known critical KPI', async () => {
     let index = 0
-    const hooks = { useState: value => [index++ === 4 ? 'UNKNOWN' : value, () => {}], useMemo: fn => fn(), useEffect() {} }
+    const hooks = { useState: value => [index++ === 5 ? 'UNKNOWN' : value, () => {}], useMemo: fn => fn(), useEffect() {} }
     const { useAIReviewFilters } = load('src/pages/(pm)/ai-review/useAIReviewFilters.ts', { react: { ...hooks }, 'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}] } })
     const cases = [{ id: 'unknown', severity: 'UNKNOWN', status: 'AWAITING_EVIDENCE', source: 'CITIZEN', stationing: '' }, { id: 'low', severity: 'LOW', status: 'PENDING', source: 'CITIZEN', stationing: '' }]
     const filters = useAIReviewFilters({ cases })
@@ -424,8 +424,8 @@ function caseLifecycleHarness() {
     h.changeSession({ user: { id: 'sup', role: roles.SUPERVISOR } })
     h.render(); h.commit(); await h.flush()
     h.calls[0].reject(failure(409, 'reference_scope_conflict')); await h.flush()
-    h.calls[1].resolve(response({ items: [detail()] })); await h.flush()
-    h.calls[2].resolve(response({ items: [] })); const view = await h.flush()
+    for (let i = 1; i < 7; i++) { h.calls[i].resolve(response({ items: i === 5 ? [detail()] : [] })); await h.flush() }
+    const view = await h.flush()
     assert.equal(view.cases.length, 1); assert.ok(view.loadError.includes('reference_scope_conflict'))
     assert.equal(view.isLoading, false)
     assert.ok(h.writes.every(rows => rows.length === 0))
@@ -447,6 +447,107 @@ function caseLifecycleHarness() {
     await fieldTaskService.verifyTask('p', 'task', undefined, 'SUPPLEMENT')
     assert.equal(sent[0].body.submissionId, 'submission'); assert.equal(sent[0].body.decision, 'SUPPLEMENT')
     assert.equal(sent[0].options.headers['If-Match'], '"AAAAAAAAAAE="')
+  })
+
+  await test('Supervisor queries explicit unassigned scope and still reports corrupt concluded scope', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const queries = []
+    const service = triage({ get: async (url, config) => {
+      if (url === '/projects') return response({ items: [{ id: 'p', name: 'Project', projectCode: 'PRJ' }] })
+      queries.push(config.params)
+      if (!config.params.projectId && config.params.status === 'CONCLUDED') throw failure(409, 'reference_scope_conflict')
+      return response({ items: config.params.status === 'UNASSIGNED' ? [detail({ id: 'unassigned', projectId: null, status: 'UNASSIGNED' })] : [] })
+    } })
+    await assert.rejects(service.getCases(), error => {
+      assert.equal(error.items[0].id, 'unassigned')
+      assert.equal(error.failures[0].status, 'CONCLUDED')
+      assert.equal(error.failures[0].cause.response.status, 409)
+      return true
+    })
+    assert.ok(queries.filter(q => !q.projectId).every(q => ['UNASSIGNED','OPEN','AWAITING_EVIDENCE','CONCLUDED','LINKED'].includes(q.status)))
+  })
+  await test('report merge banner never invents Defect reference or equates report linking with Defect linking', async () => {
+    const React = require('react'); const { renderToStaticMarkup } = require('react-dom/server')
+    const { DrawerDecisionBanners } = load('src/pages/(pm)/ai-review/DrawerDecisionBanners.tsx', {
+      react: { __esModule: true, default: React, ...React }, 'react-router-dom': { useNavigate: () => () => {} }, '../../../components/ui/Icon': { Icon: () => null }
+    })
+    const selectedCase = { id: 'c', status: 'MERGED', severity: 'UNKNOWN', urgency: 'UNKNOWN' }
+    const markup = renderToStaticMarkup(React.createElement(DrawerDecisionBanners, { selectedCase }))
+    assert.ok(markup.includes('HỒ SƠ CÓ LIÊN KẾT BÁO CÁO')); assert.ok(!markup.includes('#DEF-'))
+    const linked = renderToStaticMarkup(React.createElement(DrawerDecisionBanners, { selectedCase: { ...selectedCase, decision_kind: 'LINK_EXISTING', linked_defect_id: 'real-ref-123' } }))
+    assert.ok(linked.includes('#DEF-REAL-REF'))
+  })
+  await test('assignment and transparent AUTO filter are independent from processing status', async () => {
+    const rows = [{ id: 'unassigned', project_id: '', status: 'PENDING', source: 'CITIZEN', stationing: '', severity: 'UNKNOWN' }, { id: 'assigned', project_id: 'p', status: 'PENDING', source: 'CITIZEN', stationing: '', severity: 'UNKNOWN' }, { id: '11ad1a42-cfbb-4cc6-a8a8-a770c7c4ee86', project_id: 'p', status: 'PENDING', source: 'CITIZEN', stationing: '', severity: 'UNKNOWN' }]
+    const run = (projectFilter, hide) => {
+      let index = 0
+      const hooks = { useState: value => { const current = index++; return [current === 0 ? hide : current === 4 ? projectFilter : value, () => {}] }, useMemo: fn => fn(), useEffect() {} }
+      return load('src/pages/(pm)/ai-review/useAIReviewFilters.ts', { react: hooks, 'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}] } }).useAIReviewFilters({ cases: rows })
+    }
+    assert.deepEqual(json(run('UNASSIGNED', false).filteredCases.map(c => c.id)), ['unassigned'])
+    assert.equal(run('ASSIGNED', false).filteredCases.length, 2)
+    assert.equal(run('ALL', true).filteredCases.length, 2)
+    assert.equal(run('ALL', true).pendingCount, 2)
+    assert.equal(run('ALL', true).autoTestCount, 1)
+    assert.equal(run('ALL', false).filteredCases.length, 3)
+  })
+  await test('Supervisor status filter preserves canonical status and paginates every scope independently', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const calls = []
+    const service = triage({ get: async (url, config) => {
+      if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }], nextCursor: config.params.cursor ? null : 'projects-next' })
+      const q = config.params; calls.push(json(q))
+      assert.equal(q.status, 'OPEN'); assert.equal(q.pageSize, 1)
+      return response({ items: [detail({ id: `${q.projectId || 'unassigned'}-${q.cursor || 'first'}`, projectId: q.projectId, status: 'OPEN' })], nextCursor: q.cursor ? null : 'cases-next' })
+    } })
+    const rows = await service.getCases({ status: 'OPEN', pageSize: 1 })
+    assert.equal(rows.length, 4)
+    assert.ok(rows.every(row => row.status === 'PENDING'))
+    assert.deepEqual(calls.map(q => q.cursor), [undefined, 'cases-next', undefined, 'cases-next', undefined, 'cases-next'])
+  })
+  await test('all failed Supervisor scopes retain every diagnostic rather than empty success', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const service = triage({ get: async url => {
+      if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }] })
+      throw failure(503, 'dependency_unavailable')
+    } })
+    await assert.rejects(service.getCases(), error => error.items.length === 0 && error.failures.length === 6 && error.message.includes('CONCLUDED') && error.message.includes('p'))
+  })
+  await test('repeated scope cursor is exposed and standalone AwaitingEvidence maps without conclusion', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const service = triage({ get: async url => {
+      if (url === '/projects') return response({ items: [] })
+      return response({ items: [detail({ status: 'AWAITING_EVIDENCE', projectId: null })], nextCursor: 'repeat' })
+    } })
+    await assert.rejects(service.getCases({ status: 'AWAITING_EVIDENCE' }), error => error.items[0].status === 'AWAITING_EVIDENCE' && error.failures[0].cause.message.includes('Cursor'))
+  })
+  await test('supplement multipart uses admitted 8MiB parts and completes all ETags; no real IO', async () => {
+    const source = fs.readFileSync('tools/verify-intake-runtime.cjs', 'utf8')
+    const fn = source.slice(source.indexOf('async function supplementUnassignedImages()'), source.indexOf('async function prepareUnassignedThree()'))
+    const bytes = Buffer.alloc(20 * 1024 * 1024); bytes[0] = 255; bytes[1] = 216
+    const manifest = Array.from({ length: 3 }, () => ({ path: 'mock.jpg', title: 'Mock test only', author: 'Test', license: 'CC0', page: 'https://example.test/source' }))
+    const sizes = []; const completed = []; let logins = 0
+    const context = {
+      assert, Buffer, URL, crypto: require('node:crypto'), process: { env: { RG_IMAGE_MANIFEST: 'mock.json' } },
+      fs: { readFileSync: name => name === 'mock.json' ? JSON.stringify(manifest) : bytes },
+      login: async () => { logins++; return 'test-token' }, readSql: () => [{ Id: 'report', CaseId: 'case' }],
+      ledger: {}, saveLedger() {}, console: { log() {} },
+      fetch: async (_, options) => { sizes.push(options.body.length); return { ok: true, headers: { get: () => 'part-etag' } } },
+      request: async (_, route, method, body) => {
+        if (route.includes('/cases/')) return { data: { status: 'UNASSIGNED' } }
+        if (route.endsWith('/part-urls')) return { data: { parts: body.partNumbers.map(partNumber => ({ partNumber, url: 'https://example.test/part' })) } }
+        if (route.endsWith('/complete')) { completed.push(json(body)); return { data: {} } }
+        if (route.includes('/files/')) return { data: { status: 'VERIFIED', version: 'v' } }
+        if (route.includes('/uploads')) return { data: { id: 'upload', fileId: 'file', status: 'PENDING', partSizeBytes: 8 * 1024 * 1024, version: 'v' } }
+        return { data: { version: 'v', supplements: [], evidence: [] } }
+      }
+    }
+    await vm.runInNewContext(fn + '; supplementUnassignedImages()', context)
+    assert.deepEqual(sizes, [8,8,4,8,8,4,8,8,4].map(n => n * 1024 * 1024))
+    assert.ok(completed.every(body => body.parts.length === 3 && body.parts.every((part, i) => part.partNumber === i + 1 && part.eTag === 'part-etag')))
+    context.process.env = {}; logins = 0
+    await assert.rejects(vm.runInNewContext(fn + '; supplementUnassignedImages()', context), /RG_IMAGE_MANIFEST/)
+    assert.equal(logins, 0)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

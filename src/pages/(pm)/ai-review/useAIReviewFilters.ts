@@ -6,8 +6,12 @@ export interface UseAIReviewFiltersProps {
   cases: TriageCase[]
 }
 
+// Exact inventory from the test worklog; opt-in display filter, never deletion or authority.
+export const AUTO_TEST_CASE_IDS = new Set(['11ad1a42-cfbb-4cc6-a8a8-a770c7c4ee86', '44c53e93-8868-424a-a88a-f386897a204f', '68fb08f3-e003-4df8-b3aa-f3dfe39a811f'])
+
 export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [hideAutoTests, setHideAutoTests] = useState(false)
   const sourceParam = searchParams.get('source')
 
   // Chế độ xem: Hộp thư tiếp nhận tích hợp toàn diện
@@ -39,14 +43,19 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
     setActiveTab('ALL')
   }
 
+  const visibleCases = useMemo(() => cases.filter(c => !hideAutoTests || !AUTO_TEST_CASE_IDS.has(c.id.toLowerCase())), [cases, hideAutoTests])
+
   // Filtered cases
   const filteredCases = useMemo(() => {
-    return cases.filter((c) => {
+    return visibleCases.filter((c) => {
       // 1. Tab filter
       if (activeTab === 'PENDING' && c.status !== 'PENDING') return false
       if (activeTab === 'MERGED' && c.status !== 'MERGED') return false
       if (activeTab === 'NEED_SURVEY' && c.status !== 'NEED_SURVEY' && c.status !== 'AWAITING_EVIDENCE') return false
       if (activeTab === 'CRITICAL' && c.severity !== 'CRITICAL') return false
+
+      if (projectFilter === 'UNASSIGNED' && c.project_id) return false
+      if (projectFilter === 'ASSIGNED' && !c.project_id) return false
 
       // 3. Dropdown filters: Nguồn tiếp nhận
       if (sourceFilter !== 'ALL' && c.source !== sourceFilter) return false
@@ -56,12 +65,12 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       if (lineTypeFilter === 'BRANCH_LINE' && !c.stationing.includes('Nhánh')) return false
 
       // 5. Dự án & Ưu tiên
-      if (projectFilter !== 'ALL' && c.project_name !== projectFilter && c.project_id !== projectFilter) return false
+      if (!['ALL', 'UNASSIGNED', 'ASSIGNED'].includes(projectFilter) && c.project_name !== projectFilter && c.project_id !== projectFilter) return false
       if (priorityFilter !== 'ALL' && c.severity !== priorityFilter) return false
 
       // 6. Search Query
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase()
+        const q = searchQuery.trim().toLowerCase()
         return (
           c.code.toLowerCase().includes(q) ||
           c.defect_title.toLowerCase().includes(q) ||
@@ -74,21 +83,25 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
       }
       return true
     })
-  }, [cases, viewSourceMode, activeTab, sourceFilter, lineTypeFilter, projectFilter, priorityFilter, searchQuery])
+  }, [visibleCases, viewSourceMode, activeTab, sourceFilter, lineTypeFilter, projectFilter, priorityFilter, searchQuery])
 
   // Count stats
-  const pendingCount = cases.filter((c) => c.status === 'PENDING').length
-  const criticalCount = cases.filter((c) => c.severity === 'CRITICAL').length
-  const mergedCount = cases.filter((c) => c.status === 'MERGED').length
-  const surveyCount = cases.filter((c) => (c.status === 'NEED_SURVEY' || c.status === 'AWAITING_EVIDENCE')).length
+  const pendingCount = visibleCases.filter((c) => c.status === 'PENDING').length
+  const criticalCount = visibleCases.filter((c) => c.severity === 'CRITICAL').length
+  const mergedCount = visibleCases.filter((c) => c.status === 'MERGED').length
+  const surveyCount = visibleCases.filter((c) => (c.status === 'NEED_SURVEY' || c.status === 'AWAITING_EVIDENCE')).length
 
-  const citizenCount = cases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
-  const unassignedCitizenCount = cases.filter(
+  const citizenCount = visibleCases.filter((c) => c.source === 'CITIZEN' || c.source === 'PATROL').length
+  const unassignedCitizenCount = visibleCases.filter(
     (c) => (c.source === 'CITIZEN' || c.source === 'PATROL') && (!c.project_id || c.project_id === '')
   ).length
-  const droneAICount = cases.filter((c) => c.source === 'DRONE_AI').length
+  const droneAICount = visibleCases.filter((c) => c.source === 'DRONE_AI').length
 
   return {
+    visibleCases,
+    hideAutoTests,
+    setHideAutoTests,
+    autoTestCount: cases.filter(c => AUTO_TEST_CASE_IDS.has(c.id.toLowerCase())).length,
     viewSourceMode,
     handleSetViewSourceMode,
     activeTab,
