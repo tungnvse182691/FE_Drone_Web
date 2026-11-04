@@ -1,187 +1,197 @@
 import { create } from 'zustand'
 import { RoleCode } from '../types/enums'
 import { User } from '../types/domain'
-import { mockUsers } from '../api/mock/data'
-import {
-  fetchCsrfToken,
-  loginApi,
-  logoutApi,
-  getSessionApi,
-  SessionResponse,
-} from '../api/auth'
-
-// 17_10: Web dùng cookie WebSession + CSRF, KHÔNG dùng Bearer token
-// VITE_USE_MOCK_AUTH=true để dùng mock khi BE chưa sẵn sàng
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true' || !import.meta.env.VITE_API_URL
+import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse } from '../api/auth'
 
 interface AuthState {
   user: User | null
-  token: string | null
+  token: null
   csrfToken: string | null
   isAuthenticated: boolean
   mustChangePassword: boolean
-  setToken: (token: string | null) => void
-  setUser: (user: User | null) => void
-  // Mock-only (giữ tương thích)
-  login: (role: RoleCode) => void
-  setUserAndToken: (user: User, token?: string | null) => void
-  // 17_10
-  setCsrfToken: (token: string) => void
+  status: 'checking' | 'authenticating' | 'authenticated' | 'anonymous' | 'logging-out' | 'error'
+  authError: string | null
+  authEpoch: number
   setSession: (session: SessionResponse) => void
+  setCsrfToken: (token: string) => void
   loginWithCredentials: (email: string, password: string) => Promise<void>
   checkSession: () => Promise<boolean>
+  recoverSession: () => Promise<void>
   ensureCsrfToken: () => Promise<string>
   logout: () => Promise<void>
+  expireSession: (message: string) => void
   updateUser: (data: Partial<User>) => void
 }
 
-function normalizeRole(roleStr: string): RoleCode {
-  const upper = (roleStr || '').toUpperCase().replace(/[^A-Z]/g, '')
-  if (upper.includes('SUPERVISOR')) return RoleCode.SUPERVISOR
-  if (upper.includes('PROJECT') || upper.includes('PM') || upper.includes('MANAGER')) return RoleCode.PROJECT_MANAGER
-  if (upper.includes('DRONE') || upper.includes('OPERATOR')) return RoleCode.DRONE_OPERATOR
-  if (upper.includes('CREW')) return RoleCode.REPAIR_CREW
-  return RoleCode.PROJECT_MANAGER
-}
-
 function sessionToUser(session: SessionResponse): User {
-  const u = session.user as any
-  const name = u.fullName || u.displayName || 'Người dùng RoadGuard'
-  const email = u.email || 'pm-a@sandbox.example.test'
+  const u = session.user
+  const role = u.role === 'SUPERVISOR' ? RoleCode.SUPERVISOR
+    : u.role === 'PM' || u.role === RoleCode.PROJECT_MANAGER ? RoleCode.PROJECT_MANAGER : null
+  if (!role || !u.id || typeof session.mustChangePassword !== 'boolean') {
+    throw new Error('Tài khoản hoặc vai trò không được hỗ trợ trên Web PM/Giám sát.')
+  }
   return {
-    id: u.id,
-    email,
-    username: email,
-    full_name: name,
-    fullName: name,
-    role: normalizeRole(u.role),
-    must_change_password: session.mustChangePassword,
+    id: u.id, role, email: u.email || '', username: u.email || '',
+    full_name: u.displayName || u.fullName || '', must_change_password: session.mustChangePassword,
   } as User
 }
 
-
-const savedToken = typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null
-let savedUser: User | null = null
-try {
-  const u = typeof window !== 'undefined' ? sessionStorage.getItem('rg_user') : null
-  if (u) savedUser = JSON.parse(u)
-} catch {}
+// Only logout intent survives reload. No credential or cached identity is restored.
+function loggedOut(): boolean { return typeof sessionStorage !== 'undefined' && sessionStorage.getItem('rg_web_logged_out') === '1' }
+function lockReload(): void { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('rg_web_logged_out', '1') }
+if (typeof sessionStorage !== 'undefined') {
+  sessionStorage.removeItem('rg_token')
+  sessionStorage.removeItem('rg_user')
+}
+let authMutation: Promise<unknown> = Promise.resolve()
+function serializeAuth<T>(action: () => Promise<T>): Promise<T> {
+  const result = authMutation.then(action, action)
+  authMutation = result.catch(() => undefined)
+  return result
+}
+let bootstrap: { epoch: number; promise: Promise<boolean> } | null = null
+let recovery: { epoch: number; promise: Promise<void> } | null = null
+let csrf: { epoch: number; promise: Promise<string> } | null = null
+function assertEpoch(epoch: number): void {
+  if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ phản hồi xác thực cũ.')
+}
+function message(error: any): string { return error?.response?.data?.detail || error?.message || 'Không thể kiểm tra phiên. Hãy thử lại.' }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: savedUser,
-  token: savedToken,
-  csrfToken: null,
-  isAuthenticated: !!savedUser,
-  mustChangePassword: false,
+  user: null, token: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false,
+  status: loggedOut() ? 'anonymous' : 'checking', authError: null, authEpoch: 0,
 
-  setToken: (token: string | null) => {
-    if (token) {
-      sessionStorage.setItem('rg_token', token)
-    } else {
-      sessionStorage.removeItem('rg_token')
-    }
-    set({ token })
+  setSession: session => {
+    const user = sessionToUser(session)
+    set({ user, isAuthenticated: true, mustChangePassword: user.must_change_password, status: 'authenticated', authError: null })
+  },
+  setCsrfToken: csrfToken => set({ csrfToken }),
+
+  ensureCsrfToken: async () => {
+    const epoch = get().authEpoch
+    if (get().csrfToken) return get().csrfToken!
+    if (csrf?.epoch === epoch) return csrf.promise
+    const promise = fetchCsrfToken().then(data => {
+      assertEpoch(epoch)
+      if (!data.requestToken || data.headerName !== 'X-CSRF-TOKEN') throw new Error('Không lấy được CSRF token hợp lệ.')
+      set({ csrfToken: data.requestToken })
+      return data.requestToken
+    }).finally(() => { if (csrf?.epoch === epoch) csrf = null })
+    csrf = { epoch, promise }
+    return promise
   },
 
-  setUser: (user: User | null) => {
-    if (user) {
-      sessionStorage.setItem('rg_user', JSON.stringify(user))
-    } else {
-      sessionStorage.removeItem('rg_user')
-    }
-    set({ user, isAuthenticated: !!user })
-  },
-
-  // Mock login (giữ cho dev khi BE chưa sẵn sàng)
-  login: (role: RoleCode) => {
-    const user = mockUsers.find((u) => u.role === role) || mockUsers[0]
-    get().setUser(user)
-  },
-
-  setUserAndToken: (user: User, token?: string | null) => {
-    if (token) {
-      get().setToken(token)
-    }
-    get().setUser(user)
-  },
-
-  setCsrfToken: (token: string) => {
-    set({ csrfToken: token })
-  },
-
-  setSession: (session: SessionResponse) => {
-    set({
-      user: sessionToUser(session),
-      isAuthenticated: true,
-      mustChangePassword: session.mustChangePassword,
+  loginWithCredentials: async (email, password) => {
+    if (get().status === 'logging-out' || get().status === 'authenticating') throw new Error('Đang xử lý xác thực; vui lòng chờ.')
+    const epoch = get().authEpoch + 1
+    set({ authEpoch: epoch, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'authenticating', authError: null })
+    await serializeAuth(async () => {
+      try {
+        assertEpoch(epoch)
+        const token = await get().ensureCsrfToken()
+        assertEpoch(epoch)
+        await loginApi({ email, password }, token)
+        assertEpoch(epoch)
+        const session = await getSessionApi()
+        assertEpoch(epoch)
+        get().setSession(session)
+        set({ csrfToken: null })
+        if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('rg_web_logged_out')
+      } catch (error) {
+        if (get().authEpoch === epoch) {
+          lockReload()
+          set({ user: null, isAuthenticated: false, status: 'anonymous', authError: message(error) })
+        }
+        throw error
+      }
     })
   },
 
-  ensureCsrfToken: async () => {
-    const existing = get().csrfToken
-    if (existing) return existing
-    const { requestToken } = await fetchCsrfToken()
-    set({ csrfToken: requestToken })
-    return requestToken
-  },
-
-  loginWithCredentials: async (email: string, password: string) => {
-    if (USE_MOCK) {
-      // Mock fallback: tìm user theo email
-      const user = mockUsers.find((u) => u.email === email) || mockUsers[0]
-      set({
-        user: { ...user },
-        isAuthenticated: true,
-      })
-      return
-    }
-    const csrfToken = await get().ensureCsrfToken()
-    const session = await loginApi({ email, password }, csrfToken)
-    get().setSession(session)
+  recoverSession: async () => {
+    const epoch = get().authEpoch
+    if (recovery?.epoch === epoch) return recovery.promise
+    const expected = get().user
+    const promise = (async () => {
+      try {
+        let session: SessionResponse
+        try { session = await getSessionApi() }
+        catch (error: any) {
+          if (error?.response?.status !== 401) throw error
+          session = await serializeAuth(async () => {
+            assertEpoch(epoch)
+            set({ csrfToken: null })
+            const token = await get().ensureCsrfToken()
+            assertEpoch(epoch)
+            return renewSessionApi(token)
+          })
+        }
+        assertEpoch(epoch)
+        let user: User
+        try { user = sessionToUser(session) }
+        catch (error) {
+          get().expireSession('Tài khoản hoặc vai trò không được hỗ trợ trên Web PM/Giám sát.')
+          throw error
+        }
+        if (expected && (expected.id !== user.id || expected.role !== user.role)) {
+          get().expireSession('Tài khoản phiên đã thay đổi. Vui lòng đăng nhập lại.')
+          throw new Error('Tài khoản phiên đã thay đổi.')
+        }
+        // Same actor renewal must not invalidate active readers merely by replacing the user object.
+        if (!expected || expected.must_change_password !== user.must_change_password) get().setSession(session)
+        set({ csrfToken: null })
+      } catch (error: any) {
+        if (get().authEpoch === epoch && error?.response?.status === 401) get().expireSession('Phiên không còn hợp lệ. Vui lòng đăng nhập lại.')
+        throw error
+      }
+    })().finally(() => { if (recovery?.epoch === epoch) recovery = null })
+    recovery = { epoch, promise }
+    return promise
   },
 
   checkSession: async () => {
-    if (USE_MOCK) {
-      return get().isAuthenticated
-    }
-    try {
-      const session = await getSessionApi()
-      get().setSession(session)
-      return true
-    } catch {
-      set({ user: null, isAuthenticated: false })
-      return false
-    }
+    if (loggedOut()) { set({ status: 'anonymous' }); return false }
+    const epoch = get().authEpoch
+    if (bootstrap?.epoch === epoch) return bootstrap.promise
+    set({ status: 'checking', authError: null })
+    const promise = (async () => {
+      try {
+        await get().recoverSession()
+        assertEpoch(epoch)
+        set({ status: 'authenticated' })
+        return true
+      } catch (error: any) {
+        if (get().authEpoch === epoch) set({ status: 'error', authError: message(error) })
+        return false
+      }
+    })().finally(() => { if (bootstrap?.epoch === epoch) bootstrap = null })
+    bootstrap = { epoch, promise }
+    return promise
+  },
+
+  expireSession: authError => {
+    lockReload()
+    set({ authEpoch: get().authEpoch + 1, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'anonymous', authError })
   },
 
   logout: async () => {
-    sessionStorage.removeItem('rg_token')
-    sessionStorage.removeItem('rg_user')
-    try {
-      document.cookie.split(';').forEach((c) => {
-        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
-      })
-    } catch {}
-    const csrfToken = get().csrfToken
-    if (!USE_MOCK && csrfToken) {
+    if (get().status === 'logging-out') return
+    const epoch = get().authEpoch + 1
+    lockReload()
+    set({ authEpoch: epoch, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'logging-out', authError: null })
+    await serializeAuth(async () => {
+      let warning: string | null = null
       try {
-        await logoutApi(csrfToken)
+        assertEpoch(epoch)
+        const token = await get().ensureCsrfToken()
+        assertEpoch(epoch)
+        await logoutApi(token)
       } catch {
-        // Logout BE fail thì vẫn clear local state
+        warning = 'Đã khóa phiên trên trình duyệt; chưa xác nhận thu hồi phiên trên máy chủ. Hãy thử đăng xuất lại khi kết nối ổn định.'
+      } finally {
+        if (get().authEpoch === epoch) set({ user: null, csrfToken: null, isAuthenticated: false, status: 'anonymous', authError: warning })
       }
-    }
-    set({
-      user: null,
-      token: null,
-      csrfToken: null,
-      isAuthenticated: false,
-      mustChangePassword: false,
     })
   },
 
-  updateUser: (data: Partial<User>) => {
-    set((state) => ({
-      user: state.user ? { ...state.user, ...data } : null,
-    }))
-  },
+  updateUser: data => set(state => ({ user: state.user ? { ...state.user, ...data } : null })),
 }))

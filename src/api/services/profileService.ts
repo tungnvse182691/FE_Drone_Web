@@ -209,7 +209,7 @@ let phoneSessionEpoch = 0
 let phoneCommand: PhoneCommand | null = null
 useAuthStore.subscribe((state, previous) => {
   if (state.user?.id !== previous.user?.id || state.user?.role !== previous.user?.role ||
-      state.token !== previous.token || state.isAuthenticated !== previous.isAuthenticated) {
+      state.token !== previous.token || state.authEpoch !== previous.authEpoch || state.isAuthenticated !== previous.isAuthenticated) {
     phoneSessionEpoch++
     phoneCommand = null
   }

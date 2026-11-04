@@ -216,42 +216,6 @@ export const INITIAL_SURVEY_MISSIONS: SurveyMissionItem[] = []
 export const INITIAL_SURVEY_ROUTES: ProjectRouteConfig[] = []
 export const INITIAL_PILOTS: AvailablePilot[] = []
 
-/**
- * Đảm bảo có Bearer Token cho các endpoint Candidate3 yêu cầu xác thực JWT Bearer
- */
-async function ensureBearerToken(): Promise<string | null> {
-  const storeToken =
-    useAuthStore.getState().token ||
-    (typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null)
-  if (storeToken) return storeToken
-
-  const currentUser = useAuthStore.getState().user
-  if (currentUser) {
-    try {
-      const rawEmail = currentUser.email || 'supervisor@sandbox.example.test'
-      const email = rawEmail.replace(/^synthetic-/, '')
-      let password = 'Rg1!1YpbfL2fpPP1JWp3t1HdkXpTPZVdUJ2OrWllT8iNLvBPaZq3MMU5g3XT7VFUCwDv'
-      if (email.includes('pm-a') || email.includes('pm')) {
-        password = 'Rg1!6NDP3wctfXKjXNzvYjSeg-grQxza2t_BGNxmH_DDlyfjEr7oZFEMtLmnssW7Meed'
-      }
-      const res = await apiClient.post<{ accessToken: string }>('/auth/login', {
-        email,
-        password
-      })
-      if (res.data?.accessToken) {
-        useAuthStore.getState().setToken(res.data.accessToken)
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('rg_token', res.data.accessToken)
-        }
-        return res.data.accessToken
-      }
-    } catch {
-      // Bỏ qua lỗi nếu backend dùng cookie
-    }
-  }
-  return null
-}
-
 // Cấu hình trắc địa tim tuyến và phân đoạn chuẩn theo từng Dự án từ CSDL Candidate3
 export interface ProjectRoadDefectTemplate {
   typeCode: 'CRACK' | 'POTHOLE'
@@ -452,7 +416,6 @@ export const surveyService = {
    * Nghiêm cấm trả về mock data giả mạo. CSDL rỗng trả về [].
    */
   async getSurveys(targetProjectId?: string): Promise<SurveyMissionItem[]> {
-    await ensureBearerToken()
 
     let projects = await projectService.fetchProjects()
     if (targetProjectId) {
@@ -844,7 +807,6 @@ export const surveyService = {
    * Lấy danh sách phi công UAV được phân công trong dự án (GET /api/v1/projects/{projectId}/members)
    */
   async getAvailablePilots(projectId?: string): Promise<AvailablePilot[]> {
-    await ensureBearerToken()
 
     let targetProjectId = projectId
     if (!targetProjectId) {
@@ -905,7 +867,6 @@ export const surveyService = {
    * Kèm gán nhiệm vụ bay cho Operator (API-203 / POST /survey-tasks)
    */
   async createSurvey(data: CreateSurveyPayload): Promise<SurveyMissionItem> {
-    await ensureBearerToken()
 
     let projectId = data.project_id
     if (projectId.startsWith('branch-')) {
@@ -1056,7 +1017,6 @@ export const surveyService = {
    * Kích hoạt tiến trình chạy nhận diện Road-YOLOv9 (API-053 / POST /ai-mock-runs)
    */
   async simulateDroneFlightCompletion(surveyId: string): Promise<SurveyMissionItem | null> {
-    await ensureBearerToken()
 
     const missions = await this.getSurveys()
     const current = missions.find((m) => m.id === surveyId || m.code === surveyId)
@@ -1128,7 +1088,6 @@ export const surveyService = {
     preloadedMission?: SurveyMissionItem,
     preloadedProjectId?: string
   ): Promise<AIDetectionItem[]> {
-    await ensureBearerToken()
 
     let target = preloadedMission
     if (!target) {
@@ -1370,7 +1329,6 @@ export const surveyService = {
     detectionId: string,
     updates: Partial<AIDetectionItem>
   ): Promise<AIDetectionItem | null> {
-    await ensureBearerToken()
 
     const missions = await this.getSurveys()
     const target = missions.find((m) => m.id === surveyId || m.code === surveyId)
@@ -1523,7 +1481,6 @@ export const surveyService = {
    * Đọc thông tin chuẩn xác (AiCandidateFactsV1) của một phát hiện AI từ CSDL Backend
    */
   async getAiCandidateFacts(projectId: string, detectionId: string): Promise<AiCandidateFactsDto> {
-    await ensureBearerToken()
     const res = await apiClient.get<AiCandidateFactsDto>(
       `/projects/${projectId}/ai-candidates/${detectionId}`
     )
@@ -1535,7 +1492,6 @@ export const surveyService = {
    * Đọc quyết định thẩm định (KEEP_NEW / LINK_EXISTING / REJECT) đã lưu trong CSDL
    */
   async getCandidateDecision(projectId: string, decisionId: string): Promise<CandidateDecisionDto> {
-    await ensureBearerToken()
     const res = await apiClient.get<CandidateDecisionDto>(
       `/projects/${projectId}/candidate-decisions/${decisionId}`
     )
@@ -1551,7 +1507,6 @@ export const surveyService = {
     sourceKind: 'AI_DETECTION' | 'REPORT',
     sourceId: string
   ): Promise<CandidateMatchPageDto> {
-    await ensureBearerToken()
 
     // Nếu sourceId không phải là GUID UUID hợp lệ (ví dụ: synthetic detection 'det-...'),
     // không gửi query lên Backend Candidate3 vì API Candidate3 validate GUID và sẽ trả về 400 Bad Request
@@ -1641,7 +1596,6 @@ export const surveyService = {
       reason: string
     }
   ): Promise<CandidateDecisionDto> {
-    await ensureBearerToken()
 
     if (payload.decision === 'KEEP_NEW' && payload.defectTypeCode) {
       await this.saveAiCandidateOverride(payload.sourceId, {
@@ -1843,7 +1797,6 @@ export const surveyService = {
    * Lấy danh sách toàn bộ khiếm khuyết mặt đường trong CSDL của dự án
    */
   async getProjectDefects(projectId?: string): Promise<BackendDefectDto[]> {
-    await ensureBearerToken()
 
     let targetProjects: Array<{ id: string }> = []
     if (projectId) {
@@ -1877,7 +1830,6 @@ export const surveyService = {
     projectId: string,
     defectId: string
   ): Promise<{ defect: BackendDefectDto; etag: string }> {
-    await ensureBearerToken()
     const res = await apiClient.get<BackendDefectDto>(`/projects/${projectId}/defects/${defectId}`)
     const rawEtag = res.headers?.etag || `"${res.data.version}"`
     const quotedEtag = rawEtag.startsWith('"') ? rawEtag : `"${rawEtag}"`
@@ -1899,7 +1851,6 @@ export const surveyService = {
       evidenceIds?: string[]
     }
   ): Promise<BackendDefectDto> {
-    await ensureBearerToken()
     if (payload.defectTypeCode) {
       await this.saveAiCandidateOverride(defectId, {
         rawTypeCode: payload.defectTypeCode,
@@ -1949,7 +1900,6 @@ export const surveyService = {
       fieldContentHash?: string | null
     }
   ): Promise<BackendDefectDto> {
-    await ensureBearerToken()
     const { etag } = await this.getDefectById(projectId, defectId)
 
     let evidenceIds = payload.evidenceIds || []
@@ -2005,7 +1955,6 @@ export const surveyService = {
    * Lấy metadata tệp tin (frameFileId / videoFileId) từ CSDL Backend
    */
   async getFileMetadata(fileId: string): Promise<FileMetadataDto> {
-    await ensureBearerToken()
     const res = await apiClient.get<FileMetadataDto>(`/files/${fileId}`)
     return res.data
   },
@@ -2019,7 +1968,6 @@ export const surveyService = {
     if (fileBlobUrlCache.has(fileId)) {
       return fileBlobUrlCache.get(fileId)!
     }
-    await ensureBearerToken()
     try {
       const res = await apiClient.get<Blob>(`/files/${fileId}/content`, {
         responseType: 'blob'
@@ -2043,7 +1991,6 @@ export const surveyService = {
    */
   async getAllProjectAiDetections(targetProjectId?: string): Promise<AIDetectionItem[]> {
     const actor = useAuthStore.getState().user
-    await ensureBearerToken()
 
     let projects = await projectService.fetchProjects()
     if (targetProjectId) {
@@ -2205,7 +2152,6 @@ export const surveyService = {
       projectId?: string
     }
   ): Promise<{ success: boolean; taskId: string }> {
-    await ensureBearerToken()
 
     const missions = await this.getSurveys()
     const current = missions.find((m) => m.id === surveyId || m.code === surveyId)
@@ -2307,7 +2253,6 @@ export const surveyService = {
    * Khóa Baseline đoạn đường sau khi thẩm định 100% (API-057 / POST /baseline-selections)
    */
   async lockBaseline(surveyId: string, projectId?: string): Promise<boolean> {
-    await ensureBearerToken()
 
     let targetProjectId = projectId
     if (!targetProjectId) {

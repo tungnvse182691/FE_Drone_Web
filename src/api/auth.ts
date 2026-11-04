@@ -23,15 +23,16 @@ export interface LoginRequest {
 export interface SessionResponse {
   user: {
     id: string
-    email: string
-    fullName: string
+    email?: string
+    fullName?: string
+    displayName: string
     role: string
     [key: string]: unknown
   }
   mustChangePassword: boolean
   issuedAt: string
-  absoluteExpiresAt: string
-  idleExpiresAt: string
+  absoluteExpiresAt: string | null
+  idleExpiresAt: string | null
   renewable: boolean
   ticketLifetimeSeconds: number
 }
@@ -72,7 +73,7 @@ export async function logoutApi(csrfToken: string): Promise<void> {
 export async function renewSessionApi(csrfToken: string): Promise<SessionResponse> {
   const res = await apiClient.post<SessionResponse>(
     '/auth/web/renew',
-    {},
+    undefined,
     {
       headers: { 'X-CSRF-TOKEN': csrfToken },
     }

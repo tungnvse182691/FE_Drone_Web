@@ -1,4 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { STORAGE_KEYS, removeFromStorage } from './api/services/storageHelper'
+import { useQueryClient } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { ToastContainer } from './components/ui/ToastContainer'
@@ -48,6 +50,17 @@ import { ProfilePage } from './pages/(pm)/ProfilePage'
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    const unsubscribe = useAuthStore.subscribe((state, previous) => {
+      if (state.authEpoch !== previous.authEpoch) {
+        queryClient.clear()
+        Object.values(STORAGE_KEYS).forEach(removeFromStorage)
+      }
+    })
+    void useAuthStore.getState().checkSession()
+    return unsubscribe
+  }, [queryClient])
 
   return (
     <BrowserRouter>

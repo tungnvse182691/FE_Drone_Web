@@ -16,6 +16,7 @@ function load(file, mocks = {}) {
   const requireMock = name => {
     if (name in mocks) return mocks[name]
     if (name === 'axios') return require('axios')
+    if (name === 'zustand') return require('zustand')
     if (name.endsWith('/authStore')) return auth
     if (name.endsWith('/enums')) return { RoleCode: roles }
     if (name.endsWith('/storageHelper') || name === './storageHelper') return storage
@@ -24,7 +25,7 @@ function load(file, mocks = {}) {
     throw new Error(`Missing mock: ${name} (${file})`)
   }
   vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, URLSearchParams, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
-    sessionStorage: { getItem: () => null, setItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: undefined, URL, Blob }, { filename: file })
+    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: undefined, URL, Blob }, { filename: file })
   return module.exports
 }
 const detail = (extra = {}) => ({ id: 'case-new', projectId: 'p', version: 'AAAAAAAAAAE=', reportIds: ['r1', 'r2'], ...extra })
@@ -617,6 +618,88 @@ function caseLifecycleHarness() {
     await assert.rejects(selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="'))
     const old = state; state = { ...state, user: { id: 'sup', role: roles.SUPERVISOR }, token: 'two' }; notify(state, old)
     assert.throws(() => dispatch('{"phoneNumber":"+84901234567"}'), /Phiên tài khoản/)
+  })
+  function webAuthHarness(overrides = {}) {
+    const calls = { session: 0, renew: 0, logout: 0 }
+    const session = { user: { id: 'pm', role: 'PM', displayName: 'PM' }, mustChangePassword: false }
+    const api = {
+      fetchCsrfToken: async () => ({ requestToken: 'csrf', headerName: 'X-CSRF-TOKEN' }),
+      loginApi: async () => session,
+      logoutApi: async () => { calls.logout++ },
+      getSessionApi: async () => { calls.session++; return session },
+      renewSessionApi: async () => { calls.renew++; return session },
+      ...overrides
+    }
+    const { useAuthStore: store } = load('src/store/authStore.ts', { '../api/auth': api })
+    return { store, api, calls, session }
+  }
+  await test('Web login/session mapping rejects unknown roles and preserves force-change; no Bearer', async () => {
+    const h = webAuthHarness()
+    await h.store.getState().loginWithCredentials('pm@test', 'password')
+    assert.equal(h.store.getState().token, null); assert.equal(h.store.getState().user.role, roles.PROJECT_MANAGER)
+    h.store.getState().setSession({ ...h.session, mustChangePassword: true })
+    assert.equal(h.store.getState().user.must_change_password, true)
+    assert.throws(() => h.store.getState().setSession({ ...h.session, user: { ...h.session.user, role: 'UNKNOWN' } }), /vai trò/)
+  })
+  await test('Web concurrent recovery is single-flight and failed renew settles without recursion', async () => {
+    const h = webAuthHarness({ getSessionApi: async () => { throw failure(401, 'expired') } })
+    h.store.getState().setSession(h.session)
+    await Promise.all([h.store.getState().recoverSession(), h.store.getState().recoverSession(), h.store.getState().recoverSession()])
+    assert.equal(h.calls.renew, 1)
+    h.api.renewSessionApi = async () => { throw failure(401, 'revoked') }
+    // A fresh harness closes over a definitive failed renew.
+    const bad = webAuthHarness({ getSessionApi: async () => { throw failure(401, 'expired') }, renewSessionApi: async () => { throw failure(401, 'revoked') } })
+    bad.store.getState().setSession(bad.session)
+    await assert.rejects(bad.store.getState().recoverSession())
+    assert.equal(bad.store.getState().status, 'anonymous')
+  })
+  await test('Web network failure keeps identity; logout failure locks local state and reports revoke gap', async () => {
+    const h = webAuthHarness({ getSessionApi: async () => { throw new Error('Network Error') }, logoutApi: async () => { throw new Error('Network Error') } })
+    h.store.getState().setSession(h.session)
+    await assert.rejects(h.store.getState().recoverSession())
+    assert.equal(h.store.getState().isAuthenticated, true)
+    await h.store.getState().logout()
+    assert.equal(h.store.getState().isAuthenticated, false); assert.ok(h.store.getState().authError.includes('chưa xác nhận thu hồi'))
+  })
+  await test('Web logout fences late bootstrap/renew response and serializes cookie mutations', async () => {
+    let finish; let renewStarted
+    const started = new Promise(resolve => { renewStarted = resolve })
+    const h = webAuthHarness({ getSessionApi: async () => { throw failure(401, 'expired') }, renewSessionApi: () => { renewStarted(); return new Promise(resolve => { finish = resolve }) } })
+    h.store.getState().setSession(h.session)
+    const recovering = h.store.getState().recoverSession(); await started
+    const logout = h.store.getState().logout()
+    finish(h.session)
+    await assert.rejects(recovering, /Phiên đã thay đổi/); await logout
+    assert.equal(h.store.getState().isAuthenticated, false); assert.equal(h.calls.logout, 1)
+  })
+  await test('Web HTTP client never sends Bearer; reads retry once; mutations never auto replay', async () => {
+    const axios = require('axios'); let recoveries = 0
+    const state = { authEpoch: 1, isAuthenticated: true, status: 'authenticated', token: 'must-not-send', csrfToken: 'csrf', ensureCsrfToken: async () => 'csrf', recoverSession: async () => { recoveries++ } }
+    const { apiClient: client } = load('src/api/client.ts', { '../store/authStore': { useAuthStore: { getState: () => state } } })
+    let attempts = 0
+    client.defaults.adapter = async config => {
+      attempts++; assert.equal(config.headers.get('Authorization'), undefined)
+      if (attempts === 1) throw new axios.AxiosError('Unauthorized', 'ERR_BAD_REQUEST', config, null, { status: 401, data: {}, headers: {}, config })
+      return { status: 200, data: {}, headers: {}, config }
+    }
+    await client.get('/projects'); assert.equal(attempts, 2); assert.equal(recoveries, 1)
+    attempts = 0
+    await assert.rejects(client.patch('/me/phone-number', { phoneNumber: '+84901234567' }, { headers: { 'Idempotency-Key': 'same', 'If-Match': '"AAAAAAAAAAE="' } }))
+    assert.equal(attempts, 1)
+    attempts = 0
+    await assert.rejects(client.post('/auth/web/renew'))
+    assert.equal(attempts, 1)
+  })
+  await test('Web HTTP client discards old actor responses and keeps 403/network outcomes intact', async () => {
+    const axios = require('axios'); let recoveries = 0
+    const state = { authEpoch: 1, isAuthenticated: true, status: 'authenticated', recoverSession: async () => { recoveries++ } }
+    const { apiClient: client } = load('src/api/client.ts', { '../store/authStore': { useAuthStore: { getState: () => state } } })
+    client.defaults.adapter = async config => { state.authEpoch++; return { status: 200, data: { oldActor: true }, headers: {}, config } }
+    await assert.rejects(client.get('/profile'), axios.isCancel)
+    client.defaults.adapter = async config => { throw new axios.AxiosError('Forbidden', 'ERR_BAD_REQUEST', config, null, { status: 403, data: {}, headers: {}, config }) }
+    await assert.rejects(client.get('/users'), error => error.response.status === 403)
+    client.defaults.adapter = async config => { throw new axios.AxiosError('Network Error', 'ERR_NETWORK', config) }
+    await assert.rejects(client.get('/projects'), /Network/); assert.equal(recoveries, 0)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

@@ -1,87 +1,63 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig, CanceledError } from 'axios'
 import { useAuthStore } from '../store/authStore'
-import { renewSessionApi } from './auth'
+
+interface WebRequestConfig extends InternalAxiosRequestConfig {
+  webEpoch?: number
+  webRetried?: boolean
+}
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  // 17_10: Web dùng cookie WebSession, browser tự gửi cookie
+  headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 })
 
-// Request Interceptor: gắn Bearer token và CSRF token
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token =
-      useAuthStore.getState().token ||
-      (typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null)
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
-    }
-    const csrfToken = useAuthStore.getState().csrfToken
-    if (csrfToken) {
-      config.headers['X-CSRF-TOKEN'] = csrfToken
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
+function isAuthRequest(url = ''): boolean {
+  return /^\/?auth\//.test(url) || url.includes('/api/v1/auth/') || url.includes('/invitations/accept')
+}
+function current(config: WebRequestConfig): boolean {
+  const state = useAuthStore.getState()
+  return config.webEpoch === state.authEpoch && state.isAuthenticated && state.status !== 'logging-out'
+}
 
-// Flag chống renew đồng thời nhiều lần (single-flight)
-let renewPromise: Promise<void> | null = null
+apiClient.interceptors.request.use(async (request: WebRequestConfig) => {
+  // This shared Web client never borrows a Bearer credential, including legacy callers.
+  request.headers.delete('Authorization')
+  if (isAuthRequest(request.url)) return request
+  const state = useAuthStore.getState()
+  request.webEpoch ??= state.authEpoch
+  if (!current(request)) throw new CanceledError('Phiên Web đã thay đổi hoặc chưa sẵn sàng.')
+  const mutation = !['get', 'head', 'options'].includes((request.method || 'get').toLowerCase())
+  if (mutation) {
+    request.headers['X-CSRF-TOKEN'] = await state.ensureCsrfToken()
+    if (!current(request)) throw new CanceledError('Bỏ lệnh của phiên Web cũ.')
+  }
+  return request
+})
 
-// Response Interceptor: xử lý 401/403 theo 17_10
 apiClient.interceptors.response.use(
-  (response) => response,
+  response => {
+    const config = response.config as WebRequestConfig
+    if (!isAuthRequest(config.url) && !current(config)) throw new CanceledError('Bỏ phản hồi của phiên Web cũ.')
+    return response
+  },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean
+    const request = error.config as WebRequestConfig | undefined
+    // Bootstrap/login/renew/logout handle their own outcome. Never recurse on 401.
+    if (!request || isAuthRequest(request.url)) throw error
+    if (!current(request)) throw new CanceledError('Bỏ lỗi của phiên Web cũ.')
+    if (error.response?.status !== 401) throw error
+    if (request.webRetried) {
+      error.message = `API ${request.url} từ chối xác thực dù phiên Web hợp lệ. Cần kiểm tra cookie eligibility/quyền backend; không chuyển sang Bearer.`
+      throw error
     }
-
-    const requestUrl = originalRequest?.url || ''
-    const isAuthRequest =
-      requestUrl.includes('/auth/android/login') ||
-      requestUrl.includes('/auth/login') ||
-      requestUrl.includes('/auth/web/login') ||
-      requestUrl.includes('/invitations/accept')
-
-    // Nếu chính request đăng nhập bị 401 (sai thông tin xác thực), trả lỗi ngay để UI hiển thị thông báo, không reload trang!
-    if (isAuthRequest) {
-      return Promise.reject(error)
-    }
-
-    // 401: thử renew 1 lần rồi retry (chỉ cho request idempotent hoặc chưa retry)
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-
-      try {
-        // Single-flight: nếu đang renew thì đợi
-        if (!renewPromise) {
-          renewPromise = (async () => {
-            const csrfToken = useAuthStore.getState().csrfToken
-            if (!csrfToken) throw new Error('No CSRF token for renew')
-            const session = await renewSessionApi(csrfToken)
-            useAuthStore.getState().setSession(session)
-          })().finally(() => {
-            renewPromise = null
-          })
-        }
-        await renewPromise
-        // Renew thành công, retry request gốc
-        return apiClient(originalRequest)
-      } catch {
-        // Renew fail -> logout
-        useAuthStore.getState().logout()
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') { window.location.href = '/login' }
-      }
-    }
-
-    // 403: hiển thị denial, KHÔNG tự logout (theo 17_10)
-    // Để UI xử lý thông báo
-
-    return Promise.reject(error)
+    request.webRetried = true
+    await useAuthStore.getState().recoverSession()
+    if (!current(request)) throw new CanceledError('Phiên đã thay đổi trong khi kiểm tra xác thực.')
+    // A valid session may still receive 401 from a Bearer-only operation.
+    // Only reads replay once; mutation identity/body/If-Match remain with its caller.
+    if (['get', 'head'].includes((request.method || 'get').toLowerCase())) return apiClient(request)
+    throw error
   }
 )

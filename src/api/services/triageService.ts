@@ -191,7 +191,7 @@ let caseCacheRequest = 0
 let caseSessionEpoch = 0
 useAuthStore.subscribe((state, previous) => {
   if (state.user?.id !== previous.user?.id || state.user?.role !== previous.user?.role ||
-      state.isAuthenticated !== previous.isAuthenticated || state.token !== previous.token) {
+      state.isAuthenticated !== previous.isAuthenticated || state.authEpoch !== previous.authEpoch || state.token !== previous.token) {
     caseSessionEpoch += 1
     caseCacheRequest += 1
     inMemoryTriageCases = []

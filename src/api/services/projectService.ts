@@ -545,12 +545,20 @@ function mapBackendProjectToHub(
 let projectStore: HubProject[] = (() => {
   try {
     const cached = sessionStorage.getItem('roadguard_project_store')
-    if (cached) return JSON.parse(cached)
+    if (cached && useAuthStore.getState().isAuthenticated) return JSON.parse(cached)
   } catch {}
   return import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     ? JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
     : []
 })()
+
+useAuthStore.subscribe((state, previous) => {
+  if (state.authEpoch !== previous.authEpoch) {
+    projectStore = []
+    sessionStorage.removeItem('roadguard_project_store')
+    saveToStorage(STORAGE_KEYS.PROJECTS, [])
+  }
+})
 
 export const projectService = {
   /**

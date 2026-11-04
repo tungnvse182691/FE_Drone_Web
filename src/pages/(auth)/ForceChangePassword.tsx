@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
 import { ForcePasswordForm } from './force-change-password/ForcePasswordForm'
@@ -10,7 +9,6 @@ import './auth-light-aurora.css'
 export const ForceChangePassword: React.FC = () => {
   const toast = useToastStore()
   const navigate = useNavigate()
-  const { setUserAndToken } = useAuthStore()
 
   // State cho Form Đổi mật khẩu bắt buộc
   const [tempPassword, setTempPassword] = useState('123456')
@@ -42,7 +40,6 @@ export const ForceChangePassword: React.FC = () => {
       setIsForceSuccess(true)
       setTimeout(() => {
         const updatedUser = res.user
-        setUserAndToken(updatedUser)
         if (updatedUser.role === RoleCode.SUPERVISOR) {
           navigate('/sup/dashboard')
         } else {

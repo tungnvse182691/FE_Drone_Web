@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { apiClient } from '../../api/client'
-import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { ShieldCheck } from 'lucide-react'
 import { InvitationDemoState } from './accept-invitation/types'
@@ -14,7 +13,6 @@ export const AcceptInvitation: React.FC = () => {
   const [searchParams] = useSearchParams()
   const { token: paramToken } = useParams<{ token?: string }>()
   const activeToken = searchParams.get('token') || paramToken || ''
-  const { login } = useAuthStore()
 
   // Chế độ xem Demo: 'valid' (Token hợp lệ) hoặc 'expired' (Token hết hạn)
   const [demoState, setDemoState] = useState<InvitationDemoState>('valid')

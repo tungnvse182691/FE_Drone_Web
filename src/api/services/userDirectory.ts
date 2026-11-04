@@ -112,7 +112,12 @@ class UserDirectoryService {
   private cache = new Map<string, UserDirectoryEntry>()
 
   constructor() {
-    this.init()
+    if (import.meta.env.VITE_USE_MOCK_AUTH === 'true') this.init()
+  }
+
+  public clearSessionCache() {
+    this.cache.clear()
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('roadguard_user_directory')
   }
 
   private init() {
@@ -234,3 +239,7 @@ class UserDirectoryService {
 }
 
 export const userDirectory = new UserDirectoryService()
+
+useAuthStore.subscribe((state, previous) => {
+  if (state.authEpoch !== previous.authEpoch) userDirectory.clearSessionCache()
+})

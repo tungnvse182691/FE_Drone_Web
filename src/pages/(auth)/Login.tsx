@@ -13,7 +13,7 @@ import './auth-light-aurora.css'
 export const Login: React.FC = () => {
   const toast = useToastStore()
   const navigate = useNavigate()
-  const { setUserAndToken } = useAuthStore()
+  const authError = useAuthStore(state => state.authError)
 
   // Chế độ xem: 'login' (Form Đăng nhập chính) hoặc 'force' (Chặn đổi mật khẩu lần đầu)
   const [viewMode, setViewMode] = useState<LoginViewMode>('login')
@@ -55,9 +55,7 @@ export const Login: React.FC = () => {
     setLoginErrorMessage('')
 
     try {
-      // Gọi qua Mock API Service bất đồng bộ
       const res = await authService.login({ email, password })
-      setUserAndToken(res.user, res.token)
 
       if (res.user.must_change_password) {
         setViewMode('force')
@@ -66,7 +64,6 @@ export const Login: React.FC = () => {
         navigate(dest)
       }
     } catch (err: any) {
-      console.error('🔥 Login error details:', err?.response?.status, err?.response?.data, err)
       setLoginError(true)
       const detailMsg =
         err?.response?.data?.detail ||
@@ -89,7 +86,6 @@ export const Login: React.FC = () => {
       setIsForceSuccess(true)
       setTimeout(() => {
         const currentUser = res.user
-        setUserAndToken(currentUser)
         const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
         navigate(dest)
       }, 700)
@@ -105,6 +101,7 @@ export const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#1A1D20] flex flex-col justify-between relative overflow-x-hidden">
+      {authError && <p role="alert" className="relative z-20 p-3 text-sm text-rose-700">{authError}{authError.includes('chưa xác nhận thu hồi') && <button type="button" onClick={() => useAuthStore.getState().logout()}>Thử đăng xuất lại</button>}</p>}
       {/* Light Aurora background: blobs + grid + contour lines */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[120px] -left-[120px] aurora-blob-light-1 rounded-full" />
