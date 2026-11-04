@@ -17,6 +17,8 @@ function load(file, mocks = {}) {
     if (name in mocks) return mocks[name]
     if (name === 'axios') return require('axios')
     if (name === 'zustand') return require('zustand')
+    if (name === 'maplibre-gl') return {}
+    if (name.endsWith('/utils/maplibre')) return { getMapLibreStyle: () => ({}) }
     if (name.endsWith('/authStore')) return auth
     if (name.endsWith('/enums')) return { RoleCode: roles }
     if (name.endsWith('/storageHelper') || name === './storageHelper') return storage
@@ -25,7 +27,7 @@ function load(file, mocks = {}) {
     throw new Error(`Missing mock: ${name} (${file})`)
   }
   vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, URLSearchParams, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
-    sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: undefined, URL, Blob }, { filename: file })
+    sessionStorage: mocks.__sessionStorage || { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: mocks.__window, URL, Blob }, { filename: file })
   return module.exports
 }
 const detail = (extra = {}) => ({ id: 'case-new', projectId: 'p', version: 'AAAAAAAAAAE=', reportIds: ['r1', 'r2'], ...extra })
@@ -817,6 +819,83 @@ function caseLifecycleHarness() {
   await test('project list success with no selection never silently selects the first project', async()=>{
     const h=geometryWorkflowHarness(async()=>projectPage(),async()=>geometryFact('a','va'),{projectId:''})
     await h.flush();assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'');assert.ok(h.text().includes('Chưa chọn dự án.'));h.unmount()
+  })
+  const createInput={code:'TEST-NEW',name:'Test project',primaryPmId:'pm',handoverDate:'2026-11-04',warrantyEndDate:'2027-11-04',handoverFileIds:[]}
+  const createMocks=client=>({'../client':{apiClient:client},'./userDirectory':{userDirectory:{findUser:()=>undefined,getAllUsers:()=>[]}}})
+  await test('project timeout holds body/key, blocks new intent, deliberate replay returns201 then reads server', async()=>{
+    const posts=[];let fail=true
+    const {projectService:service}=load('src/api/services/projectService.ts',createMocks({post:async(url,body,config)=>{posts.push(json({body,headers:config.headers}));if(fail)throw new Error('timeout');return {status:201,data:{projectId:'new'}}},get:async()=>response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server name',status:'ACTIVE'}]})}))
+    await assert.rejects(service.createProject(createInput),/timeout/);assert.ok(service.pendingProjectCreate())
+    await assert.rejects(service.createProject({...createInput,name:'Different'}),/chưa rõ kết quả/);assert.equal(posts.length,1)
+    fail=false;const result=await service.createProject(createInput,true);assert.equal(result.name,'Server name');assert.deepEqual(posts[0],posts[1]);assert.equal(service.pendingProjectCreate(),null)
+  })
+  await test('project201 with failed readback keeps receipt and never POSTs again when reconciled', async()=>{
+    let posts=0,reads=0
+    const {projectService:service}=load('src/api/services/projectService.ts',createMocks({post:async()=>{posts++;return {status:201,data:{id:'new'}}},get:async()=>{reads++;if(reads===1)throw failure(503,'dependency_unavailable');return response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server',status:'ACTIVE'}]})}}))
+    await assert.rejects(service.createProject(createInput));await service.createProject(createInput,true);assert.equal(posts,1)
+  })
+  await test('project create blocks duplicate in-flight, rejects filename attachments and distinguishes CSRF/code conflict', async()=>{
+    let finish
+    const {projectService:service}=load('src/api/services/projectService.ts',createMocks({post:()=>new Promise(resolve=>finish=resolve),get:async()=>response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server',status:'ACTIVE'}]})}))
+    await assert.rejects(service.createProject({...createInput,handoverFileIds:['name.pdf']}),/upload/)
+    const first=service.createProject(createInput);await assert.rejects(service.createProject(createInput,true),/chưa rõ kết quả/);finish({status:201,data:{id:'new'}});await first
+    for(const code of ['csrf_failed','project_code_conflict']){
+      const {projectService:s}=load('src/api/services/projectService.ts',createMocks({post:async()=>{throw failure(code==='csrf_failed'?403:409,code)}}))
+      await assert.rejects(s.createProject(createInput),e=>e.code===code&&(code==='csrf_failed'?e.message.includes('CSRF'):e.message.includes('đã tồn tại')));assert.equal(s.pendingProjectCreate(),null)
+    }
+  })
+  await test('Case reports paginate with fixed limit/opaque cursor; wrong Case, repeated cursor and errors never become empty', async()=>{
+    const calls=[]
+    const {caseReportService:s}=load('src/api/services/caseReportService.ts',{'../client':{apiClient:{get:async(url,cfg)=>{calls.push(json(cfg.params));return response({items:[{caseId:'c',reportId:cfg.params.cursor?'r2':'r1'}],nextCursor:cfg.params.cursor?null:'opaque+/='})}}}})
+    assert.equal((await s.read('c')).length,2);assert.deepEqual(calls,[{limit:20},{limit:20,cursor:'opaque+/='}])
+    const repeat=load('src/api/services/caseReportService.ts',{'../client':{apiClient:{get:async()=>response({items:[],nextCursor:'repeat'})}}}).caseReportService
+    await assert.rejects(repeat.read('c'),/Cursor/)
+    const wrong=load('src/api/services/caseReportService.ts',{'../client':{apiClient:{get:async()=>response({items:[{caseId:'other',reportId:'r'}]})}}}).caseReportService
+    await assert.rejects(wrong.read('c'),/sai Case/)
+    const denied=load('src/api/services/caseReportService.ts',{'../client':{apiClient:{get:async()=>{throw failure(403,'access_forbidden')}}}}).caseReportService
+    await assert.rejects(denied.read('c'),e=>e.response.status===403)
+  })
+  await test('Case evidence content uses configured API origin once, rejects another origin/report and preserves Blob ProblemDetails', async()=>{
+    const evidence={evidenceId:'e',contentPath:'/api/v1/cases/c/reports/r/evidence/e/content'}
+    const client={defaults:{baseURL:'https://api.example.test/api/v1'},get:async()=>{throw {response:{status:412,data:new Blob([JSON.stringify({code:'concurrency_conflict'})],{type:'application/problem+json'})}}}}
+    const {caseReportService:s}=load('src/api/services/caseReportService.ts',{'../client':{apiClient:client},__window:{location:{origin:'https://fe.example.test'}}})
+    assert.equal(s.contentUrl('c','r',evidence),'https://api.example.test/api/v1/cases/c/reports/r/evidence/e/content')
+    assert.throws(()=>s.contentUrl('c','other',evidence),/Đường ảnh/)
+    assert.throws(()=>s.contentUrl('c','r',{...evidence,contentPath:'https://evil.test'+evidence.contentPath}),/Đường ảnh/)
+    await assert.rejects(s.image('c','r',evidence),e=>e.response.status===412&&e.response.data.code==='concurrency_conflict')
+    client.defaults.baseURL='/api/v1';assert.equal(s.contentUrl('c','r',evidence),'https://fe.example.test'+evidence.contentPath)
+  })
+  await test('per-evidence GPS keeps UNKNOWN/null and permits a sourced zero coordinate pair without borrowing Case GPS', async()=>{
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const {ReportEvidence}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:React,...React},'../../../api/services/caseReportService':{caseReportService:{}}})
+    const render=evidence=>renderToStaticMarkup(React.createElement(ReportEvidence,{caseId:'c',reportId:'r',evidence:{evidenceId:'e',capturedAt:null,fileVersion:'v',...evidence}}))
+    assert.ok(render({locationSource:'UNKNOWN',location:null}).includes('GPS: Chưa có thông tin'))
+    assert.ok(!render({locationSource:'CAPTURE',location:{latitude:0,longitude:null}}).includes('Xem vị trí evidence'))
+    assert.ok(render({locationSource:'CAPTURE',location:{latitude:0,longitude:0,accuracyMeters:0}}).includes('Xem vị trí evidence'))
+  })
+  await test('Case report loader isolates each Report/supplement and fences old Case/session responses', async()=>{
+    const React=require('react');const values=[],effects=[],calls=[];let slot=0,caseId='a',epoch=0,view
+    const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useEffect(setup,deps){const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true}}}
+    const {CaseReportsPanel}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:hooks,...hooks},'../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:epoch})},'../../../api/services/caseReportService':{caseReportService:{read:(id,signal)=>new Promise((resolve,reject)=>calls.push({id,signal,resolve,reject}))}}})
+    const render=()=>{slot=0;view=CaseReportsPanel({caseId});for(const e of effects)if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}}
+    const flush=async()=>{for(let i=0;i<8;i++){await Promise.resolve();render()}}
+    const text=x=>typeof x==='string'?x:Array.isArray(x)?x.map(text).join(''):x?.props?text(x.props.children):''
+    const row=(reportId,description)=>({caseId,reportId,reporterDisplayName:reportId,reporterPhoneNumber:null,reporterPhoneNumberConfirmed:false,description,receivedAt:'2026-11-04T00:00:00Z',originalEvidence:[],supplements:[]})
+    render();caseId='b';render();assert.equal(calls[0].signal.aborted,true)
+    calls[1].resolve([row('report-b1','B original'),{...row('report-b2','B2 original'),supplements:[{id:'s2',description:'B2 supplement',receivedAt:'2026-11-04T01:00:00Z',evidence:[]}]}]);await flush();assert.ok(text(view).includes('B2 supplement'));assert.ok(text(view).includes('Chưa có thông tin'))
+    calls[0].resolve([row('old-a','OLD CASE DATA')]);await flush();assert.ok(!text(view).includes('OLD CASE DATA'))
+    epoch++;render();assert.equal(calls[1].signal.aborted,true);assert.ok(!text(view).includes('B2 supplement'));calls[2].reject(failure(403,'access_forbidden'));await flush();assert.ok(text(view).includes('403 access_forbidden'));assert.ok(!text(view).includes('Không có Report'))
+    effects.forEach(e=>e?.cleanup?.())
+  })
+  await test('project reload restores the same actor command key/body without storing credentials or replaying under another actor', async()=>{
+    const journal=new Map();const storage={getItem:key=>journal.get(key)||null,setItem:(key,value)=>journal.set(key,value),removeItem:key=>journal.delete(key)};let firstKey
+    const first=load('src/api/services/projectService.ts',{...createMocks({post:async(_,__,config)=>{firstKey=config.headers['Idempotency-Key'];throw new Error('timeout')}}),__sessionStorage:storage}).projectService
+    await assert.rejects(first.createProject(createInput));assert.equal(journal.size,1)
+    assert.ok(![...journal.values()][0].includes('test-token'))
+    const other=load('src/api/services/projectService.ts',{...createMocks({}),__sessionStorage:storage,'../../store/authStore':{useAuthStore:{getState:()=>({user:{id:'other'},authEpoch:2}),subscribe:()=>()=>{}}}}).projectService
+    assert.equal(other.pendingProjectCreate(),null)
+    const second=load('src/api/services/projectService.ts',{...createMocks({post:async(_,body,config)=>{assert.equal(config.headers['Idempotency-Key'],firstKey);assert.equal(body.code,createInput.code);return {status:201,data:{id:'new'}}},get:async()=>response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server',status:'ACTIVE'}]})}),__sessionStorage:storage}).projectService
+    assert.ok(second.pendingProjectCreate());await second.createProject(createInput,true);assert.equal(journal.size,0)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

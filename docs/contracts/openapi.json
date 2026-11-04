@@ -39115,7 +39115,7 @@
         "tags": [
           "Projects"
         ],
-        "description": "Create projects resources. Permissions: Supervisor.",
+        "description": "Supervisor only. Bearer or Web cookie. For cookie requests, get requestToken from GET /api/v1/auth/web/csrf and send X-CSRF-TOKEN with credentials. Supply Idempotency-Key or body operationId. handoverFileIds: [] means no attachment; handoverDate and warrantyEndDate are required. Same-key changed-body retry returns 409.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -39134,6 +39134,14 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateProjectRequestDto"
+              },
+              "example": {
+                "code": "RG-2026-001",
+                "name": "Road maintenance project",
+                "primaryPmId": "11111111-1111-1111-1111-111111111111",
+                "handoverDate": "2026-11-01",
+                "warrantyEndDate": "2027-11-01",
+                "handoverFileIds": []
               }
             },
             "text/json": {
@@ -39223,7 +39231,7 @@
             }
           },
           "403": {
-            "description": "Error codes: access_forbidden.",
+            "description": "Error codes: access_forbidden. Cookie unsafe requests also return csrf_failed when the antiforgery pair is invalid.",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation UUID, emitted by middleware on all responses.",
@@ -39279,8 +39287,8 @@
               }
             }
           },
-          "500": {
-            "description": "Unexpected exception; generic internal_error ProblemDetails. No internal implementation details are returned.",
+          "415": {
+            "description": "Unsupported request media type: unsupported_media_type.",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation UUID, emitted by middleware on all responses.",
@@ -39298,8 +39306,8 @@
               }
             }
           },
-          "415": {
-            "description": "Unsupported request media type: unsupported_media_type.",
+          "500": {
+            "description": "Unexpected exception; generic internal_error ProblemDetails. No internal implementation details are returned.",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation UUID, emitted by middleware on all responses.",
@@ -39321,6 +39329,11 @@
         "security": [
           {
             "Bearer": []
+          },
+          {
+            "WebSession": [],
+            "CsrfToken": [],
+            "AntiforgeryCookie": []
           }
         ],
         "x-roadguard-api-id": "SWG-138",
@@ -61973,6 +61986,285 @@
         "controller": "RoadGuardSystem.API/Controllers/MeController.cs",
         "limitations": "Runtime Swagger omits GET response schema/ETag and PATCH error metadata/required headers. Consult MeController, PhoneNumberDtos, StaffPhoneNumberService and IdentityRepository.PhoneNumbers; do not infer those missing annotations as optional behavior."
       }
+    },
+    "/api/v1/cases/{caseId}/reports": {
+      "get": {
+        "tags": [
+          "CaseReportDetails"
+        ],
+        "description": "Supervisor or current-project PM reads currently linked Reports, ordered by receivedAt DESC then reportId DESC. Follow nextCursor using the same actor, Case and limit (1-100). Every page includes each Report's original evidence and all supplements. Reporter name, phone and phone confirmation come from the current account and can change after submission; a missing phone is null. Missing evidence position/time stays null or UNKNOWN.",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseReportDetailPageDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseReportDetailPageDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseReportDetailPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "WebSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cases/{caseId}/reports/{reportId}/evidence/{evidenceId}/content": {
+      "get": {
+        "tags": [
+          "CaseReportDetails"
+        ],
+        "description": "Authenticated private image stream. Checks current Case authority, active Report-Case link, evidence and verified private file before opening storage. No signed URL is issued. An already opened stream cannot be recalled retroactively after rights change.",
+        "parameters": [
+          {
+            "name": "caseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reportId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "evidenceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "WebSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -75458,6 +75750,138 @@
           }
         },
         "additionalProperties": false
+      },
+      "CaseReportEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "evidenceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "supplementId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "locationSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "$ref": "#/components/schemas/ReportEvidenceLocationDto"
+          },
+          "contentPath": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CaseReportDetailPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseReportDetailDto"
+            },
+            "nullable": true
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CaseReportSupplementDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseReportEvidenceDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CaseReportDetailDto": {
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reporterUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reporterDisplayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "reporterPhoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "reporterPhoneNumberConfirmed": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "originalEvidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseReportEvidenceDto"
+            },
+            "nullable": true
+          },
+          "supplements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CaseReportSupplementDto"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       }
     },
     "securitySchemes": {
@@ -75498,5 +75922,14 @@
         "in": "header"
       }
     }
+  },
+  "x-roadguard-web-integration-sync": {
+    "backendRevision": "5180ab9f86eee06a7328e9edeb5bee7dc18e808e",
+    "source": "Runtime /swagger/v1/swagger.json built from official origin/develop",
+    "scope": [
+      "POST /api/v1/projects",
+      "/api/v1/cases/{caseId}/reports",
+      "/api/v1/cases/{caseId}/reports/{reportId}/evidence/{evidenceId}/content"
+    ]
   }
 }

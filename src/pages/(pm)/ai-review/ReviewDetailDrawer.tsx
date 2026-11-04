@@ -1,4 +1,5 @@
 import React from 'react'
+import { CaseReportsPanel } from './CaseReportsPanel'
 import type { TriageCase } from './types'
 import { DrawerHeader } from './DrawerHeader'
 import { DrawerDecisionBanners } from './DrawerDecisionBanners'
@@ -102,6 +103,10 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
             />
 
+            {selectedCase.source === 'CITIZEN' ? <>
+              <CaseReportsPanel key={selectedCase.id} caseId={selectedCase.id} />
+              {isSupervisor && !selectedCase.project_id && <button type="button" onClick={() => onOpenTriageProject(selectedCase)}>Điều phối dự án</button>}
+            </> : <>
             <DrawerMediaViewer
               selectedCase={selectedCase}
               detailViewMode={detailViewMode}
@@ -130,6 +135,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
               onUnlinkReport={onUnlinkReport}
             />
+            </>}
           </div>
 
           {/* RIGHT COLUMN: Biểu mẫu quyết định kỹ thuật & hành động thẩm định */}

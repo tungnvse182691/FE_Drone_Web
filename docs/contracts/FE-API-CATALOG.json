@@ -10,7 +10,7 @@
     "review-evidence/milestone2-r1-closure/EXACT-OPERATION-ACCEPTANCE.json": "1bc48e4c66bd621a5c005d114dfdf4f0c339a9dbad3cd2012d7d4cd500bee56e",
     "review-evidence/milestone2-r1-closure/EXACT-DIMENSION-ACCEPTANCE.json": "2dd5545b0ddecfb6075e1a228dde8a1b2587876dc78c41f082eceddfa6f86afd"
   },
-  "operationCount": 262,
+  "operationCount": 264,
   "metadataAcceptance": "NOT_VERIFIED",
   "schemas": {
     "AcceptInvitationRequestDto": {
@@ -13491,6 +13491,138 @@
         "phoneNumber": {
           "minLength": 1,
           "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CaseReportEvidenceDto": {
+      "type": "object",
+      "properties": {
+        "evidenceId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "fileId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "fileVersion": {
+          "type": "string",
+          "nullable": true
+        },
+        "supplementId": {
+          "type": "string",
+          "format": "uuid",
+          "nullable": true
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "nullable": true
+        },
+        "locationSource": {
+          "type": "string",
+          "nullable": true
+        },
+        "location": {
+          "$ref": "#/components/schemas/ReportEvidenceLocationDto"
+        },
+        "contentPath": {
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "CaseReportDetailPageDto": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CaseReportDetailDto"
+          },
+          "nullable": true
+        },
+        "nextCursor": {
+          "type": "string",
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "CaseReportSupplementDto": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": "string",
+          "nullable": true
+        },
+        "receivedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CaseReportEvidenceDto"
+          },
+          "nullable": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "CaseReportDetailDto": {
+      "type": "object",
+      "properties": {
+        "caseId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reportId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reporterUserId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "reporterDisplayName": {
+          "type": "string",
+          "nullable": true
+        },
+        "reporterPhoneNumber": {
+          "type": "string",
+          "nullable": true
+        },
+        "reporterPhoneNumberConfirmed": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string",
+          "nullable": true
+        },
+        "receivedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "originalEvidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CaseReportEvidenceDto"
+          },
+          "nullable": true
+        },
+        "supplements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/CaseReportSupplementDto"
+          },
+          "nullable": true
         }
       },
       "additionalProperties": false
@@ -49990,11 +50122,16 @@
           }
         ]
       },
-      "authorization": {
-        "status": "NOT_VERIFIED",
-        "observedRoleScope": "Supervisor.; current resource authority applies",
-        "limitation": "Source-observed scope must be reconciled with active authority and actual transport tests."
-      },
+      "authorization": [
+        {
+          "Bearer": []
+        },
+        {
+          "WebSession": [],
+          "CsrfToken": [],
+          "AntiforgeryCookie": []
+        }
+      ],
       "prerequisites": {
         "status": "NOT_VERIFIED",
         "orderedRecipe": null
@@ -50017,6 +50154,14 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/CreateProjectRequestDto"
+            },
+            "example": {
+              "code": "RG-2026-001",
+              "name": "Road maintenance project",
+              "primaryPmId": "11111111-1111-1111-1111-111111111111",
+              "handoverDate": "2026-11-01",
+              "warrantyEndDate": "2027-11-01",
+              "handoverFileIds": []
             }
           },
           "text/json": {
@@ -50250,10 +50395,9 @@
         }
       ],
       "sourcePins": {
-        "RoadGuardSystem.API/Controllers/ProjectsController.cs": "dfd764b64cd384a597ac49cb0a47c7828a21d1704f465424a6447c888cfae54a",
-        "RoadGuardSystem.Repositories/Implementations/Projects/ProjectCreationPersistenceService.cs": "e3020c2ab84e3926ecf1b8152509231649e64840af4732bf7860adb8e9f07a0e",
-        "RoadGuardSystem.Repositories/Spatial/SpatialConstants.cs": "44d064d46e9ce9d0b350753abdb4b9a3f6550de1c82b04b70eb8278bcc1d820f",
-        "RoadGuardSystem.Services/Implementations/Projects/ProjectCreationService.cs": "a5c30e0d72ce0fa1e77e554c2b83a906c536f6a7f5802b7db0fbbe2753639b9e"
+        "backendRevision": "5180ab9f86eee06a7328e9edeb5bee7dc18e808e",
+        "controller": "RoadGuardSystem.API/Controllers/ProjectsController.cs",
+        "filter": "RoadGuardSystem.API/Extensions/ProjectCreationWebOperationFilter.cs"
       },
       "references": {
         "openapi": "openapi.json#/paths/~1api~1v1~1projects/post",
@@ -137585,6 +137729,295 @@
         "PATCH requires If-Match and Idempotency-Key; WebSession requires CSRF. 204 has no body; GET again. 400/401/403/409/412/428 from source; runtime Swagger omits these annotations.",
         "7-15 ASCII digits with optional leading + after trimming. Replay must preserve original key/body/version; GET equality alone is not receipt proof."
       ]
+    },
+    {
+      "operationId": "CaseReportDetailsController.List",
+      "method": "GET",
+      "path": "/api/v1/cases/{caseId}/reports",
+      "authorization": [
+        {
+          "Bearer": []
+        },
+        {
+          "WebSession": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "caseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "schema": {
+            "type": "integer",
+            "format": "int32",
+            "default": 20
+          }
+        },
+        {
+          "name": "cursor",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "successResponses": {
+        "200": {
+          "description": "OK",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseReportDetailPageDto"
+              }
+            },
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseReportDetailPageDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseReportDetailPageDto"
+              }
+            }
+          }
+        },
+        "400": {
+          "description": "Bad Request",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Unauthorized",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "Not Found",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "409": {
+          "description": "Conflict",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "412": {
+          "description": "Precondition Failed",
+          "content": {
+            "application/problem+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        }
+      },
+      "sourcePins": {
+        "backendRevision": "5180ab9f86eee06a7328e9edeb5bee7dc18e808e",
+        "controller": "RoadGuardSystem.API/Controllers/CaseReportDetailsController.cs"
+      },
+      "status": "SOURCE_AND_RUNTIME_VERIFIED_LIMITED",
+      "knownLimitations": [
+        "Runtime local API/browser verification is scoped; not full W01-W10 E2E."
+      ]
+    },
+    {
+      "operationId": "CaseReportDetailsController.Download",
+      "method": "GET",
+      "path": "/api/v1/cases/{caseId}/reports/{reportId}/evidence/{evidenceId}/content",
+      "authorization": [
+        {
+          "Bearer": []
+        },
+        {
+          "WebSession": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "caseId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "reportId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "evidenceId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      ],
+      "successResponses": {
+        "200": {
+          "description": "OK",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Unauthorized",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "403": {
+          "description": "Forbidden",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "Not Found",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "409": {
+          "description": "Conflict",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "412": {
+          "description": "Precondition Failed",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        },
+        "503": {
+          "description": "Service Unavailable",
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "$ref": "#/components/schemas/ProblemDetails"
+              }
+            }
+          }
+        }
+      },
+      "sourcePins": {
+        "backendRevision": "5180ab9f86eee06a7328e9edeb5bee7dc18e808e",
+        "controller": "RoadGuardSystem.API/Controllers/CaseReportDetailsController.cs"
+      },
+      "status": "SOURCE_AND_RUNTIME_VERIFIED_LIMITED",
+      "knownLimitations": [
+        "Runtime local API/browser verification is scoped; not full W01-W10 E2E."
+      ]
     }
   ],
   "currentSourceNavigation": {
@@ -137593,6 +138026,15 @@
     "selfPhoneSync": {
       "backendRevision": "7be7ffcdff7d5e55a3f1369c3375308c1a2f9768",
       "source": "Runtime Swagger plus exact controller/DTO/service/repository; only /me/phone-number synchronized, historical pins for other operations unchanged."
+    },
+    "caseReportsAndProjectWebSync": {
+      "backendRevision": "5180ab9f86eee06a7328e9edeb5bee7dc18e808e",
+      "source": "Runtime /swagger/v1/swagger.json built from official origin/develop",
+      "scope": [
+        "POST /api/v1/projects",
+        "/api/v1/cases/{caseId}/reports",
+        "/api/v1/cases/{caseId}/reports/{reportId}/evidence/{evidenceId}/content"
+      ]
     }
   }
 }

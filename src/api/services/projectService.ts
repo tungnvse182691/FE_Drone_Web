@@ -560,7 +560,31 @@ useAuthStore.subscribe((state, previous) => {
   }
 })
 
+// Persist only command identity/body/receipt, scoped by the authoritative actor.
+// No token/CSRF/cookie is stored. Full reload must not mint another unknown command.
+let projectCreateCommand: { epoch: unknown; fingerprint: string; key: string; body: any; busy: boolean; receipt?: any } | null = null
+const projectJournalKey = (actor: string) => `rg_pending_project_create_${actor}`
+function saveProjectCommand(actor: string, command: typeof projectCreateCommand): void {
+  if (command) sessionStorage.setItem(projectJournalKey(actor), JSON.stringify({ fingerprint: command.fingerprint, key: command.key, body: command.body, receipt: command.receipt }))
+  else sessionStorage.removeItem(projectJournalKey(actor))
+}
+useAuthStore.subscribe((state, previous) => {
+  if (state.authEpoch !== previous.authEpoch || state.user?.id !== previous.user?.id) projectCreateCommand = null
+})
+
 export const projectService = {
+  pendingProjectCreate() {
+    const state = useAuthStore.getState()
+    if (!projectCreateCommand && state.user?.id) {
+      const saved = sessionStorage.getItem(projectJournalKey(state.user.id))
+      if (saved) {
+        const journal = JSON.parse(saved)
+        if (!journal.key || !journal.body || journal.fingerprint !== JSON.stringify(journal.body)) throw new Error('Bản ghi yêu cầu tạo dự án không hợp lệ; cần đối chiếu trước khi tạo mới.')
+        projectCreateCommand = { ...journal, epoch: state.authEpoch, busy: false }
+      }
+    }
+    return projectCreateCommand ? { body: { ...projectCreateCommand.body }, busy: projectCreateCommand.busy } : null
+  },
   /**
    * API-049: GET /projects
    * Lấy danh sách dự án thật từ Backend Candidate3 Docker theo phân quyền (PM / Supervisor)
@@ -727,61 +751,48 @@ export const projectService = {
    * API-050: POST /projects (Chỉ Supervisor có quyền - FR-04, BR-01, DA01)
    * Header: Idempotency-Key
    */
-  async createProject(payload: ProjectCreatePayload): Promise<HubProject> {
+  async createProject(payload: ProjectCreatePayload, replay = false): Promise<HubProject> {
     const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
+      this.pendingProjectCreate()
+      const epoch = useAuthStore.getState().authEpoch
+      const actor = useAuthStore.getState().user?.id
+      if (!actor) throw new Error('Chưa xác định được phiên tạo dự án.')
+      if (payload.handoverFileIds?.length) throw new Error('Chưa hỗ trợ upload bàn giao trước dự án; hãy tạo không đính kèm file.')
+      const body = { name: payload.name.trim(), code: payload.code.trim().toUpperCase(), description: payload.region?.trim() || '',
+        primaryPmId: payload.primaryPmId, handoverDate: payload.handoverDate, warrantyEndDate: payload.warrantyEndDate, handoverFileIds: [] }
+      const fingerprint = JSON.stringify(body)
+      if (projectCreateCommand && (projectCreateCommand.busy || !replay || fingerprint !== projectCreateCommand.fingerprint)) {
+        throw new Error('Yêu cầu trước chưa rõ kết quả. Chỉ gửi lại cùng nội dung và khóa đã giữ; không tạo ý định mới.')
+      }
+      const command = projectCreateCommand || { epoch, fingerprint, key: crypto.randomUUID(), body, busy: false }
+      projectCreateCommand = command
+      command.busy = true
+      const current = () => useAuthStore.getState().authEpoch === epoch && useAuthStore.getState().user?.id === actor
       try {
-        console.log('🚀 [CANDIDATE3 BE] Gọi POST /api/v1/projects...')
-        const idempotencyKey = crypto.randomUUID()
-        const formattedCode = payload.code?.trim().toUpperCase() || ''
-        const formattedName = payload.name?.trim() || ''
-
-        const res = await apiClient.post<any>(
-          '/projects',
-          {
-            name: formattedName,
-            code: formattedCode,
-            description: payload.region?.trim() || '',
-            primaryPmId: payload.primaryPmId,
-            handoverDate: payload.handoverDate,
-            warrantyEndDate: payload.warrantyEndDate,
-            handoverFileIds: payload.handoverFileIds || []
-          },
-          {
-            headers: {
-              'Idempotency-Key': idempotencyKey
-            }
-          }
-        )
-        console.log('✅ [CANDIDATE3 BE] Tạo dự án thành công:', res.data)
-        const createdId = res.data?.projectId || res.data?.id
-        const createdCode = res.data?.projectCode || res.data?.code || formattedCode
-        const regionVal = payload.region?.trim() || ''
-
-        if (regionVal) {
-          const meta = {
-            region: regionVal,
-            location_detail: regionVal
-          }
-          if (createdId) saveToStorage(`roadguard_project_meta_${createdId}`, meta)
-          if (createdCode) saveToStorage(`roadguard_project_meta_${createdCode}`, meta)
-
-          const regionMap = getFromStorage<Record<string, string>>('roadguard_projects_region_map', {})
-          if (createdId) regionMap[createdId] = regionVal
-          if (createdCode) regionMap[createdCode] = regionVal
-          saveToStorage('roadguard_projects_region_map', regionMap)
+        saveProjectCommand(actor, command)
+        if (!command.receipt) {
+          const response = await apiClient.post('/projects', command.body, { headers: { 'Idempotency-Key': command.key } })
+          if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả tạo dự án cũ.')
+          if (response.status !== 201 || !(response.data.projectId || response.data.id)) throw new Error('Phản hồi tạo dự án không đúng contract201; cần đối chiếu kết quả.')
+          command.receipt = response.data
+          saveProjectCommand(actor, command)
         }
-
-        const createdHub = mapBackendProjectToHub({
-          ...res.data,
-          region: regionVal,
-          locationDetail: regionVal
-        })
-        projectStore = [createdHub, ...projectStore]
-        try {
-          sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
-        } catch {}
-        window.dispatchEvent(new Event('roadguard_state_change'))
+        const createdId = command.receipt.projectId || command.receipt.id
+        let cursor: string | undefined
+        const seen = new Set<string>()
+        let readBack: any
+        do {
+          const response = await apiClient.get('/projects', { params: { cursor } })
+          if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả dự án cũ.')
+          readBack = response.data.items.find((item: any) => (item.projectId || item.id) === createdId)
+          cursor = response.data.nextCursor || undefined
+          if (cursor && seen.has(cursor)) throw new Error('Cursor dự án bị lặp khi đọc lại kết quả.')
+          if (cursor) seen.add(cursor)
+        } while (!readBack && cursor)
+        if (!readBack) throw new Error('Đã nhận201 nhưng chưa đọc lại được dự án từ danh sách server. Hãy đối chiếu cùng yêu cầu.')
+        const createdHub = mapBackendProjectToHub(readBack)
+        if (projectCreateCommand === command) { projectCreateCommand = null; saveProjectCommand(actor, null) }
         return createdHub
       } catch (err: any) {
         console.error('❌ [CANDIDATE3 BE] Lỗi tạo dự án:', err?.response?.data || err?.message)
@@ -789,6 +800,7 @@ export const projectService = {
         const status = err?.response?.status
         const data = err?.response?.data
         const code = data?.code
+        if (projectCreateCommand === command && !command.receipt && status >= 400 && status < 500 && code !== 'duplicate_request') { projectCreateCommand = null; saveProjectCommand(actor, null) }
         const detail = data?.detail
         const errors = data?.errors
         const inputCode = payload.code?.trim().toUpperCase() || ''
@@ -840,7 +852,9 @@ export const projectService = {
           }
         }
         // 4. Xử lý lỗi 403 Forbidden (Không có quyền)
-        else if (status === 403 || code === 'access_forbidden') {
+        else if (code === 'csrf_failed') {
+          friendlyMessage = 'CSRF không hợp lệ. Hãy kiểm tra lại phiên Web trước khi tạo dự án.'
+        } else if (status === 403 || code === 'access_forbidden') {
           friendlyMessage = 'Bạn không có quyền khởi tạo dự án. Chức năng này chỉ dành cho tài khoản Giám sát (Supervisor).'
         }
         // 5. Xử lý lỗi 401 Unauthorized
@@ -853,6 +867,8 @@ export const projectService = {
         }
 
         throw Object.assign(new Error(friendlyMessage), { response: err?.response, cause: err, code, input: payload })
+      } finally {
+        command.busy = false
       }
     }
 

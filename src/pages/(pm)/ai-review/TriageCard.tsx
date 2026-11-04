@@ -247,7 +247,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
         {/* Hàng 3: Mô tả ngắn 1-2 dòng + Thumbnail GPS nhỏ gọn */}
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs text-slate-600 break-words leading-relaxed flex-1">
-            {item.description || 'API Case chưa hỗ trợ nội dung report gốc; không dùng kết luận thay lời người dân.'}
+            {item.description || 'Mở hồ sơ để tải nội dung và ảnh riêng của từng Report.'}
           </p>
           {item.image_url && (
             <div className="relative w-12 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-200 shrink-0">

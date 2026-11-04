@@ -153,7 +153,6 @@ function mapBackendCaseToDomain(
     verification_method: item.verificationMethod || undefined,
     project_id: projId,
     project_code: undefined,
-    report_details_state: 'UNSUPPORTED',
     project_name: projName || 'Chưa phân công dự án',
     stationing: 'Chưa có dữ liệu lý trình',
     lane: '',
