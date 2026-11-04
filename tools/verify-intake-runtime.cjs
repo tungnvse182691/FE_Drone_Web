@@ -112,7 +112,15 @@ async function prepareUnassignedThree() {
     assert.ok(results.every(row => ids.has(row.caseId.toLowerCase())))
     inbox = { status: 200, allThreePresent: true }
   } catch (error) { inbox = { status: error.status, code: error.data?.code, correlationId: error.data?.correlationId, message: error.message } }
-  console.log(JSON.stringify({ batch, results, inbox, handoffComplete: inbox.allThreePresent === true }, null, 2))
+  let webInbox
+  try {
+    const page = await request(supervisor, '/api/v1/cases?pageSize=100')
+    webInbox = { status: page.status }
+  } catch (error) {
+    webInbox = { status: error.status, code: error.data?.code, correlationId: error.data?.correlationId }
+  }
+  // A filtered API check alone cannot certify the actual Web inbox or project form.
+  console.log(JSON.stringify({ batch, results, filteredUnassignedInbox: inbox, webInboxRequest: webInbox, persistedCount: results.length, browserVerified: false, handoffComplete: false }, null, 2))
 }
 
 async function prepareFieldHandoff() {
