@@ -1,7 +1,7 @@
 import { RoleCode } from '../../types/enums'
 import { User } from '../../types/domain'
 import {
-  fetchCsrfToken,
+  getSessionApi,
   changePasswordApi,
 } from '../auth'
 import { useAuthStore } from '../../store/authStore'
@@ -106,53 +106,45 @@ export const authService = {
   /**
    * Đổi mật khẩu lần đầu / Cập nhật mật khẩu bảo mật (API-004)
    */
-  async changePassword(payload: ChangePasswordPayload): Promise<{ success: boolean; user: User }> {
-    const isMock = import.meta.env.VITE_USE_MOCK_AUTH === 'true'
-    if (!isMock) {
-      console.log('🚀 [CANDIDATE3 BE] Gửi yêu cầu đổi mật khẩu POST /api/v1/auth/change-password...')
-      let csrfToken = useAuthStore.getState().csrfToken
-      if (!csrfToken) {
-        const csrf = await fetchCsrfToken()
-        csrfToken = csrf.requestToken
-        useAuthStore.getState().setCsrfToken(csrfToken)
+  async changePassword(payload: ChangePasswordPayload): Promise<{ success: boolean; user: User | null; requiresLogin?: boolean }> {
+    const state = useAuthStore.getState()
+    const epoch = state.authEpoch
+    const actor = state.user?.id
+    const current = () => {
+      const now = useAuthStore.getState()
+      if (!actor || now.authEpoch !== epoch || now.user?.id !== actor || !now.isAuthenticated) {
+        throw new Error('Phiên đã thay đổi; bỏ yêu cầu đổi mật khẩu cũ.')
       }
-
-      await changePasswordApi(
-        {
-          currentPassword: payload.tempPassword,
-          newPassword: payload.newPassword,
-        },
-        csrfToken
-      )
-
-      if (!await useAuthStore.getState().checkSession()) throw new Error('Mật khẩu đã đổi; cần kiểm tra lại phiên Web.')
-      const updatedUser = useAuthStore.getState().user
-      if (!updatedUser) throw new Error('Phiên Web không còn hợp lệ.')
-      currentSessionUser = { ...updatedUser }
-      return { success: true, user: updatedUser }
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 400))
-
-    if (!currentSessionUser) {
-      throw new Error('Chưa đăng nhập phiên làm việc')
-    }
-
-    const userIndex = IN_MEMORY_USERS.findIndex((u) => u.id === currentSessionUser?.id)
-    if (userIndex === -1) {
-      throw new Error('Không tìm thấy tài khoản người dùng')
-    }
-
-    // Cập nhật mật khẩu và gỡ cờ đổi mật khẩu bắt buộc
-    IN_MEMORY_USERS[userIndex].password_hash = payload.newPassword
-    IN_MEMORY_USERS[userIndex].must_change_password = false
-
-    const { password_hash, ...safeUser } = IN_MEMORY_USERS[userIndex]
-    currentSessionUser = { ...safeUser }
-
-    return {
-      success: true,
-      user: safeUser
+    current()
+    let passwordChanged = false
+    try {
+      const csrfToken = await state.ensureCsrfToken()
+      current()
+      await changePasswordApi({ currentPassword: payload.tempPassword, newPassword: payload.newPassword }, csrfToken, current)
+      current()
+      passwordChanged = true
+      const session = await getSessionApi()
+      current()
+      if (session.user.id !== actor || session.mustChangePassword) throw new Error('Chưa xác nhận đổi mật khẩu thành công từ phiên máy chủ.')
+      useAuthStore.getState().setSession(session)
+      const user = useAuthStore.getState().user!
+      currentSessionUser = { ...user }
+      return { success: true, user }
+    } catch (error: any) {
+      if (passwordChanged && useAuthStore.getState().authEpoch === epoch) {
+        const detail = error?.response?.data?.code || error?.message || 'Lỗi đọc phiên'
+        useAuthStore.getState().expireSession(error?.response?.status === 401
+          ? 'Mật khẩu đã đổi. Vui lòng đăng nhập lại bằng mật khẩu mới.'
+          : `Mật khẩu đã đổi; chưa xác nhận lại phiên (${detail}). Vui lòng đăng nhập lại bằng mật khẩu mới.`)
+        currentSessionUser = null
+        return { success: true, user: null, requiresLogin: true }
+      }
+      if (useAuthStore.getState().authEpoch === epoch && error?.response?.status === 401 && error?.response?.data?.code !== 'auth_invalid_credentials') {
+        useAuthStore.getState().expireSession('Phiên không còn hợp lệ. Vui lòng đăng nhập lại.')
+        currentSessionUser = null
+      }
+      throw error
     }
   },
 

@@ -45,13 +45,18 @@ if (typeof sessionStorage !== 'undefined') {
 }
 let authMutation: Promise<unknown> = Promise.resolve()
 function serializeAuth<T>(action: () => Promise<T>): Promise<T> {
-  const result = authMutation.then(action, action)
+  const run = () => typeof navigator !== 'undefined' && navigator.locks
+    ? navigator.locks.request('roadguard-web-auth', action) : action()
+  const result = authMutation.then(run, run)
   authMutation = result.catch(() => undefined)
   return result
 }
 let bootstrap: { epoch: number; promise: Promise<boolean> } | null = null
 let recovery: { epoch: number; promise: Promise<void> } | null = null
 let csrf: { epoch: number; promise: Promise<string> } | null = null
+// Cookies are shared across tabs; invalidate local readers without sharing credentials.
+const sessionEvents = typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined'
+  ? new BroadcastChannel('roadguard-web-session') : null
 function assertEpoch(epoch: number): void {
   if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ phản hồi xác thực cũ.')
 }
@@ -85,6 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().status === 'logging-out' || get().status === 'authenticating') throw new Error('Đang xử lý xác thực; vui lòng chờ.')
     const epoch = get().authEpoch + 1
     set({ authEpoch: epoch, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'authenticating', authError: null })
+    sessionEvents?.postMessage('invalidate')
     await serializeAuth(async () => {
       try {
         assertEpoch(epoch)
@@ -97,6 +103,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         get().setSession(session)
         set({ csrfToken: null })
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('rg_web_logged_out')
+        sessionEvents?.postMessage('invalidate')
       } catch (error) {
         if (get().authEpoch === epoch) {
           lockReload()
@@ -178,6 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const epoch = get().authEpoch + 1
     lockReload()
     set({ authEpoch: epoch, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'logging-out', authError: null })
+    sessionEvents?.postMessage('invalidate')
     await serializeAuth(async () => {
       let warning: string | null = null
       try {
@@ -195,3 +203,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateUser: data => set(state => ({ user: state.user ? { ...state.user, ...data } : null })),
 }))
+
+if (sessionEvents) sessionEvents.onmessage = event => {
+  if (event.data === 'invalidate') useAuthStore.getState().expireSession('Phiên đã thay đổi ở tab khác. Vui lòng đăng nhập lại.')
+}

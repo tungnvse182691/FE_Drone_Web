@@ -95,13 +95,18 @@ export interface ChangePasswordRequest {
 /** API-004: Đổi mật khẩu (yêu cầu Idempotency-Key và X-CSRF-TOKEN) */
 export async function changePasswordApi(
   payload: ChangePasswordRequest,
-  csrfToken: string
+  csrfToken: string,
+  assertCurrent: () => void
 ): Promise<void> {
   const idempotencyKey = crypto.randomUUID()
   await apiClient.post(
     '/auth/change-password',
     payload,
     {
+      transformRequest: [(body: ChangePasswordRequest) => {
+        assertCurrent()
+        return JSON.stringify(body)
+      }],
       headers: {
         'X-CSRF-TOKEN': csrfToken,
         'Idempotency-Key': idempotencyKey,

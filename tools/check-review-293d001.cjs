@@ -27,7 +27,7 @@ function load(file, mocks = {}) {
     throw new Error(`Missing mock: ${name} (${file})`)
   }
   vm.runInNewContext(code, { module, exports: module.exports, require: requireMock, console: mocks.__console || { log() {}, warn() {}, error() {} }, crypto: webcrypto, AbortController, URLSearchParams, setTimeout: mocks.__setTimeout || setTimeout, clearTimeout,
-    sessionStorage: mocks.__sessionStorage || { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: mocks.__window, URL, Blob }, { filename: file })
+    sessionStorage: mocks.__sessionStorage || { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: mocks.__window, BroadcastChannel: mocks.__BroadcastChannel, URL, Blob }, { filename: file })
   return module.exports
 }
 const detail = (extra = {}) => ({ id: 'case-new', projectId: 'p', version: 'AAAAAAAAAAE=', reportIds: ['r1', 'r2'], ...extra })
@@ -1018,6 +1018,71 @@ function caseLifecycleHarness() {
         assert.equal(keys[0], keys[1])
       }
     }
+  })
+  await test('cross-tab invalidation clears identity/epoch and rejects late session responses without rebroadcast loops', async () => {
+    let channel, finish
+    const messages = []
+    const session = { user: { id: 'pm', role: 'PM', displayName: 'PM' }, mustChangePassword: false }
+    const { useAuthStore: store } = load('src/store/authStore.ts', {
+      __window: {}, __BroadcastChannel: class { constructor() { channel = this } postMessage(value) { messages.push(value) } },
+      '../api/auth': { getSessionApi: () => new Promise(resolve => { finish = resolve }) }
+    })
+    store.getState().setSession(session)
+    const epoch = store.getState().authEpoch
+    const recovering = store.getState().recoverSession()
+    channel.onmessage({ data: 'invalidate' })
+    finish(session)
+    await assert.rejects(recovering, /Phiên đã thay đổi/)
+    assert.equal(store.getState().authEpoch, epoch + 1)
+    assert.equal(store.getState().user, null); assert.equal(messages.length, 0)
+  })
+  await test('password change fences CSRF and server completion across actors, never inventing a changed user', async () => {
+    for (const phase of ['csrf', 'write']) {
+      let finish, writes = 0
+      let state = { user: { id: 'pm' }, authEpoch: 1, isAuthenticated: true }
+      const store = { getState: () => ({ ...state, ensureCsrfToken: () => phase === 'csrf' ? new Promise(resolve => { finish = resolve }) : Promise.resolve('csrf') }) }
+      const { authService: service } = load('src/api/services/authService.ts', {
+        '../../store/authStore': { useAuthStore: store },
+        '../auth': { changePasswordApi: async () => { writes++; if (phase === 'write') await new Promise(resolve => { finish = resolve }) }, getSessionApi: async () => { throw new Error('must not read under next actor') } }
+      })
+      const pending = service.changePassword({ tempPassword: 'old', newPassword: 'new' })
+      const rejected = assert.rejects(pending, /Phiên đã thay đổi/)
+      while (!finish) await new Promise(resolve => setImmediate(resolve))
+      state = { user: { id: 'other' }, authEpoch: 2, isAuthenticated: true }
+      finish('csrf'); await rejected
+      assert.equal(writes, phase === 'csrf' ? 0 : 1)
+    }
+  })
+  await test('password success requires a fresh server session clearing mustChangePassword; terminal401 expires locally', async () => {
+    let state = { user: { id: 'pm' }, authEpoch: 1, isAuthenticated: true }
+    let reads = 0, expired = 0
+    const store = { getState: () => ({ ...state, ensureCsrfToken: async () => 'csrf', setSession: s => { state.user = s.user }, expireSession: () => { expired++ } }) }
+    const api = { changePasswordApi: async body => { assert.equal(body.currentPassword, 'old'); assert.equal(body.newPassword, 'new') }, getSessionApi: async () => { reads++; return { user: { id: 'pm', role: 'PM' }, mustChangePassword: false } } }
+    const { authService: service } = load('src/api/services/authService.ts', { '../../store/authStore': { useAuthStore: store }, '../auth': api })
+    assert.equal((await service.changePassword({ tempPassword: 'old', newPassword: 'new' })).success, true); assert.equal(reads, 1)
+    api.getSessionApi = async () => ({ user: { id: 'pm' }, mustChangePassword: true })
+    assert.equal((await service.changePassword({ tempPassword: 'old', newPassword: 'new' })).requiresLogin, true)
+    api.changePasswordApi = async () => { throw failure(401, 'auth_session_revoked') }
+    await assert.rejects(service.changePassword({ tempPassword: 'old', newPassword: 'new' })); assert.equal(expired, 2)
+    api.changePasswordApi = async () => {}
+    api.getSessionApi = async () => { throw failure(401, 'auth_session_revoked') }
+    const result = await service.changePassword({ tempPassword: 'old', newPassword: 'new' })
+    assert.equal(result.success, true); assert.equal(result.requiresLogin, true); assert.equal(result.user, null); assert.equal(expired, 3)
+    api.getSessionApi = async () => { throw new Error('Network Error') }
+    assert.equal((await service.changePassword({ tempPassword: 'old', newPassword: 'new' })).requiresLogin, true)
+    assert.equal(expired, 4)
+  })
+  await test('password HTTP dispatch retains exact DTO/headers and rechecks epoch after async interceptors', async () => {
+    let epoch = 1, dispatch
+    const { changePasswordApi } = load('src/api/auth.ts', { './client': { apiClient: { post: async (url, body, config) => {
+      assert.equal(url, '/auth/change-password')
+      assert.equal(config.headers['X-CSRF-TOKEN'], 'csrf'); assert.ok(config.headers['Idempotency-Key'])
+      dispatch = config.transformRequest[0]
+      assert.equal(dispatch(body), JSON.stringify({ currentPassword: 'old', newPassword: 'new' }))
+    } } } })
+    await changePasswordApi({ currentPassword: 'old', newPassword: 'new' }, 'csrf', () => { if (epoch !== 1) throw new Error('stale epoch') })
+    epoch++
+    assert.throws(() => dispatch({ currentPassword: 'old', newPassword: 'new' }), /stale epoch/)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

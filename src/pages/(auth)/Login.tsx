@@ -28,7 +28,7 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
 
   // State cho Form Đổi mật khẩu bắt buộc
-  const [tempPassword, setTempPassword] = useState('123456')
+  const [tempPassword, setTempPassword] = useState('')
   const [showTempPassword, setShowTempPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -83,12 +83,10 @@ export const Login: React.FC = () => {
 
     try {
       const res = await authService.changePassword({ tempPassword, newPassword })
+      if (res.requiresLogin || !res.user) { navigate('/login', { replace: true }); return }
+      const currentUser = res.user
       setIsForceSuccess(true)
-      setTimeout(() => {
-        const currentUser = res.user
-        const dest = currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
-        navigate(dest)
-      }, 700)
+      navigate(currentUser.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard')
     } catch (err: any) {
       const detailMsg =
         err?.response?.data?.detail ||

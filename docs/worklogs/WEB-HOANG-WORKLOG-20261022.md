@@ -1488,3 +1488,48 @@ Thực chạy harness tạm ngoài repo: `rg-step3-api-read-only.cjs` (3 actor �
 **Kết luận:** phần tạo/chọnPM/đọc và xem phân công hiện tại có bằng chứngPASS; **Bước2 chưa hoàn tất toàn bộ vì đổiPM Web và gỡmembership cònBLOCKED**. Không nhận nghiệm thu chuyển quyền khi chưa có command thành công.
 
 **Chốt kiểm bản cuối:** typecheck `tsc -b` **PASS**; build `vite build` **PASS** (heap896MiB, chỉ cảnh báo Tailwind duration/chunk lớn có sẵn); regression **87 PASS**; `git diff --check` **PASS**. Browser trên bundle cuối **PASS cả3actor/F5/đổi tài khoản**, members network-error→retry **PASS**, projects network-error→retry **PASS**; không fulfill response, **0 business writes**. Lỗi selector nút retry có icon được sửa trong harness tạm và rerun thành công. Harness thực chạy: `rg-step2-members-live.cjs` cho PUT401/POST âm, `rg-step2-check.py` cho quyền/current-history, `rg-step2-finalize-data.py` cho Swagger/SELECT, `rg-step2-browser-real.cjs` cho production browser. Positive đổiPM/thu quyền theo effective-date vẫn **BLOCKED**, gỡmembership **BLOCKED**, positive thêmOperator/Crew và server500 thật **NOT_RUN**. Không suy các kiểm thử cô lập hoặc build thành E2E chuyểnPM.
+
+### 05/11/2026 — Bước1 Web session/RBAC từ 96eb953: kiểm thật, đồng bộ tab và sửa đổi mật khẩu bắt buộc
+
+**Base:** `96eb953e6dd835fa54369159d77d71986df617a4`, nhánh `hoang`, status/diff sạch trước làm. Đọc AGENTS.md, RoadGuard_LoTrinh_GanAPI_PM_Supervisor.md trong Downloads, worklog mới nhất, Spec17_10 Authentication/Web Architecture/auth-contract, OpenAPI, Login/authService/authStore/auth.ts/client/route guards/App cache invalidation. Đối chiếu WebAuthController, AuthController, WebCookieConfiguration, AuthService.ChangePasswordAsync và IdentityRepository.PasswordChanges tại backend5180ab9 với runtime thật. Không mặc định tên android còn được dùng: Login hiện đã gọi authService→loginWithCredentials→Web APIs, không đổi transport hoặc viết lại phần đúng.
+
+#### API đã đối chiếu và sử dụng
+
+| Method/path | DTO/header/cookie đúng contract | Kết quả thực |
+|---|---|---|
+| GET `/api/v1/auth/web/csrf` | requestToken/headerName=X-CSRF-TOKEN, cookie antiforgery do browser giữ | **PASS** bootstrap trước login/renew/logout; không đọc HttpOnly cookie bằngJS |
+| POST `/api/v1/auth/web/login` | LoginRequestDto(email,password), CSRF header + cookie pair; khôngAuthorization | Sup/PM-A/PM-B200; sai mật khẩu401; saiCSRF403 **PASS API/browser** |
+| GET `/api/v1/auth/web/session` | Web session cookie, user.id/displayName/role/version và root mustChangePassword | Login đọc user server, F5 kiểm session trước protected area; rolePM/Sup đúng **PASS** |
+| POST `/api/v1/auth/web/renew` | Renewal cookie + CSRF; khôngAuthorization, không dựng DTO/token mới | **PASS API/browser**, kể cả bỏ riêng cookie ticket rồi renew bằng renewal cookie thật; GET session lại200 |
+| POST `/api/v1/auth/web/logout` | Session cookie + CSRF + Idempotency-Key;204 | **PASS**; session/renew bằng bản cookie phiên cũ sau logout đều401, không chỉ xóa cacheclient |
+| POST `/api/v1/auth/change-password` | ChangePasswordRequestDto(currentPassword,newPassword), K+cookieCSRF;204 | **PASS API âm400validation** bằng body thiếu field, không đổi mật khẩu; positive **NOT_RUN** vì không có fixture mustChangePassword=true phù hợp |
+
+Cookie theo Edge browser thật: **__Host-RoadGuardCsrf, __Host-RoadGuardSession, __Host-RoadGuardRenewal** đều Secure/HttpOnly/SameSiteLax; session ticket43200giây theo contract/source, không coi renewal365ngày là ticket vô hạn. Axios withCredentials:true tương đương fetch credentials:include; traffic kiểm thử không có Android login hoặc Authorization. Không lưu credential vào localStorage/sessionStorage; sessionStorage chỉ giữ logout-intent trong luồng auth. Các helper mock cũ không được gọi thay cho Web login/session; nhánh mock đổi mật khẩu đã loại khỏi luồng được tích hợp.
+
+#### Thay đổi đúng phạm vi
+
+- Giữ CSRF→Web login→GET session, bootstrap/loading/route guard, renew single-flight/giới hạn replay và logout API hiện có. 401 session/renew cuối cùng làm expireSession, tăng epoch/xóa user/cache/redirectLogin; 403 và network error thông thường không tự coi là hết phiên. 401 của operation không eligible cookie khi GET session vẫn200 giữ lỗi operation để chẩn đoán, không khôi phụcBearer hoặc đăng xuất giả.
+- Thêm BroadcastChannel chỉ gửi tín hiệu invalidate, không gửi user/secret. Login/logout ở một tab vô hiệu hóa actor/cache/lượt đọc của tab khác qua authEpoch; tab nhận khóa cục bộ và cần đăng nhập lại. Dùng Web Locks khi browser hỗ trợ để serialize các mutation cookie auth giữa tab, giữ cơ chế serialize trong tab làm fallback; không tạo cơ chế đăng nhập thứhai. Regression kiểm response session cũ sau invalidation không khôi phục user và không phát vòng lặp broadcast.
+- Đổi mật khẩu bỏ giá trị điền sẵn ở Login/ForceChangePassword và bỏ local-mock approval. Capture actor/epoch từ đầu, kiểm lại sau CSRF, trước HTTP dispatch qua transformRequest, sau POST và GET session; phản hồi actor/epoch cũ không set user. Chỉ map root mustChangePassword/user.role từ session server, không tự gỡ cờ hoặc mặc định role lạ thànhPM. Form chặn submit trong khi đang gửi/thành công; bỏ navigation timer cũ.
+- Căn cứ quan trọng: IdentityRepository.ChangePasswordAtomicAsync đổi mật khẩu và **revoke mọi session/refresh token** của user. Vì vậy POST204→GET session401 là đổi thành công nhưng cần đăng nhập lại; FE xóa/khóa phiên và báo rõ dùng mật khẩu mới, không báo password-change failed hoặc dựng user để vàoDashboard. Nếu POST204 nhưng đọc session lỗi/không xác nhận được, vẫn thông báo rõ phần password đã được server xác nhận và phần session chưa xác nhận, yêu cầu login; lỗi trước204 giữ lỗi HTTP thật. Sai currentPassword/auth_invalid_credentials không bị nhầm với terminal session401. Nhánh này có source/regression evidence, chưa có positive account fixture để gọi thật.
+
+#### Tiêu chí kiểm thử và giới hạn
+
+| Tiêu chí | Kết quả/bằng chứng |
+|---|---|
+| Login Sup/PM-A đúng/sai; cookie/CSRF | **PASS API/browser thật**, khôngBearer; CSRF lỗi403, password lỗi401 được hiển thị |
+| F5 phiên hợp lệ và renew | **PASS browser**; controlled ticket removal→session401→renew200→read server. Hết12giờ tự nhiên **NOT_RUN**, không chỉnh clock/expiry |
+| Logout/F5 và credential phiên cũ | **PASS API/browser**, logout204; bản credential cũ session/renew401; F5 ởLogin |
+| Đổi actor/nhiều tab/project/member/Case cache | **PASS browser** trên cùng context: PM-A→Sup→PM-B; tab thứhai nhận broadcast và vềLogin, không giữ member. PM-A inbox scope hợp lệ tải Case cache từ server vào localStorage, logout xóa cache thật; không chèn cache giả để test |
+| 401 terminal/403/scope | **PASS browser/API**: server logout quaWeb API rồi kích hoạt protected read trong FE→401/renewfail→Login. Project2cde860a-f777-4e5c-8d8f-384fdaed9509 PM-A/Sup200, PM-B403; PM-B mởURL/F5 không được thay bằng project cache |
+| Route guard hai chiều | **PASS browser** PM vàoSup→PM dashboard; Sup vàoPM→Sup dashboard. Unknown-role và must-change routing/mapping giữ đúng bằng source/regression |
+| Response cũ/renew cạnh tranh/lỗi mạng/logout lỗi | **PASS regression cô lập** cho single-flight, fence epoch, khôngloop/replay mutation, network không tựlogout và cảnh báo chưa xác nhận revoke khi logout lỗi; không gọi mock test là API E2E |
+| mustChangePassword=true, đổi thành công và login mật khẩu mới | **NOT_RUN thực**: ba actor PM/Sup có credential test hợp lệ đều trảfalse; không có fixture forced phù hợp trong demo accounts. Không reset password/user/DB để tạo điều kiện. Guard/DTO/lỗi trước204/sau204 và no-stale-dispatch **PASS source/regression**, không tính là positive E2E |
+
+Browser chạy trên production build qua Vite preview5181/proxy tới Docker, Edge headless, không fulfill/mock HTTP. Harness tạm `rg-step1-web-api-now.py` kiểm3actor/CSRF/renew/old-cookie revoke/scope; `rg-step1-web-browser-now.cjs` kiểm route/F5/epoch cross-tab/cache/terminal401, **0 business writes**. HTTP Date API khoảng **Wed,04Nov2026 22:25–22:27 GMT**. Một lượt harness copy cookie bị lỗi PythonRLock trước cleanup đã sửa trong temp và rerun assertions thành công; các lần login tự nhiên tạo Session/Audit test, không dùngSQL sửa/xóa các session cũ. Chỉ dùng bản cookie cũ trong RAM để kiểm revoke, không ghi ra file/log.
+
+Quan sát ngoài phạm vi auth: Sup inbox scope **UNASSIGNED+CONCLUDED** báo `reference_scope_conflict`, không commit partial list như cache hoàn chỉnh. Không sửa business inbox để ép testauth; dùng PM-A scope hợp lệ đã có để kiểm cache thật và đãPASS. Đây là lỗi/gap scope nghiệp vụ đã thấy, **không phải thiếu WebAuth API** hoặc lý do dùngmock.
+
+**Checks cuối:** `tools/check-review-293d001.cjs` **91 scenarios PASS** (HTTP/hooks mô phỏng có kiểm soát, khôngE2E); `tsc -b` **PASS**, `vite build` **PASS**, `git diff --check` **PASS**. Cảnh báo duration/chunk lớn có sẵn, không mở refactor. Không tạo file mới trongrepo, không sửa backend/contract/project/Case/Report/geometry/membership; không đổi password tài khoản, SQL/clock hoặc resetDB/volume. Dữ liệu local/session/audit không đi theo commitGitHub. Không ghi mật khẩu/token/cookie value/SĐT.
+
+**Kết luận:** luồng Web session/RBAC PM/Sup và đổi actor/cache có bằng chứng thực **PASS**. Không thiếu endpoint auth cần BE tạo thêm; phần chưa nghiệm thu thực là forced-password positive và natural12h expiry (**NOT_RUN**), không tuyên bố đãPASS toàn bộ nhánh đó từ build/regression. Cần fixture test buộc đổi mật khẩu hợp lệ để chốt positive; không tự đổi tài khoản thật.
