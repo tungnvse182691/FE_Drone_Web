@@ -11,7 +11,7 @@ const marker = 'RG-INTAKE-20261103-01'
 const ledgerPath = process.env.RG_TEST_LEDGER || require('node:path').join(require('node:os').tmpdir(), marker + '.json')
 const ledger = fs.existsSync(ledgerPath) ? JSON.parse(fs.readFileSync(ledgerPath, 'utf8')) : {}
 const saveLedger = () => fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2))
-const accounts = () => JSON.parse(execFileSync('docker', ['exec', apiContainer, 'cat', '/handoff/demo-accounts.json'], { encoding: 'utf8' }))
+const accounts = () => JSON.parse(execFileSync('docker', ['exec', apiContainer, 'cat', '/handoff/demo-accounts.json'], { encoding: 'utf8', timeout: 15000 }))
 async function login(key) {
   const account = accounts().find(item => item.key === key)
   assert.ok(account, `Missing test account ${key}`)
@@ -29,15 +29,91 @@ async function request(token, route, method = 'GET', body, key, version) {
 }
 function readSql(query) {
   assert.ok(/^SELECT\s/i.test(query) && !/\b(INSERT|UPDATE|DELETE|MERGE|DROP|ALTER|EXEC|INTO|TRUNCATE)\b/i.test(query), 'Read-only SELECT required')
-  const config = JSON.parse(execFileSync('docker', ['exec', apiContainer, 'cat', '/handoff/config.json'], { encoding: 'utf8' }))
+  const config = JSON.parse(execFileSync('docker', ['exec', apiContainer, 'cat', '/handoff/config.json'], { encoding: 'utf8', timeout: 15000 }))
   const database = config.RoadGuardDatabase.ConnectionString.match(/(?:Database|Initial Catalog)=([^;]+)/i)[1]
   assert.match(database, /^RoadGuard_FE_[A-Za-z0-9_]+$/)
   // Password is read inside the container, never printed or passed from the host.
   const args = ['exec', sqlContainer, 'bash', '-c', 'export SQLCMDPASSWORD="$(cat /handoff/sql-password)"; exec /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -d "$1" -w 65535 -y 0 -Q "$2"', 'read-only', database, 'SET NOCOUNT ON; ' + query + ' FOR JSON PATH']
-  const output = execFileSync('docker', args, { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }).trim()
+  const output = execFileSync('docker', args, { encoding: 'utf8', timeout: 15000, maxBuffer: 8 * 1024 * 1024 }).trim()
   return JSON.parse(output.slice(output.indexOf('['), output.lastIndexOf(']') + 1).replace(/[\r\n]/g, '') || '[]')
 }
 module.exports = { marker, login, request, readSql }
+
+async function prepareUnassignedThree() {
+  const batch = 'RG-UNASSIGNED-20261104-01'
+  const reporter = await login('reporter-a')
+  const supervisor = await login('supervisor')
+  const pm = await login('pm-a')
+  const journalKey = batch + '-journal'
+  ledger[journalKey] ||= {}
+  const journal = ledger[journalKey]
+  const step = async (name, route, body, version) => {
+    if (!journal[name]) { journal[name] = { route, body, version, key: `${batch}-${name}` }; saveLedger() }
+    const saved = journal[name]
+    if (!saved.result) {
+      saved.result = await request(reporter, saved.route, 'POST', saved.body, saved.key, saved.version)
+      saveLedger()
+    }
+    return saved.result
+  }
+  const results = []
+  const descriptions = ['vị trí nghi có ổ gà', 'vị trí nghi có vết nứt mặt đường', 'vị trí nghi có bong tróc mặt đường']
+  for (let index = 0; index < 3; index++) {
+    const tag = `${batch}-${index + 1}`
+    // Synthetic pixel fixture already used by this dev harness; no private/real incident photo.
+    const content = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64')
+    const digest = crypto.createHash('sha256').update(content).digest('hex')
+    const existing = readSql(`SELECT Id FROM Reports WHERE Description LIKE '${tag}:%'`)
+    assert.ok(existing.length <= 1, 'Duplicate batch marker; stop without new writes')
+    let reportId = existing[0]?.Id
+    if (!reportId) {
+      const upload = (await step(`${index + 1}-upload`, '/api/v1/reporter-evidence/uploads', { fileName: `${tag}-synthetic-pixel.png`, mediaType: 'image/png', sizeBytes: content.length, checksumSha256: digest })).data
+      const root = '/api/v1/reporter-evidence/uploads/' + upload.id
+      const current = (await request(reporter, root)).data
+      if (current.status === 'PENDING' || current.status === 'UPLOADING') {
+        const urls = await request(reporter, root + '/part-urls', 'POST', { partNumbers: [1] }, `${tag}-part-${crypto.randomUUID()}`)
+        const put = await fetch(urls.data.parts[0].url, { method: 'PUT', body: content })
+        assert.ok(put.ok, 'Upload bytes failed')
+        const version = (await request(reporter, root)).data.version
+        await step(`${index + 1}-complete`, root + '/complete', { parts: [{ partNumber: 1, eTag: put.headers.get('etag') }], checksumSha256: digest }, version)
+      }
+      let file
+      for (let attempt = 0; attempt < 50; attempt++) {
+        file = (await request(reporter, '/api/v1/reporter-evidence/files/' + upload.fileId)).data
+        if (file.status === 'VERIFIED') break
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      assert.equal(file.status, 'VERIFIED', 'No Report until evidence VERIFIED')
+      reportId = (await step(`${index + 1}-report`, '/api/v1/reports', {
+        description: `${tag}: Người dân mô tả ${descriptions[index]}. TÌNH HUỐNG KIỂM THỬ, chưa phải kết luận kỹ thuật. Ảnh PNG pixel tổng hợp dùng kiểm tra upload, không phải ảnh tổn hại/sự kiện thực. Không có vị trí hoặc thời điểm chụp đáng tin. Dành cho Supervisor tự điều phối.`,
+        evidence: [{ fileId: upload.fileId, fileVersion: file.version, locationSource: 'UNKNOWN' }]
+      })).data.id
+    }
+    const own = (await request(reporter, '/api/v1/reports/' + reportId)).data
+    const link = readSql(`SELECT CaseId FROM CaseReportLinks WHERE ReportId='${reportId}' AND EndedAt IS NULL`)
+    assert.equal(link.length, 1)
+    const caseId = link[0].CaseId
+    const incident = (await request(supervisor, '/api/v1/cases/' + caseId)).data
+    assert.equal(incident.status, 'UNASSIGNED'); assert.ok(!incident.projectId)
+    assert.equal(incident.defectIds.length, 0); assert.ok(!incident.conclusion)
+    assert.equal(own.evidence.length, 1); assert.equal(own.publicUpdates.length, 0)
+    await assert.rejects(request(pm, '/api/v1/cases/' + caseId), error => error.status === 403)
+    results.push({ tag, description: descriptions[index], reportId, caseId, displayCode: '#CAS-' + caseId.slice(0, 8).toUpperCase(), evidenceId: own.evidence[0].id, fileId: own.evidence[0].fileId, reporter: 'reporter-a', status: incident.status, projectId: incident.projectId || null })
+  }
+  const count = readSql(`SELECT COUNT(*) AS Count FROM Reports WHERE Description LIKE '${batch}-%'`)
+  assert.equal(count[0].Count, 3)
+  let inbox
+  try {
+    const ids = new Set(); let cursor
+    do {
+      const page = (await request(supervisor, '/api/v1/cases?status=UNASSIGNED&pageSize=100' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''))).data
+      page.items.forEach(item => ids.add(item.id.toLowerCase())); cursor = page.nextCursor
+    } while (cursor)
+    assert.ok(results.every(row => ids.has(row.caseId.toLowerCase())))
+    inbox = { status: 200, allThreePresent: true }
+  } catch (error) { inbox = { status: error.status, code: error.data?.code, correlationId: error.data?.correlationId, message: error.message } }
+  console.log(JSON.stringify({ batch, results, inbox, handoffComplete: inbox.allThreePresent === true }, null, 2))
+}
 
 async function prepareFieldHandoff() {
   const pm = await login('pm-b')
@@ -171,7 +247,7 @@ async function prepareReporterHandoff() {
   console.log(JSON.stringify({ marker, handoffReports: result }, null, 2))
 }
 if (require.main === module) {
-  const run = process.argv[2] === '--prepare-reporter-handoff' ? prepareReporterHandoff : process.argv[2] === '--prepare-field-handoff' ? prepareFieldHandoff : null
-  if (!run) throw new Error('Explicit --prepare-reporter-handoff or --prepare-field-handoff required; writes development test data through official APIs.')
+  const run = process.argv[2] === '--prepare-unassigned-three' ? prepareUnassignedThree : process.argv[2] === '--prepare-reporter-handoff' ? prepareReporterHandoff : process.argv[2] === '--prepare-field-handoff' ? prepareFieldHandoff : null
+  if (!run) throw new Error('Explicit --prepare-unassigned-three, --prepare-reporter-handoff or --prepare-field-handoff required; writes development test data through official APIs.')
   run().catch(error => { console.error(error.message, error.status || '', error.data?.code || ''); process.exitCode = 1 })
 }
