@@ -1343,3 +1343,67 @@ Luồng yêu cầu từ chối/yêu cầu sửa và gửi lại là tiêu chí n
 **Code/tests:** Không phát hiện lỗi FE có thể sửa hợp lệ để vượt các gate hiện tại mà vẫn giữ đúng contract; không sửa code application, backend hoặc contract. Không chạy lại regression/typecheck/build vì lượt này chỉ audit/runtime+worklog, không lấy build hay test cũ làm E2E mới. Positive từ chối/sửa/gửi lại, geometry mới read-only cycle, full2step E2E đều **BLOCKED/NOT_RUN**, không PASS.
 
 **Kết luận:** chưa thể chốt nghiệm thu toàn Bước1/Bước2: Bước1 chờ ngày UTC hiệu lực; Bước2 còn discovery transport, dữ liệu CRS/kỹ thuật và thiếu submit/reject/revision contract, kèm write integration FE chưa đủ điều kiện. Các read/import/F5 diagnostic đãPASS như bảng, không thay lifecycle mới. Chỉ commit worklog chung tiếng Việt/push origin/hoang không force; không outputcredential/token/cookie/SQL dump.
+
+
+### 05/11/2026 — Chốt Bước1 bằng project hiệu lực ngay theo UTC; phân loại đúng contract Bước2
+
+**Base/parent:** `e8051ae1190e7a7b20e2446218fbab2060a3293f`, nhánh `hoang`; git status/diff sạch trước kiểm. Đọc AGENTS.md/worklog mới nhất, Spec17_10 Project/Road/Geometry (workflow/preconditions/guards/K-V), ma trận PM/Sup, Web auth, GIS integration, OpenAPI DTO/path và source BE tương ứng. Fetch origin/develop chỉ đọc xác minh latest vẫn `5180ab9f86eee06a7328e9edeb5bee7dc18e808e`, runtime image `sha256:abddd74b62baef95c41456e9a57972ce39eda0e076ef916bb1730dafc34b00d3` healthy. Bốn file deploy bẩn của checkout backend cũ giữ nguyên; không đổi BE/runtime/clock/auth hoặc SQL, không reset/seed volume. Lượt này chỉ tạo đúng1 project test qua API và cập nhật worklog, không sửa FE code.
+
+#### 1. Project hiệu lực ngay — PASS API/browser/SELECT
+
+Đọc `/ready`200 và HTTP Date ngay trước khi tạo: **Wed, 04 Nov 2026 20:47:51 GMT**, ngày UTC **2026-11-04**. Không dùng ngày local05/11 làm validFrom. Kiểm source CreateProjectRequestDto/ProjectsController/ProjectCreationService/PersistenceService: handoverDate đi vào ProjectMember.CreatePrimaryProjectManager; contract cho phép ngày UTC hiện tại và warrantyEnd>=handover, không cần SQL hoặc membership override. GET users?rolePM&statusACTIVE lấy đúng PM-A hiện hữu. POST Web session cookie + CSRF identity hiện hành + Idempotency-Key UUID, bỏ operationId override và không Bearer; `handoverFileIds:[]` hợp lệ.
+
+| Dữ liệu test mới giữ lại | Giá trị thực |
+|---|---|
+| Project ID | **2cde860a-f777-4e5c-8d8f-384fdaed9509** |
+| Code duy nhất từ timestamp HTTP Date | **RG-STEP1-NOW-20261104T204751Z** |
+| Name/purpose | TEST STEP1 NOW - Web cookie immediate PM access; description ghi rõ dữ liệu nghiệm thu, không phải công trình thực |
+| HandoverDate / WarrantyEndDate | **2026-11-04 / 2027-11-04** |
+| Primary PM | PM-A lấy từ ACTIVE API, `72f84201-a001-4000-8000-000000000002` |
+| Membership | rolePM/statusACTIVE/isPrimarytrue, **validFrom2026-11-04**, validTonull; khớp ngày UTC server |
+| Handover / Warranty IDs | aa223914-e692-4861-b1d6-00cb447562d9 / 85dcbfce-414b-4cb5-a1d6-87aab166c25c |
+| Source records | Không file bàn giao, vẫn có handover+warranty+primary membership đúng transaction API; project wireStatusACTIVE (DB Status2) |
+| Geometry | EngineeringUtmSrid chưa khai (NULL),0 draft/0 road/0 geometry version; không dựng geometry để nghiệm thu Step1 |
+
+Chỉ **1 POST create201** của ý định này. Journal code/key/body/receipt ở temp trước dispatch, rerun khi có receipt chỉ GET lại, không sinh timestamp/key/project mới để thử quyền; không chứa credential/token/cookie/CSRF. Không sửa project632bae9a... hoặc bất kỳ project/hồ sơ cũ. Đây là dữ liệu mới hiệu lực ngay theo contract, không đổi clock hoặc backfill SQL để ép gate cũ.
+
+| Tiêu chí hiện tại | API thực | Browser thật/F5 | Kết quả |
+|---|---|---|---|
+| Sup create/read | POST projects201; GET projects200 có ID; GET summary200; members200 xác nhận PM-A | /sup/projects có code; F5 vẫn thấy | **PASS** |
+| PM-A được gán đọc | Cookie login PM-A; GET projects200 có ID; GET summary200 ngay sauPOST | /pm/projects thấy code và F5 vẫn thấy | **PASS** |
+| PM-B ngoài project | GET projects200 không chứa ID, summary403 | Không thấy code, F5 không xuất hiện dữ liệu Sup/PM-A | **PASS** |
+| Ngày/quyền đúng | ProjectScopeGuard xét ngày UTC, membership validFrom<=HTTP day; không thêm quyền phụ | Context/cookie từng actor riêng, không giả role | **PASS** |
+| Durable records | Đọc INFORMATION_SCHEMA trước SELECT Projects/ProjectMembers/HandoverDocuments/Warranties/RoadGeometryDrafts/RoadSections/RoadSectionVersions. Đúng1 project/membership/handover/warranty, đúngPM/dates/status;0 geometry | Không lấy toast/local data thay persistence | **PASS SELECT chỉ đọc** |
+
+**Bước1 đã chốt trong phạm vi tạo project Web và Sup/assigned-PM/outside-PM access bằng dữ liệu hiệu lực ngay.** Gate ngày của project632bae9a cũ không được sửa hoặc dùng làm kết quả này; nghiệm thu mới dựa project2cde... theo yêu cầu lượt này.
+
+#### 2. CRS/geometry — phân biệt có API, thiếu dữ liệu, thiếu transport và thiếu contract
+
+Đọc trực tiếp GeometryWorkflowController/Service/PersistenceService, GeometryEngine, CrsProfileEngine, GeometryDraftInput/GeometryDraftView/GeometryConfirmInput/CrsProfileInput, RoadGeometryDraft domain và các route geometry trong Swagger hiện tại. Không suy thiếu chỉ từ nútdisabled hoặc snapshot kit.
+
+| Phần | Contract/source hiện có | Kết luận chính xác |
+|---|---|---|
+| CRS profile | GET/POST /projects/{id}/crs-profiles, DTO CrsProfileInput, PM create+K/cookieCSRF. SourceSrid metadata cho phép sốkhôngâm, axisEN/NE/metresPerUnit/provenance và optional operation/ellipsoid/projection/control | Có contract metadata, không đồng nghĩa có adapter chuyển đổi EPSG thật |
+| COORDINATES | GeometryDraftInput.sourceCrs phải trùng project engineeringSRID32648 hoặc32649; GeometryEngine dùng NTS LineString.Length trên **tọa độ mét**; stationOrigin/changeReason/surveyWidth/widthProfile phải hợp lệ và profile phủ đúng metric length | Nhánh này không nhận lonlat độ chỉ vì gán sourceCrs32648. Không gửi file sai đơn vị để lấy lỗi PASS |
+| NATIVE_ALIGNMENT | Analytic native geometry phải pin project-owned CRS revision; spatial/sourceSrid match profile; có routeSystem/routeKind/tolerance/width/provenance và native validation | Không nói toàn backend chỉ nhận2 EPSG. Đây nguồn riêng, không đổi119 lonlat thành native rỗng/giả để lưu |
+| Transform WGS84→UTM | Live Swagger không có operation transform/reproject/conversion; CrsProfileEngine chỉ có executable **SAMPLE_AFFINE_TO_WGS84**, chiềuNATIVE_TO_WGS84 và sampleOnly. MetadataEPSG/ProjectionDefinition không tự thực thiverifiedadapter; legacy COORDINATES preview trảwgs84null/warning khi chưa cấu hình | **Thiếu verified transform/admission cho nguồn file này**, hoặc cần cung cấp nguồn metric có căn cứ. Chưa đặt tên endpoint mới; không dùng sample để khẳng định accuracy |
+| Tạo/sửa draft | POST /projects/{id}/road-geometry-drafts, PUT /.../{draftId}; aliases road-section tương đương, DTO GeometryDraftInput | **Đã có** API, PM write; createK,editK+If-Match,WebCSRF. Không ghi chung “thiếu API lưu” |
+| Đọc/preview/readiness | GET /.../{draftId}, POST /.../{draftId}/preview, GET /.../{draftId}/readiness | **Đã có** read/preview contract; readiness semantics COORDINATES/native vẫn cần làm rõ như audit trước |
+| Sup xác nhận | POST /.../{draftId}/confirm, DTO GeometryConfirmInput(expectedCurrentVersionId,effectiveFrom,reason), roleSup,K+If-Match/cookieCSRF | **Đã có** confirm. Source tạo road mới ở confirm nếu dùng draft project-level chưa có roadSection; không bắt buộc mọi luồng phải đi qua Sup prepare-road POST |
+| Gửi duyệt | Không có submit command/DTO/persisted review-queue transition trong route/service/domain hiện tại | **Thiếu contract nghiệp vụ gửi duyệt**, không coi chia sẻURL draft là đã lưu trạng thái gửi |
+| Từ chối/yêu cầu sửa/gửi lại | Không có review-decision DTO/action/history/return transition cho geometry; RoadGeometryDraft chỉ Create/Edit ởDRAFT và Confirm→CONFIRMED | **Thiếu contract** cho reject/revision/resubmit cycle yêu cầu. Không tự đặt endpoint/enum, không dùng Confirm vớireasonReject |
+| Immutable | Domain Edit chặn khi status!=DRAFT, confirm chỉ từDRAFT; persistence checks state/version/head | Có source guard readonly; không claim đã chạy approval cycle mới của file này |
+| Discovery | GET /projects/{id}/work-package Bearer-only, chứa engineeringSrid/roads/currentversions; cookie hiện401. POST road-sections/versions cũngBearer-only nếu chọn workflow cần prepare | Cần Web-cookie admission cho discovery/operation được lựa chọn, không yêu cầu mở mặc định mọi API. Alias new-road draft/confirm có sẵn nên prepare-road không phải blocker bắt buộc cho mọi nhánh |
+
+**Dữ liệu thiếu không được đánh đồng thiếu API:** project mới2cde... không khaiengineeringSrid/profile/route-system vì phục vụStep1. `CreateProjectRequestDto` vốn có engineeringUtmSrid optional; việcNULL không chứng minh BE không có field cấu hình. File roadguard-export.geojson là GeoJSON lonlatWGS84 mặc định, không có sourced metric transform/accuracy/station/calibration/surveyWidth. roadWidth7 chỉ metadata, không tự gán thành đủ widthProfile/surveyWidth. Muốn đi nhánh metric cần verified conversion hoặc dữ liệu metric đúng nguồn, engineeringSrid được chọn có căn cứ và các field kỹ thuật bắt buộc; không scale chiều dài để khớp700.73m. Calibration optional theo source nếu cung cấp phải có provenance; không tự coi là bắt buộc toàn bộ COORDINATES.
+
+**Thực chạy Step2 trên project mới, không mock/hardcode response:** cookie Sup/PM-A GET crs-profiles200(empty), route-systems200(empty); PM-B cả2 bị403. Work-package trả401 cả3 (transport, không lấy401 đó làm test project-scope). Browser PM-A /pm/projects/2cde.../alignment chọn đúng ID từ project API, import file gốc hiển thị119 điểm, blockerwork-package/CRS/source data rõ, Lưu draft và Confirm vẫn khóa; F5 vẫn đúng project server, không nói preview file đãpersist. Mọi mutationgeometry bị harness chặn, ghi0POSTgeometry; không gọi API draft với sourceCrs giả hoặc số liệu tự điền.
+
+**Danh sách BE/owner cần chốt (không tự đặt URL/DTO/status):**
+1. Verified transform/admission WGS84 lonlat→engineeringEPSG32648/32649 **hoặc** nguồn metric và provenance hợp lệ cho input hiện hữu; metadata CrsProfileInput không thay code chuyển đổi. Cần quy định accepted CRS/axis/unit và kiểm soátaccuracy; không invent default coefficients.
+2. Contract thao tác gửi duyệt, quyết định từchối/yêu cầu sửa và PM gửi lại, gồm role, reason/version/K, persisted state và history/discovery. Hiện chỉ confirm có DTO/route; không mở lệnh giả ở FE.
+3. Cookie eligibility cho GET work-package và operation prepare-road/version chỉ khi luồng chọn cần chúng; giữ đúng scope/role/CSRF, không lấy Bearer tài khoản khác bù. Cần làm rõ readiness cho COORDINATES so với native.
+
+FE còn phần write-handler/source-input integration cho create/edit/confirm khi có đủ đầu vào/contract, không đổ toàn bộ việc còn lại cho BE. **Không tạo geometry mới** vì toàn cycle submit/reject/resubmit chưa có contract và file chưa là valid metric/native input; positive save/submit/confirm/reject/edit-resend mới **BLOCKED/NOT_RUN**, không lấy preview/build làm E2E PASS.
+
+**Tests/build và dữ liệu:** Không sửa code application/backend/contract, không phát hiện lỗiFE trong các read/access đã chạy; không rerun regression/typecheck/build vì chỉ runtime audit+worklog (test cũ không tính thành E2E mới). `git diff --check` PASS. Tạo mới chỉ1 project +membership/handover/warranty bắt buộc qua API,0geometry/Report/Case/file/CRS; không SQLwrite và không sửa/xóa data cũ. Journal/scripts temp không mang credential/token/cookie/phone. **Database local không đi theo commitGitHub**; tất cả record test trên vẫn giữ cho review. Bước1PASS theo project mới; Bước2 chưa chốt, blockers chính xác ở bảng. Chỉ commit worklog chung tiếng Việt/push origin/hoang không force.
