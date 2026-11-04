@@ -1228,3 +1228,66 @@ Sau đó gỡ toàn bộ response fixture, mở lại /pm/alignment bằng API c
 - Dự án test đã tạo trước:632bae9a-c3f2-44f6-bed3-6f59b928d832 / RG-WEB-20261105-01. Kiểm live cookie: Sup summary200, PM-A403 và PM-B403; HTTP Date runtime **04/11/2026 19:51 UTC**, vẫn trước validFrom2026-11-05 của PM-A đã ghi nhận bằng members API. **PM-A read200 sau khi effective chưa kiểm được/BLOCKED theo thời gian**, không sửa ngày/SQL/clock hoặc tạo thêm project. PM-B outside deny403 là evidence riêng, không lấy làm positive assigned-read. Cần kiểm lại từ00:00UTC05/11 (07:00 VN).
 
 **Kiểm tra build/source:** `tsc -b --pretty false` PASS; `npm run build` GOMAXPROCS2/GOGC50 PASS2018 modules, warnings duration-[250ms]/large chunk có sẵn; `git diff --check` PASS. Không file repo mới, không framework/dependency/contract hoặc backend thay đổi. Chỉ stage files thuộc2 lỗi và worklog. **Kết luận:** code/regression/recovery browser đã sửa trong scope; live split multiReport và assigned-PM read200 chưa đủ điều kiện, không công bố full E2E PASS. Commit tiếng Việt/push origin/hoang không force, không commit ledger/output/credentials/token/cookie/private ảnh.
+
+
+### 05/11/2026 — Kiểm thử thật PM đọc project và liên kết/tách Report (không mock response)
+
+**Base/parent:** `bf154cf32b118fabf547d7be5975935152d08d60`, nhánh `hoang`, working tree sạch trước/sau kiểm thử, trước ghi worklog. Đọc AGENTS.md/worklog, Spec17_10 Reporter/IncidentCase, OpenAPI create Report/triage/link/split/private evidence và source guards/normalizer/persistence hiện hành. Backend vẫn5180ab9 và Docker instance roadguard-fe-starter01 healthy, không sửa BE, clock/schema/SQL hoặc auth. User đã cho phép chuẩn bị dữ liệu tối thiểu qua API để đóng gate split thật; không dùng các hồ sơ cũ dành Hoàng làm fixture ghi.
+
+#### 1. Quyền PM trên project632bae9a... — một gate thời gian còn BLOCKED
+
+Project test `632bae9a-c3f2-44f6-bed3-6f59b928d832` / RG-WEB-20261105-01 vẫn giữ nguyên. Browser/API Web cookie thật, từng context riêng:
+| Tiêu chí | Kết quả thực tế | Trạng thái |
+|---|---|---|
+| Thời gian server và membership | Header API **04/11/2026 20:12 UTC**. Sup GET members200: PM-A rolePM/statusACTIVE/isPrimarytrue, validFrom2026-11-05/validTonull; ProjectScopeGuard so ngày UTC | PASS kiểm tra nguyên nhân |
+| Supervisor đọc project | GET projects200 có ID, GET project summary200; browser /sup/projects hiển thị code test | PASS |
+| PM-B ngoài project | GET summary403, members403; list không chứa ID và UI không hiện code | PASS từ chối backend/UI |
+| PM-A trước validFrom | GET projects200 nhưng chưa chứa project, summary403/members403; UI không hiện code. Cookie đúng PM-A, không lỗi cache/role giả | Đúng deny trước hiệu lực; không lấy làm assigned-read PASS |
+| PM-A đọc200 sau khi hiệu lực | Chưa tới00:00UTC05/11 (**07:00 VN05/11**) theo server trong lượt kiểm; không đổi SQL/ngày/clock hoặc tạo thêm project | **BLOCKED theo thời gian / positive NOT_RUN** |
+
+Không sửa quyền để ép PASS; source + membership API + HTTP Date nhất quán. Cần kiểm lại project này khi ngày UTC đã chuyển05/11. Việc PM-A đọc project TEST SBX-A cũ phục vụ split không thay nghiệm thu project mới632bae9a.
+
+#### 2. Kiểm kê và dữ liệu tối thiểu được chuẩn bị qua API
+
+SELECT inventory trước: không có CaseReportLinks active group COUNT>1. Các Report RG-INTAKE cũ/RG-UNASSIGNED đều dành cho Hoàng, giữ nguyên liên kết/nội dung/trạng thái; không link/tách chúng. Đọc INFORMATION_SCHEMA.COLUMNS trước SELECT các bảng Reports/IncidentCases/ProjectMembers/CaseReportLinks và ReportOriginalEvidence/CaseReportLinkHistory/AuditLogs. Không dùng SQL seed/update để vượt guard.
+
+Tạo đúng2 Report mới cho batch **RG-SPLIT-20261105-01**, dùng Reporter-a test hiện có (owner `72f84201-a001-4000-8000-000000000004`). Hai private file PNG test đã tồn tại được **GET bằng owner**, metadataVERIFIED, purpose/private ownership theo producer, content200/checksum SHA256 đúng; tái dùng reference hợp lệ trong2 Report mới, không tạo upload/file hoặc ảnh hiện trường giả. Đây ảnh pixel pipeline68byte đã được browser giải mã, không phải ảnh tổn hại thực; description mới nói rõ test liên kết/tách, không kết luận hiện trường. Không GPS/thời gian chụp có nguồn nên chỉ gửi locationSourceUNKNOWN, omit location/capturedAt; SELECT/API sau tạo giữ null. Report description khác nhau R1/R2, có marker và mục đích, không đưa test field ngoài DTO.
+
+| Dữ liệu giữ lại | ID | Mục đích / trạng thái cuối |
+|---|---|---|
+| Report R1 | `cd4d747f-254e-4469-aaf0-1aa35bcbeea0` | RG-SPLIT-20261105-01-R1; còn active trong Case nguồn1db5... |
+| Report R2 | `f212fccf-7cd5-4baf-8d5d-8bc14b7e3adb` | RG-SPLIT-20261105-01-R2; được PM chọn tách thật, active trong Case mới9cf5... |
+| Case R1 / master liên kết | `1db5cb70-e60f-499d-8b30-bd56d7dad0e6` | OPEN, project TEST SBX-A `72f84201-c001-4000-8000-000000000001`, activeReports=[R1] sau split |
+| Case intake R2 ban đầu | `277db54a-84a2-4723-9818-2e8361d0e3ea` | Đã triage rồi link qua API; trạng thái LINKED, activeReports=[], linkedTarget=master; giữ lịch sử, không xóa |
+| Case mới do split | `9cf57686-34a7-47d7-9b9a-72f5b936095c` | OPEN, cùng project SBX-A, activeReports=[R2] |
+| Evidence R1 | `26e1f3cc-6a55-4639-958f-84ccdd810879` | File có sẵn `98af3d6c-7e58-43d4-8a30-011312db753b`, owner Reporter-a, VerificationState1, UNKNOWN/null |
+| Evidence R2 | `7adaef8f-9f6d-4678-90dd-e7283ba35b3d` | File có sẵn `5c7f1c24-76b7-42d0-8b0d-be2ae349736f`, owner Reporter-a, VerificationState1, UNKNOWN/null |
+
+Không tạo project/Defect/FIELD, không thay geometry hoặc pin; chỉ2 Report +2 intake Case +1 Case được command split tạo đúng nghiệp vụ, cùng evidence/link/history/audit bắt buộc. Hai file cũ và các hồ sơ cũ không bị sửa/xóa. Nguồn actor: Reporter upload/report chuẩn Bearer đúng contract owner; **PM/Sup chỉ Web cookie**, không mint Bearer thay Web hoặc dùng owner API bằng PM/Sup.
+
+Chống trùng: journal command identity/body/ETag/receipt theo batch trong temp, marker SELECT trước tạo và key UUID được lưu trước POST; chỉ POST create khi chưa có marker. Không tự đổi key/version khi409/412; lỗi thì dừng để đối chiếu. Browser split lưu request metadata/201 receipt; khi chạy lại đã có receipt thì chỉ kiểm GET/F5/SELECT, không POST split lần2. SELECT cuối marker đúng2 Report, history split đúng1. Journal không chứa password/token/cookie/CSRF value; contact trước/sau được đối chiếu bằng hash, không lưu phone vào worklog/Git.
+
+#### 3. Kết quả API/browser/SELECT thật
+
+| Tiêu chí | Bằng chứng | Kết quả |
+|---|---|---|
+| Report create hợp lệ | Reporter POST reports201 từng Report, evidence fileVersion metadata hiện hành; generated IDs từ API, active links đối chiếu SELECT | PASS |
+| Supervisor điều phối | GET mớiUNASSIGNED + POST cases/{id}/triage200, projectSBX-A/methodEXISTING_EVIDENCE, reason test, If-Match/K/CSRF đúng | PASS |
+| PM liên kết | GET hai Case đúng project, POST master/report-links200 với reportIds=[R2], sourceCaseVersions đúng Case2, If-Match master; không đổi K/version tự động | PASS |
+| Case nhiều Report + pagination | GET master/reports?limit1 có nextCursor; giữ cùng actor/Case/limit lấy trang2 đúng Report còn lại, nextCursornull; GETlimit20 đầy đủ2Report | PASS API thật |
+| Supervisor không tách | Trước PM split, Case vẫn có2Report: Sup cookie+CSRF/K/If-Match gửi DTO đúng R2 -> **403 access_forbidden**, GET lại vẫn2Report | PASS negative thật |
+| PM chọn đúng Report trên browser | Web login PM-A -> inbox Case #CAS-1DB5CB70 -> article **R2** -> Tách Report này -> Xác nhận. Request captured reportIds=[f212...], quoted If-Match khớp GET Case mới trước thao tác, Idempotency-Key có, CSRF có, Authorization không có | PASS browser/API thật |
+| Server split | POST report-splits **201**, receipt Case mới9cf5... chứa R2; chỉ1 command split thành công | PASS |
+| Readback/UI/F5 | Callback GET Case/list/detail thật; R2 biến mất khỏi Case nguồn, R1 còn. F5 mở lại source vẫn chỉR1; mở Case mới#CAS-9CF57686 cóR2 và ảnh decode thành công | PASS |
+| Contact/nội dung/evidence không trộn | Canonical hash từng Report trước/sau (bỏ caseId/contentPath là routing thay đổi) giữ nguyên current sender/contact/description/receivedAt/original/supplement/evidence metadata | PASS; không ghi phone values |
+| Private content sau chuyển | Đường R2 dưới Case nguồn cũ404; contentPath mới dưới Case9cf5...200/68byte, browser ảnh loaded; Sup đọc Case mới200, PM-B outside403 | PASS |
+| Liên kết DB | SELECT CaseReportLinks: R1 active master; R2 originalCase277→master→newCase9cf với EndedAt/StartedAt nối đúng, chỉ link cuối active | PASS |
+| History/audit/owner | CaseReportLinkHistory giữ2 cạnh link/split, R2 đúng ID; split actor PM-A và đúng1 row. Audit có report_received/case_triage/case_link/case_split. FK evidence ReportId/Owner/Files đúng, verification1, locationSource0 vàlat/lng/accuracy/capturedAtNULL | PASS SELECT chỉ đọc |
+
+Không intercept/fulfill/hardcode response để báo PASS: browser route chỉ cho request thật đi tiếp và chặn mutation ngoài auth/split đã cho phép. Chuẩn bị dùng API chính thức, SELECT phục vụ inventory/reconcile/verify; không SQL write/seed. Script tạm ngoài repo: rg-prepare-real-split.cjs, rg-real-split-browser.cjs, rg-real-project-membership.cjs; không tạo report riêng trong repository. Dữ liệu vẫn giữ lại trong database local cho review; sau split không còn fixture multiReport vì nghiệp vụ đã tách1→2 Case đơn, nếu cần chạy lại mutation phải có tác vụ cho phép link lại bộ test này, không tự lặp/reset.
+
+**Lỗi harness, không phải lỗi FE:** Lượt browser đầu POST201 đã thành công và được journal lưu, UI đã reload; sau đó hàm kiểm ảnh dùng Fetch Response.status như function gây TypeError. Sửa duy nhất script temp dùng property.status, chạy lại chỉ GET/F5/verify dựa receipt, **0 POST split lần chạy lại**, không tạo Case trùng. Kết quả PASS trên là kết hợp command201 thật, UI readback và SQL durable effect đã đối chiếu; không coi lần harness throw là test PASS hoặc tự resend key khác.
+
+**Code/build:** Không phát hiện lỗi FE trong các tiêu chí đã chạy, không sửa application/backend/tests. Không chạy lại typecheck/build/regression vì chỉ bổ sung bằng chứng runtime/worklog;80 regression/build của base vẫn là evidence lịch sử, không gọi thành kết quả E2E mới. Scope chưa chạy: assigned PM-A positive read200 trên project632bae9a sau validFromUTC; full W01–W10/offline/deployment/trust không nghiệm thu.
+
+**Bàn giao:** Gate **PM tách Report thật đã PASS** bằng API/browser/SELECT, không còn blocker thiếu multiReport fixture của lượt trước. Gate **PM-A đọc project632bae9a sau hiệu lực vẫn BLOCKED theo thời gian server**, Sup read và PM-B deny đã PASS; không ép SQL/ngày/clock để đạt. Không code fix hoặc dữ liệu cũ người dùng bị sửa, không reset database/volume. **Dữ liệu database Docker local không đi theo commit/push GitHub**; Git chỉ mang worklog. Chỉ commit worklog chung tiếng Việt/push origin/hoang không force, không credentials/cookie/token/private dump/output nhạy cảm.
