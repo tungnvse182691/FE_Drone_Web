@@ -35,7 +35,8 @@ export interface ReviewDetailDrawerProps {
   onOpenRequestSurveyModal: (c?: TriageCase) => void
   onOpenPublishModal: (c?: TriageCase) => void
   onNavigateFastTrack: (c: TriageCase) => void
-  onUnlinkReport: (childId: string) => void
+  onUnlinkReport: (reportId: string) => void
+  onSplitReport?: (reportId: string) => Promise<void>
   onOpenTriageProject: (c: TriageCase) => void
   onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
@@ -71,6 +72,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onOpenPublishModal,
   onNavigateFastTrack,
   onUnlinkReport,
+  onSplitReport,
   onOpenTriageProject,
   onOpenGISModal,
   onOpenPhotoZoomModal,
@@ -104,7 +106,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
             />
 
             {selectedCase.source === 'CITIZEN' ? <>
-              <CaseReportsPanel key={selectedCase.id} caseId={selectedCase.id} />
+              <CaseReportsPanel key={selectedCase.id} caseId={selectedCase.id} onSplit={onSplitReport} />
               {isSupervisor && !selectedCase.project_id && <button type="button" onClick={() => onOpenTriageProject(selectedCase)}>Điều phối dự án</button>}
             </> : <>
             <DrawerMediaViewer

@@ -583,7 +583,7 @@ export const projectService = {
         projectCreateCommand = { ...journal, epoch: state.authEpoch, busy: false }
       }
     }
-    return projectCreateCommand ? { body: { ...projectCreateCommand.body }, busy: projectCreateCommand.busy } : null
+    return projectCreateCommand ? { body: { ...projectCreateCommand.body }, busy: projectCreateCommand.busy, hasReceipt: !!projectCreateCommand.receipt } : null
   },
   /**
    * API-049: GET /projects

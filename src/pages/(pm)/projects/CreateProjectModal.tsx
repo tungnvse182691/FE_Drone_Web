@@ -23,6 +23,7 @@ export interface CreateProjectModalProps {
   onChangeStartDate: (val: string) => void
   endDate: string // warrantyEndDate
   onChangeEndDate: (val: string) => void
+  receivedCreate?: boolean
   pendingCreate?: boolean
   isSubmitting?: boolean
   errorMessage?: string | null
@@ -45,6 +46,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeStartDate,
   endDate,
   onChangeEndDate,
+  receivedCreate = false,
   pendingCreate = false,
   isSubmitting = false,
   errorMessage = null,
@@ -63,6 +65,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   }, [startDate, endDate])
 
   const isFormValid = useMemo(() => {
+    if (pendingCreate) return !isSubmitting
     return (
       projectName.trim().length > 0 &&
       projectCode.trim().length > 0 &&
@@ -73,7 +76,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       !isDateInvalid &&
       !isSubmitting
     )
-  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pmOptions])
+  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pmOptions, pendingCreate])
 
   if (!isOpen) return null
 
@@ -119,7 +122,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
           )}
 
-          {pendingCreate && <p role="alert">Yêu cầu trước chưa rõ kết quả hoặc chưa đọc lại được. Nội dung và khóa được giữ trong phiên này; chỉ gửi lại đúng yêu cầu.</p>}
+          {pendingCreate && <p role="alert">{receivedCreate ? 'Đã nhận201: chỉ đọc lại kết quả, không POST thêm.' : 'Yêu cầu trước chưa rõ kết quả: chỉ chủ động gửi lại đúng nội dung và khóa đã giữ.'} Danh mục PM hiện tại không thay đổi yêu cầu đã lưu.</p>}
           <fieldset disabled={isSubmitting || pendingCreate} className="space-y-4">
           {/* Mã dự án & Tên dự án */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -186,6 +189,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
               >
                 <option value="">Chọn PM đang hoạt động</option>
+                {pendingCreate && projectPM && !pmOptions.some(pm => pm.id === projectPM) && <option value={projectPM}>PM của yêu cầu đã lưu ({projectPM})</option>}
                 {pmOptions.length === 0 ? (
                   <option value="">Đang tải danh sách PM...</option>
                 ) : (
@@ -292,7 +296,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 size={16}
                 className={isSubmitting ? 'animate-spin' : ''}
               />
-              <span>{isSubmitting ? 'Đang khởi tạo...' : pendingCreate ? 'Gửi lại đúng yêu cầu' : 'Khởi tạo dự án'}</span>
+              <span>{isSubmitting ? 'Đang khởi tạo...' : pendingCreate ? receivedCreate ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu' : 'Khởi tạo dự án'}</span>
             </button>
           </div>
         </form>

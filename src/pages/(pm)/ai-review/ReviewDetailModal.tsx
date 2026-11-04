@@ -29,7 +29,8 @@ export interface ReviewDetailModalProps {
   onOpenRequestSurveyModal: (c?: TriageCase) => void
   onOpenPublishModal: (c?: TriageCase) => void
   onNavigateFastTrack: (c?: TriageCase) => void
-  onUnlinkReport: (code: string) => void
+  onUnlinkReport: (reportId: string) => void
+  onSplitReport?: (reportId: string) => Promise<void>
   onOpenTriageProject: (c: TriageCase) => void
   onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void

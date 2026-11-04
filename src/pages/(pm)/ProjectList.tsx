@@ -135,6 +135,7 @@ export const ProjectList: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const createBusy = useRef(false)
   const [pendingCreate, setPendingCreate] = useState(false)
+  const [receivedCreate, setReceivedCreate] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
   // Reset form sạch khi mở modal tạo mới (dứt khoát không để mock data)
@@ -152,6 +153,7 @@ export const ProjectList: React.FC = () => {
     try { pending = projectService.pendingProjectCreate() }
     catch (error: any) { setCreateErrorMessage(error.message); setIsModalOpen(true); setPendingCreate(true); return }
     setPendingCreate(!!pending)
+    setReceivedCreate(!!pending?.hasReceipt)
     if (pending) {
       setNewProjectName(pending.body.name); setNewProjectCode(pending.body.code); setNewProjectRegion(pending.body.description)
       setNewProjectPM(pending.body.primaryPmId); setNewStartDate(pending.body.handoverDate); setNewEndDate(pending.body.warrantyEndDate)
@@ -184,7 +186,7 @@ export const ProjectList: React.FC = () => {
       setCreateErrorMessage(msg)
       showToast(msg)
     } finally {
-      try { setPendingCreate(!!projectService.pendingProjectCreate()) }
+      try { const pending = projectService.pendingProjectCreate(); setPendingCreate(!!pending); setReceivedCreate(!!pending?.hasReceipt) }
       catch { setPendingCreate(true) }
       createBusy.current = false
       setIsSubmitting(false)
@@ -374,6 +376,7 @@ export const ProjectList: React.FC = () => {
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
         isSubmitting={isSubmitting}
+        receivedCreate={receivedCreate}
         pendingCreate={pendingCreate}
         errorMessage={createErrorMessage || pmError}
         onSubmit={handleCreateProjectSubmit}

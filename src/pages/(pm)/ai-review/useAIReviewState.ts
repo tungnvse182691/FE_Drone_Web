@@ -244,7 +244,8 @@ export const useAIReviewState = () => {
     handleSelectAllReports: linkActions.handleSelectAllReports,
     handleOpenLinkReportsModal: linkActions.handleOpenLinkReportsModal,
     handleConfirmLinkReports: linkActions.handleConfirmLinkReports,
-    handleUnlinkReport: linkActions.handleUnlinkReport,
+    handleUnlinkReport: linkActions.handleUnlinkReportLegacy,
+    handleSplitReport: linkActions.handleUnlinkReport,
     handleOpenTriageProject: linkActions.handleOpenTriageProject,
     handleConfirmTriageProject: linkActions.handleConfirmTriageProject,
 

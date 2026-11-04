@@ -65,7 +65,7 @@ export const AIReviewInbox: React.FC = () => {
     criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
     handleOpenRequestSurveyModal, handleConfirmRequestSurvey, handleNavigateFastTrack,
     handleToggleSelectReport, handleSelectAllReports, handleOpenLinkReportsModal,
-    handleConfirmLinkReports, handleUnlinkReport, handleOpenTriageProject, handleConfirmTriageProject,
+    handleConfirmLinkReports, handleUnlinkReport, handleSplitReport, handleOpenTriageProject, handleConfirmTriageProject,
     handleOpenNoDefectModal, handleConfirmNoDefect, handleConclusionOutOfScope,
     handleResetConclusion, handleOpenPublishModal, handleConfirmPublishResult,
     handleExecuteMerge, handleBulkVerify, handleBulkNeedSurvey
@@ -186,6 +186,7 @@ export const AIReviewInbox: React.FC = () => {
         onOpenPublishModal={handleOpenPublishModal}
         onNavigateFastTrack={handleNavigateFastTrack}
         onUnlinkReport={handleUnlinkReport}
+        onSplitReport={handleSplitReport}
         onOpenTriageProject={handleOpenTriageProject}
         onOpenGISModal={() => setIsGISModalOpen(true)}
         onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}

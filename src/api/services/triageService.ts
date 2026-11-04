@@ -559,17 +559,19 @@ export const triageService = {
     const session = getCaseSessionKey()
     const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
     if (!current.data.reportIds?.includes(reportId)) throw new Error('Report không thuộc Case hiện tại; chưa gửi lệnh tách.')
+    if (current.data.reportIds.length < 2) throw new Error('Case phải có nhiều Report trước khi tách.')
     assertCaseReadActive(session)
     const pendingKey = `${useAuthStore.getState().user?.id}:split:${caseId}`
     if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả; cần tải lại và đối chiếu trước lệnh mới.')
     const key = crypto.randomUUID()
     const body = { reportIds: [reportId], reason }
-    const version = normalizeETag(current.data.version || undefined)
+    const version = current.headers?.etag || normalizeETag(current.data.version || undefined)
     pendingCaseCommands.set(pendingKey, { key, body, version })
     try {
     await apiClient.post(`/cases/${caseId}/report-splits`, body, {
       headers: { 'Idempotency-Key': key, 'If-Match': version }
     })
+    assertCaseReadActive(session)
     pendingCaseCommands.delete(pendingKey)
     } catch (error: any) {
       if (error.response?.status < 500) pendingCaseCommands.delete(pendingKey)

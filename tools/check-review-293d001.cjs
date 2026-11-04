@@ -832,7 +832,7 @@ function caseLifecycleHarness() {
   await test('project201 with failed readback keeps receipt and never POSTs again when reconciled', async()=>{
     let posts=0,reads=0
     const {projectService:service}=load('src/api/services/projectService.ts',createMocks({post:async()=>{posts++;return {status:201,data:{id:'new'}}},get:async()=>{reads++;if(reads===1)throw failure(503,'dependency_unavailable');return response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server',status:'ACTIVE'}]})}}))
-    await assert.rejects(service.createProject(createInput));await service.createProject(createInput,true);assert.equal(posts,1)
+    await assert.rejects(service.createProject(createInput));assert.equal(service.pendingProjectCreate().hasReceipt,true);await service.createProject(createInput,true);assert.equal(posts,1)
   })
   await test('project create blocks duplicate in-flight, rejects filename attachments and distinguishes CSRF/code conflict', async()=>{
     let finish
@@ -874,17 +874,24 @@ function caseLifecycleHarness() {
     assert.ok(render({locationSource:'CAPTURE',location:{latitude:0,longitude:0,accuracyMeters:0}}).includes('Xem vị trí evidence'))
   })
   await test('Case report loader isolates each Report/supplement and fences old Case/session responses', async()=>{
-    const React=require('react');const values=[],effects=[],calls=[];let slot=0,caseId='a',epoch=0,view
-    const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useEffect(setup,deps){const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true}}}
-    const {CaseReportsPanel}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:hooks,...hooks},'../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:epoch})},'../../../api/services/caseReportService':{caseReportService:{read:(id,signal)=>new Promise((resolve,reject)=>calls.push({id,signal,resolve,reject}))}}})
-    const render=()=>{slot=0;view=CaseReportsPanel({caseId});for(const e of effects)if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}}
+    const React=require('react');const values=[],effects=[],calls=[],splits=[];let slot=0,caseId='a',epoch=0,view
+    const hooks={...React,useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useEffect(setup,deps){const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true}}}
+    const {CaseReportsPanel}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:hooks,...hooks},'../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:epoch,user:{role:roles.PROJECT_MANAGER}})},'../../../api/services/caseReportService':{caseReportService:{read:(id,signal)=>new Promise((resolve,reject)=>calls.push({id,signal,resolve,reject}))}}})
+    const render=()=>{slot=0;view=CaseReportsPanel({caseId,onSplit:async reportId=>splits.push(reportId)});for(const e of effects)if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}}
     const flush=async()=>{for(let i=0;i<8;i++){await Promise.resolve();render()}}
     const text=x=>typeof x==='string'?x:Array.isArray(x)?x.map(text).join(''):x?.props?text(x.props.children):''
     const row=(reportId,description)=>({caseId,reportId,reporterDisplayName:reportId,reporterPhoneNumber:null,reporterPhoneNumberConfirmed:false,description,receivedAt:'2026-11-04T00:00:00Z',originalEvidence:[],supplements:[]})
     render();caseId='b';render();assert.equal(calls[0].signal.aborted,true)
     calls[1].resolve([row('report-b1','B original'),{...row('report-b2','B2 original'),supplements:[{id:'s2',description:'B2 supplement',receivedAt:'2026-11-04T01:00:00Z',evidence:[]}]}]);await flush();assert.ok(text(view).includes('B2 supplement'));assert.ok(text(view).includes('Chưa có thông tin'))
     calls[0].resolve([row('old-a','OLD CASE DATA')]);await flush();assert.ok(!text(view).includes('OLD CASE DATA'))
-    epoch++;render();assert.equal(calls[1].signal.aborted,true);assert.ok(!text(view).includes('B2 supplement'));calls[2].reject(failure(403,'access_forbidden'));await flush();assert.ok(text(view).includes('403 access_forbidden'));assert.ok(!text(view).includes('Không có Report'))
+    const nodes=x=>!x||typeof x!=='object'?[]:Array.isArray(x)?x.flatMap(nodes):[x,...nodes(x.props?.children)]
+    const article=nodes(view).find(x=>x.props?.['data-report-id']==='report-b2')
+    nodes(article).find(x=>x.type==='button'&&x.props.children==='Tách Report này').props.onClick();render()
+    await nodes(view).find(x=>x.type==='button'&&x.props.children==='Xác nhận tách Report').props.onClick();await flush()
+    assert.deepEqual(splits,['report-b2']);assert.equal(calls[2].id,'b')
+    calls[2].resolve([row('report-b1','B original after server reload')]);await flush()
+    assert.ok(!text(view).includes('B2 supplement'));assert.ok(!text(view).includes('Tách Report này'))
+    epoch++;render();assert.equal(calls[2].signal.aborted,true);assert.ok(!text(view).includes('B2 supplement'));calls[3].reject(failure(403,'access_forbidden'));await flush();assert.ok(text(view).includes('403 access_forbidden'));assert.ok(!text(view).includes('Không có Report'))
     effects.forEach(e=>e?.cleanup?.())
   })
   await test('project reload restores the same actor command key/body without storing credentials or replaying under another actor', async()=>{
@@ -896,6 +903,36 @@ function caseLifecycleHarness() {
     assert.equal(other.pendingProjectCreate(),null)
     const second=load('src/api/services/projectService.ts',{...createMocks({post:async(_,body,config)=>{assert.equal(config.headers['Idempotency-Key'],firstKey);assert.equal(body.code,createInput.code);return {status:201,data:{id:'new'}}},get:async()=>response({items:[{projectId:'new',projectCode:'TEST-NEW',name:'Server',status:'ACTIVE'}]})}),__sessionStorage:storage}).projectService
     assert.ok(second.pendingProjectCreate());await second.createProject(createInput,true);assert.equal(journal.size,0)
+  })
+  await test('project recovery bypasses PM inventory only for held commands; new create still needs an active listed PM', async()=>{
+    const React=require('react')
+    const {CreateProjectModal}=load('src/pages/(pm)/projects/CreateProjectModal.tsx',{react:{__esModule:true,default:React,...React,useMemo:fn=>fn()},'../../../components/ui/Icon':{Icon:()=>null}})
+    const props={isOpen:true,onClose(){},projectName:'Held',projectCode:'HELD',projectRegion:'',projectPM:'old-pm',pmOptions:[],startDate:'2026-11-05',endDate:'2027-11-05',onSubmit(){}}
+    const nodes=x=>!x||typeof x!=='object'?[]:Array.isArray(x)?x.flatMap(nodes):[x,...nodes(x.props?.children)]
+    const text=x=>typeof x==='string'?x:Array.isArray(x)?x.map(text).join(''):x?.props?text(x.props.children):''
+    for(const receivedCreate of [false,true]){
+      const view=CreateProjectModal({...props,pendingCreate:true,receivedCreate,errorMessage:'PM API unavailable'})
+      const button=nodes(view).find(x=>x.type==='button'&&x.props.type==='submit');assert.equal(button.props.disabled,false)
+      assert.ok(text(view).includes(receivedCreate?'Đọc lại kết quả':'Gửi lại đúng yêu cầu'))
+      assert.ok(nodes(view).some(x=>x.type==='option'&&x.props.value==='old-pm'))
+    }
+    const view=CreateProjectModal({...props,pendingCreate:false});assert.equal(nodes(view).find(x=>x.type==='button'&&x.props.type==='submit').props.disabled,true)
+  })
+  await test('split uses exact Report ID and GET ETag; single-report/foreign-report and412 never POST twice', async()=>{
+    const sent=[];const service=triage({get:async()=>({data:detail({reportIds:['r1','r2']}),headers:{etag:'"AAAAAAAAAAI="'}}),post:async(url,body,config)=>{sent.push({url,body,config});throw failure(412,'concurrency_conflict')}})
+    await assert.rejects(service.splitReport('master','r2'),e=>e.response.status===412)
+    assert.equal(sent.length,1);assert.deepEqual(json(sent[0].body.reportIds),['r2']);assert.equal(sent[0].config.headers['If-Match'],'"AAAAAAAAAAI="');assert.ok(sent[0].config.headers['Idempotency-Key'])
+    for(const reportIds of [['r1'],['other','r3']]){
+      const blocked=triage({get:async()=>response(detail({reportIds})),post:async()=>assert.fail('must not POST')})
+      await assert.rejects(blocked.splitReport('master','r1'))
+    }
+  })
+  await test('Report split action refreshes Case and list from server without changing selected Case or inventing local links', async()=>{
+    const calls=[];let cases
+    const hooks={...require('react'),useState:value=>[value,()=>{}]}
+    const {useAIReviewLinkActions}=load('src/pages/(pm)/ai-review/useAIReviewLinkActions.ts',{react:{__esModule:true,default:hooks,...hooks},'../../../data/mockData':{mockProjects:[]},'../../../api/services/projectService':{projectService:{}},'../../../api/services/triageService':{getCaseSessionKey:()=> 'session',triageService:{splitReport:async(c,r)=>calls.push(['split',c,r]),getCaseById:async c=>{calls.push(['case',c]);return {id:c}},getCases:async()=>{calls.push(['list']);return [{id:'master',report_ids:['r1']},{id:'new',report_ids:['r2']}]}}}})
+    const action=useAIReviewLinkActions({cases:[],setCases:value=>cases=value,selectedCaseId:'master',setSelectedCaseId:()=>assert.fail('do not change selection'),setExpandedMasterIds(){},showToast:()=>assert.fail('no fake success'),filteredCases:[],reloadCases:()=>assert.fail('do not clear current Case')})
+    await action.handleUnlinkReport('r2');assert.deepEqual(calls,[['split','master','r2'],['case','master'],['list']]);assert.deepEqual(cases[0].report_ids,['r1']);assert.deepEqual(cases[1].report_ids,['r2'])
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })
