@@ -34,24 +34,31 @@ export const ProjectList: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  const loadSequence = useRef(0)
   const loadProjects = useCallback(async () => {
+    const sequence = ++loadSequence.current
+    const epoch = useAuthStore.getState().authEpoch
+    const current = () => sequence === loadSequence.current && epoch === useAuthStore.getState().authEpoch
     try {
+      setProjects([])
       setIsLoading(true)
       setLoadError(null)
       const data = await projectService.fetchProjects()
-      setProjects(data)
+      if (current()) setProjects(data)
     } catch (err: any) {
+      if (!current()) return
       console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
       const msg = err?.message || 'Không thể tải danh sách dự án từ máy chủ Backend.'
       setLoadError(msg)
       setProjects([]) // Dứt khoát không nạp mock data khi API thật bị lỗi!
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     loadProjects()
+    return () => { ++loadSequence.current }
   }, [loadProjects])
 
   // Đồng bộ reactive qua Event Bus
@@ -302,7 +309,7 @@ export const ProjectList: React.FC = () => {
       />
 
       {loadError && (
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between gap-3 shadow-sm animate-fade-in">
+        <div role="alert" className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between gap-3 shadow-sm animate-fade-in">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-red-100 text-red-600 mt-0.5">
               <Icon name="error" size={20} />
@@ -330,7 +337,7 @@ export const ProjectList: React.FC = () => {
           <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
           <span>Đang tải danh mục dự án từ máy chủ API...</span>
         </div>
-      ) : viewMode === 'grid' ? (
+      ) : loadError ? null : viewMode === 'grid' ? (
         <ProjectGridView
           filteredProjects={filteredProjects}
           isSupervisor={isSupervisor}

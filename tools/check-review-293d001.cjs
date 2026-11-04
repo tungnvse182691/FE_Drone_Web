@@ -934,5 +934,90 @@ function caseLifecycleHarness() {
     const action=useAIReviewLinkActions({cases:[],setCases:value=>cases=value,selectedCaseId:'master',setSelectedCaseId:()=>assert.fail('do not change selection'),setExpandedMasterIds(){},showToast:()=>assert.fail('no fake success'),filteredCases:[],reloadCases:()=>assert.fail('do not clear current Case')})
     await action.handleUnlinkReport('r2');assert.deepEqual(calls,[['split','master','r2'],['case','master'],['list']]);assert.deepEqual(cases[0].report_ids,['r1']);assert.deepEqual(cases[1].report_ids,['r2'])
   })
+  await test('members errors propagate, and pagination preserves current/history scope', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    const calls = []
+    const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ get: async (_, config) => {
+      calls.push(config.params)
+      return response(config.params.cursor ? { items: [{ membershipId: 'm2' }] } : { items: [{ membershipId: 'm1' }], nextCursor: 'next' })
+    } }))
+    assert.deepEqual(json(await service.fetchProjectMembers('p')), [{ membershipId: 'm1' }, { membershipId: 'm2' }])
+    assert.equal(calls[1].cursor, 'next')
+    assert.equal(calls[0].includeHistory, false)
+    const { projectService: failed } = load('src/api/services/projectService.ts', createMocks({ get: async () => { throw failure(503, 'internal_error') } }))
+    await assert.rejects(failed.fetchProjectMembers('p'), error => error.response.status === 503)
+  })
+  await test('member cursor loops and a changed session reject the whole result', async () => {
+    const { projectService: loop } = load('src/api/services/projectService.ts', createMocks({ get: async () => response({ items: [], nextCursor: 'same' }) }))
+    await assert.rejects(loop.fetchProjectMembers('p'), /Cursor/)
+    let epoch = 1
+    const { projectService: stale } = load('src/api/services/projectService.ts', {
+      ...createMocks({ get: async () => { epoch++; return response({ items: [{ membershipId: 'old' }] }) } }),
+      '../../store/authStore': { useAuthStore: { getState: () => ({ user: actor, authEpoch: epoch }), subscribe: () => () => {} } }
+    })
+    await assert.rejects(stale.fetchProjectMembers('p'), /Phiên/)
+  })
+  await test('project pages are complete, stat failures stay explicit, and missing IDs never fall back', async () => {
+    let calls = 0
+    const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ get: async (url, config) => {
+      if (url !== '/projects') throw failure(503, 'stats_unavailable')
+      calls++
+      return response(config.params.cursor ? { items: [{ projectId: 'p2', projectCode: 'P2', name: 'Second' }] }
+        : { items: [{ projectId: 'p1', projectCode: 'P1', name: 'First' }], nextCursor: 'next' })
+    } }))
+    const projects = await service.fetchProjects()
+    assert.equal(projects.length, 2); assert.equal(calls, 2)
+    assert.ok(projects.every(project => project.stats_error === 'stats_unavailable'))
+    assert.equal(await service.fetchProjectById('outside'), undefined)
+    const { projectService: failed } = load('src/api/services/projectService.ts', createMocks({ get: async () => { throw failure(500, 'internal_error') } }))
+    await assert.rejects(failed.fetchProjectById('p1'), /internal_error/)
+  })
+  await test('project cursor loop fails instead of presenting an incomplete list', async () => {
+    const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ get: async () => response({ items: [], nextCursor: 'same' }) }))
+    await assert.rejects(service.fetchProjects(), /Cursor/)
+  })
+  await test('Web PM reassignment is explicitly blocked before any placeholder version, fresh key or network write', async () => {
+    let calls = 0
+    const { personnelService: service } = load('src/api/services/personnelService.ts', {
+      '../client': { apiClient: { get: async () => { calls++ }, put: async () => { calls++ } } }
+    })
+    await assert.rejects(service.reassignPrimaryProjectManager('p', { primaryProjectManagerUserId: 'next', effectiveFrom: '2026-11-04', reason: 'test' }), error => error.code === 'web_cookie_unsupported')
+    assert.equal(calls, 0)
+  })
+  await test('personnel project assignments never become unassigned when projects or members fail, and cover more than ten projects', async () => {
+    for (const failedScope of ['projects', 'members']) {
+      const { personnelService: service } = load('src/api/services/personnelService.ts', {
+        '../client': { apiClient: { get: async () => response({ items: [] }) } },
+        './projectService': { projectService: {
+          fetchProjects: async () => { if (failedScope === 'projects') throw failure(503, 'projects_failed'); return [{ id: 'p' }] },
+          fetchProjectMembers: async () => { throw failure(503, 'members_failed') }
+        } }
+      })
+      await assert.rejects(service.fetchUsers(), error => error.response.status === 503)
+    }
+    let reads = 0
+    const { personnelService: service } = load('src/api/services/personnelService.ts', {
+      '../client': { apiClient: { get: async () => response({ items: [] }) } },
+      './projectService': { projectService: {
+        fetchProjects: async () => Array.from({ length: 11 }, (_, id) => ({ id: String(id) })),
+        fetchProjectMembers: async () => { reads++; return [] }
+      } }
+    })
+    await service.fetchUsers(); assert.equal(reads, 11)
+  })
+  await test('create validation, forbidden and server errors preserve their distinct response and uncertain key', async () => {
+    for (const [status, code] of [[400, 'validation_error'], [403, 'access_forbidden'], [500, 'internal_error']]) {
+      const keys = []
+      const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ post: async (_, __, config) => {
+        keys.push(config.headers['Idempotency-Key']); throw failure(status, code)
+      } }))
+      await assert.rejects(service.createProject(createInput), error => error.code === code && error.response.status === status)
+      assert.equal(!!service.pendingProjectCreate(), status === 500)
+      if (status === 500) {
+        await assert.rejects(service.createProject(createInput, true))
+        assert.equal(keys[0], keys[1])
+      }
+    }
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

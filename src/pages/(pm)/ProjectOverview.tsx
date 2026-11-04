@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -7,7 +7,6 @@ import { alignmentService } from '../../api/services/alignmentService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { Segment, ProjectMember } from './project-overview/types'
-import { userDirectory } from '../../api/services/userDirectory'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
 import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
@@ -21,7 +20,7 @@ export type { Segment, ProjectMember }
 
 export const ProjectOverview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
-  const projectId = id || 'prj-ql1a-02'
+  const projectId = id || ''
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
@@ -32,6 +31,9 @@ export const ProjectOverview: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [segments, setSegments] = useState<Segment[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const loadSequence = useRef(0)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [membersError, setMembersError] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
 
@@ -69,9 +71,14 @@ export const ProjectOverview: React.FC = () => {
 
   // Fetch Project Data bất đồng bộ qua Mock API
   const loadProjectData = useCallback(async () => {
+    const sequence = ++loadSequence.current
+    const epoch = useAuthStore.getState().authEpoch
+    const current = () => sequence === loadSequence.current && epoch === useAuthStore.getState().authEpoch
     setIsLoading(true)
+    setProject(null); setMembers([]); setLoadError(null); setMembersError(null)
     try {
       const data = await projectService.fetchProjectById(projectId)
+      if (!current()) return
       if (data) {
         setProject(data)
 
@@ -116,61 +123,63 @@ export const ProjectOverview: React.FC = () => {
 
         // 2. Cơ cấu nhân sự từ API Backend thật (API-112: GET /projects/{projectId}/members)
         try {
-          const rawMembers = await projectService.fetchProjectMembers(data.id)
+          const rawMembers = await projectService.fetchProjectMembers(data.id, isSupervisor)
+          if (!current()) return
           if (rawMembers && rawMembers.length > 0) {
             const mappedMembers: ProjectMember[] = rawMembers.map((m: any) => {
-              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
-              const email = matchedUser?.email || m.email || ''
-              const phone = matchedUser?.phone || ''
-              const contact = email ? `${email}${phone ? ` • ${phone}` : ''}` : 'Chưa thiết lập email'
 
               return {
                 id: m.membershipId || m.userId,
-                name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
-                role_code: m.role || matchedUser?.role || 'MEMBER',
+                name: m.displayName || 'Chưa có tên trong API',
+                role_code: m.role || 'MEMBER',
                 role_title: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
                   ? 'Chỉ huy trưởng dự án (Project Manager)'
                   : m.role === 'OPERATOR' || m.role === 'DRONE_OPERATOR'
                   ? 'Phi công Drone (Operator)'
                   : m.role === 'CREW' || m.role === 'REPAIR_CREW'
                   ? 'Đội trưởng thi công (Crew)'
-                  : 'Giám sát viên (Supervisor)',
+                  : m.role === 'SUPERVISOR' ? 'Giám sát viên (Supervisor)' : (m.role || 'Chưa có vai trò trong API'),
                 role_badge: m.isPrimary ? 'PM CHÍNH' : m.role,
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-                is_online: m.status === 'ACTIVE' || m.status === 1,
+                avatar: '',
+                membership_status: m.status, valid_from: m.validFrom, valid_to: m.validTo, membership_version: m.membershipVersion,
+                is_online: false,
                 authority: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
                   ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)'
                   : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
-                contact,
-                unit: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
-                  ? 'Ban Chỉ huy Công trường'
-                  : 'Đội ngũ Kỹ thuật & Khảo sát'
+                contact: 'API thành viên không cung cấp thông tin liên hệ',
+                unit: 'Chưa có dữ liệu đơn vị trong API'
               }
             })
             setMembers(mappedMembers)
           } else {
             setMembers([])
           }
-        } catch (err) {
+        } catch (err: any) {
+          if (!current()) return
           console.error('[ProjectOverview] Lỗi tải thành viên dự án:', err)
-          setMembers([])
+          setMembersError(err?.response?.data?.detail || err?.message || 'Không tải được thành viên.')
         }
       } else {
-        // Fallback an toàn nếu không tìm thấy ID
-        setProject(projectService.getProjects()[0] || null)
+        setLoadError('Dự án không thuộc danh mục API cho phép hoặc không còn quyền truy cập.')
       }
     } catch (err: any) {
       console.error('[ProjectOverview] Lỗi tải dữ liệu dự án:', err)
+      if (current()) setLoadError(err?.response?.data?.detail || err?.message || 'Lỗi tải dự án.')
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [projectId])
+  }, [projectId, user?.id])
 
   useEffect(() => {
     loadProjectData()
     window.addEventListener('roadguard_state_change', loadProjectData)
-    return () => window.removeEventListener('roadguard_state_change', loadProjectData)
+    return () => { ++loadSequence.current; window.removeEventListener('roadguard_state_change', loadProjectData) }
   }, [loadProjectData])
+
+  if (!isLoading && (loadError || !project)) return <div role="alert">
+    {loadError || 'Không tìm thấy dự án trong phạm vi tài khoản.'}
+    <button onClick={loadProjectData}>Tải lại dự án</button>
+  </div>
 
   if (isLoading || !project) {
     return (
@@ -207,12 +216,12 @@ export const ProjectOverview: React.FC = () => {
       />
 
       {/* 2. PROJECT HIGHLIGHTS GRID (3 CARDS) */}
-      <ProjectHighlightsGrid
+      {project.stats_error ? <p role="alert">Chưa tải được thống kê dự án: {project.stats_error}</p> : <ProjectHighlightsGrid
         project={project}
         mainlineLengthKm={alignmentDetail.mainlineLengthKm}
         branchesLengthKm={alignmentDetail.branchesLengthKm}
         branchesCount={alignmentDetail.branchesCount}
-      />
+      />}
 
       {/* 3. MAIN TWO-COLUMN SPLIT (8 cols Left | 4 cols Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -243,6 +252,7 @@ export const ProjectOverview: React.FC = () => {
         <div className="lg:col-span-4 space-y-6">
           <ProjectPersonnelCard
             members={members}
+            error={membersError}
             project={project}
             onReloadMembers={loadProjectData}
             showToast={showToast}

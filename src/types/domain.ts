@@ -657,6 +657,7 @@ export interface HubProject {
   length_km: number
   open_defects: number
   repair_packages: number
+  stats_error?: string
   image_url: string
   is_assigned: boolean
   is_restricted_for_pm?: boolean

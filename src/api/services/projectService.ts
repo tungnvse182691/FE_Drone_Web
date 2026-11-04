@@ -595,15 +595,22 @@ export const projectService = {
     if (!isMock) {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
-        const [res, usersMap] = await Promise.all([
-          apiClient.get<{ items: any[]; nextCursor?: string; asOf?: string }>('/projects'),
-          getUsersLookup()
-        ])
-        const rawItems = res.data?.items || (Array.isArray(res.data) ? res.data : [])
-        console.log(`✅ [CANDIDATE3 BE] Đã tải ${rawItems.length} dự án từ Backend thật:`, rawItems.map(p => p.projectCode || p.code))
+        const usersMap = await getUsersLookup()
+        const rawItems: any[] = []
+        const cursors = new Set<string>()
+        let cursor: string | undefined
+        do {
+          const res = await apiClient.get('/projects', { params: { cursor } })
+          if (!Array.isArray(res.data?.items)) throw new Error('Danh sách dự án trả sai contract.')
+          rawItems.push(...res.data.items)
+          cursor = res.data.nextCursor || undefined
+          if (cursor && cursors.has(cursor)) throw new Error('Cursor dự án bị lặp.')
+          if (cursor) cursors.add(cursor)
+        } while (cursor)
 
         const currentUser = useAuthStore.getState().user
         const isPM = currentUser?.role === RoleCode.PROJECT_MANAGER
+        const statsErrors = new Map<string, string>()
         const statsMap = new Map<string, { openDefects: number; repairPackages: number }>()
         await Promise.all(
           rawItems.map(async (item) => {
@@ -615,8 +622,8 @@ export const projectService = {
               if (isPM) {
                 // PM: Được phép gọi /projects/{pId}/defects (API-070)
                 const [defectsRes, packagesRes] = await Promise.all([
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/defects`).catch(() => ({ data: { items: [] } })),
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`).catch(() => ({ data: { items: [] } }))
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/defects`),
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`)
                 ])
                 const defects = defectsRes.data?.items || []
                 openDefects = defects.filter((d: any) => {
@@ -627,8 +634,8 @@ export const projectService = {
               } else {
                 // Supervisor: Không gọi /defects để tránh 403 Forbidden; dùng API-140 repair-packages & API-078 defect-statistics
                 const [statsRes, packagesRes] = await Promise.all([
-                  apiClient.get<any>(`/projects/${pId}/defect-statistics`).catch(() => null),
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`).catch(() => ({ data: { items: [] } }))
+                  apiClient.get<any>(`/projects/${pId}/defect-statistics`),
+                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`)
                 ])
                 if (statsRes?.data?.statistics) {
                   openDefects = statsRes.data.statistics.openDefectsCount || 0
@@ -636,13 +643,14 @@ export const projectService = {
                 repairPackages = (packagesRes.data?.items || []).length
               }
               statsMap.set(pId.toLowerCase(), { openDefects, repairPackages })
-            } catch {
-              statsMap.set(pId.toLowerCase(), { openDefects: 0, repairPackages: 0 })
+            } catch (error: any) {
+              statsErrors.set(pId.toLowerCase(), error?.response?.data?.detail || error?.message || 'Lỗi API thống kê.')
             }
           })
         )
 
-        const mapped = rawItems.map((item) => mapBackendProjectToHub(item, usersMap, statsMap))
+        const mapped = rawItems.map((item) => ({ ...mapBackendProjectToHub(item, usersMap, statsMap),
+          stats_error: statsErrors.get((item.projectId || item.id).toLowerCase()) }))
         if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
         projectStore = mapped
         try {
@@ -686,30 +694,8 @@ export const projectService = {
   async fetchProjectById(id: string): Promise<HubProject | undefined> {
     const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
-      try {
-        console.log(`🚀 [CANDIDATE3 BE] Gọi chi tiết dự án ID: ${id}...`)
-        // 1. Tìm trong danh sách dự án hiện có
-        let found = projectStore.find((p) => p.id === id || p.code === id)
-        if (!found) {
-          const all = await this.fetchProjects()
-          found = all.find((p) => p.id === id || p.code === id)
-        }
-
-        if (found) {
-          // Thử lấy thêm thông tin lifecycle từ Backend
-          try {
-            const lcRes = await apiClient.get<any>(`/projects/${found.id}/lifecycle`)
-            if (lcRes.data) {
-              console.log('✅ [CANDIDATE3 BE] Đã tải Lifecycle dự án:', lcRes.data.projectId)
-            }
-          } catch {
-            // Không chặn nếu lifecycle chưa khởi tạo
-          }
-          return found
-        }
-      } catch (err: any) {
-        console.warn(`⚠️ [CANDIDATE3 BE] Lỗi fetchProjectById ${id}:`, err?.message)
-      }
+      const all = await this.fetchProjects()
+      return all.find(project => project.id === id || project.code === id)
     }
 
     await new Promise((resolve) => setTimeout(resolve, 150))
@@ -719,14 +705,21 @@ export const projectService = {
   /**
    * API-112: Lấy danh sách thành viên dự án (GET /projects/{projectId}/members)
    */
-  async fetchProjectMembers(projectId: string): Promise<any[]> {
-    try {
-      const res = await apiClient.get<{ items: any[] }>(`/projects/${projectId}/members`)
-      return res.data?.items || []
-    } catch (err) {
-      console.warn(`⚠️ Lỗi lấy thành viên dự án ${projectId}:`, err)
-      return []
-    }
+  async fetchProjectMembers(projectId: string, includeHistory = false): Promise<any[]> {
+    const epoch = useAuthStore.getState().authEpoch
+    const items: any[] = []
+    const cursors = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const res = await apiClient.get(`/projects/${projectId}/members`, { params: { limit: 100, includeHistory: includeHistory && useAuthStore.getState().user?.role === RoleCode.SUPERVISOR, cursor } })
+      if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ dữ liệu thành viên cũ.')
+      if (!Array.isArray(res.data?.items)) throw new Error('Danh sách thành viên trả sai contract.')
+      items.push(...res.data.items)
+      cursor = res.data.nextCursor || undefined
+      if (cursor && cursors.has(cursor)) throw new Error('Cursor thành viên bị lặp.')
+      if (cursor) cursors.add(cursor)
+    } while (cursor)
+    return items
   },
 
   /**

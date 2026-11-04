@@ -3,9 +3,12 @@ import { UserPlus, Users, Verified } from 'lucide-react'
 import { Icon } from '../../../components/ui/Icon'
 import { ProjectMember } from './types'
 import { HubProject } from '../projects/types'
+import { useAuthStore } from '../../../store/authStore'
+import { RoleCode } from '../../../types/enums'
 import { AddProjectMemberModal } from './AddProjectMemberModal'
 
 interface ProjectPersonnelCardProps {
+  error?: string | null
   members: ProjectMember[]
   project: HubProject
   onReloadMembers?: () => Promise<void> | void
@@ -14,10 +17,12 @@ interface ProjectPersonnelCardProps {
 
 export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
   members,
+  error,
   project,
   onReloadMembers,
   showToast = () => {}
 }) => {
+  const canAdd = useAuthStore(state => state.user?.role === RoleCode.PROJECT_MANAGER)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   return (
@@ -40,13 +45,14 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {members.length} nhân sự
+              {error ? 'Chưa tải được' : `${members.length} nhân sự`}
             </span>
             <button
               type="button"
+              disabled={!canAdd}
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-bold transition shadow-2xs cursor-pointer"
-              title="Thêm Drone Operator hoặc Repair Crew vào dự án"
+              title="Chỉ PM được thêm Operator/Crew theo API"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Thêm nhân sự</span>
@@ -54,18 +60,21 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           </div>
         </div>
 
+        <p role="status">Chưa hỗ trợ đổi PM bằng phiên Web: PUT primary-project-manager hiện chỉ nhận Bearer. API thêm Operator/Crew dành cho PM; chưa có API gỡ membership trực tiếp.</p>
+        {error && <div role="alert">Tải thành viên thất bại: {error}<button onClick={onReloadMembers}>Tải lại thành viên</button></div>}
         {/* Personnel List */}
-        {members.length === 0 ? (
+        {error ? null : members.length === 0 ? (
           <div className="py-8 px-4 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 flex flex-col items-center gap-2.5">
             <Users className="w-8 h-8 text-slate-300" />
             <div className="text-xs font-semibold text-slate-600">
-              Chưa có Drone Operator hoặc Đội thi công trong CSDL dự án
+              Không có thành viên trong kết quả API dự án
             </div>
             <p className="text-[11px] text-slate-400 max-w-xs">
-              Chỉ huy trưởng dự án có thể phân công Drone Operator và Repair Crew vào dự án ngay.
+              Chưa có contract thêm/gỡ thành viên trực tiếp.
             </p>
             <button
               type="button"
+              disabled={!canAdd}
               onClick={() => setIsAddModalOpen(true)}
               className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C9A227] text-white text-xs font-bold hover:bg-[#B38E1E] transition cursor-pointer"
             >
@@ -83,11 +92,11 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="relative">
-                      <img
+                      {mem.avatar && <img
                         src={mem.avatar}
                         alt={mem.name}
                         className="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-xs"
-                      />
+                      />}
                       {mem.is_online && (
                         <span
                           className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#047857] ring-2 ring-white"
@@ -105,6 +114,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                   </span>
                 </div>
 
+                <p className="text-xs">Trạng thái: {mem.membership_status || 'Không có'}; hiệu lực: {mem.valid_from || 'Không có'} → {mem.valid_to || 'Không có ngày kết thúc'}; version: {mem.membership_version || 'Không có'}.</p>
                 <div className="text-[11px] bg-white border border-[#E2E5E9] p-2.5 rounded-xl flex flex-col gap-1 text-slate-600">
                   <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
                     <Icon name="verified_user" size={14} className="text-[#C9A227]" />

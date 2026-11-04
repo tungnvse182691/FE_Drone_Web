@@ -72,7 +72,8 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         prj.open_defects > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {prj.open_defects}
+                      {prj.stats_error ? "—" : prj.open_defects}
+                      {prj.stats_error && <span role="alert">Chưa tải được thống kê: {prj.stats_error}</span>}
                     </span>
                   </td>
                   <td className="py-3 px-4">

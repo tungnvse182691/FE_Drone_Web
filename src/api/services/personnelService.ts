@@ -161,38 +161,29 @@ export const personnelService = {
     let userProjectMap: Record<string, string[]> = {}
     let userProjectIdsMap: Record<string, string[]> = {}
 
-    try {
-      const projects = await projectService.fetchProjects()
-      projects.forEach((prj) => {
-        projectMap[prj.id] = prj.name
-      })
+    const projects = await projectService.fetchProjects()
+    projects.forEach((prj) => {
+      projectMap[prj.id] = prj.name
+    })
 
-      // Nạp members cho các dự án để map người dùng vào dự án
-      await Promise.all(
-        projects.slice(0, 10).map(async (prj) => {
-          try {
-            const mRes = await apiClient.get<ProjectMembersPageDto>(`/projects/${prj.id}/members`)
-            const members = mRes.data?.items || []
-            members.forEach((m) => {
-              if (!userProjectMap[m.userId]) {
-                userProjectMap[m.userId] = []
-                userProjectIdsMap[m.userId] = []
-              }
-              if (!userProjectMap[m.userId].includes(prj.name)) {
-                userProjectMap[m.userId].push(prj.name)
-              }
-              if (!userProjectIdsMap[m.userId].includes(prj.id)) {
-                userProjectIdsMap[m.userId].push(prj.id)
-              }
-            })
-          } catch {
-            // Tiếp tục nếu một dự án không lấy được members
+    // Nạp members cho các dự án để map người dùng vào dự án
+    await Promise.all(
+      projects.map(async (prj) => {
+        const members = await projectService.fetchProjectMembers(prj.id)
+        members.forEach((m) => {
+          if (!userProjectMap[m.userId]) {
+            userProjectMap[m.userId] = []
+            userProjectIdsMap[m.userId] = []
+          }
+          if (!userProjectMap[m.userId].includes(prj.name)) {
+            userProjectMap[m.userId].push(prj.name)
+          }
+          if (!userProjectIdsMap[m.userId].includes(prj.id)) {
+            userProjectIdsMap[m.userId].push(prj.id)
           }
         })
-      )
-    } catch {
-      // Giữ map rỗng nếu projects lỗi
-    }
+      })
+    )
 
     // 3. Mapping sang SystemUserAccount cho UI
     return userItems.map((u) => {
@@ -339,8 +330,7 @@ export const personnelService = {
    * Lấy danh sách thành viên trực thuộc một dự án (API-112: GET /api/v1/projects/{projectId}/members)
    */
   async fetchProjectMembers(projectId: string): Promise<ProjectMemberDto[]> {
-    const res = await apiClient.get<ProjectMembersPageDto>(`/projects/${projectId}/members`)
-    return res.data?.items || []
+    return projectService.fetchProjectMembers(projectId)
   },
 
   /**
@@ -371,66 +361,9 @@ export const personnelService = {
       expectedCurrentMembershipRowVersion?: string
     }
   ): Promise<any> {
-    let rowVersion = payload.expectedCurrentMembershipRowVersion
-    let etagHeader: string | undefined
-
-    // Tự động truy vấn membershipVersion hiện tại của dự án từ Backend để thỏa mãn Optimistic Concurrency Control
-    if (!rowVersion) {
-      const currentPm = await this.getPrimaryProjectManager(projectId)
-      if (!currentPm || !currentPm.membershipId) {
-        throw new Error(
-          'Dự án này chưa có Chỉ huy trưởng (PM) tiền nhiệm để bàn giao thay thế. Quy trình bàn giao (Reassign) chỉ áp dụng khi dự án đã có PM quản lý.'
-        )
-      }
-      if (currentPm.membershipVersion) {
-        rowVersion = currentPm.membershipVersion
-        etagHeader = currentPm.etag
-      }
-    }
-
-    if (!rowVersion) {
-      rowVersion = 'AAAAAAAAAAA='
-    }
-
-    const requestBody = {
-      primaryProjectManagerUserId: payload.primaryProjectManagerUserId,
-      effectiveFrom: payload.effectiveFrom,
-      reason: payload.reason,
-      expectedCurrentMembershipRowVersion: rowVersion,
-      operationId: crypto.randomUUID()
-    }
-
-    const headers: Record<string, string> = {
-      'Idempotency-Key': crypto.randomUUID()
-    }
-    if (rowVersion && rowVersion !== 'AAAAAAAAAAA=') {
-      headers['If-Match'] = etagHeader || `"${rowVersion}"`
-    }
-
-    console.log(`🔄 [CANDIDATE3 BE] Gửi PUT /api/v1/projects/${projectId}/primary-project-manager:`, {
-      requestBody,
-      headers
+    throw Object.assign(new Error('Chưa hỗ trợ đổi PM bằng phiên Web: backend PUT primary-project-manager chỉ nhận Bearer. Chưa gửi lệnh; cần backend bổ sung cookie eligibility và CSRF.'), {
+      code: 'web_cookie_unsupported', projectId, input: payload
     })
-
-    try {
-      const res = await apiClient.put(
-        `/projects/${projectId}/primary-project-manager`,
-        requestBody,
-        { headers }
-      )
-      return res.data
-    } catch (err: any) {
-      const errCode = err?.response?.data?.code || err?.response?.data?.title
-      if (errCode === 'project_primary_pm_not_found') {
-        const customErr = new Error(
-          'Không thể bàn giao: PM hiện tại của dự án được bổ nhiệm trong cùng ngày (hoặc dự án chưa có PM). Ngày hiệu lực bàn giao phải sau ngày bổ nhiệm của PM cũ.'
-        )
-        ;(customErr as any).response = err?.response
-        throw customErr
-      }
-      console.error('❌ [API-113 PUT FAILED] Response details:', err?.response?.data || err?.message)
-      throw err
-    }
   },
 
   /**

@@ -192,6 +192,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   </div>
                 </div>
 
+                {prj.stats_error && <p role="alert">Chưa tải được thống kê: {prj.stats_error}</p>}
                 {/* 3-Col Mini Technical Spec Grid */}
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
@@ -205,12 +206,12 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
                       }`}
                     >
-                      {prj.open_defects} điểm
+                      {prj.stats_error ? '—' : prj.open_defects} điểm
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Gói sửa</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{prj.stats_error ? '—' : prj.repair_packages} gói</span>
                   </div>
                 </div>
               </div>
