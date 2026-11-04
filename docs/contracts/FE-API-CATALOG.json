@@ -10,7 +10,7 @@
     "review-evidence/milestone2-r1-closure/EXACT-OPERATION-ACCEPTANCE.json": "1bc48e4c66bd621a5c005d114dfdf4f0c339a9dbad3cd2012d7d4cd500bee56e",
     "review-evidence/milestone2-r1-closure/EXACT-DIMENSION-ACCEPTANCE.json": "2dd5545b0ddecfb6075e1a228dde8a1b2587876dc78c41f082eceddfa6f86afd"
   },
-  "operationCount": 260,
+  "operationCount": 262,
   "metadataAcceptance": "NOT_VERIFIED",
   "schemas": {
     "AcceptInvitationRequestDto": {
@@ -13478,6 +13478,19 @@
         "widthMeters": {
           "type": "number",
           "format": "double"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PhoneNumberUpdateRequestDto": {
+      "required": [
+        "phoneNumber"
+      ],
+      "type": "object",
+      "properties": {
+        "phoneNumber": {
+          "minLength": 1,
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -137483,10 +137496,103 @@
         "authority": "deploy/fe-handoff/FE-INTEGRATION-QUICKSTART.md",
         "guide": "FE-API-FUNCTIONAL-GUIDE.md#add-19"
       }
+    },
+    {
+      "operationId": "MeController.GetPhoneNumber",
+      "method": "GET",
+      "path": "/api/v1/me/phone-number",
+      "openApiOperationId": null,
+      "businessDescription": "Read own phone number",
+      "parameters": [],
+      "requestBody": null,
+      "successResponses": {
+        "200": {
+          "description": "OK"
+        }
+      },
+      "sourcePins": {
+        "backendRevision": "7be7ffcdff7d5e55a3f1369c3375308c1a2f9768",
+        "controller": "RoadGuardSystem.API/Controllers/MeController.cs",
+        "dto": "RoadGuardSystem.DTOs/Identity/PhoneNumberDtos.cs",
+        "service": "RoadGuardSystem.Services/Implementations/Identity/StaffPhoneNumberService.cs",
+        "repository": "RoadGuardSystem.Repositories/Implementations/Identity/IdentityRepository.PhoneNumbers.cs"
+      },
+      "status": "SOURCE_VERIFIED_RUNTIME_TESTED_LIMITED",
+      "knownLimitations": [
+        "Source-symbol identifier; backend runtime Swagger has no operationId. Existing canonical operation IDs retained.",
+        "GET returns phoneNumber nullable, phoneNumberConfirmed, version and strong ETag according to source; Swagger omits response schema.",
+        "PATCH requires If-Match and Idempotency-Key; WebSession requires CSRF. 204 has no body; GET again. 400/401/403/409/412/428 from source; runtime Swagger omits these annotations.",
+        "7-15 ASCII digits with optional leading + after trimming. Replay must preserve original key/body/version; GET equality alone is not receipt proof."
+      ]
+    },
+    {
+      "operationId": "MeController.UpdatePhoneNumber",
+      "method": "PATCH",
+      "path": "/api/v1/me/phone-number",
+      "openApiOperationId": null,
+      "businessDescription": "Update own phone number; changing it clears confirmation; no target userId",
+      "parameters": [
+        {
+          "name": "If-Match",
+          "in": "header",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "in": "header",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+            }
+          },
+          "text/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+            }
+          },
+          "application/*+json": {
+            "schema": {
+              "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+            }
+          }
+        }
+      },
+      "successResponses": {
+        "204": {
+          "description": "No Content"
+        }
+      },
+      "sourcePins": {
+        "backendRevision": "7be7ffcdff7d5e55a3f1369c3375308c1a2f9768",
+        "controller": "RoadGuardSystem.API/Controllers/MeController.cs",
+        "dto": "RoadGuardSystem.DTOs/Identity/PhoneNumberDtos.cs",
+        "service": "RoadGuardSystem.Services/Implementations/Identity/StaffPhoneNumberService.cs",
+        "repository": "RoadGuardSystem.Repositories/Implementations/Identity/IdentityRepository.PhoneNumbers.cs"
+      },
+      "status": "SOURCE_VERIFIED_RUNTIME_TESTED_LIMITED",
+      "knownLimitations": [
+        "Source-symbol identifier; backend runtime Swagger has no operationId. Existing canonical operation IDs retained.",
+        "GET returns phoneNumber nullable, phoneNumberConfirmed, version and strong ETag according to source; Swagger omits response schema.",
+        "PATCH requires If-Match and Idempotency-Key; WebSession requires CSRF. 204 has no body; GET again. 400/401/403/409/412/428 from source; runtime Swagger omits these annotations.",
+        "7-15 ASCII digits with optional leading + after trimming. Replay must preserve original key/body/version; GET equality alone is not receipt proof."
+      ]
     }
   ],
   "currentSourceNavigation": {
     "reason": "API-218 ETag and OWNER-NULL-RESPONSE-COMPATIBILITY-01; navigation refresh only, no acceptance granted",
-    "record": "D:\\RoadGuard-Review-Evidence\\FE-PREVIEW-CLOSEOUT-20261024\\null-response-catalog-repin-20261024T110315785713Z\\repin.json"
+    "record": "D:\\RoadGuard-Review-Evidence\\FE-PREVIEW-CLOSEOUT-20261024\\null-response-catalog-repin-20261024T110315785713Z\\repin.json",
+    "selfPhoneSync": {
+      "backendRevision": "7be7ffcdff7d5e55a3f1369c3375308c1a2f9768",
+      "source": "Runtime Swagger plus exact controller/DTO/service/repository; only /me/phone-number synchronized, historical pins for other operations unchanged."
+    }
   }
 }

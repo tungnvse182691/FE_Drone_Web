@@ -549,5 +549,74 @@ function caseLifecycleHarness() {
     await assert.rejects(vm.runInNewContext(fn + '; supplementUnassignedImages()', context), /RG_IMAGE_MANIFEST/)
     assert.equal(logins, 0)
   })
+  await test('self phone reads exact strong ETag; PATCH204 has only own number then GET sees fresh version', async () => {
+    const calls = []; let saved = false
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../client': { apiClient: {
+      get: async url => ({ data: { phoneNumber: saved ? '+84901234567' : null, phoneNumberConfirmed: false, version: saved ? 'AAAAAAAAAAI=' : 'AAAAAAAAAAE=' }, headers: { etag: saved ? '"AAAAAAAAAAI="' : '"AAAAAAAAAAE="' } }),
+      patch: async (url, body, options) => { calls.push({ url, body, options }); saved = true; return { status: 204 } }
+    } } })
+    const before = await selfPhoneService.read(); await selfPhoneService.save('+84901234567', before.etag)
+    const after = await selfPhoneService.read()
+    assert.equal(calls[0].url, '/me/phone-number'); assert.deepEqual(json(calls[0].body), { phoneNumber: '+84901234567' })
+    assert.equal(calls[0].options.headers['If-Match'], before.etag); assert.ok(calls[0].options.headers['Idempotency-Key'])
+    assert.notEqual(after.etag, before.etag); assert.equal(after.phoneNumberConfirmed, false)
+  })
+  await test('self phone unknown timeout preserves identity, blocks new intent and only deliberate replay uses same command', async () => {
+    const calls = []; let timeout = true
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../client': { apiClient: {
+      patch: async (url, body, options) => { calls.push(json({ url, body, options })); if (timeout) throw new Error('timeout'); return { status: 204 } }
+    } } })
+    await assert.rejects(selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="'), /timeout/)
+    const held = selfPhoneService.pending()
+    await assert.rejects(selfPhoneService.save('+84901234568', '"AAAAAAAAAAE="'), /Lệnh trước/)
+    assert.equal(calls.length, 1); assert.equal(selfPhoneService.pending().key, held.key)
+    timeout = false; await selfPhoneService.save(held.phoneNumber, held.etag, true)
+    assert.deepEqual(calls[0], calls[1]); assert.equal(selfPhoneService.pending(), null)
+  })
+  await test('self phone validation and missing ETag never PATCH; definite conflicts never auto retry', async () => {
+    let calls = 0
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../client': { apiClient: {
+      patch: async () => { calls++; throw failure(412, 'auth_concurrency_conflict') },
+      get: async () => ({ data: { phoneNumber: null, phoneNumberConfirmed: false, version: 'AAAAAAAAAAE=' }, headers: {} })
+    } } })
+    await assert.rejects(selfPhoneService.save('123', '"AAAAAAAAAAE="')); await assert.rejects(selfPhoneService.save('+84901234567', '')); assert.equal(calls, 0)
+    await assert.rejects(selfPhoneService.read(), /ETag/)
+    await assert.rejects(selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="'), e => e.response.status === 412)
+    assert.equal(calls, 1); assert.equal(selfPhoneService.pending(), null)
+  })
+  await test('self phone cookie bootstrap supplies CSRF; session switch fences reads and writes after async bootstrap', async () => {
+    let state = { user: { id: 'pm', role: roles.PROJECT_MANAGER }, token: null, isAuthenticated: true }; let listener
+    const store = { getState: () => state, subscribe: fn => { listener = fn } }
+    let finish; let calls = 0
+    state.ensureCsrfToken = () => new Promise(resolve => { finish = resolve })
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../../store/authStore': { useAuthStore: store }, '../client': { apiClient: { patch: async (_, __, config) => { calls++; assert.equal(config.headers['X-CSRF-TOKEN'], 'csrf'); return { status: 204 } } } } })
+    const save = selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="'); finish('csrf'); await save; assert.equal(calls, 1)
+    const old = selfPhoneService.save('+84901234568', '"AAAAAAAAAAI="')
+    const previous = state; state = { ...state, user: { id: 'sup', role: roles.SUPERVISOR } }; listener(state, previous); finish('csrf')
+    await assert.rejects(old, /Phiên tài khoản/); assert.equal(calls, 1); assert.equal(selfPhoneService.pending(), null)
+  })
+  await test('self phone stale read from another account is rejected; current in-flight command blocks duplicate', async () => {
+    let state = { user: { id: 'pm', role: roles.PROJECT_MANAGER }, token: 'one', isAuthenticated: true }; let notify; let finish
+    const store = { getState: () => state, subscribe: fn => { notify = fn } }
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../../store/authStore': { useAuthStore: store }, '../client': { apiClient: {
+      get: () => new Promise(resolve => { finish = resolve }), patch: () => new Promise(resolve => { finish = resolve })
+    } } })
+    const read = selfPhoneService.read(); const old = state; state = { ...state, user: { id: 'sup', role: roles.SUPERVISOR } }; notify(state, old)
+    finish({ data: { phoneNumber: null, phoneNumberConfirmed: false, version: 'AAAAAAAAAAE=' }, headers: { etag: '"AAAAAAAAAAE="' } })
+    await assert.rejects(read, /Phiên tài khoản/)
+    const write = selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="')
+    await assert.rejects(selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="', true), /Lệnh trước/)
+    finish({ status: 204 }); await write
+  })
+  await test('self phone dispatch guard blocks retry under a different account before network write', async () => {
+    let state = { user: { id: 'pm', role: roles.PROJECT_MANAGER }, token: 'one', isAuthenticated: true }; let notify; let dispatch
+    const store = { getState: () => state, subscribe: fn => { notify = fn } }
+    const { selfPhoneService } = load('src/api/services/profileService.ts', { '../../store/authStore': { useAuthStore: store }, '../client': { apiClient: {
+      patch: async (_, body, config) => { dispatch = config.transformRequest[0]; assert.equal(dispatch(body), JSON.stringify(body)); throw failure(401, 'auth_unauthorized') }
+    } } })
+    await assert.rejects(selfPhoneService.save('+84901234567', '"AAAAAAAAAAE="'))
+    const old = state; state = { ...state, user: { id: 'sup', role: roles.SUPERVISOR }, token: 'two' }; notify(state, old)
+    assert.throws(() => dispatch('{"phoneNumber":"+84901234567"}'), /Phiên tài khoản/)
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

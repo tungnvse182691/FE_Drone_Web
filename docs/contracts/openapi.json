@@ -61892,6 +61892,87 @@
           }
         }
       }
+    },
+    "/api/v1/me/phone-number": {
+      "get": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "WebSession": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Me"
+        ],
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneNumberUpdateRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "WebSession": [],
+            "CsrfToken": [],
+            "AntiforgeryCookie": []
+          }
+        ]
+      },
+      "x-source-sync": {
+        "backendRevision": "7be7ffcdff7d5e55a3f1369c3375308c1a2f9768",
+        "source": "Runtime /swagger/v1/swagger.json from API image built from detached official origin/develop worktree",
+        "controller": "RoadGuardSystem.API/Controllers/MeController.cs",
+        "limitations": "Runtime Swagger omits GET response schema/ETag and PATCH error metadata/required headers. Consult MeController, PhoneNumberDtos, StaffPhoneNumberService and IdentityRepository.PhoneNumbers; do not infer those missing annotations as optional behavior."
+      }
     }
   },
   "components": {
@@ -75361,6 +75442,19 @@
           "widthMeters": {
             "type": "number",
             "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "PhoneNumberUpdateRequestDto": {
+        "required": [
+          "phoneNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "phoneNumber": {
+            "minLength": 1,
+            "type": "string"
           }
         },
         "additionalProperties": false

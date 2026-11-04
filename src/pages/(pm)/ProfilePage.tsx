@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { profileService, UserProfileFact } from '../../api/services/profileService'
-import { userDirectory } from '../../api/services/userDirectory'
+import { profileService, UserProfileFact, getPhoneSessionKey } from '../../api/services/profileService'
+import { SelfPhoneNumberForm } from '../../components/common/SelfPhoneNumberForm'
 
 export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuthStore()
+  const phoneSession = useAuthStore(() => getPhoneSessionKey())
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
@@ -279,18 +280,7 @@ export const ProfilePage: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Số điện thoại liên hệ (Chỉ đọc)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={userDirectory.findUser(user?.id, user?.full_name)?.phone || (user as any)?.phone || '—'}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-xs text-slate-700 bg-slate-100 font-mono cursor-not-allowed"
-                  title="Số điện thoại bảo mật được đồng bộ trực tiếp từ CSDL Backend"
-                />
-              </div>
+              <SelfPhoneNumberForm key={phoneSession} />
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
