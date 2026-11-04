@@ -286,6 +286,26 @@ const activeDraftCache = new Map<string, { draftId: string; etag: string }>()
 // ============================================================================
 
 export const alignmentService = {
+  async readProjectContext(projectId: string): Promise<{
+    projectId: string; engineeringUtmSrid: number | null;
+    roadSections: Array<{ roadSectionId: string; code: string; name: string; currentVersionId: string; versionNo: number }>
+  }> {
+    const response = await apiClient.get(`/projects/${projectId}/work-package`)
+    return response.data
+  },
+
+  async readDraftReadiness(projectId: string, draftId: string): Promise<{
+    ready: boolean; missingFields: string[]; errors: string[]; warnings: string[]; sampleOnly: boolean; crsStatus: string
+  }> {
+    const response = await apiClient.get(`/projects/${projectId}/road-geometry-drafts/${draftId}/readiness`)
+    return response.data
+  },
+
+  async readConfirmedGeometry(projectId: string, roadSectionId: string, routeVersionId: string): Promise<RoadGeometryVersionView> {
+    const response = await apiClient.get(`/projects/${projectId}/road-sections/${roadSectionId}/versions/${routeVersionId}/geometry`)
+    return response.data
+  },
+
   /**
    * API-065: Lấy danh sách hồ sơ hệ tọa độ CRS của dự án
    */

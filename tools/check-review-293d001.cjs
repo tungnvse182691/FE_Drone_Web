@@ -701,5 +701,45 @@ function caseLifecycleHarness() {
     client.defaults.adapter = async config => { throw new axios.AxiosError('Network Error', 'ERR_NETWORK', config) }
     await assert.rejects(client.get('/projects'), /Network/); assert.equal(recoveries, 0)
   })
+  function geometryParser() {
+    return load('src/pages/(pm)/alignment/alignmentImportHelpers.ts', { './data': {}, './alignmentGeometryHelpers': {} })
+  }
+  await test('GeoJSON selects explicit Centerline even after polygon/edges and never infers branch topology', async () => {
+    const features = [
+      { properties: { type: 'RoadSurface', roadWidth: 7 }, geometry: { type: 'Polygon', coordinates: [] } },
+      { properties: { type: 'RoadEdge', layer: 'MEP_TRAI' }, geometry: { type: 'LineString', coordinates: [[1,1],[2,2]] } },
+      { properties: { type: 'Centerline', layer: 'TIM_TUYEN_CHINH', name: 'nhánh', totalLength: 700.73 }, geometry: { type: 'LineString', coordinates: [[107.736642,11.474766],[107.737,11.4747],[107.738,11.474]] } }
+    ]
+    const review = geometryParser().inspectGeoJsonCenterline(JSON.stringify({ type: 'FeatureCollection', features }))
+    assert.equal(review.coords.length,3); assert.equal(review.ignoredFeatureCount,2)
+    assert.equal(review.roadWidthHintMeters,7); assert.equal(review.declaredLengthMeters,700.73)
+    assert.notEqual(review.estimatedLengthMeters,review.declaredLengthMeters)
+    assert.equal(review.coords[0][0],107.736642); assert.equal(review.routeKind,undefined)
+  })
+  await test('GeoJSON rejects ambiguous lines, polygon centerline, swapped/invalid coordinates and explicit unsupported CRS', async () => {
+    const p=geometryParser()
+    const line=coordinates=>({ type:'Feature', properties:{}, geometry:{type:'LineString',coordinates} })
+    assert.throws(()=>p.parseGeoJsonText(JSON.stringify({type:'FeatureCollection',features:[line([[1,1],[2,2]]),line([[3,3],[4,4]])]})),/đúng một/)
+    assert.throws(()=>p.parseGeoJsonText(JSON.stringify({type:'Feature',properties:{type:'Centerline'},geometry:{type:'Polygon',coordinates:[]}})),/LineString/)
+    assert.throws(()=>p.parseGeoJsonText(JSON.stringify(line([[11,107],[12,108]]))),/longitude/)
+    assert.throws(()=>p.parseGeoJsonText(JSON.stringify(line([['107',11],[108,12]]))),/longitude/)
+    assert.throws(()=>p.parseGeoJsonText(JSON.stringify({type:'LineString',coordinates:[[1,1],[2,2]],crs:{name:'EPSG:32648'}})),/CRS/)
+  })
+  await test('GeoJSON preserves duplicate vertices and reports crossings without smoothing or claiming server readiness', async () => {
+    const p=geometryParser()
+    const duplicate=p.inspectGeoJsonCenterline(JSON.stringify({type:'LineString',coordinates:[[1,1],[1,1],[2,2]]}))
+    assert.equal(duplicate.adjacentDuplicates,1);assert.equal(duplicate.coords.length,3)
+    const crossing=p.inspectGeoJsonCenterline(JSON.stringify({type:'LineString',coordinates:[[1,1],[2,2],[1,2],[2,1]]}))
+    assert.equal(crossing.selfIntersections,1);assert.equal(crossing.ready,undefined)
+    assert.equal(crossing.stationOriginMeters,undefined);assert.equal(crossing.segments,undefined)
+  })
+  await test('geometry readers pass exact project/draft/version references and surface missing cookie/readiness errors', async () => {
+    const calls=[]
+    const {alignmentService:service}=load('src/api/services/alignmentService.ts', {'../client':{apiClient:{get:async url=>{calls.push(url);if(url.endsWith('/work-package'))throw failure(401,'auth_unauthorized');return response({ready:false,missingFields:['nativeAlignment']})}}}})
+    await assert.rejects(service.readProjectContext('p'),error=>error.response.status===401)
+    const readiness=await service.readDraftReadiness('p','draft');assert.equal(readiness.ready,false)
+    await service.readConfirmedGeometry('p','road','version')
+    assert.deepEqual(calls,['/projects/p/work-package','/projects/p/road-geometry-drafts/draft/readiness','/projects/p/road-sections/road/versions/version/geometry'])
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

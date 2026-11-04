@@ -1,3 +1,4 @@
+import { AlignmentGeometryWorkflow } from './alignment/AlignmentGeometryWorkflow'
 import React from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -26,7 +27,10 @@ void useAuthStore
 void RoleCode
 void alignmentService
 
-export const AlignmentSegments: React.FC = () => {
+export const AlignmentSegments = AlignmentGeometryWorkflow
+
+// Legacy editor is retained for reference; the API workflow above never mounts its local approval/autosave logic.
+export const LegacyAlignmentSegments: React.FC = () => {
   const {
     isSupervisor,
     basePath,
