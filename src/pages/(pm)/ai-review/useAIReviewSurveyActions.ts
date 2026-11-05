@@ -23,28 +23,24 @@ export const useAIReviewSurveyActions = ({
   const [isRequestSurveyModalOpen, setIsRequestSurveyModalOpen] = useState<boolean>(false)
   const [surveyMode, setSurveyMode] = useState<'MEASURE_ONLY' | 'DRONE_RESURVEY'>('MEASURE_ONLY')
   const [surveyReason, setSurveyReason] = useState<string>('')
-  const [surveyAssignedCrew, setSurveyAssignedCrew] = useState<string>(
-    'Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)'
-  )
+  const [surveyAssignedCrew, setSurveyAssignedCrew] = useState<string>('')
   const [surveySlaHours, setSurveySlaHours] = useState<number>(24)
 
   const handleOpenRequestSurveyModal = (c?: TriageCase) => {
     const target = c || selectedCase
     setTargetTriageCase(target)
     setSurveyReason(
-      target.survey_assignment?.reason ||
-        'Ảnh hiện trường chưa rõ độ sâu/kích thước hư hỏng, cần tổ kỹ sư đo đạc kiểm tra bổ sung.'
+      target.conclusion_reason || ''
     )
     setSurveyMode('MEASURE_ONLY')
-    setSurveyAssignedCrew('Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)')
+    setSurveyAssignedCrew('')
     setSurveySlaHours(24)
     setIsRequestSurveyModalOpen(true)
   }
 
   const handleConfirmRequestSurvey = async () => {
-    const finalReason =
-      surveyReason.trim() ||
-      'Ảnh hiện trường chưa rõ độ sâu/kích thước hư hỏng, cần tổ kỹ sư đo đạc kiểm tra bổ sung.'
+    const finalReason = surveyReason.trim()
+    if (!finalReason) { showToast('Vui lòng nhập lý do yêu cầu bổ sung.'); return }
     const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
     const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
     try {

@@ -1,8 +1,6 @@
 import React, { useState } from 'react'
-import { mockProjects } from '../../../data/mockData'
 import { TriageCase } from './types'
 import { triageService, getCaseSessionKey } from '../../../api/services/triageService'
-import { projectService } from '../../../api/services/projectService'
 
 export interface UseAIReviewLinkActionsProps {
   cases: TriageCase[]
@@ -100,28 +98,17 @@ export const useAIReviewLinkActions = ({
   const handleOpenTriageProject = (c: TriageCase, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setTargetTriageCase(c)
-    setSelectedProjectId(c.project_id || 'prj-ql1a-02')
+    setSelectedProjectId(c.project_id || '')
     setIsTriageProjectModalOpen(true)
   }
 
   const handleConfirmTriageProject = async (
-    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' = 'FIELD',
-    reason: string = ''
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
+    reason: string
   ) => {
     if (!targetTriageCase) return
 
-    let projectName = 'Dự án đã chỉ định'
-    try {
-      const realProjects = projectService.getProjects()
-      const found = realProjects.find(
-        (p) => p.id === selectedProjectId || p.code === selectedProjectId
-      )
-      if (found) projectName = found.name
-      else {
-        const mockProj = mockProjects.find((p) => p.id === selectedProjectId)
-        if (mockProj) projectName = mockProj.name
-      }
-    } catch {}
+    const projectName = selectedProjectId
 
     const targetIds =
       selectedReportIds.includes(targetTriageCase.id) && selectedReportIds.length > 1
@@ -137,7 +124,8 @@ export const useAIReviewLinkActions = ({
     // Gọi API Candidate3 /api/v1/cases/{caseId}/triage (API-024)
     try {
       for (const id of targetIds) {
-        const item = cases.find((c) => c.id === id) || targetTriageCase
+        const item = cases.find((c) => c.id === id)
+        if (!item?.version) throw new Error('Thiếu snapshot Case đã chọn.')
         await triageService.triageCase(id, {
           projectId: selectedProjectId,
           verificationMethod,

@@ -27,39 +27,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div>
-          <span className="text-[10px] text-slate-400 block">
-            {isCitizen ? 'Người phản ánh:' : 'Cán bộ / Tổ tuần tra:'}
-          </span>
-          <span className="font-semibold text-slate-800">
-            {selectedCase.reporter_name || 'API Case chưa hỗ trợ thông tin người gửi'}
-          </span>
-        </div>
-        <div>
-          <span className="text-[10px] text-slate-400 block">Số điện thoại liên hệ:</span>
-          {selectedCase.reporter_phone ? (
-            <a
-              href={`tel:${selectedCase.reporter_phone}`}
-              className="text-blue-600 font-bold hover:underline flex items-center gap-1 font-mono"
-            >
-              <Icon name="call" size={13} />
-              <span>{selectedCase.reporter_phone}</span>
-            </a>
-          ) : (
-            <span className="text-slate-400 italic">API Case chưa hỗ trợ SĐT</span>
-          )}
-        </div>
-      </div>
-
-      <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
-          {isCitizen ? 'Nội dung phản ánh từ người dân:' : 'Biên bản ghi nhận hiện trường tuần tra:'}
-        </span>
-        <p className="italic text-slate-800 leading-relaxed">
-          "{selectedCase.description || 'API Case chưa hỗ trợ nội dung report gốc'}"
-        </p>
-      </div>
+      <p className="text-xs">Người gửi, SĐT và nội dung được hiển thị riêng theo từng Report trong phần chi tiết Report. Tên/SĐT là thông tin tài khoản hiện tại, không phải snapshot lúc gửi.</p>
 
       {/* Triage Project Assignment Status (PA03) */}
       <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">

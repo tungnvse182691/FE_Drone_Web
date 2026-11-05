@@ -172,63 +172,11 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
         </div>
       )}
 
-      {selectedCase.status === 'NEED_SURVEY' && (
-        <div className="p-3.5 bg-blue-50/90 border border-blue-200 rounded-xl space-y-2.5 text-blue-950 animate-in fade-in">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Icon name="photo_camera" size={20} className="text-blue-600 shrink-0" />
-              <div>
-                <span className="font-bold text-xs block text-blue-900">
-                  LỆNH KHẢO SÁT &amp; ĐO ĐẠC BỔ SUNG
-                </span>
-                <span className="text-[11px] text-blue-700">
-                  {selectedCase.survey_assignment
-                    ? selectedCase.survey_assignment.mode === 'MEASURE_ONLY'
-                      ? '📐 Đo đạc hiện trường bằng thước chuyên dụng'
-                      : '🛸 Bay quét Drone chụp bổ sung'
-                    : 'Đã chuyển sang hàng đợi nhiệm vụ khảo sát thực địa.'}
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                navigate(
-                  `${isSupervisor ? '/sup' : '/pm'}/field-tasks?tab=MEASUREMENTS&highlightCode=${encodeURIComponent(selectedCase.code)}`
-                )
-              }
-              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs cursor-pointer flex items-center gap-1 shrink-0"
-            >
-              <span>Xem nhiệm vụ</span>
-              <Icon name="arrow_forward" size={14} />
-            </button>
-          </div>
-
-          {selectedCase.survey_assignment && (
-            <div className="p-2.5 bg-white rounded-lg border border-blue-200/80 text-xs space-y-1.5 shadow-2xs">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Đơn vị nhận việc:</span>
-                <span className="font-bold text-blue-950">{selectedCase.survey_assignment.assigned_crew}</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-500 font-medium">Hạn cam kết SLA:</span>
-                <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full text-[10px]">
-                  Trong {selectedCase.survey_assignment.sla_hours} giờ
-                </span>
-              </div>
-              {selectedCase.survey_assignment.reason && (
-                <div className="pt-1.5 border-t border-slate-100 text-[11px]">
-                  <span className="text-slate-500 font-medium block">Lý do yêu cầu:</span>
-                  <p className="italic text-slate-800 mt-0.5">"{selectedCase.survey_assignment.reason}"</p>
-                </div>
-              )}
-              <div className="text-[10px] text-slate-400 text-right pt-0.5">
-                Thời gian giao: {selectedCase.survey_assignment.created_at}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {selectedCase.status === 'NEED_SURVEY' && <div role="status">
+        <strong>Yêu cầu bổ sung bằng chứng</strong>
+        <p>{selectedCase.conclusion_reason || 'Chưa có lý do trong dữ liệu server.'}</p>
+        <p>Chưa có dữ liệu nhiệm vụ FIELD/Drone được tạo hoặc giao từ kết luận này.</p>
+      </div>}
 
       {selectedCase.is_published && (
         <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl space-y-1 text-sky-950 animate-in fade-in">

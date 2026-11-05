@@ -31,7 +31,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
     selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'
       ? 'Đặc biệt khẩn cấp'
       : selectedCase.urgency === 'URGENT'
-      ? 'Khẩn cấp (24 - 48 giờ)'
+      ? 'Khẩn cấp'
       : 'Bình thường'
 
   return (

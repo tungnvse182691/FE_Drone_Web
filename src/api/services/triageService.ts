@@ -404,14 +404,41 @@ export const triageService = {
    * Header bắt buộc: Idempotency-Key, If-Match (Quoted ETag)
    */
   async triageCase(caseId: string, payload: CaseTriageInput): Promise<TriageCase> {
+    const session = getCaseSessionKey()
+    const actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Supervisor được điều phối Case.')
     if (!/^[0-9a-f-]{36}$/i.test(caseId) || !/^[0-9a-f-]{36}$/i.test(payload.projectId)) throw new Error('Thiếu Case/project UUID hợp lệ; chưa điều phối.')
-    const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
-    const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/triage`, {
-      projectId: payload.projectId, verificationMethod: payload.verificationMethod || 'FIELD',
-      reason: payload.reason || 'Giám sát điều phối phạm vi xác minh',
-      routeVersionId: payload.routeVersionId, segmentSetId: payload.segmentSetId, geometryVersion: payload.geometryVersion
-    }, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': normalizeETag(payload.version || current.data.version || undefined) } })
-    return mapBackendCaseToDomain(response.data, {})
+    if (!payload.version || !payload.reason?.trim() || !payload.verificationMethod) throw new Error('Thiếu version, lý do hoặc phương thức xác minh đã chọn; chưa điều phối.')
+    const version = normalizeETag(payload.version)
+    const body = { projectId: payload.projectId, verificationMethod: payload.verificationMethod, reason: payload.reason.trim(),
+      routeVersionId: payload.routeVersionId, segmentSetId: payload.segmentSetId, geometryVersion: payload.geometryVersion }
+    const fingerprint = JSON.stringify({ body, version })
+    const journalKey = `rg_triage_${actor.id}_${caseId}`
+    const saved = sessionStorage.getItem(journalKey)
+    const command = saved ? JSON.parse(saved) : { key: crypto.randomUUID(), body, version, fingerprint }
+    if (command.fingerprint !== fingerprint) throw new Error('Lệnh điều phối trước chưa đối chiếu xong; không đổi key/body/version.')
+    const pendingKey = `${actor.id}:triage:${caseId}`
+    if (pendingCaseCommands.has(pendingKey)) throw new Error('Đang gửi lệnh điều phối này.')
+    pendingCaseCommands.set(pendingKey, command)
+    try {
+      assertCaseReadActive(session)
+      sessionStorage.setItem(journalKey, JSON.stringify(command))
+      if (!command.receipt) {
+        const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/triage`, command.body, {
+          headers: { 'Idempotency-Key': command.key, 'If-Match': command.version },
+          transformRequest: [(data: unknown) => { assertCaseReadActive(session); return JSON.stringify(data) }]
+        })
+        assertCaseReadActive(session)
+        command.receipt = response.data
+        sessionStorage.setItem(journalKey, JSON.stringify(command))
+      }
+      const fresh = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      assertCaseReadActive(session)
+      if (fresh.data.id !== caseId || fresh.data.projectId !== payload.projectId) throw new Error('Đã nhận biên nhận nhưng chưa xác nhận Case ở project đích; cần đối chiếu.')
+      sessionStorage.removeItem(journalKey)
+      return mapBackendCaseToDomain(fresh.data, {})
+    } finally { pendingCaseCommands.delete(pendingKey) }
+
   },
 
   /**
@@ -437,21 +464,27 @@ export const triageService = {
     const version = normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined)
     const key = crypto.randomUUID()
     const pendingKey = `${actor?.id}:conclude:${caseId}`
+    const journalKey = `rg_case_conclusion_${actor?.id}_${caseId}`
+    if (sessionStorage.getItem(journalKey)) throw new Error('Lệnh kết luận trước chưa đối chiếu xong; không tạo key mới sau F5.')
     if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả. Hãy tải lại/đối chiếu; không tạo lệnh mới.')
     pendingCaseCommands.set(pendingKey, { key, body, version })
+    sessionStorage.setItem(journalKey, JSON.stringify({ key, body, version }))
     try {
       const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/conclusions`, body, {
         headers: { 'Idempotency-Key': key, 'If-Match': version }
       })
       pendingCaseCommands.delete(pendingKey)
       if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả lệnh cũ.')
-      const confirmed = mapBackendCaseToDomain(response.data, {})
-      if (response.data.conclusion?.outcome !== payload.outcome) {
+      const reread = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết luận cũ.')
+      const confirmed = mapBackendCaseToDomain(reread.data, {})
+      if (reread.data.conclusion?.outcome !== payload.outcome) {
         throw Object.assign(new Error('Kết quả server khác yêu cầu; hãy đối chiếu kết luận.'), { serverCase: confirmed })
       }
+      sessionStorage.removeItem(journalKey)
       return confirmed
     } catch (error: any) {
-      if (error.response && error.response.status < 500) pendingCaseCommands.delete(pendingKey)
+      if (error.response && error.response.status < 500) { pendingCaseCommands.delete(pendingKey); sessionStorage.removeItem(journalKey) }
       if (error.serverCase) throw error
       const status = error.response?.status
       const code = error.response?.data?.code
@@ -504,17 +537,7 @@ export const triageService = {
    * Cập nhật thông tin hồ sơ thẩm định cục bộ & đồng bộ storage
    */
   async updateCase(caseId: string, updates: Partial<TriageCase>): Promise<TriageCase> {
-    await new Promise((resolve) => setTimeout(resolve, 80))
-    const index = inMemoryTriageCases.findIndex((c) => c.id === caseId || c.code === caseId)
-    if (index === -1) {
-      throw new Error(`Không tìm thấy hồ sơ Triage với ID ${caseId}`)
-    }
-    inMemoryTriageCases[index] = {
-      ...inMemoryTriageCases[index],
-      ...updates
-    }
-    saveToStorage(STORAGE_KEYS.TRIAGE_CASES, inMemoryTriageCases)
-    return JSON.parse(JSON.stringify(inMemoryTriageCases[index]))
+    throw new Error('Không dùng updateCase cục bộ thay triage/conclusion API; chưa ghi thay đổi.')
   },
 
   /**

@@ -125,8 +125,9 @@ function caseLifecycleHarness() {
   })
   await test('NEEDS_EVIDENCE permits empty references as validated by CaseWorkflowService', async () => {
     const bodies = []
-    const service = triage({ get: async () => response(detail()), post: async (_, body) => {
-      bodies.push(body); return response(detail({ status: 'AWAITING_EVIDENCE', conclusion: { outcome: 'NEEDS_EVIDENCE' } }))
+    let written = false
+    const service = triage({ get: async () => response(detail(written ? { status: 'AWAITING_EVIDENCE', conclusion: { outcome: 'NEEDS_EVIDENCE' } } : {})), post: async (_, body) => {
+      written = true; bodies.push(body); return response(detail({ status: 'AWAITING_EVIDENCE', conclusion: { outcome: 'NEEDS_EVIDENCE' } }))
     } })
     assert.equal((await service.concludeCase('case-new', { outcome: 'NEEDS_EVIDENCE' })).conclusion, 'NEEDS_EVIDENCE')
     assert.deepEqual(json(bodies[0].evidenceIds), []); assert.deepEqual(json(bodies[0].defectIds), [])
@@ -301,7 +302,7 @@ function caseLifecycleHarness() {
     assert.equal(view.cases[0].id, 'retry-result'); assert.equal(view.isLoading, false)
     assert.equal(h.writes.length, 1); assert.equal(h.writes[0][0].id, 'retry-result'); assert.equal(h.errors.length, 0)
     assert.equal(view.toastMessage, null)
-    await assert.rejects(h.serviceModule.triageService.updateCase('stale', { pm_notes: 'bad' }), /Không tìm thấy/)
+    await assert.rejects(h.serviceModule.triageService.updateCase('stale', { pm_notes: 'bad' }), /updateCase/)
   })
   await test('Case lifecycle: concurrent scopes and detail reader never invalidate each other', async () => {
     const h = caseLifecycleHarness(); const service = h.serviceModule.triageService
@@ -1146,6 +1147,43 @@ function caseLifecycleHarness() {
     await assert.rejects(service.saveAiCandidateOverride('s', {}), /contract/)
     await assert.rejects(service.updateSurveyDetection('survey', 's', { status: 'APPROVED' }), /legacy/)
     assert.equal(calls, 0)
+  })
+  await test('Supervisor triage holds exact key/body/version after timeout, receipt readback never POSTs twice', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const journal = new Map(), posts = []
+    const caseId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', projectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    let timeout = true, readFailure = true
+    const { triageService: service } = load('src/api/services/triageService.ts', {
+      __sessionStorage: { getItem: key => journal.get(key) || null, setItem: (key, value) => journal.set(key, value), removeItem: key => journal.delete(key) },
+      '../client': { apiClient: {
+        post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response(detail({ id: caseId, projectId })) },
+        get: async () => { if (readFailure) throw failure(503, 'read_failed'); return response(detail({ id: caseId, projectId })) }
+      } }
+    })
+    const input = { projectId, verificationMethod: 'EXISTING_EVIDENCE', reason: 'Supervisor selected', version: 'AAAAAAAAAAE=' }
+    await assert.rejects(service.triageCase(caseId, input), /timeout/)
+    await assert.rejects(service.triageCase(caseId, { ...input, reason: 'changed' }), /key\/body\/version/)
+    timeout = false
+    await assert.rejects(service.triageCase(caseId, input), error => error.response.status === 503)
+    readFailure = false
+    await service.triageCase(caseId, input)
+    assert.equal(posts.length, 2); assert.deepEqual(posts[0], posts[1]); assert.equal(journal.size, 0)
+    assert.equal(posts[0].body.verificationMethod, 'EXISTING_EVIDENCE')
+    assert.equal(posts[0].headers['If-Match'], '"AAAAAAAAAAE="')
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    await assert.rejects(service.triageCase(caseId, input), /Supervisor/)
+  })
+  await test('triage requires explicit snapshot/method/reason and retains real conflict codes without another command', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', projectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    for (const status of [409, 412, 428]) {
+      let posts = 0
+      const service = triage({ post: async () => { posts++; throw failure(status, 'conflict') } })
+      await assert.rejects(service.triageCase(id, { projectId }), /Thiếu version/)
+      await assert.rejects(service.triageCase(id, { projectId, verificationMethod: 'FIELD', reason: 'reason', version: 'AAAAAAAAAAE=' }), error => error.response.status === status)
+      assert.equal(posts, 1)
+    }
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

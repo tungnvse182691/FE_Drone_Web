@@ -70,17 +70,8 @@ export const useAIReviewActions = ({
     const isFieldIntake = target.source === 'CITIZEN' || target.source === 'PATROL'
     const outcome = isFieldIntake ? 'NEEDS_EVIDENCE' : 'CONFIRMED'
 
-    const updates: Partial<TriageCase> = {
-      status: outcome === 'NEEDS_EVIDENCE' ? 'AWAITING_EVIDENCE' : 'VERIFIED',
-      status_label: outcome === 'NEEDS_EVIDENCE' ? 'Chờ đo đạc hiện trường' : 'Đã xác minh (Verified)',
-      conclusion: outcome === 'NEEDS_EVIDENCE' ? 'NEEDS_EVIDENCE' : 'DEFECT_FOUND',
-      conclusion_reason: currentNotes || (outcome === 'NEEDS_EVIDENCE'
-        ? 'Phản ánh hiện trường hợp lệ. Đã duyệt yêu cầu đo đạc thực tế (Dài x Rộng x Sâu) để lập hồ sơ kỹ thuật.'
-        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'),
-      pm_notes: currentNotes || (outcome === 'NEEDS_EVIDENCE'
-        ? 'Đã duyệt yêu cầu đo đạc hiện trường.'
-        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.')
-    }
+    if (!currentNotes.trim()) { showToast('Vui lòng nhập lý do thẩm định.'); return }
+    const updates = { conclusion_reason: currentNotes.trim() }
 
     try {
       const res = await triageService.concludeCase(target.id, {
@@ -121,8 +112,7 @@ export const useAIReviewActions = ({
     const target = c || selectedCase
     setTargetTriageCase(target)
     setNoDefectReason(
-      target.conclusion_reason ||
-        'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
+      target.conclusion_reason || ''
     )
     setIsNoDefectModalOpen(true)
   }
@@ -143,9 +133,8 @@ export const useAIReviewActions = ({
   }
 
   const handleConfirmNoDefect = async () => {
-    const finalReason =
-      noDefectReason.trim() ||
-      'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
+    const finalReason = noDefectReason.trim()
+    if (!finalReason) { showToast('Vui lòng nhập lý do kết luận.'); return }
     const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
     const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
 
@@ -196,51 +185,9 @@ export const useAIReviewActions = ({
 
   // OUT_OF_SCOPE Conclusion
   const handleConclusionOutOfScope = async (c?: TriageCase) => {
-    const target = c || selectedCase
-    const updates: Partial<TriageCase> = {
-      status: 'REJECTED',
-      status_label: 'Ngoài phạm vi',
-      conclusion: 'OUT_OF_SCOPE',
-      conclusion_reason: 'Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.',
-      pm_notes:
-        '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
-    }
-
-    try {
-      const res = await triageService.concludeCase(target.id, {
-        outcome: 'NO_DEFECT',
-        reason: updates.conclusion_reason,
-        version: target.version
-      })
-
-      if (!isCurrent()) return
-      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
-      setCases((prev) =>
-        prev.map((item) =>
-          item.id === target.id || item.code === target.code
-            ? {
-                ...item,
-                ...res,
-                project_name: item.project_name
-              }
-            : item
-        )
-      )
-
-      // Đóng modal/drawer thẩm định và trả về danh sách
-      setIsDetailModalOpen?.(false)
-
-      showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
-    } catch (e: any) {
-      console.error('❌ Lỗi khi gửi kết luận ngoài phạm vi tới backend:', e)
-      if (!isCurrent()) return
-      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
-      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
-      showToast(`❌ Lỗi Backend: ${errorMsg}`)
-    }
+    showToast('Chưa có contract kết luận OUT_OF_SCOPE hoặc chuyển cơ quan khác. Chưa gửi lệnh; không thay bằng NO_DEFECT.')
   }
 
-  // Reset conclusion to PENDING for re-evaluating
   const handleResetConclusion = () => {
     showToast('Chưa có command mở lại kết luận Case trong contract. Không thay đổi trạng thái server; hãy bổ sung bằng chứng theo quy trình được phép.')
   }
