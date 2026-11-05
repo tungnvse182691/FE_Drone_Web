@@ -21,7 +21,7 @@ export const DroneMissionAIReview: React.FC = () => {
 
   const [currentSurvey, setCurrentSurvey] = useState<SurveyMissionItem | null>(null)
   const [isLoadingSurvey, setIsLoadingSurvey] = useState<boolean>(true)
-  const [isSimulating, setIsSimulating] = useState<boolean>(false)
+  const [surveyReadError, setSurveyReadError] = useState<string | null>(null)
 
   const {
     isAiOverlayVisible,
@@ -89,8 +89,9 @@ export const DroneMissionAIReview: React.FC = () => {
         if (isMounted) {
           setCurrentSurvey(survey || null)
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Lỗi khi tải thông tin đợt bay:', err)
+        if (isMounted) setSurveyReadError(err?.message || 'Không tải được hồ sơ khảo sát.')
       } finally {
         if (isMounted) {
           setIsLoadingSurvey(false)
@@ -103,24 +104,8 @@ export const DroneMissionAIReview: React.FC = () => {
     }
   }, [id])
 
-  // Xử lý mô phỏng bay xong ngay trên trang chi tiết nếu trạng thái là SCHEDULED
-  const handleSimulateFlight = async () => {
-    if (!currentSurvey) return
-    try {
-      setIsSimulating(true)
-      const updated = await surveyService.simulateDroneFlightCompletion(currentSurvey.id)
-      if (updated) {
-        setCurrentSurvey(updated)
-        showToast(`Đã mô phỏng chuyến bay [${updated.code}] hoàn tất và xuất dữ liệu phân tích AI thành công!`)
-      }
-    } catch (err) {
-      console.error('Lỗi khi mô phỏng bay:', err)
-    } finally {
-      setIsSimulating(false)
-    }
-  }
-
   // Trường hợp đang tải
+  if (surveyReadError) return <div role="alert">{surveyReadError}</div>
   if (isLoadingSurvey) {
     return (
       <div className="bg-white border border-[#E2E5E9] rounded-xl p-12 flex flex-col items-center justify-center space-y-3 min-h-[400px]">
@@ -171,7 +156,7 @@ export const DroneMissionAIReview: React.FC = () => {
             <div className="text-xs text-amber-900 leading-relaxed">
               <p className="font-bold mb-1">Chuyến bay đang ở trạng thái Chuẩn bị / Lên lịch bay:</p>
               <p>
-                Drone chưa cất cánh khảo sát thực địa nên hệ thống chưa nhận được gói ảnh RGB phân giải cao và mô hình AI Road-YOLOv9 chưa kích hoạt trích xuất bounding box. Vui lòng bấm nút <strong>&quot;Mô phỏng bay xong & Chạy AI&quot;</strong> bên dưới để hoàn tất thu thập dữ liệu và chuyển sang màn hình thẩm định AI.
+                Chưa có dữ liệu Operator được xác minh cho màn này. Đọc kế hoạch và provenance từ màn khảo sát; không mô phỏng hoàn tất bay.
               </p>
             </div>
           </div>
@@ -207,24 +192,7 @@ export const DroneMissionAIReview: React.FC = () => {
               <span>Quay lại danh sách khảo sát</span>
             </button>
 
-            <button
-              type="button"
-              disabled={isSimulating}
-              onClick={handleSimulateFlight}
-              className="px-5 py-2.5 text-xs font-bold rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] active:scale-95 text-white shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSimulating ? (
-                <>
-                  <Icon name="sync" size={16} className="animate-spin" />
-                  <span>Đang xử lý chuyến bay và nạp AI...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="play_arrow" size={16} />
-                  <span>Mô phỏng bay xong & Chạy AI</span>
-                </>
-              )}
-            </button>
+
           </div>
         </div>
       </div>

@@ -1084,5 +1084,16 @@ function caseLifecycleHarness() {
     epoch++
     assert.throws(() => dispatch({ currentPassword: 'old', newPassword: 'new' }), /stale epoch/)
   })
+  await test('survey collections paginate, preserve failures and reject loop/stale session rather than empty success', async () => {
+    const make = client => load('src/api/services/surveyService.ts', { '../client': { apiClient: client } }).surveyService
+    const reader = make({ get: async (_, config) => response(config.params.cursor ? { items: [{ id: 'two' }] } : { items: [{ id: 'one' }], nextCursor: 'next' }) })
+    assert.equal((await reader.readSurveyPage('/projects/p/survey-plans')).length, 2)
+    await assert.rejects(make({ get: async () => { throw failure(403, 'access_forbidden') } }).readSurveyPage('/projects/p/survey-tasks'), e => e.response.status === 403)
+    await assert.rejects(make({ get: async () => response({ items: [], nextCursor: 'same' }) }).readSurveyPage('/projects'), /Cursor/)
+    await assert.rejects(make({ get: async () => response({ wrong: [] }) }).readSurveyPage('/projects'), /contract/)
+    await assert.rejects(reader.createSurvey({}), /BLOCKED/)
+    await assert.rejects(reader.getSurveyRoutes(), /Web cookie/)
+    assert.equal(typeof reader.simulateDroneFlightCompletion, 'undefined')
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })
