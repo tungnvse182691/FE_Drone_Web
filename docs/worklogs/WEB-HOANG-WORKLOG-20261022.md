@@ -1672,3 +1672,28 @@ Hướng dẫn test thủ công Web:
 6. F5 với Sup/PM-A phải đọc lại server. Logout/đổi actor không giữ project/member cũ. Users directory Sup-only; eligible/add PM-only; không nhầm transport401 của reassignment với lỗi role403.
 
 **Chốt bản cuối:** 99 regression PASS, tsc -b PASS, vite build PASS, git diff --check PASS. Browser production bundle qua preview5181/proxy tới backend18443: Sup/PM-A/PM-B scope/F5/đổi tài khoản PASS; lỗi members/projects rồi retry PASS; PM eligible lỗi mạng rồi retry và đổi OPERATOR/CREW PASS; 0 business writes. Harness rg-step2-refresh-browser.cjs và rg-step2-refresh-api.py ngoài repo. Selector test trùng hai alert được sửa trong harness và rerun PASS. Một build đọc trúng file đang ghi đã lỗi; chốt source ổn định rồi build lại PASS, không dùng lượt lỗi làm bằng chứng. Positive thêm member/project và reassignment thực vẫn NOT_RUN/BLOCKED như trên. Không thay đổi backend hoặc DB. Bước 2 hoàn thiện thêm phần FE đọc/chọn/recovery; chưa nghiệm thu toàn vòng mutation E2E.
+
+
+### 06/11/2026 — Follow-up review 598786c: số liệu project và journal member
+
+Base/parent `598786c68ef1dd84836bea3aced1767d4437e31a`, hoang, status sạch. Đọc review/diff, Spec17_10 workflow01 và02, OpenAPI ProjectListItemResponseDto/member operations, projectService/personnelService, grid/table/modal; đối chiếu StaffDirectoryController.Map cho mã lỗi. Chỉ sửa FE Bước2, không backend/DB/Docker/migration/config hoặc bước3–6.
+
+| Finding | File | Căn cứ | Sửa và kết quả |
+|---|---|---|---|
+| Text bị truyền vào CSS width | ProjectGridView | Dữ liệu thiếu không được làm số liệu | Width thiếu/ngày hoặc phần trăm không hữu hạn là0%; có dữ liệu dùng phần trăm; render regression PASS |
+| Project số0 giả/status suy diễn | projectService/domain/ProjectList và các card overview | DTO list không cung cấp start/end/length; current membership do API | start_km/end_km/length_km optional, không gán0; length thiếu báo Chưa có dữ liệu từ API, KPI tổng không cộng thành0. Thiếu status dùng UNKNOWN chỉ là marker UI, không enum gửi backend. Nullable guards ở card/map/timeline để typecheck, không đổi nghiệp vụ geometry |
+| PMbadge/is_assigned | projectService/grid/table | Primary PM là field server, không phải quyền PM đọc project | pm_role_badge chỉ khi có primaryProjectManagerUserId; is_assigned không còntrue mặc định. Grid/table dùng primary ID trực tiếp, thiếu ID báo thiếu dữ liệu PM chính thay kết luận chắc chắn chưa phân công. Project scope vẫn theo GETprojects/members/current-effective, không dùng tên/email/cache |
+| Journal bị xóa khi lỗi không rõ | personnelService.addProjectMember | StaffDirectoryController.Map: documented ProblemDetails và K | Giữ journal khi network/timeout/5xx/unknown409/no-code409/readback error. Chỉ clear trước receipt với status/code đã biết:400validation_error,403access_forbidden,404project_not_found/identity_user_not_found,409duplicate_request/idempotency_key_reused. Khôngreceipt→replay cùngkey/userId body; córeceipt→GETmembers, xác nhậnACTIVE; không thêmIf-Match |
+
+Tests: tools/check-review-293d001.cjs **101 scenarios PASS**, mockHTTP/hooks/render, khôngE2E. Có test mapper thiếu start/end/length/status/PM; grid thiếu warranty render width0%, có37% render width37%; zero thật vẫn hiển thị khi được cung cấp; badge thiếuprimaryID khônghiện. Addmember tests timeout cùngkey/body,201readback503 khôngPOSTlần2,409known rejectionclear/unknown409giữ,5xxgiữ,sairole khôngPOST. Các test scope/session hiện có tiếp tụcPASS. Typecheck tsc-b PASS; vite build PASS; diff-check PASS; cảnh báo Tailwind/chunk có sẵn. LintNOT_RUN vì khôngscript.
+
+Browser Edge thật trên bản production build, script temp rg-step2-refresh-browser.cjs: Sup/PM-A đọc project/member/F5 đúng; PM-B mởURLproject ngoài scope bị chặn. Logout/login actor khác không thấy tên member cũ. Members/projects/eligible bị abort mạng → lỗi rõ → retry đọc server PASS; PM đổi eligibleOperator/Crew PASS. **0 business writes**, không mockresponse. Dùng projecttest2cde860a-f777-4e5c-8d8f-384fdaed9509 ở instance cũ/proxy18443, không đổi backendconfig. Positive thêm membership/replay thực NOT_RUN; reassignment Web vẫn BLOCKED theo contractBearer-only, không coi regression/build làE2E ghi.
+
+Hướng dẫn test thủ công:
+1. Supervisor test vào /sup/projects và project2cde...; quan sát GETprojects/members200. Primary ID vắng thì không có badge PM Chính; thiếu ngày/chiều dài hiển thị thiếu dữ liệu, inspect progress style width0%, không chứa text.
+2. PM-A test vào /pm/projects, mở /pm/projects/2cde860a-f777-4e5c-8d8f-384fdaed9509. GETmembers200, không lọc quyền bằng primaryname/email. Bấm Thêm nhân sự: GETmembers/eligible?role=OPERATOR/CREW có phân trang, chỉ tài khoảnserver.
+3. Khi được phép ghi trên fixture riêng: POSTprojects/{id}/members body{userId},CSRF/K,khôngIf-Match. Sau201 phải GETmembers xác nhậnACTIVE. Timeout/5xx/409khôngrõ giữkey/body quaF5; córeceipt chỉGET. Không cố tạo member/project thật trong lượt này.
+4. Sup không được thêmOperator/Crew (nútkhóa, backend403 nếu gọi đúngcookie); PM-B ngoài project mởcùngURL phải bịchặn, GETmembers/primary/summary403. 401 transport khác403 quyền, không đổiBearer đểlách.
+5. F5 và logout/login Sup→PM-A→PM-B: dữliệuserver theoactor hiện tại, khôngfallbackprojectđầutiên/cachedmember. Tắt mạng eligible/members/projects thấyalert, bật lại vàretry.
+
+Giới hạn còn lại: positive mutation E2E chưa chạy; không sửa tài khoản hoặc SQL để ép PASS. Field kỹ thuật hiện không có trong APIlist nên không nghiệm thu geometry từ mànproject. Các field optional là read-model FE, không tạo DTO/endpoint/state backend mới. Chỉ journal intent ở sessionStorage, không dùng làm nguồn membership. Không sửa/xóa fixture ngoài production path, không commit credentials; DB local không đi theoGitHub.

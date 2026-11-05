@@ -65,7 +65,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {project.length_km > 0 ? `${project.length_km} km` : '0 km'}
+                {(project.length_km != null && project.length_km > 0) ? `${project.length_km} km` : 'Chưa có dữ liệu từ API'}
               </span>
               <span className="text-[11px] font-bold text-[#1E40AF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 {project.kml_status || 'Chưa duyệt tim'}
@@ -85,7 +85,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span>Trục chính:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
-              {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : (project.length_km > 0 ? `${project.length_km} km` : '0 km')}
+              {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : ((project.length_km != null && project.length_km > 0) ? `${project.length_km} km` : 'Chưa có dữ liệu từ API')}
             </span>
           </div>
 

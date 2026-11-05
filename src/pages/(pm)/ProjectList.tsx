@@ -258,7 +258,7 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + p.length_km, 0).toFixed(1), [scopedProjects])
+  const totalLength = useMemo(() => scopedProjects.some(p => p.length_km == null) ? 'Chưa có dữ liệu từ API' : scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1), [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
   const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])

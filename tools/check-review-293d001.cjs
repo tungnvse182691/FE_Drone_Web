@@ -1216,5 +1216,34 @@ function caseLifecycleHarness() {
     await assert.rejects(service.addProjectMember('p', 'operator'), /PM/)
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
   })
+  await test('project missing technical facts/status/primary PM is not synthesized; warranty width is CSS only', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ get: async url => response({ items: url === '/projects' ? [{ projectId: 'p', projectCode: 'P', name: 'Server' }] : [] }) }))
+    const [project] = await service.fetchProjects()
+    for (const field of ['start_km', 'end_km', 'length_km']) assert.equal(project[field], undefined)
+    assert.equal(project.status, 'UNKNOWN'); assert.equal(project.is_assigned, false); assert.equal(project.pm_role_badge, '')
+    const React = require('react'), { renderToStaticMarkup } = require('react-dom/server')
+    const mocks = { react: { __esModule: true, default: React, ...React }, '../../../components/ui/Icon': { Icon: () => null } }
+    const { ProjectGridView } = load('src/pages/(pm)/projects/ProjectGridView.tsx', mocks)
+    const render = item => renderToStaticMarkup(React.createElement(ProjectGridView, { filteredProjects: [item], isSupervisor: true }))
+    const missing = render(project)
+    assert.ok(missing.includes('width:0%')); assert.ok(!missing.includes('width:Chưa')); assert.ok(!missing.includes('>0 km'))
+    assert.ok(missing.includes('Chưa có dữ liệu từ API')); assert.ok(!missing.includes('PM Chính'))
+    const known = render({ ...project, warranty_data_missing: false, warranty_passed_percent: 37, length_km: 0, is_assigned: true, pm_user_id: 'real-pm', pm_role_badge: 'PM Chính' })
+    assert.ok(known.includes('width:37%')); assert.ok(known.includes('PM Chính')); assert.ok(known.includes('0 km'))
+  })
+  await test('member uncertain failures retain journal; only documented rejection clears it', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    for (const [status, code, clears] of [[500, 'internal_error', false], [503, 'dependency_unavailable', false], [409, 'unknown_conflict', false], [409, undefined, false], [409, 'duplicate_request', true], [409, 'idempotency_key_reused', true], [403, 'access_forbidden', true]]) {
+      const journal = new Map(), sent = []
+      const { personnelService: service } = load('src/api/services/personnelService.ts', {
+        __sessionStorage: { getItem: k => journal.get(k) || null, setItem: (k, v) => journal.set(k, v), removeItem: k => journal.delete(k) },
+        '../client': { apiClient: { post: async (_, body, config) => { sent.push(json({ body, headers: config.headers })); throw failure(status, code) } } }
+      })
+      await assert.rejects(service.addProjectMember('p', 'operator'))
+      assert.equal(journal.size, clears ? 0 : 1)
+      if (!clears) { await assert.rejects(service.addProjectMember('p', 'operator')); assert.deepEqual(sent[0], sent[1]) }
+    }
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

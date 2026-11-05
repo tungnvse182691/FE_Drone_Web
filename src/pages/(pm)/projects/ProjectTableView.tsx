@@ -49,7 +49,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     <div className="font-mono text-[11px] text-slate-400 mt-0.5">{prj.stationing_text}</div>
                   </td>
                   <td className="py-3 px-4">
-                    {prj.is_assigned ? (
+                    {prj.pm_user_id ? (
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-800">{prj.pm_name}</span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">
@@ -57,7 +57,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         </span>
                       </div>
                     ) : (
-                      <span className="text-amber-600 font-semibold italic">Chưa phân công</span>
+                      <span className="text-amber-600 font-semibold italic">Chưa có dữ liệu PM chính từ API</span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">

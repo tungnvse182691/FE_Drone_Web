@@ -374,8 +374,8 @@ function mapBackendProjectToHub(
   usersMap?: Map<string, UserLookupInfo>,
   statsMap?: Map<string, { openDefects: number; repairPackages: number }>
 ): HubProject {
-  const statusStr = (item.status || 'PENDING_ALIGNMENT').toUpperCase()
-  let status: HubProject['status'] = 'PENDING_ALIGNMENT'
+  const statusStr = (item.status || 'UNKNOWN').toUpperCase()
+  let status: HubProject['status'] = 'UNKNOWN'
   let statusLabel = item.status || 'Chưa có trạng thái từ API'
   let statusColor = '#D97706'
 
@@ -404,7 +404,7 @@ function mapBackendProjectToHub(
   }
 
   if (!pmName) {
-    pmName = 'Chưa gán PM'
+    pmName = pmUserId ? 'Chưa có tên PM từ API' : 'Chưa có dữ liệu PM chính từ API'
   }
 
 
@@ -442,8 +442,8 @@ function mapBackendProjectToHub(
     name: item.name || 'Dự án bảo hành RoadGuard',
     region,
     location_detail,
-    start_km: 0.0,
-    end_km: 0.0,
+    start_km: undefined,
+    end_km: undefined,
     stationing_text: 'Chưa thiết lập tim tuyến',
     status,
     status_label: statusLabel,
@@ -451,15 +451,15 @@ function mapBackendProjectToHub(
     pm_name: pmName,
     pm_email: pmEmail,
     pm_user_id: item.primaryProjectManagerUserId,
-    pm_role_badge: 'PM Chính',
+    pm_role_badge: pmUserId ? 'PM Chính' : '',
     warranty_data_missing: warrantyDataMissing,
     warranty_passed_percent: warrantyPassedPercent,
     days_remaining: daysRemaining,
-    length_km: 0.0,
+    length_km: undefined,
     open_defects: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.openDefects : 0,
     repair_packages: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.repairPackages : 0,
     image_url: '',
-    is_assigned: true,
+    is_assigned: !!pmUserId,
     is_restricted_for_pm: false,
     kml_status: 'Chưa có tim tuyến',
     handover_date: item.handoverDate,

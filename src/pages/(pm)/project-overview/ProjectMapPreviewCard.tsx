@@ -24,7 +24,7 @@ export const ProjectMapPreviewCard: React.FC<ProjectMapPreviewCardProps> = ({
 }) => {
   const previewMapContainerRef = useRef<HTMLDivElement>(null)
   const previewMapInstanceRef = useRef<maplibregl.Map | null>(null)
-  const hasAlignment = project.length_km > 0
+  const hasAlignment = (project.length_km != null && project.length_km > 0)
 
   useEffect(() => {
     if (!previewMapContainerRef.current || !hasAlignment) return

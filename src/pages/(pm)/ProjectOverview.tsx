@@ -89,7 +89,7 @@ export const ProjectOverview: React.FC = () => {
 
         const mainLen = mainlineCoords.length >= 2
           ? calculateCoordsLengthKm(mainlineCoords)
-          : (data.id === 'prj-ql1a-02' ? data.length_km : 0)
+          : 0
 
         const branchLen = branchesList.reduce((sum: number, b: any) => {
           const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0

@@ -122,7 +122,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 </div>
 
                 {/* PM Info Block (BR-01) */}
-                {prj.is_assigned ? (
+                {prj.pm_user_id ? (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {prj.pm_avatar ? (
@@ -150,8 +150,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon name="warning" size={16} className="text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
+                        <span className="text-xs text-[#92400E] font-bold">Chưa có dữ liệu PM chính từ API</span>
+                        <span className="text-[10px] text-[#B45309] truncate">Đọc lại phân công từ máy chủ</span>
                       </div>
                     </div>
                   </div>
@@ -187,7 +187,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                           ? 'bg-slate-300'
                           : 'bg-brand-gold'
                       }`}
-                      style={{ width: `${prj.warranty_data_missing ? 'Chưa có ngày bảo hành từ API' : `${prj.warranty_passed_percent}%`}` }}
+                      style={{ width: !prj.warranty_data_missing && Number.isFinite(prj.warranty_passed_percent) ? `${prj.warranty_passed_percent}%` : '0%' }}
                     ></div>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Chiều dài</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km} km</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km == null ? 'Chưa có dữ liệu từ API' : `${prj.length_km} km`}</span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Lỗi mở</span>

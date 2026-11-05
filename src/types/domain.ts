@@ -641,10 +641,10 @@ export interface HubProject {
   name: string
   region: string
   location_detail: string
-  start_km: number
-  end_km: number
+  start_km?: number
+  end_km?: number
   stationing_text: string
-  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED' | 'CLOSED'
+  status: 'ACTIVE' | 'NEAR_EXPIRY' | 'PENDING_ALIGNMENT' | 'RESTRICTED' | 'CLOSED' | 'UNKNOWN'
   status_label: string
   status_color: string
   pm_name: string
@@ -655,7 +655,7 @@ export interface HubProject {
   warranty_data_missing?: boolean
   warranty_passed_percent: number
   days_remaining: number
-  length_km: number
+  length_km?: number
   open_defects: number
   repair_packages: number
   stats_error?: string

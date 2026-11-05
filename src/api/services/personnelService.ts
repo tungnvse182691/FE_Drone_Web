@@ -443,7 +443,12 @@ export const personnelService = {
       sessionStorage.removeItem(journalKey)
       return member
     } catch (error: any) {
-      if (!command.receipt && error.response?.status >= 400 && error.response.status < 500 && error.response.data?.code !== 'duplicate_request') sessionStorage.removeItem(journalKey)
+      const status = error.response?.status, code = error.response?.data?.code
+      const knownRejection = (status === 400 && code === 'validation_error') ||
+        (status === 403 && code === 'access_forbidden') ||
+        (status === 404 && ['project_not_found', 'identity_user_not_found'].includes(code)) ||
+        (status === 409 && ['duplicate_request', 'idempotency_key_reused'].includes(code))
+      if (!command.receipt && knownRejection) sessionStorage.removeItem(journalKey)
       throw error
     } finally { memberWrites.delete(journalKey) }
 

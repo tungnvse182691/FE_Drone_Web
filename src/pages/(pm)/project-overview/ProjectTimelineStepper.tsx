@@ -15,7 +15,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   isSupervisor = false,
   onNavigate
 }) => {
-  const isAlignmentDone = project.length_km > 0
+  const isAlignmentDone = (project.length_km != null && project.length_km > 0)
   const isClosed = project.status === 'CLOSED'
   const isSuspended = project.status === 'RESTRICTED'
   const isOperating = isAlignmentDone && !isClosed && !isSuspended

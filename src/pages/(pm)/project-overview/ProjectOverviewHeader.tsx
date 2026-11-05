@@ -98,7 +98,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
 
             {/* Chi tiết Tuyến chính & Tuyến phụ Badge */}
             <div className="flex items-center gap-1 font-mono text-[11px] bg-amber-50/90 text-amber-950 border border-amber-200/90 px-2 py-0.5 rounded shadow-2xs">
-              <span className="font-semibold">Trục chính: {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : (project.length_km > 0 ? `${project.length_km}km` : '0km')}</span>
+              <span className="font-semibold">Trục chính: {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : ((project.length_km != null && project.length_km > 0) ? `${project.length_km}km` : 'Chưa có dữ liệu từ API')}</span>
               {branchesCount > 0 ? (
                 <span className="text-amber-800 font-bold">
                   • {branchesCount} tuyến phụ ({branchesLengthKm}km)
