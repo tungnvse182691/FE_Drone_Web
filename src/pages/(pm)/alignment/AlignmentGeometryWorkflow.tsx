@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { apiClient } from '../../../api/client'
 import { alignmentService, type CrsProfileView, type GeometryDraftView, type GeometryPreview, type RoadGeometryVersionView } from '../../../api/services/alignmentService'
 import { useAuthStore } from '../../../store/authStore'
@@ -11,7 +11,7 @@ type Context = Awaited<ReturnType<typeof alignmentService.readProjectContext>>
 type Readiness = Awaited<ReturnType<typeof alignmentService.readDraftReadiness>>
 const errorText = (error: any) => `${error.response?.status || ''} ${error.response?.data?.code || error.message || 'Không tải được dữ liệu'}`.trim()
 
-export const AlignmentGeometryWorkflow: React.FC = () => {
+export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded = false } = {}) => {
   const { id } = useParams()
   const [query, setQuery] = useSearchParams()
   const projectId = id || query.get('projectId') || ''
@@ -176,6 +176,34 @@ export const AlignmentGeometryWorkflow: React.FC = () => {
     'Chưa tích hợp handler confirm với current version/pin, lý do và ngày hiệu lực được xác minh; không gửi lệnh ghi.',
   ]
   const selectClass = 'border rounded p-2 w-full text-sm'
+
+  if (embedded) {
+    const coordinates = confirmed?.metricCenterline?.coordinates
+    const points = coordinates?.filter(point => point.length >= 2 && point.every(Number.isFinite)) || []
+    const validShape = confirmed?.metricCenterline?.type === 'LineString' && points.length >= 2 && points.length === coordinates?.length
+    const x = points.map(point => point[0]), y = points.map(point => point[1])
+    const minX = Math.min(...x), minY = Math.min(...y)
+    const span = Math.max(Math.max(...x) - minX, Math.max(...y) - minY) || 1
+    return <section className="bg-white border border-slate-200 rounded-[20px] p-5 space-y-4 min-w-0">
+      <h2 className="font-bold text-slate-900">Hồ sơ tuyến đường</h2>
+      {(busy || projectsLoading) && <p role="status">Đang tải hồ sơ tuyến...</p>}
+      {(projectsError || errors.length > 0) && <p role="alert" className="text-sm text-rose-700">Không thể tải đầy đủ hồ sơ tuyến. Vui lòng thử lại hoặc mở quản lý tuyến để đối chiếu.</p>}
+      <label className="block text-sm">Hệ quy chiếu<select aria-label="Hệ quy chiếu tuyến" value={profileId} onChange={event => setProfileId(event.target.value)} className={selectClass}><option value="">Chọn hồ sơ hệ quy chiếu</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.code} / {profile.revision}</option>)}</select></label>
+      <label className="block text-sm">Tuyến đã ghi nhận<select aria-label="Tuyến đã ghi nhận" value={roadId} onChange={event => { invalidateGeometry(); setRoadId(event.target.value) }} className={selectClass}><option value="">Chọn tuyến</option>{context?.roadSections.map(road => <option key={road.roadSectionId} value={road.roadSectionId}>{road.name || road.code}</option>)}</select></label>
+      <button type="button" disabled={!roadId || geometryLoading} onClick={readGeometry} className="bg-[#C9A227] hover:bg-[#B38E1E] text-white rounded-lg px-3 py-2 text-sm disabled:opacity-50">Đọc tuyến đã xác nhận</button>
+      {geometryLoading && <p role="status">Đang đọc tuyến...</p>}
+      {geometryError && <p role="alert">Không thể đọc tuyến đã chọn. Vui lòng thử lại.</p>}
+      {confirmed && <p className="text-sm">Tuyến đã xác nhận{Number.isFinite(confirmed.lengthMeters) ? ` · ${confirmed.lengthMeters} m` : ''}</p>}
+      {confirmed?.sampleOnly && <p className="text-sm">Dữ liệu minh họa, chưa xác nhận độ chính xác khảo sát.</p>}
+      {confirmed?.approvedAt && <p className="text-sm">Ngày xác nhận: {new Date(confirmed.approvedAt).toLocaleString('vi-VN')}</p>}
+      {validShape && <svg role="img" aria-label="Xem trước tuyến đã xác nhận từ máy chủ" viewBox="0 0 600 240" className="w-full border rounded-lg"><polyline fill="none" stroke="#2D3748" strokeWidth="3" points={points.map(point => `${10 + (point[0] - minX) / span * 580},${230 - (point[1] - minY) / span * 220}`).join(' ')} /></svg>}
+      {draft && <p className="text-sm">Bản nháp: {draft.data.status === 'CONFIRMED' ? 'Đã xác nhận' : draft.data.status === 'DRAFT' ? 'Bản nháp' : 'Chưa cập nhật'}</p>}
+      {readiness && <p className="text-sm">{readiness.ready ? 'Hồ sơ đủ điều kiện kiểm tra xác nhận.' : 'Hồ sơ cần bổ sung trước khi xác nhận.'}</p>}
+      <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { invalidateGeometry(); setProjectsReload(n => n + 1); setReload(n => n + 1) }} className="border rounded-lg px-3 py-2 text-sm">Tải lại hồ sơ tuyến</button>
+        <Link to={`${supervisor ? '/sup' : '/pm'}/projects/${projectId}/alignment?${query.toString()}`} className="border border-[#C9A227] text-[#8C6D1F] rounded-lg px-3 py-2 text-sm">Quản lý tuyến và bản nháp</Link>
+      </div>
+    </section>
+  }
 
   return <div className="space-y-4 max-w-5xl mx-auto">
     <h1 className="text-xl font-bold">Tim tuyến và geometry đã xác nhận</h1>

@@ -120,6 +120,7 @@ export interface RoadGeometryVersionView {
   metadataStatus?: string | null
   approvedBy?: string | null
   approvedAt?: string | null
+  sampleOnly?: boolean
 }
 
 export interface SegmentGeometryView {

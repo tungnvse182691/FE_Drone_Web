@@ -501,6 +501,12 @@ useAuthStore.subscribe((state, previous) => {
   if (state.authEpoch !== previous.authEpoch || state.user?.id !== previous.user?.id) projectCreateCommand = null
 })
 
+export interface ProjectClosureView {
+  projectId: string; operationalClosure: string; operationalClosureEligibility: string;
+  obligationInventory: string; missingReasons: string[]; outstandingMandatoryObligationIds: string[]; version: string
+}
+const closureWrites = new Set<string>()
+
 export const projectService = {
   pendingProjectCreate() {
     const state = useAuthStore.getState()
@@ -870,144 +876,40 @@ export const projectService = {
    * Payload: LD06LifecycleInputDto { reason: string }
    * Header: Idempotency-Key, If-Match
    */
-  async closeProject(
-    projectId: string,
-    payload: { reason: string }
-  ): Promise<HubProject> {
-    const reason = payload.reason?.trim()
-    if (!reason || reason.length < 10) {
-      throw new Error('Lý do / kết luận đóng dự án (reason) là bắt buộc (tối thiểu 10 ký tự).')
-    }
+  async readProjectClosure(projectId: string): Promise<{ data: ProjectClosureView; etag: string }> {
+    const response = await apiClient.get<ProjectClosureView>(`/projects/${projectId}/lifecycle`)
+    const etag = response.headers?.etag || `"${response.data.version}"`
+    if (response.data.projectId !== projectId || !/^"[0-9a-f]{64}"$/.test(etag)) throw new Error('Không xác nhận được phiên bản hồ sơ dự án.')
+    return { data: response.data, etag }
+  },
 
-    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
-    if (!isMock) {
-      const idempotencyKey =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `close-${Date.now()}`
-
-      // Kiểm tra ETag từ lifecycle máy chủ để đáp ứng đúng định dạng regex của OpenAPI
-      try {
-        const lfRes = await apiClient.get(`/projects/${projectId}/lifecycle`)
-        const rawEtag = lfRes.headers['etag'] || lfRes.headers['ETag']
-        let ifMatchTag: string | null = null
-
-        if (rawEtag && /^"[0-9a-f]{64}"$/.test(rawEtag)) {
-          ifMatchTag = rawEtag
-        } else if (lfRes.data?.version && /^[0-9a-f]{64}$/.test(lfRes.data.version)) {
-          ifMatchTag = `"${lfRes.data.version}"`
-        }
-
-        if (ifMatchTag) {
-          console.log(`🚀 [CANDIDATE3 BE] Gửi yêu cầu đóng dự án [${projectId}] qua lifecycle operational-closures...`)
-          await apiClient.post(
-            `/projects/${projectId}/lifecycle/operational-closures`,
-            { reason },
-            {
-              headers: {
-                'Idempotency-Key': idempotencyKey,
-                'If-Match': ifMatchTag
-              }
-            }
-          )
-          console.log(`✅ [CANDIDATE3 BE] Đóng dự án [${projectId}] thành công trên máy chủ.`)
-        } else {
-          console.info('ℹ️ Dự án chưa có mã băm ETag lifecycle 64-hex, áp dụng đóng bảo hành trực tiếp.')
-        }
-      } catch (err: any) {
-        console.info('ℹ️ Dự án chưa khởi tạo vòng đời trên backend, tiếp tục quy trình đóng bảo hành:', err?.message)
-      }
-    }
-
-    // Giả lập độ trễ mạng nếu ở chế độ mock
-    if (isMock) {
-      await new Promise((resolve) => setTimeout(resolve, 300))
-    }
-
-    const targetIndex = projectStore.findIndex((p) => p.id === projectId || p.code === projectId)
-    const currentProject = targetIndex !== -1 ? projectStore[targetIndex] : null
-
-    if (currentProject && currentProject.status === 'CLOSED') {
-      throw new Error(`Dự án [${currentProject.code}] đã được đóng bảo hành trước đó.`)
-    }
-
-    if (currentProject && currentProject.open_defects > 0) {
-      throw new Error(`Không thể đóng dự án [${currentProject.code}]. Dự án vẫn còn ${currentProject.open_defects} điểm hư hỏng chưa được nghiệm thu đạt chuẩn.`)
-    }
-
-    // Tính hạn lưu trữ tối thiểu hết bảo hành + 5 năm
-    const now = new Date()
-    const retentionDate = new Date(now)
-    retentionDate.setFullYear(retentionDate.getFullYear() + 5)
-    const retentionFormatted = `${String(retentionDate.getDate()).padStart(2, '0')}/${String(retentionDate.getMonth() + 1).padStart(2, '0')}/${retentionDate.getFullYear()}`
-    const retentionUntilStr = `${retentionFormatted} (Tối thiểu 5 năm)`
-
-    // Cập nhật trạng thái dự án sang CLOSED
-    const closedProject: HubProject = currentProject
-      ? {
-          ...currentProject,
-          status: 'CLOSED',
-          status_label: 'Đã đóng hồ sơ',
-          status_color: '#475569',
-          days_remaining: 0,
-          warranty_passed_percent: 100,
-          open_defects: 0,
-          closed_at: now.toISOString(),
-          closed_reason: reason,
-          closed_by: 'Giám sát viên (Supervisor)',
-          retention_until: retentionUntilStr
-        }
-      : {
-          id: projectId,
-          code: projectId,
-          name: 'Dự án bảo hành đã đóng',
-          region: '',
-          location_detail: '',
-          start_km: 0,
-          end_km: 0,
-          stationing_text: 'Đã hoàn thành',
-          status: 'CLOSED',
-          status_label: 'Đã đóng hồ sơ',
-          status_color: '#475569',
-          pm_name: '',
-          pm_email: '',
-          pm_role_badge: '',
-          warranty_passed_percent: 100,
-          days_remaining: 0,
-          length_km: 0,
-          open_defects: 0,
-          repair_packages: 0,
-          is_assigned: true,
-          is_restricted_for_pm: false,
-          kml_status: 'Đã lưu trữ',
-          closed_at: now.toISOString(),
-          closed_reason: reason,
-          closed_by: 'Giám sát viên (Supervisor)',
-          retention_until: retentionUntilStr,
-          image_url: ''
-        }
-
-    if (targetIndex !== -1) {
-      projectStore[targetIndex] = closedProject
-    } else {
-      projectStore.push(closedProject)
-    }
-
-    // Ghi nhớ danh sách ID dự án đã đóng vào sessionStorage để duy trì khi F5
+  async closeProject(projectId: string, payload: { reason: string; version?: string }): Promise<ProjectClosureView> {
+    const state = useAuthStore.getState(), actor = state.user, epoch = state.authEpoch
+    if (actor?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được đóng vận hành dự án.')
+    if (!payload.reason.trim() || payload.reason.trim().length > 2000 || !/^"[0-9a-f]{64}"$/.test(payload.version || '')) throw new Error('Thiếu lý do hoặc phiên bản hồ sơ đã đọc.')
+    const key = `rg_project_closure_${actor.id}_${projectId}`
+    const body = { reason: payload.reason.trim(), evidenceFileIds: [] }
+    const fingerprint = JSON.stringify({ body, version: payload.version })
+    const saved = sessionStorage.getItem(key)
+    const command = saved ? JSON.parse(saved) : { key: crypto.randomUUID(), body, version: payload.version, fingerprint }
+    if (command.fingerprint !== fingerprint) throw new Error('Yêu cầu đóng trước chưa được đối chiếu. Không đổi nội dung hoặc phiên bản để gửi lại.')
+    if (closureWrites.has(key)) throw new Error('Đang gửi yêu cầu đóng dự án.')
+    const current = () => { if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor.id) throw new Error('Phiên đã thay đổi; bỏ kết quả cũ.') }
+    closureWrites.add(key)
     try {
-      const closedListStr = sessionStorage.getItem('roadguard_closed_project_ids') || '[]'
-      const closedList: string[] = JSON.parse(closedListStr)
-      if (!closedList.includes(projectId)) closedList.push(projectId)
-      if (closedProject.id && !closedList.includes(closedProject.id)) closedList.push(closedProject.id)
-      if (closedProject.code && !closedList.includes(closedProject.code)) closedList.push(closedProject.code)
-      sessionStorage.setItem('roadguard_closed_project_ids', JSON.stringify(closedList))
-      sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
-    } catch {}
-
-    // Phát sự kiện đồng bộ reactive trên toàn client
-    window.dispatchEvent(new CustomEvent('roadguard_state_change', { detail: { projectId, status: 'CLOSED' } }))
-
-    return JSON.parse(JSON.stringify(closedProject))
+      current(); sessionStorage.setItem(key, JSON.stringify(command))
+      if (!command.receipt) {
+        const response = await apiClient.post(`/projects/${projectId}/lifecycle/operational-closures`, command.body, {
+          headers: { 'Idempotency-Key': command.key, 'If-Match': command.version }, transformRequest: [(data: unknown) => { current(); return JSON.stringify(data) }]
+        })
+        current(); command.receipt = response.data; sessionStorage.setItem(key, JSON.stringify(command))
+      }
+      const fresh = await this.readProjectClosure(projectId)
+      current()
+      if (fresh.data.operationalClosure !== 'CONFIRMED') throw new Error('Chưa xác nhận được kết quả đóng vận hành từ máy chủ. Vui lòng đối chiếu lại.')
+      sessionStorage.removeItem(key)
+      return fresh.data
+    } finally { closureWrites.delete(key) }
   },
 
   /**

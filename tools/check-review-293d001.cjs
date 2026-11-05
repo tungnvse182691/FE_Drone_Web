@@ -757,11 +757,11 @@ function caseLifecycleHarness() {
     }
     const service={readProjectContext:async()=>({projectId:'p',engineeringUtmSrid:32648,roadSections:roads}),fetchCrsProfiles:async()=>[],readConfirmedGeometry:readGeometry,getGeometryDraft:async()=>({data:{id:'draft',status:'DRAFT',version:'v'},etag:'"v"'}),readDraftReadiness:async()=>options.readiness}
     const {AlignmentGeometryWorkflow:Component}=load('src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx',{
-      react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
+      react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
       '../../../api/client':{apiClient:{get:projectGet}},'../../../api/services/alignmentService':{alignmentService:service},
       '../../../store/authStore':{useAuthStore:selector=>selector({user:{id:'pm',role:options.role || roles.PROJECT_MANAGER}})},'./alignmentImportHelpers':{inspectGeoJsonCenterline:()=>({})}
     })
-    const render=()=>{slot=0;view=Component();for(const effect of effects)if(effect?.pending){effect.pending=false;effect.cleanup?.();effect.cleanup=effect.setup()}return view}
+    const render=()=>{slot=0;view=Component({embedded:options.embedded});for(const effect of effects)if(effect?.pending){effect.pending=false;effect.cleanup?.();effect.cleanup=effect.setup()}return view}
     const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}return view}
     const nodes=()=>{const all=[];const visit=x=>{if(!x||typeof x!=='object')return;if(Array.isArray(x)){x.forEach(visit);return}all.push(x);visit(x.props?.children)};visit(view);return all}
     const textOf=x=>typeof x==='string'||typeof x==='number'?String(x):Array.isArray(x)?x.map(textOf).join(''):x?.props?textOf(x.props.children):''
@@ -1315,6 +1315,51 @@ function caseLifecycleHarness() {
       for (const forbidden of ['font-mono', 'từ API', 'raw backend detail', '123456', '654321']) assert.ok(!html.includes(forbidden), forbidden)
       assert.ok(html.includes('text-white')); assert.ok(html.includes('Vào quản lý dự án'))
     }
+  })
+  await test('Supervisor operational closure uses lifecycle hash/K and server readback, never local CLOSED', async () => {
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    const version = 'a'.repeat(64), posts = [], journal = new Map()
+    let timeout = true, readFailure = true
+    const { projectService: service } = load('src/api/services/projectService.ts', {
+      ...createMocks({ post: async (url, body, config) => { posts.push(json({url,body,headers:config.headers}));if(timeout)throw new Error('timeout');return response({projectId:'p',operationalClosure:'CONFIRMED',version}) },
+        get: async () => {if(readFailure)throw failure(503,'read_failed');return {data:{projectId:'p',operationalClosure:'CONFIRMED',version},headers:{etag:`"${version}"`}} } }),
+      __sessionStorage:{getItem:k=>journal.get(k)||null,setItem:(k,v)=>journal.set(k,v),removeItem:k=>journal.delete(k)}
+    })
+    const input={reason:'Supervisor reason',version:`"${version}"`}
+    await assert.rejects(service.closeProject('p',input),/timeout/)
+    await assert.rejects(service.closeProject('p',{...input,reason:'changed'}),/Không đổi/)
+    timeout=false
+    await assert.rejects(service.closeProject('p',input),e=>e.response.status===503)
+    readFailure=false
+    const result=await service.closeProject('p',input)
+    assert.equal(result.operationalClosure,'CONFIRMED');assert.equal(result.status,undefined)
+    assert.equal(posts.length,2);assert.deepEqual(posts[0],posts[1]);assert.deepEqual(posts[0].body,{reason:'Supervisor reason',evidenceFileIds:[]})
+    assert.equal(posts[0].headers['If-Match'],`"${version}"`);assert.equal(journal.size,0)
+    actor={id:'pm',role:roles.PROJECT_MANAGER}
+    await assert.rejects(service.closeProject('p',input),/Giám sát/)
+    assert.equal(posts.length,2)
+  })
+  await test('closure read/error/conflict never synthesize missing lifecycle or success', async () => {
+    actor={id:'sup',role:roles.SUPERVISOR}
+    for(const status of [403,409,412,428,500]){
+      let posts=0
+      const {projectService:service}=load('src/api/services/projectService.ts',createMocks({post:async()=>{posts++;throw failure(status,'original_code')}}))
+      await assert.rejects(service.closeProject('p',{reason:'reason',version:'"'+ 'a'.repeat(64)+'"'}),e=>e.response.status===status)
+      assert.equal(posts,1)
+    }
+    const {projectService:invalid}=load('src/api/services/projectService.ts',createMocks({get:async()=>response({projectId:'p',version:'rowversion'})}))
+    await assert.rejects(invalid.readProjectClosure('p'),/phiên bản/)
+    actor={id:'pm',role:roles.PROJECT_MANAGER}
+  })
+  await test('embedded geometry preserves server reader and dedicated draft/import entry without local geometry', async () => {
+    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>({...geometryFact('a','va'),metricCenterline:{type:'LineString',coordinates:[[100,200],[200,300]]},lengthMeters:141.4}),{embedded:true})
+    await h.flush()
+    const road=h.nodes().find(n=>n.props?.['aria-label']==='Tuyến đã ghi nhận')
+    road.props.onChange({target:{value:'a'}});h.render()
+    await h.click('Đọc tuyến đã xác nhận');await h.flush()
+    assert.ok(h.text().includes('141.4 m'));assert.ok(h.nodes().some(n=>n.type==='svg'))
+    assert.ok(h.nodes().some(n=>String(n.props?.to||'').includes('/projects/p/alignment')))
+    h.unmount()
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

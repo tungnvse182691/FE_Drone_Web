@@ -13,7 +13,7 @@ interface ProjectOverviewHeaderProps {
   branchesCount?: number
 }
 
-export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ project, basePath, isSupervisor, onNavigate }) =>
+export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ project, basePath, isSupervisor, onNavigate, onCloseProject }) =>
   <header className="bg-white border border-slate-200 rounded-[20px] p-5 space-y-4">
     <button type="button" onClick={() => onNavigate(`${basePath}/projects`)} className="text-sm text-slate-600 hover:text-[#8C6D1F] inline-flex gap-1 items-center"><Icon name="arrow_back" size={16} />Dự án</button>
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -24,4 +24,6 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
     <button type="button" onClick={() => onNavigate(`${basePath}/proposals`)} className="w-full sm:w-auto max-w-full inline-flex flex-wrap justify-center items-center gap-2 bg-[#C9A227] hover:bg-[#B38E1E] focus-visible:ring-2 focus-visible:ring-[#C9A227] text-white rounded-lg px-4 py-2 text-sm font-semibold">
       {isSupervisor ? 'Xem các đề xuất' : 'Xem các đề xuất đã trình'}<Icon name="arrow_forward" size={16} />
     </button>
+    <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="block w-full sm:w-auto border border-[#C9A227] text-[#8C6D1F] rounded-lg px-4 py-2 text-sm">Quản lý geometry tuyến</button>
+    {isSupervisor && onCloseProject && <button type="button" onClick={onCloseProject} className="block w-full sm:w-auto border border-[#C9A227] text-[#8C6D1F] rounded-lg px-4 py-2 text-sm">Đóng vận hành dự án</button>}
   </header>

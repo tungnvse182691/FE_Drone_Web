@@ -8,7 +8,7 @@ import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { ProjectMember } from './project-overview/types'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
-import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
+import { AlignmentGeometryWorkflow } from './alignment/AlignmentGeometryWorkflow'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 
@@ -32,22 +32,19 @@ export const ProjectOverview: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
 
-  // Chi tiết phân định Tuyến chính & Tuyến phụ
-  const [activeAlignmentTab, setActiveAlignmentTab] = useState<'MAINLINE' | 'BRANCHES'>('MAINLINE')
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3800)
   }
 
-  // Đóng dự án khi hết hạn bảo hành (BƯỚC SUP-07: DA12, QT13, BC10 - Duy nhất Supervisor có quyền)
-  const handleCloseProjectConfirm = async (reason: string) => {
+  // Đóng vận hành theo lifecycle server; không suy từ thời hạn bảo hành.
+  const handleCloseProjectConfirm = async (reason: string, version: string) => {
     if (!project) return
     try {
-      const closed = await projectService.closeProject(project.id, { reason })
-      setProject(closed)
-      showToast(`Đã đóng thành công dự án [${closed.code}] và chuyển sang lưu trữ hồ sơ!`)
+      await projectService.closeProject(project.id, { reason, version })
+      await loadProjectData()
+      showToast('Đã ghi nhận đóng vận hành dự án.')
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
     }
   }
@@ -159,15 +156,7 @@ export const ProjectOverview: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: 8 COLS */}
         <div className="min-w-0 lg:col-span-8 space-y-6">
-          <ProjectSegmentsTable
-            projectId={project.id}
-            segments={[]}
-            basePath={basePath}
-            onNavigate={navigate}
-            onViewSegment={(code) => showToast(`Xem chi tiết phân đoạn ${code}`)}
-            activeTab={activeAlignmentTab}
-            onTabChange={setActiveAlignmentTab}
-          />
+          <AlignmentGeometryWorkflow embedded />
         </div>
 
         {/* RIGHT COLUMN: 4 COLS */}

@@ -204,38 +204,21 @@ export const ProjectList: React.FC = () => {
   // Modal Đóng dự án khi hết hạn bảo hành
   const [closingProject, setClosingProject] = useState<HubProject | null>(null)
 
-  const handleCloseProjectSubmit = async (reason: string) => {
+  const handleCloseProjectSubmit = async (reason: string, version: string) => {
     if (!closingProject) return
     try {
-      const closed = await projectService.closeProject(closingProject.id, { reason })
+      await projectService.closeProject(closingProject.id, { reason, version })
       const refreshed = await projectService.fetchProjects()
       setProjects(refreshed)
-      showToast(`Đã đóng thành công dự án [${closed.code}] và chuyển sang lưu trữ hồ sơ 5 năm!`)
+      showToast('Đã ghi nhận đóng vận hành dự án.')
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
     }
   }
 
   // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
-  const scopedProjects = useMemo(() => {
-    if (isSupervisor) return projects
-    return projects.filter((prj) => {
-      // Backend Candidate3 đã tự động lọc quyền theo user trên server
-      if (prj.pm_email === user?.email || prj.pm_name === user?.full_name || prj.id.length === 36) {
-        return true
-      }
-      const isAssigned =
-        prj.pm_name === 'Đỗ Quốc Hoàng' ||
-        prj.id === 'prj-ql1a-02' ||
-        prj.id === 'prj-lstl-05' ||
-        prj.id === 'prj-ql1a-p1'
+  const scopedProjects = projects
 
-      return isAssigned && !prj.is_restricted_for_pm
-    })
-  }, [projects, isSupervisor, user])
-
-  // Filter projects logic
   const filteredProjects = useMemo(() => {
     return scopedProjects.filter((prj) => {
       // Filter tab
