@@ -121,7 +121,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
           <div className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-900 text-sm">{project.name}</span>
-              <span className="font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[11px] font-bold">
+              <span className=" px-2 py-0.5 rounded bg-slate-200 text-slate-700 text-[11px] font-bold">
                 {project.code}
               </span>
             </div>
@@ -129,7 +129,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
             <div className="grid grid-cols-2 gap-2 pt-1 text-slate-600 text-[11px]">
               <div>
                 <span className="text-slate-400">Lý trình: </span>
-                <span className="font-mono font-medium text-slate-800">{project.stationing_text}</span>
+                <span className=" font-medium text-slate-800">{project.stationing_text}</span>
               </div>
               <div>
                 <span className="text-slate-400">PM phụ trách: </span>
@@ -137,7 +137,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-400">Tiến độ bảo hành: </span>
-                <span className={`font-mono font-medium ${isEarlyClose ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
+                <span className={` font-medium ${isEarlyClose ? 'text-amber-700 font-bold' : 'text-slate-800'}`}>
                   {project.warranty_passed_percent}%
                 </span>
                 <span className="text-slate-400">
@@ -146,7 +146,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-400">Hư hỏng đang mở: </span>
-                <span className={`font-mono font-bold ${hasOpenDefects ? 'text-rose-600' : 'text-emerald-700'}`}>
+                <span className={` font-bold ${hasOpenDefects ? 'text-rose-600' : 'text-emerald-700'}`}>
                   {project.open_defects} điểm {hasOpenDefects ? '(Chưa đạt điều kiện)' : '(Đạt chuẩn)'}
                 </span>
               </div>

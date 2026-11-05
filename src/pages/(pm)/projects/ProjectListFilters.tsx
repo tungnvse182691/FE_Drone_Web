@@ -43,7 +43,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           }`}
         >
           <span>Tất cả</span>
-          <span className="px-1.5 py-0.2 rounded bg-black/10 text-[10px] font-mono">{scopedCount}</span>
+          <span className="px-1.5 py-0.2 rounded bg-black/10 text-[10px] ">{scopedCount}</span>
         </button>
 
         <button
@@ -51,41 +51,13 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           onClick={() => onSelectFilterTab('ACTIVE')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'ACTIVE'
-              ? 'bg-[#1B5E20] text-white shadow-2xs'
+              ? 'bg-[#C9A227] text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-[#1B5E20]"></span>
-          <span>Đang bảo hành</span>
-          <span className="text-[11px] font-mono text-slate-500">{activeCount}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectFilterTab('NEAR_EXPIRY')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-            filterTab === 'NEAR_EXPIRY'
-              ? 'bg-rose-600 text-white shadow-2xs'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-          <span>Sắp hết hạn</span>
-          <span className="text-[11px] font-mono text-slate-500">{nearExpiryCount}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onSelectFilterTab('PENDING_ALIGNMENT')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
-            filterTab === 'PENDING_ALIGNMENT'
-              ? 'bg-[#D97706] text-white shadow-2xs'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-          }`}
-        >
-          <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
-          <span>Chờ duyệt tuyến</span>
-          <span className="text-[11px] font-mono text-slate-500">{pendingAlignmentCount}</span>
+          <span>Đang hoạt động</span>
+          <span className="text-[11px]  text-slate-500">{activeCount}</span>
         </button>
 
         <button
@@ -93,13 +65,13 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           onClick={() => onSelectFilterTab('CLOSED')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'CLOSED'
-              ? 'bg-slate-800 text-white shadow-2xs'
+              ? 'bg-[#C9A227] text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
           <span className="w-2 h-2 rounded-full bg-slate-500"></span>
           <span>Đã đóng hồ sơ</span>
-          <span className="text-[11px] font-mono text-slate-500">{closedCount}</span>
+          <span className="text-[11px]  text-slate-500">{closedCount}</span>
         </button>
       </div>
 

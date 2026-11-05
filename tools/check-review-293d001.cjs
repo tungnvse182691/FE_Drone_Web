@@ -1228,10 +1228,10 @@ function caseLifecycleHarness() {
     const { ProjectGridView } = load('src/pages/(pm)/projects/ProjectGridView.tsx', mocks)
     const render = item => renderToStaticMarkup(React.createElement(ProjectGridView, { filteredProjects: [item], isSupervisor: true }))
     const missing = render(project)
-    assert.ok(missing.includes('width:0%')); assert.ok(!missing.includes('width:Chưa')); assert.ok(!missing.includes('>0 km'))
-    assert.ok(missing.includes('Chưa có dữ liệu từ API')); assert.ok(!missing.includes('PM Chính'))
+    assert.ok(!missing.includes('width:Chưa')); assert.ok(!missing.includes('>0 km'))
+    assert.ok(missing.includes('Chưa cập nhật')); assert.ok(!missing.includes('PM Chính'))
     const known = render({ ...project, warranty_data_missing: false, warranty_passed_percent: 37, length_km: 0, is_assigned: true, pm_user_id: 'real-pm', pm_role_badge: 'PM Chính' })
-    assert.ok(known.includes('width:37%')); assert.ok(known.includes('PM Chính')); assert.ok(known.includes('0 km'))
+    assert.ok(!known.includes('width:Chưa')); assert.ok(known.includes('PM chính')); assert.ok(!known.includes('0 km'))
   })
   await test('member uncertain failures retain journal; only documented rejection clears it', async () => {
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
@@ -1283,9 +1283,9 @@ function caseLifecycleHarness() {
       }
     }
   })
-  await test('member UI translates HTTP errors and does not render technical contact/unsupported Supervisor action silently', async () => {
+  await test('member UI translates HTTP errors and hides technical contact and Supervisor add action/modal', async () => {
     const module = load('src/api/services/personnelService.ts', { '../client': { apiClient: {} } })
-    for (const [status, expected] of [[400, 'Thông tin nhân sự chưa hợp lệ.'], [401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'], [403, 'Bạn không có quyền quản lý thành viên của dự án này.'], [404, 'Không tìm thấy dự án hoặc nhân sự.'], [409, 'Membership đã thay đổi hoặc nhân sự đã được thêm vào dự án.'], [412, 'Dữ liệu đã thay đổi. Vui lòng tải lại rồi thử lại.'], [428, 'Thiếu thông tin phiên bản để thực hiện thao tác.'], [500, 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.']]) {
+    for (const [status, expected] of [[400, 'Thông tin nhân sự chưa hợp lệ.'], [401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'], [403, 'Bạn không có quyền quản lý thành viên của dự án này.'], [404, 'Không tìm thấy dự án hoặc nhân sự.'], [409, 'Nhân sự đã được thêm vào dự án hoặc membership đã thay đổi.'], [412, 'Dữ liệu đã thay đổi. Vui lòng tải lại rồi thử lại.'], [428, 'Thiếu thông tin phiên bản để thực hiện thao tác.'], [500, 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.']]) {
       assert.equal(module.projectMemberErrorMessage({ response: { status, data: { detail: 'raw english detail', correlationId: 'id' } } }), expected)
     }
     assert.equal(module.projectMemberErrorMessage(new Error('Network Error')), 'Không thể kết nối đến hệ thống.')
@@ -1293,11 +1293,28 @@ function caseLifecycleHarness() {
     const store = selector => selector({ user: { role: roles.SUPERVISOR } })
     const { ProjectPersonnelCard } = load('src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx', {
       react: { __esModule: true, default: React, ...React }, '../../../store/authStore': { useAuthStore: store },
-      '../../../components/ui/Icon': { Icon: () => null }, './AddProjectMemberModal': { AddProjectMemberModal: () => null }
+      '../../../components/ui/Icon': { Icon: () => null }, './AddProjectMemberModal': { AddProjectMemberModal: () => React.createElement('div', { 'data-modal-rendered': 'yes' }) }
     })
     const html = renderToStaticMarkup(React.createElement(ProjectPersonnelCard, { project: { id: 'p', name: 'P' }, members: [{ id: 'm', name: 'Server name', role_title: 'PM', contact: 'API thành viên không cung cấp thông tin liên hệ', membership_version: 'secret-technical-version' }] }))
-    assert.ok(html.includes('Thêm nhân sự')); assert.ok(!html.includes('disabled'))
+    assert.ok(!html.includes('Thêm nhân sự')); assert.ok(!html.includes('data-modal-rendered'))
     assert.ok(!html.includes('API thành viên')); assert.ok(!html.includes('secret-technical-version'))
+  })
+  await test('PM keeps member action while project views hide unsupported metrics and technical placeholders', async () => {
+    const React = require('react'), { renderToStaticMarkup } = require('react-dom/server')
+    const mocks = { react: { __esModule: true, default: React, ...React }, '../../../components/ui/Icon': { Icon: () => null } }
+    const { ProjectPersonnelCard } = load('src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx', {
+      ...mocks, '../../../store/authStore': { useAuthStore: selector => selector({ user: { role: roles.PROJECT_MANAGER } }) },
+      './AddProjectMemberModal': { AddProjectMemberModal: () => React.createElement('div', { 'data-pm-modal': 'yes' }) }
+    })
+    const pm = renderToStaticMarkup(React.createElement(ProjectPersonnelCard, { project: { id: 'p', name: 'P' }, members: [] }))
+    assert.ok(pm.includes('Thêm nhân sự')); assert.ok(pm.includes('data-pm-modal')); assert.ok(pm.includes('text-white'))
+    const project = { id: 'p', code: 'CODE', name: 'Server', status_label: 'Đang hoạt động', open_defects: 123456, repair_packages: 654321, length_km: 123456, stats_error: 'raw backend detail' }
+    for (const [name, props] of [['ProjectGridView', { filteredProjects: [project] }], ['ProjectTableView', { filteredProjects: [project], totalProjectsCount: 1 }]]) {
+      const component = load(`src/pages/(pm)/projects/${name}.tsx`, mocks)[name]
+      const html = renderToStaticMarkup(React.createElement(component, props))
+      for (const forbidden of ['font-mono', 'từ API', 'raw backend detail', '123456', '654321']) assert.ok(!html.includes(forbidden), forbidden)
+      assert.ok(html.includes('text-white')); assert.ok(html.includes('Vào quản lý dự án'))
+    }
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

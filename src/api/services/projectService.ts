@@ -376,7 +376,7 @@ function mapBackendProjectToHub(
 ): HubProject {
   const statusStr = (item.status || 'UNKNOWN').toUpperCase()
   let status: HubProject['status'] = 'UNKNOWN'
-  let statusLabel = item.status || 'Chưa có trạng thái từ API'
+  let statusLabel = item.status || 'Chưa cập nhật'
   let statusColor = '#D97706'
 
   if (statusStr === 'CLOSED') {
@@ -404,7 +404,7 @@ function mapBackendProjectToHub(
   }
 
   if (!pmName) {
-    pmName = pmUserId ? 'Chưa có tên PM từ API' : 'Chưa có dữ liệu PM chính từ API'
+    pmName = pmUserId ? 'Chưa cập nhật' : 'Chưa cập nhật'
   }
 
 
@@ -438,8 +438,8 @@ function mapBackendProjectToHub(
 
   const project: HubProject = {
     id: projId,
-    code: item.projectCode || item.code || 'Chưa có mã từ API',
-    name: item.name || 'Dự án bảo hành RoadGuard',
+    code: item.projectCode || item.code || 'Chưa cập nhật',
+    name: item.name || 'Chưa cập nhật',
     region,
     location_detail,
     start_km: undefined,

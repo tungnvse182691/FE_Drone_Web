@@ -48,8 +48,8 @@ export const ProjectList: React.FC = () => {
       if (current()) setProjects(data)
     } catch (err: any) {
       if (!current()) return
-      console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
-      const msg = err?.message || 'Không thể tải danh sách dự án từ máy chủ Backend.'
+      console.warn('[Projects]', { status: err?.response?.status, code: err?.response?.data?.code, correlationId: err?.response?.data?.correlationId })
+      const msg = 'Không thể tải danh sách dự án. Vui lòng thử lại.'
       setLoadError(msg)
       setProjects([]) // Dứt khoát không nạp mock data khi API thật bị lỗi!
     } finally {
@@ -259,7 +259,7 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.some(p => p.length_km == null) ? 'Chưa có dữ liệu từ API' : scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1), [scopedProjects])
+  const totalLength = useMemo(() => scopedProjects.some(p => p.length_km == null) ? 'Chưa cập nhật' : scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1), [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
   const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
@@ -316,11 +316,9 @@ export const ProjectList: React.FC = () => {
               <Icon name="error" size={20} />
             </div>
             <div>
-              <h4 className="font-semibold text-sm text-red-900">Lỗi kết nối máy chủ API Backend</h4>
-              <p className="text-xs text-red-700 mt-0.5 font-mono">{loadError}</p>
-              <p className="text-[11px] text-red-500 mt-1">
-                RoadGuard áp dụng kỷ luật chống bịa: Khi máy chủ báo lỗi, hệ thống hiển thị trực tiếp lỗi và dứt khoát không trả về dữ liệu giả (mock data).
-              </p>
+              <h4 className="font-semibold text-sm text-red-900">Không tải được danh sách dự án</h4>
+              <p className="text-xs text-red-700 mt-0.5 ">{loadError}</p>
+
             </div>
           </div>
           <button

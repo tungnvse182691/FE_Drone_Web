@@ -136,7 +136,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 value={projectCode}
                 onChange={handleCodeChange}
                 placeholder="VD: PRJ-QL1A-03"
-                className={`w-full px-3 py-2 border font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full px-3 py-2 border  font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                   errorMessage && errorMessage.toLowerCase().includes('mã dự án')
                     ? 'border-rose-400 bg-rose-50/20 text-rose-900 focus:ring-rose-400'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-brand-gold'
@@ -244,7 +244,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-2">
                 <Icon name="error" size={16} className="shrink-0 text-rose-600" />
                 <span>
-                  <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="font-mono">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="font-mono">{startDate}</code>).
+                  <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="">{startDate}</code>).
                 </span>
               </div>
             )}

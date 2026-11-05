@@ -210,7 +210,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                             isSelected
-                              ? 'bg-[#C9A227] text-[#1A1D20]'
+                              ? 'bg-[#C9A227] text-white'
                               : 'bg-slate-200 text-slate-700'
                           }`}
                         >
@@ -229,7 +229,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${
                           isSelected
-                            ? 'border-[#C9A227] bg-[#C9A227] text-[#1A1D20]'
+                            ? 'border-[#C9A227] bg-[#C9A227] text-white'
                             : 'border-slate-300 bg-white'
                         }`}
                       >
@@ -264,7 +264,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
               disabled={!selectedUserId || isSubmitting}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
                 selectedUserId && !isSubmitting
-                  ? 'bg-[#C9A227] hover:bg-[#B38E1E] text-[#1A1D20]'
+                  ? 'bg-[#C9A227] hover:bg-[#B38E1E] text-white'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
