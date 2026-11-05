@@ -18,6 +18,23 @@ import { useAuthStore } from '../../store/authStore'
 
 const memberWrites = new Set<string>()
 
+export function projectMemberErrorMessage(error: any): string {
+  console.warn('[Project members]', { status: error?.response?.status, code: error?.response?.data?.code,
+    correlationId: error?.response?.data?.correlationId || error?.response?.headers?.['x-correlation-id'] })
+  switch (error?.response?.status) {
+    case 400: return 'Thông tin nhân sự chưa hợp lệ.'
+    case 401: return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+    case 403: return 'Bạn không có quyền quản lý thành viên của dự án này.'
+    case 404: return 'Không tìm thấy dự án hoặc nhân sự.'
+    case 409: return 'Membership đã thay đổi hoặc nhân sự đã được thêm vào dự án.'
+    case 412: return 'Dữ liệu đã thay đổi. Vui lòng tải lại rồi thử lại.'
+    case 428: return 'Thiếu thông tin phiên bản để thực hiện thao tác.'
+    case 500: return 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'
+    default: return !error?.response && (error?.request || /network|timeout/i.test(error?.message || ''))
+      ? 'Không thể kết nối đến hệ thống.' : 'Không thể hoàn tất yêu cầu quản lý thành viên.'
+  }
+}
+
 export interface StaffUserDto {
   userId: string
   displayName?: string | null

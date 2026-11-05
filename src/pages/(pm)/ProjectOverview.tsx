@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { projectService } from '../../api/services'
+import { projectMemberErrorMessage } from '../../api/services/personnelService'
 import { alignmentService } from '../../api/services/alignmentService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
@@ -74,6 +75,7 @@ export const ProjectOverview: React.FC = () => {
     const sequence = ++loadSequence.current
     const epoch = useAuthStore.getState().authEpoch
     const current = () => sequence === loadSequence.current && epoch === useAuthStore.getState().authEpoch
+    if (!useAuthStore.getState().isAuthenticated || useAuthStore.getState().status === 'logging-out') { setProject(null); setMembers([]); setIsLoading(false); return }
     setIsLoading(true)
     setProject(null); setMembers([]); setLoadError(null); setMembersError(null)
     try {
@@ -146,8 +148,8 @@ export const ProjectOverview: React.FC = () => {
                 authority: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
                   ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)'
                   : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
-                contact: 'API thành viên không cung cấp thông tin liên hệ',
-                unit: 'Chưa có dữ liệu đơn vị trong API'
+                contact: '',
+                unit: ''
               }
             })
             setMembers(mappedMembers)
@@ -156,8 +158,7 @@ export const ProjectOverview: React.FC = () => {
           }
         } catch (err: any) {
           if (!current()) return
-          console.error('[ProjectOverview] Lỗi tải thành viên dự án:', err)
-          setMembersError(err?.response?.data?.detail || err?.message || 'Không tải được thành viên.')
+          setMembersError(projectMemberErrorMessage(err))
         }
       } else {
         setLoadError('Dự án không thuộc danh mục API cho phép hoặc không còn quyền truy cập.')

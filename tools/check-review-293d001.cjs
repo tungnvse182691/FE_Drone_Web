@@ -1283,5 +1283,21 @@ function caseLifecycleHarness() {
       }
     }
   })
+  await test('member UI translates HTTP errors and does not render technical contact/unsupported Supervisor action silently', async () => {
+    const module = load('src/api/services/personnelService.ts', { '../client': { apiClient: {} } })
+    for (const [status, expected] of [[400, 'Thông tin nhân sự chưa hợp lệ.'], [401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'], [403, 'Bạn không có quyền quản lý thành viên của dự án này.'], [404, 'Không tìm thấy dự án hoặc nhân sự.'], [409, 'Membership đã thay đổi hoặc nhân sự đã được thêm vào dự án.'], [412, 'Dữ liệu đã thay đổi. Vui lòng tải lại rồi thử lại.'], [428, 'Thiếu thông tin phiên bản để thực hiện thao tác.'], [500, 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.']]) {
+      assert.equal(module.projectMemberErrorMessage({ response: { status, data: { detail: 'raw english detail', correlationId: 'id' } } }), expected)
+    }
+    assert.equal(module.projectMemberErrorMessage(new Error('Network Error')), 'Không thể kết nối đến hệ thống.')
+    const React = require('react'), { renderToStaticMarkup } = require('react-dom/server')
+    const store = selector => selector({ user: { role: roles.SUPERVISOR } })
+    const { ProjectPersonnelCard } = load('src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx', {
+      react: { __esModule: true, default: React, ...React }, '../../../store/authStore': { useAuthStore: store },
+      '../../../components/ui/Icon': { Icon: () => null }, './AddProjectMemberModal': { AddProjectMemberModal: () => null }
+    })
+    const html = renderToStaticMarkup(React.createElement(ProjectPersonnelCard, { project: { id: 'p', name: 'P' }, members: [{ id: 'm', name: 'Server name', role_title: 'PM', contact: 'API thành viên không cung cấp thông tin liên hệ', membership_version: 'secret-technical-version' }] }))
+    assert.ok(html.includes('Thêm nhân sự')); assert.ok(!html.includes('disabled'))
+    assert.ok(!html.includes('API thành viên')); assert.ok(!html.includes('secret-technical-version'))
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

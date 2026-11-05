@@ -1752,3 +1752,32 @@ authStore.loginWithCredentials phân biệt giai đoạn POSTlogin với GETsess
 Tests: tools/check-review-293d001.cjs **104 scenarios PASS**. Có kiểmPOSTlogin401 khácGETsession401/403/500 sau login thành công; bootstrap/renew401/403/500/network đúng thông báo; lỗi gốc giữ nguyên;401 mất phiên,403/network không tự logout; renew không thêm vòng lặp. Harness đầu kiểm nhầm counter của hàm đã override, đã sửa instrumentation và rerunPASS. tsc-b PASS, vitebuild PASS, diffcheck PASS. Chỉ cảnh báo Tailwind/chunk có sẵn. Không chạy API/browser E2E mới trong follow-up thông báo, không tạo fixture để ép session hết hạn; không coi regression mô phỏng là E2E.
 
 Files: api/auth.ts, store/authStore.ts, pages/(auth)/Login.tsx, tools/check-review-293d001.cjs và worklog chung. Commit tiếng Việt/push hoang; không credential/token/cookie trong báo cáo.
+
+
+### 06/11/2026 — Project/Thành viên: quyền Sup, thông báo nghiệp vụ và logout
+
+Base/parent `f673c15d45c443435b81876529a4ff8fa9d9a1ff`, nhánhhoang, status sạch. Đối chiếu Spec17_10 Authentication/Users/Memberships, Project workflow và OpenAPI members/eligible/primaryPM/system-user; backend chỉ đọc SHA5180ab9 StaffDirectoryController, StaffReadService/Repository. Runtime duy nhất dùng kiểm nghiệp vụ: roadguard-case409-clean-20261106, HTTPS28443 qua FEproxy5173, ready200. Không dùng database cũ, SQL hoặc sửa backend/seed/config.
+
+Quyền: GETmembers cho Sup và PM current project; includeHistory chỉSup. GETeligible và POSTmembers chỉPM current project, target activeOperator/Crew có sẵn. Sup không có quyền addOperator/Crew ở API này dù có quyền directory toàn hệ thống. PrimaryPM reassignment đã có nhưng contract Web hiện chặn; không thêm CRUD membership hoặc mở quyền PM sửarole/hồsơ user. System-user edit là API/quyền riêng, không được suy từ projectmembership.
+
+File/sửa:
+- ProjectPersonnelCard: nút Sup không disabled im lặng nữa; click hiện “Chỉ Chỉ huy trưởng của dự án được thêm phi công hoặc đội thi công. Tài khoản Giám sát hiện chỉ được xem danh sách thành viên.” và không gọieligible. PM mởmodal. Card đơn giản gồm tên/role/status/ngày hiệu lực do server; bỏ contact/unit/authority suy diễn và version kỹ thuật khỏi UI. Chưa hỗ trợ đổiPM/kết thúc phân công chỉ báo tiếngViệt, không có câuBearer/contract thô.
+- AddProjectMemberModal: MaterialSymbols qua Icon hiện có, bỏ lucide và emojiOperator/Crew. Nút chính vàng#C9A227/chữdark, nútphụ viềnxám, giữ layoutresponsive; success “Đã thêm nhân sự vào dự án.” chỉ sau service xác nhận ACTIVE/readback. Lỗi không hiển thị detail/stack/mãthô. Journal parse nằm trong try/catch, không tạo rejectedPromise khônghandled khi journal lỗi; giữsamekey/body/recovery và epochguard có sẵn. Không tạo component system/cây thư mục mới.
+- personnelService: projectMemberErrorMessage map400/401/403/404/409/412/428/500/network theo text user yêu cầu; unknown có thông báo chung. Log chỉstatus/code/correlationId, không log Axiosbody/secret. Lỗi service vẫn được throw, khôngđổi thànhsuccess/empty.
+- ProjectOverview: contact/unit rỗng vì ProjectMemberResponseDto không trả liênhệ; không đoán email/SĐT. Memberread dùng formatter. ProjectList/Overview/eligible loader không gửi API khi anonymous/logging-out; giữ epoch/unmount fence. Không sửa auth/logout backend hoặc giả nuốt reject.
+
+Test thực rg-members-ui-real.cjs (cookieWeb, không mockresponse): PM-A đọcSBX-A/members200 vàF5; eligibleCREW/OPERATOR hiệnrỗng thật, modal cóempty rõ; khôngtạotàikhoản để lấp. Sup đọcmembers200, bấmnút cómessage, không phátrequesteligible; directGETeligible403 vàPOSTmembers403. PM-B mởSBX-A bị403/UIchặn, không thấy memberprojectA. POSTtrùng memberfixtureA keymới409duplicate_request, activecount1. Logout204/F5Login ởcả3actor; pageerror/unhandled app ghi nhận0, project/member request mới saulogout204=0. Cleanprofile khôngextension; chưa có bằngchứng quy lỗi onboarding.js/content-script của profile người dùng cho app, không sửa để che extension.
+
+Positiveadd thực rg-members-ui-add-pmb.cjs: tìmprojectSBX-B vàeligible từAPI theoquyềnPM-B, không nhúngID vào source. Thêm **một Crew test** qua modal/API chính thức:
+- Project `72f84201-c001-4000-8000-000000000002`.
+- User được thêm `72f84201-a001-4000-8000-000000000008` (tài khoản Crew cósẵn).
+- Membership mới `f894d627-1836-40c8-b8ba-215bb2c667a6`.
+Mục đích TEST UI/member readback/replay; trạng thái ACTIVE, giữlại vì không có command gỡ theo contract. Khôngxóa/sửa user/project cũ. Replay cùngK/body201 trả cùngmembership; keymới cùnguser409, kiểmGET countACTIVE vẫn1; F5 vẫnthấy từserver. K/body/ledger tạm không có credential, khôngstage. DBlocalkhông đi theoGitHub. Các rerun dùngledger/receipt khôngtạothêm membership.
+
+Version: POSTmembers contract không yêu cầuIf-Match; không bịa testcase staleIf-Match412 cho operation này. Mapping412/428 và conflict/unknown outcome được regression, không claim HTTP412/428 thật. Mutation đổiPM/bodyrowversion Web vẫnBLOCKED, không mở quyềnbằngBearer. API403/409 thật đãkiểm;400/401/404/412/428/500/422 UIerror mapping/regression có kiểm soát, không cố gây lỗi server hoặc sửaaccount để épPASS.
+
+Checks: tools/check-review-293d001.cjs **105PASS**, gồm translation8status/network, render cardSup khôngnút imlặng và không textcontact/version kỹ thuật; giữ nguyên bộtestscope/journal/K/receipt. tsc-b/build/diffcheck chốt bên dưới. Không dùng mockresponse chứng minh API; mock tests chỉ regression. LintNOT_RUN vì packagekhôngscript. CảnhbáoTailwind/chunklớn cósẵn, không refactor ngoài phạmvi.
+
+Test tay: loginPM-A/Sup bằngnútdevseedruntime sạch, mởproject từ /pm/projects hoặc /sup/projects. Sup bấmThêmnhânsự phảigiải thích quyền, khôngmởmodal/requesteligible. PM currentproject bấm mởmodal, chọnOperator/Crew: danh sáchAPI/empty/error rõ; chỉPOST{userId}+CSRF/K khi chọnngườithật. Success khôngtextbackend/Confirm. Với PM-B vàoSBX-A phải403; F5/loginactor khác khônghiệndata cũ. Logout từProject/members đangtải, Networkchỉlogout204 và Login, khôngproject/memberrequest mới sauhoàn tất; khôngpageerror. Khôngdán token/cookie/password vào worklog.
+
+**Chốt bản cuối:** 105 regression PASS; tsc-b PASS; vitebuild PASS; gitdiffcheck PASS. Browser Sup/PM-A/PM-B scope/F5/logout PASS; PM-B projectB positiveadd/replay201/duplicate409/count1 PASS; modal viewport375 không tràn ngang PASS. Bản ghi mới vẫn giữ nguyên membership f894d627-1836-40c8-b8ba-215bb2c667a6; rerun chỉ đọc/replay biên nhận, không tạo thêm. Chưa có kiểm API500/412/428 thật hoặc extension profile người dùng; không nhận các nhánh đó là E2E PASS.

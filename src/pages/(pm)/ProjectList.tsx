@@ -39,6 +39,7 @@ export const ProjectList: React.FC = () => {
     const sequence = ++loadSequence.current
     const epoch = useAuthStore.getState().authEpoch
     const current = () => sequence === loadSequence.current && epoch === useAuthStore.getState().authEpoch
+    if (!useAuthStore.getState().isAuthenticated || useAuthStore.getState().status === 'logging-out') { setProjects([]); setLoadError(null); setIsLoading(false); return }
     try {
       setProjects([])
       setIsLoading(true)
