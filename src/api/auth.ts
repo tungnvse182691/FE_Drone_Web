@@ -10,6 +10,15 @@
  */
 import { apiClient } from './client'
 
+export function webLoginErrorMessage(error: { response?: { status?: number } }): string {
+  switch (error.response?.status) {
+    case 401: return 'Email hoặc mật khẩu không đúng.'
+    case 403: return 'Tài khoản không có quyền thực hiện thao tác này.'
+    case 500: return 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'
+    default: return 'Không thể hoàn tất yêu cầu đăng nhập.'
+  }
+}
+
 export interface CsrfResponse {
   requestToken: string
   headerName: string

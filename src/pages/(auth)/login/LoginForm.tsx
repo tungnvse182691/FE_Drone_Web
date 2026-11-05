@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useToastStore } from '../../../store/toastStore'
 
 export interface LoginFormProps {
@@ -35,6 +35,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSwitchToForce
 }) => {
   const toast = useToastStore()
+  const [loadingSample, setLoadingSample] = useState(false)
+  const fillSample = async (key: 'supervisor' | 'pm-a') => {
+    if (!import.meta.env.DEV || loadingSample || isLoading) return
+    setLoadingSample(true)
+    try {
+      const response = await fetch(`/__dev/test-account?key=${key}`, { credentials: 'same-origin', cache: 'no-store' })
+      if (!response.ok) throw new Error('Không đọc được tài khoản mẫu từ runtime sạch.')
+      const account = await response.json()
+      if (typeof account.email !== 'string' || typeof account.password !== 'string') throw new Error('Tài khoản mẫu không hợp lệ.')
+      setEmail(account.email); setPassword(account.password); setLoginError(false)
+    } catch { toast.error('Không đọc được tài khoản mẫu từ runtime sạch.') }
+    finally { setLoadingSample(false) }
+  }
 
   return (
     <section className="space-y-5">
@@ -49,7 +62,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       {/* Thông báo lỗi đăng nhập */}
       {loginError && (
-        <div className="p-3.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
+        <div role="alert" className="p-3.5 rounded-xl bg-[#FDECEC] border border-[#E5484D]/30 text-[#E5484D] text-xs leading-relaxed flex items-start gap-2.5">
           <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">
             error
           </span>
@@ -82,7 +95,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="pmhoang@gmail.com hoặc suphoang@gmail.com"
+              placeholder="Nhập email tài khoản"
               required
               className="aurora-input-light font-mono"
             />
@@ -193,47 +206,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         </div>
       )}
 
-      {/* 2 nút tài khoản dùng thử chuẩn Docker Candidate3: PM | Giám sát */}
-      <div className="pt-4 border-t border-[#E2E5E9]">
-        <span className="text-[11px] font-medium text-slate-400 block mb-2.5">
-          Tài khoản Seed Docker Candidate3 (Bấm để tự điền tự động):
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('pm-a@sandbox.example.test')
-              setPassword('Rg1!6NDP3wctfXKjXNzvYjSeg-grQxza2t_BGNxmH_DDlyfjEr7oZFEMtLmnssW7Meed')
-            }}
-            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
-          >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">badge</span>
-              <span className="truncate">PM-A (Chỉ huy trưởng)</span>
-            </div>
-            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              pm-a@sandbox.example.test
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEmail('supervisor@sandbox.example.test')
-              setPassword('Rg1!1YpbfL2fpPP1JWp3t1HdkXpTPZVdUJ2OrWllT8iNLvBPaZq3MMU5g3XT7VFUCwDv')
-            }}
-            className="w-full overflow-hidden p-3 rounded-xl border border-[#E2E5E9] hover:border-[#C9A227] bg-[#F8F9FA] hover:bg-white text-left transition-all cursor-pointer group shadow-2xs"
-          >
-            <div className="text-xs font-bold text-slate-800 group-hover:text-[#8C6D1F] flex items-center gap-1.5 truncate">
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0">supervisor_account</span>
-              <span className="truncate">Giám sát (Supervisor)</span>
-            </div>
-            <div className="text-[11px] text-slate-500 truncate overflow-hidden mt-0.5 font-mono">
-              supervisor@sandbox.example.test
-            </div>
-          </button>
-        </div>
-      </div>
+      {import.meta.env.DEV && <div className="pt-4 border-t border-[#E2E5E9] space-y-2">
+        <p className="text-xs">Tài khoản mẫu của runtime test local</p>
+        <button type="button" disabled={isLoading || loadingSample} onClick={() => fillSample('supervisor')}>Điền tài khoản Supervisor mẫu</button>
+        <button type="button" disabled={isLoading || loadingSample} onClick={() => fillSample('pm-a')}>Điền tài khoản PM mẫu</button>
+      </div>}
     </section>
   )
 }

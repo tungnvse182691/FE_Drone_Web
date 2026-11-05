@@ -626,6 +626,7 @@ function caseLifecycleHarness() {
     const calls = { session: 0, renew: 0, logout: 0 }
     const session = { user: { id: 'pm', role: 'PM', displayName: 'PM' }, mustChangePassword: false }
     const api = {
+      webLoginErrorMessage: () => 'Không thể hoàn tất yêu cầu đăng nhập.',
       fetchCsrfToken: async () => ({ requestToken: 'csrf', headerName: 'X-CSRF-TOKEN' }),
       loginApi: async () => session,
       logoutApi: async () => { calls.logout++ },
@@ -1243,6 +1244,12 @@ function caseLifecycleHarness() {
       await assert.rejects(service.addProjectMember('p', 'operator'))
       assert.equal(journal.size, clears ? 0 : 1)
       if (!clears) { await assert.rejects(service.addProjectMember('p', 'operator')); assert.deepEqual(sent[0], sent[1]) }
+    }
+  })
+  await test('Web login messages are Vietnamese and never expose backend detail/stack or credentials', async () => {
+    const { webLoginErrorMessage: format } = load('src/api/auth.ts', { './client': { apiClient: {} } })
+    for (const [status, expected] of [[401, 'Email hoặc mật khẩu không đúng.'], [403, 'Tài khoản không có quyền thực hiện thao tác này.'], [500, 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'], [undefined, 'Không thể hoàn tất yêu cầu đăng nhập.'], [423, 'Không thể hoàn tất yêu cầu đăng nhập.'], [429, 'Không thể hoàn tất yêu cầu đăng nhập.']]) {
+      assert.equal(format({ response: { status, data: { detail: 'sensitive english stack' } } }), expected)
     }
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)

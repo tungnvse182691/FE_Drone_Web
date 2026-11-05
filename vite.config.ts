@@ -1,11 +1,45 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { exec, spawn } from 'child_process'
+import { exec, spawn, execFile } from 'child_process'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    {
+      name: 'roadguard-local-test-account',
+      apply: 'serve',
+      configureServer(server) {
+        server.middlewares.use('/__dev/test-account', (req, res) => {
+          res.setHeader('Cache-Control', 'no-store')
+          res.setHeader('Content-Type', 'application/json; charset=utf-8')
+          res.setHeader('X-Content-Type-Options', 'nosniff')
+          let permitted = false
+          try {
+            const origin = new URL(`http://${req.headers.host}`)
+            const referer = new URL(req.headers.referer || '')
+            permitted = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) && referer.origin === origin.origin &&
+              (!req.headers.origin || req.headers.origin === origin.origin) &&
+              (!req.headers['sec-fetch-site'] || req.headers['sec-fetch-site'] === 'same-origin')
+          } catch { /* Deny nonlocal or cross-origin requests. */ }
+          const key = new URL(req.url || '', 'http://localhost').searchParams.get('key')
+          if (!permitted || req.method !== 'GET' || !['supervisor', 'pm-a'].includes(key || '')) {
+            res.statusCode = 403; res.end(JSON.stringify({ message: 'Không được đọc tài khoản mẫu.' })); return
+          }
+          execFile('docker', ['exec', 'roadguard-case409-clean-20261106-api-1', 'cat', '/handoff/demo-accounts.json'],
+            { timeout: 10000, maxBuffer: 65536 }, (error, stdout) => {
+              try {
+                if (error) throw new Error('Runtime unavailable')
+                const account = JSON.parse(stdout).find((item: { key: string }) => item.key === key)
+                if (!account?.email || !account?.password) throw new Error('Seed account missing')
+                res.end(JSON.stringify({ email: account.email, password: account.password }))
+              } catch {
+                res.statusCode = 503; res.end(JSON.stringify({ message: 'Không đọc được tài khoản mẫu từ runtime sạch.' }))
+              }
+            })
+        })
+      },
+    },
     {
       name: 'roadguard-dev-db-sync',
       configureServer(server) {

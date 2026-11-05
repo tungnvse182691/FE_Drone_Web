@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { RoleCode } from '../types/enums'
 import { User } from '../types/domain'
-import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse } from '../api/auth'
+import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse, webLoginErrorMessage } from '../api/auth'
 
 interface AuthState {
   user: User | null
@@ -107,7 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } catch (error) {
         if (get().authEpoch === epoch) {
           lockReload()
-          set({ user: null, isAuthenticated: false, status: 'anonymous', authError: message(error) })
+          set({ user: null, isAuthenticated: false, status: 'anonymous', authError: webLoginErrorMessage(error as any) })
         }
         throw error
       }

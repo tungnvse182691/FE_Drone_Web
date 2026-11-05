@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
+import { webLoginErrorMessage } from '../../api/auth'
 import { LoginViewMode } from './login/types'
 import { LoginForm } from './login/LoginForm'
 import { ForcePasswordSection } from './login/ForcePasswordSection'
@@ -58,6 +59,7 @@ export const Login: React.FC = () => {
       const res = await authService.login({ email, password })
 
       if (res.user.must_change_password) {
+        toast.error('Bạn phải đổi mật khẩu trước khi tiếp tục.')
         setViewMode('force')
       } else {
         const dest = res.user.role === RoleCode.SUPERVISOR ? '/sup/dashboard' : '/pm/dashboard'
@@ -65,11 +67,9 @@ export const Login: React.FC = () => {
       }
     } catch (err: any) {
       setLoginError(true)
-      const detailMsg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.title ||
-        err?.message ||
-        'Email hoặc mật khẩu không chính xác'
+      const detailMsg = webLoginErrorMessage(err)
+      console.warn('[Web login]', { status: err?.response?.status, code: err?.response?.data?.code,
+        correlationId: err?.response?.data?.correlationId || err?.response?.headers?.['x-correlation-id'] })
       setLoginErrorMessage(detailMsg)
       toast.error(detailMsg)
     } finally {
