@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { RoleCode } from '../types/enums'
 import { User } from '../types/domain'
-import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse, webLoginErrorMessage } from '../api/auth'
+import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse, webLoginErrorMessage, webSessionErrorMessage } from '../api/auth'
 
 interface AuthState {
   user: User | null
@@ -60,7 +60,6 @@ const sessionEvents = typeof window !== 'undefined' && typeof BroadcastChannel !
 function assertEpoch(epoch: number): void {
   if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ phản hồi xác thực cũ.')
 }
-function message(error: any): string { return error?.response?.data?.detail || error?.message || 'Không thể kiểm tra phiên. Hãy thử lại.' }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null, token: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false,
@@ -92,12 +91,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ authEpoch: epoch, user: null, csrfToken: null, isAuthenticated: false, mustChangePassword: false, status: 'authenticating', authError: null })
     sessionEvents?.postMessage('invalidate')
     await serializeAuth(async () => {
+      let readingSession = false
       try {
         assertEpoch(epoch)
         const token = await get().ensureCsrfToken()
         assertEpoch(epoch)
         await loginApi({ email, password }, token)
         assertEpoch(epoch)
+        readingSession = true
         const session = await getSessionApi()
         assertEpoch(epoch)
         get().setSession(session)
@@ -105,9 +106,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('rg_web_logged_out')
         sessionEvents?.postMessage('invalidate')
       } catch (error) {
+        if (readingSession && error && typeof error === 'object') Object.assign(error, { authContext: 'session' })
         if (get().authEpoch === epoch) {
           lockReload()
-          set({ user: null, isAuthenticated: false, status: 'anonymous', authError: webLoginErrorMessage(error as any) })
+          set({ user: null, isAuthenticated: false, status: 'anonymous', authError: readingSession
+            ? webSessionErrorMessage(error as any) : webLoginErrorMessage(error as any) })
         }
         throw error
       }
@@ -147,7 +150,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!expected || expected.must_change_password !== user.must_change_password) get().setSession(session)
         set({ csrfToken: null })
       } catch (error: any) {
-        if (get().authEpoch === epoch && error?.response?.status === 401) get().expireSession('Phiên không còn hợp lệ. Vui lòng đăng nhập lại.')
+        if (get().authEpoch === epoch) {
+          if (error?.response?.status === 401) get().expireSession(webSessionErrorMessage(error))
+          else set({ authError: webSessionErrorMessage(error) })
+        }
         throw error
       }
     })().finally(() => { if (recovery?.epoch === epoch) recovery = null })
@@ -167,7 +173,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ status: 'authenticated' })
         return true
       } catch (error: any) {
-        if (get().authEpoch === epoch) set({ status: 'error', authError: message(error) })
+        if (get().authEpoch === epoch) set({ status: 'error', authError: webSessionErrorMessage(error) })
         return false
       }
     })().finally(() => { if (bootstrap?.epoch === epoch) bootstrap = null })

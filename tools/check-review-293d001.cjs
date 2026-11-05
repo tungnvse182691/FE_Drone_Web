@@ -626,7 +626,7 @@ function caseLifecycleHarness() {
     const calls = { session: 0, renew: 0, logout: 0 }
     const session = { user: { id: 'pm', role: 'PM', displayName: 'PM' }, mustChangePassword: false }
     const api = {
-      webLoginErrorMessage: () => 'Không thể hoàn tất yêu cầu đăng nhập.',
+      ...load('src/api/auth.ts', { './client': { apiClient: {} } }),
       fetchCsrfToken: async () => ({ requestToken: 'csrf', headerName: 'X-CSRF-TOKEN' }),
       loginApi: async () => session,
       logoutApi: async () => { calls.logout++ },
@@ -1250,6 +1250,37 @@ function caseLifecycleHarness() {
     const { webLoginErrorMessage: format } = load('src/api/auth.ts', { './client': { apiClient: {} } })
     for (const [status, expected] of [[401, 'Email hoặc mật khẩu không đúng.'], [403, 'Tài khoản không có quyền thực hiện thao tác này.'], [500, 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'], [undefined, 'Không thể hoàn tất yêu cầu đăng nhập.'], [423, 'Không thể hoàn tất yêu cầu đăng nhập.'], [429, 'Không thể hoàn tất yêu cầu đăng nhập.']]) {
       assert.equal(format({ response: { status, data: { detail: 'sensitive english stack' } } }), expected)
+    }
+  })
+  await test('login401 is distinct from the session read after successful credential submission', async () => {
+    const badLogin = webAuthHarness({ loginApi: async () => { throw failure(401, 'auth_unauthorized') } })
+    await assert.rejects(badLogin.store.getState().loginWithCredentials('test', 'password'))
+    assert.equal(badLogin.store.getState().authError, 'Email hoặc mật khẩu không đúng.')
+    for (const [status, expected] of [[401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'], [403, 'Phiên đăng nhập không có quyền sử dụng.'], [500, 'Không thể khôi phục phiên đăng nhập.']]) {
+      const error = failure(status, 'original_code')
+      const h = webAuthHarness({ getSessionApi: async () => { throw error } })
+      await assert.rejects(h.store.getState().loginWithCredentials('test', 'password'), e => e === error && e.authContext === 'session' && e.response.data.code === 'original_code')
+      assert.equal(h.store.getState().authError, expected)
+      assert.equal(h.store.getState().isAuthenticated, false)
+    }
+  })
+  await test('session bootstrap and renew failures use session messages without changing401/403/network policy', async () => {
+    for (const renew of [false, true]) {
+      for (const [status, expected] of [[401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'], [403, 'Phiên đăng nhập không có quyền sử dụng.'], [500, 'Không thể khôi phục phiên đăng nhập.'], [undefined, 'Không thể khôi phục phiên đăng nhập.']]) {
+        const error = status ? failure(status, 'original_code') : new Error('Network Error')
+        let renewCalls = 0
+        const failRenew = async () => { renewCalls++; throw error }
+        const h = webAuthHarness(renew ? { getSessionApi: async () => { throw failure(401, 'expired') }, renewSessionApi: failRenew }
+          : { getSessionApi: async () => { throw error }, renewSessionApi: failRenew })
+        h.store.getState().setSession(h.session)
+        await assert.rejects(h.store.getState().recoverSession(), e => e === error)
+        assert.equal(h.store.getState().authError, expected)
+        assert.equal(h.store.getState().isAuthenticated, status !== 401)
+        assert.equal(renewCalls, renew || status === 401 ? 1 : 0)
+        const boot = webAuthHarness({ getSessionApi: async () => { throw error }, renewSessionApi: async () => { throw error } })
+        assert.equal(await boot.store.getState().checkSession(), false)
+        assert.equal(boot.store.getState().authError, expected)
+      }
     }
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)

@@ -19,6 +19,14 @@ export function webLoginErrorMessage(error: { response?: { status?: number } }):
   }
 }
 
+export function webSessionErrorMessage(error: { response?: { status?: number } }): string {
+  switch (error.response?.status) {
+    case 401: return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+    case 403: return 'Phiên đăng nhập không có quyền sử dụng.'
+    default: return 'Không thể khôi phục phiên đăng nhập.'
+  }
+}
+
 export interface CsrfResponse {
   requestToken: string
   headerName: string

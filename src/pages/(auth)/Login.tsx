@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { authService } from '../../api/services/authService'
-import { webLoginErrorMessage } from '../../api/auth'
+import { webLoginErrorMessage, webSessionErrorMessage } from '../../api/auth'
 import { LoginViewMode } from './login/types'
 import { LoginForm } from './login/LoginForm'
 import { ForcePasswordSection } from './login/ForcePasswordSection'
@@ -67,7 +67,7 @@ export const Login: React.FC = () => {
       }
     } catch (err: any) {
       setLoginError(true)
-      const detailMsg = webLoginErrorMessage(err)
+      const detailMsg = err?.authContext === 'session' ? webSessionErrorMessage(err) : webLoginErrorMessage(err)
       console.warn('[Web login]', { status: err?.response?.status, code: err?.response?.data?.code,
         correlationId: err?.response?.data?.correlationId || err?.response?.headers?.['x-correlation-id'] })
       setLoginErrorMessage(detailMsg)

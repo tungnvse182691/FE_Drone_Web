@@ -1739,3 +1739,16 @@ Test tay: npm run dev, mở http://localhost:5173/login. Bấm nút điền Sup/
 File thay đổi: vite.config.ts, api/auth.ts, authStore.ts, Login.tsx, LoginForm.tsx, regression và worklog. Không commit credential hoặc script temp; không commit/push backend. Commit tiếng Việt trên hoang, SHA đầy đủ báo ở bàn giao; worklog ghi baseSHA để tránh tự tham chiếu hash commit đang tạo.
 
 **Chốt:** renew thật Sup/PM PASS qua HTTPS28443 (session ticket bỏ riêng trong testcontext→renew200→session200); cookieSecure/HttpOnly/Lax và kết nốiupstream28443 đã quan sát. 102 regression, tsc, build, diff-check, official-autofill browser và production credential scan PASS. Không sửa backend/DB/seed.
+
+
+### 06/11/2026 — Follow-up 3456706: tách lỗi login khỏi lỗi session/renew
+
+Base/parent `3456706b766857f81a8e71787d94006956e1e241`, hoang, status sạch. Chỉ sửa thông báo FE; không backend/database/seed hoặc transport.
+
+api/auth.ts thêm webSessionErrorMessage:401→“Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.”;403→“Phiên đăng nhập không có quyền sử dụng.”; lỗi khác→“Không thể khôi phục phiên đăng nhập.”. webLoginErrorMessage vẫn giữ401 credential→“Email hoặc mật khẩu không đúng.”.
+
+authStore.loginWithCredentials phân biệt giai đoạn POSTlogin với GETsession sau login. GETsession lỗi dùng session formatter, đánh dấu authContext trên lỗi gốc để Login.tsx không format lại thành lỗi credential; giữ nguyên response/status/code/correlationId. recoverSession và checkSession chỉ dùng session formatter, không hiện raw English detail. Giữ nguyên serialize/single-flight/epoch/logout/redirect: terminal401 expireSession như cũ;403/network không tự logout. Không đổi điều kiện retry hoặc gọi endpoint mới.
+
+Tests: tools/check-review-293d001.cjs **104 scenarios PASS**. Có kiểmPOSTlogin401 khácGETsession401/403/500 sau login thành công; bootstrap/renew401/403/500/network đúng thông báo; lỗi gốc giữ nguyên;401 mất phiên,403/network không tự logout; renew không thêm vòng lặp. Harness đầu kiểm nhầm counter của hàm đã override, đã sửa instrumentation và rerunPASS. tsc-b PASS, vitebuild PASS, diffcheck PASS. Chỉ cảnh báo Tailwind/chunk có sẵn. Không chạy API/browser E2E mới trong follow-up thông báo, không tạo fixture để ép session hết hạn; không coi regression mô phỏng là E2E.
+
+Files: api/auth.ts, store/authStore.ts, pages/(auth)/Login.tsx, tools/check-review-293d001.cjs và worklog chung. Commit tiếng Việt/push hoang; không credential/token/cookie trong báo cáo.
