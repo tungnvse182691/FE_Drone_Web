@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { X, UserPlus, Search, ShieldCheck, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { useAuthStore } from '../../../store/authStore'
 import { personnelService } from '../../../api/services/personnelService'
 
 export interface AddProjectMemberModalProps {
@@ -25,6 +26,10 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   onMemberAdded,
   showToast
 }) => {
+  const epoch = useAuthStore(state => state.authEpoch)
+  const sequence = useRef(0)
+  const submitting = useRef(false)
+  const [heldUser, setHeldUser] = useState('')
   const [selectedRole, setSelectedRole] = useState<'OPERATOR' | 'CREW'>('OPERATOR')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,51 +40,58 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
 
   const loadEligible = useCallback(async () => {
     if (!isOpen || !projectId) return
+    const request = ++sequence.current
+    const actor = useAuthStore.getState().user?.id
+    const current = () => request === sequence.current && epoch === useAuthStore.getState().authEpoch
+    const saved = sessionStorage.getItem(`rg_member_add_${actor}_${projectId}`)
+    const pending = saved ? JSON.parse(saved) : null
+    setHeldUser(pending?.userId || '')
     setLoading(true)
     setErrorMsg(null)
-    setSelectedUserId(null)
+    setSelectedUserId(pending?.userId || null)
     try {
       const data = await personnelService.fetchEligibleProjectMembers(projectId, {
         role: selectedRole,
         search: searchKeyword.trim() || undefined
       })
-      setEligibleMembers(data.items || [])
+      if (current()) setEligibleMembers(data.items || [])
     } catch (err: any) {
+      if (!current()) return
       console.error('Lỗi khi tải danh sách nhân sự đủ điều kiện:', err)
-      const errText = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Không thể tải danh sách nhân sự đủ điều kiện từ máy chủ'
+      const errText = [err?.response?.status, err?.response?.data?.code, err?.response?.data?.detail || err?.message].filter(Boolean).join(' — ')
       setErrorMsg(errText)
       setEligibleMembers([])
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
-  }, [isOpen, projectId, selectedRole, searchKeyword])
+  }, [isOpen, projectId, selectedRole, searchKeyword, epoch])
 
   useEffect(() => {
     loadEligible()
+    return () => { ++sequence.current }
   }, [loadEligible])
 
   if (!isOpen) return null
 
   const handleAddMember = async () => {
-    if (!selectedUserId || isSubmitting) return
+    if (!selectedUserId || submitting.current) return
+    submitting.current = true
+    const started = useAuthStore.getState().authEpoch
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
       const selectedMember = eligibleMembers.find((m) => m.userId === selectedUserId)
       await personnelService.addProjectMember(projectId, selectedUserId)
-      showToast(`Đã thêm thành công nhân sự [${selectedMember?.displayName || 'Nhân sự'}] vào dự án!`)
+      if (started !== useAuthStore.getState().authEpoch) return
       await onMemberAdded()
+      showToast(`Đã đọc lại membership ACTIVE từ máy chủ cho ${selectedMember?.displayName || selectedUserId}.`)
       onClose()
     } catch (err: any) {
       console.error('Lỗi khi thêm thành viên vào dự án:', err)
-      if (err?.response?.status === 409) {
-        setErrorMsg('Nhân sự này đã là thành viên đang hoạt động trong dự án (409 Conflict).')
-      } else {
-        const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Lỗi khi thêm nhân sự vào dự án'
-        setErrorMsg(`❌ ${msg}`)
-      }
+      if (started === useAuthStore.getState().authEpoch) setErrorMsg([err?.response?.status, err?.response?.data?.code, err?.response?.data?.detail || err?.message].filter(Boolean).join(' — '))
     } finally {
-      setIsSubmitting(false)
+      submitting.current = false
+      if (started === useAuthStore.getState().authEpoch) setIsSubmitting(false)
     }
   }
 
@@ -153,11 +165,13 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             />
           </div>
 
+          {heldUser && <p role="status">Lệnh trước đang chờ đối chiếu cho {heldUser}. Bấm lại chỉ gửi cùng key/body hoặc đọc biên nhận; không chọn người khác.</p>}
           {/* Error notice */}
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
+            <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
+              <button type="button" onClick={loadEligible} disabled={loading || isSubmitting}>Tải lại danh sách</button>
             </div>
           )}
 
@@ -175,7 +189,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                 <Loader2 className="w-6 h-6 animate-spin text-[#C9A227]" />
                 <span>Đang tải danh sách nhân sự từ CSDL Backend...</span>
               </div>
-            ) : eligibleMembers.length === 0 ? (
+            ) : errorMsg ? null : eligibleMembers.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl p-4">
                 Không tìm thấy nhân sự phù hợp nào chưa tham gia dự án.
               </div>
@@ -186,7 +200,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                   return (
                     <div
                       key={member.userId}
-                      onClick={() => setSelectedUserId(member.userId)}
+                      aria-disabled={!!heldUser || isSubmitting} onClick={() => { if (!heldUser && !isSubmitting) setSelectedUserId(member.userId) }}
                       className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
                           ? 'border-[#C9A227] bg-[#C9A227]/10 ring-1 ring-[#C9A227]'

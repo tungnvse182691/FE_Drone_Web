@@ -29,7 +29,7 @@ export const INITIAL_HUB_PROJECTS: HubProject[] = [
     length_km: 156.0,
     open_defects: 12,
     repair_packages: 3,
-    image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
+    image_url: '',
     is_assigned: true,
     is_restricted_for_pm: false,
     kml_status: 'Đã phê duyệt',
@@ -331,20 +331,6 @@ interface UserLookupInfo {
 
 async function getUsersLookup(): Promise<Map<string, UserLookupInfo>> {
   const map = new Map<string, UserLookupInfo>()
-  // Nạp sẵn toàn bộ danh bạ từ userDirectory
-  userDirectory.getAllUsers().forEach((u) => {
-    const info: UserLookupInfo = {
-      userId: u.id,
-      displayName: u.displayName,
-      email: u.email,
-      role: u.role || ''
-    }
-    map.set(u.id.toLowerCase(), info)
-    if (u.displayName) {
-      map.set(u.displayName.trim().toLowerCase(), info)
-    }
-  })
-
   // Chỉ gọi /api/v1/users nếu người dùng hiện tại là SUPERVISOR (PM gọi sẽ bị 403)
   const currentUser = useAuthStore.getState().user
   if (currentUser?.role === RoleCode.SUPERVISOR) {
@@ -390,13 +376,15 @@ function mapBackendProjectToHub(
 ): HubProject {
   const statusStr = (item.status || 'PENDING_ALIGNMENT').toUpperCase()
   let status: HubProject['status'] = 'PENDING_ALIGNMENT'
-  let statusLabel = 'Chưa thiết lập tim tuyến'
+  let statusLabel = item.status || 'Chưa có trạng thái từ API'
   let statusColor = '#D97706'
 
   if (statusStr === 'CLOSED') {
     status = 'CLOSED'
     statusLabel = 'Đã đóng hồ sơ'
     statusColor = '#475569'
+  } else if (statusStr === 'ACTIVE') {
+    status = 'ACTIVE'; statusLabel = 'Đang hoạt động'; statusColor = '#1B5E20'
   } else if (statusStr === 'RESTRICTED' || statusStr === 'SUSPENDED') {
     status = 'RESTRICTED'
     statusLabel = 'Tạm dừng vận hành'
@@ -406,33 +394,13 @@ function mapBackendProjectToHub(
   const projId = item.projectId || item.id || ''
   const projCode = item.projectCode || item.code || ''
 
-  // Khôi phục trạng thái đã đóng từ bộ nhớ phiên nếu có
-  try {
-    const closedListStr = typeof window !== 'undefined' ? sessionStorage.getItem('roadguard_closed_project_ids') : null
-    if (closedListStr) {
-      const closedIds: string[] = JSON.parse(closedListStr)
-      if (closedIds.includes(projId) || closedIds.includes(projCode) || closedIds.includes(item.id)) {
-        status = 'CLOSED'
-        statusLabel = 'Đã đóng hồ sơ'
-        statusColor = '#475569'
-      }
-    }
-  } catch {}
-
   const pmUserId = item.primaryProjectManagerUserId ? String(item.primaryProjectManagerUserId).toLowerCase() : ''
   let pmName = item.primaryProjectManagerName || ''
   let pmEmail = ''
 
-  const matched = userDirectory.findUser(pmUserId, pmName)
-  if (matched) {
-    pmName = matched.displayName || pmName
-    pmEmail = matched.email || ''
-  } else if (usersMap) {
-    const userMatch = pmUserId ? usersMap.get(pmUserId) : (pmName ? usersMap.get(pmName.trim().toLowerCase()) : undefined)
-    if (userMatch) {
-      pmName = userMatch.displayName || pmName
-      pmEmail = userMatch.email || ''
-    }
+  if (usersMap && pmUserId) {
+    const match = usersMap.get(pmUserId)
+    if (match) { pmName = match.displayName || pmName; pmEmail = match.email || '' }
   }
 
   if (!pmName) {
@@ -442,11 +410,12 @@ function mapBackendProjectToHub(
 
   // Tính toán thời gian bảo hành thực tế dựa trên handoverDate và warrantyEndDate
   const now = new Date()
-  const handoverStr = item.handoverDate || item.createdAt || ''
+  const handoverStr = item.handoverDate || ''
   const warrantyEndStr = item.warrantyEndDate || ''
 
+  const warrantyDataMissing = !handoverStr || !warrantyEndStr
   const handover = handoverStr ? new Date(handoverStr) : now
-  const warrantyEnd = warrantyEndStr ? new Date(warrantyEndStr) : new Date(handover.getTime() + 3 * 365 * 86400000)
+  const warrantyEnd = warrantyEndStr ? new Date(warrantyEndStr) : now
 
   // Số ngày còn lại đến hết hạn bảo hành
   const diffTimeToEnd = warrantyEnd.getTime() - now.getTime()
@@ -464,53 +433,12 @@ function mapBackendProjectToHub(
     warrantyPassedPercent = 100
     daysRemaining = 0
   }
-  const metaById = projId ? getFromStorage<{ region?: string; location_detail?: string }>(`roadguard_project_meta_${projId}`, {}) : {}
-  const metaByCode = projCode ? getFromStorage<{ region?: string; location_detail?: string }>(`roadguard_project_meta_${projCode}`, {}) : {}
-  const regionMap = getFromStorage<Record<string, string>>('roadguard_projects_region_map', {})
-
-  let region =
-    item.region ||
-    item.location ||
-    metaById.region ||
-    metaByCode.region ||
-    regionMap[projId] ||
-    regionMap[projCode] ||
-    item.description ||
-    ''
-
-  // Tự động nhận diện và suy luận địa bàn từ mã hoặc tên dự án nếu dữ liệu cũ chưa kịp lưu metadata
-  if (!region || region === 'Chưa thiết lập địa bàn') {
-    const upperCode = (projCode || '').toUpperCase()
-    const upperName = (item.name || '').toUpperCase()
-    if (upperCode.startsWith('BLLĐ') || upperCode.startsWith('BLLD') || upperName.includes('BẢO LỘC') || upperName.includes('LÂM ĐỒNG')) {
-      region = 'Bảo Lộc - Lâm Đồng'
-    } else if (upperCode.startsWith('PRJ-QL1A') || upperName.includes('QL1A') || upperName.includes('QUỐC LỘ 1A')) {
-      region = 'Miền Trung'
-    } else if (upperName.includes('BẮC NAM') || upperName.includes('DIỄN CHÂU')) {
-      region = 'Nghệ An'
-    } else if (upperCode.startsWith('SBX-')) {
-      region = 'Địa bàn Thử nghiệm'
-    }
-  }
-
-  // Cập nhật lại vào cache để các màn hình khác (tim tuyến, chi tiết, danh sách) luôn nhận diện được
-  if (region && (!regionMap[projId] || !regionMap[projCode])) {
-    if (projId) regionMap[projId] = region
-    if (projCode) regionMap[projCode] = region
-    saveToStorage('roadguard_projects_region_map', regionMap)
-  }
-
-  const location_detail =
-    item.locationDetail ||
-    item.location_detail ||
-    metaById.location_detail ||
-    metaByCode.location_detail ||
-    region ||
-    ''
+  const region = item.region || item.location || item.description || ''
+  const location_detail = item.locationDetail || item.location_detail || ''
 
   const project: HubProject = {
     id: projId,
-    code: item.projectCode || item.code || 'PRJ-MOCK',
+    code: item.projectCode || item.code || 'Chưa có mã từ API',
     name: item.name || 'Dự án bảo hành RoadGuard',
     region,
     location_detail,
@@ -524,12 +452,13 @@ function mapBackendProjectToHub(
     pm_email: pmEmail,
     pm_user_id: item.primaryProjectManagerUserId,
     pm_role_badge: 'PM Chính',
+    warranty_data_missing: warrantyDataMissing,
     warranty_passed_percent: warrantyPassedPercent,
     days_remaining: daysRemaining,
     length_km: 0.0,
     open_defects: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.openDefects : 0,
     repair_packages: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.repairPackages : 0,
-    image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
+    image_url: '',
     is_assigned: true,
     is_restricted_for_pm: false,
     kml_status: 'Chưa có tim tuyến',
@@ -538,13 +467,13 @@ function mapBackendProjectToHub(
     handover_file_ids: item.handoverFileIds || []
   }
 
-  return enrichProjectWithAlignment(project)
+  return project
 }
 
 // In-Memory Store có khôi phục từ sessionStorage khi F5/reload trang
 let projectStore: HubProject[] = (() => {
   try {
-    const cached = sessionStorage.getItem('roadguard_project_store')
+    const cached = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true' ? sessionStorage.getItem('roadguard_project_store') : null
     if (cached && useAuthStore.getState().isAuthenticated) return JSON.parse(cached)
   } catch {}
   return import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'

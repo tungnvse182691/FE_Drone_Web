@@ -174,8 +174,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
                       }`}
                     >
-                      {prj.warranty_passed_percent}%{' '}
-                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span>
+                      {prj.warranty_data_missing ? 'Chưa có ngày bảo hành từ API' : `${prj.warranty_passed_percent}%`}{' '}
+                      <span className="font-normal text-slate-500 text-[11px]">{!prj.warranty_data_missing && `(Còn ${prj.days_remaining} ngày)`}</span>
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -187,7 +187,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                           ? 'bg-slate-300'
                           : 'bg-brand-gold'
                       }`}
-                      style={{ width: `${prj.warranty_passed_percent}%` }}
+                      style={{ width: `${prj.warranty_data_missing ? 'Chưa có ngày bảo hành từ API' : `${prj.warranty_passed_percent}%`}` }}
                     ></div>
                   </div>
                 </div>

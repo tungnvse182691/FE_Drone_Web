@@ -61,9 +61,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
+                    <div className="font-mono font-semibold text-slate-800">{prj.warranty_data_missing ? 'Chưa có ngày bảo hành' : `${prj.warranty_passed_percent}%`}</div>
                     <div className="text-[10px] text-slate-500 font-mono">
-                      {prj.status === 'CLOSED' ? 'Đã hoàn tất' : `Còn ${prj.days_remaining} ngày`}
+                      {prj.warranty_data_missing ? '—' : prj.status === 'CLOSED' ? 'Đã hoàn tất' : `Còn ${prj.days_remaining} ngày`}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">

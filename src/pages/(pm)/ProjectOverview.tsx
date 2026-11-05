@@ -216,7 +216,7 @@ export const ProjectOverview: React.FC = () => {
       />
 
       {/* 2. PROJECT HIGHLIGHTS GRID (3 CARDS) */}
-      {project.stats_error ? <p role="alert">Chưa tải được thống kê dự án: {project.stats_error}</p> : <ProjectHighlightsGrid
+      {project.stats_error || project.warranty_data_missing ? <p role="alert">{project.stats_error || 'Chưa có ngày bảo hành từ API.'}</p> : <ProjectHighlightsGrid
         project={project}
         mainlineLengthKm={alignmentDetail.mainlineLengthKm}
         branchesLengthKm={alignmentDetail.branchesLengthKm}

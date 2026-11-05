@@ -89,25 +89,22 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
           const membersPromises = myProjects.map(async (prj) => {
             const members = await projectService.fetchProjectMembers(prj.id)
             return members.map((m: any) => {
-              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
-              const email = matchedUser?.email || m.email || ''
-              const phone = matchedUser?.phone || m.phone || ''
-              const roleCode = mapBackendRoleToRoleCode(m.role || matchedUser?.role)
+              const roleCode = mapBackendRoleToRoleCode(m.role)
               const roleLabel = getRoleLabel(roleCode)
 
               return {
-                id: m.userId || matchedUser?.id || m.membershipId || crypto.randomUUID(),
-                full_name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
-                email: email || `${(m.displayName || 'nhansu').toLowerCase().replace(/[^a-z0-9]/g, '')}@hoanghai.vn`,
+                id: m.userId,
+                full_name: m.displayName || 'Chưa có tên trong API',
+                email: '—',
                 role: roleCode,
                 role_label: roleLabel,
-                phone: phone || '—',
+                phone: '—',
                 status: (m.status === 'ACTIVE' || m.status === 1 ? 'ACTIVE' : 'SUSPENDED') as 'ACTIVE' | 'SUSPENDED',
                 project_scope: `${prj.code ? `${prj.code} • ` : ''}${prj.name}`,
                 assigned_project_ids: [prj.id],
-                device_info: 'Ứng dụng Web / Mobile RoadGuard',
-                ip_address: 'Hệ thống nội bộ',
-                last_active: 'Vừa hoạt động',
+                device_info: '—',
+                ip_address: '—',
+                last_active: '—',
                 created_at: m.validFrom || new Date().toISOString()
               }
             })

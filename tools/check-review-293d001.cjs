@@ -1185,5 +1185,36 @@ function caseLifecycleHarness() {
     }
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
   })
+  await test('eligible members paginate and expose cursor/error rather than fallback staff', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    let requests = 0
+    const { personnelService: service } = load('src/api/services/personnelService.ts', { '../client': { apiClient: { get: async (_, config) => {
+      requests++; return response(config.params.cursor ? { items: [{ userId: 'two' }] } : { items: [{ userId: 'one' }], nextCursor: 'next' })
+    } } } })
+    assert.equal((await service.fetchEligibleProjectMembers('p', { role: 'OPERATOR' })).items.length, 2)
+    assert.equal(requests, 2)
+    const { personnelService: loop } = load('src/api/services/personnelService.ts', { '../client': { apiClient: { get: async () => response({ items: [], nextCursor: 'same' }) } } })
+    await assert.rejects(loop.fetchEligibleProjectMembers('p', { role: 'CREW' }), /Cursor/)
+  })
+  await test('member add timeout replays same key/body,201 recovery only reads, wrong role never posts', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    const journal = new Map(), posts = []
+    let timeout = true, readFailure = true
+    const { personnelService: service } = load('src/api/services/personnelService.ts', {
+      __sessionStorage: { getItem: k => journal.get(k) || null, setItem: (k, v) => journal.set(k, v), removeItem: k => journal.delete(k) },
+      '../client': { apiClient: { post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response({ membershipId: 'm' }) } } },
+      './projectService': { projectService: { fetchProjectMembers: async () => { if (readFailure) throw failure(503, 'read_failed'); return [{ userId: 'operator', status: 'ACTIVE', membershipId: 'm' }] } } }
+    })
+    await assert.rejects(service.addProjectMember('p', 'operator'), /timeout/)
+    await assert.rejects(service.addProjectMember('p', 'other'), /ý định mới/)
+    timeout = false
+    await assert.rejects(service.addProjectMember('p', 'operator'), e => e.response.status === 503)
+    readFailure = false
+    assert.equal((await service.addProjectMember('p', 'operator')).membershipId, 'm')
+    assert.equal(posts.length, 2); assert.deepEqual(posts[0], posts[1]); assert.equal(journal.size, 0)
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    await assert.rejects(service.addProjectMember('p', 'operator'), /PM/)
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

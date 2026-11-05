@@ -652,6 +652,7 @@ export interface HubProject {
   pm_role_badge: string
   pm_user_id?: string
   pm_avatar?: string
+  warranty_data_missing?: boolean
   warranty_passed_percent: number
   days_remaining: number
   length_km: number

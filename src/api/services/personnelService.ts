@@ -14,6 +14,9 @@ import { RoleCode } from '../../types/enums'
 import { SystemUserAccount } from '../../types/domain'
 import { projectService } from './projectService'
 import { userDirectory } from './userDirectory'
+import { useAuthStore } from '../../store/authStore'
+
+const memberWrites = new Set<string>()
 
 export interface StaffUserDto {
   userId: string
@@ -141,8 +144,19 @@ export const personnelService = {
     }
 
     // 1. Gọi API users
-    const usersRes = await apiClient.get<StaffPageResponseDto>('/users', { params })
-    const userItems = usersRes.data?.items || []
+    const epoch = useAuthStore.getState().authEpoch
+    const userItems: StaffUserDto[] = []
+    const seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const usersRes = await apiClient.get<StaffPageResponseDto>('/users', { params: { ...params, cursor } })
+      if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh bạ cũ.')
+      if (!Array.isArray(usersRes.data?.items)) throw new Error('Danh bạ trả sai contract.')
+      userItems.push(...usersRes.data.items)
+      cursor = usersRes.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor danh bạ bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
 
     if (userItems.length > 0) {
       userDirectory.registerUsers(
@@ -199,28 +213,27 @@ export const personnelService = {
       }
 
       const isSuspended = (u.status || '').toUpperCase() === 'SUSPENDED'
-      const matchedUser = userDirectory.findUser(u.userId, u.displayName || undefined)
-      const email = u.email || matchedUser?.email || '—'
+      const email = u.email || '—'
       const rawPhone = u.phoneNumber || (u as any).PhoneNumber || (u as any).phone
       const phone = (rawPhone && String(rawPhone).trim() && String(rawPhone).trim() !== '-')
         ? String(rawPhone).trim()
-        : (matchedUser?.phone || '—')
+        : '—'
 
       return {
         id: u.userId,
-        full_name: u.displayName || matchedUser?.displayName || u.email || 'Chưa cập nhật tên',
+        full_name: u.displayName || 'Chưa có tên trong API',
         email,
         phone,
         role: roleCode,
         role_label: roleLabel,
         project_scope: projectScope,
         assigned_project_ids: assignedProjectIds,
-        device_info: isSuspended ? 'Thu hồi toàn bộ token & quyền truy cập' : 'Ứng dụng Web / Mobile (Đã cấp quyền)',
-        ip_address: isSuspended ? 'Đình chỉ phiên' : 'Hệ thống nội bộ',
+        device_info: '—',
+        ip_address: '—',
         status: isSuspended ? 'SUSPENDED' : 'ACTIVE',
-        last_active: isSuspended ? 'Đã đình chỉ' : 'Đang hoạt động',
-        certificate: 'Hồ sơ nhân sự lưu trữ nội bộ',
-        joined_date: 'Đã biên chế'
+        last_active: '—',
+        certificate: '—',
+        joined_date: '—'
       }
     })
   },
@@ -379,25 +392,21 @@ export const personnelService = {
       cursor?: string
     }
   ): Promise<{ items: { userId: string; displayName: string; role: string }[]; nextCursor?: string }> {
-    const queryParams = new URLSearchParams()
-    queryParams.append('role', params.role)
-    if (params.search && params.search.trim()) {
-      queryParams.append('search', params.search.trim())
-    }
-    if (params.limit) {
-      queryParams.append('limit', String(params.limit))
-    }
-    if (params.cursor) {
-      queryParams.append('cursor', params.cursor)
-    }
+    const epoch = useAuthStore.getState().authEpoch
+    const items: { userId: string; displayName: string; role: string }[] = []
+    const seen = new Set<string>()
+    let cursor = params.cursor
+    do {
+      const res = await apiClient.get(`/projects/${projectId}/members/eligible`, { params: { ...params, limit: 100, cursor } })
+      if (epoch !== useAuthStore.getState().authEpoch) throw new Error('Phiên đã thay đổi; bỏ danh sách eligible cũ.')
+      if (!Array.isArray(res.data?.items)) throw new Error('Danh sách eligible trả sai contract.')
+      items.push(...res.data.items)
+      cursor = res.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor eligible bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return { items }
 
-    console.log(`🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects/${projectId}/members/eligible?${queryParams.toString()}...`)
-    const res = await apiClient.get<{
-      items: { userId: string; displayName: string; role: string }[]
-      nextCursor?: string
-    }>(`/projects/${projectId}/members/eligible?${queryParams.toString()}`)
-
-    return res.data || { items: [] }
   },
 
   /**
@@ -410,19 +419,34 @@ export const personnelService = {
     userId: string,
     idempotencyKey?: string
   ): Promise<any> {
-    const key = idempotencyKey || crypto.randomUUID()
-    console.log(`🚀 [CANDIDATE3 BE] Gọi POST /api/v1/projects/${projectId}/members (userId: ${userId}, key: ${key})...`)
-
-    const res = await apiClient.post(
-      `/projects/${projectId}/members`,
-      { userId },
-      {
-        headers: {
-          'Idempotency-Key': key
-        }
+    const state = useAuthStore.getState(), epoch = state.authEpoch, actor = state.user
+    if (!actor || actor.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được thêm Operator/Crew vào dự án.')
+    const journalKey = `rg_member_add_${actor.id}_${projectId}`
+    const saved = sessionStorage.getItem(journalKey)
+    const command = saved ? JSON.parse(saved) : { userId, key: idempotencyKey || crypto.randomUUID() }
+    if (command.userId !== userId) throw new Error('Lệnh thêm thành viên trước chưa đối chiếu xong; không tạo ý định mới.')
+    if (memberWrites.has(journalKey)) throw new Error('Đang gửi lệnh thêm thành viên.')
+    const current = () => { if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor.id) throw new Error('Phiên thành viên đã thay đổi.') }
+    memberWrites.add(journalKey)
+    try {
+      current(); sessionStorage.setItem(journalKey, JSON.stringify(command))
+      if (!command.receipt) {
+        const res = await apiClient.post(`/projects/${projectId}/members`, { userId: command.userId }, {
+          headers: { 'Idempotency-Key': command.key }, transformRequest: [(body: unknown) => { current(); return JSON.stringify(body) }]
+        })
+        current(); command.receipt = res.data; sessionStorage.setItem(journalKey, JSON.stringify(command))
       }
-    )
-    return res.data
+      const members = await projectService.fetchProjectMembers(projectId)
+      current()
+      const member = members.find(item => item.userId === userId && item.status === 'ACTIVE')
+      if (!member) throw new Error('Đã nhận biên nhận nhưng chưa đọc lại được membership ACTIVE; không POST thêm.')
+      sessionStorage.removeItem(journalKey)
+      return member
+    } catch (error: any) {
+      if (!command.receipt && error.response?.status >= 400 && error.response.status < 500 && error.response.data?.code !== 'duplicate_request') sessionStorage.removeItem(journalKey)
+      throw error
+    } finally { memberWrites.delete(journalKey) }
+
   },
 
   /**

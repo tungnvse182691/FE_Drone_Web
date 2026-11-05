@@ -1637,3 +1637,38 @@ Edge production browser rg-step5-browser.cjs: PM-A chọnproject/runserver, th�
 **Kiểm tự động:** `tools/check-review-293d001.cjs` **97 PASS**, là mockHTTP/hooks cô lập, khôngE2E: timeout/conflict/source gate, đúng K/body/If-Match triage, PM không triage, receipt readback khôngPOST lại, Report cursor/path/BlobProblemDetails/GPSUNKNOWN và session fencing. Regression conclusion cập nhật để GET đọc lại phản ánh kết quả server; updateCase test kiểm bị chặn. `tsc -b` **PASS**, `vite build` **PASS**, `git diff --check` **PASS**; lint **NOT_RUN**, package.json không script. Cảnh báo Tailwind/chunk lớn có sẵn, không refactor ngoài task.
 
 **Bàn giao:** chỉ file Bước6 và regression/worklog, không sửa backend/reportKPI/FIELD/NORMAL/FT/publication/lifecycle. Không tạo Report/Case/Defect/project hoặc business mutation, không SQLwrite/resetDB/volume, không xóa fixture. Database local không đi theo GitHub. Không ghi credential/token/cookie/mật khẩu/SĐT. Bước6 **chưa thể gọi hoàn tất E2E**; đọc/scope/UI/error và bảo vệ command đã sửa, các positive writes nêu trên còn NOT_RUN cùng gap evidence selector/journal reconciliation.
+
+
+### 06/11/2026 — Bước 2: eligible/member recovery và loại dữ liệu tự điền
+
+Base: FE hoang `ef91863cc10f15c7af54cce4dc9883edbfdffd2b`, status sạch. Đọc AGENTS, Spec17_10 workflow01 Authentication/Users/Memberships và workflow02 Project, OpenAPI, worklog, projectService/personnelService và các màn Project/Personnel liên quan. Backend chỉ đọc SHA5180ab9: StaffDirectoryController, StaffReadService/Repository, ProjectsController, DTO/service primary reassignment. Không sửa backend, DB, Docker/config/migration; không làm Bước3–6 hoặc SurveyWeb76121621.
+
+| Hạng mục | Spec/OpenAPI/backend | Phân loại và kết luận |
+|---|---|---|
+| Project/current membership | Workflow01; GET projects/members, quyền và ngày hiệu lực do server | API đã có; giữ scope/F5/epoch, sửa mapper còn lấy dữ liệu tự điền |
+| Chọn/thêm Operator/Crew | GET members/eligible; POST members AddProjectMemberRequestDto(userId), K+cookieCSRF, PM-only | FE chưa nối đúng pagination/recovery; đã sửa |
+| Sup directory/read members | GET users/member/primary PM; history chỉ Sup; eligible/add chỉ PM | API đã có và đúng; không mở quyền Sup thêm member |
+| Đổi PM chính | PUT primary-project-manager đã có; body rowversion/effectiveFrom/reason/operationId; baseline Bearer-only | Transport gap Web; giữ BLOCKED, không tự thêm If-Match |
+| Kết thúc membership trực tiếp | Active/Ended không tự xác lập endpoint CRUD | Chưa có contract; không mở rộng backend |
+
+Đã sửa:
+- Eligible và directory đọc đủ nextCursor, phát hiện cursor lặp/sai DTO, kiểm authEpoch. Modal eligible có sequence guard, lỗi HTTP/code/detail, retry và không trình bày lỗi như empty success.
+- addProjectMember bắt quyền PM; journal sessionStorage tách actor/project, giữ userId/key/body/receipt, chặn in-flight và ý định mới khi lệnh cũ chưa rõ kết quả. Kiểm epoch ngay trước dispatch. Timeout chỉ replay cùng K/body; sau receipt chỉ GET members và xác nhận ACTIVE trước khi trả thành công. Không thêm If-Match cho POST members, không map mọi409 thành “đã là thành viên”. Modal khôi phục held user để đối chiếu ngay cả khi eligible lỗi/không còn người đó. Journal là command recovery, không phải nguồn membership; chưa có UI tự hủy journal khi cần đối chiếu.
+- Mapper project bỏ nguồn PM từ danh bạ mẫu/tên, bỏ trạng thái CLOSED từ sessionStorage, địa bàn từ localStorage/mã/tên và ảnh Unsplash. PM lookup chỉ theo userID từ API. Không khôi phục project store từ sessionStorage trong luồng API; bỏ enrich geometry local ở kết quả mapper server. ACTIVE dùng status server. Bỏ bảo hành mặc định3năm khi thiếu ngày; grid/table/detail báo thiếu dữ liệu thay tỷ lệ/ngày giả.
+- PM và Sup personnel không ghép contact từ danh bạ mẫu, không sinh email hoanghai.vn/UUID, không tự điền thiết bị/IP/“vừa hoạt động”/chứng chỉ/biên chế. Giữ fixture ngoài phạm vi.
+
+API thật chỉ đọc: rg-step2-refresh-api.py dùng cookieWeb tới instance cũ18081/18443, projecttest `2cde860a-f777-4e5c-8d8f-384fdaed9509`. PM-A/Sup members/primary/summary200, PM-B403. PM-A eligibleOPERATOR200(4), CREW200(1); Sup vàPM-B eligible403. PM-A includeHistory403, Sup200. MembershipPM-A validFrom2026-11-04/versionAAAAAAAA0ts= giữ nguyên. Không POST project/member hoặc đổiPM; không SQL. HTTP Date05Nov2026 18:18–18:19UTC (06/11 local).
+
+Regression tools/check-review-293d001.cjs:99 scenarios PASS trước chốt; có pagination/cursor, error propagation, timeout member cùng K/body và receipt GET-only, sai role không POST, cùng các test project durable intent đã có. Đây là HTTP/hooks cô lập, không phải E2E. Typecheck/build/browser/diff-check ghi kết quả cuối bên dưới. Lint NOT_RUN vì package không có script, không tự thêm framework.
+
+Giới hạn: positive create/member retry/chuyển PM và thu quyền PM cũ thực NOT_RUN vì lượt này không thay DB. Reassignment Web BLOCKED theo security contract hiện hành, không yêu cầu API mới hoặc tự mở Bearer. Không gọi regression/build là E2E command PASS. Source read cho reassignment yêu cầu effectiveFrom bằng ngàyUTC hiện tại và sau currentValidFrom, operationId/rowversion thật. Form create/durable pending project có sẵn giữ nguyên. Dữ liệu local không đi theo GitHub; scripts temp không stage, không ghi secret.
+
+Hướng dẫn test thủ công Web:
+1. Dùng Supervisor, PM-A, PM-B test từ private demo accounts; FE5173 và backend proxy hiện có. Không đưa mật khẩu vào báo cáo.
+2. Sup vào /sup/projects: GET projects200 và GET users?role=PM&status=ACTIVE200. Mở project2cde...: GET members200; includeHistory=true chỉ Sup. Nút thêm Operator/Crew khóa với Sup.
+3. Logout/login PM-A, mở /pm/projects rồi /pm/projects/2cde860a-f777-4e5c-8d8f-384fdaed9509. Xem status/version/member server. Bấm Thêm nhân sự, đổi OPERATOR/CREW: quan sát GET members/eligible?role=...&limit=100 và cursor. Danh sách là tài khoản đã có, không tạo user mới. Chặn mạng phải hiện alert và nút tải lại, không empty giả.
+4. Chỉ khi được phép dùng fixture mutation: POST projects/{id}/members body {userId}, cookieCSRF/K, không If-Match. Sau201 phải GET members. Timeout dùng lại cùng K/body; córeceipt chỉ GET. Đổi người trước đối chiếu bị chặn. Lượt này chưa chạy bước ghi này.
+5. Logout/login PM-B, mở thẳng URL project2cde...: không fallback project đầu tiên. GET members/primary/summary và eligible403, không hiển thị member PM-A.
+6. F5 với Sup/PM-A phải đọc lại server. Logout/đổi actor không giữ project/member cũ. Users directory Sup-only; eligible/add PM-only; không nhầm transport401 của reassignment với lỗi role403.
+
+**Chốt bản cuối:** 99 regression PASS, tsc -b PASS, vite build PASS, git diff --check PASS. Browser production bundle qua preview5181/proxy tới backend18443: Sup/PM-A/PM-B scope/F5/đổi tài khoản PASS; lỗi members/projects rồi retry PASS; PM eligible lỗi mạng rồi retry và đổi OPERATOR/CREW PASS; 0 business writes. Harness rg-step2-refresh-browser.cjs và rg-step2-refresh-api.py ngoài repo. Selector test trùng hai alert được sửa trong harness và rerun PASS. Một build đọc trúng file đang ghi đã lỗi; chốt source ổn định rồi build lại PASS, không dùng lượt lỗi làm bằng chứng. Positive thêm member/project và reassignment thực vẫn NOT_RUN/BLOCKED như trên. Không thay đổi backend hoặc DB. Bước 2 hoàn thiện thêm phần FE đọc/chọn/recovery; chưa nghiệm thu toàn vòng mutation E2E.
