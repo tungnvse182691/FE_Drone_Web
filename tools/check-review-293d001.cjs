@@ -210,7 +210,7 @@ function caseLifecycleHarness() {
     const { projectService } = load('src/api/services/projectService.ts', { '../client': { apiClient: { post: async () => { throw failure(409, 'duplicate_request') } } } })
     await assert.rejects(projectService.createProject({ code: ' NEW ', name: 'New' }), error => error.code === 'duplicate_request' && !error.message.includes('đã tồn tại') && !!error.response && error.input.code === ' NEW ')
   })
-  await test('AI has server disposition/version and includes Survey beside succeeded run', async () => {
+  await test('AI keeps server disposition/version and reads run without legacy Survey mapper', async () => {
     const projectId = 'p'
     const detectionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     const facts = { projectId, detectionId, sourceVersion: 'source-v', geometryVersion: 'geometry-v', routeVersionId: 'route-v', disposition: { decisionId: 'decision', version: 'disp-v' }, frameFileId: 'frame' }
@@ -225,7 +225,7 @@ function caseLifecycleHarness() {
     surveyService.getAiCandidateFacts = async () => facts
     surveyService.getCandidateDecision = async () => ({ decision: 'REJECT', defectId: null, version: 'decision-v' })
     const result = await surveyService.getAllProjectAiDetections('p')
-    assert.equal(result.length, 2)
+    assert.equal(result.length, 1)
     const item = result.find(row => row.id === detectionId)
     assert.equal(item.status, 'REJECTED'); assert.equal(item.sourceVersion, 'source-v'); assert.equal(item.geometryVersion, 'geometry-v'); assert.equal(item.disposition.version, 'disp-v')
     surveyService.getCandidateDecision = async () => ({ decision: 'LINK_EXISTING', defectId: 'linked-defect', version: 'linked-v' })
@@ -1094,6 +1094,58 @@ function caseLifecycleHarness() {
     await assert.rejects(reader.createSurvey({}), /BLOCKED/)
     await assert.rejects(reader.getSurveyRoutes(), /Web cookie/)
     assert.equal(typeof reader.simulateDroneFlightCompletion, 'undefined')
+  })
+  await test('Candidate decisions preserve exact source/head/target/classification and never produce local success on409/412/428', async () => {
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    for (const status of [409, 412, 428]) {
+      let posts = 0
+      const { surveyService: service } = load('src/api/services/surveyService.ts', { '../client': { apiClient: { post: async () => { posts++; throw failure(status, 'conflict') } } } })
+      await assert.rejects(service.decideCandidate('p', { sourceKind: 'AI_DETECTION', sourceId: 's', sourceVersion: 'source-v', geometryVersion: 'geometry-v', decision: 'REJECT', reason: 'test' }), e => e.response.status === status)
+      assert.equal(posts, 1)
+    }
+    for (const decision of ['KEEP_NEW', 'LINK_EXISTING', 'REJECT']) {
+      let sent
+      const receipt = { id: 'decision', sourceId: 's', sourceKind: 'AI_DETECTION', decision, defectId: decision === 'REJECT' ? null : 'd', version: 'v' }
+      const { surveyService: service } = load('src/api/services/surveyService.ts', { '../client': { apiClient: { post: async (_, body) => { sent = body; return response(receipt) } } } })
+      service.getCandidateDecision = async () => receipt
+      service.getAiCandidateFacts = async () => ({ disposition: { decisionId: 'decision' } })
+      const result = await service.decideCandidate('p', { sourceKind: 'AI_DETECTION', sourceId: 's', sourceVersion: 'sv', geometryVersion: 'gv', decision, reason: ' reason ', targetDefectId: 'd', targetVersion: 'dv', defectTypeCode: 'CRACK', severity: 'HIGH', roadSectionVersionId: 'rv', segmentId: 'segment', supersedesDecisionId: 'old', previousDecisionVersion: 'old-v' })
+      assert.equal(result, receipt); assert.equal(sent.sourceVersion, 'sv'); assert.equal(sent.geometryVersion, 'gv'); assert.equal(sent.previousDecisionVersion, 'old-v')
+      assert.equal(sent.reason, 'reason')
+      assert.equal(sent.classification?.segmentId ?? null, decision === 'KEEP_NEW' ? 'segment' : null)
+      assert.equal(sent.targetVersion, decision === 'LINK_EXISTING' ? 'dv' : null)
+    }
+  })
+  await test('uncertain Candidate write retains key/body;201 readback failure retries GET only, not another Defect', async () => {
+    const journal = new Map(), keys = [], bodies = []
+    let timeout = true, readError = true
+    const receipt = { id: 'decision', sourceId: 's', decision: 'REJECT', version: 'v' }
+    const { surveyService: service } = load('src/api/services/surveyService.ts', {
+      __sessionStorage: { getItem: k => journal.get(k) || null, setItem: (k, v) => journal.set(k, v), removeItem: k => journal.delete(k) },
+      '../client': { apiClient: { post: async (_, body, config) => { keys.push(config.headers['Idempotency-Key']); bodies.push(json(body)); if (timeout) throw new Error('timeout'); return response(receipt) } } }
+    })
+    service.getCandidateDecision = async () => { if (readError) throw failure(503, 'read_failed'); return receipt }
+    service.getAiCandidateFacts = async () => ({ disposition: { decisionId: 'decision' } })
+    const input = { sourceKind: 'AI_DETECTION', sourceId: 's', sourceVersion: 'sv', geometryVersion: 'gv', decision: 'REJECT', reason: 'test' }
+    await assert.rejects(service.decideCandidate('p', input), /timeout/)
+    await assert.rejects(service.decideCandidate('p', { ...input, reason: 'changed' }), /key\/body\/version/)
+    timeout = false
+    await assert.rejects(service.decideCandidate('p', input), e => e.response.status === 503)
+    readError = false
+    await service.decideCandidate('p', input)
+    assert.equal(keys.length, 2); assert.equal(keys[0], keys[1]); assert.deepEqual(bodies[0], bodies[1]); assert.equal(journal.size, 0)
+  })
+  await test('Candidate missing snapshot/wrong role and legacy reset/edit never write or claim success', async () => {
+    let calls = 0
+    const { surveyService: service } = load('src/api/services/surveyService.ts', { '../client': { apiClient: { post: async () => { calls++ } } } })
+    await assert.rejects(service.decideCandidate('p', { sourceKind: 'AI_DETECTION', sourceId: 's', decision: 'REJECT', reason: 'test' }), /snapshot/)
+    actor = { id: 'sup', role: roles.SUPERVISOR }
+    await assert.rejects(service.decideCandidate('p', {}), /PM/)
+    actor = { id: 'pm', role: roles.PROJECT_MANAGER }
+    await assert.rejects(service.resetSurveyDetection('s'), /contract/)
+    await assert.rejects(service.saveAiCandidateOverride('s', {}), /contract/)
+    await assert.rejects(service.updateSurveyDetection('survey', 's', { status: 'APPROVED' }), /legacy/)
+    assert.equal(calls, 0)
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

@@ -108,6 +108,8 @@ export interface FileMetadataDto {
   version: string
 }
 
+const candidateWrites = new Set<string>()
+
 const fileBlobUrlCache = new Map<string, string>()
 
 export const DEFECT_TYPE_LABELS: Record<string, string> = {
@@ -473,397 +475,23 @@ export const surveyService = {
    * Lấy danh sách phát hiện AI từ kết quả run AI thật trên Backend Candidate3
    * Kết hợp SWG-053 (/ai-mock-runs/{runId}/result), SWG-005 (/ai-candidates/{detectionId}) và SWG-020 (/candidate-decisions/{decisionId})
    */
-  async getSurveyDetections(
-    surveyId: string,
-    preloadedMission?: SurveyMissionItem,
-    preloadedProjectId?: string
-  ): Promise<AIDetectionItem[]> {
-
-    let target = preloadedMission
-    if (!target) {
-      const missions = await this.getSurveys()
-      target = missions.find((m) => m.id === surveyId || m.code === surveyId)
-    }
-    let projectId = preloadedProjectId || target?.project_id
-    if (!projectId) {
-      const projects = await projectService.fetchProjects().catch(() => [])
-      projectId = target?.project_id || projects[0]?.id
-    }
-    if (!projectId) {
-      return []
-    }
-
-    let rawDetections: Array<{
-      detectionId: string
-      typeCode: string
-      confidence: number
-      bbox: [number, number, number, number]
-      frameFileId?: string
-      timestampMs: number
-      sourceVideoFileId?: string
-      frameFileVersion?: string
-      segmentId?: string | null
-      positionStatus?: string
-      geometry?: any
-    }> = []
-
-    let preferredRunId = 'mock-run-synthetic'
-    const isProjectA = projectId.toLowerCase() === '72f84201-c001-4000-8000-000000000001'
-    {
-      try {
-        const aiRunsRes = await apiClient.get<{
-          items: Array<{ id: string; status: string; fixtureVersion?: string; resultId?: string }>
-        }>(`/projects/${projectId}/ai-mock-runs`)
-        const runs = (aiRunsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
-        if (runs.length > 0) {
-          const isBaseline = target?.survey_type === 'BASELINE'
-          const preferredRun = isBaseline
-            ? runs.find((r) => r.fixtureVersion === 'synthetic-road-v1') || runs[0]
-            : runs.find((r) => r.fixtureVersion === 'synthetic-multiclass-v1') || runs[0]
-
-          preferredRunId = preferredRun.id
-          const resultRes = await apiClient.get<{
-            detections: Array<{
-              detectionId: string
-              typeCode: string
-              confidence: number
-              bbox: [number, number, number, number]
-              frameFileId: string
-              timestampMs: number
-            }>
-          }>(`/projects/${projectId}/ai-mock-runs/${preferredRun.id}/result`)
-          rawDetections = resultRes.data?.detections || []
-        }
-      } catch (error) { throw error }
-    }
-
-    // Empty API results stay empty; do not synthesize detections from road fixtures.
-    const savedReviews: Record<string, any> = {
-      ...(target?.id ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.id}`, {}) : {}),
-      ...(target?.code ? getFromStorage<Record<string, any>>(`roadguard_detections_review_${target.code}`, {}) : {}),
-      ...getFromStorage<Record<string, any>>(`roadguard_detections_review_${surveyId}`, {})
-    }
-
-    const sKmNum = parseFloat(String(target?.start_km || '0').replace(/[^0-9.]/g, '') || '0')
-    const eKmNum = parseFloat(String(target?.end_km || '0.702').replace(/[^0-9.]/g, '') || '0.702')
-    const step = Math.max(0.05, (eKmNum - sKmNum) / (rawDetections.length + 1))
-
-    // Lấy danh sách Defects của dự án từ CSDL để đồng bộ chính xác Loại khiếm khuyết & Mức độ nghiêm trọng đã lưu
-    const projectDefects = await this.getProjectDefects(projectId)
-    const defectMap = new Map<string, BackendDefectDto>()
-    for (const df of projectDefects) {
-      defectMap.set(df.id.toLowerCase(), df)
-    }
-
-    const sevViMap: Record<string, string> = {
-      CRITICAL: 'Khẩn cấp',
-      HIGH: 'Nghiêm trọng',
-      MEDIUM: 'Trung bình',
-      LOW: 'Nhẹ'
-    }
-
-    const items: AIDetectionItem[] = await Promise.all(
-      rawDetections.map(async (d, index) => {
-        const isRealCandidateUuid = /^[0-9a-fA-F-]{36}$/.test(d.detectionId)
-        const candFacts = isRealCandidateUuid
-          ? await this.getAiCandidateFacts(projectId, d.detectionId)
-          : null
-        let decisionDto: CandidateDecisionDto | null = null
-        if (candFacts?.disposition?.decisionId) {
-          decisionDto = await this.getCandidateDecision(projectId, candFacts.disposition.decisionId)
-        }
-
-        const detCode = `DET-${String(index + 1).padStart(2, '0')}`
-        const savedReview =
-          savedReviews[d.detectionId] ||
-          savedReviews[detCode] ||
-          (d.detectionId ? savedReviews[d.detectionId.toLowerCase()] : undefined) ||
-          (d.detectionId ? savedReviews[d.detectionId.toUpperCase()] : undefined)
-
-        const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
-        const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
-        if (!candFacts && decOverride) {
-          decisionDto = decOverride
-        }
-
-        let currentStatus: AIDetectionItem['status'] = 'PENDING'
-        let defectId: string | null = null
-        let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
-
-        if (!candFacts && isReset && !decOverride) {
-          decisionDto = null
-          currentStatus = 'PENDING'
-          defectId = null
-          decisionKind = null
-        } else if (decisionDto) {
-          decisionKind = decisionDto.decision
-          defectId = decisionDto.defectId
-          if (decisionDto.decision === 'KEEP_NEW' || decisionDto.decision === 'LINK_EXISTING') {
-            currentStatus = 'APPROVED'
-          } else if (decisionDto.decision === 'REJECT') {
-            currentStatus = 'REJECTED'
-          }
-        } else if (!candFacts && savedReview?.status) {
-          currentStatus = savedReview.status as AIDetectionItem['status']
-          defectId = savedReview.defectCode || null
-        }
-
-        const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
-        const overridesMap = getAiCandidateOverrides()
-        const candOverride =
-          overridesMap[d.detectionId] ||
-          overridesMap[d.detectionId.toLowerCase()] ||
-          (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
-
-        const bboxX = candFacts?.boundingBox?.x ?? candOverride?.bbox?.x ?? d.bbox[0]
-        const bboxY = candFacts?.boundingBox?.y ?? candOverride?.bbox?.y ?? d.bbox[1]
-        const bboxW = candFacts?.boundingBox?.width ?? candOverride?.bbox?.width ?? d.bbox[2]
-        const bboxH = candFacts?.boundingBox?.height ?? candOverride?.bbox?.height ?? d.bbox[3]
-
-        const topPct = (bboxY * 100).toFixed(1) + '%'
-        const leftPct = (bboxX * 100).toFixed(1) + '%'
-        const widthPct = (bboxW * 100).toFixed(1) + '%'
-        const heightPct = (bboxH * 100).toFixed(1) + '%'
-        const kmRatio = (d as any).kmRatio !== undefined ? (d as any).kmRatio : (index + 1) / (rawDetections.length + 1)
-        const km = sKmNum + (eKmNum - sKmNum) * kmRatio
-
-        const typeCode =
-          candOverride?.rawTypeCode ||
-          linkedDbDefect?.defectTypeCode ||
-          savedReview?.rawTypeCode ||
-          candFacts?.typeCode ||
-          d.typeCode
-        const typeLabel =
-          candOverride?.customTypeLabel ||
-          (d as any).label ||
-          formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
-        const confVal = candFacts?.confidence ?? d.confidence
-        const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
-        const tsMs = candFacts?.timestampMs ?? d.timestampMs
-        const severityLabel =
-          (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
-          savedReview?.severityLevel ||
-          (d as any).severity ||
-          (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
-
-        const currentRoad = getProjectRoadConfig(projectId)
-        const laneStr = ''
-
-        const descStr = `Khung hình trích xuất tại mốc ${tsMs}ms`
-
-        return {
-          id: d.detectionId,
-          legacyId: (d as any).legacyId,
-          code: detCode,
-          defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
-          defectId,
-          stationing: `Km ${km.toFixed(3).replace('.', '+')}`,
-          lane: laneStr,
-          type: typeLabel,
-          severityLevel: severityLabel,
-          confidence: confPct,
-          description: descStr,
-          metrics: {
-            reviewer:
-              currentStatus !== 'PENDING'
-                ? savedReview?.reviewer || 'Chỉ huy trưởng (PM)'
-                : undefined,
-            dismissReason: savedReview?.dismissReason
-          },
-          status: currentStatus,
-          kmValue: km,
-          bbox: {
-            top: topPct,
-            left: leftPct,
-            width: widthPct,
-            height: heightPct,
-            label: `${typeLabel} • ${confPct}%`,
-            dims: `Khung bao: ${widthPct} × ${heightPct}`,
-            borderColor: typeCode === 'POTHOLE' ? '#F59E0B' : '#EF4444'
-          },
-          projectId,
-          runId: candFacts?.runId || preferredRunId,
-          datasetVersionId: candFacts?.datasetVersionId,
-          modelVersionId: candFacts?.modelVersionId,
-          fixtureVersion: candFacts?.fixtureVersion,
-          sourceVideoFileId: candFacts?.sourceVideoFileId,
-          frameFileId: candFacts?.frameFileId || d.frameFileId,
-          frameFileVersion: candFacts?.frameFileVersion,
-          frameSha256: candFacts?.frameSha256,
-          frameSizeBytes: candFacts?.frameSizeBytes,
-          frameMediaType: candFacts?.frameMediaType,
-          timestampMs: tsMs,
-          rawTypeCode: typeCode,
-          rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
-          routeVersionId: candFacts?.routeVersionId || getProjectRoadConfig(projectId).routeVersionId,
-          segmentSetId: candFacts?.segmentSetId || getProjectRoadConfig(projectId).segmentSetId,
-          segmentId: candFacts?.segmentId ?? d.segmentId ?? getProjectRoadConfig(projectId).segmentIds[0] ?? null,
-          geometryVersion: candFacts?.geometryVersion,
-          positionStatus: candFacts?.positionStatus || d.positionStatus || 'IN_BOUND',
-          sourceVersion: candFacts?.sourceVersion,
-          disposition: candFacts ? candFacts.disposition : null,
-          decisionKind: decisionKind
-        }
-      })
-    )
-
-    return items
+  async getSurveyDetections(_surveyId: string, _survey?: SurveyMissionItem | null, _projectId?: string): Promise<AIDetectionItem[]> {
+    throw new Error('Chưa có read contract liên kết survey→run ở màn legacy; chọn project/run/Detection từ server tại màn Candidate.')
   },
 
   /**
    * Cập nhật thẩm định phát hiện AI trực tiếp vào CSDL Backend Candidate3
    * Gọi POST /api/v1/projects/{projectId}/candidate-decisions (SWG-019)
    */
-  async updateSurveyDetection(
-    surveyId: string,
-    detectionId: string,
-    updates: Partial<AIDetectionItem>
-  ): Promise<AIDetectionItem | null> {
-
-    const missions = await this.getSurveys()
-    const target = missions.find((m) => m.id === surveyId || m.code === surveyId)
-    const projectId = updates.projectId || target?.project_id || '72f84201-c001-4000-8000-000000000001'
-
-    let createdDefectCode: string | undefined = updates.defectCode
-
-    if (updates.status === 'PENDING') {
-      markAiCandidateReset(detectionId)
-      await fetch(`/__dev/reset-ai-candidate?id=${encodeURIComponent(detectionId)}`).catch(() => null)
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          for (let i = 0; i < window.localStorage.length; i++) {
-            const k = window.localStorage.key(i)
-            if (k && k.startsWith('roadguard_detections_review_')) {
-              const currentStore = getFromStorage<Record<string, any>>(k, {})
-              if (
-                currentStore[detectionId] ||
-                currentStore[detectionId.toLowerCase()] ||
-                currentStore[detectionId.toUpperCase()]
-              ) {
-                delete currentStore[detectionId]
-                delete currentStore[detectionId.toLowerCase()]
-                delete currentStore[detectionId.toUpperCase()]
-                saveToStorage(k, currentStore)
-              }
-            }
-          }
-        }
-      } catch {}
-      createdDefectCode = undefined
-    } else if (updates.status === 'APPROVED' || updates.status === 'REJECTED') {
-      const decisionType: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' =
-        updates.status === 'REJECTED'
-          ? 'REJECT'
-          : updates.decisionKind === 'LINK_EXISTING' && updates.defectId
-          ? 'LINK_EXISTING'
-          : 'KEEP_NEW'
-
-      const reason =
-        updates.status === 'REJECTED'
-          ? updates.metrics?.dismissReason || 'PM bác bỏ phát hiện AI (Nhiễu ảnh / Báo sai)'
-          : 'PM xác nhận phát hiện AI từ đợt bay khảo sát Drone'
-
-      const roadConfig = getProjectRoadConfig(projectId)
-      const isProjectA = projectId.toLowerCase() === '72f84201-c001-4000-8000-000000000001'
-
-      if (isProjectA) {
-        const decisionRes = await this.decideCandidate(projectId, {
-          sourceKind: 'AI_DETECTION',
-          sourceId: detectionId,
-          decision: decisionType,
-          targetDefectId: decisionType === 'LINK_EXISTING' ? updates.defectId || null : null,
-          defectTypeCode: (updates.rawTypeCode as 'POTHOLE' | 'CRACK') || undefined,
-          severity:
-            updates.severityLevel?.includes('CRITICAL') || updates.severityLevel?.includes('Khẩn cấp')
-              ? 'CRITICAL'
-              : updates.severityLevel?.includes('HIGH') || updates.severityLevel?.includes('Nghiêm trọng')
-              ? 'HIGH'
-              : updates.severityLevel?.includes('LOW') || updates.severityLevel?.includes('Nhẹ')
-              ? 'LOW'
-              : 'MEDIUM',
-          reason
-        }).catch(() => null)
-
-        if (decisionRes?.defectId) {
-          createdDefectCode = `#DEF-${decisionRes.defectId.slice(0, 8).toUpperCase()}`
-        }
-      }
-
-      // Đối với các dự án ngoài Project A (Project B, C, D, E, test1...):
-      // Lưu trực tiếp vào bảng dbo.Defects trong CSDL Docker SQL Server để ghi nhận đúng ProjectId và RoadSectionVersionId
-      if (!createdDefectCode && updates.status === 'APPROVED') {
-        try {
-          const typeVal = updates.rawTypeCode || 'CRACK'
-          const sevVal = updates.severityLevel || 'HIGH'
-          const syncRes = await fetch(
-            `/__dev/save-defect?projectId=${encodeURIComponent(projectId)}&roadSectionVersionId=${encodeURIComponent(roadConfig.routeVersionId)}&type=${encodeURIComponent(typeVal)}&severity=${encodeURIComponent(sevVal)}`
-          )
-          const syncData = await syncRes.json()
-          if (syncData?.defectId) {
-            createdDefectCode = `#DEF-${syncData.defectId.slice(0, 8).toUpperCase()}`
-          }
-        } catch {}
-      }
-
-      if (!createdDefectCode && updates.status === 'APPROVED') {
-        createdDefectCode = `#DEF-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
-      }
-    }
-
-    const keysToSync = new Set<string>([`roadguard_detections_review_${surveyId}`])
-    if (target?.id) keysToSync.add(`roadguard_detections_review_${target.id}`)
-    if (target?.code) keysToSync.add(`roadguard_detections_review_${target.code}`)
-
-    for (const key of keysToSync) {
-      const currentStore = getFromStorage<Record<string, any>>(key, {})
-      if (updates.status === 'PENDING') {
-        delete currentStore[detectionId]
-      } else {
-        currentStore[detectionId] = {
-          ...(currentStore[detectionId] || {}),
-          status: updates.status,
-          defectCode: createdDefectCode || currentStore[detectionId]?.defectCode,
-          rawTypeCode: updates.rawTypeCode || currentStore[detectionId]?.rawTypeCode,
-          severityLevel: updates.severityLevel || currentStore[detectionId]?.severityLevel,
-          reviewer: updates.metrics?.reviewer || 'Chỉ huy trưởng (PM)',
-          dismissReason: updates.metrics?.dismissReason
-        }
-      }
-      saveToStorage(key, currentStore)
-    }
-
-    const list = await this.getSurveyDetections(surveyId)
-    const found = list.find((d) => d.id === detectionId || d.code === detectionId)
-    return found || null
+  async updateSurveyDetection(_surveyId: string, _detectionId: string, _updates: Partial<AIDetectionItem>): Promise<AIDetectionItem | null> {
+    throw new Error('Màn legacy chưa cung cấp snapshot source/head hợp lệ. Dùng màn Candidate; chưa gửi quyết định.')
   },
 
   /**
    * Đặt lại trạng thái ứng viên AI về Chờ duyệt (Hủy gom / Tách ra)
    */
-  async resetSurveyDetection(detectionId: string): Promise<void> {
-    markAiCandidateReset(detectionId)
-    clearCandidateDecisionOverride(detectionId)
-    await fetch(`/__dev/reset-ai-candidate?id=${encodeURIComponent(detectionId)}`).catch(() => null)
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        for (let i = 0; i < window.localStorage.length; i++) {
-          const k = window.localStorage.key(i)
-          if (k && k.startsWith('roadguard_detections_review_')) {
-            const currentStore = getFromStorage<Record<string, any>>(k, {})
-            if (
-              currentStore[detectionId] ||
-              currentStore[detectionId.toLowerCase()] ||
-              currentStore[detectionId.toUpperCase()]
-            ) {
-              delete currentStore[detectionId]
-              delete currentStore[detectionId.toLowerCase()]
-              delete currentStore[detectionId.toUpperCase()]
-              saveToStorage(k, currentStore)
-            }
-          }
-        }
-      }
-    } catch {}
+  async resetSurveyDetection(_detectionId: string): Promise<void> {
+    throw new Error('Không có contract reset Candidate về PENDING; chỉ supersession theo current head của server.')
   },
 
   /**
@@ -874,6 +502,7 @@ export const surveyService = {
     const res = await apiClient.get<AiCandidateFactsDto>(
       `/projects/${projectId}/ai-candidates/${detectionId}`
     )
+    if (res.data.projectId !== projectId || res.data.detectionId !== detectionId) throw new Error('Candidate trả sai project/source.')
     return res.data
   },
 
@@ -898,21 +527,7 @@ export const surveyService = {
     sourceId: string
   ): Promise<CandidateMatchPageDto> {
 
-    // Nếu sourceId không phải là GUID UUID hợp lệ (ví dụ: synthetic detection 'det-...'),
-    // không gửi query lên Backend Candidate3 vì API Candidate3 validate GUID và sẽ trả về 400 Bad Request
-    if (!/^[0-9a-fA-F-]{36}$/.test(sourceId)) {
-      return {
-        items: [],
-        source: {
-          kind: sourceKind,
-          id: sourceId,
-          version: '1'
-        },
-        geometryVersion: 'v1.0',
-        algorithmVersion: 'v1.0',
-        nextCursor: null
-      }
-    }
+    if (!/^[0-9a-fA-F-]{36}$/.test(sourceId)) throw new Error('Source ID phải là UUID do server trả.')
 
     const res = await apiClient.get<CandidateMatchPageDto>(`/projects/${projectId}/candidates`, {
       params: {
@@ -927,259 +542,62 @@ export const surveyService = {
   /**
    * Lưu tọa độ khung bao (Bounding Box) và loại khiếm khuyết hiệu chỉnh vào CSDL SQL Server
    */
-  async saveAiCandidateOverride(
-    detectionId: string,
-    override: AiCandidateOverride
-  ): Promise<void> {
-    const store = getAiCandidateOverrides()
-    const current = store[detectionId] || store[detectionId.toLowerCase()] || {}
-    const merged: AiCandidateOverride = {
-      ...current,
-      ...(override.bbox ? { bbox: override.bbox } : {}),
-      ...(override.rawTypeCode ? { rawTypeCode: override.rawTypeCode } : {}),
-      ...(override.customTypeLabel !== undefined ? { customTypeLabel: override.customTypeLabel } : {})
-    }
-    store[detectionId] = merged
-    store[detectionId.toLowerCase()] = merged
-    saveToStorage('roadguard_ai_candidate_overrides', store)
-
-    const params = new URLSearchParams()
-    params.set('id', detectionId)
-    if (override.bbox) {
-      params.set(
-        'bbox',
-        JSON.stringify([
-          Number(override.bbox.x.toFixed(4)),
-          Number(override.bbox.y.toFixed(4)),
-          Number(override.bbox.width.toFixed(4)),
-          Number(override.bbox.height.toFixed(4))
-        ])
-      )
-    }
-    if (override.rawTypeCode) {
-      params.set('typeCode', override.rawTypeCode)
-      const label = formatDefectTypeLabel(override.rawTypeCode, override.customTypeLabel)
-      params.set('typeName', label)
-    }
-    fetch(`/__dev/update-ai-candidate?${params.toString()}`, {
-      signal: AbortSignal.timeout(600)
-    }).catch(() => null)
+  async saveAiCandidateOverride(_detectionId: string, _override: AiCandidateOverride): Promise<void> {
+    throw new Error('Chưa có contract sửa observation AI/bbox tại màn này; không ghi SQL hoặc local override.')
   },
 
   /**
    * [SWG-019] POST /api/v1/projects/{projectId}/candidate-decisions
    * Ra quyết định thẩm định ứng viên (KEEP_NEW | LINK_EXISTING | REJECT) chuẩn Candidate3
    */
-  async decideCandidate(
-    projectId: string,
-    payload: {
-      sourceKind: 'AI_DETECTION' | 'REPORT'
-      sourceId: string
-      decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
-      targetDefectId?: string | null
-      targetVersion?: string | null
-      defectTypeCode?: string
-      customTypeLabel?: string
-      severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-      roadSectionVersionId?: string
-      segmentId?: string | null
-      reason: string
-    }
-  ): Promise<CandidateDecisionDto> {
-
-    if (payload.decision === 'KEEP_NEW' && payload.defectTypeCode) {
-      await this.saveAiCandidateOverride(payload.sourceId, {
-        rawTypeCode: payload.defectTypeCode,
-        customTypeLabel: payload.customTypeLabel
-      })
-    }
-
-    const isProjectA = projectId.toLowerCase() === '72f84201-c001-4000-8000-000000000001'
-    const isRealCandidateUuid = isProjectA && /^[0-9a-fA-F-]{36}$/.test(payload.sourceId)
-
-    // Đối với các ứng viên trắc địa từ đợt bay của các dự án ngoài Project A (như Project E, D, C...):
-    // Lưu thẳng vào bảng dbo.Defects trong Docker SQL Server và ghi nhận quyết định thẩm định
-    if (payload.sourceKind === 'AI_DETECTION' && !isRealCandidateUuid) {
-      const roadConfig = getProjectRoadConfig(projectId)
-      let defectId: string | null = null
-      if (payload.decision === 'KEEP_NEW') {
-        const typeVal = payload.defectTypeCode || 'CRACK'
-        const sevVal = payload.severity || 'MEDIUM'
-        try {
-          const syncRes = await fetch(
-            `/__dev/save-defect?projectId=${encodeURIComponent(projectId)}&roadSectionVersionId=${encodeURIComponent(roadConfig.routeVersionId)}&type=${encodeURIComponent(typeVal)}&severity=${encodeURIComponent(sevVal)}`
-          )
-          const syncData = await syncRes.json()
-          if (syncData?.defectId) {
-            defectId = syncData.defectId
-          }
-        } catch {}
-        if (!defectId) {
-          defectId = crypto.randomUUID()
-        }
-      } else if (payload.decision === 'LINK_EXISTING') {
-        defectId = payload.targetDefectId || null
-      }
-
-      const mockDecision: CandidateDecisionDto = {
-        id: crypto.randomUUID(),
-        sourceKind: payload.sourceKind,
-        sourceId: payload.sourceId,
-        decision: payload.decision,
-        defectId,
-        version: '1',
-        supersedesDecisionId: null
-      }
-
-      saveCandidateDecisionOverride(payload.sourceId, mockDecision)
-      clearAiCandidateReset(payload.sourceId)
-      return mockDecision
-    }
-
-    let sourceVersion = ''
-    let geometryVersion = ''
-    let routeVersionId = payload.roadSectionVersionId || getProjectRoadConfig(projectId).routeVersionId
-    let segmentId: string | null = payload.segmentId ?? null
-    let defaultTypeCode: string = payload.defectTypeCode || 'CRACK'
-    let currentDisposition: { decisionId: string; version: string } | null = null
-
-    if (payload.sourceKind === 'AI_DETECTION') {
-      const cand = await this.getAiCandidateFacts(projectId, payload.sourceId)
-      sourceVersion = cand.sourceVersion
-      geometryVersion = cand.geometryVersion
-      routeVersionId = payload.roadSectionVersionId || cand.routeVersionId
-      segmentId = payload.segmentId !== undefined ? payload.segmentId : cand.segmentId
-      defaultTypeCode = payload.defectTypeCode || cand.typeCode || 'CRACK'
-      currentDisposition = cand.disposition
-    } else {
-      const matchPage = await this.getCandidateMatches(projectId, 'REPORT', payload.sourceId)
-      sourceVersion = matchPage.source.version
-      geometryVersion = matchPage.geometryVersion
-    }
-
-    // Nếu ứng viên đã có quyết định trước đó trong CSDL
-    let supersedesDecisionId: string | null = null
-    let previousDecisionVersion: string | null = null
-
-    if (currentDisposition?.decisionId) {
-      const existingDec = await this.getCandidateDecision(
-        projectId,
-        currentDisposition.decisionId
-      ).catch(() => null)
-      if (existingDec) {
-        // 1. Nếu trong CSDL Backend quyết định hiện tại ĐÃ LÀ quyết định này rồi:
-        // (ví dụ: đã là LINK_EXISTING với cùng targetDefectId hoặc cùng quyết định)
-        const isSameDecision =
-          existingDec.decision === payload.decision &&
-          (payload.decision !== 'LINK_EXISTING' ||
-            !payload.targetDefectId ||
-            (existingDec.defectId &&
-              existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
-
-        if (isSameDecision) {
-          clearAiCandidateReset(payload.sourceId)
-          return existingDec
-        }
-
-        // 2. Nếu thay đổi quyết định, gửi supersedesDecisionId và previousDecisionVersion theo chuẩn OpenAPI (API-059)
-        supersedesDecisionId = currentDisposition.decisionId
-        previousDecisionVersion = currentDisposition.version
-      }
-    }
-
-    let resolvedTargetVersion = payload.targetVersion || null
-    if (payload.decision === 'LINK_EXISTING' && payload.targetDefectId && !resolvedTargetVersion) {
-      const targetDef = await this.getDefectById(projectId, payload.targetDefectId)
-      resolvedTargetVersion = targetDef.defect.version
-    }
-
-    const requestBody = {
-      sourceKind: payload.sourceKind,
-      sourceId: payload.sourceId,
-      sourceVersion,
-      geometryVersion,
-      decision: payload.decision,
-      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId || null : null,
-      targetVersion: payload.decision === 'LINK_EXISTING' ? resolvedTargetVersion : null,
-      classification:
-        payload.decision === 'KEEP_NEW'
-          ? {
-              defectTypeCode: defaultTypeCode,
-              causeCategoryCode: null,
-              severity: payload.severity || 'MEDIUM',
-              roadSectionVersionId: routeVersionId,
-              segmentId: null
-            }
-          : null,
-      reason: payload.reason.trim() || 'Thẩm định ứng viên khiếm khuyết trên hệ thống',
-      supersedesDecisionId,
-      previousDecisionVersion,
-      recurrence: null
-    }
-
+  async decideCandidate(projectId: string, payload: {
+    sourceKind: 'AI_DETECTION' | 'REPORT'; sourceId: string;
+    decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'; reason: string;
+    sourceVersion?: string; geometryVersion?: string;
+    supersedesDecisionId?: string | null; previousDecisionVersion?: string | null;
+    targetDefectId?: string | null; targetVersion?: string | null;
+    defectTypeCode?: string; customTypeLabel?: string; severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    roadSectionVersionId?: string; segmentId?: string | null;
+  }): Promise<CandidateDecisionDto> {
+    const actor = useAuthStore.getState().user
+    const epoch = useAuthStore.getState().authEpoch
+    if (!actor || actor.role !== 'PROJECT_MANAGER') throw new Error('Chỉ PM được quyết định Candidate.')
+    if (!payload.sourceVersion || !payload.geometryVersion || !payload.reason.trim()) throw new Error('Thiếu snapshot sourceVersion/geometryVersion hoặc lý do; phải đọc lại từ server.')
+    if (payload.decision === 'KEEP_NEW' && (!payload.defectTypeCode || !payload.severity || !payload.roadSectionVersionId)) throw new Error('Thiếu classification có căn cứ cho KEEP_NEW.')
+    if (payload.decision === 'LINK_EXISTING' && (!payload.targetDefectId || !payload.targetVersion)) throw new Error('Thiếu Defect ID/version đích đã đọc.')
+    const body = { sourceKind: payload.sourceKind, sourceId: payload.sourceId, sourceVersion: payload.sourceVersion,
+      geometryVersion: payload.geometryVersion, decision: payload.decision, reason: payload.reason.trim(),
+      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId : null,
+      targetVersion: payload.decision === 'LINK_EXISTING' ? payload.targetVersion : null,
+      classification: payload.decision === 'KEEP_NEW' ? { defectTypeCode: payload.defectTypeCode, severity: payload.severity,
+        roadSectionVersionId: payload.roadSectionVersionId, segmentId: payload.segmentId ?? null, causeCategoryCode: null } : null,
+      supersedesDecisionId: payload.supersedesDecisionId ?? null, previousDecisionVersion: payload.previousDecisionVersion ?? null, recurrence: null }
+    const fingerprint = JSON.stringify(body)
+    const journalKey = `rg_candidate_command_${actor.id}_${projectId}_${payload.sourceId}`
+    const saved = sessionStorage.getItem(journalKey)
+    const command = saved ? JSON.parse(saved) : { key: crypto.randomUUID(), body, fingerprint }
+    if (command.fingerprint !== fingerprint) throw new Error('Ý định trước chưa đối chiếu xong; không đổi key/body/version để ghi đè.')
+    const current = () => { if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor.id) throw new Error('Phiên Candidate đã thay đổi.') }
+    if (candidateWrites.has(journalKey)) throw new Error('Đang gửi quyết định này.')
+    candidateWrites.add(journalKey)
     try {
-      const res = await apiClient.post<CandidateDecisionDto>(
-        `/projects/${projectId}/candidate-decisions`,
-        requestBody,
-        {
-          headers: {
-            'Idempotency-Key': crypto.randomUUID()
-          }
-        }
-      )
-      if (payload.sourceId) {
-        clearAiCandidateReset(payload.sourceId)
+      current(); sessionStorage.setItem(journalKey, JSON.stringify(command))
+      if (!command.receipt) {
+        const response = await apiClient.post<CandidateDecisionDto>(`/projects/${projectId}/candidate-decisions`, command.body, {
+          headers: { 'Idempotency-Key': command.key }, transformRequest: [(data: unknown) => { current(); return JSON.stringify(data) }] })
+        current(); command.receipt = response.data; sessionStorage.setItem(journalKey, JSON.stringify(command))
       }
-      return res.data
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
-        const errCode = err?.response?.data?.code || ''
-        const errDetail = err?.response?.data?.detail || ''
-        if (errCode === 'invalid_state_transition' || errDetail.includes('completed')) {
-          if (currentDisposition?.decisionId) {
-            const existingDec = await this.getCandidateDecision(
-              projectId,
-              currentDisposition.decisionId
-            ).catch(() => null)
-            if (
-              existingDec &&
-              existingDec.decision === payload.decision &&
-              (payload.decision !== 'LINK_EXISTING' ||
-                !payload.targetDefectId ||
-                (existingDec.defectId &&
-                  existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
-            ) {
-              clearAiCandidateReset(payload.sourceId)
-              clearCandidateDecisionOverride(payload.sourceId)
-              return existingDec
-            }
-          }
-
-          // Khi PM đã bấm tách ra và ra quyết định mới (Báo sai hoặc Chấp nhận tạo mới):
-          // Ghi nhận quyết định thẩm định của PM để giao diện phản hồi chính xác, không bị chặn bởi lỗi 409
-          clearAiCandidateReset(payload.sourceId)
-          const fallbackDefectId =
-            payload.decision === 'LINK_EXISTING'
-              ? payload.targetDefectId || null
-              : payload.decision === 'KEEP_NEW'
-              ? crypto.randomUUID()
-              : null
-
-          const overrideDecision: CandidateDecisionDto = {
-            id: crypto.randomUUID(),
-            sourceKind: 'AI_DETECTION',
-            sourceId: payload.sourceId,
-            decision: payload.decision,
-            defectId: fallbackDefectId,
-            version: 'OVERRIDE_V1',
-            supersedesDecisionId: currentDisposition?.decisionId || null
-          }
-          saveCandidateDecisionOverride(payload.sourceId, overrideDecision)
-          return overrideDecision
-        }
+      const decision = await this.getCandidateDecision(projectId, command.receipt.id)
+      current()
+      if (decision.sourceId !== payload.sourceId || decision.decision !== payload.decision) throw new Error('Quyết định đọc lại không khớp yêu cầu.')
+      if (payload.sourceKind === 'AI_DETECTION') {
+        const candidate = await this.getAiCandidateFacts(projectId, payload.sourceId)
+        current()
+        if (candidate.disposition?.decisionId !== decision.id) throw new Error('Current head chưa khớp biên nhận; cần đối chiếu, không POST thêm.')
       }
-      throw err
-    }
+      sessionStorage.removeItem(journalKey)
+      return decision
+    } finally { candidateWrites.delete(journalKey) }
   },
 
   /**
@@ -1188,27 +606,9 @@ export const surveyService = {
    */
   async getProjectDefects(projectId?: string): Promise<BackendDefectDto[]> {
 
-    let targetProjects: Array<{ id: string }> = []
-    if (projectId) {
-      targetProjects = [{ id: projectId }]
-    } else {
-      const projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
-      targetProjects = projects.length > 0 ? projects : []
-    }
-
+    const targetProjects = projectId ? [{ id: projectId }] : await projectService.fetchProjects()
     const allDefects: BackendDefectDto[] = []
-    for (const p of targetProjects) {
-      try {
-        const res = await apiClient.get<{ items: BackendDefectDto[]; nextCursor?: string | null }>(
-          `/projects/${p.id}/defects`
-        )
-        if (res.data?.items) {
-          allDefects.push(...res.data.items)
-        }
-      } catch (err) {
-        if (projectId) throw err
-      }
-    }
+    for (const project of targetProjects) allDefects.push(...await this.readSurveyPage(`/projects/${project.id}/defects`))
     return allDefects
   },
 
@@ -1407,15 +807,9 @@ export const surveyService = {
           LOW: 'Nhẹ'
         }
 
-        const runsRes = await apiClient.get<{
-          items: Array<{ id: string; status: string; fixtureVersion?: string }>
-        }>(`/projects/${proj.id}/ai-mock-runs`)
-        const succeededRuns = (runsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
+        const runs = await this.readSurveyPage(`/projects/${proj.id}/ai-mock-runs`)
+        const succeededRuns = runs.filter(r => r.status === 'SUCCEEDED')
 
-        const projectSurveys = await this.getSurveys(proj.id)
-        for (const survey of projectSurveys) {
-          allItems.push(...await this.getSurveyDetections(survey.id, survey, proj.id))
-        }
           for (const run of succeededRuns) {
           const resultRes = await apiClient
             .get<{
@@ -1443,12 +837,6 @@ export const surveyService = {
             const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
               : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
             const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
-            const overridesMap = getAiCandidateOverrides()
-            const candOverride =
-              overridesMap[d.detectionId] ||
-              overridesMap[d.detectionId.toLowerCase()] ||
-              (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
-
             const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
             const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
             const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
@@ -1460,21 +848,21 @@ export const surveyService = {
             const heightPct = (bboxH * 100).toFixed(1) + '%'
             const typeCode =
               linkedDbDefect?.defectTypeCode || candFacts.typeCode || d.typeCode
-            const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
+            const typeLabel = formatDefectTypeLabel(typeCode)
             const confVal = candFacts.confidence ?? d.confidence
             const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
             const tsMs = candFacts.timestampMs ?? d.timestampMs
-            const km = parseFloat((0.351 + (runDetIdx - 1) * 0.12).toFixed(3))
+            const km = Number.NaN
             const severityLabel =
               (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
-              (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
+              'Chưa được PM phân loại'
 
             allItems.push({
               id: d.detectionId,
               code: `DET-${String(globalIdx).padStart(2, '0')}`,
               defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
               defectId,
-              stationing: `Km 0+${String(Math.round(km * 1000)).padStart(3, '0')}`,
+              stationing: 'Chưa có lý trình từ server',
               lane: '',
               type: typeLabel,
               severityLevel: severityLabel,

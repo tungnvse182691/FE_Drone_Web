@@ -551,6 +551,10 @@ export const DefectDetailVerify: React.FC = () => {
 
   const handleVerify = async (newStatus: DefectStatus) => {
     if (!defect) return
+    if (defect.source_kind === 'AI_DETECTION') {
+      setApiError('Màn legacy chưa có snapshot/version hợp lệ cho Candidate. Dùng màn Candidate; không ghi quyết định cục bộ.')
+      return
+    }
     if (!notes.trim()) {
       showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi bấm Chấp nhận hoặc Báo sai!')
       return
@@ -676,114 +680,11 @@ export const DefectDetailVerify: React.FC = () => {
   }
 
   const handleResetDecision = async () => {
-    if (!defect || defect.source_kind !== 'AI_DETECTION') return
-    const isUnlink = defect.decision_kind === 'LINK_EXISTING'
-    setIsSubmitting(true)
-    setApiError(null)
-
-    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
-    setAllDetections((prev) =>
-      prev.map((entry) => {
-        if (
-          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
-          entry.item.code.toLowerCase() === defect.code.toLowerCase()
-        ) {
-          return {
-            ...entry,
-            item: {
-              ...entry.item,
-              status: 'PENDING',
-              decisionKind: null,
-              defectId: null,
-              disposition: null
-            }
-          }
-        }
-        return entry
-      })
-    )
-    setIsRecurrent(false)
-    setLinkedPriorCode(null)
-    showToast(
-      isUnlink
-        ? `✅ Đã tách ra thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
-        : `✅ Đã mở lại thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
-    )
-
-    try {
-      await surveyService.resetSurveyDetection(defect.id)
-      await loadBackendData(true)
-    } catch (err: any) {
-      const errMsg =
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Không thể mở lại trạng thái Chờ duyệt trên CSDL.'
-      setApiError(errMsg)
-      showToast(`❌ Lỗi Backend: ${errMsg}`)
-    } finally {
-      setIsSubmitting(false)
-    }
+    setApiError('Không có contract reset Candidate về PENDING. Đọc current head và dùng supersession theo API; chưa gửi lệnh.')
   }
 
-  const handleLinkRecurrence = async (
-    targetDefectId: string,
-    targetVersion: string,
-    notesText: string
-  ) => {
-    if (!defect) return
-    setIsSubmitting(true)
-    setApiError(null)
-
-    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
-    setAllDetections((prev) =>
-      prev.map((entry) => {
-        if (
-          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
-          entry.item.code.toLowerCase() === defect.code.toLowerCase()
-        ) {
-          return {
-            ...entry,
-            item: {
-              ...entry.item,
-              status: 'APPROVED',
-              decisionKind: 'LINK_EXISTING',
-              defectId: targetDefectId
-            }
-          }
-        }
-        return entry
-      })
-    )
-    setIsRecurrent(true)
-    setLinkedPriorCode(`#DEF-${targetDefectId.slice(0, 8).toUpperCase()}`)
-    const auditNote = `[Gom vào hồ sơ cũ] Đã liên kết vào khiếm khuyết #DEF-${targetDefectId.slice(0, 8).toUpperCase()}. ${notesText}`
-    setNotes((prev) => (prev ? `${prev}\n${auditNote}` : auditNote))
-    showToast(
-      `✅ Đã gom [${defect.code}] vào hồ sơ khiếm khuyết [#DEF-${targetDefectId.slice(0, 8).toUpperCase()}] trên CSDL!`
-    )
-
-    try {
-      await surveyService.decideCandidate(defect.project_id, {
-        sourceKind: 'AI_DETECTION',
-        sourceId: defect.id,
-        decision: 'LINK_EXISTING',
-        targetDefectId,
-        targetVersion,
-        reason: notesText.trim() || `Gom ứng viên AI vào hồ sơ khiếm khuyết hiện hữu ${targetDefectId}`
-      })
-      await loadBackendData(true)
-    } catch (err: any) {
-      const errMsg =
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Lỗi khi gom vào khiếm khuyết hiện hữu trên CSDL Backend.'
-      setApiError(errMsg)
-      showToast(`❌ Lỗi Backend: ${errMsg}`)
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleLinkRecurrence = async (_targetDefectId: string, _targetVersion: string, _notesText: string) => {
+    setApiError('Luồng liên kết legacy chưa có snapshot Candidate hợp lệ. Dùng màn Candidate; chưa gửi lệnh hoặc cập nhật cục bộ.')
   }
 
   if (isLoading) {
