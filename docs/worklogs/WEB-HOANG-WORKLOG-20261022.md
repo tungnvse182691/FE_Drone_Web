@@ -1697,3 +1697,16 @@ Hướng dẫn test thủ công:
 5. F5 và logout/login Sup→PM-A→PM-B: dữliệuserver theoactor hiện tại, khôngfallbackprojectđầutiên/cachedmember. Tắt mạng eligible/members/projects thấyalert, bật lại vàretry.
 
 Giới hạn còn lại: positive mutation E2E chưa chạy; không sửa tài khoản hoặc SQL để ép PASS. Field kỹ thuật hiện không có trong APIlist nên không nghiệm thu geometry từ mànproject. Các field optional là read-model FE, không tạo DTO/endpoint/state backend mới. Chỉ journal intent ở sessionStorage, không dùng làm nguồn membership. Không sửa/xóa fixture ngoài production path, không commit credentials; DB local không đi theoGitHub.
+
+
+### 06/11/2026 — Dev proxy Web auth chuyển tới runtime sạch HTTPS28443
+
+Base/parent `713a236ab825daa947ef9743ef1f02c1786bec13`, hoang, status sạch. Chỉ sửa vite.config.ts target server.proxy['/api'] từ HTTPS18443 cũ sang `https://localhost:28443`; secure:false đã có, giữ và chú thích chỉ thuộc dev proxy certificate local. Giữ X-Forwarded-Proto:https, API client `/api/v1`/withCredentials:true và nghiệp vụ auth. Source trước sửa là18443, không phải28081; chưa quy HTTP500 ở28081 cho lỗi nghiệp vụ. Không gọi HTTP28081 để login/CSRF.
+
+Runtime đích `roadguard-case409-clean-20261106`, /ready trên28081 trả200; SELECT chỉ đọc xác nhận seed marker sbx02-v1 và owner database mới, không dùng database cũ. Không sửa backend/DB/Docker/migration/config backend, không token/cookie hardcode. .env vẫn VITE_API_URL=/api/v1 và mockauthfalse, không thayorigin sangbrowserTLS trực tiếp.
+
+Checks: tsc-b PASS; vitebuild PASS (cảnh báo Tailwind/chunk lớn có sẵn); gitdiffcheck PASS. Browser Edge headless thật tại `http://localhost:5173/login`, script temp rg-proxy-clean-auth.cjs: GETcsrf200 và Set-Cookie __Host-RoadGuardCsrf có Secure/HttpOnly/SameSiteLax; cookie value không log. Sup vàPM-A Weblogin200, GETsession200/role đúng; bỏ riêng __Host-RoadGuardSession trong testcontext rồiF5: session401→csrf200→renew200→session200. Initial anonymous session/renew401 là trướclogin, không tính là authfailure. LogoutWeb cleanup, không businessmutation. Không dùng mockresponse hoặc localStorage thayserver.
+
+Xác minh upstream thực: kết nối TCP từ tiến trìnhVite tới127.0.0.1:28443; request GETsession trực tiếp HTTPS28443 với cùng cookie browser trả200 cho cảSup/PM. Do đó không chỉ suy từNetworkURL5173. Context API test bỏ kiểmcert riêng đểđọcTLSlocal; khôngtắtTLSbrowser/toànmáy hoặc thayconfigbackend. Scripts/credentials ngoàirepo khôngstage.
+
+Test thủ công: khởi động lại npm run dev nếuVite chưa reloadconfig; mở http://localhost:5173/login. DevToolsNetwork kiểmGET/api/v1/auth/web/csrf200, ResponseHeadersSet-Cookie __Host-RoadGuardCsrf; ApplicationCookies phảiSecure/HttpOnly/Lax. Login tài khoảnSup hoặcPM củainstanceclean: POSTlogin200, GETsession200/role đúng. F5 giữphiên; kiểmrenew bằngtestcontext loại riêngticket hoặc phiênđủđiềukiện, khôngxóa DB/đổiclock. NetworkURLbrowser vẫn5173 vìproxy; target tại vite.config.ts làhttps28443, có thể đối chiếu kết nốiTCP/serverlog. Không dùng port28081 choWebauth. Nếu còncookieinstancecũ cùnghostname, logout/xóa cookieRoadGuard của profiletest rồiđăngnhập lại, khôngresetDB. Khôngghi cookie/passwordvàobáocáo.
