@@ -1372,5 +1372,22 @@ function caseLifecycleHarness() {
     assert.throws(()=>parser.inspectGeoJsonCenterline('{invalid'),/JSON hợp lệ/)
     assert.throws(()=>parser.inspectGeoJsonCenterline('null'),/không hợp lệ/)
   })
+  await test('restored project design retains KPI/card/table/timeline/segment frames without unknown numeric facts', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}
+    const render=(file,name,props)=>renderToStaticMarkup(React.createElement(load(file,mocks)[name],props))
+    const project={id:'p',name:'Server name',code:'P',status:'ACTIVE',status_label:'Đang hoạt động'}
+    const kpis=render('src/pages/(pm)/projects/ProjectListKpis.tsx','ProjectListKpis',{kpiStats:{activeCount:2,closedCount:0}})
+    for(const title of ['Tổng chiều dài','Đang hoạt động','Thời hạn bảo hành','Hồ sơ tuyến','Đã đóng hồ sơ'])assert.ok(kpis.includes(title))
+    const highlights=render('src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx','ProjectHighlightsGrid',{project})
+    for(const title of ['Thời hạn bảo hành','Khối lượng tuyến','Theo dõi xử lý'])assert.ok(highlights.includes(title))
+    assert.ok(!highlights.includes('0 km'));assert.ok(highlights.includes('Chưa cập nhật'))
+    const timeline=render('src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx','ProjectTimelineStepper',{project,basePath:'/pm'})
+    for(const label of ['Tiếp nhận dự án','Hồ sơ tuyến','Theo dõi nghĩa vụ','Đóng vận hành'])assert.ok(timeline.includes(label))
+    assert.ok(!timeline.includes('04/04'));assert.ok(!timeline.includes('đã ký duyệt'))
+    const segments=render('src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx','ProjectSegmentsTable',{projectId:'p',basePath:'/pm',segments:[]})
+    for(const label of ['Tuyến chính','Tuyến phụ','Phân đoạn','Lý trình','Chiều dài'])assert.ok(segments.includes(label))
+    assert.ok(!segments.includes('0km'));assert.ok(!segments.includes('0 nhánh'))
+  })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

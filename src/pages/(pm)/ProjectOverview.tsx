@@ -8,7 +8,10 @@ import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { ProjectMember } from './project-overview/types'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
-import { AlignmentGeometryWorkflow } from './alignment/AlignmentGeometryWorkflow'
+import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
+import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
+import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
+import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 
@@ -152,11 +155,14 @@ export const ProjectOverview: React.FC = () => {
         onCloseProject={() => setIsCloseModalOpen(true)}
       />
 
+      <ProjectHighlightsGrid project={project} />
+
       {/* 3. MAIN TWO-COLUMN SPLIT (8 cols Left | 4 cols Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT COLUMN: 8 COLS */}
         <div className="min-w-0 lg:col-span-8 space-y-6">
-          <AlignmentGeometryWorkflow embedded />
+          <ProjectTimelineStepper project={project} basePath={basePath} isSupervisor={isSupervisor} onNavigate={navigate} />
+          <ProjectSegmentsTable projectId={project.id} segments={[]} basePath={basePath} onNavigate={navigate} onViewSegment={() => {}} />
         </div>
 
         {/* RIGHT COLUMN: 4 COLS */}
@@ -168,6 +174,7 @@ export const ProjectOverview: React.FC = () => {
             onReloadMembers={loadProjectData}
             showToast={showToast}
           />
+          <ProjectMapPreviewCard project={project} basePath={basePath} isSupervisor={isSupervisor} />
 
 
         </div>

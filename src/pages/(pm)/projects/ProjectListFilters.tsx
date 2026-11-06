@@ -51,7 +51,7 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
           onClick={() => onSelectFilterTab('ACTIVE')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'ACTIVE'
-              ? 'bg-[#C9A227] text-white shadow-2xs'
+              ? 'bg-[#1B5E20] text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
@@ -62,10 +62,38 @@ export const ProjectListFilters: React.FC<ProjectListFiltersProps> = ({
 
         <button
           type="button"
+          disabled title="Chưa cập nhật"
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+            filterTab === 'NEAR_EXPIRY'
+              ? 'bg-rose-600 text-white shadow-2xs'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span>Sắp hết hạn</span>
+          <span className="text-[11px]  text-slate-500">Chưa cập nhật</span>
+        </button>
+
+        <button
+          type="button"
+          disabled title="Chưa cập nhật"
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
+            filterTab === 'PENDING_ALIGNMENT'
+              ? 'bg-[#D97706] text-white shadow-2xs'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-[#D97706]"></span>
+          <span>Chờ duyệt tuyến</span>
+          <span className="text-[11px]  text-slate-500">Chưa cập nhật</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => onSelectFilterTab('CLOSED')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition cursor-pointer ${
             filterTab === 'CLOSED'
-              ? 'bg-[#C9A227] text-white shadow-2xs'
+              ? 'bg-slate-800 text-white shadow-2xs'
               : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
           }`}
         >
