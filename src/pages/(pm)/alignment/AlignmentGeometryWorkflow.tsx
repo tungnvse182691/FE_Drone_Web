@@ -9,7 +9,21 @@ import { inspectGeoJsonCenterline, type GeoJsonCenterlineReview } from './alignm
 type Project = { projectId: string; projectCode: string; name: string }
 type Context = Awaited<ReturnType<typeof alignmentService.readProjectContext>>
 type Readiness = Awaited<ReturnType<typeof alignmentService.readDraftReadiness>>
-const errorText = (error: any) => `${error.response?.status || ''} ${error.response?.data?.code || error.message || 'Không tải được dữ liệu'}`.trim()
+export function geometryErrorText(error: any): string {
+  console.warn('[Geometry]', { status: error?.response?.status, code: error?.response?.data?.code, correlationId: error?.response?.data?.correlationId })
+  switch (error?.response?.status) {
+    case 400: case 422: return 'Dữ liệu hình học hoặc hệ quy chiếu không hợp lệ.'
+    case 401: return 'Không thể xác thực quyền đọc hồ sơ tuyến. Vui lòng kiểm tra phiên và quyền truy cập.'
+    case 403: return 'Bạn không có quyền thao tác tuyến đường của dự án này.'
+    case 404: return 'Không tìm thấy dự án hoặc bản nháp.'
+    case 409: return 'Trạng thái hồ sơ đã thay đổi hoặc yêu cầu bị trùng. Vui lòng đối chiếu lại.'
+    case 412: return 'Phiên bản hồ sơ đã thay đổi. Vui lòng tải lại trước khi tiếp tục.'
+    case 428: return 'Thiếu thông tin phiên bản để thực hiện thao tác.'
+    case 500: return 'Hệ thống đang gặp lỗi. Vui lòng thử lại sau.'
+    default: return 'Không thể tải hồ sơ tuyến. Vui lòng thử lại.'
+  }
+}
+const errorText = geometryErrorText
 
 export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ embedded = false } = {}) => {
   const { id } = useParams()
@@ -82,7 +96,7 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
       if (request.current !== current) return
       const failures: string[] = []
       reads.forEach((result, index) => {
-        if (result.status === 'rejected') { failures.push(`${['Road/version (work-package)', 'CRS', 'Draft', 'Readiness'][index]}: ${errorText(result.reason)}`); return }
+        if (result.status === 'rejected') { failures.push(`${['Danh mục tuyến', 'Hệ quy chiếu', 'Bản nháp', 'Điều kiện xác nhận'][index]}: ${errorText(result.reason)}`); return }
         if (index === 0) setContext(result.value as Context)
         if (index === 1) setProfiles(result.value as CrsProfileView[])
         if (index === 2) setDraft(result.value as { data: GeometryDraftView; etag: string })
@@ -106,7 +120,7 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
       const result = inspectGeoJsonCenterline(await file.text())
       if (current === request.current) { setImported(result); setErrors(previous => previous.filter(error => !error.startsWith('GeoJSON:'))) }
     } catch (error) {
-      if (current === request.current) { setImported(null); setErrors(previous => [...previous, `GeoJSON: ${errorText(error)}`]) }
+      if (current === request.current) { setImported(null); setErrors(previous => [...previous, `GeoJSON: ${error instanceof Error ? error.message : 'Tệp không hợp lệ.'}`]) }
     }
   }
   function invalidateGeometry() {
@@ -153,27 +167,27 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     : projectsLoading ? ['Đang tải danh mục dự án.']
     : projectsError ? ['Chưa xác minh phạm vi dự án vì tải danh mục lỗi.']
     : !projectInScope ? ['Dự án không thuộc danh mục API cho phép.']
-    : !context ? ['Chưa đọc được API discovery road/version (work-package).'] : []
+    : !context ? ['Chưa đọc được danh mục tuyến và phiên bản hiện hành.'] : []
   const saveReasons = [
     ...(user?.role !== RoleCode.PROJECT_MANAGER ? ['Chỉ PM được lưu draft.'] : []),
     ...discoveryReasons,
     ...(!imported ? ['Chưa có tim tuyến đầu vào.'] : [
-      'Tim tuyến đang ở longitude/latitude; transform sang engineering CRS chưa được xác minh.',
-      'Chưa cung cấp stationOriginMeters, changeReason, widthProfile theo chiều dài mét và surveyWidthMeters có nguồn.',
+      'BLOCKED: Chưa xác định hệ quy chiếu và đơn vị đầu vào; không được lưu bản nháp.',
+      'Chưa có mốc lý trình, lý do thay đổi, bề rộng khảo sát và hồ sơ bề rộng có nguồn xác minh.',
       ...(imported.adjacentDuplicates || imported.repeatedVertices || imported.selfIntersections ? ['Hình học đầu vào còn điểm trùng hoặc giao cắt cần kiểm tra.'] : []),
     ]),
-    ...(!chosenProfile ? ['Chưa chọn hồ sơ CRS từ API.'] : chosenProfile.definition?.sampleOnly ? ['Hồ sơ CRS được chọn chỉ là SAMPLE.'] : []),
-    'Chưa tích hợp handler lưu/sửa draft cho nguồn nhập này; không gửi lệnh ghi.',
+    ...(!chosenProfile ? ['Chưa chọn hồ sơ hệ quy chiếu.'] : chosenProfile.definition?.sampleOnly ? ['Hồ sơ CRS được chọn chỉ là SAMPLE.'] : []),
+    'Nguồn nhập này chưa đủ điều kiện lưu hoặc sửa bản nháp.',
   ]
   const confirmReasons = [
     ...(!supervisor ? ['Chỉ Giám sát được xác nhận.'] : []),
     ...discoveryReasons,
-    ...(!draft ? ['Chưa đọc được draft từ API.'] : draft.data.status !== 'DRAFT' ? [`Draft có trạng thái ${draft.data.status}; không xác nhận lại.`] : []),
-    ...(!readiness ? ['Chưa đọc được readiness từ máy chủ.'] : [
-      ...(!readiness.ready ? [`Readiness chưa đạt: ${[...(readiness.missingFields || []), ...(readiness.errors || [])].join(', ') || 'máy chủ trả false'}.`] : []),
+    ...(!draft ? ['Chưa đọc được bản nháp.'] : draft.data.status !== 'DRAFT' ? [`Draft có trạng thái ${draft.data.status}; không xác nhận lại.`] : []),
+    ...(!readiness ? ['Chưa kiểm tra được điều kiện xác nhận.'] : [
+      ...(!readiness.ready ? ['Hồ sơ chưa đủ điều kiện xác nhận. Vui lòng bổ sung dữ liệu.'] : []),
       ...(readiness.sampleOnly ? ['Readiness thuộc nguồn SAMPLE.'] : []),
     ]),
-    'Chưa tích hợp handler confirm với current version/pin, lý do và ngày hiệu lực được xác minh; không gửi lệnh ghi.',
+    'Chưa hoàn tất dữ liệu phiên bản tuyến, lý do và ngày hiệu lực để xác nhận.',
   ]
   const selectClass = 'border rounded p-2 w-full text-sm'
 
@@ -205,7 +219,7 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     </section>
   }
 
-  return <div className="space-y-4 max-w-5xl mx-auto">
+  return <div className="space-y-4 max-w-5xl mx-auto [&_button]:border [&_button]:rounded-lg [&_button]:px-3 [&_button]:py-2 [&_button]:bg-[#C9A227] [&_button]:text-white [&_button:disabled]:opacity-50">
     <h1 className="text-xl font-bold">Tim tuyến và geometry đã xác nhận</h1>
     <p>{supervisor ? 'Giám sát đọc draft và readiness từ máy chủ trước khi xác nhận.' : 'PM nhập tim tuyến; chỉ sử dụng geometry/version do máy chủ trả về.'}</p>
     <label className="block">Dự án<select aria-label="Dự án geometry" className={selectClass} value={projectId} onChange={event => {
@@ -221,25 +235,25 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     {errors.map((error, i) => <p key={i} role="alert" className="text-red-700">{error}</p>)}
     <button type="button" onClick={() => { invalidateGeometry(); setProjectsReload(value => value + 1); setReload(value => value + 1) }} disabled={projectsLoading}>Tải lại từ máy chủ</button>
     <div className="grid md:grid-cols-2 gap-4">
-      <label>CRS/version từ API<select aria-label="CRS geometry" className={selectClass} value={profileId} onChange={event => setProfileId(event.target.value)}><option value="">Chọn hồ sơ CRS</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.code} / revision {profile.revision} / {profile.status}{profile.definition?.sampleOnly ? ' / SAMPLE' : ''}</option>)}</select></label>
-      <label>Road/version từ API<select aria-label="Road geometry" className={selectClass} value={roadId} onChange={event => { invalidateGeometry(); setRoadId(event.target.value) }}><option value="">{context ? 'Chọn road/version hiện có' : 'Chưa đọc được work-package'}</option>{context?.roadSections.map(road => <option key={road.roadSectionId} value={road.roadSectionId}>{road.code} / v{road.versionNo}</option>)}</select></label>
+      <label>Hệ quy chiếu<select aria-label="CRS geometry" className={selectClass} value={profileId} onChange={event => setProfileId(event.target.value)}><option value="">Chọn hồ sơ CRS</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.code}{profile.definition?.sampleOnly ? ' / SAMPLE' : ''}</option>)}</select></label>
+      <label>Tuyến đường<select aria-label="Road geometry" className={selectClass} value={roadId} onChange={event => { invalidateGeometry(); setRoadId(event.target.value) }}><option value="">{context ? 'Chọn road/version hiện có' : 'Chưa có danh mục tuyến'}</option>{context?.roadSections.map(road => <option key={road.roadSectionId} value={road.roadSectionId}>{road.name || road.code}</option>)}</select></label>
     </div>
     {chosenProfile && <p>SRID {chosenProfile.definition?.sourceSrid}; axis {chosenProfile.definition?.axisOrder}; {chosenProfile.definition?.metresPerUnit} metresPerUnit là metadata profile, không dùng đổi độ sang mét. Không tự gán accuracy.</p>}
     <button type="button" disabled={busy || geometryLoading || !roadId} onClick={readGeometry}>Đọc geometry confirmed</button>
     {geometryLoading && <p role="status">Đang đọc geometry đã chọn...</p>}
     {geometryError && <p role="alert">Geometry đã chọn: {geometryError}</p>}
-    {confirmed?.projectId === projectId && <p>Geometry máy chủ: {confirmed.routeVersionId}; v{confirmed.versionNo}; lengthMeters={confirmed.lengthMeters}; isCurrent={String(confirmed.isCurrent)}.</p>}
+    {confirmed?.projectId === projectId && <p>Tuyến đã xác nhận: {confirmed.lengthMeters} m. Ngày hiệu lực: {confirmed.effectiveFrom}.</p>}
     {!supervisor && <section className="bg-white border rounded p-4 space-y-3">
       <h2 className="font-semibold">Nhập GeoJSON để kiểm tra đầu vào</h2>
-      <input aria-label="Nhập tim tuyến GeoJSON" type="file" accept=".geojson,.json" disabled={!projectId} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = '' }} />
+      <input aria-label="Nhập tim tuyến GeoJSON" type="file" accept=".geojson,.json" disabled={!projectId || !projectInScope || projectsLoading || busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = '' }} />
       {imported && <>
         <p>Centerline: {imported.layer} — {points.length} điểm; bỏ qua {imported.ignoredFeatureCount} feature khác.</p>
         <p>{imported.sourceCrs}. Tên có chữ nhánh không xác lập topology.</p>
-        <p>Ước tính Haversine (R=6371000 m): {imported.estimatedLengthMeters.toFixed(3)} m; metadata: {imported.declaredLengthMeters ?? 'không có'} m.</p>
+
         <p>Trùng liền kề: {imported.adjacentDuplicates}; đỉnh lặp: {imported.repeatedVertices}; giao cắt phát hiện: {imported.selfIntersections ?? 'chưa kiểm tra (tệp lớn)'}. Chưa là readiness backend.</p>
         <p>roadWidth metadata: {imported.roadWidthHintMeters ?? 'không có'} m; chưa thay widthProfile hoặc surveyWidthMeters.</p>
         <svg role="img" aria-label="Preview tim tuyến đầu vào, chưa lưu máy chủ" viewBox="0 0 620 420" className="w-full max-h-80 bg-slate-50 border"><polyline fill="none" stroke="#2D3748" strokeWidth="3" points={points.map(p => `${10 + (p[0] - minX) / span * 590},${410 - (p[1] - minY) / span * 390}`).join(' ')} /></svg>
-        <p role="alert">Chỉ preview đầu vào, chưa lưu draft. Backend COORDINATES yêu cầu sourceCrs trùng engineering UTM và tọa độ mét; file này là longitude/latitude. Cần transform có căn cứ, stationOriginMeters, changeReason, widthProfile phủ đúng chiều dài mét và surveyWidthMeters do người có thẩm quyền cung cấp. Không tự điền calibration, số làn, vật liệu hoặc accuracy.</p>
+        <p role="alert">BLOCKED: Tệp chưa xác định hệ quy chiếu và đơn vị. Chỉ xem hình dạng đầu vào, chưa lưu. Chưa hỗ trợ chuyển đổi hệ quy chiếu trong luồng này; cần đầu vào đúng hệ kỹ thuật và các thông số có nguồn xác minh.</p>
 
       </>}
       <button type="button" disabled={saveReasons.length > 0} aria-describedby="geometry-save-blockers">Lưu draft</button>
@@ -247,15 +261,16 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     </section>}
     <section className="bg-white border rounded p-4 space-y-2">
       <h2 className="font-semibold">Đọc draft hiện có theo UUID từ API/biên nhận</h2>
-      <p>Contract hiện không có collection draft để tự tìm bản nháp. UUID chỉ định được giữ trên URL để F5 đọc lại cùng hồ sơ.</p>
+      <p>Nhập mã bản nháp từ biên nhận để đọc lại đúng hồ sơ. Đường dẫn giữ lựa chọn khi tải lại trang.</p>
       <input aria-label="Draft UUID" className={selectClass} value={draftInputId} onChange={event => setDraftInputId(event.target.value)} />
       <button type="button" disabled={!projectId || busy || !/^[0-9a-f-]{36}$/i.test(draftInputId)} onClick={() => setQuery({ projectId, draftId: draftInputId })}>Đọc draft và readiness</button>
-      {draft && <><p>Draft {draft.data.id}: {draft.data.status}; version {draft.data.version}; ETag {draft.etag}; sourceCrs {draft.data.sourceCrs}.</p><button type="button" disabled={busy || supervisor} onClick={readPreview}>Preview backend</button></>}
-      {readiness && <div><p>Readiness server: {String(readiness.ready)}; sampleOnly: {String(readiness.sampleOnly)}</p><p>Thiếu: {readiness.missingFields?.join(', ') || 'không có'}; lỗi: {readiness.errors?.join(', ') || 'không có'}.</p><p>{readiness.warnings?.join(', ')}</p></div>}
-      {preview && <p>Preview server: {preview.lengthMeters} m, engineeringSrid {preview.engineeringSrid}; {preview.warnings?.join(', ')}.</p>}
+      {draft && <><p>Bản nháp: {draft.data.status === 'CONFIRMED' ? 'Đã xác nhận' : draft.data.status === 'DRAFT' ? 'Đang soạn' : 'Chưa cập nhật'}. Hệ quy chiếu: {draft.data.sourceCrs}.</p><button type="button" disabled={busy || supervisor} onClick={readPreview}>Preview backend</button></>}
+      {readiness && <p>{readiness.ready ? 'Hồ sơ đủ điều kiện kiểm tra xác nhận.' : 'Hồ sơ cần bổ sung trước khi xác nhận.'}{readiness.sampleOnly ? ' Dữ liệu minh họa.' : ''}</p>}
+      {preview && <p>Xem trước trên máy chủ: {preview.lengthMeters} m; hệ kỹ thuật {preview.engineeringSrid}.</p>}
       <button type="button" disabled={confirmReasons.length > 0} aria-describedby="geometry-confirm-blockers">Xác nhận</button>
       <ul id="geometry-confirm-blockers">{confirmReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
     </section>
+    <p role="status">BLOCKED: Chưa có thao tác trình duyệt, yêu cầu sửa, trình lại hoặc lịch sử duyệt được bàn giao. Không tự tạo trạng thái chờ duyệt hoặc dùng xác nhận để thay từ chối.</p>
     <p>Phân đoạn/publish chỉ thực hiện sau geometry confirmed và đủ định nghĩa phân đoạn từ nguồn hợp lệ; chưa tự chia tuyến hoặc tạo mặt đường giả.</p>
   </div>
 }

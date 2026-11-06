@@ -109,7 +109,7 @@ export interface GeoJsonCenterlineReview {
   layer: string
   ignoredFeatureCount: number
   sourceCrs: string
-  estimatedLengthMeters: number
+  estimatedLengthMeters: number | null
   declaredLengthMeters?: number
   roadWidthHintMeters?: number
   adjacentDuplicates: number
@@ -119,8 +119,10 @@ export interface GeoJsonCenterlineReview {
 
 // Only inspect the input. This does not create chainage, survey accuracy or segments.
 export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview {
-  const parsed = JSON.parse(text)
-  if (parsed.crs) throw new Error('Tệp khai báo CRS riêng; cần xác minh/chuyển đổi có căn cứ trước khi đọc như GeoJSON WGS84.')
+  let parsed: any
+  try { parsed = JSON.parse(text) } catch { throw new Error('Tệp GeoJSON không phải JSON hợp lệ.') }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Tệp GeoJSON không hợp lệ.')
+  if (parsed.crs) throw new Error('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
   const features = parsed.type === 'FeatureCollection' ? parsed.features
     : parsed.type === 'Feature' ? [parsed] : parsed.type === 'LineString' ? [{ geometry: parsed, properties: {} }] : []
   if (!Array.isArray(features)) throw new Error('FeatureCollection không hợp lệ.')
@@ -133,17 +135,17 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
   const raw = feature.geometry.coordinates
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100000) throw new Error('Tim tuyến cần 2–100000 đỉnh.')
   const coords: [number, number][] = raw.map((p: any) => {
-    if (!Array.isArray(p) || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1]) || Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90) {
-      throw new Error('Tọa độ phải là longitude/latitude hữu hạn trong miền WGS84; không tự đảo trục hoặc coi mét là độ.')
+    if (!Array.isArray(p) || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
+      throw new Error('Tọa độ phải là cặp số hữu hạn; chưa xác định trục hoặc đơn vị khi thiếu hệ quy chiếu.')
     }
     return [p[0], p[1]]
   })
-  let estimatedLengthMeters = 0, adjacentDuplicates = 0, selfIntersections = 0
+  let adjacentDuplicates = 0, selfIntersections = 0
   const cross = (a: number[], b: number[], c: number[]) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
   const on = (a: number[], b: number[], p: number[]) => cross(a,b,p) === 0 && p[0] >= Math.min(a[0],b[0]) && p[0] <= Math.max(a[0],b[0]) && p[1] >= Math.min(a[1],b[1]) && p[1] <= Math.max(a[1],b[1])
   for (let i = 1; i < coords.length; i++) {
     const a = coords[i-1], b = coords[i]
-    estimatedLengthMeters += calculateHaversineKm(a,b) * 1000
+
     if (a[0] === b[0] && a[1] === b[1]) adjacentDuplicates++
     // Bounded input QA; BE remains geometry authority for large files.
     if (coords.length <= 2000) for (let j = i + 2; j < coords.length; j++) {
@@ -152,13 +154,13 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
       if ((abC * abD < 0 && cdA * cdB < 0) || on(a,b,c) || on(a,b,d) || on(c,d,a) || on(c,d,b)) selfIntersections++
     }
   }
-  if (estimatedLengthMeters <= 0) throw new Error('Tim tuyến có chiều dài bằng 0.')
+  if (coords.every(point => point[0] === coords[0][0] && point[1] === coords[0][1])) throw new Error('Tim tuyến chỉ có một vị trí lặp lại.')
   const width = features.find((f: any) => f.properties?.type === 'RoadSurface')?.properties?.roadWidth
   const declared = feature.properties?.totalLength ?? parsed.totalLengthMeters
   return {
     coords, featureName: feature.properties?.name || 'LineString', layer: feature.properties?.layer || '',
-    ignoredFeatureCount: features.length - 1, sourceCrs: 'GeoJSON longitude/latitude (WGS84, đơn vị độ); chưa có chứng cứ độ chính xác khảo sát',
-    estimatedLengthMeters, adjacentDuplicates, repeatedVertices: coords.length - new Set(coords.map(p => JSON.stringify(p))).size,
+    ignoredFeatureCount: features.length - 1, sourceCrs: 'UNKNOWN — Chưa xác định hệ quy chiếu, trục và đơn vị',
+    estimatedLengthMeters: null, adjacentDuplicates, repeatedVertices: coords.length - new Set(coords.map(p => JSON.stringify(p))).size,
     selfIntersections: coords.length <= 2000 ? selfIntersections : null, declaredLengthMeters: typeof declared === 'number' && Number.isFinite(declared) ? declared : undefined,
     roadWidthHintMeters: typeof width === 'number' && width > 0 ? width : undefined,
   }
