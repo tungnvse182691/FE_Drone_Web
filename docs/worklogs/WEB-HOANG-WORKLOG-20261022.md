@@ -3251,3 +3251,23 @@ Runtime HTTP Date quan sát `Fri,06 Nov2026 09:27:47 GMT` Sup, `09:27:51 GMT` PM
 Browser Edge headless thật,6requests mỗi batch,2actors,3test logins; kết quả race401 là thực runtime. Tất cả account test session đã logout cuối lượt. Không cần sửa production vì chưa thấy lỗi auth mới ở các tình huống thực đã chạy. Typecheck/build không chạy lại (chỉ docs; kết quả lượt trước không gắn nhãn kiểm mới). git diff --check PASS. Commit chỉ worklog, không thay UI hoặc scope khác.
 
 **Kết luận Bước1: BLOCKED nghiệm thu đầy đủ**, core concurrency/revocation PASS; force-change và natural12h ticket là hai điều kiện cần cấp/duy trì như trên. Không Bước2. Parent commit bổ sung evidence `f121600bfc3926cd06bf6d1883da0680ae5aad15`; full SHA báo khi bàn giao.
+
+### 06/11/2026 — Chốt Bước 1 theo evidence hiện có và quyết định người dùng
+
+**Quyết định hiện hành:** Người dùng tạm hoãn E2E đổi mật khẩu lần đầu và cookie ticket hết hạn tự nhiên 12 giờ. Hai tiêu chí này là **DEFERRED_BY_USER, chưa nghiệm thu E2E**, không phải PASS và không còn chặn chốt phạm vi Bước 1 được giao lần này. Không dựng fixture, chờ hết hạn, đổi clock/DB hoặc sửa code để bỏ force-change/expiry. Quyết định này cập nhật kết luận BLOCKED ở trên và các nhắc lại trạng thái Bước 1 trong ghi chép cũ; không chốt các công việc ngoài auth.
+
+Baseline kiểm tra `hoang`, HEAD/parent `a6ad0bf1ebbdea663a3a74583cf4ca99d1690cad`. Đã đọc AGENTS.md, hai mục auth Bước 1 phía trên và caller Login → authService → authStore → auth API/client, App và ba route guard. Kiểm tra source hiện tại xác nhận Web cookie + CSRF, withCredentials=true, xóa Authorization, token=null; không Android/Bearer trong luồng Login. Guard chờ bootstrap, có retry lỗi, chặn sai role và must_change_password. Chưa phát hiện lỗi mới trong luồng auth Bước 1 qua lượt đọc này.
+
+| Tiêu chí được chốt | Evidence hiện có | Kết luận và giới hạn |
+|---|---|---|
+| Login đúng/sai PM/Sup, bootstrap F5, renew, logout/không khôi phục phiên, logout nhiều tab, đổi tài khoản | Mục Bước 1 kiểm lại Web session ngày 06/11 ở trên: browser/API thật | PASS theo evidence đã ghi; không chạy lại runtime lượt chốt này |
+| Sai role tại UI | Supervisor vào /pm/projects và PM vào /sup/projects đều về dashboard đúng role | PASS browser đã ghi; đây là route guard, không thay bằng chứng quyền server |
+| Quyền role tại server | GET /users: Supervisor 200, PM 403 | PASS GET thật đã ghi; không suy rộng sang mọi endpoint hoặc quyền mutation |
+| Phạm vi dự án tại server | GET reports/summary: Supervisor dự án A/B đều 200; PM dự án A 200, dự án B 403 | PASS GET thật cho các actor/dự án đã kiểm; đã có bằng chứng chặn đọc ngoài phạm vi, không thiếu tiêu chí này trong Bước 1. Không suy thành mọi tài nguyên/mutation đều đã E2E |
+| Revoke và nhiều 401 đồng thời | Follow-up auth ở trên: Sup+PM, 6 GET đồng thời; session hợp lệ chỉ 1 GET session/0 renew; sau revoke chỉ 1 renew thất bại, mọi request kết thúc | PASS runtime đã ghi; không logout nhầm khi session còn hợp lệ, không renew storm/treo hoặc replay mutation. Endpoint nghiệp vụ trả 401 không được coi là tích hợp thành công |
+| Failure/concurrency/late response/không replay mutation/network/403/logout failure và force-change mapping/guard | 15 focused auth regression PASS đã ghi | Chốt ở mức mock HTTP/hooks; không gắn nhãn runtime E2E cho các failure này |
+| Login UI và kiểm tra biên dịch | Browser 1440/375; tsc -b, Vite build, diff-check PASS trong lượt auth trước | Evidence lịch sử, không phải build/test mới của working tree đang thay đổi |
+| Force-change PM/Sup E2E; natural 12h ticket expiry/renew sau expiry | Quyết định người dùng lần này | DEFERRED_BY_USER; cơ chế giữ nguyên, không fixture/chờ thêm |
+| Ordinary idle/max expiry của session PersistentRenewable | Follow-up đã ghi absoluteExpiresAt=null, idleExpiresAt=null, renewable=true | NOT_APPLICABLE cho session mới đã kiểm; không áp giả định idle 30 phút |
+
+**Chốt Bước 1 trong phạm vi được người dùng duyệt:** Các tiêu chí còn lại được chốt theo mức evidence ở bảng; hai E2E tạm hoãn được ghi riêng, không tuyên bố nghiệm thu E2E toàn bộ auth. Không có yêu cầu sửa production auth từ evidence hiện tại. Lượt này chỉ cập nhật phần Bước 1 của worklog, không chạy browser/API/build/regression mới, không đổi source/backend/DB và không mở rộng nhiệm vụ. Giữ nguyên 40 file đang thay đổi (kể cả các hunk ngoài auth trong chính worklog); commit chỉ hunk chốt Bước 1, parent như trên, push hoang theo yêu cầu người dùng.
