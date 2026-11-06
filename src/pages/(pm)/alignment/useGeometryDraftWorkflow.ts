@@ -3,6 +3,7 @@ import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { alignmentService, type GeometryDraftInput } from '../../../api/services/alignmentService'
 import { acceptFreshDraftVersion, pendingDraftCommand, reviseRejectedDraftCommand, runDraftCommand } from '../../../api/services/geometryDraftCommands'
+import { GeometryCommandUiError, geometryCommandErrorMessage } from '../../../api/services/geometryCommandErrors'
 import type { useGeometryReadModel } from './useGeometryReadModel'
 
 type ReadModel = ReturnType<typeof useGeometryReadModel>
@@ -12,41 +13,41 @@ export interface GeometryDraftForm {
 const emptyForm: GeometryDraftForm = { sectionId: '', profileId: '', origin: '', surveyWidth: '', widths: '', reason: '' }
 export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>): GeometryDraftInput {
   const context = model.context
-  if (!context) throw new Error('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
+  if (!context) throw new GeometryCommandUiError('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
   const road = context.roadSections.find(section => section.roadSectionId === form.sectionId)
-  if (!road) throw new Error('Hãy chọn tuyến từ phạm vi máy chủ đã trả về.')
+  if (!road) throw new GeometryCommandUiError('Hãy chọn tuyến từ phạm vi máy chủ đã trả về.')
   const profile = model.profiles.find(profile => profile.id === form.profileId && profile.projectId === context.projectId)
   const definition = profile?.definition
   if (!definition || definition.sourceSrid !== context.engineeringUtmSrid || ![32648, 32649].includes(definition.sourceSrid) || definition.axisOrder !== 'EN' || definition.metresPerUnit !== 1) {
-    throw new Error('Cần hồ sơ CRS cùng engineering SRID, trục EN và đơn vị mét. Chưa có adapter được xác minh cho lựa chọn khác.')
+    throw new GeometryCommandUiError('Cần hồ sơ CRS cùng engineering SRID, trục EN và đơn vị mét. Chưa có adapter được xác minh cho lựa chọn khác.')
   }
   if (!definition.datum || !definition.projection || !definition.sourceReference || !/^[0-9a-f]{64}$/i.test(definition.sourceChecksum || '') || definition.sampleOnly !== false) {
-    throw new Error('Hồ sơ CRS chưa đủ nguồn hoặc chỉ là mẫu; không dùng làm dữ liệu tuyến chính thức.')
+    throw new GeometryCommandUiError('Hồ sơ CRS chưa đủ nguồn hoặc chỉ là mẫu; không dùng làm dữ liệu tuyến chính thức.')
   }
   const rows = (value: string, count: number) => value.trim().split(/\r?\n/).map(line => {
     const cells = line.trim().split(/[,;\s]+/)
-    if (cells.length !== count || cells.some(cell => !cell || !Number.isFinite(Number(cell)))) throw new Error('Mỗi dòng phải có đủ các số hữu hạn theo nhãn nhập.')
+    if (cells.length !== count || cells.some(cell => !cell || !Number.isFinite(Number(cell)))) throw new GeometryCommandUiError('Mỗi dòng phải có đủ các số hữu hạn theo nhãn nhập.')
     return cells.map(Number)
   })
   const coordinates = rows(text, 2).map(([x, y]) => ({ x, y }))
-  if (coordinates.length < 2 || coordinates.length > 100000) throw new Error('Tim tuyến cần 2–100000 điểm.')
+  if (coordinates.length < 2 || coordinates.length > 100000) throw new GeometryCommandUiError('Tim tuyến cần 2–100000 điểm.')
   let length = 0
   for (let i = 1; i < coordinates.length; i++) {
     const distance = Math.hypot(coordinates[i].x - coordinates[i - 1].x, coordinates[i].y - coordinates[i - 1].y)
-    if (!(distance > 0) || !Number.isFinite(distance)) throw new Error('Hai đỉnh liền kề phải khác nhau và có khoảng cách hữu hạn.')
+    if (!(distance > 0) || !Number.isFinite(distance)) throw new GeometryCommandUiError('Hai đỉnh liền kề phải khác nhau và có khoảng cách hữu hạn.')
     length += distance
   }
-  if (!Number.isFinite(length)) throw new Error('Chiều dài không hợp lệ.')
+  if (!Number.isFinite(length)) throw new GeometryCommandUiError('Chiều dài không hợp lệ.')
   if (!form.origin.trim() || !Number.isFinite(Number(form.origin)) || !form.surveyWidth.trim() || !(Number(form.surveyWidth) > 0) || !Number.isFinite(Number(form.surveyWidth)) || !form.reason.trim()) {
-    throw new Error('Cần lý trình gốc, bề rộng khảo sát và lý do thay đổi có nguồn.')
+    throw new GeometryCommandUiError('Cần lý trình gốc, bề rộng khảo sát và lý do thay đổi có nguồn.')
   }
   let end = 0
   const widthProfile = rows(form.widths, 3).map(([fromOffsetMeters, toOffsetMeters, widthMeters]) => {
-    if (fromOffsetMeters !== end || !(toOffsetMeters > fromOffsetMeters) || !(widthMeters > 0) || widthMeters > Number(form.surveyWidth)) throw new Error('Các khoảng bề rộng phải liên tiếp và nằm trong bề rộng khảo sát.')
+    if (fromOffsetMeters !== end || !(toOffsetMeters > fromOffsetMeters) || !(widthMeters > 0) || widthMeters > Number(form.surveyWidth)) throw new GeometryCommandUiError('Các khoảng bề rộng phải liên tiếp và nằm trong bề rộng khảo sát.')
     end = toOffsetMeters
     return { fromOffsetMeters, toOffsetMeters, widthMeters }
   })
-  if (Math.abs(end - length) > 1e-7) throw new Error('Khoảng bề rộng phải phủ đúng chiều dài tim tuyến đã nhập.')
+  if (Math.abs(end - length) > 1e-7) throw new GeometryCommandUiError('Khoảng bề rộng phải phủ đúng chiều dài tim tuyến đã nhập.')
   return { sourceKind: 'COORDINATES', sourceCrs: definition.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: form.reason.trim(), roadCode: road.code, roadName: road.name }
 }
 
@@ -54,6 +55,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const { user, authEpoch } = useAuthStore()
   const [form, setForm] = useState<GeometryDraftForm>(emptyForm)
   const [awaitingDraftId, setAwaitingDraftId] = useState('')
+  const [hydrateReadError, setHydrateReadError] = useState(false)
   const acceptedDraft = useRef(''), acceptedVersion = useRef(''), awaitingAcknowledgement = useRef(false)
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   const [pending, setPending] = useState<ReturnType<typeof pendingDraftCommand>>(null)
@@ -65,7 +67,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   selection.current = { projectId, draftId: model.draftId, version: model.draft?.etag, authEpoch }
   const attempt = useRef(0), running = useRef(false), hydrated = useRef('')
   useEffect(() => {
-    attempt.current++; running.current = false; hydrated.current = ''; acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId('')
+    attempt.current++; running.current = false; hydrated.current = ''; acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId(''); setHydrateReadError(false)
     setForm(emptyForm); setCoordinatesText(''); setPreview(null); setPreviewVersion(''); setMessage(''); setBusy(false); setConflict(false); setFreshVersion(false); setEffectiveFrom(''); setConfirmReason('')
     try {
       const held = projectId ? pendingDraftCommand(projectId) : null
@@ -76,25 +78,47 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
         else if (receipt.projectId === projectId && 'id' in receipt) model.openDraft(receipt.id)
       }
     }
-    catch (error: any) { setMessage(error.message); setPending(null) }
+    catch { setMessage('Không đọc được yêu cầu cũ. Cần đối chiếu trước khi gửi lệnh mới.'); setPending(null) }
     return () => { attempt.current++ }
   }, [projectId, authEpoch])
   useEffect(() => {
     attempt.current++; if (!awaitingAcknowledgement.current) { running.current = false; setBusy(false) }
-    if (!model.draftId) { acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId('') }
+    if (!model.draftId) { acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId(''); setHydrateReadError(false) }
     setPreview(null); setPreviewVersion('')
-    if (hydrated.current === model.draftId) return
+    if (awaitingAcknowledgement.current && model.draftId === acceptedDraft.current || hydrated.current === model.draftId) return
     hydrated.current = ''
     setForm(emptyForm); setCoordinatesText('')
   }, [model.draftId])
   useEffect(() => {
     const draft = model.draft?.data
-    if (draft?.id === acceptedDraft.current && (acceptedVersion.current === 'CONFIRMED' ? draft.status === 'CONFIRMED' : model.draft?.etag === acceptedVersion.current)) { awaitingAcknowledgement.current = false; setAwaitingDraftId(''); running.current = false; setBusy(false) }
+    if ((awaitingAcknowledgement.current || hydrateReadError) && model.draftId === acceptedDraft.current) {
+      if (model.draftLoading) return
+      const sameDraft = draft?.id === acceptedDraft.current && draft.projectId === projectId
+      if (sameDraft || model.draftError) {
+        awaitingAcknowledgement.current = false; setAwaitingDraftId(''); running.current = false; setBusy(false)
+        hydrated.current = acceptedDraft.current // The unsent input remains owned by the user.
+        if (!sameDraft) {
+          setHydrateReadError(true)
+          const text = 'Đã lưu thành công nhưng chưa tải lại được bản nháp. Bản nhập được giữ; hãy thử đọc lại.'
+          setMessage(text); showToast(text)
+        } else {
+          setHydrateReadError(false)
+          const matches = acceptedVersion.current === 'CONFIRMED' ? draft!.status === 'CONFIRMED' : model.draft?.etag === acceptedVersion.current
+          if (!matches) {
+            setConflict(true); setFreshVersion(false); setPreview(null); setPreviewVersion('')
+            const text = 'Đã lưu; bản nháp vừa đọc có phiên bản khác. Bản nhập được giữ để đối chiếu.'
+            setMessage(text); showToast(text)
+          } else setMessage(acceptedVersion.current === 'CONFIRMED' ? 'Đã đọc lại hồ sơ đã xác nhận từ máy chủ.' : 'Đã đọc lại bản nháp đã lưu. Bản nhập được giữ.')
+        }
+        return
+      }
+      return
+    }
     if (!draft || draft.projectId !== projectId || draft.id !== model.draftId || hydrated.current === draft.id) return
     hydrated.current = draft.id
     setForm(old => ({ ...old, sectionId: draft.roadSectionId || '', origin: Number.isFinite(draft.stationOriginMeters) ? String(draft.stationOriginMeters) : '', surveyWidth: Number.isFinite(draft.surveyWidthMeters) ? String(draft.surveyWidthMeters) : '', widths: (draft.widthProfile || []).map(w => `${w.fromOffsetMeters}, ${w.toOffsetMeters}, ${w.widthMeters}`).join('\n') }))
     if (draft.sourceKind === 'COORDINATES') setCoordinatesText((draft.editedCoordinates || draft.originalCoordinates || []).map(p => `${p.x}, ${p.y}`).join('\n'))
-  }, [model.draft, model.draftId, projectId])
+  }, [model.draft, model.draftId, model.draftLoading, model.draftError, projectId])
   useEffect(() => {
     if (!pending) return
     if (pending.command.kind === 'confirm') {
@@ -108,20 +132,22 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     setCoordinatesText((input.coordinates || []).map(p => `${p.x}, ${p.y}`).join('\n'))
   }, [pending])
   const draft = model.draft?.data
+  const draftVersion = model.draft?.etag
   let saveReason = ''
   let input: GeometryDraftInput | null = null
   try {
-    if (awaitingDraftId) throw new Error('Đang nạp đúng bản nháp vừa lưu. Chưa gửi lệnh mới.')
-    if (user?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được lưu hoặc sửa bản nháp.')
-    if (model.draftId && (!draft || draft.id !== model.draftId || draft.projectId !== projectId)) throw new Error('Cần đọc đúng bản nháp trước khi sửa.')
-    if (draft && draft.status !== 'DRAFT') throw new Error('Bản nháp đã xác nhận, không được sửa.')
-    if (draft && draft.sourceKind !== 'COORDINATES') throw new Error('Bản nháp dùng hình học native; hồ sơ đọc chưa đủ thông tin tuyến và hiệu chỉnh để sửa an toàn.')
-    if (draft && !model.draft?.etag) throw new Error('Chưa đọc được phiên bản bản nháp.')
+    if (hydrateReadError) throw new GeometryCommandUiError('Bản nháp đã lưu nhưng chưa tải lại được. Hãy thử đọc lại trước khi gửi lệnh mới.')
+    if (awaitingDraftId) throw new GeometryCommandUiError('Đang nạp đúng bản nháp vừa lưu. Chưa gửi lệnh mới.')
+    if (user?.role !== RoleCode.PROJECT_MANAGER) throw new GeometryCommandUiError('Chỉ PM được lưu hoặc sửa bản nháp.')
+    if (model.draftId && (!draft || draft.id !== model.draftId || draft.projectId !== projectId)) throw new GeometryCommandUiError('Cần đọc đúng bản nháp trước khi sửa.')
+    if (draft && draft.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp đã xác nhận, không được sửa.')
+    if (draft && draft.sourceKind !== 'COORDINATES') throw new GeometryCommandUiError('Bản nháp dùng hình học native; hồ sơ đọc chưa đủ thông tin tuyến và hiệu chỉnh để sửa an toàn.')
+    if (draft && !model.draft?.etag) throw new GeometryCommandUiError('Chưa đọc được phiên bản bản nháp.')
     input = coordinateDraftInput(form, coordinatesText, model)
-  } catch (error: any) { saveReason = error.message }
+  } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const section = draft?.roadSectionId ? model.context?.roadSections.find(section => section.roadSectionId === draft.roadSectionId) : undefined
   const readiness = model.readiness
-  const confirmGate = user?.role !== RoleCode.SUPERVISOR ? 'Chỉ Giám sát được xác nhận.'
+  const confirmGate = hydrateReadError ? 'Hồ sơ đã lưu nhưng chưa tải lại được. Hãy thử đọc lại.' : user?.role !== RoleCode.SUPERVISOR ? 'Chỉ Giám sát được xác nhận.'
     : draft?.status === 'CONFIRMED' ? 'Hồ sơ đã được xác nhận từ máy chủ.'
     : !draft || draft.status !== 'DRAFT' || !model.draft?.etag ? 'Cần bản nháp DRAFT và phiên bản từ máy chủ.'
     : !model.context || !section?.currentVersionId ? 'Chưa đọc được tuyến/phiên bản hiện tại từ context máy chủ.'
@@ -142,6 +168,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     try { held = pendingDraftCommand(projectId) } catch { notify('Không đọc được yêu cầu đang chờ. Cần đối chiếu trước khi gửi lệnh mới.'); return }
     setPending(held)
     const status = error?.response?.status
+    const text = geometryCommandErrorMessage(error, useAuthStore.getState().isAuthenticated, held)
     if ([409, 412, 428].includes(status)) {
       setConflict(true); setFreshVersion(false); setPreview(null); setPreviewVersion('')
       try {
@@ -150,22 +177,22 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
         if (current()) { setFreshVersion(true); model.retry() }
       } catch { /* The draft input remains untouched; explicit retry stays available. */ }
       if (!current()) return
-      notify('Dữ liệu hoặc phiên bản đã thay đổi. Bản nhập được giữ; hãy đọc lại và quyết định trước khi gửi lệnh mới.')
-    } else notify(error?.receipt ? error.message : error?.response ? 'Máy chủ đã từ chối yêu cầu. Có thể gửi lại đúng yêu cầu hoặc chọn sửa đầu vào sau khi kiểm tra lỗi.' : /network|timeout/i.test(error?.message || '') ? 'Chưa rõ kết quả trên máy chủ. Hãy đối chiếu hoặc gửi lại đúng yêu cầu đã giữ.' : error?.message || 'Không thể hoàn tất yêu cầu geometry.')
+      notify(text)
+    } else notify(text)
   }
   const complete = async (result: Awaited<ReturnType<typeof runDraftCommand>>, current: () => boolean) => {
     if (!current()) return
-    setPending(null); setPreview(null); setPreviewVersion(''); awaitingAcknowledgement.current = true
+    setPending(null); setPreview(null); setPreviewVersion(''); setHydrateReadError(false); awaitingAcknowledgement.current = true
     if (result.kind === 'confirm') { acceptedDraft.current = result.draftId; acceptedVersion.current = 'CONFIRMED'; setAwaitingDraftId(result.draftId); model.openConfirmed(result.draftId, result.geometry) }
     else { acceptedDraft.current = result.draft.data.id; acceptedVersion.current = result.draft.etag; setAwaitingDraftId(result.draft.data.id); model.openDraft(result.draft.data.id) }
     model.retry()
     notify(result.kind === 'confirm' ? 'Đã xác nhận và đọc lại geometry từ máy chủ.' : 'Đã lưu và đọc lại bản nháp từ máy chủ. Chưa xác nhận tuyến.')
   }
   const save = async () => {
-    if (awaitingAcknowledgement.current || selection.current.draftId !== model.draftId || selection.current.version !== model.draft?.etag) { notify('Đang nạp đúng bản nháp vừa lưu. Chưa gửi lệnh mới.'); return }
+    if (awaitingAcknowledgement.current || selection.current.draftId !== model.draftId || selection.current.version !== draftVersion) { notify('Đang nạp đúng bản nháp vừa lưu. Chưa gửi lệnh mới.'); return }
     if (saveReason || !input || pending || conflict) { notify(saveReason || 'Cần đối chiếu yêu cầu hoặc phiên bản cũ trước.'); return }
     const current = begin(); if (!current) return
-    try { await complete(await runDraftCommand(projectId, draft ? { kind: 'update', draftId: draft.id, etag: model.draft!.etag, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
+    try { await complete(await runDraftCommand(projectId, draft ? { kind: 'update', draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
     catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
@@ -181,7 +208,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     const current = begin(); if (!current) return
     try {
       const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag)
-      if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new Error('Preview chưa có chiều dài hợp lệ từ máy chủ.')
+      if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new GeometryCommandUiError('Preview chưa có chiều dài hợp lệ từ máy chủ.')
       if (current() && selection.current.version === model.draft.etag) { setPreview(value); setPreviewVersion(model.draft.etag) }
       const ready = await alignmentService.readDraftReadiness(projectId, draft.id)
       if (current() && selection.current.version === model.draft.etag) { model.setReadiness(ready); notify('Đã đọc preview/readiness từ máy chủ. Preview chưa phải xác nhận tuyến.') }
@@ -196,9 +223,9 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       if (!current()) return
       const road = context.roadSections.find(road => road.roadSectionId === draft!.roadSectionId)
       if (fresh.etag !== model.draft!.etag || road?.currentVersionId !== section!.currentVersionId) {
-        setConflict(true); setFreshVersion(true); model.retry(); throw new Error('Phiên bản đã thay đổi. Hãy xem lại trước khi xác nhận.')
+        setConflict(true); setFreshVersion(true); model.retry(); throw new GeometryCommandUiError('Phiên bản đã thay đổi. Hãy xem lại trước khi xác nhận.')
       }
-      if (fresh.data.status !== 'DRAFT' || !ready.ready || ready.missingFields.length || ready.errors.length) throw new Error('Bản nháp/readiness không còn đủ điều kiện xác nhận.')
+      if (fresh.data.status !== 'DRAFT' || !ready.ready || ready.missingFields.length || ready.errors.length) throw new GeometryCommandUiError('Bản nháp/readiness không còn đủ điều kiện xác nhận.')
       await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: road!.currentVersionId, effectiveFrom: new Date(effectiveFrom).toISOString(), reason: confirmReason.trim() } }), current)
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
@@ -213,11 +240,16 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     } catch { if (current()) notify('Chưa đọc được phiên bản mới. Bản nhập vẫn được giữ.') }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
+  const retryHydrate = () => {
+    if (!hydrateReadError || running.current || awaitingAcknowledgement.current || model.draftLoading) return
+    awaitingAcknowledgement.current = true; setAwaitingDraftId(acceptedDraft.current)
+    setHydrateReadError(false); setBusy(true); model.retry()
+  }
   const acceptVersion = () => {
     if (!freshVersion || pending?.duplicate || model.draftLoading || !model.context || model.draftId && !model.draft) return
     if (pending) acceptFreshDraftVersion(projectId)
     setPending(null); setConflict(false); setPreview(null); setPreviewVersion(''); notify('Đã giữ bản nhập và chọn phiên bản máy chủ mới. Hãy kiểm tra rồi lưu/xem trước lại.')
   }
   const reviseRejected = () => { reviseRejectedDraftCommand(projectId); setPending(null); notify('Đã giữ bản nhập để sửa sau lỗi từ chối. Hãy kiểm tra nội dung trước khi lưu ý định mới.') }
-  return { form, setForm, busy, message, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, save, confirm, loadPreview, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
+  return { form, setForm, busy, message, hydrateReadError, retryHydrate, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, save, confirm, loadPreview, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
 }

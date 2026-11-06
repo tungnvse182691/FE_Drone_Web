@@ -211,13 +211,14 @@ export const AlignmentSegments: React.FC = () => {
         <p>Lưu bản nháp, xem trước và xác nhận là các bước riêng; trạng thái luôn đọc từ máy chủ.</p>
         {geometryRead.profileError && <p role="alert" className="text-rose-700">{geometryRead.profileError}</p>}
         {draftWorkflow.message && <p role="status">{draftWorkflow.message}</p>}
+        {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="border rounded-lg px-3 py-2">Đọc lại bản nháp đã lưu</button>}
         {draftWorkflow.pending && <div className="space-y-2">
           <p>{draftWorkflow.pending.receipt ? 'Lệnh đã được tiếp nhận; cần đọc lại kết quả.' : 'Yêu cầu trước cần được đối chiếu trước khi gửi nội dung mới.'}</p>
           <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="border rounded-lg px-3 py-2">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>
           {draftWorkflow.pending.rejected && <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.reviseRejected} className="ml-2 border rounded-lg px-3 py-2">Sửa đầu vào sau lỗi từ chối</button>}
         </div>}
         {draftWorkflow.conflict && <div>
-          <p>Bản nhập được giữ nguyên. Hãy đọc lại phiên bản máy chủ và quyết định trước khi tiếp tục.</p>
+          <p>Bản nhập được giữ nguyên. Hãy đọc lại hồ sơ và quyết định trước khi tiếp tục.</p>
           <button type="button" onClick={() => { void draftWorkflow.reviewConflict() }} disabled={draftWorkflow.busy} className="border rounded-lg px-3 py-2">Đọc phiên bản mới</button>
           <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="ml-2 border rounded-lg px-3 py-2">Giữ bản nhập và dùng phiên bản mới</button>
         </div>}
