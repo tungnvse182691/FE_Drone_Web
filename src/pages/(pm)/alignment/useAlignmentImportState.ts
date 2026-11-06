@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { SegmentItem } from './types'
-import { inspectGeoJsonCenterline } from './alignmentImportHelpers'
+import { GeoJsonValidationError, inspectGeoJsonCenterline } from './alignmentImportHelpers'
 
 export interface UseAlignmentImportStateParams {
   stationOriginKm: number
@@ -54,14 +54,18 @@ export function useAlignmentImportState({
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const text = e.target?.result as string
+        const text = e.target?.result
+        if (typeof text !== 'string') { showToast('Không đọc được nội dung văn bản của tệp GeoJSON.'); return }
         const inspection = inspectGeoJsonCenterline(text)
         showToast(`Đã kiểm tra ${inspection.coords.length} điểm. CRS UNKNOWN: cần xác minh hệ quy chiếu và thông số kỹ thuật trước khi lưu; chưa tạo phân đoạn hoặc bản nháp.`)
-      } catch {
-        showToast('Lỗi: Định dạng file GeoJSON không đúng cấu trúc JSON chuẩn!')
+      } catch (error) {
+        showToast(error instanceof GeoJsonValidationError && error.message ? error.message : 'Không thể kiểm tra nội dung tệp GeoJSON. Vui lòng kiểm tra lại tệp.')
       }
     }
-    reader.readAsText(file)
+    reader.onerror = () => showToast('Không đọc được tệp GeoJSON. Vui lòng chọn lại tệp và thử lại.')
+    reader.onabort = () => showToast('Đã hủy đọc tệp GeoJSON. Nội dung chưa được kiểm tra.')
+    try { reader.readAsText(file) }
+    catch { showToast('Không đọc được tệp GeoJSON. Vui lòng chọn lại tệp và thử lại.') }
   }
 
   const processManualCoordinates = (text: string) => {

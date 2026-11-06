@@ -117,26 +117,34 @@ export interface GeoJsonCenterlineReview {
   selfIntersections: number | null
 }
 
+export class GeoJsonValidationError extends Error {}
+
 // Only inspect the input. This does not create chainage, survey accuracy or segments.
 export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview {
   let parsed: any
-  try { parsed = JSON.parse(text) } catch { throw new Error('Tệp GeoJSON không phải JSON hợp lệ.') }
-  if (!parsed || typeof parsed !== 'object') throw new Error('Tệp GeoJSON không hợp lệ.')
-  if (parsed.crs) throw new Error('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
+  try { parsed = JSON.parse(text) } catch { throw new GeoJsonValidationError('Tệp GeoJSON sai cú pháp JSON.') }
+  if (!parsed || typeof parsed !== 'object') throw new GeoJsonValidationError('Tệp GeoJSON không hợp lệ.')
+  if (parsed.crs) throw new GeoJsonValidationError('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
   const features = parsed.type === 'FeatureCollection' ? parsed.features
     : parsed.type === 'Feature' ? [parsed] : parsed.type === 'LineString' ? [{ geometry: parsed, properties: {} }] : []
-  if (!Array.isArray(features)) throw new Error('FeatureCollection không hợp lệ.')
+  if (!Array.isArray(features)) throw new GeoJsonValidationError('FeatureCollection không hợp lệ.')
   const centerlines = features.filter((f: any) => f.properties?.type === 'Centerline' || f.properties?.layer === 'TIM_TUYEN_CHINH')
   const lines = features.filter((f: any) => f.geometry?.type === 'LineString' && !['RoadEdge', 'RoadSurface'].includes(f.properties?.type) && !/^MEP_/.test(f.properties?.layer || ''))
+  if (!centerlines.length && !lines.length) {
+    if (!['FeatureCollection', 'Feature', 'LineString'].includes(parsed.type) || features.some((f: any) => f.geometry && f.geometry.type !== 'LineString')) {
+      throw new GeoJsonValidationError('Geometry không hỗ trợ: cần tim tuyến LineString, không dùng Polygon hoặc MultiLineString.')
+    }
+    throw new GeoJsonValidationError('Không chọn được tim tuyến: cần đúng một Centerline rõ nguồn; không dùng mép đường thay tim tuyến.')
+  }
   const candidates = centerlines.length ? centerlines : lines
-  if (candidates.length !== 1) throw new Error('Cần đúng một Centerline rõ nguồn; không ghép nhiều tuyến/mép đường thành tim tuyến.')
+  if (candidates.length !== 1) throw new GeoJsonValidationError('Cần đúng một Centerline rõ nguồn; không ghép nhiều tuyến/mép đường thành tim tuyến.')
   const feature = candidates[0]
-  if (feature.geometry?.type !== 'LineString') throw new Error('Centerline phải là LineString; không dùng Polygon hoặc ghép MultiLineString khi chưa có topology.')
+  if (feature.geometry?.type !== 'LineString') throw new GeoJsonValidationError('Centerline phải là LineString; không dùng Polygon hoặc ghép MultiLineString khi chưa có topology.')
   const raw = feature.geometry.coordinates
-  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100000) throw new Error('Tim tuyến cần 2–100000 đỉnh.')
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100000) throw new GeoJsonValidationError('Tim tuyến cần 2–100000 đỉnh.')
   const coords: [number, number][] = raw.map((p: any) => {
     if (!Array.isArray(p) || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
-      throw new Error('Tọa độ phải là cặp số hữu hạn; chưa xác định trục hoặc đơn vị khi thiếu hệ quy chiếu.')
+      throw new GeoJsonValidationError('Tọa độ phải là cặp số hữu hạn; chưa xác định trục hoặc đơn vị khi thiếu hệ quy chiếu.')
     }
     return [p[0], p[1]]
   })
@@ -154,7 +162,7 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
       if ((abC * abD < 0 && cdA * cdB < 0) || on(a,b,c) || on(a,b,d) || on(c,d,a) || on(c,d,b)) selfIntersections++
     }
   }
-  if (coords.every(point => point[0] === coords[0][0] && point[1] === coords[0][1])) throw new Error('Tim tuyến chỉ có một vị trí lặp lại.')
+  if (coords.every(point => point[0] === coords[0][0] && point[1] === coords[0][1])) throw new GeoJsonValidationError('Tim tuyến chỉ có một vị trí lặp lại.')
   const width = features.find((f: any) => f.properties?.type === 'RoadSurface')?.properties?.roadWidth
   const declared = feature.properties?.totalLength ?? parsed.totalLengthMeters
   return {
