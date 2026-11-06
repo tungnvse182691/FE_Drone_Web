@@ -10,6 +10,8 @@ const fail = (status, code) => Object.assign(Error(code), { response: { status, 
 function load(file, client, extra = {}) {
   const module = { exports: {} }, saved = new Map()
   const mocks = {
+    '../../utils/projectWarranty': file.endsWith('projectWarranty.ts') ? {} : load('src/utils/projectWarranty.ts', {}),
+    '../../../utils/projectWarranty': file.endsWith('projectWarranty.ts') ? {} : load('src/utils/projectWarranty.ts', {}),
     '../client': { apiClient: client }, '../../store/authStore': { useAuthStore: store },
     '../../../store/authStore': { useAuthStore: store }, '../../types/enums': { RoleCode: roles },
     './userDirectory': { userDirectory: { registerUsers() {} } },
@@ -129,6 +131,31 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
     assert.equal(card.props.project.id,'b');assert.ok(card.props.memberError);assert.equal(card.props.primaryPm.displayName,'Server primary')
     id='c';render();effects.forEach(e=>e?.cleanup?.());calls[2].resolve({id:'c',code:'C',name:'C'});await flush()
     assert.ok(!nodes(view).some(n=>n.type==='ProjectPersonnelCard'&&n.props.project.id==='c'))
+  })
+  await test('render missing statistics never claims no damage or renders NaN; real zero and partial counts survive', async () => {
+    const C=load('src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx',{}).ProjectHighlightsGrid
+    const base={id:'p',name:'P',code:'P',status:'ACTIVE',warranty_data_missing:true}
+    for(const value of [NaN,null,undefined]) {
+      const html=renderToStaticMarkup(React.createElement(C,{project:{...base,open_defects:value,repair_packages:4}}))
+      assert.ok(html.includes('Chưa tải được'));assert.ok(html.includes('4 gói sửa chữa'))
+      for(const text of ['NaN','undefined','null','Chưa phát hiện hư hỏng','Ổn định','Cần xử lý','width:70%','width:100%'])assert.ok(!html.includes(text),text)
+    }
+    const html=renderToStaticMarkup(React.createElement(C,{project:{...base,open_defects:0,repair_packages:0}}))
+    assert.ok(html.includes('0 điểm'));assert.ok(html.includes('0 gói sửa chữa'));assert.ok(!html.includes('Ổn định 100%'))
+  })
+  await test('mapper and all warranty surfaces reject absent/invalid/reversed dates and CLOSED inference; valid dates remain visible', async () => {
+    const components=[['project-overview/ProjectHighlightsGrid.tsx','ProjectHighlightsGrid'],['projects/ProjectGridView.tsx','ProjectGridView'],['projects/ProjectTableView.tsx','ProjectTableView']]
+    for(const dates of [{},{handoverDate:'bad',warrantyEndDate:'2099-01-01'},{handoverDate:'2026-02-30',warrantyEndDate:'2099-01-01'},{handoverDate:'2099-01-01',warrantyEndDate:'2026-01-01'},{handoverDate:'2020-01-01',warrantyEndDate:'2099-01-01'}]) {
+      const s=project({get:async url=>url==='/projects'?page([{...created,...dates,status:'CLOSED'}]):url.endsWith('/defect-statistics')?{data:{statistics:{openDefectsCount:0}}}:page([])})
+      const [mapped]=await s.fetchProjects();const valid=dates.handoverDate==='2020-01-01'
+      assert.equal(mapped.warranty_data_missing,!valid)
+      if(valid){assert.ok(mapped.days_remaining>0);assert.ok(mapped.warranty_passed_percent<100)}else{assert.ok(Number.isNaN(mapped.days_remaining));assert.ok(Number.isNaN(mapped.warranty_passed_percent))}
+      for(const [file,name] of components){const C=load('src/pages/(pm)/'+file,{} )[name];const render=p=>renderToStaticMarkup(React.createElement(C,{project:p,filteredProjects:[p],totalProjectsCount:1,isSupervisor:false}));const html=render(mapped)
+        if(valid){assert.ok(html.includes(`Còn ${mapped.days_remaining} ngày`));assert.ok(html.includes(`${mapped.warranty_passed_percent}%`))}
+        else{for(const text of ['NaN','Còn 0 ngày','0%','3 năm từ bàn giao','width:100%'])assert.ok(!html.includes(text),file+' '+text);assert.ok(html.includes('Chưa cập nhật'))}
+        const invalid=render({...mapped,warranty_data_missing:false,handover_date:'bad',warranty_end_date:'bad',days_remaining:0,warranty_passed_percent:0});assert.ok(!invalid.includes('Còn 0 ngày'));assert.ok(!invalid.includes('0%'))
+      }
+    }
   })
   await test('Web reassignment stays blocked without dispatch despite valid membership version', async () => {
     let writes=0

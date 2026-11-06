@@ -1,3 +1,4 @@
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from './types'
@@ -61,9 +62,9 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <div className="font-mono font-semibold text-slate-800">{prj.warranty_passed_percent}%</div>
+                    <div className="font-mono font-semibold text-slate-800">{hasWarrantyData(prj) ? `${prj.warranty_passed_percent}%` : 'Chưa cập nhật'}</div>
                     <div className="text-[10px] text-slate-500 font-mono">
-                      {prj.status === 'CLOSED' ? 'Đã hoàn tất' : `Còn ${prj.days_remaining} ngày`}
+                      {hasWarrantyData(prj) ? `Còn ${prj.days_remaining} ngày` : 'Chưa cập nhật'}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">

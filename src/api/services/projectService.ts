@@ -1,3 +1,4 @@
+import { validWarrantyDates } from '../../utils/projectWarranty'
 import { personnelService } from './personnelService'
 import { apiClient } from '../client'
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
@@ -387,7 +388,7 @@ function mapBackendProjectToHub(
   const handoverStr = item.handoverDate || ''
   const warrantyEndStr = item.warrantyEndDate || ''
 
-  const warrantyDataMissing = !handoverStr || !warrantyEndStr
+  const warrantyDataMissing = !validWarrantyDates(handoverStr, warrantyEndStr)
   const handover = handoverStr ? new Date(handoverStr) : now
   const warrantyEnd = warrantyEndStr ? new Date(warrantyEndStr) : now
 
@@ -403,9 +404,11 @@ function mapBackendProjectToHub(
     warrantyPassedPercent = Math.min(100, Math.max(0, Math.round((passedDuration / totalDuration) * 100)))
   }
 
-  if (status === 'CLOSED') {
+  if (warrantyDataMissing) {
+    warrantyPassedPercent = Number.NaN
+    daysRemaining = Number.NaN
+  } else if (totalDuration === 0 && passedDuration >= 0) {
     warrantyPassedPercent = 100
-    daysRemaining = 0
   }
   const region = item.region || item.location || item.description || ''
   const location_detail = item.locationDetail || item.location_detail || ''

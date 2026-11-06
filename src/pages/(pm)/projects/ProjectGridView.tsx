@@ -1,3 +1,4 @@
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from './types'
@@ -174,12 +175,12 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
                       }`}
                     >
-                      {prj.warranty_data_missing ? 'Chưa cập nhật' : <>{prj.warranty_passed_percent}%{' '}
+                      {!hasWarrantyData(prj) ? 'Chưa cập nhật' : <>{prj.warranty_passed_percent}%{' '}
                       <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span></>}
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div
+                    {hasWarrantyData(prj) && <div
                       className={`h-full rounded-full transition-all duration-500 ${
                         prj.status === 'NEAR_EXPIRY'
                           ? 'bg-rose-500'
@@ -188,7 +189,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                           : 'bg-brand-gold'
                       }`}
                       style={{ width: Number.isFinite(prj.warranty_passed_percent) ? `${Math.max(0, Math.min(100, prj.warranty_passed_percent))}%` : '0%' }}
-                    ></div>
+                    ></div>}
                   </div>
                 </div>
 
