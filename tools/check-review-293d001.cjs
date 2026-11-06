@@ -35,7 +35,7 @@ const response = data => ({ data, headers: { etag: '"AAAAAAAAAAE="' } })
 const failure = (status, code) => Object.assign(new Error(code), { response: { status, data: { code, detail: code } } })
 const json = value => JSON.parse(JSON.stringify(value))
 let passed = 0
-async function test(name, run) { await run(); passed++; console.log(`PASS ${name}`) }
+async function test(name, run) { if (process.env.RG_AUTH_ONLY === '1' && !/Web |session bootstrap|cross-tab invalidation|password change|password success|password HTTP|login401|session bootstrap and renew|auth route guards/.test(name)) return; await run(); passed++; console.log(`PASS ${name}`) }
 function triage(client) { return load('src/api/services/triageService.ts', { '../client': { apiClient: client } }).triageService }
 function reactMock() {
   const states = []
@@ -1538,6 +1538,21 @@ function caseLifecycleHarness() {
     const html=renderToStaticMarkup(React.createElement(Component,{defect:{id:'server-defect',previous_epoch_image_url:'https://example.test/private-evidence',previous_epoch_label:'Kỳ trước đã đọc',current_epoch_label:'Kỳ hiện tại đã đọc',bounding_box:{x:0.2,y:0.3,width:0.1,height:0.1},defect_type:'POTHOLE',confidence_score:0.8,chainage_km:1}}))
     for(const text of ['50% (Cân bằng)','25%','75%','Chưa cập nhật'])assert.ok(html.includes(text))
     assert.ok(!html.includes('Kỳ T-1 (0.10'));assert.ok(!html.includes('background-image'));assert.ok(!html.includes('Road-YOLOv9'))
+  })
+  await test('auth route guards fence checking/error before rendering protected, public or force-password area', async () => {
+    const React=require('react');let state
+    const guards=load('src/components/layout/ProtectedRoute.tsx',{react:{__esModule:true,default:React,...React},'react-router-dom':{Navigate:'Navigate',Outlet:'Outlet'},'../../store/authStore':{useAuthStore:()=>state}})
+    for(const name of ['ProtectedRoute','PublicAuthRoute','ForcePasswordRoute']){
+      state={isAuthenticated:true,user:{role:roles.PROJECT_MANAGER,must_change_password:false},status:'checking'}
+      assert.equal(guards[name]({allowedRole:roles.PROJECT_MANAGER}).props.role,'status')
+      state.status='error';state.authError='Không thể khôi phục phiên đăng nhập.'
+      assert.equal(guards[name]({}).props.role,'alert')
+    }
+    state={isAuthenticated:true,user:{role:roles.PROJECT_MANAGER,must_change_password:true},status:'authenticated'}
+    assert.equal(guards.ProtectedRoute({}).props.to,'/force-change-password')
+    state.user.must_change_password=false
+    assert.equal(guards.ProtectedRoute({allowedRole:roles.SUPERVISOR}).props.to,'/pm/dashboard')
+    assert.equal(guards.ProtectedRoute({allowedRole:roles.PROJECT_MANAGER}).type,'Outlet')
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

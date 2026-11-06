@@ -3183,3 +3183,41 @@ Browser test đầu có selector exact heading không khớp Material Icon text,
 - `tools/check-review-293d001.cjs`
 
 Parent của commit follow-up: `33fbe0bf525a7532070b06d7fd4bc329041b8753`. Full SHA được báo sau commit; file đầu vào/ảnh/log temp không stage. Không có diff trong src/api, src/store, App.tsx, vite.config.ts hoặc backend.
+
+
+### 06/11/2026 — Bước 1: kiểm lại Web session và sửa guard sau phục hồi UI
+
+Baseline thực tế `c76e8050a9f1f24bd42a06193c803116edae5f1a`, parent `69cd1dfb7329d520a569bcc7fea3f992ad7db867`; hoang, working tree sạch, ahead origin/hoang một commit của công việc trước. Giữ nguyên commit đó; không reset/checkout. Đọc AGENTS hiện hành, Spec17_10 Authentication/Users/Membership và Web errors, OpenAPI, auth.ts/client/authService/authStore/App/guards/Login/ForceChangePassword và worklog. Không sử dụng v2.2. Không sửa các màn bước2+ hoặc backend/DB/config.
+
+**Finding sửa:** c76e805 bỏ status checking/error khỏi ba route guard. Bootstrap F5 chưa xong đã có thể redirect Login; trạng thái check lỗi không có retry. Phục hồi gate loading/error trước protected/public/force-password routing. PublicAuthRoute giữ form mount trong authenticating để không mất email/password/error sau login thất bại; chỉ chặn bootstrap/logging-out. Giữ toàn bộ layout/màu/menu/form JSX hiện tại và role/must-change redirect. Không thay transport/session implementation đã đúng.
+
+| File | Lý do |
+|---|---|
+| src/components/layout/ProtectedRoute.tsx | Chặn render/redirect sớm khi bootstrap chưa xác minh; error và nút retry. Giữ login form trong khi authenticating |
+| tools/check-review-293d001.cjs | Thêm guard regression; cho phép RG_AUTH_ONLY=1 chạy riêng auth vì full legacy suite tham chiếu các component bị đổi/xóa bởi baseline UI khác scope |
+| docs/worklogs/WEB-HOANG-WORKLOG-20261022.md | Evidence task này và giới hạn |
+
+**Contract đã đối chiếu:** GET /auth/web/csrf anonymous; POST /auth/web/login CSRF; GET /auth/web/session WebSession; POST /auth/web/renew WebRenewal+CSRF (không GET); POST /auth/web/logout WebSession+CSRF+Idempotency-Key; POST /auth/change-password DTO currentPassword/newPassword, WebSession+CSRF+K được khai báo. Không yêu cầu If-Match cho các operation này. Client withCredentials=true, bỏ Authorization, không tự replay mutation; read retry tối đa một lần sau recovery. Recovery GET session trước, chỉ renew khi session401, single-flight theo epoch, không logout khi business401 còn session hợp lệ/403/network. authEpoch + App queryClient.clear/storage cleanup và BroadcastChannel giữ nguyên. Không khôi phục bearer/sessionStorage identity hoặc helper mock.
+
+**Kiểm tự chạy trong lượt này** (không lấy evidence cũ làm PASS): Edge headless thật qua localhost5173 proxy HTTPS28443; /ready28081=200, container clean roadguard-case409-clean-20261106-api-1 đang chạy. Account chính thức đọc trong RAM từ handoff clean, không ghi credential. Chặn /__dev và mutation ngoài auth; không nghiệp vụ write/SQL. Một test ban đầu waitUntil load vướng load trang dashboard; rerun DOMContentLoaded và chờ form ổn định PASS. Lần đọc project detail dùng đường dẫn không có GET trả405 được ghi nhận, đã sửa test sang operation GET reports/summary trong contract và kiểm lại; không sửa API để ép PASS.
+
+| Tiêu chí | Kết quả mới | Bằng chứng / giới hạn |
+|---|---|---|
+| PM/Sup login đúng/sai | PASS browser/API | Sai password401; thông báo tiếng Việt, đúng role SUPERVISOR/PROJECT_MANAGER |
+| F5 server bootstrap | PASS browser | Mở profile và reload, role/actor đúng; không rg_token trong sessionStorage |
+| Renew thật | PASS API trong browser | POST renew với CSRF và cookie=200 cho cả2role, role từ server Sup/PM |
+| Thu hồi phiên | PASS logout/session API | Backend logout; GET session sau logout401, không mở lại protected route/F5 |
+| Logout nhiều tab | PASS browser | Cùng context cookie, tab2 profile bị chuyển Login khi tab1 logout |
+| Đổi tài khoản | PASS browser | Cùng context Sup logout rồi PM login; actor/role mới, F5 đúng vùng; không identity cache khôi phục |
+| Sai role UI | PASS browser | Sup vào /pm/projects và PM vào /sup/projects bị đưa về dashboard đúng role |
+| Quyền server | PASS GET thật | Sup /users200 và summary A/B200; PM /users403, summary A200/B403. Không thay membership/quyền |
+| Renew concurrency/failure, mutation replay, late response, network/403, logout failure | PASS 15 focused regression tổng auth | Mock HTTP/hooks, bao gồm single-flight/settle/fencing/context-message/force-password mapping/dispatch; không gọi là browser E2E cho các failure này |
+| Login UI desktop/mobile | PASS browser |1440/375 viewport, không document overflow; không sửa layout. Force-change UI giữ nguyên/source review, không fixture thật |
+| Force-change PM/Sup thật | NOT_RUN | Không đổi mật khẩu/flag account dùng chung hoặc tạo fixture; regression xác nhận mustChangePassword/guard/epoch |
+| Natural expiry/renew sau idle hết hạn; revoke riêng ngoài logout | NOT_RUN | Không clock/DB manipulation, không fixture điều khiển expiry |
+| Nhiều401 đồng thời thật | NOT_RUN | Single-flight và mutation identity chỉ đã test mô phỏng, chưa fixture401 runtime đủ điều kiện |
+| tsc -b / Vite build / diff-check | PASS | Build không phải E2E |
+
+Command: `RG_AUTH_ONLY=1 node tools/check-review-293d001.cjs` PASS15; `node --single-threaded --max-old-space-size=768 node_modules/typescript/bin/tsc -b` PASS; Vite build PASS (warning chunk/duration cũ). Full toàn repo regression NOT_RUN vì scope này chỉ auth và legacy suite có các component thay đổi ở commit trước; không sửa màn khác để làm suite xanh. Browser scripts/log nằm TEMP, không stage. Source/backend không bị sửa. Không thêm cơ chế auth khác.
+
+Review diff hai lượt: (1) auth/role/API guard ordering và tests đúng status; (2) UI/phạm vi chỉ guard transient state, không đổi màn/style/menu. Trạng thái Bước1 **PARTIAL**: core login/session/renew/logout/RBAC đã kiểm thực; force-change/natural expiry/concurrency failure thật còn NOT_RUN. Không chuyển Bước2. Commit task riêng tiếng Việt; parent c76e8050a9f1f24bd42a06193c803116edae5f1a. Push bình thường bao gồm commit baseline local có trước; không gom thay đổi của baseline vào task commit.
