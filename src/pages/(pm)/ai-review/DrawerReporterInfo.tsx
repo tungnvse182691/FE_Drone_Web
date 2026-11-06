@@ -23,11 +23,12 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
           <span>{isCitizen ? 'Thông Tin Người Dân Phản Ánh' : 'Thông Tin Tổ Tuần Tra Hiện Trường'}</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {selectedCase.reporter_channel || 'Chưa có dữ liệu kênh tiếp nhận'}
+          {selectedCase.reporter_channel || 'Chưa cập nhật'}
         </span>
       </div>
 
-      <p className="text-xs">Người gửi, SĐT và nội dung được hiển thị riêng theo từng Report trong phần chi tiết Report. Tên/SĐT là thông tin tài khoản hiện tại, không phải snapshot lúc gửi.</p>
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-white border border-slate-100 p-3 text-xs"><div className="flex items-start gap-2"><Icon name="person" size={16} className="text-slate-400" /><div><p className="text-slate-500">Người gửi</p><p className="font-semibold mt-1">Xem từng phản ánh</p></div></div><div className="flex items-start gap-2"><Icon name="call" size={16} className="text-slate-400" /><div><p className="text-slate-500">Liên hệ</p><p className="font-semibold mt-1">Xem từng phản ánh</p></div></div></div>
+      <p className="text-xs text-slate-500 leading-relaxed">Người gửi, SĐT và nội dung được hiển thị riêng theo từng Report trong phần chi tiết Report. Tên/SĐT là thông tin tài khoản hiện tại, không phải snapshot lúc gửi.</p>
 
       {/* Triage Project Assignment Status (PA03) */}
       <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">

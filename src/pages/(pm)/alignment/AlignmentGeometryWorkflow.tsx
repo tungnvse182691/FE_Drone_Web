@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Icon } from '../../../components/ui/Icon'
 import { apiClient } from '../../../api/client'
 import { alignmentService, type CrsProfileView, type GeometryDraftView, type GeometryPreview, type RoadGeometryVersionView } from '../../../api/services/alignmentService'
 import { useAuthStore } from '../../../store/authStore'
@@ -162,6 +163,10 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
   const minX = Math.min(...points.map(p => p[0])), maxX = Math.max(...points.map(p => p[0]))
   const minY = Math.min(...points.map(p => p[1])), maxY = Math.max(...points.map(p => p[1]))
   const span = Math.max(maxX - minX, maxY - minY) || 1
+  const confirmedPoints = confirmed?.metricCenterline?.coordinates || []
+  const confirmedMinX = Math.min(...confirmedPoints.map(point => point[0]))
+  const confirmedMinY = Math.min(...confirmedPoints.map(point => point[1]))
+  const confirmedSpan = Math.max(...confirmedPoints.map(point => point[0] - confirmedMinX), ...confirmedPoints.map(point => point[1] - confirmedMinY)) || 1
   const projectInScope = projects.some(project => project.projectId === projectId)
   const discoveryReasons = !projectId ? ['Chưa chọn dự án.']
     : projectsLoading ? ['Đang tải danh mục dự án.']
@@ -219,8 +224,12 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     </section>
   }
 
-  return <div className="space-y-4 max-w-5xl mx-auto [&_button]:border [&_button]:rounded-lg [&_button]:px-3 [&_button]:py-2 [&_button]:bg-[#C9A227] [&_button]:text-white [&_button:disabled]:opacity-50">
-    <h1 className="text-xl font-bold">Tim tuyến và geometry đã xác nhận</h1>
+  return <div className="space-y-5 max-w-[1600px] mx-auto min-w-0 [&_button]:border [&_button]:rounded-lg [&_button]:px-3 [&_button]:py-2 [&_button:disabled]:opacity-50">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><p className="text-xs text-slate-500 mb-1">Quản lý dự án / Tuyến đường</p><h1 className="text-2xl font-bold text-[#1A1D20]">Tim tuyến và geometry đã xác nhận</h1></div>
+      <Link to={`${supervisor ? '/sup' : '/pm'}/projects${projectId ? `/${projectId}` : ''}`} className="flex items-center gap-2 border border-slate-200 bg-white rounded-lg px-4 py-2 text-sm"><Icon name="arrow_back" size={18} />Tổng quan dự án</Link>
+    </div>
+    <section className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
     <p>{supervisor ? 'Giám sát đọc draft và readiness từ máy chủ trước khi xác nhận.' : 'PM nhập tim tuyến; chỉ sử dụng geometry/version do máy chủ trả về.'}</p>
     <label className="block">Dự án<select aria-label="Dự án geometry" className={selectClass} value={projectId} onChange={event => {
       invalidateGeometry()
@@ -243,7 +252,19 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
     {geometryLoading && <p role="status">Đang đọc geometry đã chọn...</p>}
     {geometryError && <p role="alert">Geometry đã chọn: {geometryError}</p>}
     {confirmed?.projectId === projectId && <p>Tuyến đã xác nhận: {confirmed.lengthMeters} m. Ngày hiệu lực: {confirmed.effectiveFrom}.</p>}
-    {!supervisor && <section className="bg-white border rounded p-4 space-y-3">
+    </section>
+    <section className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+      <div className="xl:col-span-8 bg-white border border-slate-200 rounded-xl overflow-hidden min-w-0">
+        <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold flex items-center gap-2"><Icon name="map" size={20} />Bản đồ tuyến đường</h2><span className="text-xs text-slate-500">{confirmed ? 'Tuyến đã xác nhận' : imported ? 'Xem trước đầu vào · Chưa lưu' : 'Chưa cập nhật'}</span></div>
+        <div className="min-h-80 bg-slate-50 flex items-center justify-center p-5">
+          {confirmedPoints.length ? <svg role="img" aria-label="Bản đồ tuyến từ dữ liệu máy chủ" viewBox="0 0 620 420" className="w-full max-h-96"><polyline fill="none" stroke="#C9A227" strokeWidth="3" points={confirmedPoints.map(point => `${10 + (point[0] - confirmedMinX) / confirmedSpan * 590},${410 - (point[1] - confirmedMinY) / confirmedSpan * 390}`).join(' ')} /></svg> : <div className="text-center text-slate-400"><Icon name="route" size={40} className="mx-auto mb-3" /><p>Chọn tuyến để xem hình học đã xác nhận.</p></div>}
+        </div>
+        <div className="border-t grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x text-sm">{['Phân đoạn tuyến', 'Mặt đường', 'Nhánh tuyến'].map(label => <div key={label} className="p-4"><p className="text-slate-500 text-xs mb-1">{label}</p><p>Chưa cập nhật</p></div>)}</div>
+      </div>
+      <aside className="xl:col-span-4 bg-white border border-slate-200 rounded-xl p-4 space-y-4 min-w-0"><h2 className="font-bold flex items-center gap-2"><Icon name="tune" size={20} />Thông số kỹ thuật</h2><p className="text-xs text-slate-500">Chỉ sử dụng thông số đã được xác minh trong hồ sơ tuyến.</p>{['Mốc lý trình', 'Bề rộng khảo sát', 'Hồ sơ bề rộng', 'Vật liệu mặt đường'].map(label => <div key={label} className="border-b border-slate-100 pb-3"><p className="text-xs text-slate-500">{label}</p><p className="text-sm mt-1">Chưa cập nhật</p></div>)}<button type="button" disabled className="w-full">Phân đoạn tuyến</button></aside>
+    </section>
+    <div className="grid lg:grid-cols-2 gap-4 items-start">
+    {!supervisor && <section className="bg-white border rounded-xl p-5 space-y-3 min-w-0">
       <h2 className="font-semibold">Nhập GeoJSON để kiểm tra đầu vào</h2>
       <input aria-label="Nhập tim tuyến GeoJSON" type="file" accept=".geojson,.json" disabled={!projectId || !projectInScope || projectsLoading || busy} onChange={event => { void importFile(event.target.files?.[0]); event.target.value = '' }} />
       {imported && <>
@@ -270,6 +291,8 @@ export const AlignmentGeometryWorkflow: React.FC<{ embedded?: boolean }> = ({ em
       <button type="button" disabled={confirmReasons.length > 0} aria-describedby="geometry-confirm-blockers">Xác nhận</button>
       <ul id="geometry-confirm-blockers">{confirmReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
     </section>
+    </div>
+    <section className="bg-white border border-slate-200 rounded-xl p-5 space-y-3"><h2 className="font-bold flex items-center gap-2"><Icon name="history" size={20} />Quy trình và lịch sử tuyến</h2><div className="grid sm:grid-cols-3 gap-3">{['Lập bản nháp', 'Trình kiểm tra', 'Xác nhận tuyến'].map(label => <div key={label} className="border rounded-lg p-3"><p className="text-sm font-semibold">{label}</p><p className="text-xs text-slate-500 mt-1">Chưa cập nhật</p></div>)}</div><p className="text-sm text-slate-500">Chưa cập nhật lịch sử xử lý.</p></section>
     <p role="status">BLOCKED: Chưa có thao tác trình duyệt, yêu cầu sửa, trình lại hoặc lịch sử duyệt được bàn giao. Không tự tạo trạng thái chờ duyệt hoặc dùng xác nhận để thay từ chối.</p>
     <p>Phân đoạn/publish chỉ thực hiện sau geometry confirmed và đủ định nghĩa phân đoạn từ nguồn hợp lệ; chưa tự chia tuyến hoặc tạo mặt đường giả.</p>
   </div>

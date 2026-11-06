@@ -172,10 +172,10 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
         </div>
       )}
 
-      {selectedCase.status === 'NEED_SURVEY' && <div role="status">
-        <strong>Yêu cầu bổ sung bằng chứng</strong>
+      {selectedCase.status === 'NEED_SURVEY' && <div role="status" className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-amber-950">
+        <strong className="flex items-center gap-2 text-sm"><Icon name="assignment" size={20} />Yêu cầu bổ sung bằng chứng</strong>
         <p>{selectedCase.conclusion_reason || 'Chưa có lý do trong dữ liệu server.'}</p>
-        <p>Chưa có dữ liệu nhiệm vụ FIELD/Drone được tạo hoặc giao từ kết luận này.</p>
+        <div className="grid grid-cols-2 gap-3 border-t border-amber-200 pt-3 text-xs"><div><p className="text-amber-700">Nhiệm vụ khảo sát</p><p className="mt-1 font-semibold">Chưa cập nhật</p></div><div><p className="text-amber-700">Người thực hiện</p><p className="mt-1 font-semibold">Chưa cập nhật</p></div></div><p className="text-xs">Yêu cầu bổ sung chưa xác nhận đã giao nhiệm vụ khảo sát.</p>
       </div>}
 
       {selectedCase.is_published && (

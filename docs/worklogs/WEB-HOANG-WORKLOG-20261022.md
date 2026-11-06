@@ -1889,3 +1889,487 @@ Tests: tools/check-review-293d001.cjs **111PASS** (HTTP/hooks/render,mockregress
 Browser rg-design-restore-browser.cjs trênruntime sạch roadguard-case409-clean-20261106/HTTPS28443proxy5173,ready200: Sup/PM-A list/table/overview/F5 vàgeometrypreviewserver200m từbiênnhậnscenarioPASS; Supmemberactionẩn,eligible0/memberwrite0; PMnútvẫnhiện; pageerror0,projectrequests sauLogout204=0. Desktop1440vàmobile375scrollWidth375PASS. Giữmembertestgốc,khôngtạodữliệumới. rg-geometry-unknown-browser.cjs rerunPASS: importfileGeoJSONđínhkèmCenterline119/CRSUNKNOWN/Lưudraftdisabled/0businesswrites,khôngsuyCRS. Lifecycleentry/modal GETeligibility thật kiểmriêng,trạngtháiseedUNKNOWNnênkhôngPOSTclose. Khôngtuyênbốpositiveclose/draftwriteE2E.
 
 Bàn giao: restoredgrid/table/KPI/filter/header/overviewframes, timeline/segments/mapcards vàworkflowlinks; phầnmetric/lifecycle stage/segmentrows chỉgiữkhungkhi chưađủsource. Khôngxóacomponentgốc/fixture ngoài phạmvi. Inputtestkhôngcommit; khôngsecret/credential/cookie hoặcDBdata trongGit. Browserpositivefreshadd/projectclose/geometrywrite mới NOT_RUN; đây làkhôiphụcthiếtkếvàbảotoànluồngđãcó,khôngclaimhoàntấtbackendgaps.
+
+
+### 06/11/2026 — Inventory trước khôi phục UI toàn dự án
+
+Base HEAD `0ba9a8bdb18e6e8874be71636b9c15ddbfc3e92a`, nhánh hoang, cây làm việc sạch trước task. Đã quét 218 commit bằng git log --all, diff name-status/stat/numstat, log --diff-filter=D, route/import App và toàn bộ TSX/CSS trong src. Baseline **`afaaaf1bf5fa6b45c16466c43ca9e8d4dcfc8b25`** đứng trước các đợt thay active view Geometry (4012f02), Survey (3065cf7), AI (6725f28); không chọn riêng từ Project. Đối chiếu bổ sung baseline Project `f673c15d45c443435b81876529a4ff8fa9d9a1ff`, trước 383e220. Trước task, App.tsx, src/components và CSS giữ nguyên so với baseline; không mất route trong chuỗi giản lược này. Các file bị xóa trước baseline được kiểm kê riêng bên dưới, không tự khôi phục mock/route trùng. Baseline chỉ làm nguồn bố cục, không thay Spec/OpenAPI về quyền/API. Ghi nhận này được thêm trước khi sửa UI.
+
+| Khu vực | Route | Component/file | Baseline có | HEAD hiện tại | Bị xóa/rút gọn gì | Cần khôi phục |
+|---|---|---|---|---|---|---|
+| shell | Legacy/helper/modal; không có route riêng | `src/App.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | `/pm/field-tasks`, `/pm/conflicts`, `/pm/conflict-center` + 3 alias (xem bảng route) | `src/components/common/ImageComparisonSlider.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | `/pm/field-tasks`, `/pm/conflicts`, `/pm/conflict-center` + 3 alias (xem bảng route) | `src/components/common/PhotoLightboxModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | `/pm/field-tasks`, `/pm/conflicts`, `/pm/conflict-center` + 3 alias (xem bảng route) | `src/components/common/RoadDefectImages.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | `/pm/field-tasks`, `/pm/conflicts`, `/pm/conflict-center` + 3 alias (xem bảng route) | `src/components/common/SafeImage.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | `/pm/profile`, `/sup/profile` | `src/components/common/SelfPhoneNumberForm.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| common | Component dùng chung / modal; theo caller | `src/components/common/UserProfileModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| layout | Component dùng chung / modal; theo caller | `src/components/layout/Header.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| layout | Component dùng chung / modal; theo caller | `src/components/layout/ProtectedRoute.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| layout | Component dùng chung / modal; theo caller | `src/components/layout/Sidebar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/dashboard`, `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a` + 3 alias (xem bảng route) | `src/components/ui/Button.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` + 8 alias (xem bảng route) | `src/components/ui/Card.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/dashboard`, `/pm/projects`, `/pm/projects/:id` + 60 alias (xem bảng route) | `src/components/ui/Icon.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/repair-batches/assign` | `src/components/ui/InputField.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/dashboard`, `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a` + 1 alias (xem bảng route) | `src/components/ui/StatusBadge.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | Component dùng chung / modal; theo caller | `src/components/ui/ToastContainer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/projects/:id/alignment`, `/pm/alignment`, `/pm/proposals` + 13 alias (xem bảng route) | `src/components/ui/Tooltip.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| ui | `/pm/proposals`, `/pm/proposals/:id`, `/pm/work-packages` + 9 alias (xem bảng route) | `src/components/ui/TruncatedText.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| shell | Toàn ứng dụng | `src/index.css` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| shell | Legacy/helper/modal; không có route riêng | `src/main.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/AcceptInvitation.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/ForceChangePassword.tsx` | Có | Đã đổi +10/-10 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/Login.tsx` | Có | Đã đổi +9/-11 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/accept-invitation/AcceptForm.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/accept-invitation/ExpiredInvitationView.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/accept-invitation/InvitationCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Toàn ứng dụng | `src/pages/(auth)/auth-light-aurora.css` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/force-change-password/ForcePasswordForm.tsx` | Có | Đã đổi +3/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/login/ForcePasswordSection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/login/LoginForm.tsx` | Có | Đã đổi +21/-44 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (auth) | Legacy/helper/modal; không có route riêng | `src/pages/(auth)/login/LoginHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/AIReviewInbox.tsx` | Có | Đã đổi +2/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/AlignmentSegments.tsx` | Có | Đã đổi +5/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/repair-batches/assign` | `src/pages/(pm)/AssignCrew.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/surveys/create` | `src/pages/(pm)/CreateSurvey.tsx` | Có | Đã đổi +1/-370 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/DefectDetailVerify.tsx` | Có | Đã đổi +7/-106 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/surveys/:id`, `/pm/surveys/:id/review`, `/pm/drone-mission` + 5 alias (xem bảng route) | `src/pages/(pm)/DroneMissionAIReview.tsx` | Có | Đã đổi +1/-345 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/FastTrackDispatch.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/field-tasks`, `/sup/field-tasks` | `src/pages/(pm)/FieldTasks.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/NotificationsHandoffHub.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/OfflineConflicts.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/dashboard` | `src/pages/(pm)/PMDashboard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/PMLayout.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/profile`, `/sup/profile` | `src/pages/(pm)/ProfilePage.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/ProjectList.tsx` | Có | Đã đổi +71/-83 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/ProjectOverview.tsx` | Có | Đã đổi +52/-130 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/RepairProposals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/surveys`, `/sup/surveys` | `src/pages/(pm)/SurveyRequests.tsx` | Có | Đã đổi +1/-181 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/BatchActionBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/CaseReportsPanel.tsx` | Không | Đã đổi +129/-0 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/ai-review/CitizenTriageChildRow.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/ai-review/CitizenTriageRow.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/ai-review/CitizenTriageStatusBadge.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/CitizenTriageTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerClusterDeduplication.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerDecisionBanners.tsx` | Có | Đã đổi +5/-57 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerDecisionForm.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerFooter.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerHeader.tsx` | Có | Đã đổi +2/-2 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerMediaViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerMergedReportsList.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/DrawerReporterInfo.tsx` | Có | Đã đổi +1/-33 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/ai-review/DroneAiQueueView.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/GisMapModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/LinkReportsModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/NoDefectModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/PhotoZoomModal.tsx` | Có | Đã đổi +1/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/PublishModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/RequestSurveyModal.tsx` | Có | Đã đổi +7/-236 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewCasesTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewDetailDrawer.tsx` | Có | Đã đổi +9/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewDetailModal.tsx` | Có | Đã đổi +2/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewFilterBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/ReviewModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/SpatialMergeModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/TriageCard.tsx` | Có | Đã đổi +1/-1 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/ai-inbox`, `/sup/cases`, `/sup/ai-inbox` | `src/pages/(pm)/ai-review/TriageProjectModal.tsx` | Có | Đã đổi +11/-26 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentAddBranchModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentAddModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentApprovalList.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentEditModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id`, `/pm/projects/:id/alignment`, `/pm/alignment` + 3 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx` | Không | Đã đổi +276/-0 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentImportModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentMap.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentMapLegend.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentSidebar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/AlignmentSplitModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/ImportPanel.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/SidebarFooterKpis.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/SidebarSegmentCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/SidebarSegmentsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/SidebarSlabsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id/alignment`, `/pm/alignment`, `/sup/projects/:id/alignment` + 1 alias (xem bảng route) | `src/pages/(pm)/alignment/SidebarWidthProfileTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/create-survey/CreateSurveyForm.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/create-survey/CreateSurveyHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/create-survey/FlightCorridorMap.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/create-survey/OverlapHelpBox.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/dashboard` | `src/pages/(pm)/dashboard/OperationalClocksWidget.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/defect-verify/DefectBoundingBoxViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/defect-verify/DefectGisMapViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/defect-verify/DefectTemporalComparison.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/defect-verify/DefectVerifyForm.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/defects/:id/verify`, `/pm/defects/:id/verify-a`, `/pm/defects/:id/verify-b` | `src/pages/(pm)/defect-verify/DefectVerifyHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/surveys/:id`, `/pm/surveys/:id/review`, `/pm/drone-mission` + 5 alias (xem bảng route) | `src/pages/(pm)/drone-review/CandidateWorkflow.tsx` | Không | Đã đổi +82/-0 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionQualitySection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionScrubber.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionTriageList.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/drone-review/MissionViewport.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/AuditModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/DefectDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/DispatchActionBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/DispatchFilters.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/DispatchSection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/DispatchTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/FastTrackDispatchModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/FastTrackHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/FastTrackModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/PolicyModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/PolicySection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/fast-track`, `/pm/dispatch`, `/sup/fast-track` + 1 alias (xem bảng route) | `src/pages/(pm)/fast-track/RoadCoverageConfirmModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/ConflictResolveModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/ConflictsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/field-tasks`, `/sup/field-tasks` | `src/pages/(pm)/field-tasks/FieldTasksHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/field-tasks`, `/sup/field-tasks` | `src/pages/(pm)/field-tasks/MeasurementsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictFilterBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictIncomingStateCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictQueueTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictResolutionActions.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictServerStateCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/conflicts`, `/pm/conflict-center`, `/sup/conflicts` + 1 alias (xem bảng route) | `src/pages/(pm)/field-tasks/conflicts/ConflictTimelineAudit.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/notifications/AudioConfigModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/notifications/NotificationsFeed.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/notifications/NotificationsFilterBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/notifications/NotificationsHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/notifications`, `/sup/notifications` | `src/pages/(pm)/notifications/NotificationsSlaWidgets.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/AddProjectMemberModal.tsx` | Có | Đã đổi +52/-39 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx` | Có | Đã đổi +12/-147 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectMapPreviewCard.tsx` | Có | Đã đổi +7/-254 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectOverviewHeader.tsx` | Có | Đã đổi +17/-168 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx` | Có | Đã đổi +28/-116 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx` | Có | Đã đổi +7/-259 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects/:id`, `/sup/projects/:id` | `src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx` | Có | Đã đổi +6/-285 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects`, `/pm/projects/:id`, `/sup/projects` + 1 alias (xem bảng route) | `src/pages/(pm)/projects/CloseProjectModal.tsx` | Có | Đã đổi +44/-264 | Cần đối chiếu | Rà JSX/khôi phục khung; không trả mock |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/CreateProjectModal.tsx` | Có | Đã đổi +18/-55 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/ProjectGridView.tsx` | Có | Đã đổi +16/-73 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/projects/ProjectLifecycleModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/ProjectListFilters.tsx` | Có | Đã đổi +8/-8 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/ProjectListHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/ProjectListKpis.tsx` | Có | Đã đổi +12/-13 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/projects`, `/sup/projects` | `src/pages/(pm)/projects/ProjectTableView.tsx` | Có | Đã đổi +16/-41 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/CreateProposalModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalBOQCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalFilterBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/repair-proposals/ProposalPDFPreviewModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalStats.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/proposals`, `/pm/work-packages`, `/pm/repair-batches` + 3 alias (xem bảng route) | `src/pages/(pm)/repair-proposals/ProposalTableRow.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/surveys`, `/pm/surveys/create`, `/sup/surveys` | `src/pages/(pm)/surveys/DroneSimulatorModal.tsx` | Có | Đã xóa | Cần đối chiếu | Khôi phục khung không mô phỏng; hook simulator không khôi phục vì tạo fake state |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/surveys/SimulatorTelemetryGrid.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/surveys/SurveyCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/surveys/SurveyHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/surveys/SurveyKpiCards.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | Legacy/helper/modal; không có route riêng | `src/pages/(pm)/surveys/SurveyTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (pm) | `/pm/surveys`, `/pm/surveys/create`, `/sup/surveys` | `src/pages/(pm)/surveys/SurveyWorkflow.tsx` | Không | Đã đổi +87/-0 | Cần đối chiếu | Dùng logic hiện hành; kiểm route/layout |
+| (sup) | `/pm/acceptance`, `/sup/acceptance` | `src/pages/(sup)/AcceptanceList.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/AuditTrail.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/approvals/:id/reject` | `src/pages/(sup)/BatchRejection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/PersonnelManagement.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/ProposalApprovalDetail.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/research-validation`, `/pm/rpt-09`, `/sup/research-validation` + 1 alias (xem bảng route) | `src/pages/(sup)/ResearchValidation.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/RiskAnalytics.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/SupDashboard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/SupLayout.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/SystemControl.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailFilters.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailInspector.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailMetrics.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/audit-trail`, `/pm/rpt-10`, `/sup/audit-trail` + 1 alias (xem bảng route) | `src/pages/(sup)/audit-trail/AuditTrailTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardExportModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardRightCards.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardRiskMap.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardRiskMapTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardRiskTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/sup/dashboard` | `src/pages/(sup)/dashboard/DashboardTopMetrics.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/ActionButtons.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/AfterViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/BeforeViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/CloseoutHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/CloseoutModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/ComparisonViewer.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/DeclareConstructionModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/ExportPdfAModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/ExportZipModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/ReworkModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/StatusBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/TechnicalCriteriaCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/work-orders/confirm`, `/pm/work-orders/:id/confirm`, `/pm/evidence-closeout` + 5 alias (xem bảng route) | `src/pages/(sup)/evidence-closeout/VerifyModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ApprovalDetailHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ApprovalItemsTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ApprovalModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ApprovalStatsBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/BatchApproveModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/DecisionModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/DefectPhotoModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ItemsFilterBar.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ItemsTableRow.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/proposals/:id`, `/pm/work-packages/:id`, `/pm/repair-batches/:id` + 3 alias (xem bảng route) | `src/pages/(sup)/proposal-approval/ProposalDispatchModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/research-validation`, `/pm/rpt-09`, `/sup/research-validation` + 1 alias (xem bảng route) | `src/pages/(sup)/research/AsyncValidationJobBanner.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/research/PairedSamplesTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/research-validation`, `/pm/rpt-09`, `/sup/research-validation` + 1 alias (xem bảng route) | `src/pages/(sup)/research/ResearchHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/research/ValidationMetricsCards.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/research/ValidationRunsTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/AsyncExportWorkerCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/DossierDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/ExportRecordRow.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/LegalAuditStrip.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/NewExportModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/RiskDeteriorationSection.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/risk-analytics/RiskExportsTable.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/RiskHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/risk-analytics/RiskMetricsGrid.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/RiskModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/reports`, `/pm/risk-analytics`, `/sup/reports` + 1 alias (xem bảng route) | `src/pages/(sup)/risk-analytics/TimeRangeModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/AIModelsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/AccountsTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/AddPersonnelModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/CreateDeletionRequestModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/DefectCatalogModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/DefectCatalogTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/DeletionRequestDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/DeletionRequestsCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/EditUserModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/LegalHoldCard.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/LegalHoldModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/ProjectRetentionDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/ResetPasswordModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/RetentionLegalHoldTab.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/SuspendUserModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/retention`, `/pm/system-control`, `/pm/wf-12` + 6 alias (xem bảng route) | `src/pages/(sup)/system-control/SystemControlHeader.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | Legacy/helper/modal; không có route riêng | `src/pages/(sup)/system-control/SystemControlModals.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+| (sup) | `/pm/personnel`, `/pm/team`, `/sup/personnel` + 1 alias (xem bảng route) | `src/pages/(sup)/system-control/UserDetailModal.tsx` | Có | Giữ nguyên | Không mất | Không thay; smoke route |
+
+Chi tiết các phần bị rút gọn lớn: CreateSurvey/SurveyRequests và DroneMissionAIReview chuyển thành alias; RequestSurveyModal mất body form; DrawerReporterInfo mất contact frame; DrawerDecisionBanners mất assignment frame; active Geometry workflow thay legacy AlignmentSegments; ProjectOverview/Header/Highlights/Timeline/Segments/Map/Personnel/Close modal giảm nhiều JSX. LoginForm mất style panel tài khoản mẫu nhưng phải giữ credential dev từ runtime. DefectDetailVerify bỏ optimistic reset/link có chủ ý, JSX vẫn còn nên không phục hồi logic giả. DroneSimulatorModal được khôi phục khung tiến độ; hook simulator không khôi phục vì tạo trạng thái/metrics giả. Inventory này ghi trước edit UI.
+
+
+### 06/11/2026 — Kết quả khôi phục UI toàn dự án (cùng task inventory trên)
+
+**Phạm vi:** phục hồi bố cục, không triển khai nghiệp vụ mới. Giữ thiết kế Project đã khôi phục trong parent; mở rộng sang Survey/Create/Drone/Geometry/drawer/modal và khung điều hướng mobile. Không xóa component/route nào, không đổi service/API/DTO, authStore, client/interceptor, guard, renew/logout, backend, DB, seed, migration, Docker hoặc config. Header chỉ đổi class responsive; handler profile/logout giữ nguyên.
+
+| Khu vực/component | Phần khôi phục / giữ nguyên | Dữ liệu và giới hạn |
+|---|---|---|
+| Project List/grid/table/filter/KPI | Giữ toàn bộ bố cục đã khôi phục ở parent: header, toolbar, 5 KPI, card/grid/table, create/close entry | Không quay về mapper/metrics giả; không tự chọn project đầu tiên |
+| Project Overview | Giữ header, highlights, timeline, tabs phân đoạn, map/preview và đường dẫn Geometry; phục hồi hierarchy/card nhân sự/role badge và modal đóng vận hành | Thành viên từ server; chỉ PM thấy AddProjectMemberModal, Sup không gọi eligible/POST members. Không thêm avatar/online/authority/contact giả |
+| CreateSurvey / SurveyWorkflow | Phân biệt route create/list; header, breadcrumb, 4 KPI, filter/search/tabs/table, form 7 cột/map 5 cột và footer | Chỉ đếm kết quả server đã tải. Coverage/GSD/độ cao/độ phủ/thiết bị/route engineering chưa đủ nguồn giữ khung “Chưa cập nhật”; form ghi vẫn khóa như trước |
+| Survey task / DroneSimulatorModal | Khôi phục file modal đã xóa và entry xem tiến độ từ hàng server | Modal chỉ là khung ba bước nhận/nộp/xác minh, không timer, không %, không complete-survey-plan, không nhận thành công giả |
+| Drone/CandidateWorkflow | Header/scope selectors, viewer 8 cột–panel 4 cột, tab ảnh/map/đa kỳ, scrubber/play/fullscreen, kết quả/nguồn gốc, quality cards, quyết định | Video/ảnh/coverage chưa đủ reader giữ placeholder; không stock image. Giữ handler quyết định đã có và các nút chưa đủ điều kiện bị khóa |
+| AlignmentGeometryWorkflow | Header/breadcrumb/action, discovery panel, map–technical sidebar 8/4 cột, draft/readiness/import, workflow/history frame | SVG chỉ biểu diễn tọa độ đầu vào hoặc geometry confirmed thật, không thêm tile/nhánh/segment/engineering giả. GeoJSON thiếu CRS vẫn UNKNOWN, không ghi; submit/revision/history chưa có contract không tạo trạng thái |
+| RequestSurveyModal | Header/source card/method frame/reason/crew & thời hạn frame/footer | Chỉ handler yêu cầu bổ sung hiện có; không biến thành giao FIELD/Drone. Lý do rỗng vẫn khóa |
+| DrawerReporterInfo / DrawerDecisionBanners | Contact/source grid và assignment card | Thông tin người gửi/evidence vẫn riêng từng Report ở CaseReportsPanel; không tổng hợp liên hệ giả ở Case |
+| LoginForm | Khôi phục card/Material Symbols của hai nút tài khoản mẫu dev, bỏ font-mono ở email | Giữ nguyên đọc credential từ runtime sạch qua dev helper; không đổi xác thực hoặc đưa credential vào production |
+| Header/Sidebar/PMLayout/SupLayout | Giữ menu desktop, thêm mở/đóng menu mobile; main cuộn ngang nội dung rộng thay đẩy viewport | Không sửa role menu, route hoặc auth; mobile menu đóng khi đổi route |
+| Dashboard PM/Sup, inbox/report/evidence, Defect/repair, acceptance/close, analytics, profile, notification/settings và src/components còn lại | Đã kiểm kê, đối chiếu baseline; giữ nguyên UI không bị giản lược trong chuỗi này | Render smoke không chứng minh mọi chức năng legacy đã có API thật |
+
+**Những phần không khôi phục nguyên code cũ và lý do:** alias CreateSurvey/SurveyRequests/DroneMissionAIReview vẫn dùng reader hiện hành thay hook cũ; layout được khôi phục ở active workflow. Các component legacy CreateSurveyForm/FlightCorridorMap/MissionViewer/AlignmentMap/Sidebar vẫn nằm trong cây thư mục; không nối lại hook cũ chứa default tọa độ/ảnh/metrics hoặc local approval. Giữ khung thao tác phù hợp, chưa tích hợp các command chưa đủ contract. Không gọi các khung placeholder là nghiệp vụ đã hoàn thành. Không phục hồi optimistic reset/link trong DefectDetailVerify vì đó là logic thành công giả, JSX màn Defect vẫn còn.
+
+**Toàn bộ delete trong lịch sử src (đã đối chiếu cả trước baseline):**
+
+| Commit xóa | File/nhóm file | Quyết định |
+|---|---|---|
+| 3065cf7 | surveys/DroneSimulatorModal.tsx | Khôi phục khung modal, bỏ hoàn toàn simulation |
+| 3065cf7 | surveys/useDroneSimulator.ts | Không khôi phục hook timer/metrics/complete-survey-plan giả; không phải thành phần UI độc lập |
+| 5c70aeb | fast-track/DispatchMap, DispatchModeSelector, FastTrackBanner | Đã khôi phục ba component theo baseline bổ sung 045f02ce, giữ khung map/mode/banner. Không phục hồi tọa độ, ID, auto-selected Case hoặc command giả |
+| 5c70aeb | fast-track/data, fastTrackMapSetup, mockData | Dữ liệu/hook/map giả, không khôi phục |
+| 5304fa1 | alignment/SegmentsTable | File dead cleanup trước baseline; ProjectSegmentsTable/AlignmentSidebar và luồng Geometry có khung thay thế, không nhân đôi bảng |
+| 53ced52 | alignment/alignmentData, alignmentGeoJson, alignmentSlabsGeoJson; fast-track/fastTrackCrews, Defects, Policy, Routes; risk-analytics/exportRecordsData, Part1, Part2, mockData, projectsConfigData | Refactor/consolidate dữ liệu trước baseline, không phục hồi dataset/hardcode cũ |
+| 672b2f1 | components/ui/TableWrapper, alignment/SlabsPanel, store/uiStore | Dead-file cleanup trước baseline; không mất caller/route trong chuỗi khôi phục. Không thêm store hoặc panel kỹ thuật tự điền |
+| 50c2fd1 | PM RepairBatching, SubmitApproval, WorkOrderConfirm; Sup BatchApprovals, FieldAcceptance, SignOffClosure | Page trùng trước baseline. App giữ alias repair-batches/proposals/approvals/work-orders/evidence-closeout/acceptance/signoff; đã mở tất cả alias, không khôi phục trang mock song song |
+
+**Căn cứ:** Spec 17_10 Web-Business-Flows §2–4, GIS Map surfaces/version, workflows 01–05 và OpenAPI hiện hành. Chỉ giữ GET đã có trong các service: projects/members, lifecycle closure, work-package/CRS/geometry draft/readiness/confirmed, survey-plans/tasks/datasets, AI runs/result/candidate. Không thêm endpoint, DTO, quyền, trạng thái hay headers mới trong task UI.
+
+**Môi trường và an toàn:** browser Edge headless thật, Vite localhost:5173 proxy HTTPS localhost:28443; `/ready` clean runtime trên 28081 trả 200. Docker label xác nhận Compose `roadguard-case409-clean-20261106`. Seed marker `sbx02-v1` đã có bằng chứng SELECT trong worklog trước; lượt này không xác minh lại marker bằng SQL (sqlcmd không có trong image; không cài công cụ/đổi port). Accounts chính thức đọc trong RAM từ handoff runtime sạch, không ghi credential vào log. Dùng project/scenario sẵn `72f84201-c001-4000-8000-000000000001` và geometry reference từ progress scenario chính thức. Không tạo/sửa/xóa dữ liệu nghiệp vụ. Chỉ login/logout session test; không dùng DB/volume cũ. Các GET legacy `/__dev/*` bị abort trong browser để tránh helper cũ: không trả mock response thay thế. Việc abort được ghi BLOCKED, không tính PASS API.
+
+**Kiểm thử đã chạy:**
+
+| Kiểm tra | Kết quả | Phạm vi bằng chứng |
+|---|---|---|
+| `node node_modules/typescript/bin/tsc -b` | PASS | Typecheck sau thay đổi cuối |
+| `node node_modules/vite/bin/vite.js build` | PASS | Vite build; còn warning chunk lớn/duration cũ, không phải E2E |
+| `node tools/check-review-293d001.cjs` | PASS 114 | Mock HTTP/hooks + render regression; thêm test khung survey/create/drone và validation modal bổ sung. Không gọi là browser E2E |
+| `git diff --check` | PASS | Không whitespace error |
+| Browser toàn App | 114 lượt route/guard | 95 child route PM/Sup + index/default/notification/role guard/logout/public routes; desktop 1440, mobile 375 |
+| Pageerror / blank / document overflow | PASS lượt cuối | 0 pageerror, 0 blank, document width không vượt 375 ở tất cả route đã mở. Nội dung legacy rộng cuộn trong main |
+| Geometry thật PM/Sup | PASS đọc/F5 | Geometry seed server 200m, preview và đường dẫn workflow; không gửi mutation. GeoJSON 119 điểm thiếu CRS UNKNOWN, nút lưu khóa |
+| Project/member UI | PASS quyền hiển thị | Sup không có nút thêm nhân sự/eligible request; PM giữ nút. Chưa gửi POST member/close vì không phải task nghiệp vụ |
+| Survey thật PM/Sup | PASS GET/F5 | survey-plans và survey-tasks 200 của project đã chọn; F5 giữ scope URL. Mở/đóng progress modal thành công, không mô phỏng hoặc ghi dữ liệu |
+| Drone tabs / menu mobile | PASS UI | Đổi tab map/đa kỳ/nguồn gốc và menu mở/đóng; không ảnh stock hoặc phát request ghi |
+| Logout | PASS browser | 204 và không phát request nghiệp vụ sau khi hoàn tất logout; đổi role bằng context/cookie riêng |
+| Visual baseline | PARTIAL | Đã so ảnh Project baseline f673c15 với ảnh PM/Sup thật; Survey/Drone/Geometry đối chiếu JSX baseline afaaaf1 và ảnh hiện tại desktop/mobile. Chưa có golden screenshot lịch sử toàn bộ route để pixel-diff |
+| Full nghiệp vụ / mọi modal / force-change / invitation | NOT_RUN | Không mutation, không token fixture; smoke route không nghiệm thu mọi action con |
+
+**Blocker/giới hạn còn lại:** work-package trả 401 bằng Web cookie (PM/Sup); một số read result AI legacy cũng 401; Sup defects 403 được giữ là kết quả quyền, không tự bypass. Draft create/submit/reject/history, video/evidence viewer/quality và survey assignment chưa được task này triển khai thêm. Không tự phục hồi command/state cũ để lấp khoảng trống. Một số màn legacy ngoài phần phục hồi vẫn có nguồn sample/helper cũ trong repo; task không kết luận toàn repo đã sạch mọi mock hoặc mọi màn là API thật. Những route đó chỉ đạt render UI và được ghi rõ ở bảng dưới. Full browser E2E toàn nghiệp vụ **chưa hoàn tất**.
+
+**Route smoke-test — từng route:** “Khung render” chỉ xác nhận trang không trắng, không pageerror, có nội dung ở desktop/mobile; không xác nhận tất cả action/DTO. Route `:id`/`:batchId` không có fixture hợp lệ được mở nguyên pattern để kiểm error/guard, luôn BLOCKED chi tiết, không tính E2E. Project param được thay bằng ID server thật. Không mock HTTP response.
+
+| Role | Route | Render | API thật | UI đầy đủ | Console | Kết quả |
+|---|---|---|---|---|---|---|
+| sup | `/sup/dashboard` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/projects` | Desktop +375px | 200×14 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/projects/:id` | Desktop +375px | 200×17, 401×2; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/projects/:id/alignment` | Desktop +375px | 200×4, 401×2; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/alignment` | Desktop +375px | 200×2 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/surveys` | Desktop +375px | 200×2 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/surveys/:id` | Desktop +375px | 200×3 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/surveys/:id/review` | Desktop +375px | 200×3 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/drone-mission` | Desktop +375px | 200×3 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/drone-mission/:id` | Desktop +375px | 200×3 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/cases` | Desktop +375px | 200×10 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/ai-inbox` | Desktop +375px | 200×10 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/fast-track` | Desktop +375px | 200×5 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/dispatch` | Desktop +375px | 200×5 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/field-tasks` | Desktop +375px | 200×33, 403×2 | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED API |
+| sup | `/sup/conflicts` | Desktop +375px | 200×15; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/conflict-center` | Desktop +375px | 200×13; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/proposals` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/proposals/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/work-packages` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/work-packages/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/repair-batches` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/approvals` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/approvals/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/approvals/:id/reject` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/acceptance` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/acceptance/:batchId` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/field-acceptance` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/research-validation` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-09` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/audit-trail` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-10` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/reports` | Desktop +375px | 200×13 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/risk-analytics` | Desktop +375px | 200×13 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/system-control` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/admin` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/retention` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/wf-12` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/legal-hold` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/personnel` | Desktop +375px | 200×32 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/team` | Desktop +375px | 200×32 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/profile` | Desktop +375px | 200×19 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/signoff` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/notifications` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/notifications` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `opposite role /projects` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS guard |
+| sup | `logout` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS |
+| pm | `/pm/dashboard` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/projects` | Desktop +375px | 200×7 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/projects/:id` | Desktop +375px | 200×3; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/projects/:id/alignment` | FAIL | Không quan sát request ở lượt này; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/alignment` | FAIL | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys` | FAIL | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/create` | FAIL | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/:id` | FAIL | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/surveys/:id/review` | FAIL | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/drone-mission` | Desktop +375px | 200×3 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/drone-mission/:id` | Desktop +375px | 200×3 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/ai-inbox` | Desktop +375px | 200×4 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/defects/:id/verify` | Desktop +375px | 200×18, 401×4 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-a` | Desktop +375px | 200×18, 401×4 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-b` | Desktop +375px | 200×18, 401×4 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/create` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/repair-batches/:id/submit` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/assign` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/field-tasks` | Desktop +375px | 200×23 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/conflicts` | Desktop +375px | 200×7; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/conflict-center` | Desktop +375px | 200×7; /__dev bị chặn | Khung render; không nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/fast-track` | Desktop +375px | 200×6 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/dispatch` | Desktop +375px | 200×6 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/proposals` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/proposals/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-packages` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/work-packages/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/repair-batches/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-orders/confirm` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/work-orders/:id/confirm` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/evidence-closeout` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/evidence-closeout/:id` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/acceptance` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/acceptance/:batchId` | Desktop +375px | 200×1 | Khung render; chi tiết cần fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/research-validation` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-09` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/audit-trail` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-10` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/reports` | Desktop +375px | 200×7 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/risk-analytics` | Desktop +375px | 200×7 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/retention` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/system-control` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/wf-12` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/legal-hold` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/personnel` | Desktop +375px | 200×15 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/team` | Desktop +375px | 200×15 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/profile` | Desktop +375px | 200×10 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/notifications` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/notifications` | Desktop +375px | 200×1 | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `opposite role /projects` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS guard |
+| pm | `logout` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS |
+| anonymous | `/login` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/accept-invitation` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/invite/:token` | Guard/render | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/auth/setup-password` | Guard/render | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/setup-password` | Guard/render | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/force-change-password` | Guard/render | Không quan sát request ở lượt này | Khung render; chi tiết cần fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/notifications` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/does-not-exist` | Guard/render | Không quan sát request ở lượt này | Khung render; không nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+
+
+Ảnh so sánh/log smoke nằm ngoài repo trong `%TEMP%/rg-design-reference` và `%TEMP%/rg-global-ui`; không commit fixture hoặc file đầu vào GeoJSON. Inventory trước sửa bao phủ 254 TSX/CSS + 3 component Fast Track khôi phục từ baseline bổ sung; bảng route trên bao phủ toàn router, kể cả alias. Không có thay đổi API/service/auth/backend/DB/config; không thêm mock, credential, hardcode ID nghiệp vụ hoặc localStorage vào luồng phục hồi. Không tuyên bố các helper legacy chưa tích hợp đã thành E2E. Commit riêng cho task UI, parent `0ba9a8bdb18e6e8874be71636b9c15ddbfc3e92a`, full SHA báo khi bàn giao.
+
+
+**Bổ sung inventory trước khi phục hồi Fast Track:** đối chiếu thêm `045f02ce9137cb7e53c5865daa0867af856b5aa0` (parent 5c70aeb). Ba file DispatchMap/DispatchModeSelector/FastTrackBanner từng có UI thật, không chỉ data cleanup. Khôi phục khung của cả ba trong cây cũ; không nối lại mockData, map setup tọa độ mẫu, auto-selected Case hoặc chế độ ghi tự suy. Điều chỉnh quyết định trong bảng delete: ba component này **được khôi phục khung**, các data/hook giả vẫn không khôi phục. Đây là bổ sung baseline lịch sử cho toàn dự án, không thay baseline chính sau khi đã sửa.
+
+
+**Kết quả bổ sung Fast Track sau inventory:**
+
+| Khu vực | Route | Component/file | Baseline có | HEAD trước task | Bị xóa/rút gọn | Kết quả phục hồi |
+|---|---|---|---|---|---|---|
+| Fast Track | /pm/fast-track, /pm/dispatch, /sup/fast-track, /sup/dispatch | fast-track/DispatchMap.tsx | Có tại 045f02ce | Đã xóa | Map/layout/layer toolbar | Đã khôi phục khung, toolbar khóa; không bản đồ/tọa độ giả |
+| Fast Track | Cùng các route trên | fast-track/DispatchModeSelector.tsx | Có tại 045f02ce | Đã xóa | Ba card workflow | Đã khôi phục ba card thông tin; không chọn mode/lệnh ghi chưa đủ contract |
+| Fast Track | Cùng các route trên | fast-track/FastTrackBanner.tsx | Có tại 045f02ce | Đã xóa | Banner nguồn hồ sơ | Đã khôi phục banner, không tự tick Case/eligibility hoặc báo đã điều phối |
+
+Browser chạy lại cả bốn route Fast Track sau thay đổi cuối: PM/Sup desktop 1440 và mobile 375, cả ba khung render, ba nút mode khóa, 0 pageerror, không document overflow. Test regression bổ sung cho ba component: tổng **114** tình huống mô phỏng/render PASS. Typecheck/build được chạy lại sau thay đổi; diff-check PASS. Survey/Candidate không hiện empty thành công khi collection đọc lỗi; chỉ hiện empty sau khi đã tải được collection tương ứng. Không mở lại xử lý nghiệp vụ Fast Track.
+
+
+**Danh sách file thay đổi trong commit UI (22 file):**
+
+- `docs/worklogs/WEB-HOANG-WORKLOG-20261022.md`
+- `src/components/layout/Header.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/pages/(auth)/login/LoginForm.tsx`
+- `src/pages/(pm)/CreateSurvey.tsx`
+- `src/pages/(pm)/FastTrackDispatch.tsx`
+- `src/pages/(pm)/PMLayout.tsx`
+- `src/pages/(pm)/ai-review/DrawerDecisionBanners.tsx`
+- `src/pages/(pm)/ai-review/DrawerReporterInfo.tsx`
+- `src/pages/(pm)/ai-review/RequestSurveyModal.tsx`
+- `src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx`
+- `src/pages/(pm)/drone-review/CandidateWorkflow.tsx`
+- `src/pages/(pm)/fast-track/DispatchMap.tsx`
+- `src/pages/(pm)/fast-track/DispatchModeSelector.tsx`
+- `src/pages/(pm)/fast-track/DispatchSection.tsx`
+- `src/pages/(pm)/fast-track/FastTrackBanner.tsx`
+- `src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx`
+- `src/pages/(pm)/projects/CloseProjectModal.tsx`
+- `src/pages/(pm)/surveys/DroneSimulatorModal.tsx`
+- `src/pages/(pm)/surveys/SurveyWorkflow.tsx`
+- `src/pages/(sup)/SupLayout.tsx`
+- `tools/check-review-293d001.cjs`

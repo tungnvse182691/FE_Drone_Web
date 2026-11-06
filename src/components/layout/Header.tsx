@@ -31,8 +31,8 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-brand-border px-6 flex items-center justify-between sticky top-0 z-50 shadow-xs">
-        <div className="flex items-center gap-3.5">
+      <header className="h-16 bg-white border-b border-brand-border pl-14 pr-3 sm:px-6 flex items-center justify-between sticky top-0 z-50 shadow-xs">
+        <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
           {/* Logo Xe Bồn Cơ Giới Hoàng Hải */}
           <img
             src="/logo.png"
@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
             className="w-10 h-10 rounded-full object-cover shadow-xs ring-2 ring-brand-gold/40 shrink-0"
           />
           <div className="flex flex-col">
-            <span className="font-headline font-black text-xl tracking-tight text-brand-gold leading-tight">
+            <span className="font-headline font-black text-base sm:text-xl tracking-tight text-brand-gold leading-tight">
               HOÀNG HẢI
             </span>
             <span className="text-[11px] text-slate-500 font-medium tracking-wide hidden sm:inline-block">
@@ -49,7 +49,7 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 sm:gap-4 shrink-0">
           {/* Thông báo */}
           <Tooltip content="Thông báo điều hành & Bàn giao hồ sơ">
             <button
@@ -68,7 +68,7 @@ export const Header: React.FC = () => {
           </Tooltip>
 
           {/* Thông tin người dùng - Bấm vào avatar hoặc tên để mở Profile */}
-          <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
+          <div className="flex items-center gap-1 sm:gap-3 pl-1 sm:pl-3 border-l border-slate-200">
             <Tooltip content="Xem & Chỉnh sửa hồ sơ cá nhân">
               <button
                 type="button"

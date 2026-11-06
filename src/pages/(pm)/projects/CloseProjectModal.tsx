@@ -47,8 +47,8 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
     } finally { if (started === useAuthStore.getState().authEpoch) setBusy(false) }
   }
   return <div role="dialog" aria-label="Đóng vận hành dự án" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <form onSubmit={submit} className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-      <h2 className="text-lg font-bold">Đóng vận hành dự án</h2><p className="text-sm">{project.name}</p>
+    <form onSubmit={submit} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4"><div className="flex items-center gap-3"><span className="rounded-xl bg-amber-50 text-[#C9A227] p-3"><Icon name="task_alt" size={24} /></span><div><h2 className="text-lg font-bold">Đóng vận hành dự án</h2><p className="text-xs text-slate-500 mt-1">Kiểm tra hồ sơ trước khi xác nhận</p></div></div><button type="button" aria-label="Đóng hộp thoại" disabled={busy} onClick={onClose} className="p-1 text-slate-400"><Icon name="close" size={20} /></button></div><div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><p className="text-xs text-slate-500 mb-1">Dự án</p><p className="text-sm font-bold">{project.name}</p></div>
       <p className="text-sm text-slate-600">Điều kiện đóng được xác nhận theo hồ sơ nghĩa vụ trên máy chủ. Thao tác này không tự kết thúc bảo hành hoặc xóa bằng chứng.</p>
       {loading && <p role="status">Đang kiểm tra điều kiện...</p>}
       {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}

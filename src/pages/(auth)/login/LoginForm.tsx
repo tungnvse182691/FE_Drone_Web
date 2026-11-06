@@ -97,7 +97,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Nhập email tài khoản"
               required
-              className="aurora-input-light font-mono"
+              className="aurora-input-light"
             />
           </div>
         </div>
@@ -208,8 +208,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
       {import.meta.env.DEV && <div className="pt-4 border-t border-[#E2E5E9] space-y-2">
         <p className="text-xs">Tài khoản mẫu của runtime test local</p>
-        <button type="button" disabled={isLoading || loadingSample} onClick={() => fillSample('supervisor')}>Điền tài khoản Supervisor mẫu</button>
-        <button type="button" disabled={isLoading || loadingSample} onClick={() => fillSample('pm-a')}>Điền tài khoản PM mẫu</button>
+        <div className="grid grid-cols-2 gap-3"><button type="button" className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-[#C9A227] transition-colors disabled:opacity-50" disabled={isLoading || loadingSample} onClick={() => fillSample('supervisor')}><span className="material-symbols-outlined text-[#C9A227] block mb-1">admin_panel_settings</span><span className="text-xs font-bold block">Điền tài khoản Supervisor mẫu</span><span className="text-[11px] text-slate-500">Giám sát dự án</span></button>
+        <button type="button" className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-[#C9A227] transition-colors disabled:opacity-50" disabled={isLoading || loadingSample} onClick={() => fillSample('pm-a')}><span className="material-symbols-outlined text-[#C9A227] block mb-1">engineering</span><span className="text-xs font-bold block">Điền tài khoản PM mẫu</span><span className="text-[11px] text-slate-500">Chỉ huy trưởng</span></button></div>
       </div>}
     </section>
   )

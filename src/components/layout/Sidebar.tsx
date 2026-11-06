@@ -45,6 +45,8 @@ export const Sidebar: React.FC = () => {
   const { user } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   // Danh mục nhóm điều hướng PM (Chỉ huy trưởng)
@@ -211,7 +213,10 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <aside className="w-64 bg-white border-r border-[#E2E5E9] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none shrink-0 shadow-2xs">
+    <>
+    <button type="button" aria-label={mobileOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'} aria-expanded={mobileOpen} aria-controls="main-navigation" onClick={() => setMobileOpen(value => !value)} className="md:hidden fixed top-4 left-3 z-[60] p-1 bg-white text-slate-600 rounded-lg"><Icon name={mobileOpen ? 'close' : 'menu'} size={24} /></button>
+    {mobileOpen && <button type="button" aria-label="Đóng nền menu" onClick={() => setMobileOpen(false)} className="md:hidden fixed inset-0 top-16 bg-black/30 z-40" />}
+    <aside id="main-navigation" className={`${mobileOpen ? 'flex' : 'hidden'} md:flex w-64 bg-white border-r border-[#E2E5E9] flex-col justify-between h-[calc(100vh-4rem)] fixed md:sticky left-0 top-16 z-40 select-none shrink-0 shadow-2xs`}>
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
         {/* Tiêu đề phân hệ */}
         <div className="px-3 py-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex items-center justify-between">
@@ -402,5 +407,6 @@ export const Sidebar: React.FC = () => {
         <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ</div>
       </div>
     </aside>
+    </>
   )
 }
