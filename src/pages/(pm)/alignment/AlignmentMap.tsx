@@ -134,7 +134,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
           {/* Live Cursor Readout */}
           <div className="pointer-events-auto hidden lg:flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs text-white shadow-lg border border-slate-700/60">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>{cursorPos.lat}° N, {cursorPos.lng}° E</span>
+            <span>{Number.isFinite(cursorPos.lat) && Number.isFinite(cursorPos.lng) ? `${cursorPos.lat}° N, ${cursorPos.lng}° E` : 'Chưa có vị trí con trỏ'}</span>
             <span className="text-slate-500">|</span>
             <span className="text-brand-gold font-semibold">H: {cursorPos.elevation}</span>
             <span className="text-slate-500">|</span>

@@ -1,26 +1,28 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { Tooltip } from '../../../components/ui/Tooltip'
 import { projectService } from '../../../api/services'
-import { alignmentService } from '../../../api/services/alignmentService'
 import { HubProject } from '../projects/types'
+import { useAuthStore } from '../../../store/authStore'
 import { calculateCoordsLengthKm } from './alignmentGeometryHelpers'
 
 export const AlignmentApprovalList: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<HubProject[]>([])
 
-  const loadData = () => {
-    const list = projectService.getProjects()
-    setProjects(list)
-  }
-
-  useEffect(() => {
-    loadData()
-    window.addEventListener('roadguard_state_change', loadData)
-    return () => window.removeEventListener('roadguard_state_change', loadData)
-  }, [])
+  const epoch = useAuthStore(state => state.authEpoch)
+  const [error, setError] = useState('')
+  const request = useRef(0)
+  const loadData = useCallback(async () => {
+    const attempt = ++request.current
+    const current = () => attempt === request.current && useAuthStore.getState().authEpoch === epoch
+    try {
+      const list = await projectService.fetchProjects()
+      if (current()) { setProjects(list); setError('') }
+    } catch { if (current()) setError('Không tải được danh mục dự án. Vui lòng thử lại.') }
+  }, [epoch])
+  useEffect(() => { void loadData(); return () => { request.current++ } }, [loadData])
 
   return (
     <div className="space-y-5 font-body">
@@ -50,6 +52,7 @@ export const AlignmentApprovalList: React.FC = () => {
         </button>
       </div>
 
+      {error && <p role="alert" className="text-xs text-rose-700">{error}<button type="button" className="ml-3 underline" onClick={() => { void loadData() }}>Thử lại</button></p>}
       {/* Main Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -66,8 +69,8 @@ export const AlignmentApprovalList: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {projects.map((prj) => {
-                const alignState = alignmentService.getAlignmentState(prj.id)
-                const alignData = alignmentService.getAlignmentData(prj.id)
+                const alignState = { status: 'UNKNOWN' }
+                const alignData: { coords?: [number, number][]; branches?: any[]; segments?: any[] } = {}
 
                 const mainlineCoords = alignData.coords || []
                 const branches = alignData.branches || []
@@ -80,7 +83,7 @@ export const AlignmentApprovalList: React.FC = () => {
                 }, 0)
                 const totalLen = parseFloat((mainlineLen + branchesLen).toFixed(3)) || prj.length_km || 0
 
-                const isPending = alignState.status === 'PENDING_APPROVAL' || prj.status === 'PENDING_ALIGNMENT'
+                const isPending = alignState.status === 'PENDING_APPROVAL'
                 const isConfirmed = alignState.status === 'CONFIRMED'
 
                 const mainlineSegmentsCount = segments.length
@@ -174,12 +177,12 @@ export const AlignmentApprovalList: React.FC = () => {
                           ) : (
                             <div className="text-[11px] text-amber-600 font-mono mt-0.5 flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                              <span>Chưa nạp tim tuyến (Chờ PM nạp GPX)</span>
+                              <span>Chưa đọc hình học máy chủ</span>
                             </div>
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-400 italic">Chưa nạp tim tuyến (0 km)</span>
+                        <span className="text-slate-400 italic">Chưa đọc hình học máy chủ</span>
                       )}
                     </td>
 
@@ -206,8 +209,8 @@ export const AlignmentApprovalList: React.FC = () => {
                         </div>
                       ) : (
                         <div>
-                          <span className="font-mono font-bold text-slate-400 text-sm">0 đoạn</span>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">Chưa phân đoạn</div>
+                          <span className="font-mono font-bold text-slate-400 text-sm">Chưa đọc phân đoạn</span>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">Cần đọc phiên bản máy chủ</div>
                         </div>
                       )}
                     </td>
@@ -226,7 +229,7 @@ export const AlignmentApprovalList: React.FC = () => {
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                          PM đang soạn nháp
+                          Chưa đọc trạng thái tuyến
                         </span>
                       )}
                     </td>

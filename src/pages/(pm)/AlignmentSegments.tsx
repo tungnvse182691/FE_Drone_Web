@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle } from '../../utils/maplibre'
@@ -34,6 +34,7 @@ export const AlignmentSegments: React.FC = () => {
     selectedProjectId,
     assignedProjects,
     activeProject,
+    geometryRead,
     alignmentStatus,
     handleSwitchProject,
     handleSubmitAlignment,
@@ -86,6 +87,8 @@ export const AlignmentSegments: React.FC = () => {
     mapState,
     importState
   } = useAlignmentState()
+
+  const [draftReference, setDraftReference] = useState('')
 
   // Nếu vai trò Supervisor truy cập danh mục menu /sup/alignment mà chưa chọn dự án: hiển thị danh sách thẩm duyệt thay vì trỏ thẳng vào 1 tuyến
   if (isSupervisor && !urlProjectId) {
@@ -164,6 +167,31 @@ export const AlignmentSegments: React.FC = () => {
       />
 
       {/* TOP HEADER */}
+      <section className="flex flex-wrap items-center gap-3 text-xs">
+        <button type="button" onClick={geometryRead.retry} disabled={geometryRead.loading} className="border rounded-lg px-3 py-2">Tải lại từ máy chủ</button>
+        {geometryRead.loading && <p role="status">Đang tải danh sách dự án...</p>}
+        {geometryRead.error && <p role="alert" className="text-rose-700">{geometryRead.error}</p>}
+        {!geometryRead.loading && !geometryRead.error && geometryRead.projects.length === 0 && <p>Không có dự án trong phạm vi tài khoản.</p>}
+        {geometryRead.geometryError && <p role="alert" className="text-rose-700">{geometryRead.geometryError}</p>}
+        {geometryRead.context?.roadSections.map(road => <button key={road.roadSectionId} type="button" disabled={geometryRead.geometryLoading || !road.currentVersionId} onClick={() => { void geometryRead.read(road.roadSectionId, road.currentVersionId) }} className="border rounded-lg px-3 py-2">Đọc tuyến {road.name || road.code}</button>)}
+        {geometryRead.geometryLoading && <p role="status">Đang đọc geometry đã chọn...</p>}
+        {geometryRead.geometry && <p>Phiên bản máy chủ: {geometryRead.geometry.routeVersionId}; metadata {geometryRead.geometry.metadataStatus || 'Chưa đủ dữ liệu'}; {Number.isFinite(geometryRead.geometry.lengthMeters) ? `${geometryRead.geometry.lengthMeters} m` : 'Chưa có chiều dài'}</p>}
+      </section>
+      <section className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
+        <p>Phạm vi tuyến phải được đọc từ máy chủ. Chưa đủ context/CRS để lưu hoặc xác nhận tuyến; không dùng dữ liệu cục bộ làm hồ sơ chính thức.</p>
+        {geometryRead.profileError && <p role="alert" className="text-rose-700">{geometryRead.profileError}</p>}
+        <p>Hồ sơ CRS: {geometryRead.profilesLoading ? 'Đang tải...' : geometryRead.profileError ? 'Chưa tải được' : geometryRead.profiles.map(profile => `${profile.code || profile.id} (${profile.status || 'Chưa xác định'})`).join(', ') || 'Chưa có hồ sơ CRS'}</p>
+        <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); geometryRead.openDraft(draftReference.trim()) }}>
+          <label htmlFor="geometry-draft-reference">ID bản nháp từ máy chủ</label>
+          <input id="geometry-draft-reference" value={draftReference} onChange={e => setDraftReference(e.target.value)} className="border rounded-lg px-3 py-2" />
+          <button type="submit" disabled={!draftReference.trim() || geometryRead.draftLoading} className="border rounded-lg px-3 py-2">Mở bản nháp</button>
+        </form>
+        {geometryRead.draftLoading && <p role="status">Đang đọc bản nháp và readiness...</p>}
+        {geometryRead.draftError && <p role="alert" className="text-rose-700">{geometryRead.draftError}</p>}
+        {geometryRead.draft && <p>Bản nháp {geometryRead.draft.data.id}: {geometryRead.draft.data.status}; phiên bản {geometryRead.draft.data.version || 'Chưa có'}; CRS nguồn {geometryRead.draft.data.sourceCrs}. Chưa phải tuyến đã xác nhận.</p>}
+        {geometryRead.readiness && <p>Readiness: {geometryRead.readiness.ready ? 'Đủ điều kiện theo kiểm tra máy chủ' : 'Chưa đủ điều kiện'}; {geometryRead.readiness.missingFields.join(', ')} {geometryRead.readiness.errors.join(', ')}</p>}
+        <p>Phân đoạn/pavement chưa được nối khi vòng nhập và xác nhận chưa đủ điều kiện.</p>
+      </section>
       <AlignmentHeader
         basePath={basePath}
         alignmentStatus={alignmentStatus}
@@ -225,6 +253,7 @@ export const AlignmentSegments: React.FC = () => {
           onCancelPickingCoords={mapState.cancelPickingCoords}
         />
 
+        <fieldset disabled className="xl:col-span-4 min-w-0 border-0 p-0 m-0" title="Phân đoạn/pavement chờ vòng xác nhận và đầu vào chính thức">
         <AlignmentSidebar
           rightTab={rightTab}
           onSetRightTab={setRightTab}
@@ -276,6 +305,7 @@ export const AlignmentSegments: React.FC = () => {
           alignmentStatus={alignmentStatus}
           isSupervisor={isSupervisor}
         />
+        </fieldset>
       </section>
     </div>
   )

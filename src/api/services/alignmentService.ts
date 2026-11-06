@@ -1,3 +1,4 @@
+import { useAuthStore } from '../../store/authStore'
 import { apiClient } from '../client'
 import { projectService } from './projectService'
 
@@ -292,6 +293,7 @@ export const alignmentService = {
     roadSections: Array<{ roadSectionId: string; code: string; name: string; currentVersionId: string; versionNo: number }>
   }> {
     const response = await apiClient.get(`/projects/${projectId}/work-package`)
+    if (response.data?.projectId !== projectId || !Array.isArray(response.data?.roadSections)) throw new Error('Phạm vi tuyến trả sai dự án hoặc contract.')
     return response.data
   },
 
@@ -299,7 +301,9 @@ export const alignmentService = {
     ready: boolean; missingFields: string[]; errors: string[]; warnings: string[]; sampleOnly: boolean; crsStatus: string
   }> {
     const response = await apiClient.get(`/projects/${projectId}/road-geometry-drafts/${draftId}/readiness`)
-    return response.data
+    const value = response.data
+    if (typeof value?.ready !== 'boolean' || !Array.isArray(value.missingFields) || !Array.isArray(value.errors)) throw new Error('Readiness trả sai contract.')
+    return value
   },
 
   async readConfirmedGeometry(projectId: string, roadSectionId: string, routeVersionId: string): Promise<RoadGeometryVersionView> {
@@ -312,7 +316,8 @@ export const alignmentService = {
    */
   async fetchCrsProfiles(projectId: string): Promise<CrsProfileView[]> {
     const response = await apiClient.get<CrsProfileView[]>(`/projects/${projectId}/crs-profiles`)
-    return response.data || []
+    if (!Array.isArray(response.data) || response.data.some(profile => profile.projectId !== projectId)) throw new Error('Danh sách CRS trả sai contract hoặc dự án.')
+    return response.data
   },
 
   /**
@@ -331,23 +336,7 @@ export const alignmentService = {
    * Đảm bảo dự án đã có cấu hình CRS UTM Zone 48N (SRID 32648)
    */
   async ensureUtm48NCrsProfile(projectId: string): Promise<CrsProfileView> {
-    const profiles = await this.fetchCrsProfiles(projectId)
-    const existing = profiles.find((p) => p.definition?.sourceSrid === 32648)
-    if (existing) {
-      return existing
-    }
-    // Tạo mới profile UTM Zone 48N nếu chưa có
-    return await this.createCrsProfile(projectId, {
-      code: 'UTM48N',
-      sourceSrid: 32648,
-      datum: 'WGS_1984',
-      projection: 'Transverse_Mercator',
-      axisOrder: 'EN',
-      metresPerUnit: 1.0,
-      sourceReference: 'EPSG:32648',
-      sourceChecksum: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-      sampleOnly: false
-    })
+    throw new Error('Cần hồ sơ CRS có definition và provenance được xác minh; không tự tạo EPSG hoặc checksum mẫu.')
   },
 
   /**
@@ -400,10 +389,13 @@ export const alignmentService = {
     projectId: string,
     draftId: string
   ): Promise<{ data: GeometryDraftView; etag: string }> {
+    const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.get<GeometryDraftView>(
       `/projects/${projectId}/road-geometry-drafts/${draftId}`
     )
-    const etag = response.headers['etag'] || ''
+    if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ bản nháp cũ.')
+    if (response.data?.projectId !== projectId || response.data?.id !== draftId) throw new Error('Bản nháp trả sai dự án hoặc ID.')
+    const etag = response.headers['etag'] || (response.data.version ? `"${response.data.version}"` : '')
     activeDraftCache.set(projectId, { draftId, etag })
     return { data: response.data, etag }
   },
@@ -662,3 +654,7 @@ export const alignmentService = {
   }
 }
 
+
+useAuthStore.subscribe((state, previous) => {
+  if (state.authEpoch !== previous.authEpoch) activeDraftCache.clear()
+})

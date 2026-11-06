@@ -103,90 +103,71 @@ export function parseExtractedCoordinates(
   }
 }
 
-export function parseGeoJsonText(text: string): [number, number][] {
-  const parsed = JSON.parse(text)
-  let rawCoords: [number, number][] = []
+export interface GeoJsonCenterlineReview {
+  coords: [number, number][]
+  featureName: string
+  layer: string
+  ignoredFeatureCount: number
+  sourceCrs: string
+  estimatedLengthMeters: number | null
+  declaredLengthMeters?: number
+  roadWidthHintMeters?: number
+  adjacentDuplicates: number
+  repeatedVertices: number
+  selfIntersections: number | null
+}
 
-  if (parsed.type === 'FeatureCollection' && Array.isArray(parsed.features)) {
-    // 1. Tìm feature tim tuyến có thuộc tính đặc thù
-    let targetFeature = parsed.features.find((f: any) => {
-      const type = (f.properties?.type || '').toLowerCase()
-      const layer = (f.properties?.layer || '').toLowerCase()
-      const name = (f.properties?.name || '').toLowerCase()
-      return (
-        type === 'centerline' ||
-        layer.includes('tim') ||
-        layer.includes('center') ||
-        layer.includes('alignment') ||
-        name.includes('tim') ||
-        name.includes('center') ||
-        name.includes('tuyến chính')
-      )
-    })
+// Only inspect the input. This does not create chainage, survey accuracy or segments.
+export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview {
+  let parsed: any
+  try { parsed = JSON.parse(text) } catch { throw new Error('Tệp GeoJSON không phải JSON hợp lệ.') }
+  if (!parsed || typeof parsed !== 'object') throw new Error('Tệp GeoJSON không hợp lệ.')
+  if (parsed.crs) throw new Error('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
+  const features = parsed.type === 'FeatureCollection' ? parsed.features
+    : parsed.type === 'Feature' ? [parsed] : parsed.type === 'LineString' ? [{ geometry: parsed, properties: {} }] : []
+  if (!Array.isArray(features)) throw new Error('FeatureCollection không hợp lệ.')
+  const centerlines = features.filter((f: any) => f.properties?.type === 'Centerline' || f.properties?.layer === 'TIM_TUYEN_CHINH')
+  const lines = features.filter((f: any) => f.geometry?.type === 'LineString' && !['RoadEdge', 'RoadSurface'].includes(f.properties?.type) && !/^MEP_/.test(f.properties?.layer || ''))
+  const candidates = centerlines.length ? centerlines : lines
+  if (candidates.length !== 1) throw new Error('Cần đúng một Centerline rõ nguồn; không ghép nhiều tuyến/mép đường thành tim tuyến.')
+  const feature = candidates[0]
+  if (feature.geometry?.type !== 'LineString') throw new Error('Centerline phải là LineString; không dùng Polygon hoặc ghép MultiLineString khi chưa có topology.')
+  const raw = feature.geometry.coordinates
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100000) throw new Error('Tim tuyến cần 2–100000 đỉnh.')
+  const coords: [number, number][] = raw.map((p: any) => {
+    if (!Array.isArray(p) || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
+      throw new Error('Tọa độ phải là cặp số hữu hạn; chưa xác định trục hoặc đơn vị khi thiếu hệ quy chiếu.')
+    }
+    return [p[0], p[1]]
+  })
+  let adjacentDuplicates = 0, selfIntersections = 0
+  const cross = (a: number[], b: number[], c: number[]) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+  const on = (a: number[], b: number[], p: number[]) => cross(a,b,p) === 0 && p[0] >= Math.min(a[0],b[0]) && p[0] <= Math.max(a[0],b[0]) && p[1] >= Math.min(a[1],b[1]) && p[1] <= Math.max(a[1],b[1])
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i-1], b = coords[i]
 
-    if (targetFeature && targetFeature.geometry) {
-      const geom = targetFeature.geometry
-      if (geom.type === 'LineString' && Array.isArray(geom.coordinates)) {
-        rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
-      } else if (geom.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
-        rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
-      }
+    if (a[0] === b[0] && a[1] === b[1]) adjacentDuplicates++
+    // Bounded input QA; BE remains geometry authority for large files.
+    if (coords.length <= 2000) for (let j = i + 2; j < coords.length; j++) {
+      const c = coords[j-1], d = coords[j]
+      const abC = cross(a,b,c), abD = cross(a,b,d), cdA = cross(c,d,a), cdB = cross(c,d,b)
+      if ((abC * abD < 0 && cdA * cdB < 0) || on(a,b,c) || on(a,b,d) || on(c,d,a) || on(c,d,b)) selfIntersections++
     }
-
-    // 2. Nếu không tìm thấy thuộc tính đặc thù, trích xuất tất cả các đường LineString
-    if (rawCoords.length < 2) {
-      const lineFeatures = parsed.features.filter(
-        (f: any) =>
-          (f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString') &&
-          Array.isArray(f.geometry?.coordinates) &&
-          f.geometry.coordinates.length >= 2
-      )
-      if (lineFeatures.length === 1) {
-        const geom = lineFeatures[0].geometry
-        if (geom.type === 'LineString') {
-          rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
-        } else {
-          rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
-        }
-      } else if (lineFeatures.length > 1) {
-        lineFeatures.forEach((lf: any) => {
-          const geom = lf.geometry
-          if (geom.type === 'LineString') {
-            geom.coordinates.forEach((pt: any) => rawCoords.push([Number(pt[0]), Number(pt[1])]))
-          } else if (geom.type === 'MultiLineString') {
-            geom.coordinates.flat(1).forEach((pt: any) => rawCoords.push([Number(pt[0]), Number(pt[1])]))
-          }
-        })
-      }
-    }
-
-    // 3. Nếu tệp GeoJSON chứa danh sách các điểm mốc Point
-    if (rawCoords.length < 2) {
-      const pointFeatures = parsed.features.filter(
-        (f: any) =>
-          f.geometry?.type === 'Point' &&
-          Array.isArray(f.geometry?.coordinates) &&
-          f.geometry.coordinates.length >= 2
-      )
-      if (pointFeatures.length >= 2) {
-        rawCoords = pointFeatures.map((f: any) => [
-          Number(f.geometry.coordinates[0]),
-          Number(f.geometry.coordinates[1])
-        ])
-      }
-    }
-  } else if (parsed.type === 'Feature') {
-    const geom = parsed.geometry
-    if (geom?.type === 'LineString' && Array.isArray(geom.coordinates)) {
-      rawCoords = geom.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
-    } else if (geom?.type === 'MultiLineString' && Array.isArray(geom.coordinates)) {
-      rawCoords = geom.coordinates.flat(1).map((pt: any) => [Number(pt[0]), Number(pt[1])])
-    }
-  } else if (parsed.type?.toLowerCase() === 'linestring' && Array.isArray(parsed.coordinates)) {
-    rawCoords = parsed.coordinates.map((pt: any) => [Number(pt[0]), Number(pt[1])])
   }
+  if (coords.every(point => point[0] === coords[0][0] && point[1] === coords[0][1])) throw new Error('Tim tuyến chỉ có một vị trí lặp lại.')
+  const width = features.find((f: any) => f.properties?.type === 'RoadSurface')?.properties?.roadWidth
+  const declared = feature.properties?.totalLength ?? parsed.totalLengthMeters
+  return {
+    coords, featureName: feature.properties?.name || 'LineString', layer: feature.properties?.layer || '',
+    ignoredFeatureCount: features.length - 1, sourceCrs: 'UNKNOWN — Chưa xác định hệ quy chiếu, trục và đơn vị',
+    estimatedLengthMeters: null, adjacentDuplicates, repeatedVertices: coords.length - new Set(coords.map(p => JSON.stringify(p))).size,
+    selfIntersections: coords.length <= 2000 ? selfIntersections : null, declaredLengthMeters: typeof declared === 'number' && Number.isFinite(declared) ? declared : undefined,
+    roadWidthHintMeters: typeof width === 'number' && width > 0 ? width : undefined,
+  }
+}
 
-  return rawCoords
+export function parseGeoJsonText(text: string): [number, number][] {
+  return inspectGeoJsonCenterline(text).coords
 }
 
 export function parseManualCoordinatesText(text: string): [number, number][] {

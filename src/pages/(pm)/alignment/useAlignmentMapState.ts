@@ -78,10 +78,10 @@ export function useAlignmentMapState({
   }, [currentCoords, currentKmPoints])
 
   const [cursorPos, setCursorPos] = useState({
-    lng: initialCoords[0] ? initialCoords[0][0] : 108.0825,
-    lat: initialCoords[0] ? initialCoords[0][1] : 16.2731,
+    lng: initialCoords[0] ? initialCoords[0][0] : Number.NaN,
+    lat: initialCoords[0] ? initialCoords[0][1] : Number.NaN,
     station: initialStationText.split(' ')[0],
-    elevation: '+14.2m'
+    elevation: 'Chưa có dữ liệu'
   })
 
   // Cập nhật các Marker HTML đánh dấu điểm chấm trên bản đồ tức thời (0 delay)
@@ -174,7 +174,7 @@ export function useAlignmentMapState({
         lng: parseFloat(lng.toFixed(4)),
         lat: parseFloat(lat.toFixed(4)),
         station: stationStr,
-        elevation: `+${(12.0 + ((lng * 100) % 20)).toFixed(1)}m`
+        elevation: 'Chưa có dữ liệu'
       })
     })
 
