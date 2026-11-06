@@ -1,10 +1,10 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript'),{webcrypto}=require('crypto')
-let epoch=1;const listeners=[]
-const auth={useAuthStore:Object.assign(selector=>selector({authEpoch:epoch}),{getState:()=>({authEpoch:epoch}),subscribe:fn=>listeners.push(fn)})}
-function load(file,mocks={}){const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8').replaceAll('import.meta.env','({})'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;vm.runInNewContext(code,{module,exports:module.exports,require:n=>{if(n in mocks)return mocks[n];if(n.endsWith('/authStore'))return auth;if(n==='./projectService')return{projectService:{}};throw Error('Missing '+n)},console,Error,FileReader:mocks.__FileReader,crypto:webcrypto,localStorage:{getItem:()=>null},sessionStorage:{getItem:()=>null},setTimeout,clearTimeout,AbortController,URLSearchParams});return module.exports}
+let epoch=1,actor={id:'pm',role:'PROJECT_MANAGER'};const listeners=[]
+const auth={useAuthStore:Object.assign(selector=>selector?selector({authEpoch:epoch,user:actor,isAuthenticated:true}):{authEpoch:epoch,user:actor,isAuthenticated:true},{getState:()=>({authEpoch:epoch,user:actor,isAuthenticated:true}),subscribe:fn=>listeners.push(fn)})}
+function load(file,mocks={}){const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8').replaceAll('import.meta.env','({})'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;vm.runInNewContext(code,{module,exports:module.exports,require:n=>{if(n==='react'&&n in mocks)return {useRef:v=>({current:v}),useEffect(){},...mocks[n]};if(n in mocks)return mocks[n];if(n.endsWith('/authStore'))return auth;if(n==='./projectService')return{projectService:{}};throw Error('Missing '+n)},console,Error,FileReader:mocks.__FileReader,crypto:webcrypto,localStorage:{getItem:()=>null},sessionStorage:mocks.__sessionStorage||{getItem:()=>null,setItem(){},removeItem(){}},setTimeout,clearTimeout,AbortController,URLSearchParams});return module.exports}
 const ok=data=>({data,headers:{etag:'"AAAAAAAAAAE="'}})
 const service=client=>load('src/api/services/alignmentService.ts',{'../client':{apiClient:client}}).alignmentService
-let count=0;async function test(name,run){epoch=1;await run();console.log('PASS '+name);count++}
+let count=0;async function test(name,run){epoch=1;actor={id:'pm',role:'PROJECT_MANAGER'};await run();console.log('PASS '+name);count++}
 ;(async()=>{
 await test('CRS failure/wrong project/null never becomes empty; no automatic checksum profile',async()=>{
  for(const data of [null,{},[{projectId:'other'}]])await assert.rejects(service({get:async()=>ok(data)}).fetchCrsProfiles('p'))
@@ -31,7 +31,7 @@ await test('read model keeps draft when readiness fails; old project/epoch canno
  render();id='b';render();calls[1].resolve({data:{id:calls[1].draftId,projectId:'b'}});await flush();assert.equal(view.draft.data.projectId,'b');assert.ok(view.draftError);assert.equal(view.readiness,null)
  calls[0].resolve({data:{id:calls[0].draftId,projectId:'a'}});await flush();assert.equal(view.draft.data.projectId,'b')
  epoch++;render();calls[2].reject(Error('old'));await flush();assert.equal(view.draft,null)
- view.openDraft('22222222-2222-4222-8222-222222222222');assert.equal(query.get('draftId'),'22222222-2222-4222-8222-222222222222')
+ view.openGeometry('road-from-server','version-from-server');assert.equal(query.get('roadSectionId'),'road-from-server');assert.equal(query.get('routeVersionId'),'version-from-server');view.openDraft('22222222-2222-4222-8222-222222222222');assert.equal(query.get('draftId'),'22222222-2222-4222-8222-222222222222');assert.equal(query.get('routeVersionId'),null)
  effects.forEach(e=>e?.cleanup?.())
 })
 await test('GeoJSON inspection preserves vertices and unknown CRS without axis guesses or generated segments',async()=>{
@@ -84,6 +84,106 @@ await test('GeoJSON import preserves syntax/ambiguity/geometry/CRS/validation er
  for(const error of [null,Error('Unexpected internal failure'),new TypeError('Unexpected shape')]){const unknown=make(()=>{throw error});unknown.processGeoJSONFile({});reader.onload({target:{result:'{}'}});assert.match(message,/Không thể kiểm tra nội dung/)}
  const sync=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:{useState:v=>[v,()=>{}]},'maplibre-gl':{},'./alignmentImportHelpers':parser,__FileReader:class{readAsText(){throw Error('read failure')}}}).useAlignmentImportState({defaultManualText:'',showToast:m=>message=m});sync.processGeoJSONFile({});assert.match(message,/Không đọc được tệp/)
  model.processGeoJSONFile({});reader.onload({target:{result:JSON.stringify({type:'LineString',coordinates:[[1,2],[3,4]]})}});assert.match(message,/CRS UNKNOWN/);assert.equal(writes,0)
+})
+
+const roles={PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}
+const draftInput={sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:0,coordinates:[{x:500000,y:1000000},{x:500100,y:1000000}],widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:6}],surveyWidthMeters:10,changeReason:'Hồ sơ đo đã kiểm',roadCode:'R'}
+const dto={id:'11111111-1111-4111-8111-111111111111',projectId:'p',roadSectionId:'road',status:'DRAFT',sourceKind:'COORDINATES',version:'AAAAAAAAAAE=',stationOriginMeters:0,surveyWidthMeters:10,widthProfile:draftInput.widthProfile,originalCoordinates:draftInput.coordinates}
+const storage=()=>{const map=new Map();return{getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}}
+const commands=(client,journal=storage())=>load('src/api/services/geometryDraftCommands.ts',{'./alignmentService':{alignmentService:service(client)},'../../types/enums':{RoleCode:roles},__sessionStorage:journal})
+const fail=(status,code)=>Object.assign(Error(code),{response:{status,data:{code}}})
+await test('create timeout/F5 holds key/body and explicit retry; another intent or actor cannot borrow it',async()=>{
+ const journal=storage(),posts=[];let timeout=true
+ const client={post:async(url,body,config)=>{posts.push({url,body:JSON.stringify(body),key:config.headers['Idempotency-Key']});if(timeout)throw Error('timeout');return{...ok(dto),status:201}},get:async()=>ok(dto)}
+ const c=commands(client,journal);await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),/timeout/)
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:{...draftInput,changeReason:'different'}}),/Yêu cầu cũ/);assert.equal(posts.length,1)
+ actor={id:'other',role:'PROJECT_MANAGER'};assert.equal(c.pendingDraftCommand('p'),null);actor={id:'pm',role:'PROJECT_MANAGER'}
+ const reloaded=commands(client,journal);assert.ok(reloaded.pendingDraftCommand('p'));assert.equal(posts.length,1);timeout=false
+ const result=await reloaded.runDraftCommand('p');assert.equal(result.draft.data.id,dto.id);assert.deepEqual(posts[0],posts[1]);assert.ok(posts[0].url.includes('/road-sections/road/geometry-drafts'));assert.equal(reloaded.pendingDraftCommand('p'),null)
+})
+await test('201 with readback503 keeps receipt and retry never POSTs again',async()=>{
+ let writes=0,broken=true;const c=commands({post:async()=>{writes++;return{...ok(dto),status:201}},get:async()=>{if(broken)throw fail(503,'dependency_unavailable');return ok(dto)}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),e=>!!e.receipt)
+ assert.ok(c.pendingDraftCommand('p').receipt);broken=false;await c.runDraftCommand('p');assert.equal(writes,1)
+})
+await test('update conflict preserves input/key and requires explicit new-version decision; exact If-Match',async()=>{
+ const calls=[];let conflict=true
+ const c=commands({put:async(url,body,config)=>{calls.push({body:JSON.stringify(body),headers:config.headers});if(conflict)throw fail(412,'concurrency_conflict');return ok({...dto,version:'AAAAAAAAAAI='})},get:async()=>ok({...dto,version:'AAAAAAAAAAI='})})
+ await assert.rejects(c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:draftInput}),e=>e.response.status===412)
+ assert.equal(c.pendingDraftCommand('p').command.input.changeReason,draftInput.changeReason);await assert.rejects(c.runDraftCommand('p'),/phiên bản mới/);assert.equal(calls.length,1)
+ c.acceptFreshDraftVersion('p');conflict=false;await c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAI="',input:draftInput})
+ assert.equal(calls[0].headers['If-Match'],'"AAAAAAAAAAE="');assert.equal(calls[1].headers['If-Match'],'"AAAAAAAAAAI="');assert.notEqual(calls[0].headers['Idempotency-Key'],calls[1].headers['Idempotency-Key']);assert.equal(calls[0].body,calls[1].body)
+})
+await test('PM cannot confirm; Sup confirmation receipt/F5 readback is fenced and never resubmitted',async()=>{
+ let writes=0,broken=true;const geometry={projectId:'p',roadSectionId:'road',routeVersionId:'route-new',sourceDraftId:dto.id,metadataStatus:'COMPLETE'}
+ const c=commands({post:async(url,body,config)=>{writes++;assert.equal(body.expectedCurrentVersionId,'route-old');assert.equal(config.headers['If-Match'],'"AAAAAAAAAAE="');return{...ok(geometry),status:201}},get:async()=>{if(broken)throw fail(503,'read_failed');return ok(geometry)}})
+ const intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:'route-old',effectiveFrom:'2026-11-07T01:00:00Z',reason:'Đối chiếu hồ sơ'}}
+ await assert.rejects(c.runDraftCommand('p',intent),/Vai trò/);assert.equal(writes,0);actor={id:'sup',role:'SUPERVISOR'}
+ await assert.rejects(c.runDraftCommand('p',intent),e=>!!e.receipt);broken=false;const result=await c.runDraftCommand('p');assert.equal(result.geometry.routeVersionId,'route-new');assert.equal(writes,1)
+})
+await test('late mutation after epoch change never returns accepted result or clears another session intent',async()=>{
+ let finish;const c=commands({post:()=>new Promise(resolve=>finish=resolve)})
+ const request=c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput});epoch++;finish({...ok(dto),status:201});await assert.rejects(request,/Phiên/);assert.ok(c.pendingDraftCommand('p'))
+})
+await test('coordinate form requires sourced matching EN/metre profile and never invents engineering data',async()=>{
+ const module=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:{},'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:{}},'../../../api/services/geometryDraftCommands':{}})
+ const form={sectionId:'road',profileId:'profile',origin:'0',surveyWidth:'10',widths:'0, 100, 6',reason:'Đo từ hồ sơ'}
+ const model={context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'Road'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'authority datum',projection:'authority projection',sourceReference:'authority document',sourceChecksum:'a'.repeat(64),sampleOnly:false}}]}
+ const input=module.coordinateDraftInput(form,'500000, 1000000\n500100, 1000000',model);assert.equal(input.sourceCrs,32648);assert.equal(input.stationOriginMeters,0);assert.equal(input.widthProfile[0].widthMeters,6)
+ assert.throws(()=>module.coordinateDraftInput(form,'1,2\n3,4',{...model,context:null}),/phạm vi tuyến/)
+ for(const patch of [{axisOrder:'NE'},{metresPerUnit:0.001},{sourceSrid:32649},{sourceChecksum:''},{sampleOnly:true}]){const profiles=[{...model.profiles[0],definition:{...model.profiles[0].definition,...patch}}];assert.throws(()=>module.coordinateDraftInput(form,'500000,1000000\n500100,1000000',{...model,profiles}))}
+ assert.throws(()=>module.coordinateDraftInput({...form,origin:''},'500000,1000000\n500100,1000000',model));assert.throws(()=>module.coordinateDraftInput({...form,widths:'0,99,6'},'500000,1000000\n500100,1000000',model))
+})
+
+await test('rejected HTTP retry keeps key until explicit input revision',async()=>{
+ const keys=[];const c=commands({post:async(_,__,cfg)=>{keys.push(cfg.headers['Idempotency-Key']);throw fail(403,'access_forbidden')}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}));await assert.rejects(c.runDraftCommand('p'));assert.equal(keys[0],keys[1]);assert.equal(c.pendingDraftCommand('p').rejected,true);c.reviseRejectedDraftCommand('p');assert.equal(c.pendingDraftCommand('p'),null)
+})
+await test('workflow fences create/update receipt-to-URL transition, previews without confirming and Sup confirms exact fresh snapshot',async()=>{
+ const React=require('react');let slot=0,view,coords='',opened,confirmedRef;const values=[],effects=[],writes=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const model={draftId:'',draft:null,readiness:{ready:true,missingFields:[],errors:[]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'test source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},retry(){},openDraft:id=>opened=id,openConfirmed:(id,geometry)=>confirmedRef={id,geometry},setReadiness:value=>model.readiness=value}
+ let next=1
+ const commandMock={pendingDraftCommand:()=>null,acceptFreshDraftVersion(){},reviseRejectedDraftCommand(){},runDraftCommand:async(_,intent)=>{writes.push(JSON.parse(JSON.stringify(intent)));if(intent.kind==='confirm')return{kind:'confirm',draftId:dto.id,geometry:{projectId:'p',roadSectionId:'road',routeVersionId:'route-new',sourceDraftId:dto.id}};return{kind:intent.kind,draft:{data:{...dto,version:next===1?'AAAAAAAAAAE=':'AAAAAAAAAAI='},etag:next++===1?'"AAAAAAAAAAE="':'"AAAAAAAAAAI="'}}}}
+ const api={getGeometryDraft:async()=>model.draft,readDraftReadiness:async()=>model.readiness,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100,warnings:[]})}
+ const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
+ const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,()=>{});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();coords='500000,1000000\n500100,1000000';view.setForm({sectionId:'road',profileId:'profile',origin:'0',surveyWidth:'10',widths:'0,100,6',reason:'Tài liệu nguồn'});render();assert.equal(view.saveReason,'')
+ const oldSave=view.save;await oldSave();await oldSave();assert.equal(writes.length,1);assert.equal(opened,dto.id);render();assert.match(view.saveReason,/Đang nạp/)
+ model.draftId=dto.id;model.draft={data:{...dto},etag:'"AAAAAAAAAAE="'};render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập sửa'});render();const oldUpdate=view.save;await oldUpdate();await oldUpdate();assert.equal(writes.length,2);assert.equal(writes[1].kind,'update')
+ model.draft={data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'};render();await flush();await view.loadPreview();await flush();assert.equal(writes.length,2);assert.ok(view.preview)
+ actor={id:'sup',role:'SUPERVISOR'};epoch++;render();await flush();view.setEffectiveFrom('2026-11-07T10:00');view.setReason('Đã xem hồ sơ');render();await view.loadPreview();await flush();assert.equal(view.confirmReason,'');const confirm=view.confirm;await confirm();await confirm();assert.equal(writes.length,3);assert.equal(writes[2].kind,'confirm');assert.equal(writes[2].input.expectedCurrentVersionId,'route-old');assert.equal(writes[2].etag,'"AAAAAAAAAAI="');assert.equal(confirmedRef.geometry.routeVersionId,'route-new')
+ effects.forEach(e=>e?.cleanup?.())
+})
+await test('late GeoJSON FileReader cannot replace another project/draft input',async()=>{
+ let reader,messages=[],setInputs=0,refSlot=0,stateSlot=0;const refs=[]
+ const React={useState:v=>{const i=stateSlot++;return[v,()=>{if(i===2)setInputs++}]},useRef:v=>refs[refSlot++]||(refs[refSlot-1]={current:v}),useEffect(){}}
+ class Reader{constructor(){reader=this}readAsText(){}}
+ const hook=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:React,'maplibre-gl':{},'./alignmentImportHelpers':{GeoJsonValidationError:class extends Error{},inspectGeoJsonCenterline:()=>({coords:[[1,2],[3,4]]})},__FileReader:Reader}).useAlignmentImportState
+ const render=inputScope=>{refSlot=0;stateSlot=0;return hook({inputScope,defaultManualText:'',showToast:m=>messages.push(m)})}
+ const a=render('epoch1:p:d1');a.processGeoJSONFile({});const old=reader;render('epoch2:q:d2');old.onload({target:{result:'{}'}});old.onerror();assert.equal(setInputs,0);assert.equal(messages.length,0)
+})
+
+await test('native edit is specifically blocked but preview remains usable; pending confirmation inputs restore after F5',async()=>{
+ const React=require('react');let slot=0,view,held=null;const values=[],effects=[]
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const model={draftId:dto.id,draft:{data:{...dto,sourceKind:'NATIVE_ALIGNMENT'},etag:'"AAAAAAAAAAE="'},context:{projectId:'p',roadSections:[{roadSectionId:'road',currentVersionId:'v'}]},profiles:[],readiness:{ready:true,missingFields:[],errors:[]},setReadiness(){},retry(){}}
+ let previews=0
+ const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:{previewGeometryDraft:async()=>{previews++;return{lengthMeters:100}},readDraftReadiness:async()=>model.readiness}},'../../../api/services/geometryDraftCommands':{pendingDraftCommand:()=>held}}).useGeometryDraftWorkflow
+ const render=()=>{slot=0;view=hook('p',model,'',()=>{},()=>{});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();assert.match(view.saveReason,/native/);await view.loadPreview();await flush();assert.equal(previews,1)
+ held={key:'held',command:{kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:'v',effectiveFrom:'2026-11-07T03:00:00Z',reason:'Lý do đã nhập trước F5'}}};actor={id:'sup',role:'SUPERVISOR'};epoch++;render();await flush();await flush();assert.equal(view.reason,'Lý do đã nhập trước F5');assert.ok(view.effectiveFrom);assert.ok(view.pending);let reference;model.openConfirmed=(id,geometry)=>reference={id,geometry};held={...held,receipt:{projectId:'p',roadSectionId:'road',routeVersionId:'confirmed-version',sourceDraftId:dto.id}};model.draftId='';model.draft=null;epoch++;render();await flush();assert.equal(reference.geometry.routeVersionId,'confirmed-version');assert.equal(view.preview,null);effects.forEach(e=>e?.cleanup?.())
+})
+await test('command never dispatches when browser cannot retain stable identity',async()=>{
+ let writes=0;const c=commands({post:async()=>writes++},{getItem:()=>null,setItem(){throw Error('quota')},removeItem(){}})
+ await assert.rejects(c.runDraftCommand('p',{kind:'create',sectionId:'road',input:draftInput}),/Không giữ được yêu cầu/);assert.equal(writes,0)
+})
+await test('first dispatch uses the same immutable payload that was journaled, even if caller changes its object',async()=>{
+ let finish,observed;const input=JSON.parse(JSON.stringify(draftInput))
+ const c=commands({post:async(_,body)=>{await new Promise(resolve=>finish=resolve);observed=body.changeReason;return{...ok(dto),status:201}},get:async()=>ok(dto)})
+ const request=c.runDraftCommand('p',{kind:'create',sectionId:'road',input});input.changeReason='Changed after dispatch';finish();await request;assert.equal(observed,draftInput.changeReason)
 })
 console.log(`${count} Step 3 scoped scenarios PASS (mock/hooks/static; NOT E2E).`)
 })().catch(e=>{console.error(e);process.exitCode=1})

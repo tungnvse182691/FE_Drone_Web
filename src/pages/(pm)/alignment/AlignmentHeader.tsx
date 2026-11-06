@@ -4,6 +4,9 @@ import { Icon } from '../../../components/ui/Icon'
 import { AssignedProjectOption } from './types'
 
 export interface AlignmentHeaderProps {
+  commandBusy?: boolean
+  saveDisabledReason?: string
+  confirmDisabledReason?: string
   basePath: string
   alignmentStatus: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
   activeProject: AssignedProjectOption
@@ -24,6 +27,9 @@ export interface AlignmentHeaderProps {
 
 export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   basePath,
+  commandBusy = false,
+  saveDisabledReason = '',
+  confirmDisabledReason = 'Chưa đọc điều kiện xác nhận.',
   alignmentStatus,
   activeProject,
   selectedProjectId,
@@ -191,7 +197,8 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         {!isSupervisor && (
           <button
             onClick={onSubmitAlignment}
-            disabled={alignmentStatus === 'CONFIRMED' || alignmentStatus === 'PENDING_APPROVAL'}
+            disabled={commandBusy || !!saveDisabledReason}
+            title={saveDisabledReason}
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
@@ -207,7 +214,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
                 ? 'Đã trình duyệt tim tuyến'
                 : alignmentStatus === 'CONFIRMED'
                 ? 'Đã khóa tim tuyến'
-                : 'Trình duyệt tim tuyến'}
+                : 'Lưu bản nháp'}
             </span>
           </button>
         )}
@@ -216,39 +223,19 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         {isSupervisor && (
           <button
             onClick={onLockAlignment}
-            disabled={
-              alignmentStatus === 'CONFIRMED' ||
-              (displayTotalKm === 0 && currentCoords.length === 0) ||
-              alignmentStatus === 'DRAFT'
-            }
-            title={
-              alignmentStatus === 'CONFIRMED'
-                ? 'Tim tuyến đã được phê duyệt và khóa bất biến'
-                : displayTotalKm === 0 && currentCoords.length === 0
-                ? 'Dự án chưa có tim tuyến, không thể phê duyệt'
-                : alignmentStatus === 'DRAFT'
-                ? 'Hồ sơ tim tuyến đang ở bản nháp của PM, chờ PM trình duyệt'
-                : 'Xác nhận và khóa mốc lý trình tim tuyến'
-            }
+            disabled={commandBusy || !!confirmDisabledReason}
+            title={confirmDisabledReason || 'Xác nhận phiên bản bản nháp đã xem trước'}
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs shadow-xs flex items-center gap-1.5 transition-all ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-emerald-600 text-white opacity-90 cursor-default'
-                : (displayTotalKm === 0 && currentCoords.length === 0) || alignmentStatus === 'DRAFT'
+                : commandBusy || !!confirmDisabledReason
                 ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
                 : 'bg-brand-gold hover:bg-[#B38E1F] text-white cursor-pointer active:scale-98'
             }`}
             type="button"
           >
             <Icon name="lock" size={14} />
-            <span>
-              {alignmentStatus === 'CONFIRMED'
-                ? 'Đã khóa tim tuyến'
-                : displayTotalKm === 0 && currentCoords.length === 0
-                ? 'Chưa có tim tuyến'
-                : alignmentStatus === 'DRAFT'
-                ? 'Chờ PM trình duyệt'
-                : 'Xác nhận & Khóa tim tuyến'}
-            </span>
+            <span>{alignmentStatus === 'CONFIRMED' ? 'Đã khóa tim tuyến' : 'Xác nhận & Khóa tim tuyến'}</span>
           </button>
         )}
       </div>

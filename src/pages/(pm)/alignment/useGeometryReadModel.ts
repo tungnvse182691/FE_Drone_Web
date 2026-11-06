@@ -46,6 +46,10 @@ export function useGeometryReadModel(projectId: string) {
   const selection = useRef({ projectId, epoch })
   selection.current = { projectId, epoch }
   useEffect(() => {
+    attempt.current++; setGeometry(null); setGeometryError(''); setGeometryLoading(false)
+    return () => { attempt.current++ }
+  }, [projectId, epoch])
+  useEffect(() => {
     const controller = new AbortController()
     setLoading(true); setError(''); setProjects([])
     ;(async () => {
@@ -66,12 +70,12 @@ export function useGeometryReadModel(projectId: string) {
   }, [epoch, reload])
   useEffect(() => {
     let active = true
-    attempt.current++; setContext(null); setGeometry(null); setGeometryError(''); setGeometryLoading(false)
+    setContext(null)
     if (projectId && projects.some(project => project.projectId === projectId)) {
       alignmentService.readProjectContext(projectId).then(value => {if (active) setContext(value)})
         .catch(() => {if (active) setGeometryError('Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.')})
     }
-    return () => { active = false; attempt.current++ }
+    return () => { active = false }
   }, [projectId, epoch, projects])
   const invalidate = () => {attempt.current++;setGeometry(null);setGeometryError('');setGeometryLoading(false)}
   const read = async (roadId: string, versionId: string) => {
@@ -86,6 +90,25 @@ export function useGeometryReadModel(projectId: string) {
     } catch {if (current()) setGeometryError('Không thể tải hình học đúng tuyến và phiên bản đã chọn.')}
     finally {if (current()) setGeometryLoading(false)}
   }
-  const openDraft = (id: string) => { const next = new URLSearchParams(params); if (id) next.set('draftId', id); else next.delete('draftId'); setParams(next) }
-  return {draftId,openDraft,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
+  const roadReference = params.get('roadSectionId') || ''
+  const versionReference = params.get('routeVersionId') || ''
+  useEffect(() => {
+    if (projectId && roadReference && versionReference) void read(roadReference, versionReference)
+  }, [projectId, epoch, roadReference, versionReference, reload])
+  const openDraft = (id: string) => {
+    invalidate()
+    const next = new URLSearchParams(params)
+    if (id) next.set('draftId', id); else next.delete('draftId')
+    next.delete('roadSectionId'); next.delete('routeVersionId'); setParams(next)
+  }
+  const openGeometry = (roadId: string, versionId: string) => {
+    const next = new URLSearchParams(params)
+    next.set('roadSectionId', roadId); next.set('routeVersionId', versionId); setParams(next)
+  }
+  const openConfirmed = (id: string, geometry: RoadGeometryVersionView) => {
+    const next = new URLSearchParams(params)
+    next.set('draftId', id); next.set('roadSectionId', geometry.roadSectionId!); next.set('routeVersionId', geometry.routeVersionId)
+    setParams(next)
+  }
+  return {draftId,roadReference,versionReference,openDraft,openGeometry,openConfirmed,setReadiness,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
 }

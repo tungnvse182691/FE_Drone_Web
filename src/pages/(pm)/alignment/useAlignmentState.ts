@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import * as maplibregl from 'maplibre-gl'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
@@ -10,6 +10,7 @@ import {
   calculateCoordsLengthKm
 } from './alignmentGeometryHelpers'
 import { computeSplitSegmentPair } from './alignmentSplitHelpers'
+import { useGeometryDraftWorkflow } from './useGeometryDraftWorkflow'
 import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
@@ -17,6 +18,7 @@ import { useAlignmentImportState } from './useAlignmentImportState'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
+  const navigate = useNavigate()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
   const [assignedProjects, setAssignedProjects] = useState<AssignedProjectOption[]>([])
@@ -65,15 +67,15 @@ export function useAlignmentState() {
 
   useEffect(() => {
     const geometry = geometryRead.geometry
-    setAlignmentStatus(geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    setAlignmentStatus(geometryRead.draft?.data.status !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
+    if (Number.isFinite(geometry?.lengthMeters) && geometry!.lengthMeters > 0) setImportedLengthKm(geometry!.lengthMeters / 1000)
     const line = geometry?.wgs84Centerline
     if (line?.type === 'LineString' && Array.isArray(line.coordinates) && line.coordinates.length >= 2 &&
         line.coordinates.every(point => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite) && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90)) {
       setCurrentCoords(line.coordinates)
-      if (Number.isFinite(geometry?.lengthMeters)) setImportedLengthKm(geometry!.lengthMeters / 1000)
     }
-  }, [geometryRead.geometry])
+  }, [geometryRead.geometry, geometryRead.draft?.data.status])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
@@ -251,6 +253,7 @@ export function useAlignmentState() {
 
   // Hook 3: Import State
   const importState = useAlignmentImportState({
+    inputScope: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`,
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,
     roadWidthM,
@@ -272,9 +275,13 @@ export function useAlignmentState() {
 
   })
 
+  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast)
+
   // Chuyển đổi dự án PM phụ trách
   const handleSwitchProject = (prjId: string) => {
+    if (!prjId) return
     geometryRead.invalidate()
+    if (prjId !== urlProjectId) navigate(`${isSupervisor ? '/sup' : '/pm'}/projects/${prjId}/alignment`)
     setSelectedProjectId(prjId)
   }
 
@@ -501,19 +508,15 @@ export function useAlignmentState() {
     showToast('Đã xóa tuyến nhánh thành công! Bạn có thể tạo lại tuyến nhánh mới.')
   }
 
-  const handleSubmitAlignment = async () => {
-    showToast('Chưa thể trình tuyến: cần CRS, thông số kỹ thuật có nguồn và contract trình duyệt chính thức. Chưa gửi lệnh hoặc thay đổi trạng thái.')
-  }
-
-  const handleLockAlignment = async () => {
-    showToast('Chưa thể xác nhận tuyến từ dữ liệu thiết kế cục bộ. Cần bản nháp server, readiness, version và đầu vào xác nhận hợp lệ. Chưa gửi lệnh.')
-  }
+  const handleSubmitAlignment = draftWorkflow.save
+  const handleLockAlignment = draftWorkflow.confirm
 
   const basePath = isSupervisor ? '/sup' : '/pm'
   const handleClearMainline = () => showToast('Chưa có lệnh xóa tuyến chính thức từ màn hình này. Dữ liệu máy chủ được giữ nguyên.')
 
   return {
     geometryRead,
+    draftWorkflow,
     isSupervisor,
     basePath,
     urlProjectId,

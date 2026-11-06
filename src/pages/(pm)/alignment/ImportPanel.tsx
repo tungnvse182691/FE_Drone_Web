@@ -85,7 +85,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
             </div>
             <span className="text-xs font-bold text-slate-800">Kéo thả hoặc Bấm để tải tệp trắc địa lên</span>
             <span className="text-[11px] text-slate-400 mt-0.5">
-              Hỗ trợ GeoJSON (LineString / MultiLineString), KML, GPX
+              Kiểm tra một tim tuyến GeoJSON LineString; chưa lưu bản nháp.
             </span>
           </div>
         </div>
@@ -96,7 +96,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-700">
-              Nhập danh sách tọa độ đỉnh WGS84 [Kinh độ, Vĩ độ]:
+              Nhập tọa độ nguồn [X, Y] theo hồ sơ CRS đã chọn:
             </label>
             <button
               type="button"
@@ -113,7 +113,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
             value={manualCoordsText}
             onChange={(e) => onSetManualCoordsText(e.target.value)}
             className="w-full font-mono text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-gold bg-slate-50 text-slate-800"
-            placeholder="108.0825, 16.2731&#10;108.1054, 16.2589&#10;..."
+            placeholder="Mỗi dòng: X, Y theo hệ tọa độ nguồn"
           />
 
           <div className="flex justify-end">
@@ -123,7 +123,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
               className="px-4 py-2 bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Phân tích &amp; Tạo tim tuyến</span>
+              <span>Giữ bản nhập tọa độ</span>
             </button>
           </div>
         </div>

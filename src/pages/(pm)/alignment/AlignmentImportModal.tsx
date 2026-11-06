@@ -4,6 +4,8 @@ import { AssignedProjectOption } from './types'
 import { ImportPanel } from './ImportPanel'
 
 export interface AlignmentImportModalProps {
+  importDisabled?: boolean
+  draftControls?: React.ReactNode
   isOpen: boolean
   onClose: () => void
   importTab: 'FILE' | 'MANUAL'
@@ -18,6 +20,8 @@ export interface AlignmentImportModalProps {
 
 export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
   isOpen,
+  draftControls,
+  importDisabled = false,
   onClose,
   importTab,
   onSetImportTab,
@@ -46,6 +50,7 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
           </button>
         </div>
 
+        <fieldset disabled={importDisabled} className="border-0 p-0 m-0 min-w-0">
         <ImportPanel
           importTab={importTab}
           onSetImportTab={onSetImportTab}
@@ -56,6 +61,8 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
           onProcessManualCoordinates={onProcessManualCoordinates}
           activeProject={activeProject}
         />
+        </fieldset>
+        {draftControls}
       </div>
     </div>
   )

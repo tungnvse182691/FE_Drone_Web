@@ -363,11 +363,13 @@ export const alignmentService = {
    */
   async createGeometryDraft(
     projectId: string,
-    input: GeometryDraftInput
+    input: GeometryDraftInput,
+    idempotencyKey = generateUuid(),
+    roadSectionId?: string
   ): Promise<{ data: GeometryDraftView; etag: string }> {
-    const idempotencyKey = generateUuid()
+    const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.post<GeometryDraftView>(
-      `/projects/${projectId}/road-geometry-drafts`,
+      roadSectionId ? `/projects/${projectId}/road-sections/${roadSectionId}/geometry-drafts` : `/projects/${projectId}/road-geometry-drafts`,
       input,
       {
         headers: {
@@ -375,6 +377,7 @@ export const alignmentService = {
         }
       }
     )
+    if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả tạo bản nháp cũ.')
     const etag = response.headers['etag'] || ''
     if (response.data?.id) {
       activeDraftCache.set(projectId, { draftId: response.data.id, etag })
@@ -407,18 +410,21 @@ export const alignmentService = {
     projectId: string,
     draftId: string,
     input: GeometryDraftInput,
-    etag: string
+    etag: string,
+    idempotencyKey = generateUuid()
   ): Promise<{ data: GeometryDraftView; etag: string }> {
+    const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.put<GeometryDraftView>(
       `/projects/${projectId}/road-geometry-drafts/${draftId}`,
       input,
       {
         headers: {
           'If-Match': etag,
-          'Idempotency-Key': generateUuid()
+          'Idempotency-Key': idempotencyKey
         }
       }
     )
+    if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả sửa bản nháp cũ.')
     const newEtag = response.headers['etag'] || etag
     activeDraftCache.set(projectId, { draftId, etag: newEtag })
     return { data: response.data, etag: newEtag }
@@ -427,9 +433,11 @@ export const alignmentService = {
   /**
    * API-181: Xem trước tim tuyến bản thảo (Preview)
    */
-  async previewGeometryDraft(projectId: string, draftId: string): Promise<GeometryPreview> {
+  async previewGeometryDraft(projectId: string, draftId: string, etag?: string): Promise<GeometryPreview> {
     const response = await apiClient.post<GeometryPreview>(
-      `/projects/${projectId}/road-geometry-drafts/${draftId}/preview`
+      `/projects/${projectId}/road-geometry-drafts/${draftId}/preview`,
+      undefined,
+      etag ? { headers: { 'If-Match': etag } } : undefined
     )
     return response.data
   },
@@ -442,18 +450,21 @@ export const alignmentService = {
     projectId: string,
     draftId: string,
     input: GeometryConfirmInput,
-    etag: string
+    etag: string,
+    idempotencyKey = generateUuid()
   ): Promise<RoadGeometryVersionView> {
+    const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.post<RoadGeometryVersionView>(
       `/projects/${projectId}/road-geometry-drafts/${draftId}/confirm`,
       input,
       {
         headers: {
           'If-Match': etag,
-          'Idempotency-Key': generateUuid()
+          'Idempotency-Key': idempotencyKey
         }
       }
     )
+    if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả xác nhận cũ.')
     activeDraftCache.delete(projectId)
     return response.data
   },
