@@ -1,8 +1,7 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { apiClient } from '../../api/client'
-import { getCaseSessionKey, isCaseReadCanceled } from '../../api/services/triageService'
+import { projectService } from '../../api/services/projectService'
 import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
@@ -19,31 +18,42 @@ export const AIReviewInbox: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
-  const session = useAuthStore(() => getCaseSessionKey())
-  const [activeProjects, setActiveProjects] = React.useState<Array<{ id: string; code: string; name: string }>>([])
-  const [projectError, setProjectError] = React.useState<string | null>(null)
-  React.useEffect(() => {
-    const controller = new AbortController()
-    setActiveProjects([])
-    setProjectError(null)
-    const load = async () => {
-      const items: Array<{ id: string; code: string; name: string }> = []
-      let cursor: string | undefined
-      const seen = new Set<string>()
-      do {
-        const response = await apiClient.get<{ items: Array<{ projectId: string; projectCode: string; name: string }>; nextCursor?: string }>('/projects', { params: { cursor }, signal: controller.signal })
-        items.push(...response.data.items.map(project => ({ id: project.projectId, code: project.projectCode, name: project.name })))
-        cursor = response.data.nextCursor || undefined
-        if (cursor && seen.has(cursor)) throw new Error('Cursor dự án bị lặp.')
-        if (cursor) seen.add(cursor)
-      } while (cursor)
-      if (!controller.signal.aborted && session === getCaseSessionKey()) setActiveProjects(items)
+  const activeProjects = React.useMemo(() => {
+    try {
+      const real = projectService.getProjects()
+      if (real && real.length > 0) {
+        const scoped = isSupervisor
+          ? real
+          : real.filter((p) => {
+              if (!user) return false
+              const userId = user.id
+              const userEmail = (user.email || '').toLowerCase()
+              const userName = (user.full_name || (user as any).name || '').toLowerCase()
+              const pmUserId = p.pm_user_id
+              const pmEmail = (p.pm_email || '').toLowerCase()
+              const pmName = (p.pm_name || '').toLowerCase()
+
+              if (userId && pmUserId && userId === pmUserId) return true
+              if (pmEmail && userEmail && pmEmail === userEmail) return true
+              if (pmName && userName && (pmName === userName || pmName.includes(userName) || userName.includes(pmName))) return true
+              if (userEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
+              if (userEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
+              return false
+            })
+
+        return scoped.map((p) => ({
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          start_km: p.start_km || 0,
+          end_km: p.end_km || 0
+        }))
+      }
+    } catch (err) {
+      console.error('Lỗi khi nạp danh sách dự án CSDL:', err)
     }
-    load().catch(error => {
-      if (!controller.signal.aborted && session === getCaseSessionKey() && !isCaseReadCanceled(error)) setProjectError(error.message || 'Không tải được danh mục dự án.')
-    })
-    return () => controller.abort()
-  }, [session])
+    return []
+  }, [isSupervisor, user])
 
   const state = useAIReviewState()
   const {
@@ -65,7 +75,7 @@ export const AIReviewInbox: React.FC = () => {
     criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
     handleOpenRequestSurveyModal, handleConfirmRequestSurvey, handleNavigateFastTrack,
     handleToggleSelectReport, handleSelectAllReports, handleOpenLinkReportsModal,
-    handleConfirmLinkReports, handleUnlinkReport, handleSplitReport, handleOpenTriageProject, handleConfirmTriageProject,
+    handleConfirmLinkReports, handleUnlinkReport, handleOpenTriageProject, handleConfirmTriageProject,
     handleOpenNoDefectModal, handleConfirmNoDefect, handleConclusionOutOfScope,
     handleResetConclusion, handleOpenPublishModal, handleConfirmPublishResult,
     handleExecuteMerge, handleBulkVerify, handleBulkNeedSurvey
@@ -73,10 +83,6 @@ export const AIReviewInbox: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {projectError && <p role="alert">Danh mục dự án chưa tải được: {projectError}</p>}
-      {state.isLoading && <p role="status">Đang tải hồ sơ...</p>}
-      {state.loadError && <div role="alert" className="p-3 bg-red-50 text-red-700">{state.loadError} <button onClick={state.reloadCases}>Thử lại</button></div>}
-      {!state.isLoading && !state.loadError && cases.length === 0 && <p>Chưa có dữ liệu trong CSDL.</p>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
@@ -92,7 +98,7 @@ export const AIReviewInbox: React.FC = () => {
       <ReviewHeader
         basePath={basePath}
         isSupervisor={isSupervisor}
-        cases={state.visibleCases}
+        cases={cases}
         pendingCount={pendingCount}
         selectedReportIds={selectedReportIds}
         selectedCase={selectedCase}
@@ -103,10 +109,7 @@ export const AIReviewInbox: React.FC = () => {
 
       {/* 2. Quick Filter Tabs & Search Controls */}
       <ReviewFilterBar
-        hideAutoTests={state.hideAutoTests}
-        setHideAutoTests={state.setHideAutoTests}
-        autoTestCount={state.autoTestCount}
-        cases={state.visibleCases}
+        cases={cases}
         projectsList={activeProjects}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -168,9 +171,9 @@ export const AIReviewInbox: React.FC = () => {
         detailViewMode={detailViewMode}
         setDetailViewMode={setDetailViewMode}
         drawerMapContainerRef={drawerMapContainerRef}
-        currentSeverity={currentSeverity}
+        currentSeverity={currentSeverity === 'UNKNOWN' ? 'MEDIUM' : currentSeverity}
         setCurrentSeverity={setCurrentSeverity}
-        currentUrgency={currentUrgency}
+        currentUrgency={currentUrgency === 'UNKNOWN' ? 'NORMAL' : currentUrgency}
         setCurrentUrgency={setCurrentUrgency}
         currentArea={currentArea}
         setCurrentArea={setCurrentArea}
@@ -186,7 +189,6 @@ export const AIReviewInbox: React.FC = () => {
         onOpenPublishModal={handleOpenPublishModal}
         onNavigateFastTrack={handleNavigateFastTrack}
         onUnlinkReport={handleUnlinkReport}
-        onSplitReport={handleSplitReport}
         onOpenTriageProject={handleOpenTriageProject}
         onOpenGISModal={() => setIsGISModalOpen(true)}
         onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}

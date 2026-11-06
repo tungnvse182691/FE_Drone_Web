@@ -13,7 +13,6 @@ import {
   BarChart3,
   ShieldCheck,
   Zap,
-  Route,
   Sparkles,
   History,
   Sliders,
@@ -23,7 +22,6 @@ import {
 } from 'lucide-react'
 
 interface NavNestedChild {
-  disabled?: boolean
   label: string
   path: string
 }
@@ -47,8 +45,6 @@ export const Sidebar: React.FC = () => {
   const { user } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  useEffect(() => { setMobileOpen(false) }, [location.pathname])
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   // Danh mục nhóm điều hướng PM (Chỉ huy trưởng)
@@ -61,12 +57,9 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án & Tuyến',
+      title: 'Dự án bảo hành',
       icon: FolderKanban,
-      items: [
-        { label: 'Dự án bảo hành', path: '/pm/projects', icon: FolderKanban },
-        { label: 'Tuyến & Phân đoạn', path: '/pm/alignment', icon: Route }
-      ]
+      directPath: '/pm/projects'
     },
     {
       id: 'surveys',
@@ -74,14 +67,7 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         {
-          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff,
-          children: [
-            { label: 'Danh sách đợt bay', path: '/pm/surveys' },
-            { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' },
-            { label: 'Khung hình thẩm định AI', path: '/pm/drone-mission' },
-            { label: 'Thẩm định khung nhận diện', path: '', disabled: true }
-          ]
-        },
+          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff },
         { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },
         { label: 'Điều phối nhanh', path: '/pm/fast-track', icon: Zap }
       ]
@@ -121,12 +107,9 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án & Tuyến',
+      title: 'Dự án bảo hành',
       icon: FolderKanban,
-      items: [
-        { label: 'Dự án bảo hành', path: '/sup/projects', icon: FolderKanban },
-        { label: 'Phê duyệt tuyến', path: '/sup/alignment', icon: Route }
-      ]
+      directPath: '/sup/projects'
     },
     {
       id: 'surveys',
@@ -228,10 +211,7 @@ export const Sidebar: React.FC = () => {
   }
 
   return (
-    <>
-    <button type="button" aria-label={mobileOpen ? 'Đóng menu điều hướng' : 'Mở menu điều hướng'} aria-expanded={mobileOpen} aria-controls="main-navigation" onClick={() => setMobileOpen(value => !value)} className="md:hidden fixed top-4 left-3 z-[60] p-1 bg-white text-slate-600 rounded-lg"><Icon name={mobileOpen ? 'close' : 'menu'} size={24} /></button>
-    {mobileOpen && <button type="button" aria-label="Đóng nền menu" onClick={() => setMobileOpen(false)} className="md:hidden fixed inset-0 top-16 bg-black/30 z-40" />}
-    <aside id="main-navigation" className={`${mobileOpen ? 'flex' : 'hidden'} md:flex w-64 bg-white border-r border-[#E2E5E9] flex-col justify-between h-[calc(100vh-4rem)] fixed md:sticky left-0 top-16 z-40 select-none shrink-0 shadow-2xs`}>
+    <aside className="w-64 bg-white border-r border-[#E2E5E9] flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none shrink-0 shadow-2xs">
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5 custom-scrollbar">
         {/* Tiêu đề phân hệ */}
         <div className="px-3 py-1.5 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex items-center justify-between">
@@ -380,7 +360,6 @@ export const Sidebar: React.FC = () => {
                         {hasChildren && isBranchOpen && (
                           <div className="pl-7 pr-1 py-0.5 space-y-1 relative before:absolute before:left-6 before:top-1 before:bottom-1 before:w-[1px] before:bg-amber-200">
                             {subItem.children!.map((child) => {
-                              if (child.disabled) return <button key={child.label} type="button" disabled title="Chọn hồ sơ phát hiện trước khi mở thẩm định" className="w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-200" /><span>{child.label}</span></button>
                               const isChildActive = child.path.includes('/review')
                                 ? location.pathname.includes('/review') || location.pathname.startsWith('/pm/drone-mission')
                                 : child.path.includes('/defects')
@@ -423,6 +402,5 @@ export const Sidebar: React.FC = () => {
         <div className="text-[10px] text-slate-400 font-mono">Hạ tầng đường bộ</div>
       </div>
     </aside>
-    </>
   )
 }

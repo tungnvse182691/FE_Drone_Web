@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAuthStore } from '../../../store/authStore'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
 import { getProjectCorridorCoords, getDefectGpsCoordinates } from '../../../utils/projectGeodesy'
@@ -13,8 +12,6 @@ export function useDroneMissionReview(
   surveyId: string = 'srv-01',
   currentSurvey?: SurveyMissionItem | null
 ) {
-  const user = useAuthStore(state => state.user)
-  const [detectionsError, setDetectionsError] = useState<string | null>(null)
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [currentFrame, setCurrentFrame] = useState<number>(1)
@@ -69,10 +66,8 @@ export function useDroneMissionReview(
     const fetchDetections = async () => {
       try {
         setIsLoadingDetections(true)
-        setDetections([])
-        setDetectionsError(null)
-        const data = await surveyService.getSurveyDetections(surveyId, currentSurvey || undefined, currentSurvey?.project_id)
-        if (isMounted && useAuthStore.getState().user === user) {
+        const data = await surveyService.getSurveyDetections(surveyId)
+        if (isMounted) {
           setDetections(data)
           if (data.length > 0) {
             setSelectedDetectionId((prev) => {
@@ -81,8 +76,7 @@ export function useDroneMissionReview(
             })
           }
         }
-      } catch (err: any) {
-        if (isMounted && useAuthStore.getState().user === user) setDetectionsError(err.message || 'Không tải được danh sách AI')
+      } catch (err) {
         console.error('Lỗi khi tải danh sách phát hiện AI:', err)
       } finally {
         if (isMounted) {
@@ -94,7 +88,7 @@ export function useDroneMissionReview(
     return () => {
       isMounted = false
     }
-  }, [surveyId, currentSurvey, user])
+  }, [surveyId])
 
   const totalCount = detections.length
   const approvedCount = detections.filter((d) => d.status === 'APPROVED').length
@@ -409,8 +403,6 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     setToastMessage,
     showToast,
     detections,
-    detectionsError,
-    isLoadingDetections,
     totalCount,
     approvedCount,
     rejectedCount,

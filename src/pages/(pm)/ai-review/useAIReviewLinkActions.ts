@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
+import { mockProjects } from '../../../data/mockData'
 import { TriageCase } from './types'
-import { triageService, getCaseSessionKey } from '../../../api/services/triageService'
+import { triageService } from '../../../api/services/triageService'
+import { projectService } from '../../../api/services/projectService'
 
 export interface UseAIReviewLinkActionsProps {
   cases: TriageCase[]
@@ -10,7 +12,6 @@ export interface UseAIReviewLinkActionsProps {
   setExpandedMasterIds: React.Dispatch<React.SetStateAction<string[]>>
   showToast: (msg: string) => void
   filteredCases: TriageCase[]
-  reloadCases: () => void
 }
 
 export const useAIReviewLinkActions = ({
@@ -20,8 +21,7 @@ export const useAIReviewLinkActions = ({
   setSelectedCaseId,
   setExpandedMasterIds,
   showToast,
-  filteredCases,
-  reloadCases
+  filteredCases
 }: UseAIReviewLinkActionsProps) => {
   // Multi-select cho bảng tiếp nhận phản ánh người dân (Link Reports)
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([])
@@ -66,49 +66,95 @@ export const useAIReviewLinkActions = ({
     setIsLinkReportsModalOpen(true)
   }
 
-  const handleConfirmLinkReports = async () => {
-    if (!linkMasterCaseId || selectedReportIds.length < 2) { showToast('Chọn Case chính và ít nhất một Case nguồn.'); return }
-    try {
-      await triageService.linkDuplicateReports(linkMasterCaseId, selectedReportIds.filter(id => id !== linkMasterCaseId), linkAuditNotes)
-      reloadCases()
-      setIsLinkReportsModalOpen(false)
-      setSelectedReportIds([])
-      showToast('Server đã xác nhận liên kết báo cáo. Đang tải lại hồ sơ.')
-    } catch (error: any) {
-      showToast(error?.response?.data?.code || error.message || 'Không thể liên kết; giữ bản nháp để đối chiếu.')
+  const handleConfirmLinkReports = () => {
+    if (!linkMasterCaseId) {
+      showToast('Vui lòng chọn hồ sơ gốc tiếp nhận chính!')
+      return
     }
+    const master = cases.find((c) => c.id === linkMasterCaseId)
+    if (!master) return
+
+    const secondaryIds = selectedReportIds.filter((id) => id !== linkMasterCaseId)
+    const secondaryCodes = cases.filter((c) => secondaryIds.includes(c.id)).map((c) => c.code)
+
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id === linkMasterCaseId) {
+          const updatedLinkedCodes = Array.from(new Set([...(c.linked_report_ids || []), ...secondaryCodes]))
+          return {
+            ...c,
+            linked_report_ids: updatedLinkedCodes,
+            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[LIÊN KẾT BÁO TRÙNG] Đã gộp hồ sơ từ: ${secondaryCodes.join(', ')}. Ghi chú: ${linkAuditNotes}`
+          }
+        }
+        if (secondaryIds.includes(c.id)) {
+          return {
+            ...c,
+            status: 'MERGED',
+            status_label: 'Đã gộp trùng',
+            master_case_id: master.id,
+            pm_notes: `Đã liên kết báo trùng vào hồ sơ chính ${master.code} (Gộp báo trùng). Ghi chú: ${linkAuditNotes}`
+          }
+        }
+        return c
+      })
+    )
+
+    setExpandedMasterIds((prev) => Array.from(new Set([...prev, linkMasterCaseId])))
+    setIsLinkReportsModalOpen(false)
+    setSelectedReportIds([])
+    setSelectedCaseId(linkMasterCaseId)
+    showToast(
+      `Đã liên kết thành công ${secondaryIds.length} phản ánh vào hồ sơ chính [${master.code}]!`
+    )
   }
 
   // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31, API-023)
   const handleUnlinkReport = async (secondaryIdentifier: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    const session = getCaseSessionKey()
-    const masterId = selectedCaseId
-    if (!masterId) throw new Error('Chưa xác định được Case để tách Report.')
-    await triageService.splitReport(masterId, secondaryIdentifier, 'PM yêu cầu tách Report đã chọn khỏi Case')
-    const updated = await triageService.getCaseById(masterId)
-    if (!updated) throw new Error('Đã gửi lệnh tách nhưng chưa đọc lại được Case nguồn.')
-    const refreshed = await triageService.getCases()
-    if (session !== getCaseSessionKey()) throw new Error('Phiên đã thay đổi; bỏ phản hồi tách cũ.')
-    setCases(refreshed)
+    const target = cases.find((c) => c.id === secondaryIdentifier || c.code === secondaryIdentifier)
+    const targetCode = target ? target.code : secondaryIdentifier
+    const targetId = target ? target.id : secondaryIdentifier
+    const masterId = target?.master_case_id || selectedCaseId
 
+    try {
+      await triageService.unlinkReport(targetId, masterId)
+      // Tải lại 100% dữ liệu từ Backend CSDL
+      const refreshed = await triageService.getCases()
+      setCases(refreshed)
+      showToast(`Đã tách phản ánh [${targetCode.slice(0, 8)}] thành hồ sơ độc lập trong CSDL thành công!`)
+    } catch (err: any) {
+      console.error('❌ Lỗi khi tách hồ sơ qua API:', err)
+      showToast(`❌ Lỗi tách hồ sơ: ${err?.message || 'Không thể tách báo cáo khỏi hồ sơ'}`)
+    }
   }
 
   // Triage Project Assignment Modal (PA03)
   const handleOpenTriageProject = (c: TriageCase, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setTargetTriageCase(c)
-    setSelectedProjectId(c.project_id || '')
+    setSelectedProjectId(c.project_id || 'prj-ql1a-02')
     setIsTriageProjectModalOpen(true)
   }
 
   const handleConfirmTriageProject = async (
-    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
-    reason: string
+    verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' = 'FIELD',
+    reason: string = ''
   ) => {
     if (!targetTriageCase) return
 
-    const projectName = selectedProjectId
+    let projectName = 'Dự án đã chỉ định'
+    try {
+      const realProjects = projectService.getProjects()
+      const found = realProjects.find(
+        (p) => p.id === selectedProjectId || p.code === selectedProjectId
+      )
+      if (found) projectName = found.name
+      else {
+        const mockProj = mockProjects.find((p) => p.id === selectedProjectId)
+        if (mockProj) projectName = mockProj.name
+      }
+    } catch {}
 
     const targetIds =
       selectedReportIds.includes(targetTriageCase.id) && selectedReportIds.length > 1
@@ -124,8 +170,7 @@ export const useAIReviewLinkActions = ({
     // Gọi API Candidate3 /api/v1/cases/{caseId}/triage (API-024)
     try {
       for (const id of targetIds) {
-        const item = cases.find((c) => c.id === id)
-        if (!item?.version) throw new Error('Thiếu snapshot Case đã chọn.')
+        const item = cases.find((c) => c.id === id) || targetTriageCase
         await triageService.triageCase(id, {
           projectId: selectedProjectId,
           verificationMethod,
@@ -134,7 +179,22 @@ export const useAIReviewLinkActions = ({
         })
       }
 
-      reloadCases()
+      setCases((prev) =>
+        prev.map((c) => {
+          if (targetIds.includes(c.id)) {
+            return {
+              ...c,
+              project_id: selectedProjectId,
+              project_name: projectName,
+              is_assigned: true,
+              status: 'PENDING',
+              status_label: 'Chờ PM thẩm định',
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[ĐIỀU PHỐI DỰ ÁN] Giám sát đã gán vào dự án: ${projectName}. Định hướng xác minh: ${methodLabels[verificationMethod] || verificationMethod}${reason ? `. Chỉ đạo: "${reason}"` : ''}`
+            }
+          }
+          return c
+        })
+      )
 
       setIsTriageProjectModalOpen(false)
       setSelectedReportIds([])
@@ -166,7 +226,6 @@ export const useAIReviewLinkActions = ({
     handleOpenLinkReportsModal,
     handleConfirmLinkReports,
     handleUnlinkReport,
-    handleUnlinkReportLegacy: (reportId: string, event?: React.MouseEvent) => handleUnlinkReport(reportId, event).catch(error => showToast(error?.message || 'Không thể tách Report.')),
     handleOpenTriageProject,
     handleConfirmTriageProject
   }

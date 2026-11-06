@@ -7,14 +7,6 @@ interface ProtectedRouteProps {
   allowedRole?: RoleCode
 }
 
-const SessionStatus: React.FC = () => {
-  const { status, authError, checkSession } = useAuthStore()
-  if (status === 'checking' || status === 'logging-out') {
-    return <p role="status" className="p-6">{status === 'logging-out' ? 'Đang đăng xuất...' : 'Đang kiểm tra phiên Web...'}</p>
-  }
-  return <div role="alert" className="p-6">{authError || 'Không kiểm tra được phiên Web.'} <button onClick={() => checkSession()}>Thử lại</button></div>
-}
-
 /**
  * Route guard cho các trang nội bộ (/pm/*, /sup/*):
  * 1. Chặn chưa login -> /login
@@ -22,8 +14,7 @@ const SessionStatus: React.FC = () => {
  * 3. role PM vào /sup/* (và ngược lại) -> đá về dashboard đúng vai
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole }) => {
-  const { user, isAuthenticated, status } = useAuthStore()
-  if (['checking', 'logging-out', 'error'].includes(status)) return <SessionStatus />
+  const { user, isAuthenticated } = useAuthStore()
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />
@@ -49,8 +40,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole }) =
  * - nếu không -> đá về dashboard đúng vai
  */
 export const PublicAuthRoute: React.FC = () => {
-  const { user, isAuthenticated, status } = useAuthStore()
-  if (['checking', 'logging-out', 'error'].includes(status)) return <SessionStatus />
+  const { user, isAuthenticated } = useAuthStore()
 
   if (isAuthenticated && user) {
     if (user.must_change_password) {
@@ -70,8 +60,7 @@ export const PublicAuthRoute: React.FC = () => {
  * 2. Đã login nhưng không cần đổi mật khẩu -> đá về dashboard đúng vai
  */
 export const ForcePasswordRoute: React.FC = () => {
-  const { user, isAuthenticated, status } = useAuthStore()
-  if (['checking', 'logging-out', 'error'].includes(status)) return <SessionStatus />
+  const { user, isAuthenticated } = useAuthStore()
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />

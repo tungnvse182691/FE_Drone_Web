@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
@@ -37,9 +37,6 @@ export const useAIReviewActions = ({
 }: UseAIReviewActionsProps) => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const mounted = useRef(true)
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  const isCurrent = () => mounted.current && useAuthStore.getState().user === user
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
@@ -70,8 +67,17 @@ export const useAIReviewActions = ({
     const isFieldIntake = target.source === 'CITIZEN' || target.source === 'PATROL'
     const outcome = isFieldIntake ? 'NEEDS_EVIDENCE' : 'CONFIRMED'
 
-    if (!currentNotes.trim()) { showToast('Vui lòng nhập lý do thẩm định.'); return }
-    const updates = { conclusion_reason: currentNotes.trim() }
+    const updates: Partial<TriageCase> = {
+      status: outcome === 'NEEDS_EVIDENCE' ? 'AWAITING_EVIDENCE' : 'VERIFIED',
+      status_label: outcome === 'NEEDS_EVIDENCE' ? 'Chờ đo đạc hiện trường' : 'Đã xác minh (Verified)',
+      conclusion: outcome === 'NEEDS_EVIDENCE' ? 'NEEDS_EVIDENCE' : 'DEFECT_FOUND',
+      conclusion_reason: currentNotes || (outcome === 'NEEDS_EVIDENCE'
+        ? 'Phản ánh hiện trường hợp lệ. Đã duyệt yêu cầu đo đạc thực tế (Dài x Rộng x Sâu) để lập hồ sơ kỹ thuật.'
+        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'),
+      pm_notes: currentNotes || (outcome === 'NEEDS_EVIDENCE'
+        ? 'Đã duyệt yêu cầu đo đạc hiện trường.'
+        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.')
+    }
 
     try {
       const res = await triageService.concludeCase(target.id, {
@@ -80,15 +86,14 @@ export const useAIReviewActions = ({
         version: target.version
       })
 
-      if (!isCurrent()) return
       // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
       setCases((prev) =>
         prev.map((item) =>
           item.id === target.id || item.code === target.code
             ? {
                 ...item,
-                ...res,
-                project_name: item.project_name
+                ...updates,
+                version: res.version || item.version
               }
             : item
         )
@@ -96,13 +101,11 @@ export const useAIReviewActions = ({
 
       showToast(
         outcome === 'NEEDS_EVIDENCE'
-          ? `Đã ghi nhận yêu cầu bổ sung bằng chứng cho hồ sơ [${target.code}]. Chưa tạo hoặc giao nhiệm vụ đo đạc.`
-          : `Đã ghi nhận kết luận từ server cho hồ sơ [${target.code}].`
+          ? `Đã duyệt hợp lệ hồ sơ [${target.code}]! Đã chuyển sang phân hệ Nhiệm vụ đo đạc hiện trường.`
+          : `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
       )
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi xác minh tới backend:', e)
-      if (!isCurrent()) return
-      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi xác minh tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
@@ -112,7 +115,8 @@ export const useAIReviewActions = ({
     const target = c || selectedCase
     setTargetTriageCase(target)
     setNoDefectReason(
-      target.conclusion_reason || ''
+      target.conclusion_reason ||
+        'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
     )
     setIsNoDefectModalOpen(true)
   }
@@ -133,8 +137,9 @@ export const useAIReviewActions = ({
   }
 
   const handleConfirmNoDefect = async () => {
-    const finalReason = noDefectReason.trim()
-    if (!finalReason) { showToast('Vui lòng nhập lý do kết luận.'); return }
+    const finalReason =
+      noDefectReason.trim() ||
+      'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
     const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
     const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
 
@@ -153,15 +158,14 @@ export const useAIReviewActions = ({
         version: targetTriageCase?.version || selectedCase.version
       })
 
-      if (!isCurrent()) return
       // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
       setCases((prev) =>
         prev.map((c) =>
           c.id === targetId || c.code === targetCode
             ? {
                 ...c,
-                ...res,
-                project_name: c.project_name
+                ...updates,
+                version: res.version || c.version
               }
             : c
         )
@@ -176,8 +180,6 @@ export const useAIReviewActions = ({
       )
     } catch (e: any) {
       console.error('❌ Lỗi khi gửi kết luận tới backend:', e)
-      if (!isCurrent()) return
-      if (e.serverCase) setCases(prev => prev.map(item => item.id === e.serverCase.id ? { ...item, ...e.serverCase, project_name: item.project_name } : item))
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     }
@@ -185,11 +187,64 @@ export const useAIReviewActions = ({
 
   // OUT_OF_SCOPE Conclusion
   const handleConclusionOutOfScope = async (c?: TriageCase) => {
-    showToast('Chưa có contract kết luận OUT_OF_SCOPE hoặc chuyển cơ quan khác. Chưa gửi lệnh; không thay bằng NO_DEFECT.')
+    const target = c || selectedCase
+    const updates: Partial<TriageCase> = {
+      status: 'REJECTED',
+      status_label: 'Ngoài phạm vi',
+      conclusion: 'OUT_OF_SCOPE',
+      conclusion_reason: 'Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.',
+      pm_notes:
+        '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
+    }
+
+    try {
+      const res = await triageService.concludeCase(target.id, {
+        outcome: 'NO_DEFECT',
+        reason: updates.conclusion_reason,
+        version: target.version
+      })
+
+      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
+      setCases((prev) =>
+        prev.map((item) =>
+          item.id === target.id || item.code === target.code
+            ? {
+                ...item,
+                ...updates,
+                version: res.version || item.version
+              }
+            : item
+        )
+      )
+
+      // Đóng modal/drawer thẩm định và trả về danh sách
+      setIsDetailModalOpen?.(false)
+
+      showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
+    } catch (e: any) {
+      console.error('❌ Lỗi khi gửi kết luận ngoài phạm vi tới backend:', e)
+      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
+      showToast(`❌ Lỗi Backend: ${errorMsg}`)
+    }
   }
 
-  const handleResetConclusion = () => {
-    showToast('Chưa có command mở lại kết luận Case trong contract. Không thay đổi trạng thái server; hãy bổ sung bằng chứng theo quy trình được phép.')
+  // Reset conclusion to PENDING for re-evaluating
+  const handleResetConclusion = (c?: TriageCase) => {
+    const target = c || selectedCase
+    setCases((prev) =>
+      prev.map((item) =>
+        item.id === target.id
+          ? {
+              ...item,
+              status: 'PENDING',
+              status_label: 'Chờ thẩm định',
+              conclusion: null,
+              conclusion_reason: undefined
+            }
+          : item
+      )
+    )
+    showToast(`Đã mở lại trạng thái chờ thẩm định cho hồ sơ [${target.code}].`)
   }
 
   // Publish Public Result 
@@ -210,20 +265,17 @@ export const useAIReviewActions = ({
       new Date().toLocaleDateString('vi-VN')
 
     try {
-      const result = await triageService.publishCase(target.id, {
+      await triageService.publishCase(target.id, {
         summary: publishPublicNote,
         version: target.version,
         reportIds: target.report_ids && target.report_ids.length > 0 ? target.report_ids : undefined
       })
 
-      if (!isCurrent()) return
       setCases((prev) =>
         prev.map((c) =>
           c.id === target.id
             ? {
                 ...c,
-                ...result,
-                project_name: c.project_name,
                 is_published: true,
                 published_at: nowTime,
                 public_notice: publishPublicNote
@@ -244,7 +296,42 @@ export const useAIReviewActions = ({
   }
 
   const handleExecuteMerge = () => {
-    showToast('Gợi ý trùng không tự gộp hồ sơ. Hãy chọn các Case và dùng Liên kết báo cáo để gửi command có version hợp lệ.')
+    const selectedDups = selectedCase.cluster_duplicates?.filter((d) => d.selected) || []
+    if (selectedDups.length === 0) {
+      showToast('Vui lòng chọn ít nhất 1 hồ sơ trùng lặp để gộp!')
+      return
+    }
+
+    const dupCodes = selectedDups.map((d) => d.code)
+    setCases((prev) =>
+      prev.map((c) => {
+        if (dupCodes.includes(c.code)) {
+          return {
+            ...c,
+            status: 'MERGED',
+            status_label: 'Đã gộp trùng',
+            master_case_id: selectedCase.id,
+            pm_notes: `Đã tự động gộp dữ liệu vào hồ sơ chính ${selectedCase.code}`
+          }
+        }
+        if (c.id === selectedCase.id) {
+          const updatedDups = (c.cluster_duplicates || []).map((dup) =>
+            dupCodes.includes(dup.code) ? { ...dup, selected: false, is_merged: true } : dup
+          )
+          const updatedLinked = Array.from(new Set([...(c.linked_report_ids || []), ...dupCodes]))
+          return {
+            ...c,
+            linked_report_ids: updatedLinked,
+            cluster_duplicates: updatedDups,
+            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[GỘP CỤM SPATIAL] Đã tích hợp bằng chứng từ ${dupCodes.join(', ')}`
+          }
+        }
+        return c
+      })
+    )
+    setExpandedMasterIds((prev) => Array.from(new Set([...prev, selectedCase.id])))
+    setIsMergeModalOpen(false)
+    showToast(`Gộp thành công ${selectedDups.length} phản ánh lân cận vào hồ sơ gốc [${selectedCase.code}]!`)
   }
 
   return {

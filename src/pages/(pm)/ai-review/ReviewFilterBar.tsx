@@ -3,9 +3,6 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase, ActiveTabFilter } from './types'
 
 export interface ReviewFilterBarProps {
-  hideAutoTests: boolean
-  setHideAutoTests: (value: boolean) => void
-  autoTestCount: number
   cases: TriageCase[]
   projectsList?: Array<{ id: string; code: string; name: string }>
   activeTab: ActiveTabFilter
@@ -27,7 +24,6 @@ export interface ReviewFilterBarProps {
 }
 
 export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
-  hideAutoTests, setHideAutoTests, autoTestCount,
   cases,
   projectsList,
   activeTab,
@@ -49,10 +45,6 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
 }) => {
   return (
     <div className="bg-white rounded-2xl border border-[#E2E5E9] shadow-2xs p-4 space-y-3.5">
-      <label className="flex items-center gap-2 text-xs text-slate-600">
-        <input type="checkbox" checked={hideAutoTests} onChange={event => setHideAutoTests(event.target.checked)} />
-        Ẩn bộ AUTO kiểm thử đã kiểm kê ({autoTestCount}) — chỉ lọc hiển thị, không xóa dữ liệu
-      </label>
       {/* 1. Horizontal Status Tabs (Spec: bo tròn 999px, padding 10px 18px, viền #E2E5E9, tab active nền đen #1A1D20 chữ trắng) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <button
@@ -102,7 +94,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          Chờ bổ sung bằng chứng <span className="ml-1 opacity-75">({surveyCount})</span>
+          Cần đo đạc <span className="ml-1 opacity-75">({surveyCount})</span>
         </button>
         <button
           onClick={() => setActiveTab('CRITICAL')}
@@ -162,8 +154,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             <option value="CRITICAL">Khẩn cấp</option>
             <option value="HIGH">Cao</option>
             <option value="MEDIUM">Vừa</option>
-            <option value="LOW">Thấp</option>
-            <option value="UNKNOWN">Chưa xác định</option>
+            <option value="LOW">Bình thường</option>
           </select>
         </div>
 
@@ -176,12 +167,10 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
             className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-gold font-medium"
           >
             <option value="ALL">Tất cả dự án</option>
-            <option value="UNASSIGNED">Chưa phân dự án ({cases.filter(c => !c.project_id).length})</option>
-            <option value="ASSIGNED">Đã phân dự án ({cases.filter(c => !!c.project_id).length})</option>
             {/* 1. Danh sách dự án thực tế từ CSDL */}
             {projectsList && projectsList.length > 0
               ? projectsList.map((p) => (
-                  <option key={p.id} value={p.id}>
+                  <option key={p.id} value={p.name}>
                     {p.name} ({p.code})
                   </option>
                 ))
@@ -203,7 +192,6 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
         <div className="flex items-end">
           <button
             onClick={() => {
-              setHideAutoTests(false)
               setSourceFilter('ALL')
               setLineTypeFilter('ALL')
               setProjectFilter('ALL')

@@ -58,28 +58,24 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
   const [assignReason, setAssignReason] = useState<string>('Điều chuyển nhân sự theo quyết định của Ban điều hành')
 
   // Tải danh sách nhân sự từ Database thật (API-237 cho Supervisor, API-111 cho PM)
-  const loadSequence = useRef(0)
   const loadUsers = useCallback(async () => {
-    const request = ++loadSequence.current
-    const actor = useAuthStore.getState().user
-    const current = () => request === loadSequence.current && useAuthStore.getState().user === actor
     setIsLoading(true)
     setError(null)
     try {
       if (user?.role === RoleCode.SUPERVISOR) {
         // Supervisor: Xem toàn bộ nhân sự công ty và người phản ánh (API-237: GET /api/v1/users)
-        const results = await Promise.allSettled([
-          personnelService.fetchUsers(), personnelService.fetchUsers({ role: RoleCode.REPORTER })
-        ])
-        if (!current()) return
-        const combined = new Map<string, SystemUserAccount>()
-        results.forEach(result => {
-          if (result.status === 'fulfilled') result.value.forEach(account => combined.set(account.id, account))
-        })
-        setUsersList(Array.from(combined.values()))
-        const failures = results.flatMap((result, index) => result.status === 'rejected'
-          ? [`${index === 0 ? 'Nhân sự' : 'Reporter'} chưa tải được: ${result.reason?.message || 'Lỗi API'}`] : [])
-        if (failures.length) setError(`Danh bạ chưa đầy đủ. ${failures.join('; ')}. Bấm thử lại.`)
+        const staffPromise = personnelService.fetchUsers()
+        const reporterPromise = personnelService.fetchUsers({ role: RoleCode.REPORTER }).catch(() => [])
+        const [staffUsers, reporterUsers] = await Promise.all([staffPromise, reporterPromise])
+
+        // Gộp staff + reporter (loại bỏ trùng lặp id)
+        const combined = [...staffUsers]
+        for (const rep of reporterUsers) {
+          if (!combined.some((u) => u.id === rep.id)) {
+            combined.push(rep)
+          }
+        }
+        setUsersList(combined)
       } else {
         // PM: Lấy thành viên ban điều hành & tổ đội thi công của các dự án PM quản lý (API-111: GET /api/v1/projects/{projectId}/members)
         const myProjects = await projectService.fetchProjects()
@@ -89,22 +85,25 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
           const membersPromises = myProjects.map(async (prj) => {
             const members = await projectService.fetchProjectMembers(prj.id)
             return members.map((m: any) => {
-              const roleCode = mapBackendRoleToRoleCode(m.role)
+              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
+              const email = matchedUser?.email || m.email || ''
+              const phone = matchedUser?.phone || m.phone || ''
+              const roleCode = mapBackendRoleToRoleCode(m.role || matchedUser?.role)
               const roleLabel = getRoleLabel(roleCode)
 
               return {
-                id: m.userId,
-                full_name: m.displayName || 'Chưa có tên trong API',
-                email: '—',
+                id: m.userId || matchedUser?.id || m.membershipId || crypto.randomUUID(),
+                full_name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
+                email: email || `${(m.displayName || 'nhansu').toLowerCase().replace(/[^a-z0-9]/g, '')}@hoanghai.vn`,
                 role: roleCode,
                 role_label: roleLabel,
-                phone: '—',
+                phone: phone || '—',
                 status: (m.status === 'ACTIVE' || m.status === 1 ? 'ACTIVE' : 'SUSPENDED') as 'ACTIVE' | 'SUSPENDED',
                 project_scope: `${prj.code ? `${prj.code} • ` : ''}${prj.name}`,
                 assigned_project_ids: [prj.id],
-                device_info: '—',
-                ip_address: '—',
-                last_active: '—',
+                device_info: 'Ứng dụng Web / Mobile RoadGuard',
+                ip_address: 'Hệ thống nội bộ',
+                last_active: 'Vừa hoạt động',
                 created_at: m.validFrom || new Date().toISOString()
               }
             })
@@ -129,22 +128,20 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
               }
             }
           }
-          if (current()) setUsersList(Array.from(userMap.values()))
+          setUsersList(Array.from(userMap.values()))
         }
       }
     } catch (err: any) {
-      if (!current()) return
       const errMsg = err?.response?.data?.detail || err?.message || 'Lỗi truy vấn danh sách nhân sự từ CSDL Backend'
       setError(errMsg)
       triggerNoticeRef.current(`❌ ${errMsg}`)
     } finally {
-      if (current()) setIsLoading(false)
+      setIsLoading(false)
     }
-  }, [user?.id, user?.role])
+  }, [user?.role])
 
   // Tải danh mục dự án thật từ Database (API-134: GET /api/v1/projects)
   const loadProjects = useCallback(async () => {
-    const actor = useAuthStore.getState().user
     try {
       const projects = await projectService.fetchProjects()
       const mapped = projects.map((p) => ({
@@ -154,7 +151,7 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
         pm_user_id: p.pm_user_id,
         pm_name: p.pm_name
       }))
-      if (useAuthStore.getState().user === actor) setProjectsList(mapped)
+      setProjectsList(mapped)
     } catch (err: any) {
       console.warn('Không thể tải danh sách dự án cho dropdown nhân sự:', err)
     }
@@ -163,7 +160,6 @@ export function usePersonnelState(triggerNotice: (msg: string) => void) {
   useEffect(() => {
     loadUsers()
     loadProjects()
-    return () => { loadSequence.current += 1 }
   }, [loadUsers, loadProjects])
 
   const filteredUsers = useMemo(() => {

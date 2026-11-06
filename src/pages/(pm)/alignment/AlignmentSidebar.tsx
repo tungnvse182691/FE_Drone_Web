@@ -1,5 +1,4 @@
 import React from 'react'
-import { Icon } from '../../../components/ui/Icon'
 import {
   SplitSquareVertical,
   Sliders,
@@ -61,15 +60,7 @@ export interface AlignmentSidebarProps {
   isSupervisor?: boolean
 }
 
-type UnavailableAlignmentSidebarProps = { readOnly: true; rightTab: AlignmentSidebarProps['rightTab']; onSetRightTab: AlignmentSidebarProps['onSetRightTab'] }
-
-export const AlignmentSidebar: React.FC<AlignmentSidebarProps | UnavailableAlignmentSidebarProps> = (props) => {
-  if ('readOnly' in props) {
-    const labels = { SEGMENTS: 'Phân đoạn', WIDTH_PROFILE: 'Bề rộng (m)', SLABS: 'Tấm & Khe' }
-    const fields = props.rightTab === 'SEGMENTS' ? ['Lý trình bắt đầu', 'Lý trình kết thúc', 'Khoảng chia đoạn', 'Tuyến nhánh'] : props.rightTab === 'WIDTH_PROFILE' ? ['Bề rộng mặt đường', 'Tổng diện tích mặt đường', 'Bề rộng bình quân'] : ['Chiều dài tấm', 'Chiều dày tấm', 'Khe co giãn', 'Khe giãn nở', 'Kích thước khe']
-    return <aside className="xl:col-span-4 flex flex-col gap-3 min-w-0"><div className="bg-white rounded-xl p-4 shadow-2xs border border-brand-border space-y-4"><div role="tablist" aria-label="Thông số tuyến" className="flex flex-wrap items-center bg-slate-100 p-1 rounded-lg gap-1">{(Object.keys(labels) as Array<keyof typeof labels>).map(tab => <button type="button" role="tab" aria-selected={props.rightTab === tab} key={tab} onClick={() => props.onSetRightTab(tab)} className={`flex-1 py-1.5 px-2 rounded-md text-xs font-semibold ${props.rightTab === tab ? 'bg-white text-brand-dark shadow-2xs' : 'text-slate-500'}`}>{labels[tab]}</button>)}</div><section role="tabpanel" className="space-y-3"><h2 className="font-bold text-xs text-brand-dark flex items-center gap-2"><Icon name="tune" size={18} />{props.rightTab === 'SEGMENTS' ? 'Phân đoạn & Tuyến nhánh' : props.rightTab === 'WIDTH_PROFILE' ? 'Hồ sơ bề rộng mặt đường' : 'Cấu hình tấm & Khe nối BTXM'}</h2><fieldset disabled className="grid sm:grid-cols-2 xl:grid-cols-1 gap-3">{fields.map(label => <label key={label} className="text-xs text-slate-500">{label}<input placeholder="Chưa cập nhật" className="w-full block mt-1 border border-slate-200 rounded-lg p-2 text-xs bg-slate-50" /></label>)}</fieldset><div className="flex flex-wrap gap-2">{(props.rightTab === 'SEGMENTS' ? ['Chia tự động', 'Thêm phân đoạn', 'Thêm tuyến nhánh'] : props.rightTab === 'WIDTH_PROFILE' ? ['Cập nhật bề rộng'] : ['Cập nhật tấm & Khe']).map(label => <button type="button" key={label} disabled className="px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-400">{label}</button>)}</div><p className="text-xs text-slate-500">Chưa có hồ sơ kỹ thuật đã xác minh để chỉnh sửa tại đây.</p></section></div><div className="bg-white border border-brand-border rounded-xl p-4 grid grid-cols-2 gap-3 text-xs"><div><p className="text-slate-500">Phân đoạn</p><p className="mt-1">Chưa cập nhật</p></div><div><p className="text-slate-500">Chiều dài</p><p className="mt-1">Chưa cập nhật</p></div></div></aside>
-  }
-  const {
+export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
   onSetRightTab,
   segments,
@@ -116,7 +107,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps | UnavailableAlign
   mainlineLengthKm,
   alignmentStatus,
   isSupervisor
-  } = props
+}) => {
   return (
     <div className="xl:col-span-4 flex flex-col gap-3">
       <div className="bg-white rounded-xl p-4 shadow-2xs border border-brand-border flex flex-col gap-3">

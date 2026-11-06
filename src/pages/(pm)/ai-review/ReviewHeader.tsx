@@ -41,7 +41,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
         </nav>
         <div className="flex items-center gap-2 text-slate-500 text-xs font-medium bg-white px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Nguồn hồ sơ: API</span>
+          <span>Đồng bộ CSDL: Trực tuyến</span>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl font-bold text-brand-dark tracking-tight">
-              {isSupervisor ? 'Hộp thư tiếp nhận và điều phối phản ánh' : 'Hộp Thư Tiếp Nhận & Sàng Lọc Lỗi'}
+              {isSupervisor ? 'Hộp Thư Giám Sát Khiếm Khuyết AI' : 'Hộp Thư Tiếp Nhận & Sàng Lọc Lỗi'}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
               {pendingCount} ca chờ xác minh

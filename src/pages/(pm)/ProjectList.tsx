@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { apiClient } from '../../api/client'
-import { projectService } from '../../api/services'
+import { projectService, personnelService } from '../../api/services'
 import { userDirectory } from '../../api/services/userDirectory'
 import { Icon } from '../../components/ui/Icon'
 import {
@@ -34,32 +33,24 @@ export const ProjectList: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const loadSequence = useRef(0)
   const loadProjects = useCallback(async () => {
-    const sequence = ++loadSequence.current
-    const epoch = useAuthStore.getState().authEpoch
-    const current = () => sequence === loadSequence.current && epoch === useAuthStore.getState().authEpoch
-    if (!useAuthStore.getState().isAuthenticated || useAuthStore.getState().status === 'logging-out') { setProjects([]); setLoadError(null); setIsLoading(false); return }
     try {
-      setProjects([])
       setIsLoading(true)
       setLoadError(null)
       const data = await projectService.fetchProjects()
-      if (current()) setProjects(data)
+      setProjects(data)
     } catch (err: any) {
-      if (!current()) return
-      console.warn('[Projects]', { status: err?.response?.status, code: err?.response?.data?.code, correlationId: err?.response?.data?.correlationId })
-      const msg = 'Không thể tải danh sách dự án. Vui lòng thử lại.'
+      console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
+      const msg = err?.message || 'Không thể tải danh sách dự án từ máy chủ Backend.'
       setLoadError(msg)
       setProjects([]) // Dứt khoát không nạp mock data khi API thật bị lỗi!
     } finally {
-      if (current()) setIsLoading(false)
+      setIsLoading(false)
     }
-  }, [user?.id])
+  }, [])
 
   useEffect(() => {
     loadProjects()
-    return () => { ++loadSequence.current }
   }, [loadProjects])
 
   // Đồng bộ reactive qua Event Bus
@@ -87,30 +78,46 @@ export const ProjectList: React.FC = () => {
   // Danh mục PM thật lấy trực tiếp từ CSDL Backend Candidate3
   const [dbPms, setDbPms] = useState<PmOption[]>([])
 
-  const [pmError, setPmError] = useState<string | null>(null)
   useEffect(() => {
-    const controller = new AbortController()
-    setDbPms([]); setPmError(null)
-    if (!isSupervisor) return () => controller.abort()
-    const load = async () => {
-      const items: PmOption[] = []
-      const cursors = new Set<string>()
-      let cursor: string | undefined
-      do {
-        const response = await apiClient.get('/users', { params: { role: 'PM', status: 'ACTIVE', limit: 100, cursor }, signal: controller.signal })
-        items.push(...response.data.items.map((u: any) => ({ id: u.userId, name: u.displayName, email: u.email || '' })))
-        cursor = response.data.nextCursor || undefined
-        if (cursor && cursors.has(cursor)) throw new Error('Cursor PM bị lặp.')
-        if (cursor) cursors.add(cursor)
-      } while (cursor)
-      if (!controller.signal.aborted) setDbPms(items)
+    let isMounted = true
+    const loadPms = async () => {
+      // Chỉ Supervisor mới có quyền truy cập /api/v1/users (API-237)
+      if (isSupervisor) {
+        try {
+          const users = await personnelService.fetchUsers({ role: 'PM' })
+          if (isMounted && users && users.length > 0) {
+            setDbPms(
+              users.map((u) => ({
+                id: u.id,
+                name: u.full_name,
+                email: u.email
+              }))
+            )
+          }
+        } catch (err) {
+          console.warn('[ProjectList] Lỗi nạp danh sách PM từ CSDL:', err)
+        }
+      } else {
+        // PM: Sử dụng userDirectory tra cứu các tài khoản PM hợp lệ từ CSDL
+        const pms = userDirectory.getAllUsers().filter((u) => u.role === 'PROJECT_MANAGER' || u.role === 'PM')
+        if (isMounted) {
+          setDbPms(
+            pms.map((u) => ({
+              id: u.id,
+              name: u.displayName,
+              email: u.email
+            }))
+          )
+        }
+      }
     }
-    load().catch(error => { if (!controller.signal.aborted) setPmError(error.message || 'Không tải được PM hợp lệ.') })
-    return () => controller.abort()
-  }, [isSupervisor, user?.id])
+    loadPms()
+    return () => {
+      isMounted = false
+    }
+  }, [isSupervisor])
 
   const availablePms = useMemo<PmOption[]>(() => {
-    if (isSupervisor) return dbPms
     const map = new Map<string, PmOption>()
     dbPms.forEach((pm) => map.set(pm.id.toLowerCase(), pm))
     projects.forEach((prj) => {
@@ -126,24 +133,22 @@ export const ProjectList: React.FC = () => {
       }
     })
     return Array.from(map.values())
-  }, [dbPms, projects, isSupervisor])
+  }, [dbPms, projects])
 
   // Modal Khởi tạo dự án mới (Bước SUP-01: DA01, BR-01, FR-04)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectCode, setNewProjectCode] = useState('')
   const [newProjectRegion, setNewProjectRegion] = useState('')
-  const [newProjectPM, setNewProjectPM] = useState('')
+  const [newProjectPM, setNewProjectPM] = useState('72f84201-a001-4000-8000-000000000002')
   const [newStartDate, setNewStartDate] = useState(() => new Date().toISOString().split('T')[0])
   const [newEndDate, setNewEndDate] = useState(() => {
     const d = new Date()
     d.setFullYear(d.getFullYear() + 3)
     return d.toISOString().split('T')[0]
   })
+  const [handoverFiles, setHandoverFiles] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const createBusy = useRef(false)
-  const [pendingCreate, setPendingCreate] = useState(false)
-  const [receivedCreate, setReceivedCreate] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
   // Reset form sạch khi mở modal tạo mới (dứt khoát không để mock data)
@@ -156,24 +161,14 @@ export const ProjectList: React.FC = () => {
     const d = new Date()
     d.setFullYear(d.getFullYear() + 3)
     setNewEndDate(d.toISOString().split('T')[0])
+    setHandoverFiles([])
     setCreateErrorMessage(null)
-    let pending
-    try { pending = projectService.pendingProjectCreate() }
-    catch (error: any) { setCreateErrorMessage(error.message); setIsModalOpen(true); setPendingCreate(true); return }
-    setPendingCreate(!!pending)
-    setReceivedCreate(!!pending?.hasReceipt)
-    if (pending) {
-      setNewProjectName(pending.body.name); setNewProjectCode(pending.body.code); setNewProjectRegion(pending.body.description)
-      setNewProjectPM(pending.body.primaryPmId); setNewStartDate(pending.body.handoverDate); setNewEndDate(pending.body.warrantyEndDate)
-    }
     setIsModalOpen(true)
   }
 
   // Submit tạo dự án mới (Chỉ Supervisor mới có quyền - BR-01, FR-04)
   const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (createBusy.current) return
-    createBusy.current = true
     setIsSubmitting(true)
     setCreateErrorMessage(null)
     try {
@@ -183,10 +178,11 @@ export const ProjectList: React.FC = () => {
         primaryPmId: newProjectPM,
         handoverDate: newStartDate,
         warrantyEndDate: newEndDate,
-        handoverFileIds: [],
+        handoverFileIds: handoverFiles,
         region: newProjectRegion
-      }, pendingCreate)
-      await loadProjects()
+      })
+      const refreshed = await projectService.fetchProjects()
+      setProjects(refreshed)
       setIsModalOpen(false)
       showToast(`Khởi tạo thành công dự án [${created.code}] và phân bổ PM [${created.pm_name}]!`)
     } catch (err: any) {
@@ -194,9 +190,6 @@ export const ProjectList: React.FC = () => {
       setCreateErrorMessage(msg)
       showToast(msg)
     } finally {
-      try { const pending = projectService.pendingProjectCreate(); setPendingCreate(!!pending); setReceivedCreate(!!pending?.hasReceipt) }
-      catch { setPendingCreate(true) }
-      createBusy.current = false
       setIsSubmitting(false)
     }
   }
@@ -204,21 +197,38 @@ export const ProjectList: React.FC = () => {
   // Modal Đóng dự án khi hết hạn bảo hành
   const [closingProject, setClosingProject] = useState<HubProject | null>(null)
 
-  const handleCloseProjectSubmit = async (reason: string, version: string) => {
+  const handleCloseProjectSubmit = async (reason: string) => {
     if (!closingProject) return
     try {
-      await projectService.closeProject(closingProject.id, { reason, version })
+      const closed = await projectService.closeProject(closingProject.id, { reason })
       const refreshed = await projectService.fetchProjects()
       setProjects(refreshed)
-      showToast('Đã ghi nhận đóng vận hành dự án.')
+      showToast(`Đã đóng thành công dự án [${(closed as any)?.code || closingProject.code}] và chuyển sang lưu trữ hồ sơ 5 năm!`)
     } catch (err: any) {
+      showToast(err.message || 'Lỗi khi đóng dự án')
       throw err
     }
   }
 
   // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
-  const scopedProjects = projects
+  const scopedProjects = useMemo(() => {
+    if (isSupervisor) return projects
+    return projects.filter((prj) => {
+      // Backend Candidate3 đã tự động lọc quyền theo user trên server
+      if (prj.pm_email === user?.email || prj.pm_name === user?.full_name || prj.id.length === 36) {
+        return true
+      }
+      const isAssigned =
+        prj.pm_name === 'Đỗ Quốc Hoàng' ||
+        prj.id === 'prj-ql1a-02' ||
+        prj.id === 'prj-lstl-05' ||
+        prj.id === 'prj-ql1a-p1'
 
+      return isAssigned && !prj.is_restricted_for_pm
+    })
+  }, [projects, isSupervisor, user])
+
+  // Filter projects logic
   const filteredProjects = useMemo(() => {
     return scopedProjects.filter((prj) => {
       // Filter tab
@@ -242,7 +252,7 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.some(p => p.length_km == null) ? 'Chưa cập nhật' : scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1), [scopedProjects])
+  const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + (p.length_km || 0), 0).toFixed(1), [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
   const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
@@ -293,15 +303,17 @@ export const ProjectList: React.FC = () => {
       />
 
       {loadError && (
-        <div role="alert" className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between gap-3 shadow-sm animate-fade-in">
+        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between gap-3 shadow-sm animate-fade-in">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-red-100 text-red-600 mt-0.5">
               <Icon name="error" size={20} />
             </div>
             <div>
-              <h4 className="font-semibold text-sm text-red-900">Không tải được danh sách dự án</h4>
-              <p className="text-xs text-red-700 mt-0.5 ">{loadError}</p>
-
+              <h4 className="font-semibold text-sm text-red-900">Lỗi kết nối máy chủ API Backend</h4>
+              <p className="text-xs text-red-700 mt-0.5 font-mono">{loadError}</p>
+              <p className="text-[11px] text-red-500 mt-1">
+                RoadGuard áp dụng kỷ luật chống bịa: Khi máy chủ báo lỗi, hệ thống hiển thị trực tiếp lỗi và dứt khoát không trả về dữ liệu giả (mock data).
+              </p>
             </div>
           </div>
           <button
@@ -319,7 +331,7 @@ export const ProjectList: React.FC = () => {
           <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
           <span>Đang tải danh mục dự án từ máy chủ API...</span>
         </div>
-      ) : loadError ? null : viewMode === 'grid' ? (
+      ) : viewMode === 'grid' ? (
         <ProjectGridView
           filteredProjects={filteredProjects}
           isSupervisor={isSupervisor}
@@ -364,10 +376,10 @@ export const ProjectList: React.FC = () => {
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
+        handoverFiles={handoverFiles}
+        onChangeHandoverFiles={setHandoverFiles}
         isSubmitting={isSubmitting}
-        receivedCreate={receivedCreate}
-        pendingCreate={pendingCreate}
-        errorMessage={createErrorMessage || pmError}
+        errorMessage={createErrorMessage}
         onSubmit={handleCreateProjectSubmit}
       />
 

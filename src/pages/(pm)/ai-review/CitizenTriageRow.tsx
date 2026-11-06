@@ -239,7 +239,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
                 : 'bg-slate-50 text-slate-600 border-slate-200'
             }`}
           >
-            {item.severity === 'UNKNOWN' ? 'Chưa có dữ liệu' : item.severity === 'CRITICAL'
+            {item.severity === 'CRITICAL'
               ? 'Khẩn cấp'
               : item.severity === 'HIGH'
               ? 'Cao'

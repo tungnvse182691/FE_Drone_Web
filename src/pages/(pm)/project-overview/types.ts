@@ -15,10 +15,6 @@ export interface ProjectMember {
   role_title: string
   role_badge: string
   avatar: string
-  membership_status?: string
-  valid_from?: string
-  valid_to?: string | null
-  membership_version?: string
   is_online?: boolean
   authority: string
   contact: string

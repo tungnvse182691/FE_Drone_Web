@@ -1,4 +1,3 @@
-import type { components } from '../../../types/api.generated'
 import React, { useState } from 'react'
 import { type SurveyMissionItem as SurveyMission } from '../../../api/services'
 
@@ -10,30 +9,14 @@ interface SurveyCardProps {
   onOpenSimulator: (mission: SurveyMission) => void
 }
 
-type ServerSurveyCardProps = {
-  serverRecord: components['schemas']['SurveyPlanV2ResponseDto'] | components['schemas']['SurveyTaskV2ResponseDto']
-  projectName?: string
-  operatorName?: string
-  onViewProgress: () => void
-}
-
-export const SurveyCard: React.FC<SurveyCardProps | ServerSurveyCardProps> = (props) => {
+export const SurveyCard: React.FC<SurveyCardProps> = ({
+  survey,
+  isHighlighted = false,
+  basePath,
+  onNavigate,
+  onOpenSimulator
+}) => {
   const [isHovered, setIsHovered] = useState(false)
-  if ('serverRecord' in props) {
-    const { serverRecord, projectName, operatorName, onViewProgress } = props
-    const plannedAt = 'plannedAt' in serverRecord ? serverRecord.plannedAt : undefined
-    return <div onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} className="rounded-[20px] overflow-hidden flex flex-col justify-between border border-slate-200 bg-gradient-to-b from-[#FFFDF5] to-white shadow-2xs" style={{ transform: isHovered ? 'translateY(-4px)' : 'none', transition: 'all 0.3s ease' }}>
-      <div className="h-1 w-full bg-gradient-to-r from-[#C9A227] to-amber-200" />
-      <div className="p-[20px_22px] flex flex-col justify-between flex-1 gap-3.5">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-2.5 min-w-0"><span className="w-2.5 h-2.5 rounded-full bg-[#C9A227] ring-4 ring-amber-100 shrink-0" /><h3 className="text-sm font-bold text-slate-900 tracking-tight">{projectName || 'Chưa cập nhật'}</h3></div><span className="rounded-full text-[11px] font-bold px-3.5 py-1 border border-slate-200 bg-slate-50 text-slate-600">{serverRecord.status || 'Chưa cập nhật'}</span></div>
-        <div className="text-xs text-slate-500 font-medium flex flex-wrap gap-x-2 gap-y-1"><span>Người thực hiện: {operatorName || 'Chưa cập nhật'}</span><span>•</span><span>{plannedAt ? new Date(plannedAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}</span></div>
-        <p className="text-xs text-slate-600 leading-relaxed">Lý trình khảo sát: Chưa cập nhật</p>
-        <div className="grid grid-cols-3 gap-2 text-xs">{['Hình ảnh', 'Độ phủ', 'Phát hiện AI'].map(label => <div key={label} className="p-2.5 rounded-lg border border-slate-100 bg-slate-50"><p className="text-[10px] text-slate-500">{label}</p><p className="mt-1 text-slate-600">Chưa cập nhật</p></div>)}</div>
-        <div className="border-t border-slate-100 pt-3 flex flex-wrap items-center justify-between gap-3 mt-auto"><span className="font-semibold text-xs text-slate-700 break-all">{serverRecord.id}</span><button type="button" onClick={onViewProgress} className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold shadow-xs">Xem tiến độ</button></div>
-      </div>
-    </div>
-  }
-  const { survey, isHighlighted = false, basePath, onNavigate, onOpenSimulator } = props
 
   const isCompleted = survey.status === 'BASELINE_LOCKED'
   const isNeedReview = survey.status === 'PENDING_AI_REVIEW'

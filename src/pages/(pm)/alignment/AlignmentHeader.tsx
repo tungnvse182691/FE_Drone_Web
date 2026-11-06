@@ -22,15 +22,7 @@ export interface AlignmentHeaderProps {
   onLockAlignment: () => void
 }
 
-type ServerAlignmentHeaderProps = { serverView: true; basePath: string; projectName?: string; statusLabel?: string; isSupervisor: boolean; onOpenImport: () => void; canImport: boolean }
-
-export const AlignmentHeader: React.FC<AlignmentHeaderProps | ServerAlignmentHeaderProps> = (props) => {
-  const navigate = useNavigate()
-  if (!('serverView' in props)) return <LegacyAlignmentHeader {...props} />
-  return <header className="bg-white rounded-xl px-5 py-3.5 shadow-2xs border border-brand-border flex flex-col xl:flex-row xl:items-center justify-between gap-3"><div className="flex flex-col gap-2 min-w-0"><nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500"><button type="button" onClick={() => navigate(`${props.basePath}/dashboard`)}>Trang chủ</button><Icon name="chevron_right" size={14} /><button type="button" onClick={() => navigate(`${props.basePath}/projects`)}>Dự án</button><Icon name="chevron_right" size={14} /><span>Thiết lập tim tuyến &amp; Phân đoạn</span></nav><h1 className="text-lg font-bold text-brand-dark tracking-tight">Tim tuyến và geometry đã xác nhận</h1><div className="flex flex-wrap gap-2 text-xs text-slate-500"><span className="bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl">{props.projectName || 'Chọn dự án được phép đọc'}</span><span className="bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">{props.statusLabel || 'Chưa cập nhật'}</span></div></div><div className="flex flex-wrap gap-2 text-xs">{!props.isSupervisor && <button type="button" disabled={!props.canImport} onClick={props.onOpenImport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-slate-700"><Icon name="upload_file" size={16} />Nhập tim tuyến</button>}<button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-2 text-slate-400">{props.isSupervisor ? 'Phê duyệt tim tuyến' : 'Trình duyệt tim tuyến'}</button><button type="button" disabled className="rounded-lg border border-slate-200 px-3 py-2 text-slate-400">{props.isSupervisor ? 'Yêu cầu chỉnh sửa' : 'Xóa tuyến'}</button></div></header>
-}
-
-const LegacyAlignmentHeader: React.FC<AlignmentHeaderProps> = ({
+export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   basePath,
   alignmentStatus,
   activeProject,

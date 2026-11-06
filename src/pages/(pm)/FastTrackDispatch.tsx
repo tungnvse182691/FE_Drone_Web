@@ -7,7 +7,6 @@ import { Icon } from '../../components/ui/Icon'
 import { PolicySection } from './fast-track/PolicySection'
 import { DispatchSection } from './fast-track/DispatchSection'
 import { FastTrackModals } from './fast-track/FastTrackModals'
-import { FastTrackBanner } from './fast-track/FastTrackBanner'
 import { FastTrackHeader } from './fast-track/FastTrackHeader'
 import { RoadCoverageConfirmModal } from './fast-track/RoadCoverageConfirmModal'
 import { useFastTrackState } from './fast-track/useFastTrackState'
@@ -108,8 +107,6 @@ export const FastTrackDispatch: React.FC = () => {
           el?.scrollIntoView({ behavior: 'smooth' })
         }}
       />
-
-      <FastTrackBanner />
 
       {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection

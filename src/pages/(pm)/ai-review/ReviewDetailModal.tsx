@@ -11,10 +11,10 @@ export interface ReviewDetailModalProps {
   detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
   setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
   drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: TriageCase['severity']
-  setCurrentSeverity: (s: TriageCase['severity']) => void
-  currentUrgency: TriageCase['urgency']
-  setCurrentUrgency: (u: TriageCase['urgency']) => void
+  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -29,8 +29,7 @@ export interface ReviewDetailModalProps {
   onOpenRequestSurveyModal: (c?: TriageCase) => void
   onOpenPublishModal: (c?: TriageCase) => void
   onNavigateFastTrack: (c?: TriageCase) => void
-  onUnlinkReport: (reportId: string) => void
-  onSplitReport?: (reportId: string) => Promise<void>
+  onUnlinkReport: (code: string) => void
   onOpenTriageProject: (c: TriageCase) => void
   onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void

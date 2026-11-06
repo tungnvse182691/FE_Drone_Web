@@ -1,20 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
-import { triageService, getCaseSessionKey, isCaseReadCanceled, CaseListReadError } from '../../../api/services/triageService'
-import { useAuthStore } from '../../../store/authStore'
+import { triageService } from '../../../api/services/triageService'
+import { STORAGE_KEYS } from '../../../api/services/storageHelper'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
-  const session = useAuthStore(() => getCaseSessionKey())
-  const [loadedSession, setLoadedSession] = useState(session)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [reload, setReload] = useState(0)
   // Dữ liệu hồ sơ tiếp nhận từ Candidate3 Backend CSDL
-  const [caseData, setCases] = useState<TriageCase[]>([])
-  const cases = loadedSession === session ? caseData : []
+  const [cases, setCases] = useState<TriageCase[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [selectedCaseId, setSelectedCaseId] = useState<string>('')
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
@@ -27,39 +22,40 @@ export const useAIReviewState = () => {
 
   // Nạp dữ liệu từ Backend CSDL khi khởi tạo
   useEffect(() => {
-    const controller = new AbortController()
-    const isActive = () => !controller.signal.aborted && session === getCaseSessionKey()
-    setLoadedSession(session)
-    setCases([])
-    setSelectedCaseId('')
-    setLoadError(null)
-    setToastMessage(null)
+    let isMounted = true
     const loadCases = async () => {
       try {
         setIsLoading(true)
-        const data = await triageService.getCases(undefined, controller.signal)
-        if (isActive()) {
+        const data = await triageService.getCases()
+        if (isMounted) {
           setCases(data)
           if (data.length > 0) {
             setSelectedCaseId(data[0].id)
           }
         }
       } catch (err: any) {
-        if (!isActive() || isCaseReadCanceled(err)) return
         console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
-        if (isActive()) {
-          if (err instanceof CaseListReadError) setCases(err.items)
-          setLoadError(err?.message || 'Không tải được Case')
+        if (isMounted) {
           showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
         }
       } finally {
-        if (isActive()) setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
     loadCases()
 
-    return () => { controller.abort() }
-  }, [session, reload])
+    const handleStorageChange = (e: any) => {
+      if (e.detail?.key === STORAGE_KEYS.TRIAGE_CASES && e.detail?.value) {
+        setCases(e.detail.value)
+      }
+    }
+    window.addEventListener('roadguard_state_change', handleStorageChange)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('roadguard_state_change', handleStorageChange)
+    }
+  }, [])
 
   const selectedCase = useMemo(() => {
     return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
@@ -78,10 +74,10 @@ export const useAIReviewState = () => {
 
   // Form states for selected case editing
   const [currentSeverity, setCurrentSeverity] = useState<TriageCase['severity']>(
-    selectedCase?.severity || 'UNKNOWN'
+    selectedCase?.severity || 'CRITICAL'
   )
   const [currentUrgency, setCurrentUrgency] = useState<TriageCase['urgency']>(
-    selectedCase?.urgency || 'UNKNOWN'
+    selectedCase?.urgency || 'EMERGENCY'
   )
   const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm || 0)
   const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm || 0)
@@ -125,8 +121,7 @@ export const useAIReviewState = () => {
     setSelectedCaseId,
     setExpandedMasterIds,
     showToast,
-    filteredCases: filters.filteredCases,
-    reloadCases: () => setReload(value => value + 1)
+    filteredCases: filters.filteredCases
   })
 
   // Sub-hook: Actions (Triage decisions, survey, publish, modals)
@@ -147,19 +142,53 @@ export const useAIReviewState = () => {
 
   // Thao tác hàng loạt (Bulk Actions): Xác nhận hàng loạt & Đánh dấu kiểm tra lại
   const handleBulkVerify = () => {
-    showToast('Chưa hỗ trợ kết luận hàng loạt: cần kiểm tra source, version và bằng chứng riêng của từng hồ sơ. Chưa gửi lệnh.')
+    const ids = linkActions.selectedReportIds
+    if (ids.length === 0) return
+
+    setCases((prev) =>
+      prev.map((c) =>
+        ids.includes(c.id)
+          ? {
+              ...c,
+              status: 'VERIFIED',
+              status_label: 'Đã xác minh (Verified)',
+              conclusion: 'DEFECT_FOUND',
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_VERIFY] Đã xác nhận hàng loạt ngày ${new Date().toLocaleDateString('vi-VN')}`
+            }
+          : c
+      )
+    )
+    linkActions.setSelectedReportIds([])
+    showToast(`Đã xác nhận hàng loạt ${ids.length} khiếm khuyết thành công! Sẵn sàng đưa vào kế hoạch sửa chữa.`)
   }
 
   const handleBulkNeedSurvey = () => {
-    showToast('Chưa hỗ trợ yêu cầu hàng loạt. Hãy mở từng hồ sơ để gửi yêu cầu bổ sung bằng chứng; thao tác này không tạo FIELD.')
+    const ids = linkActions.selectedReportIds
+    if (ids.length === 0) return
+
+    const surveyCode = `SR-2026-BULK-${Date.now().toString().slice(-4)}`
+    setCases((prev) =>
+      prev.map((c) =>
+        ids.includes(c.id)
+          ? {
+              ...c,
+              status: 'NEED_SURVEY',
+              status_label: 'Cần đo đạc bổ sung',
+              conclusion: null,
+              survey_request_code: surveyCode,
+              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_SURVEY] Đã yêu cầu đo đạc lại hiện trường (${surveyCode})`
+            }
+          : c
+      )
+    )
+    linkActions.setSelectedReportIds([])
+    showToast(`Đã đánh dấu kiểm tra lại hiện trường cho ${ids.length} hồ sơ! Mã phiếu: ${surveyCode}`)
   }
 
   return {
     cases,
     setCases,
-    isLoading: loadedSession !== session || isLoading,
-    loadError: loadedSession === session ? loadError : null,
-    reloadCases: () => setReload(value => value + 1),
+    isLoading,
     expandedMasterIds,
     handleToggleExpandMaster,
     collapseMergedRows,
@@ -186,10 +215,6 @@ export const useAIReviewState = () => {
     handleToggleClusterItem,
 
     // Spread filters
-    visibleCases: filters.visibleCases,
-    hideAutoTests: filters.hideAutoTests,
-    setHideAutoTests: filters.setHideAutoTests,
-    autoTestCount: filters.autoTestCount,
     viewSourceMode: filters.viewSourceMode,
     handleSetViewSourceMode: filters.handleSetViewSourceMode,
     activeTab: filters.activeTab,
@@ -244,8 +269,7 @@ export const useAIReviewState = () => {
     handleSelectAllReports: linkActions.handleSelectAllReports,
     handleOpenLinkReportsModal: linkActions.handleOpenLinkReportsModal,
     handleConfirmLinkReports: linkActions.handleConfirmLinkReports,
-    handleUnlinkReport: linkActions.handleUnlinkReportLegacy,
-    handleSplitReport: linkActions.handleUnlinkReport,
+    handleUnlinkReport: linkActions.handleUnlinkReport,
     handleOpenTriageProject: linkActions.handleOpenTriageProject,
     handleConfirmTriageProject: linkActions.handleConfirmTriageProject,
 

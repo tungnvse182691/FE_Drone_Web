@@ -24,6 +24,7 @@ Bạn là AI Assistant phát triển dự án này. Hãy luôn tuân thủ nghi�
 - Chỉ chỉnh sửa đúng những file và những dòng code trực tiếp phục vụ yêu cầu.
 - Tuyệt đối không "tiện tay" refactor, format lại code, xóa comment hoặc sửa code ở các vùng xung quanh không liên quan.
 - Giữ nguyên coding style và quy ước đặt tên hiện có của dự án.
+- **BẢO TỒN 100% GIAO DIỆN:** Toàn bộ giao diện (timeline stepper, bản đồ MapLibre, corridor map, drone simulator, AI review modal/drawer, charts) là UI chuẩn Hoàng Hải. Tuyệt đối KHÔNG xóa bỏ, KHÔNG rút gọn thành stub/khung rỗng tối giản. Gắn API chỉ can thiệp vào service/state kết nối dữ liệu.
 - Nếu thay đổi của bạn tạo ra code thừa (unused import, unused variable do chính bạn tạo ra), hãy tự dọn dẹp. Nhưng KHÔNG xóa dead code cũ của dự án trừ khi được yêu cầu.
 - Mọi dòng code thay đổi trong git diff phải giải thích được là phục vụ trực tiếp cho yêu cầu của tôi.
 
@@ -49,9 +50,13 @@ Nguyên nhân AI "ngáo": **viết trước khi đọc đủ** (premature commit
    - Khi một chức năng/màn hình đã chuyển sang gắn API, dữ liệu hiển thị lên giao diện **bắt buộc phải lấy từ CSDL Backend (Docker)**.
    - Nếu gọi API bị lỗi (4xx, 5xx, timeout, sai DTO, thiếu quyền), **bắt buộc phải ném lỗi / hiển thị thông báo lỗi (Toast/Alert/Error state)** rõ ràng để Hoàng biết nguyên nhân và sửa.
    - **TUYỆT ĐỐI CẤM** hành vi âm thầm catch error rồi fallback trả về `mock data` giả vờ chạy thành công. Không đánh lừa người dùng bằng dữ liệu giả khi đang kiểm thử API. Nếu Database rỗng thì hiển thị Empty State ("Không có dữ liệu trong CSDL").
+7. **Bảo tồn 100% giao diện chuẩn Hoàng Hải (CẤM xóa hoặc rút gọn UI):**
+   - Các màn hình, stepper timeline, modal, video simulation, bản đồ MapLibre, corridor map và component UI trong `src/pages/` và `src/components/` là thiết kế hoàn chỉnh.
+   - Tuyệt đối CẤM xóa bỏ, rút gọn thành stub/khung rỗng hoặc thay bằng template sơ sài. Chỉ can thiệp surgical vào API service và state logic khi nối dữ liệu thật.
 
 ### Checklist Chống Bịa (Kiểm tra trước mỗi lần sinh code)
 - [ ] **Đường dẫn file:** Đã kiểm tra file tồn tại trong cấu trúc phẳng `src/pages/(pm)/` hoặc `src/pages/(sup)/`.
+- [ ] **Bảo tồn giao diện:** Không xóa bỏ hoặc rút gọn bất kỳ UI component hay tương tác người dùng nào hiện có.
 - [ ] **Tham khảo Stitch:** Chỉ tham khảo bố cục khung hình, vị trí thành phần và mã màu từ `docs/stitch-designs/`. Không bê nguyên text/nội dung/dữ liệu giả của Stitch vào.
 - [ ] **Nội dung & Dữ liệu chuẩn 17_10:** Nghiệp vụ, field dữ liệu, nhãn hiển thị đối chiếu 100% theo tài liệu `17_10` (`docs/specs/17_10/`), `src/types/domain.ts` và `src/types/enums.ts`.
 - [ ] **Màu sắc & Phông chữ:** Dùng đúng tokens trong `src/design-tokens.ts` (Vàng đồng `#C9A227`, Navy `#2D3748`, Dark `#1A1D20`).

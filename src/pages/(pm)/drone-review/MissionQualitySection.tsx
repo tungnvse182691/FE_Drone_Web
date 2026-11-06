@@ -2,12 +2,10 @@ import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 
 export interface MissionQualitySectionProps {
-  coveragePercentage?: number
-  hasBlindspot?: boolean
-  setCurrentFrame?: (f: number) => void
-  showToast?: (msg: string) => void
-  readModelPending?: boolean
-  modelVersionId?: string
+  coveragePercentage: number
+  hasBlindspot: boolean
+  setCurrentFrame: (f: number) => void
+  showToast: (msg: string) => void
   totalPhotos?: number
   aiDetectionsCount?: number
   reviewedCount?: number
@@ -20,8 +18,6 @@ export interface MissionQualitySectionProps {
 }
 
 export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
-  readModelPending = false,
-  modelVersionId,
   aiDetectionsCount = 0,
   reviewedCount = 0,
   totalCount = 0,
@@ -41,15 +37,15 @@ export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
               Mô hình nhận diện
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-              {readModelPending ? 'Chưa cập nhật' : 'YOLOv9'}
+              YOLOv9
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-[#1A1D20]">{readModelPending ? modelVersionId || 'Chưa cập nhật' : 'Road-YOLOv9'}</span>
+            <span className="text-lg font-bold text-[#1A1D20] font-mono">Road-YOLOv9</span>
           </div>
           <span className="text-[11px] text-slate-500 flex items-center gap-1">
             <Icon name="memory" size={13} className="text-[#C9A227] shrink-0" />
-            <span>{readModelPending ? 'Chưa cập nhật' : 'Phiên bản: synthetic-road-v1'}</span>
+            <span>Phiên bản: synthetic-road-v1</span>
           </span>
         </div>
 
@@ -66,19 +62,19 @@ export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
                   : 'bg-amber-50 text-amber-700 border border-amber-200'
               }`}
             >
-              {readModelPending ? 'Chưa cập nhật' : pendingCount === 0 ? 'HOÀN TẤT' : 'ĐANG RÀ SOÁT'}
+              {pendingCount === 0 ? 'HOÀN TẤT' : 'ĐANG RÀ SOÁT'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-[#1A1D20]">
-              {readModelPending ? 'Chưa cập nhật' : `${reviewedCount} / ${totalCount}`}
+            <span className="text-lg font-bold text-[#1A1D20] font-mono">
+              {reviewedCount} / {totalCount}
             </span>
-            <span className="text-xs text-slate-400">{readModelPending ? '' : `mục (${reviewProgressPercent}%)`}</span>
+            <span className="text-xs text-slate-400">mục ({reviewProgressPercent}%)</span>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-0.5">
             <div
               className="bg-[#C9A227] h-full rounded-full transition-all"
-              style={{ width: readModelPending ? '0%' : `${reviewProgressPercent}%` }}
+              style={{ width: `${reviewProgressPercent}%` }}
             ></div>
           </div>
         </div>
@@ -90,17 +86,17 @@ export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
               Phân loại kết quả
             </span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-              {readModelPending ? 'Chưa cập nhật' : `${totalCount} PHÁT HIỆN`}
+              {totalCount} PHÁT HIỆN
             </span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-sm font-bold text-emerald-700">Hợp lệ: {readModelPending ? 'Chưa cập nhật' : approvedCount}</span>
+            <span className="text-sm font-bold text-emerald-700">Hợp lệ: {approvedCount}</span>
             <span className="text-xs text-slate-400">•</span>
-            <span className="text-sm font-bold text-slate-600">Báo sai: {readModelPending ? 'Chưa cập nhật' : rejectedCount}</span>
+            <span className="text-sm font-bold text-slate-600">Báo sai: {rejectedCount}</span>
           </div>
           <span className="text-[11px] text-amber-700 font-medium flex items-center gap-1">
             <Icon name="pending" size={13} className="text-amber-600 shrink-0" />
-            <span>{readModelPending ? 'Chưa cập nhật' : `Chờ duyệt: ${pendingCount} mục`}</span>
+            <span>Chờ duyệt: {pendingCount} mục</span>
           </span>
         </div>
 
@@ -117,12 +113,12 @@ export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
                   : 'bg-amber-50 text-amber-700 border border-amber-200'
               }`}
             >
-              {readModelPending ? 'Chưa cập nhật' : isBaselineLocked ? 'ĐÃ KHÓA' : 'CHƯA KHÓA'}
+              {isBaselineLocked ? 'ĐÃ KHÓA' : 'CHƯA KHÓA'}
             </span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-bold text-[#1A1D20]">
-              {readModelPending ? 'Chưa cập nhật' : isBaselineLocked ? 'Đã chốt Baseline số' : 'Chờ PM khóa mốc'}
+              {isBaselineLocked ? 'Đã chốt Baseline số' : 'Chờ PM khóa mốc'}
             </span>
           </div>
           <span className="text-[11px] text-slate-500 flex items-center gap-1">
@@ -131,7 +127,7 @@ export const MissionQualitySection: React.FC<MissionQualitySectionProps> = ({
               size={13}
               className={isBaselineLocked ? 'text-emerald-600' : 'text-slate-400'}
             />
-            <span>{readModelPending ? 'Chưa cập nhật' : isBaselineLocked ? 'Đã lưu mốc bảo hành CSDL' : 'Cần thẩm định 100% để chốt'}</span>
+            <span>{isBaselineLocked ? 'Đã lưu mốc bảo hành CSDL' : 'Cần thẩm định 100% để chốt'}</span>
           </span>
         </div>
       </div>

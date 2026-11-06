@@ -41,14 +41,13 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
               </span>
             )}
           </div>
-          <p className="text-xs font-semibold mt-1">{selectedCase.project_id ? `Đã phân dự án: ${selectedCase.project_name}` : 'Chưa phân dự án — Cần điều phối'} • {selectedCase.status_label}</p>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tiếp nhận: {selectedCase.created_at ? new Date(selectedCase.created_at).toLocaleString('vi-VN') : 'API chưa cung cấp'} • {formattedSourceDetail}
+            Gửi lúc {selectedCase.created_at} bởi {formattedSourceDetail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2 text-slate-400">
-        {selectedCase.source !== 'CITIZEN' && <button
+        <button
           onClick={onOpenPhotoZoomModal}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold transition-colors cursor-pointer"
           title="Mở rộng chi tiết"
@@ -56,7 +55,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
         >
           <Icon name="fullscreen" size={16} />
           <span>Phóng to ảnh</span>
-        </button>}
+        </button>
         {handleClose && (
           <button
             onClick={handleClose}

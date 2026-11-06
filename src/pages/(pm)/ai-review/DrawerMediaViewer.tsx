@@ -71,7 +71,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1.5">
               <Icon name="photo_camera" size={32} />
-              <span className="text-xs">{selectedCase.report_details_state === 'UNSUPPORTED' ? 'API Case chưa cung cấp reference/đường đọc ảnh cho vai trò này' : selectedCase.report_details_state === 'ERROR' ? 'Tải ảnh thất bại; hãy thử lại' : selectedCase.report_details_state === 'LOADING' ? 'Đang tải ảnh...' : 'Chưa có dữ liệu ảnh'}</span>
+              <span className="text-xs">Không có ảnh đính kèm</span>
             </div>
           )}
           {/* Top-left GPS & telemetry overlay */}
@@ -79,7 +79,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
             <div className="flex items-center gap-1 font-bold text-brand-gold">
               <Icon name="location_on" size={12} className="text-brand-gold" />
               <span>
-                {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? 'Chưa có tọa độ' : `${selectedCase.gps.lat}°, ${selectedCase.gps.lng}°`}
+                {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
               </span>
             </div>
             {selectedCase.source === 'DRONE_AI' && selectedCase.gps.altitude_m > 0 && (
@@ -134,16 +134,16 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="absolute bottom-2.5 left-2.5 bg-slate-900/90 text-white px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/20">
               <Icon name="engineering" size={13} className="text-amber-400" />
-              <span>{selectedCase.source_label}</span>
+              <span>Ghi nhận hiện trường Đội tuần tra</span>
             </div>
           )}
         </div>
       ) : (
         /* Live Mini MapLibre in Drawer */
         <div className="w-full h-80 lg:h-[380px] rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
-          {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? <p className="p-4 text-sm text-slate-500">Chưa có tọa độ hiện trường.</p> : <div ref={drawerMapContainerRef} className="w-full h-full" />}
+          <div ref={drawerMapContainerRef} className="w-full h-full" />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
-            {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? 'Chưa có tọa độ' : `${selectedCase.gps.lat}°, ${selectedCase.gps.lng}°`}
+            {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
           </div>
         </div>
       )}

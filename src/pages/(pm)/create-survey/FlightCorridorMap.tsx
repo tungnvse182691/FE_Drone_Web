@@ -10,9 +10,9 @@ interface FlightCorridorMapProps {
   currentProject?: ProjectRouteConfig
   fullRouteCoords: [number, number][]
   surveySegmentCoords: [number, number][]
-  sKm?: number
-  eKm?: number
-  flightDistanceKm?: number
+  sKm: number
+  eKm: number
+  flightDistanceKm: number
 }
 
 export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
@@ -37,7 +37,8 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
 
     const midCoord =
       surveySegmentCoords[Math.floor(surveySegmentCoords.length / 2)] ||
-      fullRouteCoords[0]
+      fullRouteCoords[0] ||
+      [108.1965, 16.0520]
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
@@ -59,7 +60,13 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: fullRouteCoords
+            coordinates:
+              fullRouteCoords.length > 0
+                ? fullRouteCoords
+                : [
+                    [108.1940, 16.0490],
+                    [108.1990, 16.0550]
+                  ]
           },
           properties: {}
         }
@@ -140,7 +147,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         startEl.innerHTML = `
           <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
             <div style="background:#2F9E44; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-              Cất cánh: Km ${sKm?.toFixed(3) ?? 'Chưa cập nhật'}
+              Cất cánh: Km ${sKm.toFixed(sKm % 1 !== 0 ? 3 : 1)}
             </div>
             <div style="width:14px; height:14px; background:#2F9E44; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #2F9E44;"></div>
           </div>
@@ -155,7 +162,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
         endEl.innerHTML = `
           <div style="display:flex; flex-direction:column; align-items:center; cursor:pointer;" class="group">
             <div style="background:#E5484D; color:#FFFFFF; font-size:10px; font-weight:bold; padding:2px 7px; border-radius:6px; border:1px solid #FFFFFF; box-shadow:0 3px 8px rgba(0,0,0,0.5); margin-bottom:3px; white-space:nowrap; font-family:monospace;">
-              Hạ cánh: Km ${eKm?.toFixed(3) ?? 'Chưa cập nhật'}
+              Hạ cánh: Km ${eKm.toFixed(eKm % 1 !== 0 ? 3 : 1)}
             </div>
             <div style="width:14px; height:14px; background:#E5484D; border:2.5px solid #FFFFFF; border-radius:50%; box-shadow:0 0 10px #E5484D;"></div>
           </div>
@@ -192,7 +199,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
             <Icon name="flight_takeoff" size={16} className="text-[#C9A227]" />
             <span>Hành Lang Bay Trắc Dọc (MapLibre GIS)</span>
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold flex items-center gap-1">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold flex items-center gap-1">
             <Icon name="satellite_alt" size={12} className="text-[#C9A227]" />
             <span>Vệ Tinh MapLibre</span>
           </span>
@@ -205,10 +212,10 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
               <Icon name="wrong_location" size={24} />
             </div>
             <p className="text-sm font-bold text-slate-800">
-              Chưa cập nhật hành lang bay
+              Dự án [{currentProject?.code}] chưa có tim tuyến trắc địa
             </p>
             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-              Chọn phạm vi tuyến có dữ liệu vị trí và hệ quy chiếu đã xác minh để xem bản đồ.
+              Chỉ huy trưởng (PM) cần lập tim tuyến và gửi Giám sát (Supervisor) phê duyệt để hiển thị hành lang bay trên bản đồ vệ tinh.
             </p>
           </div>
         ) : (
@@ -216,7 +223,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
             <div ref={mapContainerRef} className="w-full h-full" />
 
             {/* Overlay Badge - Chi tiết tuyến dự án */}
-            <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[10px] pointer-events-none z-10 border border-white/10 shadow-lg flex flex-col gap-0.5 max-w-[280px]">
+            <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md text-white px-2.5 py-1.5 rounded-lg text-[10px] font-mono pointer-events-none z-10 border border-white/10 shadow-lg flex flex-col gap-0.5 max-w-[280px]">
               <div className="text-[#C9A227] font-bold uppercase tracking-wider flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
                 <span>Tuyến Khảo Sát:</span>
@@ -225,7 +232,7 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
                 [{currentProject?.code}] {currentProject?.name}
               </div>
               <div className="text-white font-bold text-xs truncate">
-                Km {sKm?.toFixed(3) ?? 'Chưa cập nhật'} → Km {eKm?.toFixed(3) ?? 'Chưa cập nhật'} ({flightDistanceKm?.toFixed(2) ?? 'Chưa cập nhật'} km)
+                Km {sKm.toFixed(sKm % 1 !== 0 ? 3 : 1)} → Km {eKm.toFixed(eKm % 1 !== 0 ? 3 : 1)} ({flightDistanceKm.toFixed(2)} km)
               </div>
             </div>
 
@@ -250,8 +257,8 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
               <Icon name="straighten" size={13} className="text-[#C9A227]" />
               <span>Cự ly khảo sát</span>
             </div>
-            <div className="font-bold text-[#1A1D20] text-sm mt-0.5">
-              {flightDistanceKm?.toFixed(3) ?? 'Chưa cập nhật'} km
+            <div className="font-bold text-[#1A1D20] text-sm mt-0.5 font-mono">
+              {flightDistanceKm.toFixed(3)} km
             </div>
           </div>
 
@@ -260,8 +267,8 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
               <Icon name="alt_route" size={13} className="text-sky-600" />
               <span>Đoạn lý trình</span>
             </div>
-            <div className="font-bold text-[#1A1D20] text-xs mt-0.5 truncate" title={`Km ${sKm?.toFixed(3) ?? 'Chưa cập nhật'} → Km ${eKm?.toFixed(3) ?? 'Chưa cập nhật'}`}>
-              {sKm?.toFixed(3) ?? 'Chưa cập nhật'} → {eKm?.toFixed(3) ?? 'Chưa cập nhật'}
+            <div className="font-bold text-[#1A1D20] text-xs mt-0.5 font-mono truncate" title={`Km ${sKm.toFixed(3)} → Km ${eKm.toFixed(3)}`}>
+              {sKm.toFixed(3)} → {eKm.toFixed(3)}
             </div>
           </div>
 
@@ -270,8 +277,8 @@ export const FlightCorridorMap: React.FC<FlightCorridorMapProps> = ({
               <Icon name="my_location" size={13} className="text-[#2F9E44]" />
               <span>Điểm cất cánh</span>
             </div>
-            <div className="font-bold text-[#1A1D20] text-xs mt-0.5">
-              Chưa cập nhật
+            <div className="font-bold text-[#1A1D20] text-xs mt-0.5 font-mono">
+              108.194, 16.049
             </div>
           </div>
         </div>

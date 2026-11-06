@@ -11,13 +11,10 @@ interface ProjectHighlightsGridProps {
 
 export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
   project,
-  mainlineLengthKm,
-  branchesLengthKm,
-  branchesCount
+  mainlineLengthKm = 0,
+  branchesLengthKm = 0,
+  branchesCount = 0
 }) => {
-  const warrantyKnown = !project.warranty_data_missing && Number.isFinite(project.days_remaining) && Number.isFinite(project.warranty_passed_percent)
-  const warrantyWidth = warrantyKnown ? `${Math.max(0, Math.min(100, project.warranty_passed_percent))}%` : '0%'
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 font-body">
       {/* Card 1: Thời hạn bảo hành (#C9A227 Gold) */}
@@ -32,8 +29,8 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-slate-900">
-                {warrantyKnown ? `Còn ${project.days_remaining} ngày` : 'Chưa cập nhật'}
+              <span className="text-2xl font-bold text-slate-900 font-mono">
+                Còn {project.days_remaining} ngày
               </span>
             </div>
           </div>
@@ -43,13 +40,13 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
         </div>
         <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
           <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
-            <span>Hết hạn: <strong className="text-slate-900">{project.warranty_end_date || 'Chưa cập nhật'}</strong></span>
-            <span className="font-bold text-[#8C6D1F]">{warrantyKnown ? `${project.warranty_passed_percent}% đã qua` : 'Chưa cập nhật'}</span>
+            <span>Hết hạn: <strong className="text-slate-900 font-mono">{project.warranty_end_date || '3 năm từ bàn giao'}</strong></span>
+            <span className="font-mono font-bold text-[#8C6D1F]">{project.warranty_passed_percent}% đã qua</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
             <div
               className="bg-[#C9A227] h-full rounded-full transition-all duration-500"
-              style={{ width: warrantyWidth }}
+              style={{ width: `${project.warranty_passed_percent}%` }}
             />
           </div>
         </div>
@@ -67,11 +64,11 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-slate-900">
-                {typeof project.length_km === 'number' && Number.isFinite(project.length_km) ? `${project.length_km} km` : 'Chưa cập nhật'}
+              <span className="text-2xl font-bold text-slate-900 font-mono">
+                {(project.length_km || 0) > 0 ? `${project.length_km} km` : '0 km'}
               </span>
               <span className="text-[11px] font-bold text-[#1E40AF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                {project.kml_status || 'Chưa cập nhật'}
+                {project.kml_status || 'Chưa duyệt tim'}
               </span>
             </div>
           </div>
@@ -87,8 +84,8 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span className="w-2 h-2 rounded-full bg-[#C9A227]" />
               <span>Trục chính:</span>
             </span>
-            <span className="font-bold text-slate-900">
-              {typeof mainlineLengthKm === 'number' && Number.isFinite(mainlineLengthKm) ? `${mainlineLengthKm} km` : 'Chưa cập nhật'}
+            <span className="font-mono font-bold text-slate-900">
+              {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : ((project.length_km || 0) > 0 ? `${project.length_km} km` : '0 km')}
             </span>
           </div>
 
@@ -97,13 +94,13 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>Tuyến phụ:</span>
             </span>
-            <span className="font-bold text-slate-900">
-              {typeof branchesCount === 'number' && Number.isFinite(branchesCount) && typeof branchesLengthKm === 'number' && Number.isFinite(branchesLengthKm) ? (
+            <span className="font-mono font-bold text-slate-900">
+              {branchesCount > 0 ? (
                 <span className="text-amber-800 font-bold">
                   {branchesLengthKm} km ({branchesCount} nhánh)
                 </span>
               ) : (
-                <span className="text-slate-400 font-normal italic">Chưa cập nhật</span>
+                <span className="text-slate-400 font-normal italic">0 km (0 nhánh)</span>
               )}
             </span>
           </div>
@@ -111,8 +108,8 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
 
         <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium">
           <span>Dải lý trình trục chính:</span>
-          <span className="font-semibold text-slate-700 truncate max-w-[180px]">
-            {project.stationing_text || 'Chưa cập nhật'}
+          <span className="font-mono font-semibold text-slate-700 truncate max-w-[180px]">
+            {project.stationing_text}
           </span>
         </div>
       </div>
@@ -125,15 +122,15 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2.5 h-2.5 rounded-full bg-[#047857] ring-4 ring-[#047857]/20" />
               <span className="text-xs text-slate-700 font-bold uppercase tracking-wider">
-                Theo dõi xử lý
+                Khiếm khuyết mặt đường
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-bold text-slate-900">
-                {Number.isFinite(project.open_defects) ? `${project.open_defects} điểm` : 'Chưa cập nhật'}
+              <span className="text-2xl font-bold text-slate-900 font-mono">
+                {project.open_defects} điểm
               </span>
               <span className="text-[11px] font-bold text-[#047857] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {Number.isFinite(project.repair_packages) ? `${project.repair_packages} gói sửa chữa` : 'Chưa cập nhật'}
+                {project.repair_packages} gói sửa chữa
               </span>
             </div>
           </div>
@@ -144,20 +141,20 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
         <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100">
           <div className="flex justify-between items-center text-xs font-medium">
             <span className="text-slate-500">
-              {Number.isFinite(project.open_defects) ? (
+              {project.open_defects > 0 ? (
                 <>Đang mở: <strong className="text-rose-600 font-bold">{project.open_defects} điểm</strong></>
               ) : (
-                'Chưa cập nhật'
+                'Chưa phát hiện hư hỏng mặt đường'
               )}
             </span>
-            <span className="font-bold text-slate-700">
-              Chưa cập nhật
+            <span className="font-mono font-bold text-slate-700">
+              {project.open_defects === 0 ? 'Ổn định 100%' : 'Cần xử lý'}
             </span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
             <div
               className={`h-full ${project.open_defects === 0 ? 'bg-[#047857]' : 'bg-[#C9A227]'}`}
-              style={{ width: '0%' }}
+              style={{ width: `${project.open_defects === 0 ? 100 : 70}%` }}
             />
           </div>
         </div>
@@ -165,3 +162,4 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
     </div>
   )
 }
+

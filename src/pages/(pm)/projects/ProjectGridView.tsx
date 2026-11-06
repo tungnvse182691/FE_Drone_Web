@@ -30,16 +30,37 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
             key={prj.id}
             className="bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-all flex flex-col overflow-hidden group relative"
           >
+            {/* IDOR 403 Restricted Overlay khi ở vai trò PM xem dự án ngoài thẩm quyền */}
+            {isRestrictedForCurrentPM && (
+              <div className="absolute inset-0 z-30 bg-slate-900/80 backdrop-blur-[2px] p-5 flex flex-col items-center justify-center text-center gap-3 select-none">
+                <div className="w-11 h-11 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                  <Icon name="lock" size={24} />
+                </div>
+                <div className="flex flex-col gap-1 max-w-xs">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span className="font-mono px-2 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px]">
+                      403 RESTRICTED
+                    </span>
+                    <span className="text-xs text-rose-300 font-semibold">Chính sách Scope &amp; IDOR</span>
+                  </div>
+                  <span className="text-sm text-white font-bold mt-1">Dự án ngoài phạm vi phụ trách</span>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Bạn hiện chỉ được cấp quyền quản lý các tuyến được Giám sát chỉ định.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Card Banner / Spatial Reference */}
             <div className="h-32 relative bg-slate-100 overflow-hidden">
               <div
                 className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-
+                style={{ backgroundImage: `url('${prj.image_url}')` }}
               ></div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent"></div>
 
               <div className="absolute top-3 left-3">
-                <span className=" px-2 py-0.5 bg-white/95 rounded-md text-[11px] text-slate-900 font-bold shadow-2xs">
+                <span className="font-mono px-2 py-0.5 bg-white/95 rounded-md text-[11px] text-slate-900 font-bold shadow-2xs">
                   {prj.code}
                 </span>
               </div>
@@ -76,9 +97,9 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
               </div>
 
               <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/95">
-                <span className=" text-xs flex items-center gap-1.5 truncate">
+                <span className="font-mono text-xs flex items-center gap-1.5 truncate">
                   <Icon name="alt_route" size={14} className="text-brand-gold shrink-0" />
-                  <span className="truncate">Chưa cập nhật</span>
+                  <span className="truncate">{prj.stationing_text}</span>
                 </span>
               </div>
             </div>
@@ -95,13 +116,13 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   <span className="truncate">
                     Địa bàn:{' '}
                     <strong className={prj.region || prj.location_detail ? 'text-slate-800 font-semibold' : 'text-slate-400 font-normal italic'}>
-                      Chưa cập nhật
+                      {prj.region || prj.location_detail || 'Chưa thiết lập địa bàn'}
                     </strong>
                   </span>
                 </div>
 
                 {/* PM Info Block (BR-01) */}
-                {prj.pm_user_id ? (
+                {prj.is_assigned ? (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {prj.pm_avatar ? (
@@ -117,7 +138,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                       )}
                       <div className="flex flex-col min-w-0">
                         <span className="text-xs text-slate-800 truncate font-semibold">{prj.pm_name}</span>
-                        {prj.pm_email && <span className="text-[10px] text-slate-500 truncate">{prj.pm_email}</span>}
+                        <span className="text-[10px] text-slate-500 truncate font-mono">{prj.pm_email}</span>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-brand-gold/15 text-brand-goldMuted text-[10px] font-bold shrink-0">
@@ -129,31 +150,67 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon name="warning" size={16} className="text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-[#92400E] font-bold">Chưa cập nhật</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Đọc lại phân công từ máy chủ</span>
+                        <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
+                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-2 pt-1"><div className="flex justify-between gap-2 text-xs"><span className="text-slate-500">Thời hạn bảo hành</span><span className="text-slate-600">Chưa cập nhật</span></div><div className="h-2 rounded-full bg-slate-100" /></div>
+                {/* Warranty Progress Metric */}
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-medium">
+                      {prj.status === 'NEAR_EXPIRY' ? (
+                        <span className="text-rose-600 font-semibold flex items-center gap-1">
+                          <Icon name="warning" size={14} /> Cần lập hồ sơ bàn giao
+                        </span>
+                      ) : (
+                        'Thời hạn bảo hành'
+                      )}
+                    </span>
+                    <span
+                      className={`font-mono font-bold ${
+                        prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
+                      }`}
+                    >
+                      {prj.warranty_passed_percent}%{' '}
+                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span>
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        prj.status === 'NEAR_EXPIRY'
+                          ? 'bg-rose-500'
+                          : prj.status === 'PENDING_ALIGNMENT'
+                          ? 'bg-slate-300'
+                          : 'bg-brand-gold'
+                      }`}
+                      style={{ width: `${prj.warranty_passed_percent}%` }}
+                    ></div>
+                  </div>
+                </div>
+
                 {/* 3-Col Mini Technical Spec Grid */}
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Chiều dài</span>
-                    <span className=" text-xs font-bold text-slate-800">{prj.length_km == null ? 'Chưa cập nhật' : `$Chưa cập nhật`}</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km} km</span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Lỗi mở</span>
                     <span
-                      className="text-xs font-bold text-slate-600"
+                      className={`font-mono text-xs font-bold ${
+                        prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
+                      }`}
                     >
-                      Chưa cập nhật
+                      {prj.open_defects} điểm
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Gói sửa</span>
-                    <span className=" text-xs font-bold text-slate-800">Chưa cập nhật</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
                   </div>
                 </div>
               </div>
@@ -164,7 +221,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onNavigateDetail(prj.id)}
-                    className="w-full py-2 px-3 bg-[#C9A227] hover:bg-[#B38E1E] text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
+                    className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-98"
                   >
                     <Icon name="inventory_2" size={16} />
                     <span>Tra cứu hồ sơ lưu trữ</span>
@@ -194,7 +251,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     {isSupervisor && onOpenCloseModal && (
                       <button
                         type="button"
-                        title="Đóng vận hành dự án"
+                        title="Đóng dự án khi hết hạn bảo hành"
                         onClick={(e) => {
                           e.stopPropagation()
                           onOpenCloseModal(prj)

@@ -27,14 +27,7 @@ export interface MissionHeaderProps {
   reviewProgressPercent?: number
 }
 
-type ServerMissionHeaderProps = { serverView: true; basePath: string; modelVersionId?: string; onReload: () => void; busy: boolean; onInspect: (kind: 'refly' | 'baseline') => void }
-
-export const MissionHeader: React.FC<MissionHeaderProps | ServerMissionHeaderProps> = (props) => {
-  if (!('serverView' in props)) return <LegacyMissionHeader {...props} />
-  return <><section className="bg-white rounded-xl px-5 py-4 shadow-2xs border border-[#E2E5E9] flex flex-col gap-3"><nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500"><Link to={`${props.basePath}/dashboard`} className="inline-flex gap-1 items-center"><Icon name="home" size={14} />Trang chủ</Link><Icon name="chevron_right" size={14} /><Link to={`${props.basePath}/surveys`}>Khảo sát</Link><Icon name="chevron_right" size={14} /><span>Thẩm định kết quả AI</span></nav><div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pt-3 border-t border-slate-100"><div><h1 className="text-xl font-bold text-[#1A1D20] tracking-tight">Thẩm định kết quả AI</h1><p className="text-xs text-slate-500 mt-1">Thẩm định dữ liệu và bằng chứng từ đợt khảo sát đã chọn.</p></div><div className="flex flex-wrap gap-2">{props.basePath === '/sup' ? <span className="inline-flex gap-1.5 items-center px-3.5 py-2 text-xs bg-slate-100 border border-slate-200 rounded-lg"><Icon name="visibility" size={14} />Chế độ Giám sát (Chỉ xem)</span> : <><button type="button" onClick={() => props.onInspect('refly')} title="Mở hồ sơ xem trước; chưa gửi lệnh" className="border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-400">Yêu cầu bay bổ sung</button><button type="button" onClick={() => props.onInspect('baseline')} title="Mở điều kiện xem trước; chưa gửi lệnh" className="border border-slate-200 rounded-lg px-3.5 py-2 text-xs text-slate-400">Khóa Baseline đoạn đường</button></>}<button type="button" onClick={props.onReload} disabled={props.busy} className="border border-slate-200 rounded-lg px-3.5 py-2 text-xs">Tải lại hồ sơ</button></div></div></section><MissionQualitySection readModelPending modelVersionId={props.modelVersionId} /></>
-}
-
-const LegacyMissionHeader: React.FC<MissionHeaderProps> = ({
+export const MissionHeader: React.FC<MissionHeaderProps> = ({
   basePath,
   missionCode = '#MS-2026-0000',
   missionTitle = 'Nhiệm vụ bay khảo sát trắc địa',

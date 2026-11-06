@@ -30,7 +30,7 @@ export const GisMapModal: React.FC<GisMapModalProps> = ({
             <div>
               <h3 className="text-base font-bold text-brand-dark">Vị Trí Bản Đồ Không Gian (GIS WGS84)</h3>
               <p className="text-xs text-slate-500 font-mono">
-                {selectedCase.code} • {selectedCase.stationing} ({selectedCase.gps.lat == null || selectedCase.gps.lng == null ? 'Chưa có tọa độ' : `${selectedCase.gps.lat}°, ${selectedCase.gps.lng}°`})
+                {selectedCase.code} • {selectedCase.stationing} ({selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E)
               </p>
             </div>
           </div>
@@ -75,7 +75,7 @@ export const GisMapModal: React.FC<GisMapModalProps> = ({
           </div>
 
           <div className="w-full h-80 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
-            {selectedCase.gps.lat == null || selectedCase.gps.lng == null ? <p className="p-4 text-sm text-slate-500">Chưa có tọa độ hiện trường.</p> : <div ref={modalMapContainerRef} className="w-full h-full" />}
+            <div ref={modalMapContainerRef} className="w-full h-full" />
             <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg text-white text-[11px] font-mono border border-white/10 z-10 pointer-events-none">
               Hệ quy chiếu: WGS-84 / UTM Zone 32648 (EPSG:32648) • Bán kính cụm: 2.5m
             </div>

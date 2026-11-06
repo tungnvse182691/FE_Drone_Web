@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Icon } from '../../../components/ui/Icon'
-import { useAuthStore } from '../../../store/authStore'
-import { personnelService, projectMemberErrorMessage } from '../../../api/services/personnelService'
+import React, { useState, useEffect, useCallback } from 'react'
+import { X, UserPlus, Search, ShieldCheck, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { personnelService } from '../../../api/services/personnelService'
 
 export interface AddProjectMemberModalProps {
   isOpen: boolean
@@ -26,10 +25,6 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   onMemberAdded,
   showToast
 }) => {
-  const epoch = useAuthStore(state => state.authEpoch)
-  const sequence = useRef(0)
-  const submitting = useRef(false)
-  const [heldUser, setHeldUser] = useState('')
   const [selectedRole, setSelectedRole] = useState<'OPERATOR' | 'CREW'>('OPERATOR')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,69 +34,63 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const loadEligible = useCallback(async () => {
-    if (!isOpen || !projectId || !useAuthStore.getState().isAuthenticated || useAuthStore.getState().status === 'logging-out') return
-    const request = ++sequence.current
-    const actor = useAuthStore.getState().user?.id
-    const current = () => request === sequence.current && epoch === useAuthStore.getState().authEpoch
+    if (!isOpen || !projectId) return
     setLoading(true)
     setErrorMsg(null)
-    setHeldUser(''); setSelectedUserId(null)
+    setSelectedUserId(null)
     try {
-      const saved = sessionStorage.getItem(`rg_member_add_${actor}_${projectId}`)
-      const pending = saved ? JSON.parse(saved) : null
-      setHeldUser(pending?.userId || '')
-      setSelectedUserId(pending?.userId || null)
       const data = await personnelService.fetchEligibleProjectMembers(projectId, {
         role: selectedRole,
         search: searchKeyword.trim() || undefined
       })
-      if (current()) setEligibleMembers(data.items || [])
+      setEligibleMembers(data.items || [])
     } catch (err: any) {
-      if (!current()) return
-      const errText = projectMemberErrorMessage(err)
+      console.error('Lỗi khi tải danh sách nhân sự đủ điều kiện:', err)
+      const errText = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Không thể tải danh sách nhân sự đủ điều kiện từ máy chủ'
       setErrorMsg(errText)
       setEligibleMembers([])
     } finally {
-      if (current()) setLoading(false)
+      setLoading(false)
     }
-  }, [isOpen, projectId, selectedRole, searchKeyword, epoch])
+  }, [isOpen, projectId, selectedRole, searchKeyword])
 
   useEffect(() => {
     loadEligible()
-    return () => { ++sequence.current }
   }, [loadEligible])
 
   if (!isOpen) return null
 
   const handleAddMember = async () => {
-    if (!selectedUserId || submitting.current) return
-    submitting.current = true
-    const started = useAuthStore.getState().authEpoch
+    if (!selectedUserId || isSubmitting) return
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
+      const selectedMember = eligibleMembers.find((m) => m.userId === selectedUserId)
       await personnelService.addProjectMember(projectId, selectedUserId)
-      if (started !== useAuthStore.getState().authEpoch) return
+      showToast(`Đã thêm thành công nhân sự [${selectedMember?.displayName || 'Nhân sự'}] vào dự án!`)
       await onMemberAdded()
-      if (started !== useAuthStore.getState().authEpoch) return
-      showToast('Đã thêm nhân sự vào dự án.')
       onClose()
     } catch (err: any) {
-      if (started === useAuthStore.getState().authEpoch) setErrorMsg(projectMemberErrorMessage(err))
+      console.error('Lỗi khi thêm thành viên vào dự án:', err)
+      if (err?.response?.status === 409) {
+        setErrorMsg('Nhân sự này đã là thành viên đang hoạt động trong dự án (409 Conflict).')
+      } else {
+        const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Lỗi khi thêm nhân sự vào dự án'
+        setErrorMsg(`❌ ${msg}`)
+      }
     } finally {
-      submitting.current = false
-      if (started === useAuthStore.getState().authEpoch) setIsSubmitting(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div role="dialog" aria-label="Thêm nhân sự vào dự án" className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl border border-[#E2E5E9] max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-[#C9A227]/15 text-[#8C6D15] flex items-center justify-center font-bold">
-              <Icon name="person_add" className="w-5 h-5" />
+              <UserPlus className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 leading-tight">
@@ -117,7 +106,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition cursor-pointer"
           >
-            <Icon name="close" className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -136,7 +125,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Phi công Drone (OPERATOR)</span>
+                <span>🛸 Phi công Drone (OPERATOR)</span>
               </button>
               <button
                 type="button"
@@ -147,14 +136,14 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>Đội thi công (CREW)</span>
+                <span>👷 Đội thi công (CREW)</span>
               </button>
             </div>
           </div>
 
           {/* Search box */}
           <div className="relative">
-            <Icon name="search" className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
               placeholder="Tìm kiếm theo họ tên hoặc ID nhân sự..."
@@ -164,20 +153,18 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             />
           </div>
 
-          {heldUser && <p role="status">Có yêu cầu thêm nhân sự đang chờ xác nhận. Vui lòng tiếp tục yêu cầu hiện tại trước khi chọn người khác.</p>}
           {/* Error notice */}
           {errorMsg && (
-            <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-              <Icon name="error" className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
-              <button type="button" onClick={loadEligible} disabled={loading || isSubmitting}>Tải lại danh sách</button>
             </div>
           )}
 
           {/* Eligible List */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-              <span>Nhân sự có thể thêm vào dự án:</span>
+              <span>Danh sách nhân sự khả dụng trong hệ thống:</span>
               <span className="text-[11px] text-slate-500 font-mono">
                 {eligibleMembers.length} khả dụng
               </span>
@@ -185,10 +172,10 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
 
             {loading ? (
               <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs">
-                <Icon name="progress_activity" className="w-6 h-6 animate-spin text-[#C9A227]" />
-                <span>Đang tải danh sách nhân sự...</span>
+                <Loader2 className="w-6 h-6 animate-spin text-[#C9A227]" />
+                <span>Đang tải danh sách nhân sự từ CSDL Backend...</span>
               </div>
-            ) : errorMsg ? null : eligibleMembers.length === 0 ? (
+            ) : eligibleMembers.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl p-4">
                 Không tìm thấy nhân sự phù hợp nào chưa tham gia dự án.
               </div>
@@ -199,7 +186,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                   return (
                     <div
                       key={member.userId}
-                      aria-disabled={!!heldUser || isSubmitting} onClick={() => { if (!heldUser && !isSubmitting) setSelectedUserId(member.userId) }}
+                      onClick={() => setSelectedUserId(member.userId)}
                       className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
                           ? 'border-[#C9A227] bg-[#C9A227]/10 ring-1 ring-[#C9A227]'
@@ -221,7 +208,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                             {member.displayName}
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono">
-                            {member.role === 'OPERATOR' ? 'Phi công Drone' : member.role === 'CREW' ? 'Đội thi công' : 'Chưa có vai trò'}
+                            ID: {member.userId.slice(0, 8)}... • Vai trò: {member.role}
                           </div>
                         </div>
                       </div>
@@ -233,7 +220,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                             : 'border-slate-300 bg-white'
                         }`}
                       >
-                        {isSelected && <Icon name="check" className="w-3.5 h-3.5 " />}
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
                     </div>
                   )
@@ -246,7 +233,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
           <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            <Icon name="verified_user" className="w-3.5 h-3.5 text-[#C9A227]" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#C9A227]" />
             <span>Thực hiện bởi Chỉ huy trưởng dự án (PM)</span>
           </div>
           <div className="flex items-center gap-2">
@@ -270,12 +257,12 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             >
               {isSubmitting ? (
                 <>
-                  <Icon name="progress_activity" className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Đang xử lý...</span>
                 </>
               ) : (
                 <>
-                  <Icon name="person_add" className="w-3.5 h-3.5" />
+                  <UserPlus className="w-3.5 h-3.5" />
                   <span>Thêm Vào Dự Án</span>
                 </>
               )}

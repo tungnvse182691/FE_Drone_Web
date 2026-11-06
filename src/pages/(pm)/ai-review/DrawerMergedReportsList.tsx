@@ -44,12 +44,23 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
       <div className="space-y-2.5">
         {selectedCase.linked_report_ids.map((code) => {
           const secondary = cases.find((c) => c.code === code || c.id === code)
-          const displayChannel = secondary?.reporter_channel || 'Chưa có kênh tiếp nhận'
-          const displayReporter = secondary?.reporter_name || 'Chưa có dữ liệu người gửi'
-          const displayDesc = secondary?.description || 'Chưa có nội dung report từ API được phép đọc'
-          const displayImage = secondary?.image_url || undefined
-          const displayTime = secondary?.created_at || 'Chưa có ngày tiếp nhận report'
-          const displayGps = secondary?.gps || { lat: null, lng: null, altitude_m: 0, resolution_cm_px: 0 }
+          const dupInfo = selectedCase.cluster_duplicates?.find((d) => d.code === code)
+          const displayChannel =
+            secondary?.reporter_channel ||
+            secondary?.source_label ||
+            dupInfo?.source ||
+            'Ứng dụng Người dân'
+          const displayReporter =
+            secondary?.reporter_name || dupInfo?.reporter || 'Người dân phản ánh'
+          const displayDesc =
+            secondary?.description ||
+            'Phản ánh hư hỏng mặt đường tại vị trí lân cận đã được gộp bằng chứng'
+          const displayImage =
+            secondary?.image_url ||
+            selectedCase.image_url ||
+            'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80'
+          const displayTime = secondary?.created_at || selectedCase.created_at || 'Tiếp nhận gần đây'
+          const displayGps = secondary?.gps || selectedCase.gps
 
           const isComparing = comparingReportCode === code
           const reportShortCode = code.length > 12 ? `#REP-${code.slice(0, 8).toUpperCase()}` : code
@@ -166,7 +177,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                       </div>
                       <div className="w-full h-36 rounded-md overflow-hidden bg-slate-900 border border-slate-100">
                         <img
-                          src={selectedCase.image_url || undefined}
+                          src={selectedCase.image_url}
                           alt="Ảnh hồ sơ chính"
                           className="w-full h-full object-cover"
                         />
@@ -183,7 +194,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                         <span className="font-bold text-slate-800">2. Ảnh Báo cáo đã gộp ({reportShortCode})</span>
                         <button
                           type="button"
-                          onClick={() => setZoomedImage({ url: displayImage || '', title: `Báo cáo đã gộp: ${reportShortCode}` })}
+                          onClick={() => setZoomedImage({ url: displayImage, title: `Báo cáo đã gộp: ${reportShortCode}` })}
                           className="text-[10px] text-brand-gold hover:underline font-semibold flex items-center gap-0.5"
                         >
                           <Icon name="zoom_in" size={12} />

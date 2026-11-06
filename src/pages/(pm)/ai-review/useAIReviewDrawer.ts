@@ -22,7 +22,7 @@ export const useAIReviewDrawer = ({ selectedCase }: UseAIReviewDrawerProps) => {
 
   // Effect: Khởi tạo MapLibre trong Modal GIS Preview
   useEffect(() => {
-    if (selectedCase.gps?.lat == null || selectedCase.gps?.lng == null || !isGISModalOpen || !modalMapContainerRef.current) return
+    if (!isGISModalOpen || !modalMapContainerRef.current) return
     const { cleanup } = initReviewGisModalMap(
       modalMapContainerRef.current,
       selectedCase,
@@ -33,7 +33,7 @@ export const useAIReviewDrawer = ({ selectedCase }: UseAIReviewDrawerProps) => {
 
   // Effect: Khởi tạo MapLibre mini trong panel Drawer khi người dùng bấm tab Bản đồ
   useEffect(() => {
-    if (selectedCase.gps?.lat == null || selectedCase.gps?.lng == null || (detailViewMode !== 'GIS_MAP' && detailViewMode !== 'SIDE_BY_SIDE') || !drawerMapContainerRef.current) return
+    if ((detailViewMode !== 'GIS_MAP' && detailViewMode !== 'SIDE_BY_SIDE') || !drawerMapContainerRef.current) return
     const { cleanup } = initReviewDrawerMap(drawerMapContainerRef.current, selectedCase)
     return () => cleanup()
   }, [detailViewMode, selectedCase])

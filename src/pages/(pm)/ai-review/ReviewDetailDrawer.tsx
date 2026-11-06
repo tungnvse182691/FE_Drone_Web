@@ -1,5 +1,4 @@
 import React from 'react'
-import { CaseReportsPanel } from './CaseReportsPanel'
 import type { TriageCase } from './types'
 import { DrawerHeader } from './DrawerHeader'
 import { DrawerDecisionBanners } from './DrawerDecisionBanners'
@@ -17,10 +16,10 @@ export interface ReviewDetailDrawerProps {
   detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
   setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
   drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: TriageCase['severity']
-  setCurrentSeverity: (s: TriageCase['severity']) => void
-  currentUrgency: TriageCase['urgency']
-  setCurrentUrgency: (u: TriageCase['urgency']) => void
+  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -35,8 +34,7 @@ export interface ReviewDetailDrawerProps {
   onOpenRequestSurveyModal: (c?: TriageCase) => void
   onOpenPublishModal: (c?: TriageCase) => void
   onNavigateFastTrack: (c: TriageCase) => void
-  onUnlinkReport: (reportId: string) => void
-  onSplitReport?: (reportId: string) => Promise<void>
+  onUnlinkReport: (childId: string) => void
   onOpenTriageProject: (c: TriageCase) => void
   onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
@@ -72,7 +70,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onOpenPublishModal,
   onNavigateFastTrack,
   onUnlinkReport,
-  onSplitReport,
   onOpenTriageProject,
   onOpenGISModal,
   onOpenPhotoZoomModal,
@@ -105,10 +102,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
             />
 
-            {selectedCase.source === 'CITIZEN' ? <>
-              <CaseReportsPanel key={selectedCase.id} caseId={selectedCase.id} onSplit={onSplitReport} />
-              {isSupervisor && !selectedCase.project_id && <button type="button" onClick={() => onOpenTriageProject(selectedCase)}>Điều phối dự án</button>}
-            </> : <>
             <DrawerMediaViewer
               selectedCase={selectedCase}
               detailViewMode={detailViewMode}
@@ -137,7 +130,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
               onUnlinkReport={onUnlinkReport}
             />
-            </>}
           </div>
 
           {/* RIGHT COLUMN: Biểu mẫu quyết định kỹ thuật & hành động thẩm định */}

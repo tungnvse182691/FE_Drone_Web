@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
@@ -6,7 +6,7 @@ export interface TriageProjectModalProps {
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
-  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
   onConfirmTriageProject: (
@@ -24,16 +24,14 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   setSelectedProjectId,
   onConfirmTriageProject,
 }) => {
-  const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' | ''>('')
+  const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE'>('FIELD')
   const [reason, setReason] = useState<string>('')
 
-  useEffect(() => { setReason(''); setVerificationMethod('') }, [isOpen, targetTriageCase?.id])
   if (!isOpen || !targetTriageCase) return null
 
-  const selectedProj = projects.find((p) => p.id === selectedProjectId)
+  const selectedProj = projects.find((p) => p.id === selectedProjectId) || projects[0]
 
   const handleConfirm = () => {
-    if (!verificationMethod || !selectedProj || !reason.trim()) return
     onConfirmTriageProject(verificationMethod, reason)
   }
 
@@ -75,11 +73,26 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
 
             <div className="flex gap-3">
               {/* Thumbnail ảnh hiện trường người dân gửi (nếu có) */}
+              {targetTriageCase.image_url && (
+                <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-300 shrink-0 bg-slate-200 shadow-2xs">
+                  <img
+                    src={targetTriageCase.image_url}
+                    alt={targetTriageCase.defect_title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // Fallback nếu ảnh lỗi
+                      e.currentTarget.src =
+                        'https://images.unsplash.com/photo-1578953186255-a13f70ecb1e5?auto=format&fit=crop&w=400&q=80'
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center justify-between text-slate-700">
                   <span className="font-bold text-slate-900 truncate">{targetTriageCase.defect_title}</span>
                   <span className="font-mono text-slate-600 text-[11px] shrink-0 ml-2">
-                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Chưa có dữ liệu làn'})
+                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Làn xe thô sơ'})
                   </span>
                 </div>
                 {targetTriageCase.description && (
@@ -104,13 +117,12 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
-              <option value="">Chọn dự án từ API</option>
               {projects.map((p) => {
                 // Kiểm tra nếu p.name đã chứa chuỗi Km thì không nối thêm tránh lặp chuỗi
                 const hasKmInName = p.name.includes('Km')
                 const displayLabel = hasKmInName
                   ? `${p.code} — ${p.name}`
-                  : `${p.code} — ${p.name}`
+                  : `${p.code} — ${p.name} (Km ${p.start_km} → Km ${p.end_km})`
                 return (
                   <option key={p.id} value={p.id}>
                     {displayLabel}
@@ -118,7 +130,11 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                 )
               })}
             </select>
-
+            {selectedProj && (
+              <span className="text-[10px] text-slate-500 mt-1 pl-1">
+                Phạm vi bảo hành: Km {selectedProj.start_km} đến Km {selectedProj.end_km}
+              </span>
+            )}
           </div>
 
           {/* 2. Định hướng phương thức xác minh (Spec 17_10 CaseTriageDto.verificationMethod) */}
@@ -141,7 +157,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   <span>Đo đạc hiện trường</span>
                 </div>
                 <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
-                  Chọn phương thức xác minh; chưa giao task
+                  Cử tổ đo đạc kiểm tra thước đo
                 </span>
               </button>
 
@@ -159,7 +175,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   <span>Khảo sát Drone</span>
                 </div>
                 <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
-                  Chọn phương thức xác minh; chưa tạo yêu cầu bay
+                  Tạo yêu cầu bay quét bổ sung
                 </span>
               </button>
 
@@ -225,7 +241,6 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!selectedProj || !verificationMethod || !reason.trim() || !targetTriageCase.version}
               className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >
               <Icon name="domain" size={15} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import {
@@ -207,16 +207,30 @@ export const DefectDetailVerify: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000)
   }
 
-  const dataRequest = useRef(0)
   const loadBackendData = useCallback(async (silent: boolean = false) => {
-    const request = ++dataRequest.current
-    const actor = useAuthStore.getState().user
-    const current = () => request === dataRequest.current && useAuthStore.getState().user === actor
     if (!silent) setIsLoading(true)
     setApiError(null)
     try {
-      const projects = await projectService.fetchProjects()
-      const targetProjects = projects
+      let projects = projectService.getProjects()
+      if (!projects || projects.length === 0) {
+        projects = await projectService.fetchProjects()
+      }
+
+      const scopedProjects = isSupervisor
+        ? projects
+        : projects.filter((p) => {
+            if (!user) return true
+            const uEmail = (user.email || '').toLowerCase()
+            const pmEmail = (p.pm_email || '').toLowerCase()
+            const pmName = (p.pm_name || '').toLowerCase()
+            if (user.id && p.pm_user_id && user.id === p.pm_user_id) return true
+            if (uEmail && pmEmail && uEmail === pmEmail) return true
+            if (uEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
+            if (uEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
+            return false
+          })
+
+      const targetProjects = scopedProjects.length > 0 ? scopedProjects : projects
 
       const detEntries: Array<{ item: AIDetectionItem; projectId: string; projectName: string }> = []
       const defEntries: Array<{ dto: BackendDefectDto; projectId: string; projectName: string }> = []
@@ -228,7 +242,7 @@ export const DefectDetailVerify: React.FC = () => {
             detEntries.push({ item: d, projectId: proj.id, projectName: proj.name })
           }
         } catch (err) {
-          throw err
+          console.warn(`Không thể tải AI detections của dự án ${proj.id}:`, err)
         }
 
         try {
@@ -237,7 +251,7 @@ export const DefectDetailVerify: React.FC = () => {
             defEntries.push({ dto: df, projectId: proj.id, projectName: proj.name })
           }
         } catch (err) {
-          throw err
+          console.warn(`Không thể tải Defects của dự án ${proj.id}:`, err)
         }
       }
 
@@ -295,11 +309,9 @@ export const DefectDetailVerify: React.FC = () => {
         } catch {}
       }
 
-      if (!current()) return
       setAllDetections(detEntries)
       setAllDefects(defEntries)
     } catch (err: any) {
-      if (!current()) return
       const msg =
         err?.response?.data?.message ||
         err?.response?.data?.detail ||
@@ -307,13 +319,12 @@ export const DefectDetailVerify: React.FC = () => {
         'Không thể tải dữ liệu khiếm khuyết từ CSDL Backend.'
       setApiError(msg)
     } finally {
-      if (current()) setIsLoading(false)
+      setIsLoading(false)
     }
   }, [id, isSupervisor, user])
 
   useEffect(() => {
     loadBackendData()
-    return () => { dataRequest.current += 1 }
   }, [loadBackendData])
 
   const targetId = (id || '').toLowerCase()
@@ -551,10 +562,6 @@ export const DefectDetailVerify: React.FC = () => {
 
   const handleVerify = async (newStatus: DefectStatus) => {
     if (!defect) return
-    if (defect.source_kind === 'AI_DETECTION') {
-      setApiError('Màn legacy chưa có snapshot/version hợp lệ cho Candidate. Dùng màn Candidate; không ghi quyết định cục bộ.')
-      return
-    }
     if (!notes.trim()) {
       showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi bấm Chấp nhận hoặc Báo sai!')
       return
@@ -680,11 +687,114 @@ export const DefectDetailVerify: React.FC = () => {
   }
 
   const handleResetDecision = async () => {
-    setApiError('Không có contract reset Candidate về PENDING. Đọc current head và dùng supersession theo API; chưa gửi lệnh.')
+    if (!defect || defect.source_kind !== 'AI_DETECTION') return
+    const isUnlink = defect.decision_kind === 'LINK_EXISTING'
+    setIsSubmitting(true)
+    setApiError(null)
+
+    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
+    setAllDetections((prev) =>
+      prev.map((entry) => {
+        if (
+          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
+          entry.item.code.toLowerCase() === defect.code.toLowerCase()
+        ) {
+          return {
+            ...entry,
+            item: {
+              ...entry.item,
+              status: 'PENDING',
+              decisionKind: null,
+              defectId: null,
+              disposition: null
+            }
+          }
+        }
+        return entry
+      })
+    )
+    setIsRecurrent(false)
+    setLinkedPriorCode(null)
+    showToast(
+      isUnlink
+        ? `✅ Đã tách ra thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
+        : `✅ Đã mở lại thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
+    )
+
+    try {
+      await surveyService.resetSurveyDetection(defect.id)
+      await loadBackendData(true)
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Không thể mở lại trạng thái Chờ duyệt trên CSDL.'
+      setApiError(errMsg)
+      showToast(`❌ Lỗi Backend: ${errMsg}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleLinkRecurrence = async (_targetDefectId: string, _targetVersion: string, _notesText: string) => {
-    setApiError('Luồng liên kết legacy chưa có snapshot Candidate hợp lệ. Dùng màn Candidate; chưa gửi lệnh hoặc cập nhật cục bộ.')
+  const handleLinkRecurrence = async (
+    targetDefectId: string,
+    targetVersion: string,
+    notesText: string
+  ) => {
+    if (!defect) return
+    setIsSubmitting(true)
+    setApiError(null)
+
+    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
+    setAllDetections((prev) =>
+      prev.map((entry) => {
+        if (
+          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
+          entry.item.code.toLowerCase() === defect.code.toLowerCase()
+        ) {
+          return {
+            ...entry,
+            item: {
+              ...entry.item,
+              status: 'APPROVED',
+              decisionKind: 'LINK_EXISTING',
+              defectId: targetDefectId
+            }
+          }
+        }
+        return entry
+      })
+    )
+    setIsRecurrent(true)
+    setLinkedPriorCode(`#DEF-${targetDefectId.slice(0, 8).toUpperCase()}`)
+    const auditNote = `[Gom vào hồ sơ cũ] Đã liên kết vào khiếm khuyết #DEF-${targetDefectId.slice(0, 8).toUpperCase()}. ${notesText}`
+    setNotes((prev) => (prev ? `${prev}\n${auditNote}` : auditNote))
+    showToast(
+      `✅ Đã gom [${defect.code}] vào hồ sơ khiếm khuyết [#DEF-${targetDefectId.slice(0, 8).toUpperCase()}] trên CSDL!`
+    )
+
+    try {
+      await surveyService.decideCandidate(defect.project_id, {
+        sourceKind: 'AI_DETECTION',
+        sourceId: defect.id,
+        decision: 'LINK_EXISTING',
+        targetDefectId,
+        targetVersion,
+        reason: notesText.trim() || `Gom ứng viên AI vào hồ sơ khiếm khuyết hiện hữu ${targetDefectId}`
+      })
+      await loadBackendData(true)
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Lỗi khi gom vào khiếm khuyết hiện hữu trên CSDL Backend.'
+      setApiError(errMsg)
+      showToast(`❌ Lỗi Backend: ${errMsg}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (isLoading) {

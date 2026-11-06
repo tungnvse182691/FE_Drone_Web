@@ -55,7 +55,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   const isCritical = item.severity === 'CRITICAL' || item.urgency === 'EMERGENCY'
   const isMerged = item.status === 'MERGED'
   const isVerified = item.status === 'VERIFIED'
-  const isNeedSurvey = item.status === 'NEED_SURVEY' || item.status === 'AWAITING_EVIDENCE'
+  const isNeedSurvey = item.status === 'NEED_SURVEY'
   const isPending = item.status === 'PENDING' || item.severity === 'HIGH'
 
   // Bảng màu viền / thanh gradient / chấm / nền tint (tông trầm, ĐÃ DUYỆT)
@@ -132,8 +132,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
     if (item.severity === 'MEDIUM') {
       return { bg: '#F5EED3', text: '#8C6D1F', label: 'Ưu tiên Vừa' }
     }
-    if (item.severity === 'LOW') return { bg: '#F5EED3', text: '#8C6D1F', label: 'Ưu tiên Thấp' }
-    return { bg: '#F1F5F9', text: '#64748B', label: 'Chưa xác định ưu tiên' }
+    return { bg: '#F5EED3', text: '#8C6D1F', label: 'Ưu tiên Thấp' }
   })()
 
   // Badge trạng thái xác minh (Bo tròn 999px, font 11px font-weight 700, padding 5px 14px)
@@ -141,11 +140,11 @@ export const TriageCard: React.FC<TriageCardProps> = ({
     if (item.status === 'VERIFIED') {
       return { bg: '#DCE8E2', text: '#065F46', label: 'Đã xác minh' }
     }
-    if (item.status === 'NEED_SURVEY' || item.status === 'AWAITING_EVIDENCE') {
-      return { bg: '#DDE3EE', text: '#1E3A5F', label: 'Chờ bổ sung bằng chứng' }
+    if (item.status === 'NEED_SURVEY') {
+      return { bg: '#DDE3EE', text: '#1E3A5F', label: 'Cần đo đạc' }
     }
     if (item.status === 'PENDING') {
-      return { bg: '#F0E8D5', text: '#78350F', label: item.project_id ? 'Chờ thẩm định' : 'Chờ tiếp nhận sau điều phối' }
+      return { bg: '#F0E8D5', text: '#78350F', label: 'Chờ xác minh' }
     }
     if (item.status === 'MERGED') {
       return { bg: '#F3E8FF', text: '#6B21A8', label: 'Đã gộp trùng' }
@@ -235,7 +234,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
         <div className="text-xs text-slate-500 font-medium flex items-center flex-wrap gap-x-2 gap-y-1">
           <span className="text-slate-800 font-semibold">{sourceLabel}</span>
           <span>•</span>
-          <span className="text-slate-700">{item.project_id ? `Đã phân dự án: ${item.project_name}${item.project_code ? ` (${item.project_code})` : ''}` : 'Chưa phân dự án — Cần điều phối'}</span>
+          <span className="text-slate-700">{item.project_name || 'Chưa gán dự án'}</span>
           <span>•</span>
           <span className="font-mono text-slate-700">
             {item.stationing || 'Lý trình cập nhật'}
@@ -246,8 +245,8 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
         {/* Hàng 3: Mô tả ngắn 1-2 dòng + Thumbnail GPS nhỏ gọn */}
         <div className="flex items-start justify-between gap-3">
-          <p className="text-xs text-slate-600 break-words leading-relaxed flex-1">
-            {item.description || 'Mở hồ sơ để tải nội dung và ảnh riêng của từng Report.'}
+          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed flex-1">
+            {item.description || item.pm_notes || 'Ghi nhận hiện trường đang chờ kỹ sư đối chiếu và thẩm định phân cấp.'}
           </p>
           {item.image_url && (
             <div className="relative w-12 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-200 shrink-0">

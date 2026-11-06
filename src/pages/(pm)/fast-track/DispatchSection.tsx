@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, PolicyThresholdConfig, ProjectOption, CrewTeam } from './types'
-import { DispatchMap } from './DispatchMap'
-import { DispatchModeSelector } from './DispatchModeSelector'
 import { DispatchFilters } from './DispatchFilters'
 import { DispatchTable } from './DispatchTable'
 import { DispatchActionBar } from './DispatchActionBar'
@@ -125,9 +123,6 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
       />
-
-      <DispatchModeSelector />
-      <DispatchMap />
 
       {/* Table & Violation Warning */}
       <DispatchTable

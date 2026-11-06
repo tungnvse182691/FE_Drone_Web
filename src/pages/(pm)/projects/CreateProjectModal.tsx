@@ -23,8 +23,8 @@ export interface CreateProjectModalProps {
   onChangeStartDate: (val: string) => void
   endDate: string // warrantyEndDate
   onChangeEndDate: (val: string) => void
-  receivedCreate?: boolean
-  pendingCreate?: boolean
+  handoverFiles?: string[]
+  onChangeHandoverFiles?: (files: string[]) => void
   isSubmitting?: boolean
   errorMessage?: string | null
   onSubmit: (e: React.FormEvent) => void
@@ -46,8 +46,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeStartDate,
   endDate,
   onChangeEndDate,
-  receivedCreate = false,
-  pendingCreate = false,
+  handoverFiles = [],
+  onChangeHandoverFiles,
   isSubmitting = false,
   errorMessage = null,
   onSubmit,
@@ -65,18 +65,17 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   }, [startDate, endDate])
 
   const isFormValid = useMemo(() => {
-    if (pendingCreate) return !isSubmitting
     return (
       projectName.trim().length > 0 &&
       projectCode.trim().length > 0 &&
       projectPM.trim().length > 0 &&
-      pmOptions.some(pm => pm.id === projectPM) &&
+      projectPM !== '-- Để trống --' &&
       startDate.length > 0 &&
       endDate.length > 0 &&
       !isDateInvalid &&
       !isSubmitting
     )
-  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pmOptions, pendingCreate])
+  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting])
 
   if (!isOpen) return null
 
@@ -122,8 +121,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
           )}
 
-          {pendingCreate && <p role="alert">{receivedCreate ? 'Đã nhận201: chỉ đọc lại kết quả, không POST thêm.' : 'Yêu cầu trước chưa rõ kết quả: chỉ chủ động gửi lại đúng nội dung và khóa đã giữ.'} Danh mục PM hiện tại không thay đổi yêu cầu đã lưu.</p>}
-          <fieldset disabled={isSubmitting || pendingCreate} className="space-y-4">
           {/* Mã dự án & Tên dự án */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
@@ -136,7 +133,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 value={projectCode}
                 onChange={handleCodeChange}
                 placeholder="VD: PRJ-QL1A-03"
-                className={`w-full px-3 py-2 border  font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                className={`w-full px-3 py-2 border font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                   errorMessage && errorMessage.toLowerCase().includes('mã dự án')
                     ? 'border-rose-400 bg-rose-50/20 text-rose-900 focus:ring-rose-400'
                     : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-brand-gold'
@@ -188,8 +185,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => onChangeProjectPM(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
               >
-                <option value="">Chọn PM đang hoạt động</option>
-                {pendingCreate && projectPM && !pmOptions.some(pm => pm.id === projectPM) && <option value={projectPM}>PM của yêu cầu đã lưu ({projectPM})</option>}
                 {pmOptions.length === 0 ? (
                   <option value="">Đang tải danh sách PM...</option>
                 ) : (
@@ -238,13 +233,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-600">Quyền PM có hiệu lực từ ngày bàn giao; hệ thống xét ngày hiệu lực theo UTC.</p>
             {/* Cảnh báo vi phạm validation */}
             {isDateInvalid && (
               <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-2">
                 <Icon name="error" size={16} className="shrink-0 text-rose-600" />
                 <span>
-                  <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="">{startDate}</code>).
+                  <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="font-mono">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="font-mono">{startDate}</code>).
                 </span>
               </div>
             )}
@@ -265,13 +259,56 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </p>
 
             <div className="space-y-2">
-              <p className="text-xs text-slate-600">Chưa có luồng upload trước dự án hợp lệ. Tạo dự án không đính kèm file (handoverFileIds: []); không gửi tên file thay UUID.</p>
-              <input type="file" disabled aria-label="Đính kèm bàn giao chưa hỗ trợ" />
+              <label className="flex items-center justify-center p-3 border-2 border-dashed border-slate-200 hover:border-brand-gold rounded-lg cursor-pointer bg-white transition group">
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files
+                    if (files && files.length > 0) {
+                      const names = Array.from(files).map((f) => f.name)
+                      onChangeHandoverFiles?.([...(handoverFiles || []), ...names])
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-2 text-slate-500 group-hover:text-brand-navy">
+                  <Icon name="upload_file" size={18} className="text-slate-400 group-hover:text-brand-gold" />
+                  <span className="text-xs">Bấm để chọn file biên bản bàn giao hoặc kéo thả vào đây</span>
+                </div>
+              </label>
+
+              {handoverFiles && handoverFiles.length > 0 ? (
+                <div className="space-y-1">
+                  {handoverFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-[11px]"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <Icon name="description" size={16} className="text-brand-gold shrink-0" />
+                        <span className="truncate font-medium text-slate-800">{file}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onChangeHandoverFiles?.(handoverFiles.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-rose-600 transition p-1"
+                        title="Xóa tài liệu"
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 italic text-center py-1">
+                  Chưa có tài liệu bàn giao nào được đính kèm.
+                </p>
+              )}
             </div>
           </div>
 
 
-          </fieldset>
           {/* Action Buttons */}
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
@@ -296,7 +333,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 size={16}
                 className={isSubmitting ? 'animate-spin' : ''}
               />
-              <span>{isSubmitting ? 'Đang khởi tạo...' : pendingCreate ? receivedCreate ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu' : 'Khởi tạo dự án'}</span>
+              <span>{isSubmitting ? 'Đang khởi tạo...' : 'Khởi tạo dự án'}</span>
             </button>
           </div>
         </form>
