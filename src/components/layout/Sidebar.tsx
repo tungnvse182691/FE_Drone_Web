@@ -13,6 +13,7 @@ import {
   BarChart3,
   ShieldCheck,
   Zap,
+  Route,
   Sparkles,
   History,
   Sliders,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react'
 
 interface NavNestedChild {
+  disabled?: boolean
   label: string
   path: string
 }
@@ -59,9 +61,12 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án bảo hành',
+      title: 'Dự án & Tuyến',
       icon: FolderKanban,
-      directPath: '/pm/projects'
+      items: [
+        { label: 'Dự án bảo hành', path: '/pm/projects', icon: FolderKanban },
+        { label: 'Tuyến & Phân đoạn', path: '/pm/alignment', icon: Route }
+      ]
     },
     {
       id: 'surveys',
@@ -69,7 +74,14 @@ export const Sidebar: React.FC = () => {
       icon: PlaneTakeoff,
       items: [
         {
-          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff },
+          label: 'Đợt bay Drone', path: '/pm/surveys', icon: PlaneTakeoff,
+          children: [
+            { label: 'Danh sách đợt bay', path: '/pm/surveys' },
+            { label: 'Tạo yêu cầu bay', path: '/pm/surveys/create' },
+            { label: 'Khung hình thẩm định AI', path: '/pm/drone-mission' },
+            { label: 'Thẩm định khung nhận diện', path: '', disabled: true }
+          ]
+        },
         { label: 'Hộp thư tiếp nhận lỗi', path: '/pm/ai-inbox', icon: Inbox },
         { label: 'Điều phối nhanh', path: '/pm/fast-track', icon: Zap }
       ]
@@ -109,9 +121,12 @@ export const Sidebar: React.FC = () => {
     },
     {
       id: 'projects',
-      title: 'Dự án bảo hành',
+      title: 'Dự án & Tuyến',
       icon: FolderKanban,
-      directPath: '/sup/projects'
+      items: [
+        { label: 'Dự án bảo hành', path: '/sup/projects', icon: FolderKanban },
+        { label: 'Phê duyệt tuyến', path: '/sup/alignment', icon: Route }
+      ]
     },
     {
       id: 'surveys',
@@ -365,6 +380,7 @@ export const Sidebar: React.FC = () => {
                         {hasChildren && isBranchOpen && (
                           <div className="pl-7 pr-1 py-0.5 space-y-1 relative before:absolute before:left-6 before:top-1 before:bottom-1 before:w-[1px] before:bg-amber-200">
                             {subItem.children!.map((child) => {
+                              if (child.disabled) return <button key={child.label} type="button" disabled title="Chọn hồ sơ phát hiện trước khi mở thẩm định" className="w-full text-left flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-slate-200" /><span>{child.label}</span></button>
                               const isChildActive = child.path.includes('/review')
                                 ? location.pathname.includes('/review') || location.pathname.startsWith('/pm/drone-mission')
                                 : child.path.includes('/defects')

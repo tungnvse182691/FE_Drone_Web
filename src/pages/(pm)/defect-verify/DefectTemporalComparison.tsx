@@ -24,8 +24,8 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
   const epochPrevLabel = defect.previous_epoch_label || 'Chu kỳ khảo sát trước (T-1)'
   const epochCurrLabel =
     defect.current_epoch_label ||
-    `Chu kỳ hiện tại (${defect.fixture_version || 'Road-YOLOv9'} • Đợt #${(defect.run_id || '').slice(0, 8).toUpperCase()})`
-  const prevBbox = defect.previous_epoch_bbox || defect.bounding_box
+    `Chu kỳ hiện tại (${defect.fixture_version || 'Chưa cập nhật'} • Đợt #${(defect.run_id || '').slice(0, 8).toUpperCase()})`
+  const prevBbox = defect.previous_epoch_bbox
   const defectTypeVi =
     defect.defect_type === 'POTHOLE' ? 'Ổ gà mặt đường' : 'Vết nứt mặt đường'
 
@@ -76,26 +76,10 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
     }
   }
 
-  const renderSyntheticRoadSurface = (label: string, variant: 'PREV' | 'CURR') => (
-    <div
-      className={`absolute inset-0 ${
-        variant === 'PREV' ? 'bg-[#18222D]' : 'bg-[#1B1F24]'
-      } flex flex-col justify-between p-4 pointer-events-none`}
-    >
-      <div
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, #334155 1px, transparent 1px), linear-gradient(to bottom, #334155 1px, transparent 1px)',
-          backgroundSize: '36px 36px'
-        }}
-      />
-      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[72%] bg-[#22272E] border-x-2 border-slate-500/40">
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 border-l-2 border-dashed border-amber-400/50" />
-      </div>
-      <div className="relative z-10 text-[10px] font-mono text-slate-400 self-end mt-auto">
-        {label}
-      </div>
+  const renderMissingEvidence = (label: string) => (
+    <div className="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center gap-2 text-slate-500">
+      <Icon name="image_not_supported" size={28} />
+      <p className="text-xs">{label} · Chưa cập nhật</p>
     </div>
   )
 
@@ -163,11 +147,11 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                     className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                   />
                 ) : (
-                  renderSyntheticRoadSurface(epochPrevLabel, 'PREV')
+                  renderMissingEvidence(epochPrevLabel)
                 )}
 
                 {/* Khung bao kỳ trước */}
-                <div
+                {prevBbox && (<div
                   className="absolute border-2 border-emerald-400 bg-emerald-400/15 rounded pointer-events-none"
                   style={{
                     left: `${prevBbox.x * 100}%`,
@@ -179,7 +163,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                   <span className="bg-emerald-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded absolute -top-4 left-0 whitespace-nowrap">
                     Kỳ T-1 ({prevBbox.width.toFixed(2)}×{prevBbox.height.toFixed(2)})
                   </span>
-                </div>
+                </div>)}
 
                 <div className="absolute top-3 left-3 bg-[#1A1D20]/85 text-white backdrop-blur-xs px-2.5 py-1 rounded-md text-[11px] font-medium border border-white/10 pointer-events-none z-10 flex items-center gap-1.5 shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -199,7 +183,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   ) : (
-                    renderSyntheticRoadSurface(epochCurrLabel, 'CURR')
+                    renderMissingEvidence(epochCurrLabel)
                   )}
                   <div
                     className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded"
@@ -248,6 +232,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                   />
                   <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap">T0</span>
                 </div>
+                <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-200">{[25,50,75].map(position => <button type="button" key={position} onClick={() => setSliderPos(position)} className={`px-2 py-0.5 rounded text-[10px] font-medium ${sliderPos === position ? 'bg-[#C9A227] text-white' : 'text-slate-600'}`}>{position === 50 ? '50% (Cân bằng)' : `${position}%`}</button>)}</div>
               </div>
             </div>
           )}
@@ -271,9 +256,9 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    renderSyntheticRoadSurface(epochPrevLabel, 'PREV')
+                    renderMissingEvidence(epochPrevLabel)
                   )}
-                  <div
+                  {prevBbox && (<div
                     className="absolute border-2 border-emerald-400 bg-emerald-400/20 rounded pointer-events-none"
                     style={{
                       left: `${prevBbox.x * 100}%`,
@@ -281,7 +266,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                       width: `${prevBbox.width * 100}%`,
                       height: `${prevBbox.height * 100}%`
                     }}
-                  />
+                  />)}
                 </div>
               </div>
 
@@ -301,7 +286,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    renderSyntheticRoadSurface(epochCurrLabel, 'CURR')
+                    renderMissingEvidence(epochCurrLabel)
                   )}
                   <div
                     className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded pointer-events-none"
@@ -321,9 +306,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-[#F8F9FA] rounded-lg border border-[#E2E5E9] text-xs">
             <div>
               <span className="text-slate-500 text-[11px] block">Khung bao Chu kỳ T-1</span>
-              <span className="font-mono font-bold text-slate-700">
-                ({prevBbox.x.toFixed(2)}, {prevBbox.y.toFixed(2)}, {prevBbox.width.toFixed(2)}, {prevBbox.height.toFixed(2)})
-              </span>
+              <span className="font-mono font-bold text-slate-700">{prevBbox ? `(${prevBbox.x.toFixed(2)}, ${prevBbox.y.toFixed(2)}, ${prevBbox.width.toFixed(2)}, ${prevBbox.height.toFixed(2)})` : 'Chưa cập nhật'}</span>
             </div>
             <div>
               <span className="text-slate-500 text-[11px] block">Khung bao Chu kỳ T0</span>
@@ -335,7 +318,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
             <div>
               <span className="text-slate-500 text-[11px] block">Độ tin cậy AI (T0)</span>
               <span className="font-mono font-bold text-amber-800">
-                {(defect.confidence_score * 100).toFixed(1)}% ({defect.fixture_version || 'Road-YOLOv9'})
+                {(defect.confidence_score * 100).toFixed(1)}% ({defect.fixture_version || 'Chưa cập nhật'})
               </span>
             </div>
           </div>
@@ -388,7 +371,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  renderSyntheticRoadSurface(epochCurrLabel, 'CURR')
+                  renderMissingEvidence(epochCurrLabel)
                 )}
                 <div
                   className="absolute border-2 border-[#C9A227] bg-[#C9A227]/20 rounded pointer-events-none"

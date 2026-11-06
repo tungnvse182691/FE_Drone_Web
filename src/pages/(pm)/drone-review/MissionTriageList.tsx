@@ -1,4 +1,5 @@
 import React from 'react'
+import type { AiCandidateFactsDto } from '../../../api/services/surveyService'
 import { Link, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { useAuthStore } from '../../../store/authStore'
@@ -30,7 +31,14 @@ export interface MissionTriageListProps {
   isBaselineLocked?: boolean
 }
 
-export const MissionTriageList: React.FC<MissionTriageListProps> = ({
+type ServerMissionTriageProps = { serverView: true; records: Array<Pick<AiCandidateFactsDto, 'detectionId' | 'typeCode'>>; selectedId: string; onSelect: (id: string) => void; loading: boolean; error: boolean; projectSelected: boolean }
+
+export const MissionTriageList: React.FC<MissionTriageListProps | ServerMissionTriageProps> = (props) => {
+  if (!('serverView' in props)) return <LegacyMissionTriageList {...props} />
+  return <section className="lg:col-span-5 min-w-0 bg-white border border-brand-border rounded-xl shadow-2xs p-4 flex flex-col gap-3"><header className="space-y-3"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-bold text-sm text-brand-dark flex items-center gap-2"><Icon name="fact_check" size={18} className="text-brand-gold" />Danh sách phát hiện AI</h2><span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600">Chưa cập nhật</span></div><div className="flex flex-wrap gap-1.5">{['Tất cả','Chờ duyệt','Hợp lệ','Báo sai'].map(label => <button type="button" disabled key={label} className="px-2.5 py-1 rounded-full text-xs border border-slate-200 text-slate-400">{label}</button>)}</div></header><div className="flex flex-col gap-2.5 max-h-[640px] overflow-y-auto pr-1">{props.records.map(record => <button type="button" key={record.detectionId} onClick={() => props.onSelect(record.detectionId)} className={`rounded-xl border text-left p-3.5 space-y-2 ${props.selectedId === record.detectionId ? 'bg-amber-50/50 border-brand-gold ring-2 ring-brand-gold/50' : 'border-slate-200'}`}><p className="text-xs font-bold text-slate-800">{record.typeCode}</p><p className="text-xs text-slate-500 break-all">{record.detectionId}</p><div className="rounded-lg bg-slate-50 border border-slate-100 p-2 text-xs text-slate-500">Kết quả thẩm định: Chưa cập nhật</div></button>)}{!props.loading && !props.error && !props.records.length && <p className="p-6 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-xl">{props.projectSelected ? 'Chưa có phát hiện trong kết quả đã tải.' : 'Chọn dự án để xem phát hiện.'}</p>}</div><footer className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 mt-auto text-xs text-slate-500"><p>Đã rà soát: Chưa cập nhật</p><div className="flex flex-wrap gap-3"><span>Hợp lệ: Chưa cập nhật</span><span>Báo sai: Chưa cập nhật</span></div><div className="h-2 rounded-full bg-slate-200" /></footer></section>
+}
+
+const LegacyMissionTriageList: React.FC<MissionTriageListProps> = ({
   detections,
   selectedDetectionId,
   onSelectDetection,

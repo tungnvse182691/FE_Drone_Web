@@ -60,6 +60,9 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
               Bỏ chọn
             </button>
 
+            <button type="button" disabled title="Chưa tích hợp lưu nháp phân công từ màn hình này" className="px-3.5 py-2 bg-white text-slate-400 text-xs font-semibold rounded-xl border border-slate-200 shadow-2xs">Lưu nháp phân công</button>
+            <button type="button" disabled title="Chưa xác minh đầy đủ điều kiện lệnh đo đạc tại đây" className="px-3.5 py-2 bg-white text-slate-400 text-xs font-semibold rounded-xl border border-slate-200">Giao việc gom lô đo đạc</button>
+            <button type="button" disabled title="Chưa tích hợp lệnh khẩn cấp tại đây" className="px-3.5 py-2 bg-white text-slate-400 text-xs font-semibold rounded-xl border border-slate-200">Giao việc khẩn cấp</button>
             {onOpenDispatchModal && (
               <button
                 onClick={onOpenDispatchModal}

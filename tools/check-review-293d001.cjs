@@ -757,7 +757,7 @@ function caseLifecycleHarness() {
     }
     const service={readProjectContext:async()=>({projectId:'p',engineeringUtmSrid:32648,roadSections:roads}),fetchCrsProfiles:async()=>[],readConfirmedGeometry:readGeometry,getGeometryDraft:async()=>({data:{id:'draft',status:'DRAFT',version:'v'},etag:'"v"'}),readDraftReadiness:async()=>options.readiness}
     const {AlignmentGeometryWorkflow:Component}=load('src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx',{
-      '../../../components/ui/Icon':{Icon:()=>null},react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
+      './AlignmentHeader':{AlignmentHeader:()=>null},'./AlignmentMap':{AlignmentMap:()=>null},'./AlignmentSidebar':{AlignmentSidebar:()=>null},'./AlignmentImportModal':{AlignmentImportModal:()=>null},'../../../components/ui/Icon':{Icon:()=>null},react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
       '../../../api/client':{apiClient:{get:projectGet}},'../../../api/services/alignmentService':{alignmentService:service},
       '../../../store/authStore':{useAuthStore:selector=>selector({user:{id:'pm',role:options.role || roles.PROJECT_MANAGER}})},'./alignmentImportHelpers':{inspectGeoJsonCenterline:()=>({})}
     })
@@ -1392,19 +1392,31 @@ function caseLifecycleHarness() {
   await test('restored survey/list/create and drone observer render original frames without fabricated flight facts', async () => {
     const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
     const shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},
-      'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useSearchParams:()=>[new URLSearchParams(),()=>{}]},
+      'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useNavigate:()=>()=>{},useSearchParams:()=>[new URLSearchParams(),()=>{}]},
       '../../../api/client':{apiClient:{}},'../../../api/services/surveyService':{surveyService:{}},
-      '../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:1,user:{role:roles.PROJECT_MANAGER}})}}
+      '../../../store/authStore':{useAuthStore:Object.assign(selector=>selector({authEpoch:1,user:{role:roles.PROJECT_MANAGER}}),{getState:()=>({user:{role:roles.PROJECT_MANAGER}})})}}
     const Modal=load('src/pages/(pm)/surveys/DroneSimulatorModal.tsx',shared).DroneSimulatorModal
-    const Workflow=load('src/pages/(pm)/surveys/SurveyWorkflow.tsx',{...shared,'./DroneSimulatorModal':{DroneSimulatorModal:Modal}}).SurveyWorkflow
+    const Header=load('src/pages/(pm)/surveys/SurveyHeader.tsx',shared).SurveyHeader
+    const CreateHeader=load('src/pages/(pm)/create-survey/CreateSurveyHeader.tsx',shared).CreateSurveyHeader
+    const Map=load('src/pages/(pm)/create-survey/FlightCorridorMap.tsx',{...shared,'maplibre-gl/dist/maplibre-gl.css':{},'../../../components/ui/Card':{Card:props=>React.createElement('section',{},props.children)}}).FlightCorridorMap
+    const Button=load('src/components/ui/Button.tsx',shared).Button
+    const Form=load('src/pages/(pm)/create-survey/CreateSurveyForm.tsx',{...shared,'../../../components/ui/Button':{Button},'./OverlapHelpBox':{OverlapHelpBox:()=>null}}).CreateSurveyForm
+    const SurveyCard=load('src/pages/(pm)/surveys/SurveyCard.tsx',shared).SurveyCard
+    const Kpis=load('src/pages/(pm)/surveys/SurveyKpiCards.tsx',shared).SurveyKpiCards
+    const Workflow=load('src/pages/(pm)/surveys/SurveyWorkflow.tsx',{...shared,'./DroneSimulatorModal':{DroneSimulatorModal:Modal},'./SurveyCard':{SurveyCard},'./SurveyKpiCards':{SurveyKpiCards:Kpis},'./SurveyHeader':{SurveyHeader:Header},'../create-survey/CreateSurveyHeader':{CreateSurveyHeader:CreateHeader},'../create-survey/FlightCorridorMap':{FlightCorridorMap:Map},'../create-survey/CreateSurveyForm':{CreateSurveyForm:Form}}).SurveyWorkflow
     const list=renderToStaticMarkup(React.createElement(Workflow))
-    for(const label of ['Kế hoạch bay','Nhiệm vụ đã giao','Độ phủ khảo sát','Chất lượng dữ liệu','Chọn dự án được cấp quyền','Nguồn gốc'])assert.ok(list.includes(label),label)
+    for(const label of ['Tổng kế hoạch bay','Cần thẩm định AI','Kế hoạch lên lịch','Đã khóa Baseline','Chọn dự án được cấp quyền','Nguồn gốc'])assert.ok(list.includes(label),label)
     const create=renderToStaticMarkup(React.createElement(Workflow,{mode:'create'}))
-    for(const label of ['Thông tin kế hoạch bay','Lý trình bắt đầu','Độ cao bay','Operator'])assert.ok(create.includes(label),label)
+    for(const label of ['1.','2.','3.','4.','Ghi Chú Kỹ Thuật','Tạo kế hoạch và giao Operator'])assert.ok(create.includes(label),label)
     assert.ok(create.includes('<fieldset disabled=""'));assert.ok(create.includes('Chưa cập nhật'))
     const observer=renderToStaticMarkup(React.createElement(Modal,{isOpen:true,onClose(){}}))
     assert.ok(!observer.includes('100%'));assert.ok(!observer.includes('Hoàn tất chuyến bay'))
-    const candidate=load('src/pages/(pm)/drone-review/CandidateWorkflow.tsx',shared).CandidateWorkflow
+    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',shared).MissionQualitySection
+    const HeaderMission=load('src/pages/(pm)/drone-review/MissionHeader.tsx',{...shared,'./MissionQualitySection':{MissionQualitySection:Quality}}).MissionHeader
+    const Viewer=load('src/pages/(pm)/drone-review/MissionViewer.tsx',{...shared,'./MissionViewport':{MissionViewport:()=>null},'./MissionScrubber':{MissionScrubber:()=>null}}).MissionViewer
+    const Triage=load('src/pages/(pm)/drone-review/MissionTriageList.tsx',shared).MissionTriageList
+    const MissionModals=load('src/pages/(pm)/drone-review/MissionModals.tsx',shared).MissionModals
+    const candidate=load('src/pages/(pm)/drone-review/CandidateWorkflow.tsx',{...shared,'./MissionModals':{MissionModals},'./MissionHeader':{MissionHeader:HeaderMission},'./MissionViewer':{MissionViewer:Viewer},'./MissionTriageList':{MissionTriageList:Triage}}).CandidateWorkflow
     const review=renderToStaticMarkup(React.createElement(candidate))
     for(const label of ['Thẩm định kết quả AI','Phát hiện','Nguồn gốc'])assert.ok(review.includes(label),label)
     for(const html of [list,create,observer,review]){assert.ok(!html.includes('unsplash'));assert.ok(!html.includes('API không cung cấp'))}
@@ -1425,6 +1437,107 @@ function caseLifecycleHarness() {
       assert.ok(!html.includes('mapbox'));assert.ok(!html.includes('localStorage'))
       if(name==='DispatchModeSelector')assert.equal((html.match(/disabled=""/g)||[]).length,3)
     }
+  })
+  await test('original application menus retain geometry/survey entry without sample record IDs', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const noop=()=>null
+    for(const role of [roles.PROJECT_MANAGER,roles.SUPERVISOR]){
+      const Component=load('src/components/layout/Sidebar.tsx',{react:{__esModule:true,default:React,...React},
+        'react-router-dom':{NavLink:props=>React.createElement('a',{href:props.to},props.children),useLocation:()=>({pathname:role===roles.SUPERVISOR?'/sup/projects':'/pm/projects'}),useNavigate:()=>()=>{}},
+        '../../store/authStore':{useAuthStore:()=>({user:{role}})},'../ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop})}).Sidebar
+      const html=renderToStaticMarkup(React.createElement(Component))
+      assert.ok(html.includes('Dự án &amp; Tuyến'));assert.ok(html.includes(role===roles.SUPERVISOR?'/sup/alignment':'/pm/alignment'))
+      if(role===roles.PROJECT_MANAGER){assert.ok(html.includes('/pm/surveys/create'));assert.ok(html.includes('/pm/drone-mission'))}
+      for(const record of ['srv-01','det-03'])assert.ok(!html.includes(record))
+    }
+  })
+  await test('invitation assignment and restored source components never fabricate project, coordinates or model metrics', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
+    const Component=load('src/pages/(auth)/accept-invitation/InvitationCard.tsx',{react:{__esModule:true,default:React,...React},'lucide-react':new Proxy({},{get:()=>noop})}).InvitationCard
+    const html=renderToStaticMarkup(React.createElement(Component))
+    for(const label of ['Chi tiết phân công nhân sự','Người gửi lời mời','Vai trò được phân công','Thời hạn lời mời'])assert.ok(html.includes(label))
+    assert.ok(html.includes('Chưa cập nhật'));assert.ok(!html.includes('Quốc lộ 1A'));assert.ok(!html.includes('Nguyễn Văn An'))
+    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop}}).MissionQualitySection
+    const quality=renderToStaticMarkup(React.createElement(Quality,{readModelPending:true}))
+    for(const label of ['Mô hình nhận diện','Tiến độ thẩm định','Phân loại kết quả','Mốc Baseline'])assert.ok(quality.includes(label))
+    for(const text of ['Road-YOLOv9','synthetic-road-v1','HOÀN TẤT','CHƯA KHÓA'])assert.ok(!quality.includes(text))
+    assert.ok(quality.includes('width:0%'))
+  })
+  await test('original survey card and KPI frames consume raw server records without synthetic survey lifecycle/metrics', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}
+    const Card=load('src/pages/(pm)/surveys/SurveyCard.tsx',mocks).SurveyCard
+    const card=renderToStaticMarkup(React.createElement(Card,{serverRecord:{id:'server-plan',projectId:'server-project',status:'DRAFT'},projectName:'Dự án từ máy chủ',onViewProgress(){}}))
+    for(const text of ['server-plan','Dự án từ máy chủ','DRAFT','Hình ảnh','Độ phủ','Phát hiện AI'])assert.ok(card.includes(text))
+    for(const text of ['0 phát hiện','Chờ Thẩm Định AI','SCHEDULED','BASELINE_LOCKED','srv-01'])assert.ok(!card.includes(text))
+    const Kpis=load('src/pages/(pm)/surveys/SurveyKpiCards.tsx',mocks).SurveyKpiCards
+    const unknown=renderToStaticMarkup(React.createElement(Kpis,{serverMode:true}))
+    assert.ok(unknown.includes('Chưa cập nhật'));assert.ok(!unknown.includes('>00<'))
+  })
+  await test('restored geometry sidebar and import modal retain technical frames with no preset CRS/width/slab or write command', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
+    const mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop}),
+      './SidebarSegmentsTab':{SidebarSegmentsTab:noop},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:noop},'./SidebarSlabsTab':{SidebarSlabsTab:noop},'./SidebarFooterKpis':{SidebarFooterKpis:noop}}
+    const Sidebar=load('src/pages/(pm)/alignment/AlignmentSidebar.tsx',mocks).AlignmentSidebar
+    for(const tab of ['SEGMENTS','WIDTH_PROFILE','SLABS']){
+      const html=renderToStaticMarkup(React.createElement(Sidebar,{readOnly:true,rightTab:tab,onSetRightTab(){}}))
+      for(const text of ['Phân đoạn','Bề rộng (m)','Tấm &amp; Khe','Chưa cập nhật'])assert.ok(html.includes(text),text)
+      assert.ok(html.includes('<fieldset disabled=""'));assert.ok(!html.includes('value="8"'))
+    }
+    const Modal=load('src/pages/(pm)/alignment/AlignmentImportModal.tsx',{...mocks,'./ImportPanel':{ImportPanel:noop}}).AlignmentImportModal
+    let writes=0;const html=renderToStaticMarkup(React.createElement(Modal,{inspectOnly:true,isOpen:true,onClose(){},onProcessGeoJsonFile(){writes++}}))
+    assert.ok(html.includes('Tải tệp GeoJSON'));assert.ok(html.includes('chưa lưu bản nháp'));assert.ok(!html.includes('WGS84'));assert.equal(writes,0)
+  })
+  await test('original mission header/viewer/triage components keep absent evidence and actions gated', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children)}}
+    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',shared).MissionQualitySection
+    const Header=load('src/pages/(pm)/drone-review/MissionHeader.tsx',{...shared,'./MissionQualitySection':{MissionQualitySection:Quality}}).MissionHeader
+    const Viewer=load('src/pages/(pm)/drone-review/MissionViewer.tsx',{...shared,'./MissionViewport':{MissionViewport:()=>{throw Error('legacy viewport must not render')}},'./MissionScrubber':{MissionScrubber:()=>{throw Error('legacy playback must not render')}}}).MissionViewer
+    const header=renderToStaticMarkup(React.createElement(Header,{serverView:true,basePath:'/pm',busy:false,onReload(){}}))
+    for(const label of ['Yêu cầu bay bổ sung','Khóa Baseline đoạn đường','Mô hình nhận diện'])assert.ok(header.includes(label))
+    assert.ok(header.includes('Mở hồ sơ xem trước; chưa gửi lệnh'));assert.ok(header.includes('Mở điều kiện xem trước; chưa gửi lệnh'));assert.ok(!header.includes('#MS-2026'))
+    const viewer=renderToStaticMarkup(React.createElement(Viewer,{serverView:true,tab:'Ảnh nguồn',onTabChange(){},fullscreen:false,onToggleFullscreen(){}}))
+    for(const label of ['Ảnh nguồn','Bản đồ','So sánh đa kỳ','Lớp AI','Chưa cập nhật'])assert.ok(viewer.includes(label))
+    assert.ok(!viewer.includes('unsplash'));assert.ok(!viewer.includes('0 / 120'))
+  })
+  await test('restored mission modal layouts expose only inspection and never the legacy flight/baseline effects', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const Modal=load('src/pages/(pm)/drone-review/MissionModals.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).MissionModals
+    for(const kind of ['refly','baseline']){
+      const html=renderToStaticMarkup(React.createElement(Modal,{inspectOnly:true,kind,onClose(){}}))
+      assert.ok(html.includes('Chưa cập nhật'));assert.ok(html.includes('disabled=""'));assert.ok(html.includes('Chưa tích hợp gửi lệnh'))
+      for(const text of ['1027+100','95%','coveragePercentage','#MS-2026'])assert.ok(!html.includes(text))
+    }
+  })
+  await test('restored map/header surfaces render original controls without requiring invented geometry', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
+    const shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop}),
+      './AlignmentMapLegend':{AlignmentMapLegend:noop},'./alignmentGeometryHelpers':{},'react-router-dom':{useNavigate:()=>()=>{}}}
+    const Map=load('src/pages/(pm)/alignment/AlignmentMap.tsx',shared).AlignmentMap
+    const html=renderToStaticMarkup(React.createElement(Map,{serverView:true,caption:'Chưa cập nhật',children:'Không có geometry'}))
+    for(const label of ['Vệ tinh','Bản đồ tuyến','Tấm &amp; Khe','Mặt cắt ngang','Vị trí con trỏ','Không có geometry'])assert.ok(html.includes(label),label)
+    assert.ok(!html.includes('8.0'));assert.ok(html.includes('disabled=""'))
+    const Header=load('src/pages/(pm)/alignment/AlignmentHeader.tsx',shared).AlignmentHeader
+    const header=renderToStaticMarkup(React.createElement(Header,{serverView:true,basePath:'/sup',isSupervisor:true,canImport:false,onOpenImport(){}}))
+    assert.ok(header.includes('Phê duyệt tim tuyến'));assert.ok(header.includes('Yêu cầu chỉnh sửa'));assert.ok(header.includes('disabled=""'))
+    assert.ok(!header.includes('PENDING_APPROVAL'))
+  })
+  await test('reflog CRS widget starts loading and never restores local presets or implicit first profile', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const Widget=load('src/pages/(pm)/project-overview/ProjectCrsProfileCard.tsx',{
+      react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},
+      '../../../api/services/alignmentService':{alignmentService:{fetchCrsProfiles:()=>{throw Error('SSR must not read or mutate')}}},
+      '../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:1})}
+    }).ProjectCrsProfileCard
+    const html=renderToStaticMarkup(React.createElement(Widget,{projectId:'server-project'}))
+    for(const text of ['Hồ sơ hệ quy chiếu','Đang tải hồ sơ','Chọn hồ sơ hệ quy chiếu','Chưa cập nhật'])assert.ok(html.includes(text))
+    for(const text of ['VN2000','32648','crs-default','Không có dữ liệu'])assert.ok(!html.includes(text))
+  })
+  await test('temporal comparison restores split presets and never borrows current bbox or draws a synthetic evidence surface', async () => {
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+    const Component=load('src/pages/(pm)/defect-verify/DefectTemporalComparison.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).DefectTemporalComparison
+    const html=renderToStaticMarkup(React.createElement(Component,{defect:{id:'server-defect',previous_epoch_image_url:'https://example.test/private-evidence',previous_epoch_label:'Kỳ trước đã đọc',current_epoch_label:'Kỳ hiện tại đã đọc',bounding_box:{x:0.2,y:0.3,width:0.1,height:0.1},defect_type:'POTHOLE',confidence_score:0.8,chainage_km:1}}))
+    for(const text of ['50% (Cân bằng)','25%','75%','Chưa cập nhật'])assert.ok(html.includes(text))
+    assert.ok(!html.includes('Kỳ T-1 (0.10'));assert.ok(!html.includes('background-image'));assert.ok(!html.includes('Road-YOLOv9'))
   })
   console.log(`${passed} focused regression scenarios passed (mock HTTP/hooks; NOT E2E).`)
 })().catch(error => { console.error(error); process.exitCode = 1 })

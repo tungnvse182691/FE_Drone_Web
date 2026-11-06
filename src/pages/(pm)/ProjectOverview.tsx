@@ -12,6 +12,7 @@ import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
 import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
+import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 
@@ -175,6 +176,7 @@ export const ProjectOverview: React.FC = () => {
             showToast={showToast}
           />
           <ProjectMapPreviewCard project={project} basePath={basePath} isSupervisor={isSupervisor} />
+          <ProjectCrsProfileCard projectId={project.id} />
 
 
         </div>

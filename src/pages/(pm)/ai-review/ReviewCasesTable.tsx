@@ -131,7 +131,7 @@ export const ReviewCasesTable: React.FC<ReviewCasesTableProps> = ({
         <span className="text-slate-500">
           {filteredCases.length} hồ sơ phản ánh đã tải theo bộ lọc
         </span>
-        <span className="text-slate-500">Hiển thị tất cả kết quả</span>
+        <div className="flex flex-wrap items-center gap-2"><span className="text-slate-500">Hiển thị tất cả kết quả</span><nav aria-label="Điều hướng bảng hồ sơ" className="flex gap-1">{['first_page','chevron_left','chevron_right','last_page'].map(name => <button type="button" disabled key={name} aria-label={`Trang ${name}`} className="border border-slate-200 rounded-lg p-1.5 text-slate-300"><Icon name={name} size={16} /></button>)}</nav></div>
       </div>
     </div>
   )

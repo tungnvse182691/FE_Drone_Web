@@ -2373,3 +2373,813 @@ Browser chạy lại cả bốn route Fast Track sau thay đổi cuối: PM/Sup 
 - `src/pages/(pm)/surveys/SurveyWorkflow.tsx`
 - `src/pages/(sup)/SupLayout.tsx`
 - `tools/check-review-293d001.cjs`
+
+
+### 06/11/2026 — Đính chính baseline toàn ứng dụng; inventory trước sửa follow-up
+
+**HEAD kiểm tra:** `33fbe0bf525a7532070b06d7fd4bc329041b8753`, nhánh hoang, status sạch. Chưa sửa code khi lập bảng này. Kết quả task trước chỉ là khôi phục một số khung; **không đủ căn cứ tuyên bố đã khôi phục toàn bộ thiết kế nguyên bản**.
+
+**Snapshot gốc chọn để đối chiếu toàn ứng dụng:** `6644837bb5bb0a042369050fb31ff1b0ab5b7c56` (origin/main = origin/tung = local tung, 20/10/2026, tác giả Nguyễn Văn Tùng). Đây là snapshot nhánh gốc đầy đủ nhất tìm được trong các branch gốc hiện có, không phải commit trước 383e220. So sánh thêm main local `8867730c16d08506e4c1e1d481600f5497081dfb` và backup `37ee496ab538d1d86e90e7c1eada504448abba39`. Không dùng tên tác giả làm bằng chứng “trước mọi Codex”: lịch sử Git không ghi công cụ tạo commit, nên **chưa thể xác minh tuyệt đối mốc trước Codex**. Không có một SHA duy nhất chứa đồng thời mọi UI đã từng có; snapshot gốc kết hợp inventory lịch sử và giữ các màn hợp lệ thêm sau này.
+
+| Snapshot | TSX/CSS | JSX node tĩnh | Đánh giá |
+|---|---|---|---|
+| main | 87 | 8080 | Đối chiếu chéo; không lấy số node làm tiêu chí đầy đủ |
+| hoang-backup-before-merge | 242 | 10360 | Đối chiếu chéo; không lấy số node làm tiêu chí đầy đủ |
+| origin/main | 246 | 10887 | Nguồn gốc toàn ứng dụng |
+| 045f02c | 251 | 11855 | Đối chiếu chéo; không lấy số node làm tiêu chí đầy đủ |
+| afaaaf1 | 250 | 11494 | Đối chiếu chéo; không lấy số node làm tiêu chí đầy đủ |
+| HEAD | 257 | 11263 | Đối chiếu chéo; không lấy số node làm tiêu chí đầy đủ |
+
+Đã đọc history toàn repo 219 commit, branch remote qua ls-remote, App registry và diff JSX/children/button giữa snapshot. ZIP đã quét đệ quy thư mục dự án cha, Downloads và Desktop (bỏ node_modules/.git/bin/obj/dist): `drive-download-20261017T104249Z-1-001.zip` chỉ chứa 6 sơ đồ PNG; `RoadGuard-Project-Docs-v0.1.zip` chứa 44 tài liệu, không source FE. Không thấy ZIP FE/App.tsx/Sidebar.tsx dự án RoadGuard khác tại các vị trí đã quét; không suy ra không tồn tại trên mọi ổ đĩa.
+
+**Phát hiện đã bỏ sót:** menu Dự án & Tuyến bị đổi thành link Project nên mất entry Geometry ở cả hai role; Survey mất nhánh danh sách/tạo yêu cầu/thẩm định. Các link cũ gắn srv-01/det-03 là ID giả, không được phục hồi. InvitationCard mất summary/role/security frame; ProfilePage và UserProfileModal mất professional/role/info/security frame khi bỏ dữ liệu giả. Các component còn tồn tại nhưng không render: CreateSurveyHeader/Form/FlightCorridorMap, SurveyHeader/Kpi/Table, MissionHeader/Viewer/Triage/Modals và LegacyAlignmentSegments children. Cần ghép dữ liệu thật/gate vào component gốc, không coi khung mới rút gọn là đã hoàn nguyên.
+
+#### Inventory toàn bộ menu/route — trước chỉnh sửa
+
+| Menu | Route | Màn hình | Có trong snapshot gốc | Có ở HEAD | Đã mất gì | Cách khôi phục |
+|---|---|---|---|---|---|---|
+| Route phụ / từ màn cha | `/login` | Login | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/accept-invitation` | AcceptInvitation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/invite/:token` | AcceptInvitation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ activation handler, khôi phục summary/security layout không token/ID giả |
+| Route phụ / từ màn cha | `/force-change-password` | ForceChangePassword | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm` | Layout/index | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Tổng quan PM | `/pm/dashboard` | PMDashboard | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Dự án bảo hành | `/pm/projects` | ProjectList | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/projects/:id` | ProjectOverview | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/projects/:id/alignment` | AlignmentSegments | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Khôi phục entry menu và layout Geometry gốc; giữ UNKNOWN và gate server |
+| Tuyến & Phân đoạn | `/pm/alignment` | AlignmentSegments | Có | Có | Mất menu trực tiếp | Khôi phục entry menu và layout Geometry gốc; giữ UNKNOWN và gate server |
+| Đợt bay Drone | `/pm/surveys` | SurveyRequests | Có | Có | JSX 14→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Tạo yêu cầu bay | `/pm/surveys/create` | CreateSurvey | Có | Có | Mất menu trực tiếp; JSX 10→1; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/pm/surveys/:id` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/pm/surveys/:id/review` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/pm/drone-mission` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/pm/drone-mission/:id` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Hộp thư tiếp nhận lỗi | `/pm/ai-inbox` | AIReviewInbox | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/defects/:id/verify` | DefectDetailVerify | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/defects/:id/verify-a` | DefectDetailVerify | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/defects/:id/verify-b` | DefectDetailVerify | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/repair-batches/create` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/repair-batches/:id/submit` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/repair-batches/assign` | AssignCrew | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nhiệm vụ & Đo đạc hiện trường | `/pm/field-tasks` | FieldTasks | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/conflict-center` | OfflineConflicts | Có | Có | Component FieldTasks→OfflineConflicts | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Điều phối nhanh | `/pm/fast-track` | FastTrackDispatch | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/dispatch` | FastTrackDispatch | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Gói sửa chữa | `/pm/proposals` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/proposals/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/work-packages` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/work-packages/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/repair-batches` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/repair-batches/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/work-orders/confirm` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/work-orders/:id/confirm` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/evidence-closeout` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/evidence-closeout/:id` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nghiệm thu | `/pm/acceptance` | AcceptanceList | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/acceptance/:batchId` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Thực nghiệm AI | `/pm/research-validation` | ResearchValidation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/rpt-09` | ResearchValidation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nhật ký hoạt động | `/pm/audit-trail` | AuditTrail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/rpt-10` | AuditTrail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Báo cáo KPI | `/pm/reports` | RiskAnalytics | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/risk-analytics` | RiskAnalytics | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Lưu trữ hồ sơ | `/pm/retention` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/system-control` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/wf-12` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/legal-hold` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nhân sự dự án | `/pm/personnel` | PersonnelManagement | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/team` | PersonnelManagement | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/pm/profile` | ProfilePage | Có | Có | JSX 155→92; child gốc không còn render | Khôi phục section gốc, dùng DTO thật/Chưa cập nhật, không đổi auth |
+| Route phụ / từ màn cha | `/pm/notifications` | NotificationsHandoffHub | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup` | Layout/index | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Tổng quan Sup | `/sup/dashboard` | SupDashboard | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Dự án bảo hành | `/sup/projects` | ProjectList | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/projects/:id` | ProjectOverview | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/projects/:id/alignment` | AlignmentSegments | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Khôi phục entry menu và layout Geometry gốc; giữ UNKNOWN và gate server |
+| Phê duyệt tuyến | `/sup/alignment` | AlignmentSegments | Có | Có | Mất menu trực tiếp | Khôi phục entry menu và layout Geometry gốc; giữ UNKNOWN và gate server |
+| Giám sát Drone | `/sup/surveys` | SurveyRequests | Có | Có | JSX 14→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/sup/surveys/:id` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/sup/surveys/:id/review` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/sup/drone-mission` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Route phụ / từ màn cha | `/sup/drone-mission/:id` | DroneMissionAIReview | Có | Có | JSX 61→0; child gốc không còn render | Khôi phục nhánh menu/layout/component gốc; reader hiện hành, thiếu dữ liệu để trống |
+| Xử lý cấp bách | `/sup/fast-track` | FastTrackDispatch | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/dispatch` | FastTrackDispatch | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nghiệm thu hiện trường | `/sup/field-tasks` | FieldTasks | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/conflict-center` | OfflineConflicts | Có | Có | Component FieldTasks→OfflineConflicts | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Phê duyệt gói | `/sup/proposals` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/proposals/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/work-packages` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/work-packages/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/repair-batches` | RepairProposals | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/approvals` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/approvals/:id` | ProposalApprovalDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/approvals/:id/reject` | BatchRejection | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nghiệm thu đóng đợt | `/sup/acceptance` | AcceptanceList | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/acceptance/:batchId` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/field-acceptance` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Kiểm định mô hình | `/sup/research-validation` | ResearchValidation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/rpt-09` | ResearchValidation | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nhật ký hoạt động | `/sup/audit-trail` | AuditTrail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/rpt-10` | AuditTrail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/evidence-closeout` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/evidence-closeout/:id` | EvidenceCloseoutDetail | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/reports` | RiskAnalytics | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Phân tích rủi ro | `/sup/risk-analytics` | RiskAnalytics | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Cấu hình hệ thống | `/sup/system-control` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/admin` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/retention` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/wf-12` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/legal-hold` | SystemControl | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Nhân sự & Phân quyền | `/sup/personnel` | PersonnelManagement | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/team` | PersonnelManagement | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/profile` | ProfilePage | Có | Có | JSX 155→92; child gốc không còn render | Khôi phục section gốc, dùng DTO thật/Chưa cập nhật, không đổi auth |
+| Route phụ / từ màn cha | `/sup/signoff` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/sup/notifications` | NotificationsHandoffHub | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `*` | Navigate | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/` | Redirect | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/notifications` | Redirect | Có | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ route/logic hiện hành; so body/modal qua inventory component |
+| Route phụ / từ màn cha | `/auth/setup-password` | AcceptInvitation | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+| Route phụ / từ màn cha | `/setup-password` | AcceptInvitation | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+| Xử lý xung đột ngoại tuyến | `/pm/conflicts` | OfflineConflicts | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+| Tiếp nhận phản ánh | `/sup/cases` | AIReviewInbox | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+| Route phụ / từ màn cha | `/sup/ai-inbox` | AIReviewInbox | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+| Xử lý xung đột ngoại tuyến | `/sup/conflicts` | OfflineConflicts | Không / thêm sau | Có | Chưa thấy mất route; cần đối chiếu section/action | Giữ bổ sung hợp lệ sau snapshot; không xóa để quay về thiết kế cũ |
+
+#### Inventory toàn bộ component/layout/style (gồm file còn nhưng JSX mất)
+
+Bảng dùng phân tích AST JSX/child/component/button và graph render tĩnh, không chỉ diff-filter=D. Graph có giới hạn với HOC/alias/conditional; “cần rà caller” không tự kết luận dead. File không đổi vẫn được liệt kê. Các file dữ liệu/hook không phải UI được kiểm riêng khi ghép, không khôi phục mock/localStorage. Cấm lấy số node làm bằng chứng nội dung đã đúng.
+
+| Menu | Route | Màn hình/component | Có trong snapshot gốc | Có ở HEAD | Đã mất gì | Cách khôi phục |
+|---|---|---|---|---|---|---|
+| Router | Theo route/caller ở bảng trên | `src/App.tsx` | Có | Có | JSX 219→231 | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/ImageComparisonSlider.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/PhotoLightboxModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/RoadDefectImages.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/SafeImage.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/SelfPhoneNumberForm.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/common/UserProfileModal.tsx` | Có | Có | JSX 155→95 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| Chung | Theo route/caller ở bảng trên | `src/components/layout/Header.tsx` | Có | Có | JSX 24→25 | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/layout/ProtectedRoute.tsx` | Có | Có | JSX 10→16 | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/layout/Sidebar.tsx` | Có | Có | JSX 29→32 | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/Button.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/Card.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/Icon.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/InputField.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/StatusBadge.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/ToastContainer.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/Tooltip.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/components/ui/TruncatedText.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Chung | Theo route/caller ở bảng trên | `src/index.css` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Router | Theo route/caller ở bảng trên | `src/main.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/AcceptInvitation.tsx` | Có | Có | JSX 45→46 | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/ForceChangePassword.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/Login.tsx` | Có | Có | JSX 37→39 | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/accept-invitation/AcceptForm.tsx` | Có | Có | JSX 84→64; Không còn child: HelpCircle, User | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/accept-invitation/ExpiredInvitationView.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/accept-invitation/InvitationCard.tsx` | Có | Có | JSX 60→22; Không còn child: BadgeAlert, Lock, Route, ShieldCheck, Timer | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| Chung | Theo route/caller ở bảng trên | `src/pages/(auth)/auth-light-aurora.css` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/force-change-password/ForcePasswordForm.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/login/ForcePasswordSection.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/login/LoginForm.tsx` | Có | Có | JSX 57→55 | Giữ nguyên bố cục; kiểm browser/action |
+| Auth | Theo route/caller ở bảng trên | `src/pages/(auth)/login/LoginHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/AIReviewInbox.tsx` | Có | Có | JSX 12→17 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/AlignmentSegments.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/AssignCrew.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/CreateSurvey.tsx` | Có | Có | JSX 10→1; Không còn child: CreateSurveyForm, CreateSurveyHeader, FlightCorridorMap, Icon | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/DefectDetailVerify.tsx` | Có | Có | JSX 15→33 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/DroneMissionAIReview.tsx` | Có | Có | JSX 61→0; Không còn child: Icon, Link, MissionHeader, MissionModals, MissionTriageList, MissionViewer | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/FastTrackDispatch.tsx` | Có | Có | JSX 11→12 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/FieldTasks.tsx` | Có | Có | JSX 9→12; Không còn child: ConflictResolveModal, ConflictsTab | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/NotificationsHandoffHub.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/OfflineConflicts.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/PMDashboard.tsx` | Có | Có | JSX 130→131 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/PMLayout.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ProfilePage.tsx` | Có | Có | JSX 155→92 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ProjectList.tsx` | Có | Có | JSX 15→25 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ProjectOverview.tsx` | Có | Có | JSX 19→21 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/RepairProposals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/SurveyRequests.tsx` | Có | Có | JSX 14→0; Không còn child: DroneSimulatorModal, Icon, SurveyHeader, SurveyKpiCards, SurveyTable | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/BatchActionBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/CaseReportsPanel.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/CitizenTriageChildRow.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/CitizenTriageRow.tsx` | Có | Có | JSX 52→51 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/CitizenTriageStatusBadge.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/CitizenTriageTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerClusterDeduplication.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerDecisionBanners.tsx` | Có | Có | JSX 68→60 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerDecisionForm.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerFooter.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerHeader.tsx` | Có | Có | JSX 17→18 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerMediaViewer.tsx` | Có | Có | JSX 31→40 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerMergedReportsList.tsx` | Có | Có | JSX 24→81 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DrawerReporterInfo.tsx` | Có | Có | JSX 26→25 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/DroneAiQueueView.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/GisMapModal.tsx` | Có | Có | JSX 23→24 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/LinkReportsModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/NoDefectModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/PhotoZoomModal.tsx` | Có | Có | JSX 13→76 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/PublishModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/RequestSurveyModal.tsx` | Có | Có | JSX 67→29 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewCasesTable.tsx` | Có | Có | JSX 30→19 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewDetailDrawer.tsx` | Có | Có | JSX 13→15 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewDetailModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewFilterBar.tsx` | Có | Có | JSX 47→50 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewHeader.tsx` | Có | Có | JSX 25→22 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/ReviewModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/SpatialMergeModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/TriageCard.tsx` | Có | Có | JSX 49→48 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/ai-review/TriageProjectModal.tsx` | Có | Có | JSX 32→64 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentAddBranchModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentAddModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentApprovalList.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentEditModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentHeader.tsx` | Có | Có | JSX 43→49 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentImportModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentMap.tsx` | Có | Có | JSX 102→98; Không còn child: Maximize2, Ruler | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentMapLegend.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentSidebar.tsx` | Có | Có | JSX 19→17 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/AlignmentSplitModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/ImportPanel.tsx` | Có | Có | JSX 38→27 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/SidebarFooterKpis.tsx` | Có | Có | JSX 15→11; Không còn child: Icon | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/SidebarSegmentCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/SidebarSegmentsTab.tsx` | Có | Có | JSX 70→75 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/SidebarSlabsTab.tsx` | Có | Có | JSX 62→66 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/alignment/SidebarWidthProfileTab.tsx` | Có | Có | JSX 42→41 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/create-survey/CreateSurveyForm.tsx` | Có | Có | JSX 103→123; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/create-survey/CreateSurveyHeader.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/create-survey/FlightCorridorMap.tsx` | Có | Có | JSX 44→45; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/create-survey/OverlapHelpBox.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/dashboard/OperationalClocksWidget.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/defect-verify/DefectBoundingBoxViewer.tsx` | Có | Có | JSX 39→49 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/defect-verify/DefectGisMapViewer.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/defect-verify/DefectTemporalComparison.tsx` | Có | Có | JSX 125→91 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/defect-verify/DefectVerifyForm.tsx` | Có | Có | JSX 155→144 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/defect-verify/DefectVerifyHeader.tsx` | Có | Có | JSX 31→39 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/CandidateWorkflow.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionHeader.tsx` | Có | Có | JSX 45→52; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionModals.tsx` | Có | Có | JSX 117→79; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionQualitySection.tsx` | Có | Có | JSX 45→40; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionScrubber.tsx` | Có | Có | JSX 23→18; Không còn child: Link; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionTriageList.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionViewer.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/drone-review/MissionViewport.tsx` | Có | Có | JSX 55→53; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/AuditModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DefectDetailModal.tsx` | Có | Có | JSX 39→34 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchActionBar.tsx` | Có | Có | JSX 49→15 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchFilters.tsx` | Có | Có | JSX 26→20 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchMap.tsx` | Có | Có | JSX 16→11 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchModeSelector.tsx` | Có | Có | JSX 51→11 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchSection.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/DispatchTable.tsx` | Có | Có | JSX 93→54 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/FastTrackBanner.tsx` | Có | Có | JSX 17→8 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/FastTrackDispatchModal.tsx` | Có | Có | JSX 79→34 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/FastTrackHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/FastTrackModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/PolicyModal.tsx` | Có | Có | JSX 65→55 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/PolicySection.tsx` | Có | Có | JSX 104→110 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/fast-track/RoadCoverageConfirmModal.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/ConflictResolveModal.tsx` | Có | Có | JSX 68→73 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/ConflictsTab.tsx` | Có | Có | JSX 29→33 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/FieldTasksHeader.tsx` | Có | Có | JSX 116→71 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/MeasurementsTab.tsx` | Có | Có | JSX 291→460 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictFilterBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictIncomingStateCard.tsx` | Có | Có | JSX 73→245 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictQueueTable.tsx` | Có | Có | JSX 44→39 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictResolutionActions.tsx` | Có | Có | JSX 68→76 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictServerStateCard.tsx` | Có | Có | JSX 57→168 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/field-tasks/conflicts/ConflictTimelineAudit.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/notifications/AudioConfigModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/notifications/NotificationsFeed.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/notifications/NotificationsFilterBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/notifications/NotificationsHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/notifications/NotificationsSlaWidgets.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/AddProjectMemberModal.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx` | Có | Có | JSX 66→12 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectMapPreviewCard.tsx` | Có | Có | JSX 29→5 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectOverviewHeader.tsx` | Có | Có | JSX 92→44 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectPersonnelCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx` | Có | Có | JSX 90→15; Không còn child: Icon | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx` | Có | Có | JSX 57→12 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/CloseProjectModal.tsx` | Có | Có | JSX 69→24 | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/CreateProjectModal.tsx` | Có | Có | JSX 73→75 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectGridView.tsx` | Có | Có | JSX 83→72 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectLifecycleModal.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectListFilters.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectListHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectListKpis.tsx` | Có | Có | JSX 36→33 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/projects/ProjectTableView.tsx` | Có | Có | JSX 51→46 | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/CreateProposalModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalBOQCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalDetailModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalFilterBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalPDFPreviewModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalStats.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/repair-proposals/ProposalTableRow.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/DroneSimulatorModal.tsx` | Có | Có | JSX 79→14; Không còn child: SimulatorTelemetryGrid | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SimulatorTelemetryGrid.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SurveyCard.tsx` | Có | Có | JSX 26→28; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SurveyHeader.tsx` | Có | Có | JSX 16→13; Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SurveyKpiCards.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SurveyTable.tsx` | Có | Có | Không còn trong graph render tĩnh; cần rà caller/alias | Rà JSX/caller; phục hồi section/action gốc có gate dữ liệu thật |
+| PM | Theo route/caller ở bảng trên | `src/pages/(pm)/surveys/SurveyWorkflow.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/AcceptanceList.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/AuditTrail.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/BatchRejection.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/EvidenceCloseoutDetail.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/PersonnelManagement.tsx` | Có | Có | JSX 32→36 | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/ProposalApprovalDetail.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/ResearchValidation.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/RiskAnalytics.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/SupDashboard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/SupLayout.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/SystemControl.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailFilters.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailInspector.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailMetrics.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/audit-trail/AuditTrailTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardExportModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardRightCards.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardRiskMap.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardRiskMapTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardRiskTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/dashboard/DashboardTopMetrics.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/ActionButtons.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/AfterViewer.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/BeforeViewer.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/CloseoutHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/CloseoutModals.tsx` | Có | Có | JSX 4→5 | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/ComparisonViewer.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/DeclareConstructionModal.tsx` | Không | Có | Thêm sau snapshot; giữ nếu hợp lệ | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/ExportPdfAModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/ExportZipModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/ReworkModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/StatusBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/TechnicalCriteriaCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/evidence-closeout/VerifyModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ApprovalDetailHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ApprovalItemsTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ApprovalModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ApprovalStatsBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/BatchApproveModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/DecisionModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/DefectPhotoModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ItemsFilterBar.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ItemsTableRow.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/proposal-approval/ProposalDispatchModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/research/AsyncValidationJobBanner.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/research/PairedSamplesTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/research/ResearchHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/research/ValidationMetricsCards.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/research/ValidationRunsTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/AsyncExportWorkerCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/DossierDetailModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/ExportRecordRow.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/LegalAuditStrip.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/NewExportModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/RiskDeteriorationSection.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/RiskExportsTable.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/RiskHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/RiskMetricsGrid.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/RiskModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/risk-analytics/TimeRangeModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/AIModelsTab.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/AccountsTab.tsx` | Có | Có | JSX 71→84 | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/AddPersonnelModal.tsx` | Có | Có | JSX 79→132; Không còn child: Check, Plus | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/CreateDeletionRequestModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/DefectCatalogModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/DefectCatalogTab.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/DeletionRequestDetailModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/DeletionRequestsCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/EditUserModal.tsx` | Có | Có | JSX 66→62 | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/LegalHoldCard.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/LegalHoldModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/ProjectRetentionDetailModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/ResetPasswordModal.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/RetentionLegalHoldTab.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/SuspendUserModal.tsx` | Có | Có | JSX 24→25 | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/SystemControlHeader.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/SystemControlModals.tsx` | Có | Có | JSX tương đương; vẫn đối chiếu nội dung/style | Giữ nguyên bố cục; kiểm browser/action |
+| Supervisor | Theo route/caller ở bảng trên | `src/pages/(sup)/system-control/UserDetailModal.tsx` | Có | Có | JSX 78→59; Không còn child: ShieldCheck | Giữ nguyên bố cục; kiểm browser/action |
+
+**Kế hoạch xử lý sau inventory:** phục hồi menu mất trước; không phục hồi link ID mẫu. Rà invitation/profile, rồi ghép các component gốc Survey/Create/Drone/Geometry và các action/modal đã bị thu nhỏ. Giữ tất cả route bổ sung và phân quyền Spec17_10; khi contract không đủ vẫn hiển thị khung và khóa lệnh có giải thích. Chưa commit follow-up. Bảng smoke cũ không thay smoke sau các thay đổi này; cần chạy lại PM/Sup và nêu hạn chế fixture/API.
+
+
+#### Kết quả follow-up đang làm — chưa commit
+
+Đính chính: “snapshot gốc chọn” ở inventory trên là **ứng viên nhánh gốc đầy đủ nhất tìm được**, chưa phải bằng chứng bản bàn giao nguyên bản tuyệt đối. Đã hỏi đường dẫn ZIP/source hoặc SHA bàn giao trước Codex để đối chiếu thêm. Không có file mới ngoài source hiện hữu; không thay authStore/client/session/logout/guard/API/DTO/config/backend/DB. Các thay đổi dưới đây đang để working tree, chưa stage/commit/push.
+
+| Menu/màn hình | Phần khôi phục thêm sau khi đối chiếu snapshot 6644837 | Trạng thái |
+|---|---|---|
+| Sidebar PM/Sup | Dự án & Tuyến, entry Tuyến & Phân đoạn / Phê duyệt tuyến; nhánh Survey danh sách/tạo/thẩm định; giữ menu phản ánh/conflicts mới | Đã kiểm browser PM/Sup; link srv-01/det-03 không phục hồi; menu thẩm định khung nhận diện giữ disabled khi chưa chọn hồ sơ |
+| Invitation | Summary phân công/role/scope/expiry, security notices; bỏ tên project hardcode còn sót | Đã mở browser không token để kiểm frame. Kích hoạt thật NOT_RUN, không tạo lời mời |
+| ProfilePage/UserProfileModal | Professional/certificate/scan frame; Profile tab thiết bị/phiên và bảng theo bố cục cũ | Chỉ khung Chưa cập nhật, upload/revoke khóa, không đổi session logic. Browser mở tab/modal PASS |
+| Survey list | Nối lại SurveyHeader, SurveyKpiCards, SurveyCard thật vào active workflow; grid mặc định và table tùy chọn | Record SurveyPlanV2ResponseDto/SurveyTaskV2ResponseDto trực tiếp, không map thành lifecycle bay giả; KPI thiếu bằng chứng để trống |
+| CreateSurvey | Nối lại CreateSurveyHeader, bốn card CreateSurveyForm và FlightCorridorMap trong layout gốc 7/5 cột | readOnly branch explicit; blank engineering, không preset/fallback Operator; không submit. Xóa tọa độ fallback ở map |
+| Drone/Candidate | Nối lại MissionHeader/MissionQualitySection/MissionViewer/MissionTriageList qua serverView branch | Header/breadcrumb/action, quality 4 khối, viewer controls/scrubber/fullscreen, triage cards/filter/audit frame. Legacy viewport/scrubber có ảnh mẫu không được render. Evidence chưa có giữ placeholder, capture/layer/playback/lock/refly khóa |
+| Geometry | Nối lại AlignmentSidebar ba tab và AlignmentImportModal inspect-only | Giữ parser/readers/anti-race hiện hành. Không manual-WGS84/preset hoặc tạo nhánh/tấm. File thiếu CRS UNKNOWN, lệnh ghi khóa |
+| Project Overview | Khôi phục nguyên hierarchy/màu ba Highlights card từ source gốc, timeline dọc năm bước, map toolbar/fullscreen/legend và section phân đoạn/6 cột | Không suy hoàn thành bước từ số liệu; warranty/metrics thiếu để Chưa cập nhật, progress không giả 70/100%. Geometry vẫn đọc server |
+| Defect temporal evidence | Giữ split/side-by-side layout, thay fallback đường tổng hợp bằng empty evidence | Không dựng bề mặt đường/ảnh thay bằng chứng khi thiếu/ảnh lỗi |
+
+**Những phần chưa đủ căn cứ gọi là nguyên bản đầy đủ:** chưa có ZIP/source bàn giao được chủ dự án xác nhận. MissionModals/refly/baseline form, một số FIELD/FastTrack action/detail modal, các section/slab/width/profile child gốc và ProjectSegments row/detail chưa được khôi phục 1:1 toàn bộ. Các file còn tồn tại nhưng branch legacy chứa dữ liệu giả vẫn không được kích hoạt. Cần rà từng action với contract và ghép gate trước khi có thể chốt toàn bộ; không gọi việc thêm một khung placeholder là phục hồi hoàn chỉnh. Không commit khi các điều kiện này chưa được giải quyết.
+
+**BLOCKED nghiệp vụ/dữ liệu, không đồng nghĩa xóa UI:** work-package Web cookie vẫn 401; một số AI result 401; Sup defects 403; thiếu read-model chứng chỉ/thiết bị Web session, media/video và dữ liệu kỹ thuật có nguồn. Draft submit/revision/history phải theo contract thực, không dùng enum/command cũ giả lập. Thống kê geometry/coverage/GSD/AI audit không có bằng chứng không hiện số 0 thay thế. Không sửa backend hoặc tạo fixture để ép kiểm thử PASS.
+
+**Kiểm thử follow-up:** Typecheck PASS; Vite build PASS (còn warning chunk/duration cũ); 119 regression mock/hooks/render PASS; git diff --check PASS sau sửa newline. Browser Edge thật qua proxy HTTPS28443 của runtime sạch, không mock response. Các /__dev legacy bị abort để không đọc DB cũ; không mutation nghiệp vụ. PM/Sup tương tác menu, grid/table, Geometry tab/import modal, profile professional/session tab/modal, mobile menu PASS, 0 pageerror, 0 ghi nghiệp vụ. PM input GeoJSON 119 điểm giữ UNKNOWN và save disabled. Hai selector test ban đầu sai accessible name vì Icon text gây timeout; sửa locator theo heading/regex rồi chạy lại PASS, không phải lỗi app. Force-change/invitation mutation/mọi modal/state transition chưa có fixture: NOT_RUN.
+
+Ảnh/log tạm ở `%TEMP%/rg-original-ui`, không commit dữ liệu GeoJSON hoặc credential. Chưa có golden screenshot lịch sử toàn bộ ứng dụng, chỉ đối chiếu source/JSX/styles snapshot và ảnh browser hiện tại; **chưa nghiệm thu pixel-perfect toàn ứng dụng**.
+
+
+#### Route smoke follow-up sau thay đổi cuối (HEAD 33fbe0b + working tree)
+
+114 lượt: 76 render-only, 22 BLOCKED fixture chi tiết, 3 BLOCKED API, 4 NOT_RUN token/force fixture, 5 anonymous render/guard, 2 wrong-role guard, 2 logout. Một số render-only có helper legacy đã abort; đánh dấu BLOCKED riêng dưới đây. Tất cả route quan sát có nội dung desktop/mobile, 0 pageerror, 0 document overflow ở 375px. Project chi tiết dùng ID server thật; các detail pattern chưa có fixture được mở nguyên `:id` để kiểm error frame, không tính E2E. Không sửa code hoặc tạo dữ liệu để đổi kết quả này.
+
+| Role | Route | Render | API thật | UI đầy đủ | Console | Kết quả |
+|---|---|---|---|---|---|---|
+| sup | `/sup/dashboard` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/projects` | 1440px +375px | 200×6 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/projects/:id` | 1440px +375px | 200×14; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/projects/:id/alignment` | 1440px +375px | 200×5, 401×2; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/alignment` | 1440px +375px | 200×2 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/surveys` | 1440px +375px | 200×2 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/surveys/:id` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/surveys/:id/review` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/drone-mission` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/drone-mission/:id` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/cases` | 1440px +375px | 200×4 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/ai-inbox` | 1440px +375px | 200×5 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/fast-track` | 1440px +375px | 200×6 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/dispatch` | 1440px +375px | 200×5 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/field-tasks` | 1440px +375px | 200×7 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/conflicts` | 1440px +375px | 200×9; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/conflict-center` | 1440px +375px | 200×9; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| sup | `/sup/proposals` | 1440px +375px | 200×8 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/proposals/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/work-packages` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/work-packages/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/repair-batches` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/approvals` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/approvals/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/approvals/:id/reject` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/acceptance` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/acceptance/:batchId` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/field-acceptance` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/research-validation` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-09` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/audit-trail` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-10` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/reports` | 1440px +375px | 200×7 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/risk-analytics` | 1440px +375px | 200×12 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/system-control` | 1440px +375px | 200×4 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/admin` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/retention` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/wf-12` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/legal-hold` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/personnel` | 1440px +375px | 200×20 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/team` | 1440px +375px | 200×21 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/profile` | 1440px +375px | 200×18 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/signoff` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup/notifications` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/sup` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `/notifications` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| sup | `opposite role /projects` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS guard |
+| sup | `logout` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS |
+| pm | `/pm/dashboard` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/projects` | 1440px +375px | 200×7 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/projects/:id` | 1440px +375px | 200×11, 401×1; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/projects/:id/alignment` | 1440px +375px | 200×4, 401×3; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/alignment` | 1440px +375px | 200×2 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys` | 1440px +375px | 200×2 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/create` | 1440px +375px | 200×2 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/:id` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/surveys/:id/review` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/drone-mission` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/drone-mission/:id` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/ai-inbox` | 1440px +375px | 200×4 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/defects/:id/verify` | 1440px +375px | 200×12 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-a` | 1440px +375px | 200×20, 401×4 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-b` | 1440px +375px | 200×16, 401×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/create` | 1440px +375px | 200×3 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/repair-batches/:id/submit` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/assign` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/field-tasks` | 1440px +375px | 200×9 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/conflicts` | 1440px +375px | 200×11; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/conflict-center` | 1440px +375px | 200×7; /__dev abort | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED helper legacy; render được |
+| pm | `/pm/fast-track` | 1440px +375px | 200×6 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/dispatch` | 1440px +375px | 200×6 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/proposals` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/proposals/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-packages` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/work-packages/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/repair-batches/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-orders/confirm` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/work-orders/:id/confirm` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/evidence-closeout` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/evidence-closeout/:id` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/acceptance` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/acceptance/:batchId` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/research-validation` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-09` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/audit-trail` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-10` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/reports` | 1440px +375px | 200×7 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/risk-analytics` | 1440px +375px | 200×7 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/retention` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/system-control` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/wf-12` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/legal-hold` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/personnel` | 1440px +375px | 200×15 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/team` | 1440px +375px | 200×15 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/profile` | 1440px +375px | 200×10 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm/notifications` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/pm` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `/notifications` | 1440px +375px | 200×1 | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render only |
+| pm | `opposite role /projects` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS guard |
+| pm | `logout` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS |
+| anonymous | `/login` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/accept-invitation` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/invite/:token` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/auth/setup-password` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/setup-password` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/force-change-password` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/notifications` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+| anonymous | `/does-not-exist` | Guard / route công khai | Không quan sát ở lượt này | Khung render; chưa nghiệm thu mọi action | 0 pageerror | PASS render/guard |
+
+**Kiểm tra thêm ngoài bảng route:** Project List/grid/table/Overview PM/Sup, đóng modal lifecycle (chỉ GET), đọc geometry confirmed và F5 PASS; không request eligible của Sup (0), không mutation nghiệp vụ (0), không business request sau logout (0). Fullscreen viewer, menu gốc, profile và inspection-only import đã kiểm trên browser. Build/typecheck/regression/diff-check là kiểm riêng, không suy thành E2E toàn nghiệp vụ.
+
+**Trạng thái bàn giao:** CHƯA HOÀN TẤT khôi phục nguyên bản toàn ứng dụng; không commit/push ở lượt này. Cần đối chiếu bản bàn giao/SHA gốc được xác nhận và tiếp tục rà các modal/action/section đã nêu ở mục chưa hoàn tất. Tất cả thay đổi không liên quan được giữ, không reset/restore. HEAD vẫn `33fbe0bf525a7532070b06d7fd4bc329041b8753`.
+
+**File đang sửa trong follow-up:**
+
+- `docs/worklogs/WEB-HOANG-WORKLOG-20261022.md`
+- `src/components/common/UserProfileModal.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/pages/(auth)/accept-invitation/InvitationCard.tsx`
+- `src/pages/(pm)/ProfilePage.tsx`
+- `src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx`
+- `src/pages/(pm)/alignment/AlignmentImportModal.tsx`
+- `src/pages/(pm)/alignment/AlignmentSidebar.tsx`
+- `src/pages/(pm)/create-survey/CreateSurveyForm.tsx`
+- `src/pages/(pm)/create-survey/FlightCorridorMap.tsx`
+- `src/pages/(pm)/defect-verify/DefectTemporalComparison.tsx`
+- `src/pages/(pm)/drone-review/CandidateWorkflow.tsx`
+- `src/pages/(pm)/drone-review/MissionHeader.tsx`
+- `src/pages/(pm)/drone-review/MissionQualitySection.tsx`
+- `src/pages/(pm)/drone-review/MissionTriageList.tsx`
+- `src/pages/(pm)/drone-review/MissionViewer.tsx`
+- `src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx`
+- `src/pages/(pm)/project-overview/ProjectMapPreviewCard.tsx`
+- `src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx`
+- `src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx`
+- `src/pages/(pm)/surveys/SurveyCard.tsx`
+- `src/pages/(pm)/surveys/SurveyKpiCards.tsx`
+- `src/pages/(pm)/surveys/SurveyWorkflow.tsx`
+- `tools/check-review-293d001.cjs`
+
+
+### 06/11/2026 — Kiểm reflog và chốt snapshot theo xác nhận Hoàng
+
+Hoàng xác nhận không giữ ZIP source; yêu cầu kiểm reflog/branch rồi dùng 6644837 nếu là nhánh gốc đầy đủ nhất. Đã đọc `git reflog show --all`: 398 entry, 131 SHA duy nhất, 8 SHA không reachable từ branch hiện tại. Đã kiểm refs heads/remotes/stash, `git log --all --graph`, các commit gần nhất của origin/main/tung/backup và fsck read-only. Không checkout/reset/restore working tree đang sửa.
+
+| Nguồn | SHA | Kết quả |
+|---|---|---|
+| origin/main, origin/tung, local tung | 6644837bb5bb0a042369050fb31ff1b0ab5b7c56 | 345 src file/244 TSX, bộ gốc chốt để phục hồi UI toàn ứng dụng |
+| local main | 8867730c16d08506e4c1e1d481600f5497081dfb | 125 src/86 TSX, snapshot sớm hơn, không đầy đủ hơn |
+| hoang-backup-before-merge | 37ee496ab538d1d86e90e7c1eada504448abba39 | 336 src/241 TSX, trước main đã bổ sung/polish nhiều màn |
+| stash / stash index | 91b4b38d3dfa2016b9b5871bfecf93f03cb6cfc8 | 125 src/86 TSX, bản backup sớm, không có thêm toàn bộ hệ thống |
+| reflog unreachable 1774a851,44169a68,61f907f8,841581a6,abf10d86,6f6b62fd | Các bản trước amend/ngôn ngữ thông điệp | Không phải snapshot toàn ứng dụng đầy đủ hơn; UI cùng các màn lịch sử tương ứng |
+| reflog unreachable 4f047ef5b03a221502b8b490b1f980cfa02738d5 | Bản trước amend W04/W05 | Giữ tham chiếu bổ sung layout Survey/Geometry, không phục hồi mock/simulator |
+| reflog unreachable b6400d6481390158e9f67ab1ba3228348da6cd79 | Widget CRS local (153 dòng service,367 dòng card) | Có UI riêng ngoài snapshot chính; cần đối chiếu contract trước ghép, không tự phục hồi local CRUD/service cũ |
+
+**Chốt nguồn thiết kế:** 6644837bb5bb0a042369050fb31ff1b0ab5b7c56 theo yêu cầu Hoàng; không cần chờ ZIP hoặc xác nhận lại. Các ghi chú trước về “chờ bản gốc” được thay bằng kết quả này. Giữ menu/màn hợp lệ được bổ sung sau snapshot (Case/Sup inbox/OfflineConflicts...), và dùng Spec17_10/OpenAPI hiện hành cho mọi quyền/dữ liệu/lệnh ghi. Không áp dụng wholesale checkout làm lùi auth/API. Inventory trước sửa vẫn áp dụng, cập nhật thêm widget CRS reflog và kết quả dưới đây trước khi sửa thêm.
+
+
+### 06/11/2026 — Chốt phục hồi UI theo snapshot nhánh gốc sau kiểm reflog
+
+**Snapshot toàn ứng dụng đã chốt theo chỉ dẫn Hoàng:** `6644837bb5bb0a042369050fb31ff1b0ab5b7c56`. Không còn chờ ZIP hoặc xác nhận lại. Nội dung “CHƯA HOÀN TẤT/chờ SHA gốc” ở các mục giữa task là trạng thái lịch sử, được thay bởi kết quả cuối này. Git không ghi công cụ tạo commit; không gắn nhãn “trước mọi Codex” chỉ từ tên tác giả. Đã so origin/main/tung, main local, backup, stash và 8 commit reflog rời; dùng snapshot 6644837 làm nguồn layout/styles, giữ màn hợp lệ bổ sung sau snapshot.
+
+**Hoàn tất phần phục hồi giao diện có thể ghép an toàn:** menu/route gốc còn hợp lệ được giữ; JSX/component bị alias/rút gọn được ghép lại trong active workflow. Giữ API hiện tại thay toàn bộ hook/state/mock cũ. Đây là phục hồi UI trên nền contract hiện hành, **không phải git checkout nguyên snapshot** và không chứng nhận đầy đủ nghiệp vụ hoặc pixel-perfect tất cả màn.
+
+| Menu/khu vực | Kết quả UI cuối | Giữ đúng API / phần khóa vì thiếu dữ liệu |
+|---|---|---|
+| Login / đổi mật khẩu / lời mời | Giữ layout login/force-password; khôi phục summary/role/scope/expiry/security của lời mời | Không đổi login/session/renew/logout/force-change handler; không tên người mời/project mặc định |
+| Dashboard PM/Sup / shared layout | So snapshot không mất page/component; giữ dashboard, header, sidebar; khôi phục menu Dự án & Tuyến và Survey children | Giữ role menu và mobile drawer đang đúng, không trả về sidebar desktop cố định ở 375px |
+| Project List/grid/table/filter/KPI | Giữ phần đã phục hồi parent; không còn việc lấy snapshot Project làm chuẩn toàn app | DTO thiếu không thành số 0. Close lifecycle thật vẫn hoạt động theo điều kiện server |
+| Project Overview | Khôi phục ba card màu/hierarchy/gradient từ source snapshot, timeline dọc năm bước, bảng phân đoạn sáu cột/empty frame, map toolbar/fullscreen/legend, personnel cards | Không suy bước hoàn tất từ length/defect. Warranty chỉ dùng dữ liệu hợp lệ; nhánh/mặt đường/metrics chưa xác minh để trống |
+| CRS reflog widget | Khôi phục ProjectCrsProfileCard từ thiết kế b6400d6, ghép vào Overview | Dùng alignmentService.fetchCrsProfiles; loading/error/empty riêng, không chọn profile đầu tiên; tạo/sửa/CRS preset/local store không phục hồi |
+| Geometry | Component gốc AlignmentHeader, AlignmentMap, AlignmentSidebar, AlignmentImportModal render lại trong workflow đọc hiện hành | Giữ geometry server/anti-race/retry, UNKNOWN CRS; toolbar/cross-section/width/slab/branch giữ frame nhưng lệnh ghi khóa khi thiếu contract/engineering |
+| Survey / Create | Component SurveyHeader/KpiCards/SurveyCard, CreateSurveyHeader/Form/FlightCorridorMap render lại; grid/table và form bốn khối giữ thiết kế gốc | Read raw plan/task DTO; không status bay, ảnh/coverage/GSD/Operator/route/accessPoint tự điền; create vẫn khóa như baseline API an toàn |
+| Drone / AI / Evidence provenance | Component MissionHeader/QualitySection/Viewer/TriageList/Modals render lại; controls, fullscreen, tabs, scrubber, list, audit/quality frame và refly/baseline dialogs có đủ phần xem trước | Legacy MissionViewport/Scrubber/hook có stock image, timestamp/metrics/model giả không render. Modal xác nhận khóa; không gọi flight/baseline command cũ |
+| Inbox / Case / Report / Triage | Giữ reader riêng Report và tất cả drawer/modal hiện hành; phục hồi contact/assignment/request frame từ parent và pagination controls của bảng | Không client-page giả khi đã tải hết collection; pagination controls disabled. Không trộn Reporter/evidence hoặc tự tạo FIELD |
+| Defect / temporal | Giữ compare split/side-by-side, thêm lại preset25/50/75 của slider | Thiếu ảnh là empty, không synthetic road. Không mượn bbox kỳ hiện tại làm kỳ trước; không ngày/tốc độ suy thoái/diện tích giả |
+| Điều phối / Fast Track | Phục hồi layout ba mode cards khác màu, map floating controls/legend/source banner theo JSX snapshot; action bar và dispatch modal summary/crew/equipment frame | Nút của mode chưa hỗ trợ chỉ read-only; không phục hồi local mode/auto-selected Case/dispatch success giả. Handler thật hiện tại giữ nguyên |
+| Nhiệm vụ hiện trường / offline conflicts | Giữ màn FIELD và OfflineConflicts đã tách đúng; snapshot cũ gộp chung không bị đưa lại | Không khôi phục “reset sample”. Entry conflicts giữ ở cả role theo route hiện tại |
+| Gói sửa chữa / nghiệm thu / evidence-close/archive | Rà route/JSX/child; không mất page layout trong chuỗi bị sửa, giữ current components và alias | Không phục hồi trang trùng trước refactor hoặc approval sai role; command chưa nghiệm thu không tính PASS |
+| Báo cáo/KPI / audit / lưu trữ / nhân sự / thông báo | Inventory và browser từng route; giữ UI snapshot không bị mất, giữ các bổ sung Spec17_10 | Render-only không suy API E2E; /__dev helper cũ bị abort trong test để không đọc DB cũ |
+| Profile/settings | Phục hồi professional/certificate/scan section, tab thiết bị/session và table; modal profile có lại technical profile frame | Field chưa có read contract “Chưa cập nhật”; upload certificate/revoke session disabled; không thay auth/session nghiệp vụ |
+
+**Ngoại lệ có bằng chứng, không phải UI bị bỏ quên:** hook useDroneSimulator/timer, old approval local state, preset/manual geometry default, stock evidence/model/flight stats, reset sample buttons, auto-selected Case, và page duplicate đã refactor không được phục hồi. Giữ modal/action/frame nếu là UI hợp lệ, khóa lệnh thiếu contract; không nhân lại file/store/route mock. Các child form kỹ thuật legacy vẫn nằm trong cây source, nhưng branch active read-only hiển thị trường trống thay kích hoạt thuật toán/default sai. Không có API/DTO/enum/quyền mới trong task.
+
+**Danh sách blocker API/dữ liệu bàn giao riêng:**
+
+| Endpoint/read model | Bằng chứng / tình trạng | UI xử lý |
+|---|---|---|
+| GET /projects/{id}/work-package | Browser cookie401 trên runtime sạch | Discovery giữ lỗi, không fake route/scope để mở create/geometry |
+| GET /projects/{id}/ai-mock-runs/{runId}/result | Một số runtime read cookie401 | Không hiển thị ảnh/video/triage metrics thay thế; error frame giữ nguyên |
+| GET /projects/{id}/defects với Sup | Runtime403 | Giữ giới hạn quyền, không mở backend/đổi Bearer |
+| Geometry submit/reject/revision/history tương ứng flow cũ | Chưa có contract đủ để gọi luồng cũ | Header/sidebar/history/action vẫn hiện, command khóa; không thêm enum |
+| Survey engineering/assignment, media/video verified read model, coverage/GSD/audit counts | Chưa đủ nguồn/fixture/luồng Web đã tích hợp | Khung gốc và “Chưa cập nhật”; không giảcreate/upload/flightstatus |
+| Chứng chỉ, ảnh CCHN, session-device listing/revoke và thay CRS trong widget | Chưa tích hợp contract Web tại các surface này | Giữ layout/modals, không ghi dữ liệu hoặc dùng store local |
+
+**Kiểm thử cuối:**
+
+| Kiểm tra | Kết quả | Giới hạn |
+|---|---|---|
+| Typecheck `tsc -b` | PASS | Đã sửa lỗi type tham chiếu cũ WorkMode/RouteConfig/stationing và bbox optional do merge UI |
+| Vite build | PASS | Warning chunk lớn/duration cũ còn; không phải E2E |
+| Focused regression | PASS 123 | Mock HTTP/hooks/render. Thêm menu không ID mẫu, invitation, card/KPI server mode, modal inspect-only, geometry controls, CRS loading, temporal bbox/slider |
+| diff-check | PASS | Không whitespace error |
+| Toàn router PM/Sup + public/index/alias/guard/logout | 114 lượt browser thật | 76 render-only,22 BLOCKED detail fixture,3 BLOCKED API,4 NOT_RUN token/force,5 anonymous render/guard,2 wrong-role guard,2 logout |
+| Desktop1440 / mobile375 | PASS render | 0 blank,0 pageerror,0 document horizontal overflow ở toàn route đã mở; không tuyên bố pixel-diff |
+| Project PM/Sup, lifecycle modal chỉ GET, F5 geometry confirmed | PASS browser thật | Sup eligible request0, business write0, business request sau logout0; PM vẫn có add-member |
+| Menu/Geometry tabs/import dialog/GeoJSON UNKNOWN | PASS browser thật | PM import file thật,save disabled; không tạo/sửa/confirm geometry |
+| Survey grid/table/original create form, Drone fullscreen/refly/baseline dialogs | PASS browser thật | Xem trước/modal đóng mở, mọi confirm chưa đủ contract disabled; không write |
+| CRS widget/select/management modal; profile/certificate/session tab/modal | PASS browser thật | Dữ liệu thật hoặc placeholder; lưu CRS/upload/revoke disabled |
+| Fast Track fast-track/dispatch PM+Sup | PASS UI 4 route trên2viewport | Không execute dispatch; map không tọa độ giả, mode khóa |
+| Invitation/force-change/mọi state mutation | NOT_RUN E2E | Không fixture hợp lệ/mutation trong task UI |
+
+Browser test đầu có selector exact heading không khớp Material Icon text, đã sửa locator và chạy lại PASS. Không gộp timeout test locator thành lỗi app. Browser không mock response; chặn non-auth mutation và legacy /__dev helper, đánh dấu giới hạn ở smoke report. Test accounts/scenario từ clean runtime, không ghi credential; không tạo data mới, không SQL reset/update, không backend/Docker/config changes.
+
+**Điều kiện trước commit:** có SHA snapshot đã chốt; inventory toàn bộ menu/route/file trước sửa; danh sách khôi phục và blocker ở trên; full route smoke PM/Sup (bảng cuối bên dưới); typecheck/build/regression/diff-check PASS. Một commit riêng cho follow-up, tiếng Việt, chỉ stage file thuộc task. Không merge/deploy/force-push. Full E2E nghiệp vụ và golden pixel-diff chưa được chứng nhận.
+
+#### Route smoke cuối sau khôi phục source snapshot 6644837
+
+| Role | Route | Render | API thật | UI đầy đủ | Console | Kết quả |
+|---|---|---|---|---|---|---|
+| sup | `/sup/dashboard` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/projects` | Desktop1440 +375 | 200×6 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/projects/:id` | Desktop1440 +375 | 200×12; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| sup | `/sup/projects/:id/alignment` | Desktop1440 +375 | 200×6, 401×2; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| sup | `/sup/alignment` | Desktop1440 +375 | 200×2 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/surveys` | Desktop1440 +375 | 200×2 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/surveys/:id` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/surveys/:id/review` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/drone-mission` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/drone-mission/:id` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/cases` | Desktop1440 +375 | 200×10 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/ai-inbox` | Desktop1440 +375 | 200×10 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/fast-track` | Desktop1440 +375 | 200×5 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/dispatch` | Desktop1440 +375 | 200×5 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/field-tasks` | Desktop1440 +375 | 200×18 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/conflicts` | Desktop1440 +375 | 200×11; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| sup | `/sup/conflict-center` | Desktop1440 +375 | 200×7; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| sup | `/sup/proposals` | Desktop1440 +375 | 200×4 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/proposals/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/work-packages` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/work-packages/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/repair-batches` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/approvals` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/approvals/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/approvals/:id/reject` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/acceptance` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/acceptance/:batchId` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/field-acceptance` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/research-validation` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-09` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/audit-trail` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/rpt-10` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/evidence-closeout/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| sup | `/sup/reports` | Desktop1440 +375 | 200×13 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/risk-analytics` | Desktop1440 +375 | 200×13 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/system-control` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/admin` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/retention` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/wf-12` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/legal-hold` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/personnel` | Desktop1440 +375 | 200×21 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/team` | Desktop1440 +375 | 200×25 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/profile` | Desktop1440 +375 | 200×22 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/signoff` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup/notifications` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/sup` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `/notifications` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| sup | `opposite role /projects` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS guard |
+| sup | `logout` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS |
+| pm | `/pm/dashboard` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/projects` | Desktop1440 +375 | 200×7 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/projects/:id` | Desktop1440 +375 | 200×8; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| pm | `/pm/projects/:id/alignment` | Desktop1440 +375 | 200×5, 401×2; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| pm | `/pm/alignment` | Desktop1440 +375 | 200×2 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/surveys` | Desktop1440 +375 | 200×2 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/create` | Desktop1440 +375 | 200×2 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/surveys/:id` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/surveys/:id/review` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/drone-mission` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/drone-mission/:id` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/ai-inbox` | Desktop1440 +375 | 200×4 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/defects/:id/verify` | Desktop1440 +375 | 200×17, 401×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-a` | Desktop1440 +375 | 200×18, 401×3 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/defects/:id/verify-b` | Desktop1440 +375 | 200×16, 401×2 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/create` | Desktop1440 +375 | 200×2, 401×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED API |
+| pm | `/pm/repair-batches/:id/submit` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches/assign` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/field-tasks` | Desktop1440 +375 | 200×5 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/conflicts` | Desktop1440 +375 | 200×7; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| pm | `/pm/conflict-center` | Desktop1440 +375 | 200×4; /__dev abort | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED helper; render được |
+| pm | `/pm/fast-track` | Desktop1440 +375 | 200×3 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/dispatch` | Desktop1440 +375 | 200×8 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/proposals` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/proposals/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-packages` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/work-packages/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/repair-batches` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/repair-batches/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/work-orders/confirm` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/work-orders/:id/confirm` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/evidence-closeout` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/evidence-closeout/:id` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/acceptance` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/acceptance/:batchId` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | BLOCKED detail fixture |
+| pm | `/pm/research-validation` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-09` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/audit-trail` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/rpt-10` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/reports` | Desktop1440 +375 | 200×7 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/risk-analytics` | Desktop1440 +375 | 200×7 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/retention` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/system-control` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/wf-12` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/legal-hold` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/personnel` | Desktop1440 +375 | 200×15 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/team` | Desktop1440 +375 | 200×15 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/profile` | Desktop1440 +375 | 200×10 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm/notifications` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/pm` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `/notifications` | Desktop1440 +375 | 200×1 | Layout render; action theo gate/fixture | 0 pageerror | PASS render only |
+| pm | `opposite role /projects` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS guard |
+| pm | `logout` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS |
+| anonymous | `/login` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS render/guard |
+| anonymous | `/accept-invitation` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS render/guard |
+| anonymous | `/invite/:token` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/auth/setup-password` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/setup-password` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/force-change-password` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | NOT_RUN token/force fixture; rendered guard |
+| anonymous | `/` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS render/guard |
+| anonymous | `/notifications` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS render/guard |
+| anonymous | `/does-not-exist` | Guard/public | Không quan sát request tại lượt này | Layout render; action theo gate/fixture | 0 pageerror | PASS render/guard |
+
+**File thay đổi cuối (35 file):**
+
+- `docs/worklogs/WEB-HOANG-WORKLOG-20261022.md`
+- `src/components/common/UserProfileModal.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/pages/(auth)/accept-invitation/InvitationCard.tsx`
+- `src/pages/(pm)/ProfilePage.tsx`
+- `src/pages/(pm)/ProjectOverview.tsx`
+- `src/pages/(pm)/ai-review/ReviewCasesTable.tsx`
+- `src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx`
+- `src/pages/(pm)/alignment/AlignmentHeader.tsx`
+- `src/pages/(pm)/alignment/AlignmentImportModal.tsx`
+- `src/pages/(pm)/alignment/AlignmentMap.tsx`
+- `src/pages/(pm)/alignment/AlignmentSidebar.tsx`
+- `src/pages/(pm)/create-survey/CreateSurveyForm.tsx`
+- `src/pages/(pm)/create-survey/FlightCorridorMap.tsx`
+- `src/pages/(pm)/defect-verify/DefectTemporalComparison.tsx`
+- `src/pages/(pm)/drone-review/CandidateWorkflow.tsx`
+- `src/pages/(pm)/drone-review/MissionHeader.tsx`
+- `src/pages/(pm)/drone-review/MissionModals.tsx`
+- `src/pages/(pm)/drone-review/MissionQualitySection.tsx`
+- `src/pages/(pm)/drone-review/MissionTriageList.tsx`
+- `src/pages/(pm)/drone-review/MissionViewer.tsx`
+- `src/pages/(pm)/fast-track/DispatchActionBar.tsx`
+- `src/pages/(pm)/fast-track/DispatchMap.tsx`
+- `src/pages/(pm)/fast-track/DispatchModeSelector.tsx`
+- `src/pages/(pm)/fast-track/FastTrackBanner.tsx`
+- `src/pages/(pm)/fast-track/FastTrackDispatchModal.tsx`
+- `src/pages/(pm)/project-overview/ProjectCrsProfileCard.tsx`
+- `src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx`
+- `src/pages/(pm)/project-overview/ProjectMapPreviewCard.tsx`
+- `src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx`
+- `src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx`
+- `src/pages/(pm)/surveys/SurveyCard.tsx`
+- `src/pages/(pm)/surveys/SurveyKpiCards.tsx`
+- `src/pages/(pm)/surveys/SurveyWorkflow.tsx`
+- `tools/check-review-293d001.cjs`
+
+Parent của commit follow-up: `33fbe0bf525a7532070b06d7fd4bc329041b8753`. Full SHA được báo sau commit; file đầu vào/ảnh/log temp không stage. Không có diff trong src/api, src/store, App.tsx, vite.config.ts hoặc backend.

@@ -9,7 +9,7 @@ export const ProfilePage: React.FC = () => {
   const phoneSession = useAuthStore(() => getPhoneSessionKey())
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
-  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'sessions'>('profile')
   const [loading, setLoading] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
   const [profile, setProfile] = useState<UserProfileFact | null>(null)
@@ -174,14 +174,14 @@ export const ProfilePage: React.FC = () => {
 
         <div className="px-6 pb-6 pt-0 relative flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-12">
           <div className="flex items-end gap-4">
-            <div className="w-24 h-24 rounded-full bg-[#C9A227]/20 border-4 border-white text-[#8C6D15] font-bold text-2xl flex items-center justify-center ring-2 ring-brand-gold/40 shadow-md font-mono shrink-0">
+            <div className="w-24 h-24 rounded-full bg-[#C9A227]/20 border-4 border-white text-[#8C6D15] font-bold text-2xl flex items-center justify-center ring-2 ring-brand-gold/40 shadow-md shrink-0">
               {initials}
             </div>
             <div className="mb-1">
               <h1 className="text-xl font-bold text-slate-900 font-headline">
                 {profile?.displayName || fullName || 'Nhân sự Hoàng Hải'}
               </h1>
-              <p className="text-xs text-slate-500 font-mono">{profile?.email || user?.email}</p>
+              <p className="text-xs text-slate-500">{profile?.email || user?.email}</p>
               <p className="text-xs text-slate-500 mt-0.5">Công ty TNHH Xây dựng Bê tông Hoàng Hải</p>
             </div>
           </div>
@@ -195,7 +195,7 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         {/* Tab Bar */}
-        <div className="flex border-t border-slate-200 px-6 bg-slate-50/50">
+        <div className="flex overflow-x-auto border-t border-slate-200 px-6 bg-slate-50/50">
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
@@ -220,6 +220,7 @@ export const ProfilePage: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">lock_reset</span>
             <span>Đổi mật khẩu tài khoản</span>
           </button>
+          <button type="button" onClick={() => setActiveTab('sessions')} className={`py-3 px-4 text-xs font-bold border-b-2 flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'sessions' ? 'border-brand-gold text-brand-goldDark' : 'border-transparent text-slate-500'}`}><span className="material-symbols-outlined text-[18px]">devices</span>Thiết bị &amp; Phiên hoạt động</button>
         </div>
       </div>
 
@@ -276,7 +277,7 @@ export const ProfilePage: React.FC = () => {
                   type="email"
                   disabled
                   value={profile?.email || user?.email || ''}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-xs text-slate-500 bg-slate-100 font-mono cursor-not-allowed"
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-xs text-slate-500 bg-slate-100 cursor-not-allowed"
                 />
               </div>
 
@@ -317,6 +318,12 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
 
+              <section className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-xs font-bold text-slate-900 flex items-center gap-2"><span className="material-symbols-outlined text-[18px] text-brand-gold">workspace_premium</span>Chứng chỉ hành nghề &amp; Thẩm quyền kỹ thuật</h3><span className="text-[11px] text-slate-500">Chưa cập nhật</span></div>
+                <fieldset disabled className="grid sm:grid-cols-2 gap-3">{['Phòng ban điều hành', 'Tên chứng chỉ & Số hiệu CCHN', 'Hạn hiệu lực chứng chỉ', 'Tiêu chuẩn áp dụng'].map(label => <label key={label} className="text-xs text-slate-600">{label}<input type="text" placeholder="Chưa cập nhật" className="block w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs" /></label>)}</fieldset>
+                <div className="pt-3 border-t border-slate-200 space-y-3"><div className="flex flex-wrap justify-between items-center gap-2"><h4 className="text-xs font-bold text-slate-700">Ảnh chụp / Bản scan CCHN đối soát</h4><button type="button" disabled className="inline-flex gap-1 items-center px-3 py-1.5 rounded-lg border border-slate-200 text-slate-400 text-xs"><span className="material-symbols-outlined text-[17px]">add_photo_alternate</span>Tải ảnh CCHN lên</button></div><div className="p-5 rounded-lg border border-dashed border-slate-300 bg-white text-xs text-center text-slate-500">Chưa cập nhật</div><p className="text-[11px] text-slate-500">Chưa hỗ trợ cập nhật hồ sơ chuyên môn tại đây.</p></div>
+              </section>
+
             {/* Danh sách dự án đang phụ trách thật */}
             <div className="pt-4 border-t border-slate-100 space-y-3">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -334,7 +341,7 @@ export const ProfilePage: React.FC = () => {
                       </span>
                       <span>{proj.name}</span>
                       {proj.code && (
-                        <span className="text-[11px] text-amber-700 font-mono">({proj.code})</span>
+                        <span className="text-[11px] text-amber-700">({proj.code})</span>
                       )}
                     </span>
                   ))}
@@ -358,6 +365,8 @@ export const ProfilePage: React.FC = () => {
               </button>
             </div>
           </form>
+        ) : activeTab === 'sessions' ? (
+          <section className="space-y-4"><div className="flex flex-wrap justify-between items-center gap-3"><div><h2 className="font-bold text-slate-900">Thiết bị &amp; Phiên hoạt động</h2><p className="text-xs text-slate-500 mt-1">Theo dõi các phiên đăng nhập được phép đọc.</p></div><button type="button" disabled className="text-xs text-slate-400 border rounded-lg px-3 py-2">Thu hồi phiên</button></div><div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full text-xs"><thead className="bg-slate-50"><tr>{['Thiết bị', 'Hoạt động gần nhất', 'Trạng thái', 'Thao tác'].map(label => <th key={label} className="text-left p-3">{label}</th>)}</tr></thead><tbody><tr><td colSpan={4} className="p-8 text-center text-slate-500">Chưa cập nhật</td></tr></tbody></table></div><p className="text-xs text-slate-500">Chưa hỗ trợ quản lý danh sách phiên tại đây.</p></section>
         ) : (
           <form onSubmit={handleChangePassword} className="space-y-5 max-w-xl">
             <div className="p-3.5 rounded-lg bg-blue-50/70 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">

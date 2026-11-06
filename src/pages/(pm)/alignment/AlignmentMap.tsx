@@ -1,3 +1,4 @@
+import { Icon } from '../../../components/ui/Icon'
 import React, { useState } from 'react'
 import {
   Layers,
@@ -50,7 +51,15 @@ export interface AlignmentMapProps {
   onCancelPickingCoords?: () => void
 }
 
-export const AlignmentMap: React.FC<AlignmentMapProps> = ({
+type ServerAlignmentMapProps = { serverView: true; children: React.ReactNode; caption: string }
+
+export const AlignmentMap: React.FC<AlignmentMapProps | ServerAlignmentMapProps> = (props) => {
+  const [minimized, setMinimized] = useState(false)
+  if (!('serverView' in props)) return <LegacyAlignmentMap {...props} />
+  return <section className="xl:col-span-8 min-w-0 flex flex-col gap-2"><div className="relative w-full min-h-[520px] rounded-xl overflow-hidden shadow-md bg-slate-950 select-none flex flex-col justify-between border border-slate-800"><header className="relative z-10 p-3 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-b from-slate-950/90 to-transparent"><div className="inline-flex flex-wrap items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-700/60">{['Vệ tinh','Bản đồ tuyến','Tấm & Khe'].map(label => <button type="button" key={label} disabled className="px-2.5 py-1 rounded-md text-xs text-slate-400">{label}</button>)}</div><div className="flex gap-1">{['straighten','add','remove'].map(name => <button key={name} type="button" disabled className="border border-slate-700 bg-slate-900 rounded-lg p-2 text-slate-400"><Icon name={name} size={18} /></button>)}</div></header><div className="flex-1 min-h-64 flex items-center justify-center p-4">{props.children}</div><section className="m-3 p-3 bg-slate-900/90 border border-slate-700/60 rounded-xl text-slate-300"><button type="button" onClick={() => setMinimized(value => !value)} className="w-full flex items-center justify-between text-xs font-semibold"><span>Mặt cắt ngang &amp; Thông số kỹ thuật</span><Icon name={minimized ? 'expand_more' : 'expand_less'} size={18} /></button>{!minimized && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 text-xs">{['Bề rộng mặt đường','Chiều dày tấm','Khe co giãn','Lý trình'].map(label => <div key={label}><p className="text-slate-400 text-[10px]">{label}</p><p className="mt-1">Chưa cập nhật</p></div>)}</div>}</section><footer className="bg-slate-900 border-t border-slate-800 px-3 py-2 flex flex-wrap justify-between gap-2 text-[10px] text-slate-400"><span>{props.caption}</span><span>Vị trí con trỏ: Chưa cập nhật</span></footer></div></section>
+}
+
+const LegacyAlignmentMap: React.FC<AlignmentMapProps> = ({
   mapContainerRef,
   mapRef,
   mapLayer,

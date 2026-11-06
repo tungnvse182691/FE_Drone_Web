@@ -5,6 +5,8 @@ import { ProjectRouteConfig, AvailablePilot } from './types'
 import { OverlapHelpBox } from './OverlapHelpBox'
 
 interface CreateSurveyFormProps {
+  readOnly?: boolean
+  selectedProjectName?: string
   projects: ProjectRouteConfig[]
   projectId: string
   onProjectChange: (id: string) => void
@@ -49,51 +51,54 @@ interface CreateSurveyFormProps {
   onCancel: () => void
 }
 
-export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
-  projects,
-  projectId,
-  onProjectChange,
+export const CreateSurveyForm: React.FC<CreateSurveyFormProps | { readOnly: true; selectedProjectName?: string; onCancel: () => void }> = (props) => {
+  const {
+  readOnly = false,
+  selectedProjectName,
+  projects = [],
+  projectId = '',
+  onProjectChange = () => {},
   currentProject,
-  startKm,
-  setStartKm,
-  endKm,
-  setEndKm,
-  altitudeMode,
-  setAltitudeMode,
-  presetAltitude,
-  setPresetAltitude,
-  customAltitude,
-  setCustomAltitude,
-  gsdCmPx,
-  overlap,
-  setOverlap,
-  overlapMode,
-  setOverlapMode,
-  customOverlapForward,
-  setCustomOverlapForward,
-  customOverlapSide,
-  setCustomOverlapSide,
+  startKm = '',
+  setStartKm = () => {},
+  endKm = '',
+  setEndKm = () => {},
+  altitudeMode = 'custom',
+  setAltitudeMode = () => {},
+  presetAltitude = '',
+  setPresetAltitude = () => {},
+  customAltitude = '',
+  setCustomAltitude = () => {},
+  gsdCmPx = '',
+  overlap = '',
+  setOverlap = () => {},
+  overlapMode = 'custom',
+  setOverlapMode = () => {},
+  customOverlapForward = '',
+  setCustomOverlapForward = () => {},
+  customOverlapSide = '',
+  setCustomOverlapSide = () => {},
   showOverlapHelp,
-  setShowOverlapHelp,
-  date,
-  setDate,
+  setShowOverlapHelp = () => {},
+  date = '',
+  setDate = () => {},
   surveyType,
-  setSurveyType,
-  pilots,
-  pilotId,
-  setPilotId,
-  notes,
-  setNotes,
+  setSurveyType = () => {},
+  pilots = [],
+  pilotId = '',
+  setPilotId = () => {},
+  notes = '',
+  setNotes = () => {},
   hasBaseline = false,
   hasActivePeriodic = false,
   hasActiveAdHoc = false,
   conflictReason = null,
   errorMessage,
   onClearError,
-  onSubmit,
-  onCancel
-}) => {
-  const selectedPilot = pilots.find((p) => p.id === pilotId) || pilots[0]
+  onSubmit = (event) => event.preventDefault(),
+  onCancel = () => {},
+  } = props as Partial<CreateSurveyFormProps>
+  const selectedPilot = pilots.find((p) => p.id === pilotId)
 
   // State đóng / mở Menu dropdown chọn dự án
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -111,7 +116,8 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
   }, [])
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 font-body">
+    <form onSubmit={event => { if (readOnly) event.preventDefault(); else onSubmit(event) }} className="space-y-5 font-body">
+      <fieldset disabled={readOnly} className="space-y-5 min-w-0">
       {/* THẺ 1: HÀNH LANG & TUYẾN ĐƯỜNG KHẢO SÁT (#1E40AF Blue) */}
       <div className="relative bg-white border border-[#E2E5E9] rounded-[20px] p-5 shadow-2xs flex flex-col gap-4 z-30">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1E40AF] to-blue-200 rounded-t-[20px]" />
@@ -137,7 +143,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             <div className="flex items-center gap-2 truncate">
               <Icon name="route" size={18} className="text-[#1E40AF] shrink-0" />
               <span className="font-semibold text-[#1A1D20] truncate">
-                [{currentProject.code}] {currentProject.name}
+                {currentProject ? `[${currentProject.code}] ${currentProject.name}` : selectedProjectName || 'Chưa cập nhật'}
               </span>
             </div>
             <Icon
@@ -175,7 +181,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                       <div className="truncate">
                         <span className="font-bold text-slate-800">[{p.code}]</span> {p.name}
                         {p.hasAlignment ? (
-                          <span className="text-[11px] text-slate-500 ml-2 font-mono">
+                          <span className="text-[11px] text-slate-500 ml-2">
                             (Km {p.startKm.toFixed(p.startKm % 1 !== 0 ? 3 : 1)} → Km {p.endKm.toFixed(p.endKm % 1 !== 0 ? 3 : 1)})
                           </span>
                         ) : (
@@ -198,25 +204,25 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
           <div className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1.5 px-0.5">
             <Icon name="info" size={13} className="text-slate-400 shrink-0" />
             <span>
-              {currentProject.hasAlignment ? (
+              {currentProject?.hasAlignment ? (
                 <>
-                  Đang chọn dự án <strong>[{currentProject.code}] {currentProject.name}</strong> • Chiều dài:{' '}
-                  {currentProject.lengthKm} km (Km {currentProject.startKm} → Km {currentProject.endKm}).
+                  Đang chọn dự án <strong>{currentProject ? `[${currentProject.code}] ${currentProject.name}` : selectedProjectName || 'Chưa cập nhật'}</strong> • Chiều dài:{' '}
+                  {currentProject?.lengthKm} km (Km {currentProject?.startKm} → Km {currentProject?.endKm}).
                 </>
               ) : (
                 <span className="text-amber-800 font-semibold">
-                  Dự án <strong>[{currentProject.code}] {currentProject.name}</strong> chưa có tim tuyến được phê duyệt trong hệ thống.
+                  Chưa xác minh dữ liệu tim tuyến của dự án đã chọn.
                 </span>
               )}
             </span>
           </div>
 
           {/* Banner cảnh báo nếu dự án chưa có tim tuyến */}
-          {!currentProject.hasAlignment && (
+          {!currentProject?.hasAlignment && (
             <div className="mt-3 p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5 leading-relaxed">
               <Icon name="warning" size={16} className="text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <strong className="font-bold">Dự án chưa có tim tuyến kỹ thuật:</strong> Dự án này chưa được Chỉ huy trưởng (PM) lập tim tuyến hoặc chưa được Giám sát (Supervisor) phê duyệt. Bạn cần vào màn hình <strong>Dự án bảo hành → Thiết lập tim tuyến</strong> để hoàn thiện tim tuyến trước khi ban hành lệnh bay khảo sát.
+                <strong className="font-bold">Chưa thể gửi kế hoạch:</strong> Cần xác minh phạm vi tuyến và dữ liệu kỹ thuật trước khi tiếp tục.
               </div>
             </div>
           )}
@@ -231,18 +237,18 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             <input
               type="number"
               step="0.001"
-              disabled={!currentProject.hasAlignment}
-              min={currentProject.startKm}
-              max={currentProject.endKm}
+              disabled={!currentProject?.hasAlignment}
+              min={currentProject?.startKm}
+              max={currentProject?.endKm}
               value={startKm}
               onChange={(e) => setStartKm(e.target.value)}
               required
-              className={`w-full px-3.5 py-2 text-sm font-mono font-bold text-[#1A1D20] border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] ${
-                !currentProject.hasAlignment ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
+              className={`w-full px-3.5 py-2 text-sm font-bold text-[#1A1D20] border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] ${
+                !currentProject?.hasAlignment ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
               }`}
             />
-            <span className="text-[10px] text-slate-400 mt-1 block font-mono">
-              {currentProject.hasAlignment ? `Giới hạn tuyến: Km ${currentProject.startKm}` : 'Chưa có tim tuyến'}
+            <span className="text-[10px] text-slate-400 mt-1 block">
+              {currentProject?.hasAlignment ? `Giới hạn tuyến: Km ${currentProject?.startKm}` : 'Chưa có tim tuyến'}
             </span>
           </div>
 
@@ -253,18 +259,18 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             <input
               type="number"
               step="0.001"
-              disabled={!currentProject.hasAlignment}
-              min={currentProject.startKm}
-              max={currentProject.endKm}
+              disabled={!currentProject?.hasAlignment}
+              min={currentProject?.startKm}
+              max={currentProject?.endKm}
               value={endKm}
               onChange={(e) => setEndKm(e.target.value)}
               required
-              className={`w-full px-3.5 py-2 text-sm font-mono font-bold text-[#1A1D20] border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] ${
-                !currentProject.hasAlignment ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
+              className={`w-full px-3.5 py-2 text-sm font-bold text-[#1A1D20] border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] ${
+                !currentProject?.hasAlignment ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white'
               }`}
             />
-            <span className="text-[10px] text-slate-400 mt-1 block font-mono">
-              {currentProject.hasAlignment ? `Đến tối đa: Km ${currentProject.endKm}` : 'Chưa có tim tuyến'}
+            <span className="text-[10px] text-slate-400 mt-1 block">
+              {currentProject?.hasAlignment ? `Đến tối đa: Km ${currentProject?.endKm}` : 'Chưa có tim tuyến'}
             </span>
           </div>
         </div>
@@ -334,17 +340,17 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                   value={customAltitude}
                   onChange={(e) => setCustomAltitude(e.target.value)}
                   placeholder="Nhập độ cao (30 - 120m)..."
-                  className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
+                  className="w-full px-3.5 py-2 text-sm font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">mét</span>
               </div>
-              <div className="bg-[#FEF3E2] border border-amber-200 px-3 py-2 rounded-[10px] text-xs font-mono text-[#8F7212] whitespace-nowrap">
-                Độ phân giải GSD: <strong>~{gsdCmPx} cm/px</strong>
+              <div className="bg-[#FEF3E2] border border-amber-200 px-3 py-2 rounded-[10px] text-xs text-[#8F7212] whitespace-nowrap">
+                Độ phân giải GSD: <strong>{gsdCmPx ? `~${gsdCmPx} cm/px` : 'Chưa cập nhật'}</strong>
               </div>
             </div>
           )}
           <p className="text-[10px] text-slate-500">
-            Trần bay quy định: Tối đa 120m AGL. Độ cao càng thấp thì ảnh trắc địa càng nét nhưng thời gian bay tăng.
+            {readOnly ? 'Thông số bay: Chưa cập nhật' : 'Trần bay quy định: Tối đa 120m AGL. Độ cao càng thấp thì ảnh trắc địa càng nét nhưng thời gian bay tăng.'}
           </p>
         </div>
 
@@ -411,7 +417,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                   value={customOverlapForward}
                   onChange={(e) => setCustomOverlapForward(e.target.value)}
                   placeholder="Độ phủ dọc (%)..."
-                  className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
+                  className="w-full px-3.5 py-2 text-sm font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">% Dọc</span>
               </div>
@@ -424,7 +430,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
                   value={customOverlapSide}
                   onChange={(e) => setCustomOverlapSide(e.target.value)}
                   placeholder="Độ phủ ngang (%)..."
-                  className="w-full px-3.5 py-2 text-sm font-mono font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
+                  className="w-full px-3.5 py-2 text-sm font-bold bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] pr-12 text-[#1A1D20]"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">% Ngang</span>
               </div>
@@ -451,7 +457,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               Loại Hình Khảo Sát
             </label>
             <select
-              value={surveyType}
+              value={surveyType || ''}
               onChange={(e) => {
                 setSurveyType(e.target.value as any)
                 onClearError?.()
@@ -468,6 +474,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               <option value="AD_HOC">
                 Đột xuất / Sự cố {hasActiveAdHoc ? '— Đã có đợt bay chưa xong' : ''}
               </option>
+              {readOnly && <option value="">Chưa cập nhật</option>}
               <option value="BASELINE" disabled={hasBaseline}>
                 Khảo sát cơ sở {hasBaseline ? '— Đã thiết lập mốc Baseline' : ''}
               </option>
@@ -511,6 +518,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
               onChange={(e) => setPilotId(e.target.value)}
               className="w-full h-10 px-3.5 py-2 text-sm bg-white border border-[#E2E5E9] rounded-[10px] focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] font-medium cursor-pointer text-[#1A1D20]"
             >
+              <option value="">Chưa cập nhật</option>
               {pilots.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -524,6 +532,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
         </div>
       </div>
 
+      </fieldset>
       {/* THẺ 4: GHI CHÚ KỸ THUẬT & BAN HÀNH LỆNH BAY */}
       <div className="relative bg-white border border-[#E2E5E9] rounded-[20px] p-5 shadow-2xs overflow-hidden flex flex-col gap-4">
         <div className="flex items-center gap-2 pb-2 border-b border-[#EDEFF2]">
@@ -538,6 +547,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
             Ghi Chú Kỹ Thuật &amp; Yêu Cầu An Toàn
           </label>
           <textarea
+            disabled={readOnly}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
@@ -553,15 +563,15 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
           </Button>
           <Button
             type="submit"
-            disabled={!currentProject.hasAlignment || Boolean(conflictReason)}
+            disabled={readOnly || !currentProject?.hasAlignment || Boolean(conflictReason)}
             title={
-              !currentProject.hasAlignment
+              !currentProject?.hasAlignment
                 ? 'Dự án chưa có tim tuyến kỹ thuật để lập kế hoạch bay'
                 : conflictReason || ''
             }
             icon={<Icon name="flight_takeoff" size={16} className="text-white" />}
           >
-            Ban Hành Lệnh Bay Khảo Sát
+            {readOnly ? 'Tạo kế hoạch và giao Operator' : 'Ban Hành Lệnh Bay Khảo Sát'}
           </Button>
         </div>
       </div>

@@ -34,7 +34,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
@@ -62,6 +62,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             </div>
           </div>
 
+          <section className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2"><h4 className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">Các vị trí khiếm khuyết được giao</h4><div className="flex flex-wrap gap-1.5">{selectedItems.map(item => <span key={item.id} className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-700 text-[11px]">{item.code}</span>)}</div><p className="text-[11px] text-slate-500">Cự ly điều phối: Chưa cập nhật</p></section>
           {/* Cảnh báo vi phạm */}
           {hasViolation ? (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 space-y-1">
@@ -96,6 +97,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
             </select>
           </div>
 
+          <section className="grid grid-cols-2 gap-2 p-2.5 bg-amber-50/60 rounded-xl border border-amber-200 text-[11px] text-amber-900">{['Chỉ huy tổ','Nhân sự','Trạng thái sẵn sàng','Trang thiết bị mang theo'].map(label => <div key={label}><p className="text-slate-500">{label}</p><p className="font-semibold mt-1">Chưa cập nhật</p></div>)}</section>
           {/* Ghi chú */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700">Ghi chú chỉ đạo hiện trường</label>
