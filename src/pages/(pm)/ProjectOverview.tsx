@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services'
+import { projectService, personnelService } from '../../api/services'
 import { alignmentService } from '../../api/services/alignmentService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { Segment, ProjectMember } from './project-overview/types'
-import { userDirectory } from '../../api/services/userDirectory'
+import { PrimaryProjectManagerReadDto } from '../../api/services/personnelService'
 import { ProjectOverviewHeader } from './project-overview/ProjectOverviewHeader'
 import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
@@ -21,9 +21,9 @@ export type { Segment, ProjectMember }
 
 export const ProjectOverview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
-  const projectId = id || 'prj-ql1a-02'
+  const projectId = id || ''
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -32,6 +32,12 @@ export const ProjectOverview: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [segments, setSegments] = useState<Segment[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [projectError, setProjectError] = useState<string | null>(null)
+  const [memberError, setMemberError] = useState<string | null>(null)
+  const [primaryError, setPrimaryError] = useState<string | null>(null)
+  const [primaryPm, setPrimaryPm] = useState<PrimaryProjectManagerReadDto | null>(null)
+  const [includeHistory, setIncludeHistory] = useState(false)
+  const requestId = useRef(0)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false)
 
@@ -69,9 +75,13 @@ export const ProjectOverview: React.FC = () => {
 
   // Fetch Project Data bất đồng bộ qua Mock API
   const loadProjectData = useCallback(async () => {
+    const request = ++requestId.current
+    const current = () => request === requestId.current && useAuthStore.getState().authEpoch === authEpoch
     setIsLoading(true)
+    setProjectError(null)
     try {
       const data = await projectService.fetchProjectById(projectId)
+      if (!current()) return
       if (data) {
         setProject(data)
 
@@ -114,64 +124,46 @@ export const ProjectOverview: React.FC = () => {
         })
         setSegments(mappedSegments)
 
-        // 2. Cơ cấu nhân sự từ API Backend thật (API-112: GET /projects/{projectId}/members)
-        try {
-          const rawMembers = await projectService.fetchProjectMembers(data.id)
-          if (rawMembers && rawMembers.length > 0) {
-            const mappedMembers: ProjectMember[] = rawMembers.map((m: any) => {
-              const matchedUser = userDirectory.findUser(m.userId, m.displayName)
-              const email = matchedUser?.email || m.email || ''
-              const phone = matchedUser?.phone || ''
-              const contact = email ? `${email}${phone ? ` • ${phone}` : ''}` : 'Chưa thiết lập email'
-
-              return {
-                id: m.membershipId || m.userId,
-                name: m.displayName || matchedUser?.displayName || 'Nhân sự dự án',
-                role_code: m.role || matchedUser?.role || 'MEMBER',
-                role_title: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
-                  ? 'Chỉ huy trưởng dự án (Project Manager)'
-                  : m.role === 'OPERATOR' || m.role === 'DRONE_OPERATOR'
-                  ? 'Phi công Drone (Operator)'
-                  : m.role === 'CREW' || m.role === 'REPAIR_CREW'
-                  ? 'Đội trưởng thi công (Crew)'
-                  : 'Giám sát viên (Supervisor)',
-                role_badge: m.isPrimary ? 'PM CHÍNH' : m.role,
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-                is_online: m.status === 'ACTIVE' || m.status === 1,
-                authority: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
-                  ? 'Quản lý tim tuyến, lập yêu cầu bay drone, điều phối sửa chữa (BR-01)'
-                  : 'Thực hiện nhiệm vụ được giao ngoài hiện trường',
-                contact,
-                unit: m.role === 'PM' || m.role === 'PROJECT_MANAGER'
-                  ? 'Ban Chỉ huy Công trường'
-                  : 'Đội ngũ Kỹ thuật & Khảo sát'
-              }
-            })
-            setMembers(mappedMembers)
-          } else {
-            setMembers([])
-          }
-        } catch (err) {
-          console.error('[ProjectOverview] Lỗi tải thành viên dự án:', err)
-          setMembers([])
-        }
+        // Directory, effective members and primary designation are separate read models.
+        const [memberResult, primaryResult] = await Promise.allSettled([
+          projectService.fetchProjectMembers(data.id, includeHistory),
+          personnelService.getPrimaryProjectManager(data.id)
+        ])
+        if (!current()) return
+        setMemberError(memberResult.status === 'rejected' ? 'Chưa tải được thành viên dự án. Vui lòng thử lại.' : null)
+        setPrimaryError(primaryResult.status === 'rejected' ? 'Chưa tải được phân công PM chính. Vui lòng thử lại.' : null)
+        if (primaryResult.status === 'fulfilled') setPrimaryPm(primaryResult.value)
+        if (memberResult.status === 'fulfilled') setMembers(memberResult.value.map((m: any) => ({
+          id: m.membershipId, name: m.displayName || 'Chưa cập nhật tên', role_code: m.role,
+          role_title: m.role === 'PM' ? 'Chỉ huy trưởng dự án' : m.role === 'OPERATOR' ? 'Phi công Drone' : m.role === 'CREW' ? 'Đội thi công' : m.role || 'Chưa cập nhật vai trò',
+          role_badge: m.isPrimary ? 'PM CHÍNH' : m.role || 'Chưa cập nhật',
+          avatar: '', authority: '', contact: '', unit: '',
+          valid_from: m.validFrom, valid_to: m.validTo, membership_status: m.status
+        })))
       } else {
         // Fallback an toàn nếu không tìm thấy ID
-        setProject(projectService.getProjects()[0] || null)
+        setProject(null)
+        setProjectError('Không tìm thấy dự án trong phạm vi được phép.')
       }
     } catch (err: any) {
-      console.error('[ProjectOverview] Lỗi tải dữ liệu dự án:', err)
+      if (current()) setProjectError('Không tải được hồ sơ dự án. Vui lòng thử lại.')
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [projectId])
+  }, [projectId, authEpoch, includeHistory])
 
   useEffect(() => {
-    loadProjectData()
+    setProject(null)
+    setMembers([])
+    setPrimaryPm(null)
+    setMemberError(null)
+    setPrimaryError(null)
+    void loadProjectData()
     window.addEventListener('roadguard_state_change', loadProjectData)
-    return () => window.removeEventListener('roadguard_state_change', loadProjectData)
+    return () => { requestId.current++; window.removeEventListener('roadguard_state_change', loadProjectData) }
   }, [loadProjectData])
 
+  if (projectError && !project) return <div role="alert" className="p-6 border rounded-xl text-sm text-rose-700">{projectError}<button type="button" className="ml-3 underline" onClick={() => { void loadProjectData() }}>Thử lại</button></div>
   if (isLoading || !project) {
     return (
       <div className="p-16 text-center bg-white rounded-[20px] border-[1.5px] border-[#E2E5E9] text-slate-500 text-xs flex flex-col items-center justify-center gap-2 shadow-2xs">
@@ -183,6 +175,7 @@ export const ProjectOverview: React.FC = () => {
 
   return (
     <div className="space-y-6 font-body">
+      {projectError && <div role="alert" className="text-sm text-rose-700">{projectError}<button type="button" onClick={() => { void loadProjectData() }}>Thử lại</button></div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in duration-200 text-xs">
@@ -244,6 +237,11 @@ export const ProjectOverview: React.FC = () => {
           <ProjectPersonnelCard
             members={members}
             project={project}
+            memberError={memberError}
+            primaryError={primaryError}
+            primaryPm={primaryPm}
+            includeHistory={includeHistory}
+            onChangeHistory={setIncludeHistory}
             onReloadMembers={loadProjectData}
             showToast={showToast}
           />

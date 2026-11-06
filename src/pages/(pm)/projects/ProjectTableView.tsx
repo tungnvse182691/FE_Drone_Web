@@ -72,7 +72,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         prj.open_defects > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {prj.open_defects}
+                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa tải được'}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -135,7 +135,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 text-slate-500 text-xs font-body">
         <div className="flex items-center gap-2">
           <span>
-            Hiển thị <strong className="text-slate-900 font-mono">1 - {filteredProjects.length}</strong> trong tổng số{' '}
+            Hiển thị <strong className="text-slate-900 font-mono">{filteredProjects.length ? 1 : 0} - {filteredProjects.length}</strong> trong tổng số{' '}
             <strong className="text-slate-900 font-mono">{totalProjectsCount}</strong> dự án bảo hành
           </span>
         </div>

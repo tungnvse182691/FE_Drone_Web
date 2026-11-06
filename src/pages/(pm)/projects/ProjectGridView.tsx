@@ -174,8 +174,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
                       }`}
                     >
-                      {prj.warranty_passed_percent}%{' '}
-                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span>
+                      {prj.warranty_data_missing ? 'Chưa cập nhật' : <>{prj.warranty_passed_percent}%{' '}
+                      <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span></>}
                     </span>
                   </div>
                   <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -187,7 +187,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                           ? 'bg-slate-300'
                           : 'bg-brand-gold'
                       }`}
-                      style={{ width: `${prj.warranty_passed_percent}%` }}
+                      style={{ width: Number.isFinite(prj.warranty_passed_percent) ? `${Math.max(0, Math.min(100, prj.warranty_passed_percent))}%` : '0%' }}
                     ></div>
                   </div>
                 </div>
@@ -196,7 +196,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Chiều dài</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.length_km} km</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.length_km) ? prj.length_km : 'Chưa cập nhật'} km</span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Lỗi mở</span>
@@ -205,12 +205,12 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
                       }`}
                     >
-                      {prj.open_defects} điểm
+                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa tải được'} điểm
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Gói sửa</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{prj.repair_packages} gói</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.repair_packages) ? prj.repair_packages : 'Chưa tải được'} gói</span>
                   </div>
                 </div>
               </div>

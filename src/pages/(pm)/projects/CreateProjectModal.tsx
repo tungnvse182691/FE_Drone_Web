@@ -5,6 +5,7 @@ export interface PmOption {
   id: string
   name: string
   email: string
+  status?: string
 }
 
 export interface CreateProjectModalProps {
@@ -25,6 +26,11 @@ export interface CreateProjectModalProps {
   onChangeEndDate: (val: string) => void
   handoverFiles?: string[]
   onChangeHandoverFiles?: (files: string[]) => void
+  pmLoading?: boolean
+  pmError?: string | null
+  onRetryPms?: () => void
+  pendingCreate?: boolean
+  receivedCreate?: boolean
   isSubmitting?: boolean
   errorMessage?: string | null
   onSubmit: (e: React.FormEvent) => void
@@ -48,6 +54,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeEndDate,
   handoverFiles = [],
   onChangeHandoverFiles,
+  pmLoading = false,
+  pmError = null,
+  onRetryPms,
+  pendingCreate = false,
+  receivedCreate = false,
   isSubmitting = false,
   errorMessage = null,
   onSubmit,
@@ -65,9 +76,11 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   }, [startDate, endDate])
 
   const isFormValid = useMemo(() => {
+    if (pendingCreate) return !isSubmitting
     return (
-      projectName.trim().length > 0 &&
-      projectCode.trim().length > 0 &&
+      projectName.trim().length > 0 && projectName.trim().length <= 255 &&
+      projectCode.trim().length > 0 && projectCode.trim().length <= 50 &&
+      pmOptions.some(option => option.id === projectPM && option.status === 'ACTIVE') &&
       projectPM.trim().length > 0 &&
       projectPM !== '-- Để trống --' &&
       startDate.length > 0 &&
@@ -75,7 +88,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       !isDateInvalid &&
       !isSubmitting
     )
-  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting])
+  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pendingCreate, pmOptions])
 
   if (!isOpen) return null
 
@@ -115,12 +128,14 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
               <Icon name="error" size={18} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="flex-1 leading-relaxed">
-                <span className="font-bold text-rose-900 block mb-0.5">Không thể khởi tạo dự án:</span>
+                <span className="font-bold text-rose-900 block mb-0.5">Trạng thái yêu cầu tạo dự án:</span>
                 <span className="text-rose-700 whitespace-pre-line">{errorMessage}</span>
               </div>
             </div>
           )}
 
+          {pmError && <div role="alert" className="text-xs text-rose-700">{pmError} <button type="button" onClick={onRetryPms} className="underline">Thử lại danh sách PM</button></div>}
+          <fieldset disabled={pendingCreate || isSubmitting} className="space-y-4 border-0 p-0 m-0 min-w-0">
           {/* Mã dự án & Tên dự án */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">
@@ -130,6 +145,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <input
                 type="text"
                 required
+                maxLength={50}
                 value={projectCode}
                 onChange={handleCodeChange}
                 placeholder="VD: PRJ-QL1A-03"
@@ -150,6 +166,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <input
                 type="text"
                 required
+                maxLength={255}
                 value={projectName}
                 onChange={(e) => onChangeProjectName(e.target.value)}
                 placeholder="VD: Quốc lộ 1A - Đoạn Diễn Châu"
@@ -185,8 +202,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 onChange={(e) => onChangeProjectPM(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
               >
+                <option value="">Chọn PM chính</option>
+                {pendingCreate && projectPM && !pmOptions.some(option => option.id === projectPM) && <option value={projectPM}>PM của yêu cầu đang đối chiếu</option>}
                 {pmOptions.length === 0 ? (
-                  <option value="">Đang tải danh sách PM...</option>
+                  <option value="">{pmLoading ? 'Đang tải danh sách PM...' : 'Không có PM đủ điều kiện'}</option>
                 ) : (
                   pmOptions.map((pm) => (
                     <option key={pm.id} value={pm.id}>
@@ -261,20 +280,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             <div className="space-y-2">
               <label className="flex items-center justify-center p-3 border-2 border-dashed border-slate-200 hover:border-brand-gold rounded-lg cursor-pointer bg-white transition group">
                 <input
+                  disabled
                   type="file"
                   multiple
                   className="hidden"
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (files && files.length > 0) {
-                      const names = Array.from(files).map((f) => f.name)
-                      onChangeHandoverFiles?.([...(handoverFiles || []), ...names])
-                    }
-                  }}
+
                 />
                 <div className="flex items-center gap-2 text-slate-500 group-hover:text-brand-navy">
                   <Icon name="upload_file" size={18} className="text-slate-400 group-hover:text-brand-gold" />
-                  <span className="text-xs">Bấm để chọn file biên bản bàn giao hoặc kéo thả vào đây</span>
+                  <span className="text-xs">Chưa hỗ trợ tải tệp trước khi tạo dự án. Có thể tạo không đính kèm.</span>
                 </div>
               </label>
 
@@ -309,6 +323,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           </div>
 
 
+          </fieldset>
           {/* Action Buttons */}
           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
@@ -333,7 +348,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 size={16}
                 className={isSubmitting ? 'animate-spin' : ''}
               />
-              <span>{isSubmitting ? 'Đang khởi tạo...' : 'Khởi tạo dự án'}</span>
+              <span>{isSubmitting ? 'Đang khởi tạo...' : pendingCreate ? receivedCreate ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu' : 'Khởi tạo dự án'}</span>
             </button>
           </div>
         </form>

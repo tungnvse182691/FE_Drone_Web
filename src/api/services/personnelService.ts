@@ -50,6 +50,15 @@ export interface StaffPageResponseDto {
   asOf: string
 }
 
+export interface PrimaryProjectManagerReadDto {
+  membershipId: string
+  userId: string
+  displayName?: string | null
+  validFrom: string
+  validTo?: string | null
+  membershipVersion?: string | null
+}
+
 export interface ProjectMemberDto {
   membershipId: string
   userId: string
@@ -142,6 +151,24 @@ export function getRoleLabel(role: RoleCode): string {
 }
 
 export const personnelService = {
+  // Directory only: choosing a PM must not depend on project/member/statistic reads.
+  async fetchStaffDirectory(filters: { role?: string; status?: string } = {}): Promise<StaffUserDto[]> {
+    const epoch = useAuthStore.getState().authEpoch
+    const items: StaffUserDto[] = []
+    const seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const res = await apiClient.get<StaffPageResponseDto>('/users', { params: { ...filters, limit: 100, cursor } })
+      if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh bạ cũ.')
+      if (!Array.isArray(res.data?.items)) throw new Error('Danh bạ trả sai contract.')
+      items.push(...res.data.items)
+      cursor = res.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor danh bạ bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return items
+  },
+
   /**
    * Lấy danh sách toàn bộ nhân sự từ CSDL Backend (API-237: GET /api/v1/users)
    * Kèm thông tin phân công dự án thực tế từ bảng ProjectMembers (API-112)
@@ -366,17 +393,12 @@ export const personnelService = {
   /**
    * Lấy thông tin Chỉ huy trưởng chính hiện tại của dự án (GET /api/v1/projects/{projectId}/primary-project-manager)
    */
-  async getPrimaryProjectManager(projectId: string): Promise<any> {
-    try {
-      const res = await apiClient.get(`/projects/${projectId}/primary-project-manager`)
-      return {
-        ...(res.data?.primaryProjectManager || res.data || {}),
-        etag: res.headers?.etag || res.headers?.['etag']
-      }
-    } catch (err) {
-      console.warn(`[getPrimaryProjectManager] Dự án ${projectId} chưa có PM hoặc không lấy được PM:`, err)
-      return null
+  async getPrimaryProjectManager(projectId: string): Promise<PrimaryProjectManagerReadDto | null> {
+    const res = await apiClient.get<{ primaryProjectManager?: PrimaryProjectManagerReadDto | null }>(`/projects/${projectId}/primary-project-manager`)
+    if (!res.data || !Object.prototype.hasOwnProperty.call(res.data, 'primaryProjectManager')) {
+      throw new Error('Phân công PM chính trả sai contract.')
     }
+    return res.data.primaryProjectManager ?? null
   },
 
   /**

@@ -1,11 +1,19 @@
+import { useAuthStore } from '../../../store/authStore'
+import { RoleCode } from '../../../types/enums'
 import React, { useState } from 'react'
 import { UserPlus, Users, Verified } from 'lucide-react'
 import { Icon } from '../../../components/ui/Icon'
 import { ProjectMember } from './types'
 import { HubProject } from '../projects/types'
+import { PrimaryProjectManagerReadDto } from '../../../api/services/personnelService'
 import { AddProjectMemberModal } from './AddProjectMemberModal'
 
 interface ProjectPersonnelCardProps {
+  memberError?: string | null
+  primaryError?: string | null
+  primaryPm?: PrimaryProjectManagerReadDto | null
+  includeHistory?: boolean
+  onChangeHistory?: (value: boolean) => void
   members: ProjectMember[]
   project: HubProject
   onReloadMembers?: () => Promise<void> | void
@@ -15,9 +23,11 @@ interface ProjectPersonnelCardProps {
 export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
   members,
   project,
+  memberError, primaryError, primaryPm, includeHistory = false, onChangeHistory,
   onReloadMembers,
   showToast = () => {}
 }) => {
+  const isSupervisor = useAuthStore(state => state.user?.role === RoleCode.SUPERVISOR)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   return (
@@ -40,7 +50,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {members.length} nhân sự
+              {memberError ? 'Chưa tải đầy đủ' : `${members.length} nhân sự`}
             </span>
             <button
               type="button"
@@ -54,12 +64,20 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           </div>
         </div>
 
+        <div className="text-xs text-slate-700 space-y-2">
+          {primaryError ? <p role="alert" className="text-rose-700">{primaryError}</p> : <p>PM chính: {primaryPm ? primaryPm.displayName || 'Chưa cập nhật tên' : 'Chưa có phân công PM chính'}</p>}
+          {primaryPm && !primaryError && <p>Hiệu lực từ {primaryPm.validFrom}{primaryPm.validTo ? ` đến ${primaryPm.validTo}` : ''}</p>}
+          {isSupervisor && <label className="flex gap-2"><input type="checkbox" checked={includeHistory} onChange={e => onChangeHistory?.(e.target.checked)} />Xem lịch sử thành viên</label>}
+          {isSupervisor && <p>Chuyển PM chính chưa khả dụng trên phiên Web. Chưa gửi lệnh chuyển phân công.</p>}
+          {memberError && <p role="alert" className="text-rose-700">{memberError}</p>}
+          {(memberError || primaryError) && <button type="button" className="underline" onClick={() => { void onReloadMembers?.() }}>Thử lại phân công</button>}
+        </div>
         {/* Personnel List */}
-        {members.length === 0 ? (
+        {members.length === 0 && !memberError ? (
           <div className="py-8 px-4 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 flex flex-col items-center gap-2.5">
             <Users className="w-8 h-8 text-slate-300" />
             <div className="text-xs font-semibold text-slate-600">
-              Chưa có Drone Operator hoặc Đội thi công trong CSDL dự án
+              Không có thành viên trong phạm vi truy vấn hiện tại
             </div>
             <p className="text-[11px] text-slate-400 max-w-xs">
               Chỉ huy trưởng dự án có thể phân công Drone Operator và Repair Crew vào dự án ngay.
@@ -83,11 +101,11 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="relative">
-                      <img
+                      {mem.avatar ? <img
                         src={mem.avatar}
                         alt={mem.name}
                         className="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-xs"
-                      />
+                      /> : <span className="w-9 h-9 rounded-full ring-2 ring-white shadow-xs bg-slate-100 flex items-center justify-center text-xs text-slate-600">{mem.name.slice(0, 2)}</span>}
                       {mem.is_online && (
                         <span
                           className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[#047857] ring-2 ring-white"
@@ -108,11 +126,11 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                 <div className="text-[11px] bg-white border border-[#E2E5E9] p-2.5 rounded-xl flex flex-col gap-1 text-slate-600">
                   <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
                     <Icon name="verified_user" size={14} className="text-[#C9A227]" />
-                    <span>{mem.authority}</span>
+                    <span>{mem.membership_status || 'Chưa cập nhật trạng thái'}</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-100">
-                    <span>{mem.contact}</span>
-                    <span className="truncate max-w-[140px] text-right font-medium">{mem.unit}</span>
+                    <span>{mem.valid_from ? `Từ ${mem.valid_from}` : 'Chưa cập nhật ngày bắt đầu'}</span>
+                    <span className="truncate max-w-[140px] text-right font-medium">{mem.valid_to ? `Đến ${mem.valid_to}` : 'Không có ngày kết thúc'}</span>
                   </div>
                 </div>
               </div>

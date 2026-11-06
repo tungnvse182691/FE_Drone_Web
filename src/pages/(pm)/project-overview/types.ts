@@ -18,6 +18,9 @@ export interface ProjectMember {
   is_online?: boolean
   authority: string
   contact: string
+  valid_from?: string
+  valid_to?: string | null
+  membership_status?: string
   equipment?: string
   unit: string
 }

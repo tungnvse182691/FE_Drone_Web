@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { projectService, personnelService } from '../../api/services'
-import { userDirectory } from '../../api/services/userDirectory'
 import { Icon } from '../../components/ui/Icon'
 import {
   HubProject,
@@ -23,7 +22,7 @@ export type { HubProject }
 
 export const ProjectList: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -33,24 +32,32 @@ export const ProjectList: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const listRequest = useRef(0)
   const loadProjects = useCallback(async () => {
+    const request = ++listRequest.current
+    const current = () => request === listRequest.current && useAuthStore.getState().authEpoch === authEpoch
     try {
       setIsLoading(true)
       setLoadError(null)
       const data = await projectService.fetchProjects()
-      setProjects(data)
+      if (current()) setProjects(data)
     } catch (err: any) {
+      if (!current()) return
       console.error('[ProjectList] Lỗi tải danh sách dự án:', err)
       const msg = err?.message || 'Không thể tải danh sách dự án từ máy chủ Backend.'
       setLoadError(msg)
-      setProjects([]) // Dứt khoát không nạp mock data khi API thật bị lỗi!
+
     } finally {
-      setIsLoading(false)
+      if (current()) setIsLoading(false)
     }
-  }, [])
+  }, [authEpoch])
 
   useEffect(() => {
-    loadProjects()
+    setProjects([])
+    void loadProjects()
+    return () => { listRequest.current++ }
   }, [loadProjects])
 
   // Đồng bộ reactive qua Event Bus
@@ -78,69 +85,37 @@ export const ProjectList: React.FC = () => {
   // Danh mục PM thật lấy trực tiếp từ CSDL Backend Candidate3
   const [dbPms, setDbPms] = useState<PmOption[]>([])
 
+  const [pmLoading, setPmLoading] = useState(false)
+  const [pmError, setPmError] = useState<string | null>(null)
+  const pmRequest = useRef(0)
+  const loadPms = useCallback(async () => {
+    const request = ++pmRequest.current
+    const current = () => request === pmRequest.current && useAuthStore.getState().authEpoch === authEpoch
+    if (!isSupervisor) { setDbPms([]); return }
+    setPmLoading(true)
+    setPmError(null)
+    try {
+      const users = await personnelService.fetchStaffDirectory({ role: 'PM', status: 'ACTIVE' })
+      if (current()) setDbPms(users.filter(u => (u.role === 'PM' || u.role === 'PROJECT_MANAGER') && u.status === 'ACTIVE').map(u => ({
+        id: u.userId, name: u.displayName || 'Chưa cập nhật tên', email: u.email || '', status: u.status!
+      })))
+    } catch {
+      if (current()) { setDbPms([]); setPmError('Không tải được danh sách PM đủ điều kiện. Vui lòng thử lại.') }
+    } finally { if (current()) setPmLoading(false) }
+  }, [authEpoch, isSupervisor])
   useEffect(() => {
-    let isMounted = true
-    const loadPms = async () => {
-      // Chỉ Supervisor mới có quyền truy cập /api/v1/users (API-237)
-      if (isSupervisor) {
-        try {
-          const users = await personnelService.fetchUsers({ role: 'PM' })
-          if (isMounted && users && users.length > 0) {
-            setDbPms(
-              users.map((u) => ({
-                id: u.id,
-                name: u.full_name,
-                email: u.email
-              }))
-            )
-          }
-        } catch (err) {
-          console.warn('[ProjectList] Lỗi nạp danh sách PM từ CSDL:', err)
-        }
-      } else {
-        // PM: Sử dụng userDirectory tra cứu các tài khoản PM hợp lệ từ CSDL
-        const pms = userDirectory.getAllUsers().filter((u) => u.role === 'PROJECT_MANAGER' || u.role === 'PM')
-        if (isMounted) {
-          setDbPms(
-            pms.map((u) => ({
-              id: u.id,
-              name: u.displayName,
-              email: u.email
-            }))
-          )
-        }
-      }
-    }
-    loadPms()
-    return () => {
-      isMounted = false
-    }
-  }, [isSupervisor])
-
-  const availablePms = useMemo<PmOption[]>(() => {
-    const map = new Map<string, PmOption>()
-    dbPms.forEach((pm) => map.set(pm.id.toLowerCase(), pm))
-    projects.forEach((prj) => {
-      if (prj.pm_user_id && prj.pm_name && prj.pm_email && !prj.pm_name.toLowerCase().includes('chưa')) {
-        const key = prj.pm_user_id.toLowerCase()
-        if (!map.has(key)) {
-          map.set(key, {
-            id: prj.pm_user_id,
-            name: prj.pm_name,
-            email: prj.pm_email
-          })
-        }
-      }
-    })
-    return Array.from(map.values())
-  }, [dbPms, projects])
+    setDbPms([])
+    void loadPms()
+    return () => { pmRequest.current++ }
+  }, [loadPms])
+  const availablePms = dbPms
 
   // Modal Khởi tạo dự án mới (Bước SUP-01: DA01, BR-01, FR-04)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectCode, setNewProjectCode] = useState('')
   const [newProjectRegion, setNewProjectRegion] = useState('')
-  const [newProjectPM, setNewProjectPM] = useState('72f84201-a001-4000-8000-000000000002')
+  const [newProjectPM, setNewProjectPM] = useState('')
   const [newStartDate, setNewStartDate] = useState(() => new Date().toISOString().split('T')[0])
   const [newEndDate, setNewEndDate] = useState(() => {
     const d = new Date()
@@ -151,12 +126,32 @@ export const ProjectList: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
+  const [pendingCreate, setPendingCreate] = useState(false)
+  const [receivedCreate, setReceivedCreate] = useState(false)
+
   // Reset form sạch khi mở modal tạo mới (dứt khoát không để mock data)
   const handleOpenCreateModal = () => {
+    let pending: ReturnType<typeof projectService.pendingProjectCreate>
+    try { pending = projectService.pendingProjectCreate() }
+    catch (error: any) { showToast(error.message || 'Chưa đối chiếu được yêu cầu tạo dự án trước.'); return }
+    setPendingCreate(!!pending)
+    setReceivedCreate(!!pending?.hasReceipt)
+    if (pending) {
+      setNewProjectName(pending.body.name)
+      setNewProjectCode(pending.body.code)
+      setNewProjectPM(pending.body.primaryPmId)
+      setNewStartDate(pending.body.handoverDate)
+      setNewEndDate(pending.body.warrantyEndDate)
+      setNewProjectRegion(pending.body.description || '')
+      setHandoverFiles([])
+      setCreateErrorMessage(null)
+      setIsModalOpen(true)
+      return
+    }
     setNewProjectName('')
     setNewProjectCode('')
     setNewProjectRegion('')
-    setNewProjectPM(availablePms[0]?.id || '')
+    setNewProjectPM('')
     setNewStartDate(new Date().toISOString().split('T')[0])
     const d = new Date()
     d.setFullYear(d.getFullYear() + 3)
@@ -169,9 +164,15 @@ export const ProjectList: React.FC = () => {
   // Submit tạo dự án mới (Chỉ Supervisor mới có quyền - BR-01, FR-04)
   const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting) return
+    const epoch = authEpoch
+    const current = () => mounted.current && useAuthStore.getState().authEpoch === epoch
     setIsSubmitting(true)
     setCreateErrorMessage(null)
     try {
+      if (!pendingCreate && !availablePms.some(pm => pm.id === newProjectPM && pm.status === 'ACTIVE')) {
+        throw new Error('Hãy chọn PM đang hoạt động từ danh sách nhân sự đã tải.')
+      }
       const created = await projectService.createProject({
         code: newProjectCode,
         name: newProjectName,
@@ -180,17 +181,24 @@ export const ProjectList: React.FC = () => {
         warrantyEndDate: newEndDate,
         handoverFileIds: handoverFiles,
         region: newProjectRegion
-      })
-      const refreshed = await projectService.fetchProjects()
-      setProjects(refreshed)
+      }, pendingCreate)
+      if (!current()) return
+      setPendingCreate(false)
+      setReceivedCreate(false)
+      setProjects(previous => [...previous.filter(p => p.id !== created.id), created])
       setIsModalOpen(false)
-      showToast(`Khởi tạo thành công dự án [${created.code}] và phân bổ PM [${created.pm_name}]!`)
+      showToast(`Đã tạo dự án [${created.code}]. Phân công PM được đọc từ máy chủ.`)
+      await loadProjects()
     } catch (err: any) {
+      if (!current()) return
+      const pending = projectService.pendingProjectCreate()
+      setPendingCreate(!!pending)
+      setReceivedCreate(!!pending?.hasReceipt)
       const msg = err.message || 'Lỗi khởi tạo dự án'
       setCreateErrorMessage(msg)
       showToast(msg)
     } finally {
-      setIsSubmitting(false)
+      if (current()) setIsSubmitting(false)
     }
   }
 
@@ -211,22 +219,8 @@ export const ProjectList: React.FC = () => {
   }
 
   // Lọc danh sách dự án dựa theo vai trò (Role-based Project Scope - BR-02)
-  const scopedProjects = useMemo(() => {
-    if (isSupervisor) return projects
-    return projects.filter((prj) => {
-      // Backend Candidate3 đã tự động lọc quyền theo user trên server
-      if (prj.pm_email === user?.email || prj.pm_name === user?.full_name || prj.id.length === 36) {
-        return true
-      }
-      const isAssigned =
-        prj.pm_name === 'Đỗ Quốc Hoàng' ||
-        prj.id === 'prj-ql1a-02' ||
-        prj.id === 'prj-lstl-05' ||
-        prj.id === 'prj-ql1a-p1'
-
-      return isAssigned && !prj.is_restricted_for_pm
-    })
-  }, [projects, isSupervisor, user])
+  // GET /projects is scoped by server effective membership, not primary PM/name.
+  const scopedProjects = projects
 
   // Filter projects logic
   const filteredProjects = useMemo(() => {
@@ -252,7 +246,7 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.reduce((acc, p) => acc + (p.length_km || 0), 0).toFixed(1), [scopedProjects])
+  const totalLength = useMemo(() => scopedProjects.length > 0 && scopedProjects.every(p => Number.isFinite(p.length_km)) ? scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1) : 'Chưa cập nhật', [scopedProjects])
   const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
   const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
   const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
@@ -326,6 +320,13 @@ export const ProjectList: React.FC = () => {
         </div>
       )}
 
+      {projects.some(p => p.stats_error) && <div role="alert" className="p-3 rounded-xl border border-amber-200 text-amber-900 text-xs">
+        Một phần thông tin nhân sự hoặc thống kê chưa tải được. Dữ liệu dự án đã tải vẫn được giữ.
+        <button type="button" className="ml-3 underline" onClick={() => { void loadProjects() }}>Thử lại</button>
+      </div>}
+      {!isLoading && !loadError && filteredProjects.length === 0 && <p role="status" className="p-6 text-center text-sm text-slate-500 border rounded-xl bg-white">
+        {projects.length === 0 ? 'Không có dự án trong phạm vi được cấp từ CSDL.' : 'Không có dự án phù hợp bộ lọc.'}
+      </p>}
       {isLoading ? (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200 text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
           <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
@@ -372,6 +373,11 @@ export const ProjectList: React.FC = () => {
         projectPM={newProjectPM}
         onChangeProjectPM={setNewProjectPM}
         pmOptions={availablePms}
+        pmLoading={pmLoading}
+        pmError={pmError}
+        onRetryPms={() => { void loadPms() }}
+        pendingCreate={pendingCreate}
+        receivedCreate={receivedCreate}
         startDate={newStartDate}
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}

@@ -1,3 +1,4 @@
+import { personnelService } from './personnelService'
 import { apiClient } from '../client'
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { HubProject } from '../../types/domain'
@@ -334,37 +335,10 @@ async function getUsersLookup(): Promise<Map<string, UserLookupInfo>> {
   // Chỉ gọi /api/v1/users nếu người dùng hiện tại là SUPERVISOR (PM gọi sẽ bị 403)
   const currentUser = useAuthStore.getState().user
   if (currentUser?.role === RoleCode.SUPERVISOR) {
-    try {
-      const res = await apiClient.get<any>('/users', { params: { limit: 100 } })
-      const items = res.data?.items || []
-      const entries: any[] = []
-      items.forEach((u: any) => {
-        if (u.userId) {
-          const info: UserLookupInfo = {
-            userId: u.userId,
-            displayName: u.displayName || '',
-            email: u.email || '',
-            role: u.role || ''
-          }
-          entries.push({
-            id: u.userId,
-            displayName: u.displayName || '',
-            email: u.email || '',
-            role: u.role || '',
-            phone: u.phoneNumber
-          })
-          map.set(u.userId.toLowerCase(), info)
-          if (u.displayName) {
-            map.set(u.displayName.trim().toLowerCase(), info)
-          }
-        }
-      })
-      if (entries.length > 0) {
-        userDirectory.registerUsers(entries)
-      }
-    } catch (err) {
-      console.warn('[projectService] Không thể tải /users từ máy chủ:', err)
-    }
+    const users = await personnelService.fetchStaffDirectory()
+    const entries = users.map(u => ({ id: u.userId, displayName: u.displayName || '', email: u.email || '', role: u.role || '' }))
+    entries.forEach(u => map.set(u.id.toLowerCase(), { userId: u.id, displayName: u.displayName, email: u.email, role: u.role }))
+    userDirectory.registerUsers(entries)
   }
   return map
 }
@@ -456,8 +430,8 @@ function mapBackendProjectToHub(
     warranty_passed_percent: warrantyPassedPercent,
     days_remaining: daysRemaining,
     length_km: undefined,
-    open_defects: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.openDefects : 0,
-    repair_packages: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.repairPackages : 0,
+    open_defects: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.openDefects : Number.NaN,
+    repair_packages: statsMap && projId && statsMap.get(projId.toLowerCase()) ? statsMap.get(projId.toLowerCase())!.repairPackages : Number.NaN,
     image_url: '',
     is_assigned: !!pmUserId,
     is_restricted_for_pm: false,
@@ -525,12 +499,16 @@ export const projectService = {
    * Lấy danh sách dự án thật từ Backend Candidate3 Docker theo phân quyền (PM / Supervisor)
    */
   async fetchProjects(): Promise<HubProject[]> {
-    const actor = useAuthStore.getState().user
+    const epoch = useAuthStore.getState().authEpoch
     const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
     if (!isMock) {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
-        const usersMap = await getUsersLookup()
+        let directoryError = ''
+        const usersMap = await getUsersLookup().catch(() => {
+          directoryError = 'Chưa tải được thông tin danh bạ nhân sự.'
+          return new Map<string, UserLookupInfo>()
+        })
         const rawItems: any[] = []
         const cursors = new Set<string>()
         let cursor: string | undefined
@@ -551,42 +529,34 @@ export const projectService = {
           rawItems.map(async (item) => {
             const pId = item.projectId || item.id
             if (!pId) return
-            try {
-              let openDefects = 0
-              let repairPackages = 0
-              if (isPM) {
-                // PM: Được phép gọi /projects/{pId}/defects (API-070)
-                const [defectsRes, packagesRes] = await Promise.all([
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/defects`),
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`)
-                ])
-                const defects = defectsRes.data?.items || []
-                openDefects = defects.filter((d: any) => {
-                  const s = (d.status || d.verificationStatus || '').toUpperCase()
-                  return s !== 'RESOLVED' && s !== 'CLOSED' && s !== 'PASSED'
-                }).length
-                repairPackages = (packagesRes.data?.items || []).length
-              } else {
-                // Supervisor: Không gọi /defects để tránh 403 Forbidden; dùng API-140 repair-packages & API-078 defect-statistics
-                const [statsRes, packagesRes] = await Promise.all([
-                  apiClient.get<any>(`/projects/${pId}/defect-statistics`),
-                  apiClient.get<{ items: any[] }>(`/projects/${pId}/repair-packages`)
-                ])
-                if (statsRes?.data?.statistics) {
-                  openDefects = statsRes.data.statistics.openDefectsCount || 0
-                }
-                repairPackages = (packagesRes.data?.items || []).length
+            const [defects, packages] = await Promise.allSettled([
+              apiClient.get<any>(`/projects/${pId}/${isPM ? 'defects' : 'defect-statistics'}`),
+              apiClient.get<any>(`/projects/${pId}/repair-packages`)
+            ])
+            let openDefects = Number.NaN
+            let repairPackages = Number.NaN
+            const errors: string[] = []
+            if (defects.status === 'fulfilled') {
+              const page = defects.value.data
+              if (isPM && Array.isArray(page?.items) && !page.nextCursor) {
+                openDefects = page.items.filter((d: any) => !['RESOLVED', 'CLOSED', 'PASSED'].includes((d.status || d.verificationStatus || '').toUpperCase())).length
+              } else if (!isPM && typeof page?.statistics?.openDefectsCount === 'number') {
+                openDefects = page.statistics.openDefectsCount
               }
-              statsMap.set(pId.toLowerCase(), { openDefects, repairPackages })
-            } catch (error: any) {
-              statsErrors.set(pId.toLowerCase(), error?.response?.data?.detail || error?.message || 'Lỗi API thống kê.')
             }
+            if (!Number.isFinite(openDefects)) errors.push('Chưa tải đầy đủ số lỗi mở.')
+            if (packages.status === 'fulfilled' && Array.isArray(packages.value.data?.items) && !packages.value.data.nextCursor) {
+              repairPackages = packages.value.data.items.length
+            }
+            if (!Number.isFinite(repairPackages)) errors.push('Chưa tải đầy đủ số gói sửa.')
+            statsMap.set(pId.toLowerCase(), { openDefects, repairPackages })
+            if (errors.length) statsErrors.set(pId.toLowerCase(), errors.join(' '))
           })
         )
 
         const mapped = rawItems.map((item) => ({ ...mapBackendProjectToHub(item, usersMap, statsMap),
-          stats_error: statsErrors.get((item.projectId || item.id).toLowerCase()) }))
-        if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
+          stats_error: [directoryError, statsErrors.get((item.projectId || item.id).toLowerCase())].filter(Boolean).join('; ') }))
+        if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
         projectStore = mapped
         try {
           sessionStorage.setItem('roadguard_project_store', JSON.stringify(mapped))
@@ -687,6 +657,13 @@ export const projectService = {
       const actor = useAuthStore.getState().user?.id
       if (!actor) throw new Error('Chưa xác định được phiên tạo dự án.')
       if (payload.handoverFileIds?.length) throw new Error('Chưa hỗ trợ upload bàn giao trước dự án; hãy tạo không đính kèm file.')
+      if (useAuthStore.getState().user?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được tạo dự án.')
+      const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
+      if (!payload.code.trim() || payload.code.trim().length > 50 || !payload.name.trim() || payload.name.trim().length > 255 ||
+          !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(payload.primaryPmId) ||
+          !validDate(payload.handoverDate) || !validDate(payload.warrantyEndDate) || payload.warrantyEndDate < payload.handoverDate) {
+        throw new Error('Kiểm tra mã/tên dự án, PM và ngày bảo hành không trước ngày bàn giao.')
+      }
       const body = { name: payload.name.trim(), code: payload.code.trim().toUpperCase(), description: payload.region?.trim() || '',
         primaryPmId: payload.primaryPmId, handoverDate: payload.handoverDate, warrantyEndDate: payload.warrantyEndDate, handoverFileIds: [] }
       const fingerprint = JSON.stringify(body)
@@ -713,6 +690,7 @@ export const projectService = {
         do {
           const response = await apiClient.get('/projects', { params: { cursor } })
           if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả dự án cũ.')
+          if (!Array.isArray(response.data?.items)) throw new Error('Danh sách đọc lại dự án trả sai contract.')
           readBack = response.data.items.find((item: any) => (item.projectId || item.id) === createdId)
           cursor = response.data.nextCursor || undefined
           if (cursor && seen.has(cursor)) throw new Error('Cursor dự án bị lặp khi đọc lại kết quả.')
@@ -720,6 +698,7 @@ export const projectService = {
         } while (!readBack && cursor)
         if (!readBack) throw new Error('Đã nhận201 nhưng chưa đọc lại được dự án từ danh sách server. Hãy đối chiếu cùng yêu cầu.')
         const createdHub = mapBackendProjectToHub(readBack)
+        if (createdHub.pm_user_id?.toLowerCase() !== command.body.primaryPmId.toLowerCase()) throw new Error('Đã tạo dự án nhưng phân công PM đọc lại chưa khớp. Chỉ đọc lại kết quả, không tạo mới.')
         if (projectCreateCommand === command) { projectCreateCommand = null; saveProjectCommand(actor, null) }
         return createdHub
       } catch (err: any) {
@@ -728,7 +707,7 @@ export const projectService = {
         const status = err?.response?.status
         const data = err?.response?.data
         const code = data?.code
-        if (projectCreateCommand === command && !command.receipt && status >= 400 && status < 500 && code !== 'duplicate_request') { projectCreateCommand = null; saveProjectCommand(actor, null) }
+        if (current() && projectCreateCommand === command && !command.receipt && status >= 400 && status < 500 && code !== 'duplicate_request') { projectCreateCommand = null; saveProjectCommand(actor, null) }
         const detail = data?.detail
         const errors = data?.errors
         const inputCode = payload.code?.trim().toUpperCase() || ''
@@ -794,6 +773,7 @@ export const projectService = {
           friendlyMessage = detail || data?.title || err?.message || 'Không thể tạo dự án mới trên Backend.'
         }
 
+        if (command.receipt) friendlyMessage = `Dự án đã được tạo; chưa đọc lại đầy đủ kết quả. Không tạo lại. ${friendlyMessage}`
         throw Object.assign(new Error(friendlyMessage), { response: err?.response, cause: err, code, input: payload })
       } finally {
         command.busy = false
