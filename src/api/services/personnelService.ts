@@ -338,6 +338,7 @@ export const personnelService = {
     const body = invitationInput(payload), fingerprint = JSON.stringify(body), journal = `rg_invitation_${actor.id}`
     if (invitationWrites.has(journal)) throw new Error('Đang gửi lời mời. Vui lòng chờ.')
     const saved = sessionStorage.getItem(journal)
+    const retrying = invitationCommands.has(journal) || !!saved
     const held: { fingerprint: string; key: string } = invitationCommands.get(journal) || (saved ? JSON.parse(saved) : { fingerprint, key: crypto.randomUUID() })
     if (held.fingerprint !== fingerprint || !held.key) throw new Error('Yêu cầu trước chưa rõ kết quả. Hãy giữ đúng nội dung để thử lại.')
     sessionStorage.setItem(journal, JSON.stringify(held))
@@ -352,7 +353,7 @@ export const personnelService = {
       return receipt
     } catch (error: any) {
       const status = error?.response?.status, code = error?.response?.data?.code
-      if (current() && status >= 400 && status < 500 && code !== 'duplicate_request') {
+      if (current() && !retrying && status >= 400 && status < 500 && code !== 'duplicate_request') {
         sessionStorage.removeItem(journal); invitationCommands.delete(journal)
       }
       throw error

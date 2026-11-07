@@ -88,5 +88,10 @@ await test('invitation retry survives service reload and modal submit is enabled
  const nodes=x=>!x||typeof x!=='object'?[]:Array.isArray(x)?x.flatMap(nodes):[x,...nodes(x.props?.children)]
  const view=C({showAddPersonnelModal:true,addPersonnelTab:'NEW',newPersonnelRole:roles.PROJECT_MANAGER,newPersonnelProjectIds:[],assignExistingProjectIds:[],usersList:[],projectsList:[],blockedReason:''});assert.equal(nodes(view).find(x=>x.props?.type==='submit').props.disabled,false)
 })
+await test('invitation timeout then 401 then 201 keeps all three request keys and bodies identical',async()=>{
+ const calls=[],input={email:' staff@example.test ',role:roles.PROJECT_MANAGER,projectIds:['11111111-1111-4111-8111-111111111111']}
+ const {p}=modules({post:async(url,body,c)=>{calls.push({url,body:JSON.stringify(body),key:c.headers['Idempotency-Key']});if(calls.length===1)throw Object.assign(Error('timeout'),{code:'ETIMEDOUT'});if(calls.length===2)throw fail(401,'auth_unauthorized');return{status:201,data:{id:'receipt',status:'PENDING',expiresAt:'2026-12-01T00:00:00Z',version:'opaque'}}}})
+ await assert.rejects(p.createInvitation(input));await assert.rejects(p.createInvitation(input),e=>e.response.status===401);assert.equal((await p.createInvitation(input)).id,'receipt');assert.equal(calls.length,3);assert.deepEqual(calls[0],calls[1]);assert.deepEqual(calls[1],calls[2])
+})
 console.log(`${count} personnel scenarios PASS (mock HTTP/hooks/SSR; NOT runtime E2E).`)
 })().catch(e=>{console.error(e);process.exitCode=1})
