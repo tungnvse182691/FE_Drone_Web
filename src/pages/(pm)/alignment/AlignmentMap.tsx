@@ -16,6 +16,7 @@ import {
 import { SegmentItem } from './types'
 import { AlignmentMapLegend } from './AlignmentMapLegend'
 import { calculateCoordsLengthKm } from './alignmentGeometryHelpers'
+import { summarizePavementPreview, type PavementPreview } from './alignmentPavementDisplay'
 
 export interface AlignmentMapProps {
   mapContainerRef: React.RefObject<HTMLDivElement | null>
@@ -33,6 +34,7 @@ export interface AlignmentMapProps {
   importedLengthKm: number
   slabLengthM: number
   slabThicknessCm: number
+  pavementPreview?: PavementPreview
   contractionSpacingM: number
   expansionSpacingM: number
   expansionGapMm: number
@@ -64,8 +66,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
   selectedSegmentId,
   segments,
   importedLengthKm,
-  slabLengthM,
-  slabThicknessCm,
+  pavementPreview,
   contractionSpacingM,
   expansionSpacingM,
   expansionGapMm,
@@ -270,11 +271,8 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                   : routeSegments.length === 0 && selectedBranch ? selectedBranch.roadWidthM : null
                 const currW = isAll ? avgRoadWidth : currSeg?.roadWidthM
                 const halfWidth = positive(currW) ? currW / 2 : null
-                const targetLenKm = isAll ? totalRouteKm : currSeg?.lengthKm
-                const targetLenM = positive(targetLenKm) && Number.isFinite(targetLenKm * 1000) ? targetLenKm * 1000 : null
-                const estSlabs = targetLenM !== null && positive(slabLengthM) && positive(currW)
-                  && Number.isFinite(Math.floor(targetLenM / slabLengthM) * 2)
-                  ? Math.floor(targetLenM / slabLengthM) * 2 : null
+                const summary = summarizePavementPreview(pavementPreview, isAll ? undefined : currSeg?.id || null, !!branch)
+                const countText = (count: number | null, missing: string[], unit: string) => count === null ? `Thiếu: ${missing.join('; ')}` : `${count.toLocaleString('vi-VN')} ${unit} thực`
                 const displayTitle = isAll
                   ? (selectedBranch ? `[${selectedBranch.code}] Toàn tuyến nhánh` : 'Toàn tuyến trục chính')
                   : currSeg ? `${branch ? `[${branch.code}] ` : ''}${currSeg.code}` : 'Chưa chọn được phân đoạn'
@@ -336,54 +334,55 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                           </div>
 
                           <div className="w-full h-5 rounded flex items-center overflow-hidden border border-slate-600 bg-slate-800 text-[10px] font-mono font-bold">
-                            <div className="flex-1 h-full bg-sky-950/80 border-r border-dashed border-white flex items-center justify-center text-sky-300">
-                              Làn Trái ({metric(halfWidth, 'm', 1)})
+                            <div className="flex-1 h-full bg-cyan-950/80 border-r border-dashed border-white flex items-center justify-center text-cyan-300">
+                              Nửa Trái ({metric(halfWidth, 'm', 1)})
                             </div>
-                            <div className="flex-1 h-full bg-amber-950/80 flex items-center justify-center text-amber-300">
-                              Làn Phải ({metric(halfWidth, 'm', 1)})
+                            <div className="flex-1 h-full bg-rose-950/80 flex items-center justify-center text-rose-300">
+                              Nửa Phải ({metric(halfWidth, 'm', 1)})
                             </div>
                           </div>
 
                           <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold mt-1.5 pt-1 border-t border-slate-800/80">
-                            <span className="text-sky-400 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 inline-block" />
-                              Mép Trái: {positive(halfWidth) ? `-${halfWidth.toFixed(1)}m` : 'Chưa có dữ liệu'}
+                            <span className="text-cyan-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
+                              Mép Trái: {metric(halfWidth, 'm', 1)}
                             </span>
                             <span className="text-slate-400 text-[9px]">{positive(currW) ? 'CL (0.0m)' : 'CL'}</span>
-                            <span className="text-amber-400 flex items-center gap-1">
-                              Mép Phải: {positive(halfWidth) ? `+${halfWidth.toFixed(1)}m` : 'Chưa có dữ liệu'}
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                            <span className="text-rose-400 flex items-center gap-1">
+                              Mép Phải: {metric(halfWidth, 'm', 1)}
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block" />
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {/* 2. THÔNG SỐ TẤM BÊ TÔNG & KHE CO / KHE GIÃN NỞ */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <span className="text-[10px] text-sky-300">Preview — chưa lưu/chưa xác nhận · Theo chiều Km tăng</span>
+                      <div className="grid grid-cols-1 gap-2 text-[11px]">
                         <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                           <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                            <span>Tấm BTXM</span>
+                            <span>Tấm BTXM (T)</span>
                           </span>
                           <span className="font-mono font-bold text-white text-xs">
-                            {metric(slabLengthM, 'm', 1)} × {metric(halfWidth, 'm', 1)} × {metric(slabThicknessCm, 'cm')}
+                            {summary.dimensions}
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}<strong className="text-slate-200">{estSlabs !== null ? `~${estSlabs.toLocaleString()} tấm` : 'Chưa có dữ liệu'}</strong>
+                            {isAll ? 'Toàn tuyến: ' : 'Đoạn này: '}<strong className="text-slate-200">{countText(summary.slabCount, summary.slabMissing, 'tấm')}</strong>
                           </span>
                         </div>
 
                         <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                           <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                            <span>Khe co & khe giãn</span>
+                            <span className="text-red-400">Khe co (KC) — nét đứt đỏ</span>
                           </span>
-                          <span className="font-mono font-bold text-amber-400 text-[11px] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
-                            Giãn: {metric(expansionGapMm, 'mm')} (mỗi {metric(expansionSpacingM, 'm')})
+                          <span className="font-mono text-red-300">
+                            Cự ly: {metric(contractionSpacingM, 'm')}
                           </span>
-                          <span className="font-mono text-sky-400 text-[10px] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#38BDF8]" />
-                            Co: {metric(contractionSpacingM, 'm')}
-                          </span>
+                          <strong className="text-slate-200">{countText(summary.contractionCount, summary.contractionMissing, 'khe co')}</strong>
+                        </div>
+                        <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
+                          <span className="text-[10px] text-orange-400 font-semibold">Khe giãn (KG) — dải cam</span>
+                          <span className="font-mono text-orange-300">Cự ly: {metric(expansionSpacingM, 'm')} · Độ hở: {metric(expansionGapMm, 'mm')}</span>
+                          <strong className="text-slate-200">{countText(summary.expansionCount, summary.expansionMissing, 'khe giãn')}</strong>
                         </div>
                       </div>
                     </div>

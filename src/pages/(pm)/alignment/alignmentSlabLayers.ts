@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
   // A transparent hit surface uses the actual polygons; it creates no additional slabs.
   if (!map.getLayer('slabs-fill-layer')) map.addLayer({ id: 'slabs-fill-layer', type: 'fill', source: 'slabs-source', minzoom: 16,
-    paint: { 'fill-color': '#0F172A', 'fill-opacity': 0.01 } })
+    paint: { 'fill-color': '#CBD5E1', 'fill-opacity': 0.14 } })
 
   // 1. Viền đổ bóng dưới đáy tấm bê tông
   if (!map.getLayer('slabs-outline-shadow')) {
@@ -47,9 +47,9 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       minzoom: 14.5,
       maxzoom: 24,
       paint: {
-        'line-color': '#94A3B8',
-        'line-width': 1.2,
-        'line-dasharray': [1.5, 1.5]
+        'line-color': '#EF4444',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 14.5, 1.2, 20, 2],
+        'line-dasharray': [2, 2]
       }
     })
   }
@@ -65,7 +65,7 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       maxzoom: 24,
       paint: {
         'line-color': '#F59E0B',
-        'line-width': 3.5,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 14, 2.5, 20, 4],
         'line-opacity': 0.95
       }
     })
@@ -99,7 +99,7 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       maxzoom: 24,
       layout: {
         'symbol-placement': 'point',
-        'text-field': ['to-string', ['get', 'sequence']],
+        'text-field': ['get', 'code'],
         'text-anchor': 'center',
         'text-padding': 2,
         'text-size': ['interpolate', ['linear'], ['zoom'], 18.5, 9, 21.5, 12],
@@ -119,12 +119,12 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
     map.addLayer({
       id: 'joints-expansion-label-layer',
       type: 'symbol',
-      source: 'joints-source',
+      source: 'joints-labels-source',
       filter: ['get', 'isExpansion'],
-      minzoom: 16.0,
+      minzoom: 17.5,
       maxzoom: 24,
       layout: {
-        'text-field': ['get', 'label'],
+        'text-field': ['get', 'code'],
         'text-size': 11,
         'text-offset': [0, -1.2],
         'text-allow-overlap': false,
@@ -137,6 +137,13 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       }
     })
   }
+
+  if (!map.getLayer('joints-contraction-label-layer')) map.addLayer({
+    id: 'joints-contraction-label-layer', type: 'symbol', source: 'joints-labels-source',
+    filter: ['==', ['get', 'isExpansion'], false], minzoom: 18, maxzoom: 24,
+    layout: { 'text-field': ['get', 'code'], 'text-size': 10, 'text-padding': 3, 'text-offset': [0, 1.1], 'text-allow-overlap': false, 'text-ignore-placement': false },
+    paint: { 'text-color': '#EF4444', 'text-halo-color': '#0F172A', 'text-halo-width': 2.5 }
+  })
 
   // 8. Nhãn mép đường
   if (!map.getLayer('edges-label-layer')) {
@@ -166,11 +173,11 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
     })
   }
   // Route strokes stay above the grid; compact slab numbers stay legible in their cells.
-  for (const id of ['segments-surface-outline', 'segments-glow-layer', 'segments-dash-layer', 'edges-dimension-line-layer', 'edges-label-layer', 'slabs-label-layer']) if (map.getLayer(id)) map.moveLayer(id)
+  for (const id of ['segments-surface-outline', 'segments-glow-layer', 'segments-dash-layer', 'edges-dimension-line-layer', 'edges-label-layer', 'joints-contraction-layer', 'joints-expansion-layer', 'slabs-label-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) if (map.getLayer(id)) map.moveLayer(id)
 }
 
 export function setSlabGridVisibility(map: maplibregl.Map, visible: boolean) {
-  for (const id of ['slabs-fill-layer', 'slabs-outline-shadow', 'slabs-outline-layer', 'slabs-label-layer', 'joints-contraction-layer', 'joints-expansion-layer', 'joints-expansion-label-layer']) {
+  for (const id of ['slabs-fill-layer', 'slabs-outline-shadow', 'slabs-outline-layer', 'slabs-label-layer', 'joints-contraction-layer', 'joints-expansion-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) {
     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
   }
 }

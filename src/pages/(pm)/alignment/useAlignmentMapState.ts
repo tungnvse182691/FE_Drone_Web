@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle, hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import { initAlignmentMapLayers, syncMapDataDirect } from './alignmentMapSetup'
 import { setSlabGridVisibility } from './alignmentSlabLayers'
+import { buildSlabsAndJointsGeoJSON } from './data'
 import {
   calculateCoordsLengthKm,
   calculateStationFromCoordinate
@@ -74,8 +75,10 @@ export function useAlignmentMapState({
   const coordsRef = useRef<[number, number][]>(currentCoords)
   const kmPointsRef = useRef<number[]>(currentKmPoints)
   const customCfg = { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }
-  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg })
-  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg }
+  const pavementPreview = useMemo(() => buildSlabsAndJointsGeoJSON(segments, currentCoords, currentKmPoints, customCfg, branches),
+    [segments, currentCoords, currentKmPoints, branches, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
+  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview })
+  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview }
 
   useEffect(() => {
     coordsRef.current = currentCoords
@@ -136,7 +139,8 @@ export function useAlignmentMapState({
         expansionSpacingM,
         expansionGapMm
       },
-      brList
+      brList,
+      updatedSegs === segments && coords === currentCoords && kmPts === currentKmPoints && brList === branches ? pavementPreview : undefined
     )
   }
 
@@ -519,6 +523,7 @@ export function useAlignmentMapState({
   }
 
   return {
+    pavementPreview,
     mapContainerRef,
     mapRef,
     popupRef,

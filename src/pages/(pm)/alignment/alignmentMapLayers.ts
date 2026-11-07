@@ -11,6 +11,7 @@ import {
   SlabsCustomConfig
 } from './data'
 import { setupSlabsAndJointsLayers } from './alignmentSlabLayers'
+import type { PavementPreview } from './alignmentPavementDisplay'
 
 export function setupAlignmentSourcesAndLayers(
   map: maplibregl.Map,
@@ -19,7 +20,8 @@ export function setupAlignmentSourcesAndLayers(
   currentKmPoints: number[],
   selectedSegmentId: string | null,
   branches: any[] = [],
-  customCfg?: SlabsCustomConfig
+  customCfg?: SlabsCustomConfig,
+  pavementPreview?: PavementPreview
 ) {
   if (!hasMapBaseStyle(map)) return
 
@@ -57,7 +59,7 @@ export function setupAlignmentSourcesAndLayers(
   }
 
   // 2b. Thêm GeoJSON Sources cho Lưới tấm bê tông (Slabs), Khe co giãn, Khe giãn nở & Nhãn 2 mép đường (Cả chính lẫn nhánh)
-  const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
+  const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON } = pavementPreview || buildSlabsAndJointsGeoJSON(
     segments,
     currentCoords,
     currentKmPoints,
@@ -86,6 +88,7 @@ export function setupAlignmentSourcesAndLayers(
   }
 
   if (!map.getSource('slabs-labels-source')) map.addSource('slabs-labels-source', { type: 'geojson', data: slabLabelsGeoJSON, maxzoom: 24, tolerance: 0 })
+  if (!map.getSource('joints-labels-source')) map.addSource('joints-labels-source', { type: 'geojson', data: jointLabelsGeoJSON, maxzoom: 24, tolerance: 0 })
 
   if (!map.getSource('edges-source')) {
     map.addSource('edges-source', {

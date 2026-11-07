@@ -229,9 +229,7 @@ export function setupAlignmentMapInteractions(
               <span>🧱</span>
               <span>${p.code}</span>
             </span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
-              p.status === 'GOOD' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-            }">${p.status === 'GOOD' ? 'Đạt chuẩn' : 'Cần theo dõi'}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">Preview — chưa lưu/chưa xác nhận</span>
           </div>
           <div class="space-y-1.5 text-slate-300">
             <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${p.station}</span> (${p.lane})</div>
@@ -245,10 +243,13 @@ export function setupAlignmentMapInteractions(
   }
   for (const layer of ['slabs-fill-layer', 'slabs-outline-layer', 'slabs-label-layer']) map.on('click', layer, openSlabPopup)
 
-  // Click vào khe giãn nở để kích hoạt chọn phân đoạn & xem popup kỹ thuật
-  map.on('click', 'joints-expansion-layer', (e) => {
+  // Popup cho feature khe co/khe giãn thực và nhãn tương ứng.
+  let lastJointEvent: Event | undefined
+  const openJointPopup = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastJointEvent) return
+    lastJointEvent = e.originalEvent
 
     lastHandledClickTimestamp = Date.now()
 
@@ -266,20 +267,22 @@ export function setupAlignmentMapInteractions(
       .setLngLat(e.lngLat)
       .setHTML(`
         <div class="bg-slate-900 text-slate-100 p-3 text-xs font-sans min-w-[240px]">
-          <div class="font-bold text-amber-400 flex items-center gap-1.5 border-b border-slate-700/80 pb-2 mb-2 text-sm">
+          <div class="font-bold ${p.isExpansion ? 'text-orange-400' : 'text-red-400'} flex items-center gap-1.5 border-b border-slate-700/80 pb-2 mb-2 text-sm">
             <span>⚡</span>
-            <span>${p.name}</span>
+            <span>${p.name} — ${p.code || p.id}</span>
           </div>
           <div class="space-y-1.5 text-slate-300">
+            <div class="text-sky-300">Preview — chưa lưu/chưa xác nhận</div>
             <div>📍 <strong>Vị trí:</strong> <span class="font-mono font-bold text-white">${p.station}</span></div>
-            <div>📏 <strong>Độ mở khe giãn nở:</strong> <span class="font-mono font-bold text-amber-400">20 mm (±2mm)</span></div>
-            <div>🛡️ <strong>Cấu tạo kỹ thuật:</strong> <span class="text-slate-300">${p.description}</span></div>
+            <div>📏 <strong>Cự ly ${p.isExpansion ? 'khe giãn' : 'khe co'}:</strong> <span class="font-mono font-bold">${Number.isFinite(p.spacingMeters) ? p.spacingMeters + 'm' : 'Chưa có dữ liệu'}</span></div>
+            ${p.isExpansion ? `<div><strong>Độ hở:</strong> ${Number.isFinite(p.gapMm) ? p.gapMm + 'mm' : 'Chưa có dữ liệu'}</div>` : ''}
             <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">🛣️ <strong>Bề rộng mặt đường tại khe:</strong> <span class="font-mono font-semibold text-sky-400">${p.roadWidthM}m</span></div>
           </div>
         </div>
       `)
       .addTo(map)
-  })
+  }
+  for (const layer of ['joints-contraction-layer', 'joints-expansion-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) map.on('click', layer, openJointPopup)
 
   // Đăng ký sự kiện click cho Trục chính & Tuyến nhánh
   map.on('click', 'segments-surface-layer', handleFeatureClick)
@@ -296,8 +299,10 @@ export function setupAlignmentMapInteractions(
     map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
     map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
   }
-  map.on('mouseenter', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = 'pointer' })
-  map.on('mouseleave', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = '' })
+  for (const layer of ['joints-contraction-layer', 'joints-expansion-layer', 'joints-contraction-label-layer', 'joints-expansion-label-layer']) {
+    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
+  }
 
   // Click toàn cục trên bản đồ (vùng lân cận con trỏ chuột) để bắt trúng khi click vào bất kỳ vị trí nào trên tuyến
   map.on('click', (e) => {

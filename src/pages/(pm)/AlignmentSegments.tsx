@@ -243,6 +243,7 @@ export const AlignmentSegments: React.FC = () => {
           importedLengthKm={importedLengthKm}
           slabLengthM={slabLengthM}
           slabThicknessCm={slabThicknessCm}
+          pavementPreview={mapState.pavementPreview}
           contractionSpacingM={contractionSpacingM}
           expansionSpacingM={expansionSpacingM}
           expansionGapMm={expansionGapMm}

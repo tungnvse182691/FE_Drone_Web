@@ -637,7 +637,9 @@ export function buildSlabsAndJointsGeoJSON(
   slabsGeoJSON: GeoJSON.FeatureCollection
   slabLabelsGeoJSON: GeoJSON.FeatureCollection
   jointsGeoJSON: GeoJSON.FeatureCollection
+  jointLabelsGeoJSON: GeoJSON.FeatureCollection
   edgesGeoJSON: GeoJSON.FeatureCollection
+  missing: string[]
 } {
   // Mainline shares the engineering plan with the sidebar; legacy branches remain below.
   const mainline = buildMainlinePavementGeoJSON(segList, coords, kmPts, customCfg)
@@ -945,6 +947,8 @@ export function buildSlabsAndJointsGeoJSON(
     slabsGeoJSON: { type: 'FeatureCollection', features: slabFeatures },
     slabLabelsGeoJSON: mainline.slabLabelsGeoJSON,
     jointsGeoJSON: { type: 'FeatureCollection', features: jointFeatures },
+    jointLabelsGeoJSON: mainline.jointLabelsGeoJSON,
+    missing: mainline.missing,
     edgesGeoJSON: { type: 'FeatureCollection', features: edgeFeatures }
   }
 }

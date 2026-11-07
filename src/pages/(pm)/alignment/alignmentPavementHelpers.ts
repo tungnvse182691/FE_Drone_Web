@@ -63,13 +63,14 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
   const slabsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const slabLabelsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const jointsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+  const jointLabelsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const edgesGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const missing = [...plan.missing]
-  if (!plan.segments.length) return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+  if (!plan.segments.length) return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
   if (coords.length < 2 || coords.length !== kmPoints.length || coords.some(p => !p.every(Number.isFinite) || Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90) ||
       kmPoints.some((km, i) => !Number.isFinite(km) || i > 0 && km <= kmPoints[i - 1]) ||
       plan.segments[0].startKm < kmPoints[0] || plan.segments[plan.segments.length - 1].endKm > kmPoints[kmPoints.length - 1] + 1e-10) {
-    missing.push('tọa độ preview gắn với lý trình engineering'); return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+    missing.push('tọa độ preview gắn với lý trình engineering'); return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
   }
   // Station controls placement. Longitude/latitude are used only for display offsets.
   const pointAt = (km: number, lateral = 0): [number, number] => {
@@ -92,7 +93,7 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
   try {
     for (const [index, slab] of plan.slabs.entries()) {
       const left = along(slab.startKm, slab.endKm, slab.leftOffsetM), right = along(slab.startKm, slab.endKm, slab.rightOffsetM)
-      const properties = { ...slab, sequence: index + 1, code: slab.id, station: slab.stationing,
+      const properties = { ...slab, sequence: index + 1, code: `T${index + 1}`, station: slab.stationing,
         lane: `Làn ${slab.laneIndex + 1}`, edgeOffset: `${slab.leftOffsetM}m → ${slab.rightOffsetM}m`, contractionSpacingM: cfg.contractionSpacingM, preview: true },
       labelPoint = pointAt((slab.startKm + slab.endKm) / 2, (slab.leftOffsetM + slab.rightOffsetM) / 2)
       slabsGeoJSON.features.push({ type: 'Feature', properties,
@@ -110,6 +111,7 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
       }
     }
     const origin = plan.segments[0].startKm, end = plan.segments[plan.segments.length - 1].endKm, total = (end - origin) * 1000
+    const jointSequence = { contraction: 0, expansion: 0 }
     for (const isExpansion of [false, true]) {
       const spacing = isExpansion ? cfg.expansionSpacingM : cfg.contractionSpacingM
       if (!positive(spacing) || isExpansion && !positive(cfg.expansionGapMm)) continue
@@ -125,14 +127,19 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
         if (!positive(before.roadWidthM) || !positive(after.roadWidthM)) continue
         const left = pointAt(a, isExpansion ? before.roadWidthM / 2 : half), right = pointAt(a, isExpansion ? -before.roadWidthM / 2 : -half)
         const geometry: GeoJSON.Geometry = isExpansion ? { type: 'Polygon', coordinates: [[left, right, pointAt(b, -after.roadWidthM / 2), pointAt(b, after.roadWidthM / 2), left]] } : { type: 'LineString', coordinates: [left, right] }
-        jointsGeoJSON.features.push({ type: 'Feature', properties: { id: `${isExpansion ? 'EJ' : 'CJ'}-${i}`, segmentId: segment.id, segmentCode: segment.code,
+        const sequence = isExpansion ? ++jointSequence.expansion : ++jointSequence.contraction
+        const properties = { id: `${isExpansion ? 'EJ' : 'CJ'}-${i}`, code: `${isExpansion ? 'KG' : 'KC'}${sequence}`, sequence, segmentId: segment.id, segmentCode: segment.code,
           isExpansion, station: station(km), offsetMeters: offset, spacingMeters: spacing, gapMm: isExpansion ? cfg.expansionGapMm : null,
-          label: isExpansion ? `Khe giãn ${cfg.expansionGapMm}mm` : `Khe co ${spacing}m`, name: isExpansion ? 'Khe giãn' : 'Khe co', preview: true }, geometry })
+          roadWidthM: segment.roadWidthM, label: `${isExpansion ? 'KG' : 'KC'}${sequence}`, name: isExpansion ? 'Khe giãn' : 'Khe co', preview: true }
+        jointsGeoJSON.features.push({ type: 'Feature', properties, geometry })
+        const labelPositions = isExpansion ? (geometry as GeoJSON.Polygon).coordinates[0].slice(0, -1) : [left, right]
+        const labelPoint: [number, number] = [labelPositions.reduce((sum, p) => sum + p[0], 0) / labelPositions.length, labelPositions.reduce((sum, p) => sum + p[1], 0) / labelPositions.length]
+        jointLabelsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Point', coordinates: labelPoint } })
       }
     }
   } catch {
-    slabsGeoJSON.features = []; slabLabelsGeoJSON.features = []; jointsGeoJSON.features = []; edgesGeoJSON.features = []
+    slabsGeoJSON.features = []; slabLabelsGeoJSON.features = []; jointsGeoJSON.features = []; jointLabelsGeoJSON.features = []; edgesGeoJSON.features = []
     missing.push('hướng tim tuyến preview hợp lệ')
   }
-  return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+  return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
 }
