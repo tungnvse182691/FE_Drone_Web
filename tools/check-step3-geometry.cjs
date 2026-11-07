@@ -267,7 +267,7 @@ await test('UI restore unverified file cannot reuse a previous valid profile to 
  const h=hydrateHarness(true);await h.prepare();assert.match(h.view.saveReason,/chưa có mapping/);await h.view.save();assert.equal(h.writes.length,0);assert.equal(h.view.form.origin,'0');h.unmount()
 })
 await test('UI restore local segment edits require real origin/distance, keep unknown width/lanes and never manufacture slabs',async()=>{
- const React=require('react');let slot=0,view;const values=[];const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]}}
+ const React=require('react');let slot=0,view;const values=[];const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]}}
  const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}})
  const hook=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split}).useAlignmentSegmentsState
  const params={initialSegments:[],currentCoords:[],currentKmPoints:[],importedLengthKm:0.1,stationOriginKm:NaN,roadWidthM:NaN,showToast(){},syncMap(){},mapRef:{current:null},popupRef:{current:null},handleFitBounds(){}}

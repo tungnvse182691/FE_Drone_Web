@@ -314,11 +314,13 @@ export function useAlignmentState() {
   })
 
   // Sidebar values are authoritative; preserve exact source offsets when only width changed.
-  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: segmentsState.segments.map((segment, index) => {
-    const original = fileDraft.widthProfile[index], origin = fileDraft.stationOriginMeters
+  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: segmentsState.segments.map(segment => {
+    const origin = fileDraft.stationOriginMeters
+    const originalFrom = fileDraft.widthProfile.find(width => segment.startKm === (origin + width.fromOffsetMeters) / 1000)
+    const originalTo = fileDraft.widthProfile.find(width => segment.endKm === (origin + width.toOffsetMeters) / 1000)
     return {
-      fromOffsetMeters: original && segment.startKm === (origin + original.fromOffsetMeters) / 1000 ? original.fromOffsetMeters : segment.startKm * 1000 - origin,
-      toOffsetMeters: original && segment.endKm === (origin + original.toOffsetMeters) / 1000 ? original.toOffsetMeters : segment.endKm * 1000 - origin,
+      fromOffsetMeters: originalFrom ? originalFrom.fromOffsetMeters : segment.startKm * 1000 - origin,
+      toOffsetMeters: originalTo ? originalTo.toOffsetMeters : segment.endKm * 1000 - origin,
       widthMeters: segment.roadWidthM
     }
   }) } : null

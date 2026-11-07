@@ -6,33 +6,41 @@ export function computeAutoSplitSegments(
   startBaseKm: number,
   dist: number,
   roadWidthM: number,
-  splitSortOrder: 'asc' | 'desc'
+  splitSortOrder: 'asc' | 'desc',
+  currentSegments: SegmentItem[] = []
 ): SegmentItem[] {
   if (![totalKm, startBaseKm, dist].every(Number.isFinite) || totalKm <= 0 || dist <= 0) return []
   const newSegments: SegmentItem[] = []
-  let currentKm = startBaseKm
-  let idx = 1
-
-  while (currentKm < startBaseKm + totalKm - 0.001) {
-    const nextKm = Math.min(currentKm + dist, startBaseKm + totalKm)
-    const len = parseFloat((nextKm - currentKm).toFixed(3))
-
+  const profile = [...currentSegments].sort((a, b) => a.startKm - b.startKm)
+  const start = profile[0]?.startKm ?? startBaseKm
+  const end = profile[profile.length - 1]?.endKm ?? startBaseKm + totalKm
+  if (![start, end].every(Number.isFinite) || end <= start || Math.abs(start - startBaseKm) > 1e-10 || Math.abs(end - startBaseKm - totalKm) > 1e-10 ||
+      profile.some((segment, index) => !Number.isFinite(segment.startKm) || !Number.isFinite(segment.endKm) || segment.endKm <= segment.startKm || index > 0 && segment.startKm !== profile[index - 1].endKm)) return []
+  const count = Math.ceil((end - start) / dist)
+  if (count > 100000) return []
+  const cuts = new Set([start, end, ...profile.flatMap(segment => [segment.startKm, segment.endKm])])
+  const stepMeters = dist * 1000
+  for (let i = 1; i < count; i++) {
+    const cut = start + i * stepMeters / 1000
+    if (cut > start && cut < end) cuts.add(cut)
+  }
+  const boundaries = [...cuts].sort((a, b) => a - b)
+  for (let i = 1; i < boundaries.length; i++) {
+    const currentKm = boundaries[i - 1], nextKm = boundaries[i], idx = i
+    const source = profile.find(segment => currentKm >= segment.startKm && nextKm <= segment.endKm)
     newSegments.push({
       id: `seg-${idx}`,
       code: `Phân đoạn #${String(idx).padStart(2, '0')}`,
-      startKm: parseFloat(currentKm.toFixed(3)),
-      endKm: parseFloat(nextKm.toFixed(3)),
-      lengthKm: len,
-      roadWidthM,
+      startKm: currentKm,
+      endKm: nextKm,
+      lengthKm: nextKm - currentKm,
+      roadWidthM: source ? source.roadWidthM : roadWidthM,
       status: 'VALID',
-      statusText: 'HỢP LỆ',
-      laneCount: Number.NaN,
-      surfaceMaterial: '',
+      statusText: 'BẢN CHỈNH CHƯA LƯU',
+      laneCount: source?.laneCount ?? Number.NaN,
+      surfaceMaterial: source?.surfaceMaterial ?? '',
       color: SEGMENT_COLORS[(idx - 1) % SEGMENT_COLORS.length]
     })
-
-    currentKm = nextKm
-    idx++
   }
 
   if (splitSortOrder === 'desc') {

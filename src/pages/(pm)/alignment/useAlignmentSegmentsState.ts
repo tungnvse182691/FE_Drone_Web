@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { SegmentItem, SlabItem } from './types'
 import { SEGMENT_COLORS } from './data'
 import {
@@ -42,7 +42,9 @@ export function useAlignmentSegmentsState({
   const [slabs, setSlabs] = useState<SlabItem[]>([])
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
 
-  const [splitDistance, setSplitDistance] = useState<number>(Number.NaN)
+  const [splitDistance, setSplitDistanceValue] = useState<number>(Number.NaN)
+  const splitDistanceRef = useRef(splitDistance)
+  const setSplitDistance = (value: number) => { splitDistanceRef.current = value; setSplitDistanceValue(value) }
   const [splitSortOrder, setSplitSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const [editingSegment, setEditingSegment] = useState<SegmentItem | null>(null)
@@ -58,22 +60,25 @@ export function useAlignmentSegmentsState({
   })
   const [splitModalSegment, setSplitModalSegment] = useState<SegmentItem | null>(null)
   const [customSplitKm, setCustomSplitKm] = useState<number>(Number.NaN)
+  const splitInput = useRef({ segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast })
+  splitInput.current = { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast }
 
   const handleApplyAutoSplit = () => {
+    const { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast } = splitInput.current
     const totalKm = importedLengthKm || (currentKmPoints.length >= 2 ? currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0] : 0.0)
     if (!Number.isFinite(totalKm) || totalKm <= 0) {
       showToast('Chưa có dữ liệu chiều dài tim tuyến để chia đoạn.')
       return
     }
 
-    const dist = splitDistance
+    const dist = splitDistanceRef.current
     const startBaseKm = currentKmPoints.length > 0 ? currentKmPoints[0] : stationOriginKm
     if (!Number.isFinite(dist) || dist <= 0 || !Number.isFinite(startBaseKm)) {
       showToast('Cần cự ly chia đoạn và lý trình gốc có nguồn; chưa thay đổi bản nháp.')
       return
     }
-    const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
-    const validated = checkAndEnrichSegmentsContinuity(newSegments)
+    const validated = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder, segments)
+    if (!validated.length) { showToast('Phạm vi bản chỉnh chưa liên tục hoặc cự ly chia không hợp lệ; chưa thay đổi bản nháp.'); return }
     setSegments(validated)
     setSlabs([])
     setSelectedSegmentId(validated[0]?.id || null)
