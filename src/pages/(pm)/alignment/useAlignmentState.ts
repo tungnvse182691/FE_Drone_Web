@@ -55,11 +55,14 @@ export function useAlignmentState() {
 
   // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
   const geometryRead = useGeometryReadModel(selectedProjectId)
+  const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`
+  const [editorScope, setEditorScope] = useState(scopeKey)
+  const editorDraft = useRef('')
   useEffect(() => {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
     if (geometryRead.error) showToast(geometryRead.error)
   }, [geometryRead.projects, geometryRead.error])
-  useEffect(() => {
+  const resetEditor = () => {
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     segmentsState.setSegments([]); segmentsState.setSlabs([]); setBranches([])
     segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
@@ -68,11 +71,17 @@ export function useAlignmentState() {
     setSelectedTargetType('MAINLINE'); setIsAddBranchModalOpen(false)
     setAlignmentStatus('DRAFT')
     setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
-  }, [selectedProjectId, authEpoch])
+    segmentsState.setCustomSplitKm(Number.NaN); segmentsState.setSplitSortOrder('asc')
+    setSyncJointWithSlab(true)
+    setLocalDraftDirty(false); setLocalWidthsDirty(false)
+  }
 
   useEffect(() => {
-    const geometry = geometryRead.geometry
-    setAlignmentStatus(geometryRead.draft?.data.status === 'CONFIRMED' || geometryRead.draft?.data.status !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    const draft = geometryRead.draft?.data
+    const draftStatus = draft?.id === geometryRead.draftId && draft.projectId === selectedProjectId ? draft.status : undefined
+    const geometry = geometryRead.geometry?.projectId === selectedProjectId &&
+      (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) ? geometryRead.geometry : null
+    setAlignmentStatus(draftStatus === 'CONFIRMED' || draftStatus !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     if (Number.isFinite(geometry?.lengthMeters) && geometry!.lengthMeters > 0) setImportedLengthKm(geometry!.lengthMeters / 1000)
     const line = geometry?.wgs84Centerline
@@ -80,14 +89,13 @@ export function useAlignmentState() {
         line.coordinates.every(point => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite) && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90)) {
       setCurrentCoords(line.coordinates)
     }
-  }, [geometryRead.geometry, geometryRead.draft?.data.status])
+  }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, selectedProjectId])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   const [localDraftDirty, setLocalDraftDirty] = useState(false)
   const [localWidthsDirty, setLocalWidthsDirty] = useState(false)
   const markLocalDraft = () => setLocalDraftDirty(true)
   const markWidthDraft = () => { setLocalDraftDirty(true); setLocalWidthsDirty(true) }
-  useEffect(() => { setLocalDraftDirty(false); setLocalWidthsDirty(false) }, [selectedProjectId, authEpoch])
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
@@ -289,14 +297,21 @@ export function useAlignmentState() {
 
   const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile)
 
+  // Reset this hook before children can render the new draft with the previous draft's edits.
+  if (editorScope !== scopeKey) {
+    setEditorScope(scopeKey)
+    editorDraft.current = ''
+    resetEditor()
+    importState.setManualCoordsText('')
+    setToastMessage(null)
+  }
+
   useEffect(() => {
     const context = geometryRead.context
     if (context?.projectId !== selectedProjectId) return
     const section = geometryRead.draft?.data.roadSectionId || (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
     if (section) draftWorkflow.setForm(old => old.sectionId ? old : { ...old, sectionId: section })
   }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, selectedProjectId])
-  const editorDraft = useRef('')
-  useEffect(() => { editorDraft.current = '' }, [selectedProjectId, authEpoch, geometryRead.draftId])
   useEffect(() => {
     const draft = geometryRead.draft?.data
     if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === draft.id || localDraftDirty || draftWorkflow.busy || draftWorkflow.conflict) return
