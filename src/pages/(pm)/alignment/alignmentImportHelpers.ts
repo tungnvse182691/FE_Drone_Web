@@ -1,6 +1,7 @@
 import { SegmentItem } from './types'
 import { SEGMENT_COLORS } from './data'
 import { smoothRoadPolyline } from './alignmentGeometryHelpers'
+import { utm48NToWgs84 } from '../../../api/services/alignmentService'
 
 // Tính khoảng cách Haversine giữa 2 tọa độ GPS (km)
 export function calculateHaversineKm(c1: [number, number], c2: [number, number]): number {
@@ -122,6 +123,16 @@ export interface GeoJsonCenterlineReview {
 
 export class GeoJsonValidationError extends Error {}
 
+// Display only. Never replace the engineering coordinates used by draft commands.
+export function previewCenterlineCoordinates(coords: [number, number][], srid: number): [number, number][] {
+  if (srid !== 4326 && srid !== 32648) throw new GeoJsonValidationError(`Chưa hỗ trợ preview EPSG:${srid}; không chuyển bằng UTM zone 48 cho hệ khác.`)
+  const preview = coords.map(([x, y]): [number, number] => srid === 32648 ? utm48NToWgs84(x, y) : [x, y])
+  if (preview.some(([lng, lat]) => !Number.isFinite(lng) || !Number.isFinite(lat) || Math.abs(lng) > 180 || Math.abs(lat) > 90)) {
+    throw new GeoJsonValidationError('Tọa độ không hợp lệ theo CRS của tệp. GeoJSON RFC7946 không khai báo CRS phải có [longitude, latitude]; không đoán CRS từ tọa độ.')
+  }
+  return preview
+}
+
 // Only inspect the input. This does not create chainage, survey accuracy or segments.
 export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview {
   let parsed: any
@@ -144,11 +155,14 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
   if (candidates.length !== 1) throw new GeoJsonValidationError('Cần đúng một Centerline rõ nguồn; không ghép nhiều tuyến/mép đường thành tim tuyến.')
   const feature = candidates[0]
   if (feature.geometry?.type !== 'LineString') throw new GeoJsonValidationError('Centerline phải là LineString; không dùng Polygon hoặc ghép MultiLineString khi chưa có topology.')
-  const declarations = [parsed.crs, feature.crs, feature.geometry.crs].filter(value => value != null)
+  const sources = [parsed, feature, feature.geometry]
+  if (sources.some(value => Object.prototype.hasOwnProperty.call(value, 'crs') && value.crs == null)) throw new GeoJsonValidationError('Khai báo crs rỗng: chưa xác định được CRS của tệp để preview.')
+  const declarations = sources.map(value => value.crs).filter(value => value != null)
   const declaredSrids = declarations.map(value => {
     const name = value?.type === 'name' ? value.properties?.name : undefined
+    if (name === 'urn:ogc:def:crs:OGC:1.3:CRS84' || name === 'OGC:CRS84') return 4326
     const match = typeof name === 'string' ? /^(?:EPSG:|urn:ogc:def:crs:EPSG::)(4326|32648|32649)$/.exec(name) : null
-    if (!match) throw new GeoJsonValidationError('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
+    if (!match) throw new GeoJsonValidationError(`CRS ${typeof name === 'string' ? name.slice(0, 80) : 'không rõ'} chưa hỗ trợ preview; chưa xác minh được hệ quy chiếu và đơn vị của tệp.`)
     return Number(match[1])
   })
   if (new Set(declaredSrids).size > 1) throw new GeoJsonValidationError('Khai báo CRS của tim tuyến mâu thuẫn với tệp; chưa xác minh được hệ quy chiếu.')

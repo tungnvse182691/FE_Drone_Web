@@ -16,7 +16,6 @@ import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
 import type { RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
-import { utm48NToWgs84 } from '../../../api/services/alignmentService'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -61,6 +60,7 @@ export function useAlignmentState() {
   const [editorScope, setEditorScope] = useState(scopeKey)
   const editorDraft = useRef('')
   const [fileDraft, setFileDraft] = useState<RoadGuardCoordinatesDraft | null>(null)
+  const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
     if (geometryRead.error) showToast(geometryRead.error)
@@ -78,6 +78,7 @@ export function useAlignmentState() {
     setSyncJointWithSlab(true)
     setLocalDraftDirty(false); setLocalWidthsDirty(false)
     setFileDraft(null)
+    setFilePreviewCoords(null)
   }
 
   useEffect(() => {
@@ -280,11 +281,13 @@ export function useAlignmentState() {
     inputScope: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`,
     onDraftInput: markLocalDraft,
     contextReady: geometryRead.context?.projectId === selectedProjectId,
+    roadSectionCount: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.roadSections.length : undefined,
     engineeringCrs: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.engineeringUtmSrid : null,
-    onRoadGuardDraft: draft => {
-      // Called only after validation (and matching project CRS for a Draft).
+    onRoadGuardDraft: (draft, preview) => {
+      // Applying a checked file is independent of project prerequisites for saving.
       resetEditor()
       setFileDraft(draft)
+      setFilePreviewCoords(preview || [])
       draftWorkflow.setForm(old => ({ ...old, profileId: '', origin: '', reason: '', surveyWidth: '', widths: '' }))
       if (draft) setRightTab('WIDTH_PROFILE')
       else setImportedLengthKm(Number.NaN)
@@ -345,25 +348,15 @@ export function useAlignmentState() {
 
   // Display coordinates only; engineering coordinates/length/profile remain authoritative.
   useEffect(() => {
-    if (!fileDraft || editorScope !== scopeKey) return
-    if (fileDraft.sourceCrs !== 32648 || geometryRead.context?.projectId !== selectedProjectId || geometryRead.context.engineeringUtmSrid !== 32648) {
-      setCurrentCoords([]); setCurrentKmPoints([]); mapState.handleFitBounds([])
-      return
-    }
-    const coords = fileDraft.coordinates.map(point => utm48NToWgs84(point.x, point.y))
-    if (coords.some(point => !point.every(Number.isFinite) || Math.abs(point[0]) > 180 || Math.abs(point[1]) > 90)) {
-      setCurrentCoords([]); setCurrentKmPoints([]); mapState.handleFitBounds([])
-      showToast('Không tạo được preview kinh/vĩ độ hợp lệ; bản chỉnh engineering được giữ nguyên.')
-      return
-    }
+    if (!filePreviewCoords || editorScope !== scopeKey) return
     let offset = 0
-    const kmPoints = fileDraft.coordinates.map((point, index) => {
+    const kmPoints = fileDraft?.coordinates.map((point, index) => {
       if (index) { const previous = fileDraft.coordinates[index - 1]; offset += Math.sqrt((point.x - previous.x) ** 2 + (point.y - previous.y) ** 2) }
       return (fileDraft.stationOriginMeters + offset) / 1000
-    })
-    setCurrentCoords(coords); setCurrentKmPoints(kmPoints)
-    mapState.handleFitBounds(coords)
-  }, [fileDraft, geometryRead.context, scopeKey])
+    }) || []
+    setCurrentCoords(filePreviewCoords); setCurrentKmPoints(filePreviewCoords.length ? kmPoints : [])
+    mapState.handleFitBounds(filePreviewCoords)
+  }, [filePreviewCoords, fileDraft, scopeKey])
 
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {

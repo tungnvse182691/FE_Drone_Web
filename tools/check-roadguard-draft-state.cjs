@@ -38,30 +38,37 @@ function harness(root=false,saveMode=false,mapMode=false){
  return{model,workflow,readers,applied,messages,mapInputs,calls,control,maps,fits,flush,v1,v2,convert:load('src/api/services/alignmentService.ts').utm48NToWgs84,loadMap(){maps[0].ready=true;maps[0].events.load()},get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 const tests=[];function test(name,run){tests.push({name,run})}
-test('sample waits for context and CRS match, preserves full DTO and remains unsaved',()=>{
- const h=harness();h.context(false,null);h.read(sample);assert.equal(h.applied.length,0);assert.match(h.view.readMessage,/context/)
- h.context(true,32649);assert.equal(h.applied.length,0);assert.match(h.view.readMessage,/không khớp/)
- h.context(true,32648);assert.deepEqual(plain(h.applied[0]),JSON.parse(sample));assert.equal(h.view.hasUnverifiedFile,true);assert.match(h.view.readMessage,/chưa lưu/);assert.match(h.view.manualCoordsText,/^798577.937027, 1269894.645247/);h.unmount()
+test('file preview input applies independently of context and preserves full source DTO',()=>{
+ const h=harness();h.context(false,null);h.read(sample);assert.equal(h.applied.length,1);assert.match(h.view.readMessage,/chưa tải được context/i)
+ h.context(true,null);h.context(true,32649);h.context(true,32648);assert.equal(h.applied.length,1)
+ assert.deepEqual(plain(h.applied[0]),JSON.parse(sample));assert.equal(h.view.hasUnverifiedFile,true);assert.match(h.view.readMessage,/chưa lưu/);assert.match(h.view.manualCoordsText,/^798577.937027, 1269894.645247/);h.unmount()
 })
 test('malformed JSON, invalid DTO and read failure retain valid file input',()=>{
  const h=harness();h.read(sample);const before=h.view.manualCoordsText
  for(const text of ['{',JSON.stringify({...JSON.parse(sample),sourceCrs:4326})]){h.read(text);assert.equal(h.applied.length,1);assert.equal(h.view.manualCoordsText,before);assert.equal(h.view.hasUnverifiedFile,true)}
  h.read().onerror();h.flush();assert.equal(h.view.manualCoordsText,before);assert.equal(h.applied.length,1);h.unmount()
 })
+test('ABC1 work-package 200 with null CRS and empty sections reports both missing setup facts without changing them',()=>{
+ const h=harness(true),id='9b51bb39-8c5f-43f1-84a2-520a1d8b5eba';h.project(id)
+ h.model.context={projectId:id,engineeringUtmSrid:null,roadSections:[],accessRole:'PM'};h.flush();h.read(sample)
+ assert.match(h.view.importState.readMessage,/chưa thiết lập engineeringUtmSrid/);assert.match(h.view.importState.readMessage,/chưa có road section\/version/);assert.ok(!h.view.importState.readMessage.includes('chưa tải được'))
+ assert.ok(h.view.fileDraft);assert.equal(h.view.currentCoords.length,JSON.parse(sample).coordinates.length);assert.equal(h.model.context.engineeringUtmSrid,null);assert.equal(h.model.context.roadSections.length,0);assert.equal(h.calls.length,0)
+ h.model.context={...h.model.context,engineeringUtmSrid:32648};h.flush();h.read(sample);assert.match(h.view.importState.readMessage,/chưa có road section\/version/);assert.ok(!h.view.importState.readMessage.includes('chưa thiết lập engineeringUtmSrid'));assert.equal(h.calls.length,0);h.unmount()
+})
 test('new file, scope changes and unmount reject old reads and cancel pending files',()=>{
  for(const scope of ['p:b','other:a','2:p:a']){const h=harness(),r=h.read();h.scope(scope);r.onload({target:{result:sample}});h.flush();assert.equal(h.applied.length,0);h.unmount()}
  const h=harness(),old=h.read(),next=h.read();next.onload({target:{result:sample}});h.flush();old.onload({target:{result:JSON.stringify({...JSON.parse(sample),stationOriginMeters:99})}});h.flush();assert.equal(h.applied.length,1)
- h.context(false,null);h.read(sample);h.read('{');h.context(true,32648);assert.equal(h.applied.length,1)
- h.context(false,null);h.read(sample);h.scope('p:b');h.context(true,32648);assert.equal(h.applied.length,1)
- const late=h.read();h.unmount();late.onload({target:{result:sample}});assert.equal(h.applied.length,1)
+ h.context(false,null);h.read(sample);h.read('{');h.context(true,32648);assert.equal(h.applied.length,2)
+ h.context(false,null);h.read(sample);h.scope('p:b');h.context(true,32648);assert.equal(h.applied.length,3)
+ const late=h.read();h.unmount();late.onload({target:{result:sample}});assert.equal(h.applied.length,3)
 })
 test('GeoJSON uses original inspection and stays unverified',()=>{
  const h=harness();h.read(sample);h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.equal(h.applied.at(-1),null);assert.equal(h.view.manualCoordsText,'108, 16\n108.1, 16.1');assert.equal(h.view.hasUnverifiedFile,true);h.unmount()
 })
 test('real import/state/segments populate sidebar, isolate UTM from map and survive late hydrate',()=>{
- const h=harness(true);h.read(sample);assert.equal(h.view.fileDraft,null)
- h.model.context={projectId:'other',engineeringUtmSrid:32648,roadSections:[]};h.flush();assert.equal(h.view.fileDraft,null)
- h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.equal(h.view.fileDraft,null);assert.match(h.view.importState.readMessage,/không khớp/)
+ const h=harness(true);h.read(sample);assert.ok(h.view.fileDraft)
+ h.model.context={projectId:'other',engineeringUtmSrid:32648,roadSections:[]};h.flush();assert.ok(h.view.fileDraft)
+ h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.ok(h.view.fileDraft)
  h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush()
  assert.deepEqual(plain(h.view.fileDraft),JSON.parse(sample));assert.equal(h.view.localDraftDirty,true);assert.equal(h.workflow.form.origin,'0');assert.equal(h.workflow.form.surveyWidth,'12');assert.equal(h.workflow.form.reason,JSON.parse(sample).changeReason);assert.equal(h.workflow.form.widths,'0, 701.290518512277, 7')
  assert.equal(h.view.activeSegments[0].roadWidthM,7);assert.equal(h.view.activeSegments[0].statusText,'BẢN CHỈNH CHƯA LƯU');assert.equal(h.view.rightTab,'WIDTH_PROFILE');assert.equal(h.view.alignmentStatus,'DRAFT');assert.equal(h.view.currentCoords.length,119);assert.equal(h.view.currentKmPoints.length,119);assert.ok(h.mapInputs.every(c=>c.every(([lng,lat])=>Math.abs(lng)<=180&&Math.abs(lat)<=90)));assert.equal(h.view.segmentsState.slabs.length,0)
@@ -77,7 +84,7 @@ test('replacing Draft A 7m with Draft B 9m closes old editors only after valid m
  h.model.geometry={projectId:'p',lengthMeters:999};h.flush();assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.segmentsState.selectedSegmentId,a.id)
  h.read('{');assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.activeSegments[0].roadWidthM,7)
  const b=JSON.parse(sample);b.widthProfile[0].widthMeters=9;b.stationOriginMeters=100;b.changeReason='Draft B'
- h.read(JSON.stringify({...b,sourceCrs:32649}));assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.activeSegments[0].roadWidthM,7)
+ h.read(JSON.stringify({...b,sourceCrs:4326}));assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.activeSegments[0].roadWidthM,7)
  h.read(JSON.stringify(b));assert.equal(h.view.activeSegments[0].roadWidthM,9);assert.equal(h.view.activeSegments[0].startKm,.1);assert.equal(h.workflow.form.reason,'Draft B');assert.equal(h.workflow.form.origin,'100')
  assert.equal(h.view.segmentsState.editingSegment,null);assert.equal(h.view.segmentsState.splitModalSegment,null);assert.equal(h.view.segmentsState.selectedSegmentId,null);assert.equal(h.view.segmentsState.isAddSegmentModalOpen,false);assert.equal(h.view.segmentsState.newSegForm.code,'');assert.ok(Number.isNaN(h.view.segmentsState.newSegForm.roadWidthM));assert.ok(Number.isNaN(h.view.segmentsState.customSplitKm));assert.ok(Number.isNaN(h.view.segmentsState.splitDistance));assert.equal(h.view.localDraftDirty,true);h.unmount()
 })
@@ -85,7 +92,7 @@ test('Draft to GeoJSON removes old width length chainage and technical form with
  const h=harness(true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
  const s=h.view.segmentsState,a=h.view.activeSegments[0];s.setEditingSegment(a);s.setSplitModalSegment(a);s.setSelectedSegmentId(a.id);h.flush()
  h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}))
- assert.equal(h.view.fileDraft,null);assert.equal(h.view.importState.manualCoordsText,'108, 16\n108.1, 16.1');assert.equal(h.view.activeSegments.length,0);assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.currentKmPoints.length,0)
+ assert.equal(h.view.fileDraft,null);assert.equal(h.view.importState.manualCoordsText,'108, 16\n108.1, 16.1');assert.equal(h.view.activeSegments.length,0);assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.deepEqual(plain(h.view.currentCoords),[[108,16],[108.1,16.1]]);assert.equal(h.view.currentKmPoints.length,0)
  for(const key of ['origin','reason','surveyWidth','widths','profileId'])assert.equal(h.workflow.form[key],'')
  assert.equal(h.view.segmentsState.editingSegment,null);assert.equal(h.view.segmentsState.splitModalSegment,null);assert.equal(h.view.segmentsState.selectedSegmentId,null);assert.equal(h.view.localDraftDirty,true);assert.equal(h.view.importState.hasUnverifiedFile,true)
  h.model.geometry={projectId:'p',lengthMeters:701.290518512277};h.flush();assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.activeSegments.length,0);h.unmount()
@@ -134,14 +141,30 @@ test('file before map load draws and fits latest preview on existing centerline;
  assert.deepEqual(plain(h.view.fileDraft),draft);assert.equal(h.view.importedLengthKm,length);assert.ok(Math.abs(h.view.currentKmPoints.at(-1)*1000-701.2905185122771)<1e-9);assert.equal(h.view.activeSegments[0].roadWidthM,7);assert.equal(h.view.alignmentStatus,'DRAFT');assert.equal(h.calls.length,0)
  h.read('{');assert.deepEqual(plain(h.view.currentCoords),preview)
  const next=JSON.parse(sample);next.coordinates.forEach(p=>p.x+=10);h.read(JSON.stringify(next));assert.notDeepEqual(plain(h.fits.at(-1)),preview)
- h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.equal(h.maps[0].centerline.features.length,0)
+ h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.deepEqual(plain(h.maps[0].centerline.features[0].geometry.coordinates),[[108,16],[108.1,16.1]])
  h.read(sample);h.model.draftId='b';h.flush();assert.equal(h.maps[0].centerline.features.length,0);h.unmount()
  const waiting=harness(true,false,true);waiting.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};waiting.flush();waiting.read(sample);waiting.model.draftId='b';waiting.flush();waiting.loadMap();assert.equal(waiting.maps[0].centerline.features.length,0);assert.equal(waiting.fits.length,0);waiting.unmount()
 })
 test('zone49 and CRS mismatch keep engineering input but never render a zone48 preview or stale queued line',()=>{
  const h=harness(true,false,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
- h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.equal(h.view.currentCoords.length,0)
+ h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.equal(h.view.currentCoords.length,JSON.parse(sample).coordinates.length)
  const zone49={...JSON.parse(sample),sourceCrs:32649};h.read(JSON.stringify(zone49));assert.deepEqual(plain(h.view.fileDraft),zone49);assert.match(h.view.importState.readMessage,/Chưa hỗ trợ preview.*32649/);assert.equal(h.view.currentCoords.length,0)
  h.loadMap();assert.ok(h.maps[0].centerline.features.every(f=>f.geometry.coordinates.length===0));assert.equal(h.fits.length,0);assert.ok(h.view.importedLengthKm>0);assert.equal(h.calls.length,0);h.unmount()
+})
+test('two independent Draft locations and third RFC7946 file preview without project setup or business writes',async()=>{
+ const h=harness(true,true,true)
+ const draft=(x,y,count)=>({sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:25,changeReason:'Dữ liệu kiểm thử cục bộ',coordinates:Array.from({length:count},(_,i)=>({x:x+3*i,y:y+4*i})),surveyWidthMeters:12,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5*(count-1),widthMeters:7}]})
+ const a=draft(500000,1000000,3),b=draft(700000,1800000,4)
+ h.read(JSON.stringify(a));const first=plain(h.view.currentCoords);assert.deepEqual(plain(h.view.fileDraft),a);assert.equal(first.length,a.coordinates.length);h.loadMap()
+ const old=h.read();h.read(JSON.stringify(b));old.onload({target:{result:JSON.stringify(a)}});h.flush()
+ assert.deepEqual(plain(h.view.fileDraft),b);assert.deepEqual(plain(h.view.currentCoords[0]),plain(h.convert(b.coordinates[0].x,b.coordinates[0].y)));assert.notDeepEqual(plain(h.view.currentCoords[0]),first[0]);assert.equal(h.view.currentCoords.length,b.coordinates.length);assert.deepEqual(plain(h.fits.at(-1)),plain(h.view.currentCoords));assert.equal(h.view.importedLengthKm,.015)
+ h.model.context={projectId:'p',engineeringUtmSrid:null,roadSections:[]};h.flush();assert.deepEqual(plain(h.view.fileDraft),b);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
+ const geo={type:'LineString',coordinates:[[121,10],[121.01,10.02],[121.03,10.04]]};h.read(JSON.stringify(geo));assert.deepEqual(plain(h.view.currentCoords),geo.coordinates);assert.deepEqual(plain(h.maps[0].centerline.features[0].geometry.coordinates),geo.coordinates);assert.deepEqual(plain(h.fits.at(-1)),geo.coordinates);assert.equal(h.view.fileDraft,null);assert.equal(h.view.activeSegments.length,0);assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.currentKmPoints.length,0);assert.match(h.view.draftWorkflow.saveReason,/chưa có mapping/);assert.equal(h.calls.length,0);h.unmount()
+})
+test('GeoJSON declared CRS handling rejects ambiguity and unsupported CRS without replacing valid preview',()=>{
+ const h=harness(true,false,true),crs=srid=>({type:'name',properties:{name:`EPSG:${srid}`}}),geo={type:'LineString',coordinates:[[106,20],[106.01,20.02]]};h.read(JSON.stringify(geo));h.loadMap();const before=plain(h.view.currentCoords)
+ for(const [input,pattern]of [[{...geo,crs:crs(3857)},/3857.*chưa hỗ trợ/],[{...geo,crs:crs(32649)},/32649.*không chuyển/],[{...geo,crs:null},/crs rỗng/],[{...geo,coordinates:[[500000,1000000],[500003,1000004]]},/RFC7946.*không đoán/],[{type:'Feature',crs:crs(4326),geometry:{...geo,crs:crs(32648)}},/mâu thuẫn/]]){h.read(JSON.stringify(input));assert.match(h.view.importState.readMessage,pattern);assert.deepEqual(plain(h.view.currentCoords),before)}
+ const projected={type:'Feature',crs:crs(32648),properties:{},geometry:{type:'LineString',coordinates:[[600000,1200000],[600003,1200004]]}};h.read(JSON.stringify(projected));assert.deepEqual(plain(h.view.currentCoords[0]),plain(h.convert(600000,1200000)));assert.equal(h.view.importState.manualCoordsText,'600000, 1200000\n600003, 1200004');assert.equal(h.view.fileDraft,null)
+ h.read(JSON.stringify({...geo,crs:{type:'name',properties:{name:'urn:ogc:def:crs:OGC:1.3:CRS84'}}}));assert.deepEqual(plain(h.view.currentCoords),geo.coordinates);assert.equal(h.calls.length,0);h.unmount()
 })
 ;(async()=>{let count=0;for(const {name,run}of tests){await run();console.log('PASS '+name);count++}console.log(`${count} Draft import/state/save/map scenarios PASS (mock HTTP/MapLibre; no runtime writes).`)})().catch(error=>{console.error(error);process.exitCode=1})

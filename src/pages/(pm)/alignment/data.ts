@@ -417,6 +417,11 @@ export function buildSegmentsGeoJSON(
 ): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
 
+  if (!segList.length && coords.length >= 2) features.push({
+    type: 'Feature', properties: { isLine: true, isLabelPoint: false },
+    geometry: { type: 'LineString', coordinates: coords }
+  })
+
   segList.forEach((seg, idx) => {
     const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
 
