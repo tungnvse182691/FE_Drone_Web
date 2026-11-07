@@ -80,7 +80,7 @@ export function useAlignmentState() {
   }
 
   useEffect(() => {
-    if (fileDraft) return
+    if (localDraftDirty) return
     const draft = geometryRead.draft?.data
     const draftStatus = draft?.id === geometryRead.draftId && draft.projectId === selectedProjectId ? draft.status : undefined
     const geometry = geometryRead.geometry?.projectId === selectedProjectId &&
@@ -280,7 +280,14 @@ export function useAlignmentState() {
     onDraftInput: markLocalDraft,
     contextReady: geometryRead.context?.projectId === selectedProjectId,
     engineeringCrs: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.engineeringUtmSrid : null,
-    onRoadGuardDraft: draft => { setFileDraft(draft); if (draft) setLocalWidthsDirty(false) },
+    onRoadGuardDraft: draft => {
+      // Called only after validation (and matching project CRS for a Draft).
+      resetEditor()
+      setFileDraft(draft)
+      draftWorkflow.setForm(old => ({ ...old, profileId: '', origin: '', reason: '', surveyWidth: '', widths: '' }))
+      if (draft) setRightTab('WIDTH_PROFILE')
+      else setImportedLengthKm(Number.NaN)
+    },
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,
     roadWidthM,
@@ -318,14 +325,12 @@ export function useAlignmentState() {
       length += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
     }
     setImportedLengthKm(length / 1000)
-    setSelectedTargetType('MAINLINE'); setRightTab('WIDTH_PROFILE')
     if (!localWidthsDirty) segmentsState.setSegments(fileDraft.widthProfile.map((width, index) => ({
       id: `file-width-${index}`, code: `Khoảng bề rộng ${index + 1}`,
       startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
       lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
       laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU', color: '#C9A227'
     })))
-    segmentsState.setSelectedSegmentId(null)
   }, [fileDraft, geometryRead.draft, geometryRead.geometry])
 
   // Reset this hook before children can render the new draft with the previous draft's edits.

@@ -47,6 +47,26 @@ test('real import/state/segments populate sidebar, isolate UTM from map and surv
  const delayed=h.read();h.model.draftId='b';h.flush();assert.equal(h.view.fileDraft,null);assert.equal(h.view.activeSegments.length,0)
  delayed.onload({target:{result:sample}});h.flush();assert.equal(h.view.fileDraft,null);assert.equal(h.view.activeSegments.length,0);h.unmount()
 })
+test('replacing Draft A 7m with Draft B 9m closes old editors only after valid matching input',()=>{
+ const h=harness(true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
+ const a=h.view.activeSegments[0],s=h.view.segmentsState
+ s.setEditingSegment(a);s.setSplitModalSegment(a);s.setSelectedSegmentId(a.id);s.setIsAddSegmentModalOpen(true);s.setNewSegForm(old=>({...old,code:'A',roadWidthM:7}));s.setCustomSplitKm(.2);s.setSplitDistance(.1);h.flush()
+ h.model.geometry={projectId:'p',lengthMeters:999};h.flush();assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.segmentsState.selectedSegmentId,a.id)
+ h.read('{');assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.activeSegments[0].roadWidthM,7)
+ const b=JSON.parse(sample);b.widthProfile[0].widthMeters=9;b.stationOriginMeters=100;b.changeReason='Draft B'
+ h.read(JSON.stringify({...b,sourceCrs:32649}));assert.equal(h.view.segmentsState.editingSegment,a);assert.equal(h.view.activeSegments[0].roadWidthM,7)
+ h.read(JSON.stringify(b));assert.equal(h.view.activeSegments[0].roadWidthM,9);assert.equal(h.view.activeSegments[0].startKm,.1);assert.equal(h.workflow.form.reason,'Draft B');assert.equal(h.workflow.form.origin,'100')
+ assert.equal(h.view.segmentsState.editingSegment,null);assert.equal(h.view.segmentsState.splitModalSegment,null);assert.equal(h.view.segmentsState.selectedSegmentId,null);assert.equal(h.view.segmentsState.isAddSegmentModalOpen,false);assert.equal(h.view.segmentsState.newSegForm.code,'');assert.ok(Number.isNaN(h.view.segmentsState.newSegForm.roadWidthM));assert.ok(Number.isNaN(h.view.segmentsState.customSplitKm));assert.ok(Number.isNaN(h.view.segmentsState.splitDistance));assert.equal(h.view.localDraftDirty,true);h.unmount()
+})
+test('Draft to GeoJSON removes old width length chainage and technical form without inventing new values',()=>{
+ const h=harness(true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
+ const s=h.view.segmentsState,a=h.view.activeSegments[0];s.setEditingSegment(a);s.setSplitModalSegment(a);s.setSelectedSegmentId(a.id);h.flush()
+ h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}))
+ assert.equal(h.view.fileDraft,null);assert.equal(h.view.importState.manualCoordsText,'108, 16\n108.1, 16.1');assert.equal(h.view.activeSegments.length,0);assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.currentKmPoints.length,0)
+ for(const key of ['origin','reason','surveyWidth','widths','profileId'])assert.equal(h.workflow.form[key],'')
+ assert.equal(h.view.segmentsState.editingSegment,null);assert.equal(h.view.segmentsState.splitModalSegment,null);assert.equal(h.view.segmentsState.selectedSegmentId,null);assert.equal(h.view.localDraftDirty,true);assert.equal(h.view.importState.hasUnverifiedFile,true)
+ h.model.geometry={projectId:'p',lengthMeters:701.290518512277};h.flush();assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.activeSegments.length,0);h.unmount()
+})
 test('JSX/UI files are unchanged, including existing json accept',()=>{
  const cp=require('child_process');for(const name of ['ImportPanel','AlignmentImportModal','AlignmentSidebar','SidebarWidthProfileTab']){const file=base+name+'.tsx';assert.equal(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'),cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8'}).replaceAll('\r\n','\n'))}
 })
