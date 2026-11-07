@@ -309,7 +309,16 @@ export function useAlignmentState() {
 
   })
 
-  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile)
+  // Sidebar values are authoritative; preserve exact source offsets when only width changed.
+  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: segmentsState.segments.map((segment, index) => {
+    const original = fileDraft.widthProfile[index], origin = fileDraft.stationOriginMeters
+    return {
+      fromOffsetMeters: original && segment.startKm === (origin + original.fromOffsetMeters) / 1000 ? original.fromOffsetMeters : segment.startKm * 1000 - origin,
+      toOffsetMeters: original && segment.endKm === (origin + original.toOffsetMeters) / 1000 ? original.toOffsetMeters : segment.endKm * 1000 - origin,
+      widthMeters: segment.roadWidthM
+    }
+  }) } : null
+  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile, editorScope === scopeKey ? editedFileDraft : null)
 
   useEffect(() => {
     if (!fileDraft || editorScope !== scopeKey) return

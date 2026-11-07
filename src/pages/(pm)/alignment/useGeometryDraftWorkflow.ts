@@ -5,23 +5,28 @@ import { alignmentService, type GeometryDraftInput } from '../../../api/services
 import { acceptFreshDraftVersion, pendingDraftCommand, reviseRejectedDraftCommand, runDraftCommand } from '../../../api/services/geometryDraftCommands'
 import { GeometryCommandUiError, geometryCommandErrorMessage } from '../../../api/services/geometryCommandErrors'
 import type { useGeometryReadModel } from './useGeometryReadModel'
+import { parseRoadGuardDraftJson, RoadGuardDraftValidationError, type RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
 
 type ReadModel = ReturnType<typeof useGeometryReadModel>
 export interface GeometryDraftForm {
   sectionId: string; profileId: string; origin: string; surveyWidth: string; widths: string; reason: string
 }
 const emptyForm: GeometryDraftForm = { sectionId: '', profileId: '', origin: '', surveyWidth: '', widths: '', reason: '' }
-export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>): GeometryDraftInput {
+export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>, fileDraft?: RoadGuardCoordinatesDraft | null): GeometryDraftInput {
   const context = model.context
   if (!context) throw new GeometryCommandUiError('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
-  const road = context.roadSections.find(section => section.roadSectionId === form.sectionId)
-  if (!road) throw new GeometryCommandUiError('Hãy chọn tuyến từ phạm vi máy chủ đã trả về.')
+  const roads = context.roadSections.filter(section => section.roadSectionId === form.sectionId)
+  if (!form.sectionId || roads.length !== 1) throw new GeometryCommandUiError('Hãy chọn đúng một tuyến từ phạm vi máy chủ đã trả về.')
+  const road = roads[0]
   const profile = model.profiles.find(profile => profile.id === form.profileId && profile.projectId === context.projectId)
   const definition = profile?.definition
-  if (!definition || definition.sourceSrid !== context.engineeringUtmSrid || ![32648, 32649].includes(definition.sourceSrid) || definition.axisOrder !== 'EN' || definition.metresPerUnit !== 1) {
+  if (fileDraft && (fileDraft.sourceCrs !== context.engineeringUtmSrid || ![32648, 32649].includes(fileDraft.sourceCrs))) {
+    throw new GeometryCommandUiError('sourceCrs của Draft JSON không khớp engineering CRS dự án từ máy chủ.')
+  }
+  if (!fileDraft && (!definition || definition.sourceSrid !== context.engineeringUtmSrid || ![32648, 32649].includes(definition.sourceSrid) || definition.axisOrder !== 'EN' || definition.metresPerUnit !== 1)) {
     throw new GeometryCommandUiError('Cần hồ sơ CRS cùng engineering SRID, trục EN và đơn vị mét. Chưa có adapter được xác minh cho lựa chọn khác.')
   }
-  if (!definition.datum || !definition.projection || !definition.sourceReference || !/^[0-9a-f]{64}$/i.test(definition.sourceChecksum || '') || definition.sampleOnly !== false) {
+  if (!fileDraft && (!definition?.datum || !definition.projection || !definition.sourceReference || !/^[0-9a-f]{64}$/i.test(definition.sourceChecksum || '') || definition.sampleOnly !== false)) {
     throw new GeometryCommandUiError('Hồ sơ CRS chưa đủ nguồn hoặc chỉ là mẫu; không dùng làm dữ liệu tuyến chính thức.')
   }
   const rows = (value: string, count: number) => value.trim().split(/\r?\n/).map(line => {
@@ -42,16 +47,21 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
     throw new GeometryCommandUiError('Cần lý trình gốc, bề rộng khảo sát và lý do thay đổi có nguồn.')
   }
   let end = 0
-  const widthProfile = rows(form.widths, 3).map(([fromOffsetMeters, toOffsetMeters, widthMeters]) => {
+  const widthProfile = (fileDraft ? fileDraft.widthProfile.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters]) : rows(form.widths, 3)).map(([fromOffsetMeters, toOffsetMeters, widthMeters]) => {
     if (fromOffsetMeters !== end || !(toOffsetMeters > fromOffsetMeters) || !(widthMeters > 0) || widthMeters > Number(form.surveyWidth)) throw new GeometryCommandUiError('Các khoảng bề rộng phải liên tiếp và nằm trong bề rộng khảo sát.')
     end = toOffsetMeters
     return { fromOffsetMeters, toOffsetMeters, widthMeters }
   })
   if (Math.abs(end - length) > 1e-7) throw new GeometryCommandUiError('Khoảng bề rộng phải phủ đúng chiều dài tim tuyến đã nhập.')
-  return { sourceKind: 'COORDINATES', sourceCrs: definition.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: form.reason.trim(), roadCode: road.code, roadName: road.name }
+  const input: GeometryDraftInput = { sourceKind: 'COORDINATES', sourceCrs: fileDraft ? fileDraft.sourceCrs : definition!.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: fileDraft ? form.reason : form.reason.trim(), roadCode: road.code, roadName: road.name }
+  if (fileDraft) {
+    try { return parseRoadGuardDraftJson(JSON.stringify(input)) }
+    catch (error) { throw new GeometryCommandUiError(error instanceof RoadGuardDraftValidationError ? error.message : 'Không kiểm tra được bản chỉnh Draft JSON.') }
+  }
+  return input
 }
 
-export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void, sourceUnverified = false) {
+export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void, sourceUnverified = false, fileDraft?: RoadGuardCoordinatesDraft | null) {
   const { user, authEpoch } = useAuthStore()
   const [form, setForm] = useState<GeometryDraftForm>(emptyForm)
   const [awaitingDraftId, setAwaitingDraftId] = useState('')
@@ -143,8 +153,10 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (draft && draft.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp đã xác nhận, không được sửa.')
     if (draft && draft.sourceKind !== 'COORDINATES') throw new GeometryCommandUiError('Bản nháp dùng hình học native; hồ sơ đọc chưa đủ thông tin tuyến và hiệu chỉnh để sửa an toàn.')
     if (draft && !model.draft?.etag) throw new GeometryCommandUiError('Chưa đọc được phiên bản bản nháp.')
-    if (sourceUnverified) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
-    input = coordinateDraftInput(form, coordinatesText, model)
+    if (sourceUnverified && !fileDraft) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
+    if (model.context?.projectId !== projectId) throw new GeometryCommandUiError('Chưa tải đúng context dự án từ máy chủ.')
+    if (draft && (!draft.roadSectionId || form.sectionId !== draft.roadSectionId)) throw new GeometryCommandUiError('Tuyến đích phải khớp road section của bản nháp đang sửa.')
+    input = coordinateDraftInput(form, coordinatesText, model, fileDraft)
   } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const section = draft?.roadSectionId ? model.context?.roadSections.find(section => section.roadSectionId === draft.roadSectionId) : undefined
   const readiness = model.readiness

@@ -1,20 +1,33 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript')
 const base='src/pages/(pm)/alignment/',sample=fs.readFileSync('tools/fixtures/Roadguard1_RoadGuard_GeometryDraft.json','utf8'),plain=v=>JSON.parse(JSON.stringify(v))
-function harness(root=false){
+function harness(root=false,saveMode=false){
  let slot=0,changed=false,pending=[],view,project='p',inputScope='p:a',ready=true,crs=32648
  const values=[],effects=[],readers=[],applied=[],messages=[],mapInputs=[]
  const model={draftId:'a',projects:[],context:null,geometry:null,draft:null,invalidate(){}}
  const react={useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>{const v=typeof next==='function'?next(values[i]):next;if(!Object.is(v,values[i])){values[i]=v;changed=true}}]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useMemo:fn=>fn(),useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||!deps||deps.some((d,j)=>!Object.is(d,old.deps[j])))pending.push({i,setup,deps})}}
  const workflow={form:{origin:'',widths:'',reason:'',surveyWidth:''},busy:false,conflict:false,setForm(next){workflow.form=typeof next==='function'?next(workflow.form):next}}
  const mocks={react,'maplibre-gl':{},'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:project})},'../../../store/authStore':{useAuthStore:()=>({user:{role:'PROJECT_MANAGER'},authEpoch:1})},'../../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'./data':{SEGMENT_COLORS:['#C9A227']},'./useGeometryReadModel':{useGeometryReadModel:()=>model},'./useGeometryDraftWorkflow':{useGeometryDraftWorkflow(_p,model,_text,setText){react.useEffect(()=>{if(model.draft){workflow.form={origin:'-99',widths:'server'};setText('server')}},[model.draft]);return workflow}},'./useAlignmentMapState':{useAlignmentMapState(params){mapInputs.push(params.currentCoords);return{syncMap(){},handleFitBounds(){},mapRef:{current:null}}}}}
+ const calls=[],journal=new Map(),control={error:null,badReceipt:false,badReadback:false,badVersion:false,badSection:false},authState={user:{id:'pm',role:'PROJECT_MANAGER'},authEpoch:1,isAuthenticated:true}
+ const v1='"AAAAAAAAAAE="',v2='"AAAAAAAAAAI="'
+ let serverDraft={...JSON.parse(sample),id:'saved-draft',projectId:'p',roadSectionId:'road',status:'DRAFT',version:'AAAAAAAAAAI='}
+ const response=data=>({data,headers:{etag:v2}})
+ const client={async post(url,body,config){return write('POST',url,body,config)},async put(url,body,config){return write('PUT',url,body,config)},async get(url){calls.push({method:'GET',url});return{data:{...serverDraft,...(control.badReadback?{id:'wrong-draft'}:{}),...(control.badSection?{roadSectionId:'other'}:{})},headers:{etag:control.badVersion?v1:v2}}}}
+ async function write(method,url,body,config){calls.push({method,url,body:plain(body),headers:config.headers});if(control.error)throw control.error;serverDraft={...serverDraft,...plain(body)};return response(control.badReceipt?{...serverDraft,version:null}:serverDraft)}
+ if(saveMode){
+  delete mocks['./useGeometryDraftWorkflow'];model.draftId='';model.profiles=[]
+  mocks['../../../store/authStore']={useAuthStore:Object.assign(()=>authState,{getState:()=>authState,subscribe(){}})};mocks['../../store/authStore']=mocks['../../../store/authStore']
+  mocks['../../types/enums']=mocks['../../../types/enums'];mocks['../client']={apiClient:client};mocks['./projectService']={projectService:{}}
+  model.openDraft=id=>{model.draftId=id};model.retry=()=>{model.draft=null;model.draftLoading=true};model.openConfirmed=()=>{throw Error('Must not confirm')}
+ }
  class FileReader{constructor(){readers.push(this)}readAsText(){}}
- function load(file){const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText;vm.runInNewContext(code,{module,exports:module.exports,require(name){if(name in mocks)return mocks[name];if(name.startsWith('.'))return load(path.join(path.dirname(file),name+'.ts'));throw Error('Unexpected '+name)},Error,FileReader,console,setTimeout(){}});return module.exports}
+ const modules=new Map()
+ function load(file){file=path.normalize(file);if(modules.has(file))return modules.get(file);const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText;modules.set(file,module.exports);vm.runInNewContext(code,{module,exports:module.exports,require(name){if(name in mocks)return mocks[name];if(name.startsWith('.'))return load(path.join(path.dirname(file),name+'.ts'));throw Error('Unexpected '+name)},Error,FileReader,console,setTimeout(){},crypto:require('crypto').webcrypto,sessionStorage:{getItem:k=>journal.get(k)||null,setItem:(k,v)=>journal.set(k,v),removeItem:k=>journal.delete(k)}});return module.exports}
  const hook=load(base+(root?'useAlignmentState.ts':'useAlignmentImportState.ts'))[root?'useAlignmentState':'useAlignmentImportState']
  function flush(){for(let i=0;i<25;i++){changed=false;slot=0;pending=[];view=root?hook():hook({inputScope,contextReady:ready,engineeringCrs:crs,onRoadGuardDraft:draft=>applied.push(draft),onDraftInput(){},defaultManualText:'',showToast:m=>messages.push(m),currentCoords:[],currentKmPoints:[],importedLengthKm:0});if(changed)continue;for(const e of pending){effects[e.i]?.cleanup?.();effects[e.i]={deps:e.deps,cleanup:e.setup()}}if(!changed)return view}throw Error('Hook did not settle')}
  flush()
- return{model,workflow,readers,applied,messages,mapInputs,flush,get view(){return view},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
+ return{model,workflow,readers,applied,messages,mapInputs,calls,control,flush,v1,v2,get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
-let count=0;function test(name,run){run();console.log('PASS '+name);count++}
+const tests=[];function test(name,run){tests.push({name,run})}
 test('sample waits for context and CRS match, preserves full DTO and remains unsaved',()=>{
  const h=harness();h.context(false,null);h.read(sample);assert.equal(h.applied.length,0);assert.match(h.view.readMessage,/context/)
  h.context(true,32649);assert.equal(h.applied.length,0);assert.match(h.view.readMessage,/không khớp/)
@@ -70,4 +83,32 @@ test('Draft to GeoJSON removes old width length chainage and technical form with
 test('JSX/UI files are unchanged, including existing json accept',()=>{
  const cp=require('child_process');for(const name of ['ImportPanel','AlignmentImportModal','AlignmentSidebar','SidebarWidthProfileTab']){const file=base+name+'.tsx';assert.equal(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'),cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8'}).replaceAll('\r\n','\n'))}
 })
-console.log(`${count} Draft import/state scenarios PASS (mock read model/workflow/map; no API save).`)
+test('Draft JSON create uses current sidebar width and exact coordinates; receipt hydrate fences repeated clicks',async()=>{
+ const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'Road'}]};h.flush();h.read(sample)
+ h.view.handleUpdateSegmentWidth(h.view.activeSegments[0].id,9);h.view.markWidthDraft();h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
+ const save=h.view.handleSubmitAlignment;await Promise.all([save(),save()]);h.flush()
+ const writes=h.calls.filter(c=>c.method!=='GET');assert.equal(writes.length,1);assert.equal(writes[0].method,'POST');assert.equal(writes[0].url,'/projects/p/road-sections/road/geometry-drafts');assert.ok(writes[0].headers['Idempotency-Key']);assert.equal(writes[0].body.widthProfile[0].widthMeters,9);assert.equal(writes[0].body.widthProfile[0].toOffsetMeters,JSON.parse(sample).widthProfile[0].toOffsetMeters);assert.deepEqual(writes[0].body.coordinates,JSON.parse(sample).coordinates);assert.equal(writes[0].body.sourceCrs,32648);assert.equal(writes[0].body.surveyWidthMeters,12)
+ assert.equal(h.view.draftWorkflow.busy,true);await h.view.handleSubmitAlignment();assert.equal(h.calls.filter(c=>c.method!=='GET').length,1)
+ h.hydrate();assert.equal(h.view.draftWorkflow.busy,false);assert.match(h.view.draftWorkflow.message,/Đã đọc lại bản nháp đã lưu/);h.unmount()
+})
+test('Draft JSON update sends loaded If-Match and current edited fields',async()=>{
+ const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'Road'}]};h.model.draftId='saved-draft';h.model.draft={data:{...JSON.parse(sample),id:'saved-draft',projectId:'p',roadSectionId:'road',status:'DRAFT',originalCoordinates:JSON.parse(sample).coordinates},etag:h.v1};h.flush();h.read(sample)
+ h.view.handleUpdateAllWidths(10);h.view.markWidthDraft();h.view.draftWorkflow.setForm(old=>({...old,origin:'100',reason:'Lý do mới',surveyWidth:'15'}));h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
+ await h.view.handleSubmitAlignment();h.flush();const write=h.calls.find(c=>c.method==='PUT');assert.ok(write);assert.equal(write.headers['If-Match'],h.v1);assert.equal(write.body.widthProfile[0].widthMeters,10);assert.equal(write.body.stationOriginMeters,100);assert.equal(write.body.changeReason,'Lý do mới');assert.equal(write.body.surveyWidthMeters,15);h.hydrate();assert.equal(h.view.draftWorkflow.busy,false);h.unmount()
+})
+test('missing or ambiguous target, wrong CRS/project, unknown GeoJSON and invalid edited width never write',async()=>{
+ const h=harness(true,true),sections=[{roadSectionId:'r1',code:'R1'},{roadSectionId:'r2',code:'R2'}];h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:sections};h.flush();h.read(sample);assert.match(h.view.draftWorkflow.saveReason,/một tuyến/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
+ h.view.draftWorkflow.setForm(old=>({...old,sectionId:'r1'}));h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
+ h.model.context={...h.model.context,engineeringUtmSrid:32649};h.flush();assert.match(h.view.draftWorkflow.saveReason,/không khớp/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
+ h.model.context={...h.model.context,projectId:'other'};h.flush();assert.match(h.view.draftWorkflow.saveReason,/context/)
+ h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:sections};h.flush();h.view.handleUpdateAllWidths(99);h.view.markWidthDraft();h.flush();await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
+ h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.match(h.view.draftWorkflow.saveReason,/chưa có mapping/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0);h.unmount()
+})
+test('HTTP failure retains current draft and sidebar without automatic replay',async()=>{
+ const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R'}]};h.flush();h.read(sample);h.view.handleUpdateAllWidths(9);h.view.markWidthDraft();h.flush();const text=h.view.importState.manualCoordsText;h.control.error=Object.assign(Error('503'),{response:{status:503,data:{code:'dependency_unavailable'}}})
+ await h.view.handleSubmitAlignment();h.flush();assert.equal(h.view.importState.manualCoordsText,text);assert.equal(h.view.activeSegments[0].roadWidthM,9);assert.equal(h.view.fileDraft.sourceCrs,32648);assert.ok(h.view.draftWorkflow.pending);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,1);h.unmount()
+})
+test('receipt missing version or readback with wrong draft/section/version is held and never acknowledged or rewritten',async()=>{
+ for(const field of ['badReceipt','badReadback','badVersion','badSection']){const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R'}]};h.flush();h.read(sample);h.control[field]=true;await h.view.handleSubmitAlignment();h.flush();assert.equal(h.model.draftId,'');assert.ok(h.view.draftWorkflow.pending.receipt);await h.view.handleSubmitAlignment();assert.equal(h.calls.filter(c=>c.method==='POST').length,1);if(field!=='badReceipt'){h.control[field]=false;await h.view.draftWorkflow.retryCommand();h.flush();assert.equal(h.calls.filter(c=>c.method==='POST').length,1);h.hydrate();assert.equal(h.view.draftWorkflow.busy,false)}h.unmount()}
+})
+;(async()=>{let count=0;for(const {name,run}of tests){await run();console.log('PASS '+name);count++}console.log(`${count} Draft import/state/save scenarios PASS (mock HTTP; no runtime writes).`)})().catch(error=>{console.error(error);process.exitCode=1})

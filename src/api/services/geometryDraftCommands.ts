@@ -89,9 +89,13 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     }
     const draft = receipt as GeometryDraftView
     if (!draft.id || intent.kind === 'update' && draft.id !== intent.draftId) throw new Error('Receipt bản nháp thiếu hoặc sai reference.')
+    const sectionId = intent.kind === 'create' ? intent.sectionId : draft.roadSectionId
+    const receiptEtag = `"${draft.version || ''}"`
+    if (!sectionId || draft.roadSectionId !== sectionId || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(receiptEtag)) throw new Error('Receipt bản nháp thiếu tuyến hoặc phiên bản hợp lệ.')
     const readback = await alignmentService.getGeometryDraft(projectId, draft.id)
     current()
     if (!/^"[A-Za-z0-9+/]+={0,2}"$/.test(readback.etag)) throw new Error('Readback chưa có phiên bản hợp lệ.')
+    if (readback.data.projectId !== projectId || readback.data.id !== draft.id || readback.data.roadSectionId !== sectionId || readback.etag !== receiptEtag) throw new Error('Readback không khớp draft/tuyến/phiên bản của receipt; cần đối chiếu trước khi gửi lệnh mới.')
     save(journal, null)
     return { kind: intent.kind, draft: readback }
   } catch (error: any) {

@@ -128,7 +128,7 @@ await test('201 with readback503 keeps receipt and retry never POSTs again',asyn
 })
 await test('update conflict preserves input/key and requires explicit new-version decision; exact If-Match',async()=>{
  const calls=[];let conflict=true
- const c=commands({put:async(url,body,config)=>{calls.push({body:JSON.stringify(body),headers:config.headers});if(conflict)throw fail(412,'concurrency_conflict');return ok({...dto,version:'AAAAAAAAAAI='})},get:async()=>ok({...dto,version:'AAAAAAAAAAI='})})
+ const c=commands({put:async(url,body,config)=>{calls.push({body:JSON.stringify(body),headers:config.headers});if(conflict)throw fail(412,'concurrency_conflict');return ok({...dto,version:'AAAAAAAAAAI='})},get:async()=>({data:{...dto,version:'AAAAAAAAAAI='},headers:{etag:'"AAAAAAAAAAI="'}})})
  await assert.rejects(c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:draftInput}),e=>e.response.status===412)
  assert.equal(c.pendingDraftCommand('p').command.input.changeReason,draftInput.changeReason);await assert.rejects(c.runDraftCommand('p'),/phiên bản mới/);assert.equal(calls.length,1)
  c.acceptFreshDraftVersion('p');conflict=false;await c.runDraftCommand('p',{kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAI="',input:draftInput})
