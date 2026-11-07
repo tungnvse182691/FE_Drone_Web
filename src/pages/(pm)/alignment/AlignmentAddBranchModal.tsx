@@ -8,11 +8,7 @@ import {
   FileCode2
 } from 'lucide-react'
 import { BranchItem } from './types'
-import {
-  calculateCoordsLengthKm,
-  calculateStationFromCoordinate,
-  smoothRoadPolyline
-} from './alignmentGeometryHelpers'
+import { parseBranchCoordinates, branchKmPoints, branchJunction, prepareBranchPreview } from './alignmentBranchHelpers'
 
 export interface AlignmentAddBranchModalProps {
   isOpen: boolean
@@ -32,16 +28,15 @@ export const AlignmentAddBranchModal: React.FC<AlignmentAddBranchModalProps> = (
   isOpen,
   onClose,
   onAddBranch,
-  stationOriginKm,
   currentCoords = [],
   currentKmPoints = []
 }) => {
-  const [name, setName] = useState('Nhánh rẽ kết nối')
-  const [roadWidthM, setRoadWidthM] = useState<number>(8.0)
-  const [roadWidthMText, setRoadWidthMText] = useState<string>('8.0')
-  const [laneCount, setLaneCount] = useState<number>(2)
-  const [laneCountText, setLaneCountText] = useState<string>('2')
-  const [surfaceMaterial, setSurfaceMaterial] = useState<string>('Mặt BTN C12.5')
+  const [name, setName] = useState('')
+  const [, setRoadWidthM] = useState<number>(Number.NaN)
+  const [roadWidthMText, setRoadWidthMText] = useState<string>('')
+  const [, setLaneCount] = useState<number>(Number.NaN)
+  const [laneCountText, setLaneCountText] = useState<string>('')
+  const [surfaceMaterial, setSurfaceMaterial] = useState<string>('')
 
   // Danh sách tọa độ GPS
   const [branchCoordsText, setBranchCoordsText] = useState<string>('')
@@ -50,125 +45,35 @@ export const AlignmentAddBranchModal: React.FC<AlignmentAddBranchModalProps> = (
   // Reset toàn bộ form về trạng thái tuyến nhánh mới tinh mỗi khi mở modal
   useEffect(() => {
     if (isOpen) {
-      setName('Nhánh rẽ kết nối')
+      setName('')
       setBranchCoordsText('')
       setErrorMessage(null)
-      setRoadWidthM(8.0)
-      setRoadWidthMText('8.0')
-      setLaneCount(2)
-      setLaneCountText('2')
-      setSurfaceMaterial('Mặt BTN C12.5')
+      setRoadWidthM(Number.NaN)
+      setRoadWidthMText('')
+      setLaneCount(Number.NaN)
+      setLaneCountText('')
+      setSurfaceMaterial('')
     }
   }, [isOpen])
 
-  // Parse tọa độ từ chuỗi text
-  const parseCoordsFromText = (txt: string): [number, number][] => {
-    const lines = txt.trim().split('\n')
-    const result: [number, number][] = []
-    for (const l of lines) {
-      const parts = l.split(/[\s,]+/).filter(Boolean)
-      if (parts.length >= 2) {
-        const lng = parseFloat(parts[0])
-        const lat = parseFloat(parts[1])
-        if (!isNaN(lng) && !isNaN(lat)) {
-          result.push([lng, lat])
-        }
-      }
-    }
-    return result
-  }
+  let parsedPoints: [number, number][] = []
+  try { parsedPoints = parseBranchCoordinates(branchCoordsText) } catch { /* Submit reports the precise invalid field. */ }
+  const points = branchKmPoints(parsedPoints)
+  const autoCalculatedLengthKm = parsedPoints.length ? points[points.length - 1] : Number.NaN
+  const detectedStation = branchJunction(parsedPoints, currentCoords, currentKmPoints)
 
-  const parsedPoints = parseCoordsFromText(branchCoordsText)
-  const autoCalculatedLengthKm = calculateCoordsLengthKm(parsedPoints)
-
-  // Tự động chiếu điểm đầu tiên lên tim tuyến chính để xác định lý trình điểm rẽ chuẩn xác
-  const detectedStation =
-    parsedPoints.length > 0 && currentCoords.length >= 2
-      ? calculateStationFromCoordinate(parsedPoints[0], currentCoords, currentKmPoints)
-      : null
-
-  // Mẫu tọa độ nhanh nếu cần kiểm tra thử
-  const handleLoadSampleCoords = () => {
-    if (currentCoords.length >= 2) {
-      const p0 = currentCoords[Math.floor(currentCoords.length / 3)] || currentCoords[0]
-      const p1: [number, number] = [Number((p0[0] + 0.0035).toFixed(6)), Number((p0[1] + 0.0025).toFixed(6))]
-      const p2: [number, number] = [Number((p0[0] + 0.0070).toFixed(6)), Number((p0[1] + 0.0050).toFixed(6))]
-      setBranchCoordsText(`${p0[0]}, ${p0[1]}\n${p1[0]}, ${p1[1]}\n${p2[0]}, ${p2[1]}`)
-      setErrorMessage(null)
-    } else {
-      setBranchCoordsText('108.105400, 16.258900\n108.112000, 16.264000\n108.118500, 16.269500')
-    }
-  }
+  const handleLoadSampleCoords = () => setErrorMessage('Không nạp tuyến mẫu. Hãy nhập tọa độ nhánh có nguồn; không tự nối hoặc bo cong.')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
-
-    if (parsedPoints.length < 2) {
-      setErrorMessage('Vui lòng nhập hoặc dán danh sách ít nhất 2 điểm tọa độ GPS [Kinh độ, Vĩ độ] hợp lệ!')
-      return
-    }
-
-    const finalWidth = parseFloat(roadWidthMText) || roadWidthM || 8.0
-    const finalLanes = parseInt(laneCountText) || laneCount || 2
-
-    // Xác định điểm rẽ chuẩn xác nhất từ hình chiếu điểm đầu tiên lên trục chính
-    const detected =
-      currentCoords.length >= 2
-        ? calculateStationFromCoordinate(parsedPoints[0], currentCoords, currentKmPoints)
-        : { km: stationOriginKm, stationText: `Km ${Math.floor(stationOriginKm)}+000`, distanceMeters: 0 }
-
-    // Giữ nguyên 100% tọa độ thực tế theo đúng thứ tự mốc điểm người dùng nhập
-    let finalBranchCoords = [...parsedPoints]
-    finalBranchCoords = smoothRoadPolyline(finalBranchCoords)
-
-    const finalLen = calculateCoordsLengthKm(finalBranchCoords) || autoCalculatedLengthKm || 0.5
-
-    // Tự động sinh phân đoạn cho tuyến nhánh theo chiều dài tự tính
-    const step = finalLen > 2.0 ? 1.0 : finalLen > 0.8 ? 0.5 : 0.25
-    const segCount = Math.max(1, Math.ceil(finalLen / step))
-    const defaultSegs: any[] = []
-    let curKm = 0.0
-    for (let i = 1; i <= segCount; i++) {
-      const nextKm = i === segCount ? finalLen : parseFloat((curKm + step).toFixed(3))
-      defaultSegs.push({
-        id: `br-seg-${Date.now()}-${i}`,
-        code: `Đoạn nhánh #${String(i).padStart(2, '0')}`,
-        startKm: parseFloat(curKm.toFixed(3)),
-        endKm: parseFloat(nextKm.toFixed(3)),
-        lengthKm: parseFloat((nextKm - curKm).toFixed(3)),
-        roadWidthM: finalWidth,
-        status: 'VALID',
-        statusText: 'HỢP LỆ',
-        laneCount: finalLanes,
-        surfaceMaterial: surfaceMaterial || 'Mặt BTN C12.5',
-        color: '#D97706'
-      })
-      curKm = nextKm
-    }
-
-    const newBranch: BranchItem = {
-      id: `br-${Date.now()}`,
-      code: `BR-${Math.floor(Math.random() * 900 + 100)}`,
-      name: name.trim() || 'Nhánh rẽ kết nối',
-      branchStationKm: detected.km,
-      branchStationText: detected.stationText,
-      direction: 'RIGHT',
-      directionText: `Rẽ tại ${detected.stationText}`,
-      lengthKm: finalLen,
-      roadWidthM: finalWidth,
-      laneCount: finalLanes,
-      surfaceMaterial,
-      color: '#D97706',
-      status: 'DRAFT',
-      coords: finalBranchCoords,
-      segments: defaultSegs,
-      splitDistance: step
-    }
-
-    onAddBranch(newBranch)
-    setBranchCoordsText('')
-    onClose()
+    try {
+      const branch = prepareBranchPreview({ id: 'br-' + crypto.randomUUID(), name, coords: parseBranchCoordinates(branchCoordsText),
+        roadWidthM: Number(roadWidthMText), laneCount: Number(laneCountText), surfaceMaterial }, currentCoords, currentKmPoints)
+      onAddBranch(branch)
+      setBranchCoordsText('')
+      onClose()
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Không kiểm tra được dữ liệu nhánh.') }
   }
 
   if (!isOpen) return null

@@ -1,3 +1,4 @@
+import { branchLineRange, validateBranchCoordinates } from './alignmentBranchHelpers'
 import { buildMainlinePavementGeoJSON } from './alignmentPavementHelpers'
 import { AssignedProjectOption, SegmentItem } from './types'
 import {
@@ -622,56 +623,8 @@ export interface SlabsCustomConfig {
   expansionGapMm?: number
 }
 
-export function getBranchLineCoords(
-  startKm: number,
-  endKm: number,
-  bCoords: [number, number][],
-  totalLenKm: number
-): [number, number][] {
-  if (!bCoords || bCoords.length < 2) return []
-  if (startKm <= 0 && endKm >= totalLenKm) return bCoords
-
-  const latMid = bCoords[0][1]
-  const mLat = 111320
-  const mLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-  const cumDists: number[] = [0]
-  for (let i = 0; i < bCoords.length - 1; i++) {
-    const dx = (bCoords[i + 1][0] - bCoords[i][0]) * mLng
-    const dy = (bCoords[i + 1][1] - bCoords[i][1]) * mLat
-    cumDists.push(cumDists[i] + (Math.sqrt(dx * dx + dy * dy) || 0.001))
-  }
-  const fullM = cumDists[cumDists.length - 1]
-  if (fullM <= 0.5) return bCoords
-
-  const startM = Math.max(0, (startKm / Math.max(0.001, totalLenKm)) * fullM)
-  const endM = Math.min(fullM, (endKm / Math.max(0.001, totalLenKm)) * fullM)
-
-  const interp = (targetM: number): [number, number] => {
-    if (targetM <= 0) return bCoords[0]
-    if (targetM >= fullM) return bCoords[bCoords.length - 1]
-    for (let i = 0; i < cumDists.length - 1; i++) {
-      if (targetM >= cumDists[i] && targetM <= cumDists[i + 1]) {
-        const span = cumDists[i + 1] - cumDists[i]
-        if (span <= 1e-6) return bCoords[i]
-        const t = (targetM - cumDists[i]) / span
-        return [
-          Number((bCoords[i][0] + t * (bCoords[i + 1][0] - bCoords[i][0])).toFixed(7)),
-          Number((bCoords[i][1] + t * (bCoords[i + 1][1] - bCoords[i][1])).toFixed(7))
-        ]
-      }
-    }
-    return bCoords[bCoords.length - 1]
-  }
-
-  const result: [number, number][] = [interp(startM)]
-  for (let i = 0; i < cumDists.length; i++) {
-    if (cumDists[i] > startM && cumDists[i] < endM) {
-      result.push(bCoords[i])
-    }
-  }
-  result.push(interp(endM))
-  return result
+export function getBranchLineCoords(startKm: number, endKm: number, coords: [number, number][], _totalLenKm: number): [number, number][] {
+  return branchLineRange(coords, startKm, endKm)
 }
 
 export function buildSlabsAndJointsGeoJSON(
@@ -694,6 +647,7 @@ export function buildSlabsAndJointsGeoJSON(
 
   // 2. SINH ĐẦY ĐỦ TẤM BÊ TÔNG, KHE CO, KHE GIÃN & THÔNG SỐ 2 MÉP CHO CÁC TUYẾN NHÁNH PHỤ
   branchList.forEach((br) => {
+    if (br.previewOnly) return // Branch pavement is outside the local branch editing flow.
     // Legacy branch-only configuration; mainline never uses these defaults.
     const slabLengthM = 5.0
     const slabThicknessCm = 26
@@ -994,230 +948,43 @@ export function buildSlabsAndJointsGeoJSON(
 }
 
 // Xây dựng GeoJSON dải bề mặt đường Polygon cho các Tuyến nhánh (Branch Surfaces)
-export function buildBranchesSurfaceGeoJSON(
-  branchList: any[],
-  coords: [number, number][],
-  kmPts: number[],
-  selectedBranchId: string | null = null
-): GeoJSON.FeatureCollection {
+export function buildBranchesSurfaceGeoJSON(branchList: any[], _coords: [number, number][], _kmPts: number[], selectedBranchId: string | null = null): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
-
-  branchList.forEach((br) => {
-    let branchCoords: [number, number][] = br.coords
-    const branchStation = br.branchStationKm || kmPts[0] || 1020
-
-    if (!branchCoords || branchCoords.length < 2) {
-      if (coords.length >= 2) {
-        const startPt = interpolateCoordAtKm(branchStation, coords, kmPts)
-        const stepAheadKm = Math.min(branchStation + 0.1, kmPts[kmPts.length - 1] || branchStation + 0.1)
-        const nextPt = interpolateCoordAtKm(stepAheadKm, coords, kmPts)
-
-        const dx = nextPt[0] - startPt[0]
-        const dy = nextPt[1] - startPt[1]
-        const len = Math.sqrt(dx * dx + dy * dy) || 0.001
-        const ux = dx / len
-        const uy = dy / len
-
-        const sign = br.direction === 'LEFT' ? -1 : 1
-        const perpX = uy * sign
-        const perpY = -ux * sign
-
-        const angleUx = ux * 0.707 + perpX * 0.707
-        const angleUy = uy * 0.707 + perpY * 0.707
-
-        const targetLenKm = br.lengthKm || 1.85
-        const latMid = startPt[1]
-        const metersPerDegLat = 111320
-        const metersPerDegLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-        const totalMeters = targetLenKm * 1000
-        const deltaX = (angleUx * totalMeters) / metersPerDegLng
-        const deltaY = (angleUy * totalMeters) / metersPerDegLat
-
-        const midPt: [number, number] = [
-          Number((startPt[0] + deltaX * 0.45).toFixed(7)),
-          Number((startPt[1] + deltaY * 0.45).toFixed(7))
-        ]
-        const endPt: [number, number] = [
-          Number((startPt[0] + deltaX).toFixed(7)),
-          Number((startPt[1] + deltaY).toFixed(7))
-        ]
-        branchCoords = [startPt, midPt, endPt]
-      } else {
-        branchCoords = []
+  for (const branch of branchList) {
+    let coords: [number, number][]
+    try { coords = validateBranchCoordinates(branch.coords) } catch { continue }
+    const segments = branch.segments?.length ? branch.segments : [{ id: branch.id, code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial }]
+    for (const segment of segments) {
+      if (!Number.isFinite(segment.roadWidthM) || segment.roadWidthM <= 0) continue
+      const line = branchLineRange(coords, segment.startKm, segment.endKm)
+      if (line.length < 2) continue
+      const left: [number, number][] = [], right: [number, number][] = []
+      for (let i = 0; i < line.length; i++) {
+        const point = line[i], before = line[Math.max(0, i - 1)], after = line[Math.min(line.length - 1, i + 1)], mLng = 111320 * Math.cos(point[1] * Math.PI / 180)
+        const dx = (after[0] - before[0]) * mLng, dy = (after[1] - before[1]) * 111320, norm = Math.hypot(dx, dy), half = segment.roadWidthM / 2
+        if (!(norm > 0)) continue
+        left.push([point[0] - dy / norm * half / mLng, point[1] + dx / norm * half / 111320]); right.push([point[0] + dy / norm * half / mLng, point[1] - dx / norm * half / 111320])
       }
+      if (left.length < 2) continue
+      features.push({ type: 'Feature', properties: { ...segment, branchId: branch.id, branchCode: branch.code, color: segment.color || branch.color, isSelected: selectedBranchId === branch.id || selectedBranchId === segment.id, preview: true }, geometry: { type: 'Polygon', coordinates: [[...left, ...right.reverse(), left[0]]] } })
     }
-
-    if (branchCoords && branchCoords.length >= 2) {
-      branchCoords = smoothRoadPolyline(branchCoords)
-      const actualBranchKm = calculateCoordsLengthKm(branchCoords) || br.lengthKm || 1.0
-      const maxSegKm = Math.max(actualBranchKm, ...(br.segments || []).map((s: any) => s.endKm || 0))
-      const totalBranchKm = Math.max(0.01, maxSegKm)
-
-      const brSegments: any[] = (br.segments && br.segments.length > 0)
-        ? br.segments
-        : [{
-            id: br.id,
-            code: br.code,
-            name: br.name,
-            startKm: 0.0,
-            endKm: totalBranchKm,
-            lengthKm: totalBranchKm,
-            roadWidthM: br.roadWidthM || 8.0,
-            color: br.color || '#D97706'
-          }]
-
-      brSegments.forEach((seg: any) => {
-        const segCoords = getBranchLineCoords(seg.startKm, seg.endKm, branchCoords, totalBranchKm)
-        if (segCoords && segCoords.length >= 2) {
-          const roadW = seg.roadWidthM || br.roadWidthM || 8.0
-          let ring = generateRoadRibbonPolygon(segCoords, roadW)
-          if (!ring || ring.length < 4) {
-            const halfW = roadW / 2.0
-            const left: [number, number][] = []
-            const right: [number, number][] = []
-            const latMid = segCoords[0][1]
-            const mLat = 111320
-            const mLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-            for (let k = 0; k < segCoords.length; k++) {
-              const pt = segCoords[k]
-              const nextK = segCoords[Math.min(segCoords.length - 1, k + 1)]
-              const prevK = segCoords[Math.max(0, k - 1)]
-              const dLng = (nextK[0] - prevK[0]) * mLng
-              const dLat = (nextK[1] - prevK[1]) * mLat
-              const dLen = Math.sqrt(dLng * dLng + dLat * dLat) || 1
-              const nX = -dLat / dLen
-              const nY = dLng / dLen
-              left.push([
-                Number((pt[0] + (nX * halfW) / mLng).toFixed(7)),
-                Number((pt[1] + (nY * halfW) / mLat).toFixed(7))
-              ])
-              right.push([
-                Number((pt[0] - (nX * halfW) / mLng).toFixed(7)),
-                Number((pt[1] - (nY * halfW) / mLat).toFixed(7))
-              ])
-            }
-            ring = [...left, ...right.reverse(), left[0]]
-          }
-
-          if (ring && ring.length >= 4) {
-            features.push({
-              type: 'Feature',
-              properties: {
-                id: seg.id,
-                code: seg.code,
-                name: `${br.name} - ${seg.code}`,
-                branchId: br.id,
-                branchCode: br.code,
-                startKm: seg.startKm,
-                endKm: seg.endKm,
-                lengthKm: seg.lengthKm,
-                color: seg.color || br.color || '#D97706',
-                isSelected: selectedBranchId === seg.id || selectedBranchId === br.id,
-                roadWidthM: roadW,
-                isBranch: true
-              },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [ring]
-              }
-            })
-          }
-        }
-      })
-    }
-  })
-
-  return {
-    type: 'FeatureCollection',
-    features
   }
+  return { type: 'FeatureCollection', features }
 }
 
-// Xây dựng GeoJSON cho tim tuyến và nhãn các Tuyến nhánh (Branch Alignments)
-export function buildBranchesGeoJSON(
-  branchList: any[],
-  coords: [number, number][],
-  kmPts: number[]
-): GeoJSON.FeatureCollection {
+export function buildBranchesGeoJSON(branchList: any[], _coords: [number, number][], _kmPts: number[]): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = []
-
-  branchList.forEach((br) => {
-    let branchCoords: [number, number][] = br.coords
-    const branchStation = br.branchStationKm || kmPts[0] || 1020
-
-    if (!branchCoords || branchCoords.length < 2) {
-      if (coords.length >= 2) {
-        const startPt = interpolateCoordAtKm(branchStation, coords, kmPts)
-        const stepAheadKm = Math.min(branchStation + 0.1, kmPts[kmPts.length - 1] || branchStation + 0.1)
-        const nextPt = interpolateCoordAtKm(stepAheadKm, coords, kmPts)
-
-        const dx = nextPt[0] - startPt[0]
-        const dy = nextPt[1] - startPt[1]
-        const len = Math.sqrt(dx * dx + dy * dy) || 0.001
-        const ux = dx / len
-        const uy = dy / len
-
-        const sign = br.direction === 'LEFT' ? -1 : 1
-        const perpX = uy * sign
-        const perpY = -ux * sign
-
-        const angleUx = ux * 0.707 + perpX * 0.707
-        const angleUy = uy * 0.707 + perpY * 0.707
-
-        const targetLenKm = br.lengthKm || 1.85
-        const latMid = startPt[1]
-        const metersPerDegLat = 111320
-        const metersPerDegLng = Math.max(1000, 111320 * Math.cos((latMid * Math.PI) / 180))
-
-        const totalMeters = targetLenKm * 1000
-        const deltaX = (angleUx * totalMeters) / metersPerDegLng
-        const deltaY = (angleUy * totalMeters) / metersPerDegLat
-
-        const midPt: [number, number] = [
-          Number((startPt[0] + deltaX * 0.45).toFixed(7)),
-          Number((startPt[1] + deltaY * 0.45).toFixed(7))
-        ]
-        const endPt: [number, number] = [
-          Number((startPt[0] + deltaX).toFixed(7)),
-          Number((startPt[1] + deltaY).toFixed(7))
-        ]
-        branchCoords = [startPt, midPt, endPt]
-      } else {
-        branchCoords = []
-      }
+  for (const branch of branchList) {
+    let coords: [number, number][]
+    try { coords = validateBranchCoordinates(branch.coords) } catch { continue }
+    const segments = branch.segments?.length ? branch.segments : [{ id: branch.id, code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial }]
+    for (const segment of segments) {
+      const line = branchLineRange(coords, segment.startKm, segment.endKm)
+      if (line.length < 2) continue
+      features.push({ type: 'Feature', properties: { ...segment, branchId: branch.id, branchCode: branch.code, name: branch.name, color: segment.color || branch.color, stationText: branch.branchStationText, directionText: branch.directionText, isBranch: true, isLine: true, preview: true }, geometry: { type: 'LineString', coordinates: line } })
     }
-
-    if (branchCoords && branchCoords.length >= 2) {
-      branchCoords = smoothRoadPolyline(branchCoords)
-      features.push({
-        type: 'Feature',
-        properties: {
-          id: br.id,
-          branchId: br.id,
-          branchCode: br.code,
-          code: br.code,
-          name: br.name,
-          color: br.color || '#D97706',
-          roadWidthM: br.roadWidthM || 8.0,
-          lengthKm: br.lengthKm,
-          stationText: br.branchStationText,
-          directionText: br.directionText,
-          isBranch: true,
-          isLine: true
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: branchCoords
-        }
-      })
-    }
-  })
-
-  return {
-    type: 'FeatureCollection',
-    features
   }
+  return { type: 'FeatureCollection', features }
 }
 
 export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOption {

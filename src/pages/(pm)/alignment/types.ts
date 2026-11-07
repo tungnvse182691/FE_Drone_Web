@@ -41,6 +41,10 @@ export interface BranchItem {
   coords?: [number, number][] // Tọa độ tim tuyến nhánh [lng, lat][]
   segments: SegmentItem[] // Danh sách các phân đoạn của riêng tuyến nhánh này
   splitDistance?: number
+  splitSortOrder?: 'asc' | 'desc'
+  kmPoints?: number[]
+  junctionDistanceMeters?: number
+  previewOnly?: boolean
 }
 
 export interface AssignedProjectOption {

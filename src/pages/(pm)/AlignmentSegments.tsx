@@ -301,7 +301,7 @@ export const AlignmentSegments: React.FC = () => {
           branches={branches}
           selectedTargetType={selectedTargetType}
           onSelectTargetType={setSelectedTargetType}
-          onOpenAddBranchModal={() => showToast('Chưa có nguồn hình học và ngữ cảnh tuyến nhánh được xác minh; chưa thêm tuyến.')}
+          onOpenAddBranchModal={() => setIsAddBranchModalOpen(true)}
           onDeleteBranch={handleDeleteBranch}
           onClearAllSegments={() => { segmentsState.handleClearAllSegments(); markWidthDraft() }}
           onClearMainline={handleClearMainline}

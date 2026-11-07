@@ -1,6 +1,6 @@
 import * as maplibregl from 'maplibre-gl'
 import { SegmentItem } from './types'
-import { interpolateCoordAtKm, smoothRoadPolyline, calculateCoordsLengthKm } from './alignmentGeometryHelpers'
+import { interpolateCoordAtKm } from './alignmentGeometryHelpers'
 import { getBranchLineCoords } from './data'
 
 // Render các Marker lý trình các phân đoạn (Cả trục chính lẫn các tuyến nhánh)
@@ -72,10 +72,8 @@ export function renderAlignmentMarkers(
     let branchCoords: [number, number][] = br.coords
     if (!branchCoords || branchCoords.length < 2) return
 
-    branchCoords = smoothRoadPolyline(branchCoords)
-    const actualBranchKm = calculateCoordsLengthKm(branchCoords) || br.lengthKm || 1.0
-    const maxSegKm = Math.max(actualBranchKm, ...(br.segments || []).map((s: any) => s.endKm || 0))
-    const totalBranchKm = Math.max(0.01, maxSegKm)
+    const totalBranchKm = br.lengthKm
+    if (!Number.isFinite(totalBranchKm) || totalBranchKm <= 0) return
 
     const brSegs: any[] = (br.segments && br.segments.length > 0)
       ? br.segments

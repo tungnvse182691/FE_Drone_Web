@@ -5,10 +5,10 @@ import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { SegmentItem, AssignedProjectOption } from './types'
 import {
-  checkAndEnrichSegmentsContinuity,
-  calculateCoordsLengthKm
+  checkAndEnrichSegmentsContinuity
 } from './alignmentGeometryHelpers'
-import { computeSplitSegmentPair } from './alignmentSplitHelpers'
+import { computeSplitSegmentPair, computeAutoSplitSegments, checkMainlineSegmentsContinuity } from './alignmentSplitHelpers'
+import { prepareBranchPreview } from './alignmentBranchHelpers'
 import { useGeometryDraftWorkflow } from './useGeometryDraftWorkflow'
 import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
@@ -58,6 +58,8 @@ export function useAlignmentState() {
   const geometryRead = useGeometryReadModel(selectedProjectId)
   const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`
   const [editorScope, setEditorScope] = useState(scopeKey)
+  const currentScope = useRef(scopeKey); currentScope.current = scopeKey
+  const branchGeneration = useRef(0), branchVersion = branchGeneration.current
   const editorDraft = useRef('')
   const [fileDraft, setFileDraft] = useState<RoadGuardCoordinatesDraft | null>(null)
   const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
@@ -79,6 +81,8 @@ export function useAlignmentState() {
     setLocalDraftDirty(false); setLocalWidthsDirty(false)
     setFileDraft(null)
     setFilePreviewCoords(null)
+    branchDistances.current.clear()
+    branchGeneration.current++
   }
 
   useEffect(() => {
@@ -101,7 +105,7 @@ export function useAlignmentState() {
   const [localDraftDirty, setLocalDraftDirty] = useState(false)
   const [localWidthsDirty, setLocalWidthsDirty] = useState(false)
   const markLocalDraft = () => setLocalDraftDirty(true)
-  const markWidthDraft = () => { setLocalDraftDirty(true); setLocalWidthsDirty(true) }
+  const markWidthDraft = () => { setLocalDraftDirty(true); if (selectedTargetType === 'MAINLINE') setLocalWidthsDirty(true) }
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
@@ -117,6 +121,9 @@ export function useAlignmentState() {
   const [branches, setBranches] = useState<any[]>([])
   const [selectedTargetType, setSelectedTargetType] = useState<'MAINLINE' | string>('MAINLINE')
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState<boolean>(false)
+  const branchDistances = useRef(new Map<string, number>())
+  const branchEditor = useRef({ branches, selectedTargetType })
+  branchEditor.current = { branches, selectedTargetType }
 
   const roadWidthM = Number.NaN
 
@@ -134,29 +141,27 @@ export function useAlignmentState() {
 
   // Tính tổng quãng đường: Trục chính + Các tuyến nhánh phụ
   const branchesTotalLengthKm = useMemo(() => {
-    return branches.reduce((sum, b) => {
-      const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-      return sum + len
-    }, 0)
+    return branches.reduce((sum, branch) => sum + (Number.isFinite(branch.lengthKm) ? branch.lengthKm : 0), 0)
   }, [branches])
 
   const totalProjectLengthKm = useMemo(() => {
-    return parseFloat((importedLengthKm + branchesTotalLengthKm).toFixed(3))
+    return importedLengthKm + branchesTotalLengthKm
   }, [importedLengthKm, branchesTotalLengthKm])
 
-  const handleAddBranch = (newBranch: any) => {
-    const updatedBranches = [...branches, newBranch]
-    setBranches(updatedBranches)
-    setSelectedTargetType(newBranch.id)
-    if (newBranch.segments && newBranch.segments.length > 0) {
-      segmentsState.setSelectedSegmentId(newBranch.segments[0].id)
-    } else {
-      segmentsState.setSelectedSegmentId(newBranch.id)
-    }
-
-    // Tự động tính tổng quãng đường mới và lưu tức thì
-
-    showToast(`Đã tạo thành công tuyến nhánh [${newBranch.code}] ${newBranch.name}`)
+  const commitBranches = (updated: any[], selection: string | null = segmentsState.selectedSegmentId) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    branchEditor.current.branches = updated; setBranches(updated); markLocalDraft()
+    mapState.syncMap(segmentsState.segments, selectedTargetType !== 'MAINLINE' && selection === 'ALL' ? selectedTargetType : selection, currentCoords, currentKmPoints, updated)
+  }
+  const handleAddBranch = (input: any) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    try {
+      if (branchEditor.current.branches.some(branch => branch.id === input.id)) throw new Error('ID nhánh cục bộ đã tồn tại.')
+      const branch = prepareBranchPreview(input, currentCoords, currentKmPoints)
+      commitBranches([...branchEditor.current.branches, branch], branch.segments[0].id)
+      selectAlignmentTarget(branch.id)
+      showToast('Đã thêm nhánh từ hình học nguồn; lý trình nối chỉ là tham chiếu, chưa lưu/xác nhận.')
+    } catch (error) { showToast(error instanceof Error ? error.message : 'Dữ liệu nhánh không hợp lệ.') }
   }
 
   // Hook 1: Segments & Slabs State
@@ -253,7 +258,7 @@ export function useAlignmentState() {
     segments: segmentsState.segments,
     currentCoords,
     currentKmPoints,
-    selectedSegmentId: segmentsState.selectedSegmentId,
+    selectedSegmentId: selectedTargetType !== 'MAINLINE' && segmentsState.selectedSegmentId === 'ALL' ? selectedTargetType : segmentsState.selectedSegmentId,
     setSelectedSegmentId: (id: string | null) => {
       if (id) {
         handleSelectSegmentFromMap(id)
@@ -414,7 +419,7 @@ export function useAlignmentState() {
   // Danh sách phân đoạn đang kích hoạt (Tuyến chính hoặc Tuyến nhánh được chọn)
   const activeSegments = useMemo(() => {
     if (isMainline) return [...segmentsState.segments].sort((a, b) => segmentsState.splitSortOrder === 'desc' ? b.startKm - a.startKm : a.startKm - b.startKm)
-    return currentBranch?.segments || []
+    return [...(currentBranch?.segments || [])].sort((a, b) => currentBranch?.splitSortOrder === 'desc' ? b.startKm - a.startKm : a.startKm - b.startKm)
   }, [isMainline, segmentsState.segments, segmentsState.splitSortOrder, currentBranch])
 
   // Chiều dài đang kích hoạt
@@ -434,58 +439,39 @@ export function useAlignmentState() {
     if (isMainline) {
       segmentsState.setSplitDistance(dist)
     } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) => (b.id === currentBranch.id ? { ...b, splitDistance: dist } : b))
-      )
+      branchDistances.current.set(currentBranch.id, dist)
+      commitBranches(branchEditor.current.branches.map(branch => branch.id === currentBranch.id ? { ...branch, splitDistance: dist } : branch))
     }
   }
 
   // Áp dụng chia đoạn tự động cho Tuyến chính hoặc Tuyến nhánh
   const handleApplyAutoSplit = () => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
     if (isMainline) {
       segmentsState.handleApplyAutoSplit()
     } else if (currentBranch) {
-      const dist = currentBranch.splitDistance
-      const totalLen = (currentBranch.coords && currentBranch.coords.length >= 2 ? calculateCoordsLengthKm(currentBranch.coords) : 0) || currentBranch.lengthKm
-      if (!Number.isFinite(dist) || !(dist > 0) || !Number.isFinite(totalLen) || !(totalLen > 0)) { showToast('Thiếu chiều dài hoặc cự ly chia nhánh; chưa thay đổi bản nháp.'); return }
-      const count = Math.max(1, Math.ceil(totalLen / dist))
-      const newSegs: any[] = []
-      let cur = 0.0
-      for (let i = 1; i <= count; i++) {
-        const next = i === count ? totalLen : parseFloat((cur + dist).toFixed(3))
-        newSegs.push({
-          id: `br-seg-${currentBranch.id}-${i}`,
-          code: `${currentBranch.code} - Đoạn #${String(i).padStart(2, '0')}`,
-          startKm: parseFloat(cur.toFixed(3)),
-          endKm: parseFloat(next.toFixed(3)),
-          lengthKm: parseFloat((next - cur).toFixed(3)),
-          roadWidthM: currentBranch.roadWidthM ?? Number.NaN,
-          status: 'VALID',
-          statusText: 'HỢP LỆ',
-          laneCount: currentBranch.laneCount ?? Number.NaN,
-          surfaceMaterial: currentBranch.surfaceMaterial || '',
-          color: i % 2 === 0 ? '#F59E0B' : '#D97706'
-        })
-        cur = next
-      }
-      const updatedBranches = branches.map((b) => (b.id === currentBranch.id ? { ...b, segments: newSegs } : b))
-      setBranches(updatedBranches)
-      if (newSegs.length > 0) {
-        segmentsState.setSelectedSegmentId(newSegs[0].id)
-      }
-      mapState.syncMap(segmentsState.segments, newSegs[0]?.id || currentBranch.id, currentCoords, currentKmPoints, updatedBranches)
-      showToast(`Đã chia tự động tuyến nhánh [${currentBranch.code}] thành ${newSegs.length} phân đoạn!`)
+      if (currentScope.current !== scopeKey || branchEditor.current.selectedTargetType !== selectedTargetType) return
+      const branch = branchEditor.current.branches.find(item => item.id === selectedTargetType)
+      if (!branch) return
+      const dist = branchDistances.current.get(branch.id) ?? branch.splitDistance
+      const source = branch.segments.length ? branch.segments : [{ id: branch.id + '-whole', code: branch.code, startKm: 0, endKm: branch.lengthKm, lengthKm: branch.lengthKm, roadWidthM: branch.roadWidthM, laneCount: branch.laneCount, surfaceMaterial: branch.surfaceMaterial, color: branch.color, status: 'VALID' as const, statusText: 'BẢN CHỈNH CHƯA LƯU' }]
+      const divided = computeAutoSplitSegments(branch.lengthKm, 0, dist, branch.roadWidthM, 'asc', source).map((segment, index) => ({ ...segment, id: branch.id + '-segment-' + index, code: branch.code + ' - Đoạn ' + (index + 1) }))
+      if (!divided.length) { showToast('Cự ly hoặc phạm vi nhánh chưa hợp lệ/liên tục; giữ nguyên bản chỉnh.'); return }
+      commitBranches(branchEditor.current.branches.map(item => item.id === branch.id ? { ...item, segments: divided } : item), divided[0].id)
+      segmentsState.setSelectedSegmentId(divided[0].id); mapState.handleFitBounds(branch.coords)
+      showToast('Đã chia lại nhánh đang chọn; giữ thông số và phần dư, chưa lưu máy chủ.')
     }
   }
 
   // Tách 1 phân đoạn (Cho cả Tuyến chính lẫn Tuyến nhánh)
   const handleSplitSegmentSubmit = (e: React.FormEvent) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
     if (isMainline) {
       segmentsState.handleSplitSegmentSubmit(e)
     } else if (currentBranch && segmentsState.splitModalSegment) {
       e.preventDefault()
       const segToSplit = segmentsState.splitModalSegment
-      const splitKm = parseFloat(Number(segmentsState.customSplitKm).toFixed(3))
+      const splitKm = Number(segmentsState.customSplitKm)
       if (!Number.isFinite(splitKm) || splitKm <= segToSplit.startKm || splitKm >= segToSplit.endKm) {
         showToast(`Điểm tách phải nằm giữa Km ${segToSplit.startKm.toFixed(3)} và Km ${segToSplit.endKm.toFixed(3)}!`)
         return
@@ -494,7 +480,9 @@ export function useAlignmentState() {
       const segIndex = segs.findIndex((s: any) => s.id === segToSplit.id)
       if (segIndex === -1) return
 
-      const { segA, segB } = computeSplitSegmentPair(segToSplit, splitKm, segIndex)
+      const { segA, segB } = computeSplitSegmentPair(segToSplit, splitKm, segIndex, true)
+      segA.id = currentBranch.id + '-segment-' + crypto.randomUUID()
+      segB.id = currentBranch.id + '-segment-' + crypto.randomUUID()
       const updatedList = [
         ...segs.slice(0, segIndex),
         segA,
@@ -502,7 +490,7 @@ export function useAlignmentState() {
         ...segs.slice(segIndex + 1)
       ]
       const updatedBranches = branches.map((b) => (b.id === currentBranch.id ? { ...b, segments: updatedList } : b))
-      setBranches(updatedBranches)
+      commitBranches(updatedBranches, segA.id)
       segmentsState.setSelectedSegmentId(segA.id)
       segmentsState.setSplitModalSegment(null)
       mapState.syncMap(segmentsState.segments, segA.id, currentCoords, currentKmPoints, updatedBranches)
@@ -510,119 +498,78 @@ export function useAlignmentState() {
     }
   }
 
-  // Cập nhật bề rộng 1 phân đoạn
-  const handleUpdateSegmentWidth = (segId: string, w: number) => {
-    if (isMainline) {
-      segmentsState.handleUpdateSegmentWidth(segId, w)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) =>
-                  s.id === segId ? { ...s, roadWidthM: w } : s
-                )
-              }
-            : b
-        )
-      )
-      showToast(`Đã cập nhật bề rộng phân đoạn nhánh thành ${w}m!`)
+  const changeBranchSegments = (update: (segments: SegmentItem[]) => SegmentItem[]) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion || branchEditor.current.selectedTargetType !== selectedTargetType) return
+    const branch = branchEditor.current.branches.find(item => item.id === selectedTargetType)
+    if (!branch) return
+    commitBranches(branchEditor.current.branches.map(item => item.id === branch.id ? { ...item, segments: checkMainlineSegmentsContinuity(update(branch.segments)) } : item))
+  }
+  const handleUpdateSegmentWidth = (segId: string, width: number) => {
+    if (selectedTargetType === 'MAINLINE') { segmentsState.handleUpdateSegmentWidth(segId, width); return }
+    if (!Number.isFinite(width) || width <= 0) { showToast('Bề rộng nhánh phải là số hữu hạn lớn hơn 0.'); return }
+    changeBranchSegments(segments => segments.map(segment => segment.id === segId ? { ...segment, roadWidthM: width } : segment))
+  }
+  const handleUpdateAllWidths = (width: number) => {
+    if (selectedTargetType === 'MAINLINE') {
+      const updated = segmentsState.segments.map(segment => ({ ...segment, roadWidthM: width }))
+      segmentsState.setSegments(updated); mapState.syncMap(updated, segmentsState.selectedSegmentId)
+      showToast(`Đã cập nhật tất cả phân đoạn trục chính bề rộng ${width}m!`); return
     }
+    if (!Number.isFinite(width) || width <= 0) { showToast('Bề rộng nhánh phải là số hữu hạn lớn hơn 0.'); return }
+    if (branchEditor.current.selectedTargetType !== selectedTargetType) return
+    commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, roadWidthM: width, segments: branch.segments.map((segment: SegmentItem) => ({ ...segment, roadWidthM: width })) } : branch))
+  }
+  const handleSnapSegment = (id: string) => {
+    if (selectedTargetType === 'MAINLINE') { segmentsState.handleSnapSegment(id); return }
+    changeBranchSegments(segments => {
+      const ordered = [...segments].sort((a, b) => a.startKm - b.startKm), index = ordered.findIndex(segment => segment.id === id)
+      if (index <= 0 || ordered[index].endKm <= ordered[index - 1].endKm) return segments
+      return segments.map(segment => segment.id === id ? { ...segment, startKm: ordered[index - 1].endKm, lengthKm: segment.endKm - ordered[index - 1].endKm } : segment)
+    })
+  }
+  const handleSaveEditedSegment = (event: React.FormEvent) => {
+    if (selectedTargetType === 'MAINLINE') { markWidthDraft(); segmentsState.handleSaveEditedSegment(event); return }
+    event.preventDefault()
+    const edited = segmentsState.editingSegment
+    if (!edited || !currentBranch?.segments.some((segment: SegmentItem) => segment.id === edited.id)) { showToast('Đoạn sửa không thuộc nhánh đang chọn.'); return }
+    if (![edited.startKm, edited.endKm, edited.roadWidthM].every(Number.isFinite) || edited.startKm < 0 || edited.endKm > currentBranch.lengthKm || edited.startKm >= edited.endKm || edited.roadWidthM <= 0 || !Number.isInteger(edited.laneCount) || edited.laneCount <= 0 || !edited.surfaceMaterial.trim()) { showToast('Lý trình hoặc thông số đoạn nhánh chưa hợp lệ.'); return }
+    changeBranchSegments(segments => segments.map(segment => segment.id === edited.id ? { ...edited, lengthKm: edited.endKm - edited.startKm } : segment))
+    segmentsState.setEditingSegment(null)
+  }
+  const handleDeleteSegment = (id: string) => {
+    if (selectedTargetType === 'MAINLINE') segmentsState.handleDeleteSegment(id)
+    else changeBranchSegments(segments => segments.filter(segment => segment.id !== id))
+  }
+  const handleDeleteBranch = (id: string) => {
+    if (currentScope.current !== scopeKey || branchGeneration.current !== branchVersion) return
+    commitBranches(branchEditor.current.branches.filter(branch => branch.id !== id), selectedTargetType === id ? null : segmentsState.selectedSegmentId)
+    branchDistances.current.delete(id)
+    if (selectedTargetType === id) { setSelectedTargetType('MAINLINE'); segmentsState.setSelectedSegmentId(null); segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null) }
+    showToast('Đã xóa nhánh khỏi bản chỉnh cục bộ, chưa ghi máy chủ.')
   }
 
-  // Cập nhật bề rộng tất cả phân đoạn
-  const handleUpdateAllWidths = (w: number) => {
-    if (isMainline) {
-      const updated = segmentsState.segments.map((s) => ({ ...s, roadWidthM: w }))
-      segmentsState.setSegments(updated)
-      mapState.syncMap(updated, segmentsState.selectedSegmentId)
-      showToast(`Đã cập nhật tất cả phân đoạn trục chính bề rộng ${w}m!`)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) => ({ ...s, roadWidthM: w }))
-              }
-            : b
-        )
-      )
-      showToast(`Đã cập nhật tất cả phân đoạn tuyến nhánh [${currentBranch.code}] bề rộng ${w}m!`)
-    }
+
+
+  const selectAlignmentTarget = (id: string) => {
+    const branch = branchEditor.current.branches.find(item => item.id === id)
+    if (id !== 'MAINLINE' && !branch) { showToast('Nhánh được chọn không còn trong bản chỉnh.'); return }
+    setSelectedTargetType(id); segmentsState.setSelectedSegmentId(branch?.segments[0]?.id || null)
+    segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
+    segmentsState.setCustomSplitKm(Number.NaN)
+    segmentsState.setNewSegForm(old => ({ ...old, code: '', startKm: Number.NaN, endKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '' }))
+    mapState.handleFitBounds(branch?.coords || currentCoords)
   }
-
-  // Nối tiếp giáp liền kề
-  const handleSnapSegment = (segId: string) => {
-    if (isMainline) {
-      segmentsState.handleSnapSegment(segId)
-    } else if (currentBranch) {
-      const segs = [...currentBranch.segments]
-      const idx = segs.findIndex((s: any) => s.id === segId)
-      if (idx > 0) {
-        segs[idx] = {
-          ...segs[idx],
-          startKm: segs[idx - 1].endKm,
-          lengthKm: parseFloat((segs[idx].endKm - segs[idx - 1].endKm).toFixed(3)),
-          hasGap: false,
-          status: 'VALID',
-          statusText: 'HỢP LỆ'
-        }
-        setBranches((prev) =>
-          prev.map((b) => (b.id === currentBranch.id ? { ...b, segments: segs } : b))
-        )
-        showToast('Đã nối tiếp giáp liền kề phân đoạn nhánh!')
-      }
-    }
+  const handleCreateBranchSegment = (event: React.FormEvent) => {
+    if (isMainline) { segmentsState.handleCreateNewSegment(event); return }
+    event.preventDefault()
+    const form = segmentsState.newSegForm
+    if (!currentBranch || ![form.startKm, form.endKm, form.roadWidthM].every(Number.isFinite) || form.startKm < 0 || form.endKm > currentBranch.lengthKm || form.endKm <= form.startKm || form.roadWidthM <= 0 || !Number.isInteger(form.laneCount) || form.laneCount <= 0 || !form.surfaceMaterial.trim()) { showToast('Thiếu hoặc sai thông số đoạn nhánh mới.'); return }
+    const segment: SegmentItem = { ...form, id: currentBranch.id + '-segment-' + crypto.randomUUID(), lengthKm: form.endKm - form.startKm, status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU' }
+    changeBranchSegments(segments => [...segments, segment]); segmentsState.setIsAddSegmentModalOpen(false)
   }
-
-  // Sửa thông số phân đoạn
-  const handleSaveEditedSegment = (edited: any) => {
-    markWidthDraft()
-    if (isMainline) {
-      segmentsState.handleSaveEditedSegment(edited)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? {
-                ...b,
-                segments: b.segments.map((s: any) => (s.id === edited.id ? edited : s))
-              }
-            : b
-        )
-      )
-      segmentsState.setEditingSegment(null)
-      showToast(`Đã lưu phân đoạn tuyến nhánh [${edited.code}]`)
-    }
-  }
-
-  // Xóa phân đoạn
-  const handleDeleteSegment = (segId: string) => {
-    if (isMainline) {
-      segmentsState.handleDeleteSegment(segId)
-    } else if (currentBranch) {
-      setBranches((prev) =>
-        prev.map((b) =>
-          b.id === currentBranch.id
-            ? { ...b, segments: b.segments.filter((s: any) => s.id !== segId) }
-            : b
-        )
-      )
-      showToast('Đã xóa phân đoạn khỏi tuyến nhánh!')
-    }
-  }
-
-  // Xóa toàn bộ tuyến nhánh nếu nhập sai muốn nhập lại
-  const handleDeleteBranch = (branchId: string) => {
-    const updatedBranches = branches.filter((b) => b.id !== branchId)
-    setBranches(updatedBranches)
-    if (selectedTargetType === branchId) {
-      setSelectedTargetType('MAINLINE')
-    }
-
-    showToast('Đã xóa tuyến nhánh thành công! Bạn có thể tạo lại tuyến nhánh mới.')
+  const setPavementConfig = (setter: (value: any) => void, value: any) => {
+    if (!isMainline) { showToast('Chưa biên tập pavement tuyến nhánh; cấu hình tuyến chính được giữ nguyên.'); return }
+    setter(value)
   }
 
   const handleSubmitAlignment = draftWorkflow.save
@@ -653,24 +600,24 @@ export function useAlignmentState() {
     rightTab,
     setRightTab,
     slabLengthM,
-    setSlabLengthM,
+    setSlabLengthM: (value: number) => setPavementConfig(setSlabLengthM, value),
     slabThicknessCm,
-    setSlabThicknessCm,
+    setSlabThicknessCm: (value: number) => setPavementConfig(setSlabThicknessCm, value),
     contractionSpacingM,
-    setContractionSpacingM,
+    setContractionSpacingM: (value: number) => setPavementConfig(setContractionSpacingM, value),
     expansionSpacingM,
-    setExpansionSpacingM,
+    setExpansionSpacingM: (value: number) => setPavementConfig(setExpansionSpacingM, value),
     expansionGapMm,
-    setExpansionGapMm,
+    setExpansionGapMm: (value: number) => setPavementConfig(setExpansionGapMm, value),
     syncJointWithSlab,
-    setSyncJointWithSlab,
+    setSyncJointWithSlab: (value: boolean) => setPavementConfig(setSyncJointWithSlab, value),
     // Branch Alignment
     branches,
     branchesTotalLengthKm,
     totalProjectLengthKm,
     branchesCount: branches.length,
     selectedTargetType,
-    setSelectedTargetType,
+    setSelectedTargetType: selectAlignmentTarget,
     isAddBranchModalOpen,
     setIsAddBranchModalOpen,
     handleAddBranch,
@@ -694,7 +641,11 @@ export function useAlignmentState() {
     setCurrentKmPoints,
     importedLengthKm,
     setImportedLengthKm,
-    segmentsState,
+    segmentsState: { ...segmentsState, slabs: isMainline ? segmentsState.slabs : [],
+      splitSortOrder: isMainline ? segmentsState.splitSortOrder : currentBranch?.splitSortOrder || 'asc',
+      setSplitSortOrder: (order: 'asc' | 'desc') => isMainline ? segmentsState.setSplitSortOrder(order) : commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, splitSortOrder: order } : branch)),
+      handleCreateNewSegment: handleCreateBranchSegment,
+      handleClearAllSegments: () => isMainline ? segmentsState.handleClearAllSegments() : changeBranchSegments(() => []) },
     mapState,
     importState
   }
