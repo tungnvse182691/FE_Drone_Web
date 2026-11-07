@@ -2,10 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { SegmentItem } from './types'
 import { GeoJsonValidationError, inspectGeoJsonCenterline } from './alignmentImportHelpers'
+import { parseRoadGuardDraftJson, RoadGuardDraftValidationError, type RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
 
 export interface UseAlignmentImportStateParams {
   onDraftInput?: () => void
   inputScope?: string
+  contextReady?: boolean
+  engineeringCrs?: number | null
+  onRoadGuardDraft?: (draft: RoadGuardCoordinatesDraft | null) => void
   stationOriginKm: number
   splitDistance: number
   roadWidthM: number
@@ -30,6 +34,9 @@ export interface UseAlignmentImportStateParams {
 export function useAlignmentImportState({
   inputScope = '',
   onDraftInput,
+  contextReady = false,
+  engineeringCrs,
+  onRoadGuardDraft,
   stationOriginKm,
   splitDistance,
   roadWidthM,
@@ -55,12 +62,33 @@ export function useAlignmentImportState({
   const [hasUnverifiedFile, setHasUnverifiedFile] = useState(false)
   const [importTab, setImportTab] = useState<'FILE' | 'MANUAL'>('FILE')
   const [manualCoordsText, setManualCoordsText] = useState<string>(defaultManualText)
+  const [pendingDraft, setPendingDraft] = useState<{ draft: RoadGuardCoordinatesDraft; scope: string; attempt: number } | null>(null)
+  const latest = useRef({ onRoadGuardDraft, onDraftInput, showToast })
+  latest.current = { onRoadGuardDraft, onDraftInput, showToast }
 
   const scope = useRef(inputScope), mounted = useRef(true), readAttempt = useRef(0)
+  if (scope.current !== inputScope) { readAttempt.current++; setPendingDraft(null) }
   scope.current = inputScope
-  useEffect(() => { mounted.current = true; setReadMessage(''); setHasUnverifiedFile(false); return () => { mounted.current = false; readAttempt.current++ } }, [inputScope])
+  useEffect(() => { mounted.current = true; setReadMessage(''); setHasUnverifiedFile(false); setPendingDraft(null); return () => { mounted.current = false; readAttempt.current++ } }, [inputScope])
+  useEffect(() => {
+    if (!pendingDraft || pendingDraft.scope !== inputScope || pendingDraft.attempt !== readAttempt.current) return
+    const draft = pendingDraft.draft
+    let message: string
+    if (!contextReady || ![32648, 32649].includes(engineeringCrs!)) {
+      message = 'Đã giữ tệp Draft chờ: chưa tải được context và engineering CRS hợp lệ của dự án từ máy chủ.'
+    } else if (draft.sourceCrs !== engineeringCrs) {
+      message = `Đã giữ tệp Draft chờ: sourceCrs ${draft.sourceCrs} không khớp engineering CRS ${engineeringCrs} của dự án; không tự chuyển CRS.`
+    } else {
+      latest.current.onRoadGuardDraft?.(draft)
+      setManualCoordsText(draft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
+      setHasUnverifiedFile(true); latest.current.onDraftInput?.(); setPendingDraft(null)
+      message = `Đã nạp Draft (${draft.coordinates.length} điểm) vào bản chỉnh chưa lưu; chưa được máy chủ xác nhận, chưa công bố phân đoạn.`
+    }
+    setReadMessage(message); latest.current.showToast(message)
+  }, [pendingDraft, inputScope, contextReady, engineeringCrs])
   const processGeoJSONFile = (file: File) => {
     const attempt = ++readAttempt.current, selectedScope = inputScope
+    setPendingDraft(null)
     const current = () => mounted.current && attempt === readAttempt.current && scope.current === selectedScope
     setReadMessage('Đang đọc tệp...')
     const reader = new FileReader()
@@ -69,13 +97,20 @@ export function useAlignmentImportState({
       try {
         const text = e.target?.result
         if (typeof text !== 'string') { const message = 'Không đọc được nội dung văn bản của tệp GeoJSON.'; setReadMessage(message); showToast(message); return }
+        let content: any
+        try { content = JSON.parse(text) } catch { throw new RoadGuardDraftValidationError('Tệp sai cú pháp JSON.') }
+        if (content && typeof content === 'object' && 'sourceKind' in content) {
+          const draft = parseRoadGuardDraftJson(text)
+          setPendingDraft({ draft, scope: selectedScope, attempt }); return
+        }
         const inspection = inspectGeoJsonCenterline(text)
+        latest.current.onRoadGuardDraft?.(null)
         setManualCoordsText(inspection.coords.map(point => point.join(', ')).join('\n'))
         setHasUnverifiedFile(true); onDraftInput?.()
         const message = `Đã đọc tệp, chưa lưu (${inspection.coords.length} điểm). Hệ tọa độ, trục và đơn vị của tệp chưa được xác minh.`
         setReadMessage(message); showToast(message)
       } catch (error) {
-        const message = error instanceof GeoJsonValidationError && error.message ? error.message : 'Không thể kiểm tra nội dung tệp GeoJSON. Vui lòng kiểm tra lại tệp.'
+        const message = (error instanceof GeoJsonValidationError || error instanceof RoadGuardDraftValidationError) && error.message ? error.message : 'Không thể kiểm tra nội dung tệp GeoJSON hoặc RoadGuard Draft. Vui lòng kiểm tra lại tệp.'
         setReadMessage(message); showToast(message)
       }
     }

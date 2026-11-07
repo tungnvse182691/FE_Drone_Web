@@ -15,6 +15,7 @@ import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
+import type { RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -58,6 +59,7 @@ export function useAlignmentState() {
   const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`
   const [editorScope, setEditorScope] = useState(scopeKey)
   const editorDraft = useRef('')
+  const [fileDraft, setFileDraft] = useState<RoadGuardCoordinatesDraft | null>(null)
   useEffect(() => {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
     if (geometryRead.error) showToast(geometryRead.error)
@@ -74,9 +76,11 @@ export function useAlignmentState() {
     segmentsState.setCustomSplitKm(Number.NaN); segmentsState.setSplitSortOrder('asc')
     setSyncJointWithSlab(true)
     setLocalDraftDirty(false); setLocalWidthsDirty(false)
+    setFileDraft(null)
   }
 
   useEffect(() => {
+    if (fileDraft) return
     const draft = geometryRead.draft?.data
     const draftStatus = draft?.id === geometryRead.draftId && draft.projectId === selectedProjectId ? draft.status : undefined
     const geometry = geometryRead.geometry?.projectId === selectedProjectId &&
@@ -158,7 +162,7 @@ export function useAlignmentState() {
 
   const segmentsState = useAlignmentSegmentsState({
     initialSegments,
-    stationOriginKm: geometryRead.draft?.data.stationOriginMeters !== undefined ? geometryRead.draft.data.stationOriginMeters / 1000 : Number.NaN,
+    stationOriginKm: fileDraft ? fileDraft.stationOriginMeters / 1000 : geometryRead.draft?.data.stationOriginMeters !== undefined ? geometryRead.draft.data.stationOriginMeters / 1000 : Number.NaN,
     currentKmPoints,
     currentCoords,
     importedLengthKm,
@@ -274,6 +278,9 @@ export function useAlignmentState() {
   const importState = useAlignmentImportState({
     inputScope: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`,
     onDraftInput: markLocalDraft,
+    contextReady: geometryRead.context?.projectId === selectedProjectId,
+    engineeringCrs: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.engineeringUtmSrid : null,
+    onRoadGuardDraft: draft => { setFileDraft(draft); if (draft) setLocalWidthsDirty(false) },
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,
     roadWidthM,
@@ -296,6 +303,30 @@ export function useAlignmentState() {
   })
 
   const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile)
+
+  useEffect(() => {
+    if (!fileDraft || editorScope !== scopeKey) return
+    const origin = fileDraft.stationOriginMeters
+    draftWorkflow.setForm(old => ({ ...old, origin: String(origin), reason: fileDraft.changeReason,
+      surveyWidth: String(fileDraft.surveyWidthMeters),
+      widths: localWidthsDirty ? old.widths : fileDraft.widthProfile.map(width => `${width.fromOffsetMeters}, ${width.toOffsetMeters}, ${width.widthMeters}`).join('\n') }))
+    importState.setManualCoordsText(fileDraft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
+    setAlignmentStatus('DRAFT'); setCurrentCoords([]); setCurrentKmPoints([])
+    let length = 0
+    for (let i = 1; i < fileDraft.coordinates.length; i++) {
+      const a = fileDraft.coordinates[i - 1], b = fileDraft.coordinates[i]
+      length += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
+    }
+    setImportedLengthKm(length / 1000)
+    setSelectedTargetType('MAINLINE'); setRightTab('WIDTH_PROFILE')
+    if (!localWidthsDirty) segmentsState.setSegments(fileDraft.widthProfile.map((width, index) => ({
+      id: `file-width-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+      startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
+      lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU', color: '#C9A227'
+    })))
+    segmentsState.setSelectedSegmentId(null)
+  }, [fileDraft, geometryRead.draft, geometryRead.geometry])
 
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {
@@ -573,6 +604,7 @@ export function useAlignmentState() {
 
   return {
     geometryRead,
+    fileDraft,
     localDraftDirty, markLocalDraft, markWidthDraft,
     draftWorkflow,
     isSupervisor,
