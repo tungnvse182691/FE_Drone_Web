@@ -287,7 +287,10 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
       triggerNoticeRef.current('Máy chủ đã tiếp nhận lời mời nhân sự.', 'success')
       setShowAddPersonnelModal(false)
     } catch (error: any) {
-      if (useAuthStore.getState().authEpoch === epoch) blocked(error?.code === 'web_cookie_unsupported' ? personnelBlocks.invitation : personnelMessage(error))
+      if (useAuthStore.getState().authEpoch === epoch) blocked(error?.response?.status === 401 && useAuthStore.getState().isAuthenticated
+        ? 'Chưa gửi được lời mời bằng phiên Web.'
+        : !error?.response || error.response.status >= 500
+        ? 'Chưa rõ kết quả gửi lời mời. Giữ nguyên nội dung để thử lại.' : personnelMessage(error))
     } finally { invitationRunning.current = false; if (useAuthStore.getState().authEpoch === epoch) setInvitationBusy(false) }
   }
   const handleConfirmResetPassword = async (_userId: string, _password: string) => { blocked(personnelBlocks.reset); throw Error('web_cookie_unsupported') }

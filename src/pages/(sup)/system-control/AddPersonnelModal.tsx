@@ -1,4 +1,3 @@
-import { personnelBlocks } from '../../../api/services/personnelScreen'
 import React, { useState } from 'react'
 import { UserPlus, X, Mail, UserCheck, Send, CheckSquare, Square, FolderKanban, AlertCircle, Lock } from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
@@ -42,7 +41,7 @@ export interface AddPersonnelModalProps {
 export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   showAddPersonnelModal,
   invitationBusy = false,
-  blockedReason = personnelBlocks.invitation,
+  blockedReason = '',
   setShowAddPersonnelModal,
   addPersonnelTab,
   setAddPersonnelTab,

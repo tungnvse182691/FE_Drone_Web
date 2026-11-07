@@ -101,7 +101,7 @@ export function invitationInput(payload: { email: string; role: RoleCode; projec
   const email = payload.email.trim()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email nhận lời mời chưa hợp lệ.')
   if (![RoleCode.PROJECT_MANAGER, RoleCode.DRONE_OPERATOR, RoleCode.REPAIR_CREW].includes(payload.role)) throw new Error('Vai trò lời mời chưa hợp lệ.')
-  const projectIds = [...new Set(payload.projectIds)]
+  const projectIds = [...new Set(payload.projectIds)].sort()
   if (projectIds.some(id => !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) throw new Error('Cần định danh dự án thật từ máy chủ.')
   return { email, role: mapRoleCodeToBackendRole(payload.role) as 'PM' | 'OPERATOR' | 'CREW', projectIds }
 }
@@ -111,6 +111,9 @@ export interface UpdateUserPayload {
   role: 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW' | 'REPORTER'
   reason: string
 }
+
+const invitationWrites = new Set<string>()
+const invitationCommands = new Map<string, { fingerprint: string; key: string }>()
 
 // Chuyển role từ wire format (Candidate3) sang RoleCode FE
 export function mapBackendRoleToRoleCode(rawRole?: string | null): RoleCode {
@@ -330,8 +333,30 @@ export const personnelService = {
     role: RoleCode
     projectIds: string[]
   }): Promise<InvitationResponseDto> {
-    invitationInput(payload)
-    throw Object.assign(new Error('Gửi lời mời chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
+    const state = useAuthStore.getState(), actor = state.user, epoch = state.authEpoch
+    if (actor?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được gửi lời mời.')
+    const body = invitationInput(payload), fingerprint = JSON.stringify(body), journal = `rg_invitation_${actor.id}`
+    if (invitationWrites.has(journal)) throw new Error('Đang gửi lời mời. Vui lòng chờ.')
+    const saved = sessionStorage.getItem(journal)
+    const held: { fingerprint: string; key: string } = invitationCommands.get(journal) || (saved ? JSON.parse(saved) : { fingerprint, key: crypto.randomUUID() })
+    if (held.fingerprint !== fingerprint || !held.key) throw new Error('Yêu cầu trước chưa rõ kết quả. Hãy giữ đúng nội dung để thử lại.')
+    sessionStorage.setItem(journal, JSON.stringify(held))
+    invitationCommands.set(journal, held); invitationWrites.add(journal)
+    const current = () => useAuthStore.getState().authEpoch === epoch && useAuthStore.getState().user?.id === actor.id
+    try {
+      const response = await apiClient.post<InvitationResponseDto>('/invitations', body, { headers: { 'Idempotency-Key': held.key } })
+      if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả lời mời cũ.')
+      const receipt = response.data
+      if (response.status !== 201 || !receipt?.id || !receipt.version || !receipt.status || !Number.isFinite(Date.parse(receipt.expiresAt))) throw new Error('Chưa xác minh được kết quả lời mời. Hãy thử lại đúng nội dung.')
+      sessionStorage.removeItem(journal); invitationCommands.delete(journal)
+      return receipt
+    } catch (error: any) {
+      const status = error?.response?.status, code = error?.response?.data?.code
+      if (current() && status >= 400 && status < 500 && code !== 'duplicate_request') {
+        sessionStorage.removeItem(journal); invitationCommands.delete(journal)
+      }
+      throw error
+    } finally { invitationWrites.delete(journal) }
   },
 
   /**
