@@ -29,6 +29,7 @@ export interface InitMapLayersOptions {
   branches?: any[]
   isPickingRef?: React.RefObject<boolean>
   onSelectSegmentRef?: React.RefObject<((id: string, branchId?: string, feature?: any) => void) | null>
+  customCfg?: SlabsCustomConfig
 }
 
 export function initAlignmentMapLayers({
@@ -43,10 +44,11 @@ export function initAlignmentMapLayers({
   showToast,
   branches = [],
   isPickingRef,
-  onSelectSegmentRef
+  onSelectSegmentRef,
+  customCfg
 }: InitMapLayersOptions) {
   // 1. Setup GeoJSON sources & visualization layers
-  setupAlignmentSourcesAndLayers(map, segments, currentCoords, currentKmPoints, selectedSegmentId, branches)
+  setupAlignmentSourcesAndLayers(map, segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg)
 
   // 2. Setup map interaction handlers (clicks, hovers, popups)
   setupAlignmentMapInteractions(map, popupRef, onSelectSegmentId, isPickingRef, onSelectSegmentRef)
@@ -84,7 +86,7 @@ export function syncMapDataDirect(
   // Đảm bảo các nguồn và lớp luôn tồn tại trước khi cập nhật dữ liệu
   if (!map.getSource('segments-source') || !map.getSource('segments-surface-source')) {
     try {
-      setupAlignmentSourcesAndLayers(map, updatedSegs, coords, kmPts, selId, branches)
+      setupAlignmentSourcesAndLayers(map, updatedSegs, coords, kmPts, selId, branches, customCfg)
     } catch (e) {
       console.warn('setupAlignmentSourcesAndLayers warning:', e)
     }

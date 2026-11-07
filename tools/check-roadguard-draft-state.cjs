@@ -231,4 +231,14 @@ test('mainline nonzero origin edits and explicit snap preserve precision; gaps a
  h.view.handleSnapSegment(last.id);h.view.markWidthDraft();h.flush();assert.equal(h.view.activeSegments[1].startKm,split);assert.equal(h.view.activeSegments[1].endKm,last.endKm);assert.equal(h.view.activeSegments[1].lengthKm,last.endKm-split)
  const input=h.buildInput(h.workflow.form,h.view.importState.manualCoordsText,h.model,h.workflow.fileInput);assert.equal(input.stationOriginMeters,draft.stationOriginMeters);assert.equal(input.widthProfile.at(-1).toOffsetMeters,draft.widthProfile[0].toOffsetMeters);assert.equal(h.calls.length,0);h.unmount()
 })
+test('mainline pavement state and actual map sources share configuration, late style load and width/split updates',()=>{
+ const h=harness(true,false,true);h.read(sample);h.view.setRightTab('SLABS');h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.match(h.view.toastMessage,/số làn/)
+ h.view.segmentsState.setSegments(h.view.segmentsState.segments.map(s=>({...s,laneCount:3})));h.view.setSlabLengthM(5);h.view.setSlabThicknessCm(28);h.view.setContractionSpacingM(7);h.view.setExpansionSpacingM(11);h.view.setExpansionGapMm(20);h.flush();h.loadMap()
+ const compare=()=>{const rows=h.view.segmentsState.slabs,features=h.maps[0].getSource('slabs-source').data.features;assert.equal(rows.length,features.length);for(let i=0;i<rows.length;i++)for(const key of ['id','lengthM','widthM','thicknessCm'])assert.equal(rows[i][key],features[i].properties[key])}
+ compare();assert.equal(h.view.segmentsState.slabs.length,423)
+ h.view.handleUpdateAllWidths(12);h.view.markWidthDraft();h.flush();compare();assert.ok(h.view.segmentsState.slabs.every(s=>s.widthM===4))
+ h.view.setSlabLengthM(4);h.view.setContractionSpacingM(4);h.view.setSlabThicknessCm(33);h.view.setExpansionGapMm(30);h.flush();compare();assert.equal(h.view.segmentsState.slabs.length,528);assert.ok(h.view.segmentsState.slabs.every(s=>s.thicknessCm===33))
+ h.view.handleSetSplitDistance(.2);h.flush();h.view.handleApplyAutoSplit();h.view.markWidthDraft();h.flush();compare();const before=plain(h.maps[0].getSource('edges-source').data);h.view.segmentsState.setSplitSortOrder('desc');h.flush();compare();assert.deepEqual(plain(h.maps[0].getSource('edges-source').data),before)
+ h.view.handleUpdateAllWidths(NaN);h.view.markWidthDraft();h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.equal(h.maps[0].getSource('slabs-source').data.features.length,0);assert.match(h.view.toastMessage,/bề rộng/);assert.equal(h.calls.length,0);h.unmount()
+})
 ;(async()=>{let count=0;for(const {name,run}of tests){if(process.env.RG_DRAFT_FILTER&&!new RegExp(process.env.RG_DRAFT_FILTER,'i').test(name))continue;await run();console.log('PASS '+name);count++}console.log(`${count} Draft import/state/save/map scenarios PASS (mock HTTP/MapLibre; no runtime writes).`)})().catch(error=>{console.error(error);process.exitCode=1})

@@ -6,7 +6,6 @@ import { RoleCode } from '../../../types/enums'
 import { SegmentItem, AssignedProjectOption } from './types'
 import {
   checkAndEnrichSegmentsContinuity,
-  calculatePavementSlabs,
   calculateCoordsLengthKm
 } from './alignmentGeometryHelpers'
 import { computeSplitSegmentPair } from './alignmentSplitHelpers'
@@ -16,6 +15,7 @@ import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
 import type { RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
+import { planMainlinePavement } from './alignmentPavementHelpers'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -177,14 +177,11 @@ export function useAlignmentState() {
   })
   // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
   useEffect(() => {
-    if (Number.isFinite(slabLengthM) && slabLengthM > 0 && Number.isFinite(slabThicknessCm) && slabThicknessCm > 0 && segmentsState.segments.length > 0 && segmentsState.segments.every(segment => Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 && Number.isFinite(segment.laneCount) && segment.laneCount > 0)) {
-      segmentsState.setSlabs(
-        calculatePavementSlabs(segmentsState.segments, slabLengthM, slabThicknessCm)
-      )
-    } else {
-      segmentsState.setSlabs([])
-    }
-  }, [slabLengthM, slabThicknessCm, segmentsState.segments])
+    const plan = planMainlinePavement(segmentsState.segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
+    segmentsState.setSlabs(plan.slabs)
+    if (rightTab === 'SLABS' && plan.missing.length) showToast(`Thiếu dữ liệu preview tấm/khe: ${plan.missing.join('; ')}. Không tự điền thông số.`)
+    else if (rightTab === 'SLABS' && (currentCoords.length < 2 || currentCoords.length !== currentKmPoints.length)) showToast('Thiếu tọa độ gắn với lý trình engineering để vẽ preview tấm/khe và hai mép.')
+  }, [slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, segmentsState.segments, rightTab, currentCoords, currentKmPoints])
 
   // Refs theo dõi danh sách tuyến nhánh và phân đoạn mới nhất để tránh stale closure khi click trên map
   const branchesRef = useRef<any[]>(branches)

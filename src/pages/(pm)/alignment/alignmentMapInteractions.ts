@@ -232,9 +232,9 @@ export function setupAlignmentMapInteractions(
           </div>
           <div class="space-y-1.5 text-slate-300">
             <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${p.station}</span> (${p.lane})</div>
-            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${p.lengthM}m × ${p.widthM}m × 26cm</span></div>
+            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${p.lengthM}m × ${p.widthM}m × ${Number.isFinite(p.thicknessCm) ? p.thicknessCm : "Chưa có dữ liệu"}cm</span></div>
             <div>🛣️ <strong>Cự ly mép đường:</strong> <span class="font-mono text-sky-400 font-semibold">${p.edgeOffset}</span></div>
-            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly 5.0m (Dowel bar φ25)</div>
+            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly ${Number.isFinite(p.contractionSpacingM) ? p.contractionSpacingM : "Chưa có dữ liệu"}m</div>
           </div>
         </div>
       `)

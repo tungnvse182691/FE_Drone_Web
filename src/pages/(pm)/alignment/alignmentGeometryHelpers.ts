@@ -1,4 +1,5 @@
 import { SegmentItem, SlabItem } from './types'
+import { planMainlinePavement } from './alignmentPavementHelpers'
 
 // Hàm nội suy tọa độ [lng, lat] theo Km lý trình
 export function interpolateCoordAtKm(
@@ -117,52 +118,17 @@ export function checkAndEnrichSegmentsContinuity(segs: SegmentItem[]): SegmentIt
 // Tính toán danh sách tấm Slab hình học dựa trên phân đoạn và bề rộng thực tế của tuyến
 export function calculatePavementSlabs(
   segments: SegmentItem[],
-  slabLengthM: number = 5.0,
-  slabThicknessCm: number = 26
+  slabLengthM?: number,
+  slabThicknessCm?: number
 ): SlabItem[] {
-  if (!segments || segments.length === 0) return []
-  const slabs: SlabItem[] = []
-  let globalSlabIndex = 1
-
-  segments.forEach((seg) => {
-    const segLengthM = Math.max(0, (seg.endKm - seg.startKm) * 1000)
-    if (segLengthM <= 0) return
-
-    // Bề rộng 1 tấm = Tổng bề rộng mặt đường của phân đoạn chia cho số làn xe thực tế
-    const lanes = seg.laneCount && seg.laneCount > 0 ? seg.laneCount : 2
-    const slabWidthM = parseFloat(((seg.roadWidthM || 8.0) / lanes).toFixed(2))
-
-    // Số tấm dọc theo chiều dài phân đoạn (chia đều theo chiều dài tấm L)
-    const effectiveLength = slabLengthM > 0 ? slabLengthM : 5.0
-    const slabCount = Math.max(1, Math.min(100, Math.floor(segLengthM / effectiveLength)))
-
-    for (let s = 0; s < slabCount; s++) {
-      const offsetM = s * effectiveLength
-      const slabKm = seg.startKm + offsetM / 1000
-      const kmInt = Math.floor(slabKm)
-      const mInt = Math.round((slabKm - kmInt) * 1000)
-
-      slabs.push({
-        id: `SLAB-${String(globalSlabIndex).padStart(3, '0')}`,
-        segmentCode: seg.code || `Đoạn #${seg.id}`,
-        stationing: `Km ${kmInt}+${String(mInt).padStart(3, '0')}`,
-        lengthM: effectiveLength,
-        widthM: slabWidthM,
-        thicknessCm: slabThicknessCm,
-        status: 'GOOD'
-      })
-      globalSlabIndex++
-    }
-  })
-
-  return slabs
+  return planMainlinePavement(segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm }).slabs
 }
 
 // Hàm tương thích ngược: nhận array SegmentItem hoặc trả về rỗng nếu không có dữ liệu thật
 export function generateMockSlabs(
   segmentsOrCount: any,
-  slabLengthM: number = 5.0,
-  slabThicknessCm: number = 26
+  slabLengthM?: number,
+  slabThicknessCm?: number
 ): SlabItem[] {
   if (Array.isArray(segmentsOrCount)) {
     return calculatePavementSlabs(segmentsOrCount, slabLengthM, slabThicknessCm)

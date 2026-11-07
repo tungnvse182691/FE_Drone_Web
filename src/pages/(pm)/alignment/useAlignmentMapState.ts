@@ -71,8 +71,9 @@ export function useAlignmentMapState({
   // Ref theo dõi tọa độ và lý trình trục chính để tránh stale closure trong các event listener của bản đồ
   const coordsRef = useRef<[number, number][]>(currentCoords)
   const kmPointsRef = useRef<number[]>(currentKmPoints)
-  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches })
-  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches }
+  const customCfg = { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }
+  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg })
+  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg }
 
   useEffect(() => {
     coordsRef.current = currentCoords

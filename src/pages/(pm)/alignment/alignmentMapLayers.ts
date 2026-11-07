@@ -7,7 +7,8 @@ import {
   buildPlanningCorridorGeoJSON,
   buildSlabsAndJointsGeoJSON,
   buildBranchesSurfaceGeoJSON,
-  buildBranchesGeoJSON
+  buildBranchesGeoJSON,
+  SlabsCustomConfig
 } from './data'
 import { setupSlabsAndJointsLayers } from './alignmentSlabLayers'
 
@@ -17,7 +18,8 @@ export function setupAlignmentSourcesAndLayers(
   currentCoords: [number, number][],
   currentKmPoints: number[],
   selectedSegmentId: string | null,
-  branches: any[] = []
+  branches: any[] = [],
+  customCfg?: SlabsCustomConfig
 ) {
   if (!hasMapBaseStyle(map)) return
 
@@ -59,7 +61,7 @@ export function setupAlignmentSourcesAndLayers(
     segments,
     currentCoords,
     currentKmPoints,
-    undefined,
+    customCfg,
     branches
   )
 
