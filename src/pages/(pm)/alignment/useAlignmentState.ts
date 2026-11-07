@@ -16,6 +16,7 @@ import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
 import type { RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
+import { utm48NToWgs84 } from '../../../api/services/alignmentService'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -327,7 +328,7 @@ export function useAlignmentState() {
       surveyWidth: String(fileDraft.surveyWidthMeters),
       widths: localWidthsDirty ? old.widths : fileDraft.widthProfile.map(width => `${width.fromOffsetMeters}, ${width.toOffsetMeters}, ${width.widthMeters}`).join('\n') }))
     importState.setManualCoordsText(fileDraft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
-    setAlignmentStatus('DRAFT'); setCurrentCoords([]); setCurrentKmPoints([])
+    setAlignmentStatus('DRAFT')
     let length = 0
     for (let i = 1; i < fileDraft.coordinates.length; i++) {
       const a = fileDraft.coordinates[i - 1], b = fileDraft.coordinates[i]
@@ -341,6 +342,28 @@ export function useAlignmentState() {
       laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN CHỈNH CHƯA LƯU', color: '#C9A227'
     })))
   }, [fileDraft, geometryRead.draft, geometryRead.geometry])
+
+  // Display coordinates only; engineering coordinates/length/profile remain authoritative.
+  useEffect(() => {
+    if (!fileDraft || editorScope !== scopeKey) return
+    if (fileDraft.sourceCrs !== 32648 || geometryRead.context?.projectId !== selectedProjectId || geometryRead.context.engineeringUtmSrid !== 32648) {
+      setCurrentCoords([]); setCurrentKmPoints([]); mapState.handleFitBounds([])
+      return
+    }
+    const coords = fileDraft.coordinates.map(point => utm48NToWgs84(point.x, point.y))
+    if (coords.some(point => !point.every(Number.isFinite) || Math.abs(point[0]) > 180 || Math.abs(point[1]) > 90)) {
+      setCurrentCoords([]); setCurrentKmPoints([]); mapState.handleFitBounds([])
+      showToast('Không tạo được preview kinh/vĩ độ hợp lệ; bản chỉnh engineering được giữ nguyên.')
+      return
+    }
+    let offset = 0
+    const kmPoints = fileDraft.coordinates.map((point, index) => {
+      if (index) { const previous = fileDraft.coordinates[index - 1]; offset += Math.sqrt((point.x - previous.x) ** 2 + (point.y - previous.y) ** 2) }
+      return (fileDraft.stationOriginMeters + offset) / 1000
+    })
+    setCurrentCoords(coords); setCurrentKmPoints(kmPoints)
+    mapState.handleFitBounds(coords)
+  }, [fileDraft, geometryRead.context, scopeKey])
 
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {

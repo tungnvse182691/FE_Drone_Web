@@ -82,7 +82,7 @@ export function useAlignmentImportState({
       latest.current.onRoadGuardDraft?.(draft)
       setManualCoordsText(draft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
       setHasUnverifiedFile(true); latest.current.onDraftInput?.(); setPendingDraft(null)
-      message = `Đã nạp Draft (${draft.coordinates.length} điểm) vào bản chỉnh chưa lưu; chưa được máy chủ xác nhận, chưa công bố phân đoạn.`
+      message = `Đã nạp Draft (${draft.coordinates.length} điểm) vào bản chỉnh chưa lưu; chưa được máy chủ xác nhận, chưa công bố phân đoạn.${draft.sourceCrs === 32649 ? ' Chưa hỗ trợ preview bản đồ EPSG:32649; giữ nguyên bản chỉnh hợp lệ.' : ''}`
     }
     setReadMessage(message); latest.current.showToast(message)
   }, [pendingDraft, inputScope, contextReady, engineeringCrs])

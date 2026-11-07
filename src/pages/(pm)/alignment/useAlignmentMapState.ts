@@ -71,6 +71,8 @@ export function useAlignmentMapState({
   // Ref theo dõi tọa độ và lý trình trục chính để tránh stale closure trong các event listener của bản đồ
   const coordsRef = useRef<[number, number][]>(currentCoords)
   const kmPointsRef = useRef<number[]>(currentKmPoints)
+  const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches })
+  latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches }
 
   useEffect(() => {
     coordsRef.current = currentCoords
@@ -259,23 +261,15 @@ export function useAlignmentMapState({
     map.on('load', () => {
       initAlignmentMapLayers({
         map,
-        segments,
-        currentCoords,
-        currentKmPoints,
-        selectedSegmentId,
+        ...latestMapData.current,
         popupRef,
         markersRef,
         onSelectSegmentId: setSelectedSegmentId,
         showToast,
-        branches,
         isPickingRef,
         onSelectSegmentRef
       })
-      if (currentCoords && currentCoords.length > 0) {
-        const bounds = new maplibregl.LngLatBounds()
-        currentCoords.forEach((c) => bounds.extend(c))
-        map.fitBounds(bounds, { padding: 60, speed: 1.1 })
-      }
+      if (latestMapData.current.currentCoords.length) handleFitBounds(latestMapData.current.currentCoords)
     })
 
     mapRef.current = map
@@ -517,6 +511,7 @@ export function useAlignmentMapState({
   }
 
   const handleFitBounds = (coords: [number, number][] = currentCoords) => {
+    if (!mapRef.current?.isStyleLoaded()) return
     if (mapRef.current) {
       if (coords.length > 0) {
         const bounds = new maplibregl.LngLatBounds()

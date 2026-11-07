@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict'),ts=require('typescript')
 const base='src/pages/(pm)/alignment/',sample=fs.readFileSync('tools/fixtures/Roadguard1_RoadGuard_GeometryDraft.json','utf8'),plain=v=>JSON.parse(JSON.stringify(v))
-function harness(root=false,saveMode=false){
+function harness(root=false,saveMode=false,mapMode=false){
  let slot=0,changed=false,pending=[],view,project='p',inputScope='p:a',ready=true,crs=32648
  const values=[],effects=[],readers=[],applied=[],messages=[],mapInputs=[]
  const model={draftId:'a',projects:[],context:null,geometry:null,draft:null,invalidate(){}}
@@ -13,6 +13,16 @@ function harness(root=false,saveMode=false){
  const response=data=>({data,headers:{etag:v2}})
  const client={async post(url,body,config){return write('POST',url,body,config)},async put(url,body,config){return write('PUT',url,body,config)},async get(url){calls.push({method:'GET',url});return{data:{...serverDraft,...(control.badReadback?{id:'wrong-draft'}:{}),...(control.badSection?{roadSectionId:'other'}:{})},headers:{etag:control.badVersion?v1:v2}}}}
  async function write(method,url,body,config){calls.push({method,url,body:plain(body),headers:config.headers});if(control.error)throw control.error;serverDraft={...serverDraft,...plain(body)};return response(control.badReceipt?{...serverDraft,version:null}:serverDraft)}
+ mocks['../../store/authStore']={useAuthStore:{subscribe(){}}};mocks['../client']={apiClient:client};mocks['./projectService']={projectService:{}}
+ const maps=[],fits=[]
+ if(mapMode){
+  delete mocks['./useAlignmentMapState'];mocks['maplibre-gl/dist/maplibre-gl.css']={};mocks['../../../utils/maplibre']={getMapLibreStyle:()=>({})};mocks['../../../api/services/projectService']={projectService:{}}
+  class MapMock{constructor(){this.ready=false;this.events={};maps.push(this)}on(name,fn){this.events[name]=fn;return this}isStyleLoaded(){return this.ready}getLayer(){return null}getCanvas(){return{style:{}}}fitBounds(bounds){fits.push(bounds.points)}flyTo(){}remove(){}}
+  class Bounds{constructor(){this.points=[]}extend(point){this.points.push(point);return this}}
+  mocks['maplibre-gl']={Map:MapMock,LngLatBounds:Bounds}
+  const draw=(map,segments,coords,kms,selected)=>{if(map?.ready)map.centerline=load(base+'data.ts').buildSegmentsGeoJSON(segments,coords,kms,selected)}
+  mocks['./alignmentMapSetup']={initAlignmentMapLayers:p=>draw(p.map,p.segments,p.currentCoords,p.currentKmPoints,p.selectedSegmentId),syncMapDataDirect:(map,segments,selected,coords,kms)=>draw(map,segments,coords,kms,selected)}
+ }
  if(saveMode){
   delete mocks['./useGeometryDraftWorkflow'];model.draftId='';model.profiles=[]
   mocks['../../../store/authStore']={useAuthStore:Object.assign(()=>authState,{getState:()=>authState,subscribe(){}})};mocks['../../store/authStore']=mocks['../../../store/authStore']
@@ -23,9 +33,9 @@ function harness(root=false,saveMode=false){
  const modules=new Map()
  function load(file){file=path.normalize(file);if(modules.has(file))return modules.get(file);const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText;modules.set(file,module.exports);vm.runInNewContext(code,{module,exports:module.exports,require(name){if(name in mocks)return mocks[name];if(name.startsWith('.'))return load(path.join(path.dirname(file),name+'.ts'));throw Error('Unexpected '+name)},Error,FileReader,console,setTimeout(){},crypto:require('crypto').webcrypto,sessionStorage:{getItem:k=>journal.get(k)||null,setItem:(k,v)=>journal.set(k,v),removeItem:k=>journal.delete(k)}});return module.exports}
  const hook=load(base+(root?'useAlignmentState.ts':'useAlignmentImportState.ts'))[root?'useAlignmentState':'useAlignmentImportState']
- function flush(){for(let i=0;i<25;i++){changed=false;slot=0;pending=[];view=root?hook():hook({inputScope,contextReady:ready,engineeringCrs:crs,onRoadGuardDraft:draft=>applied.push(draft),onDraftInput(){},defaultManualText:'',showToast:m=>messages.push(m),currentCoords:[],currentKmPoints:[],importedLengthKm:0});if(changed)continue;for(const e of pending){effects[e.i]?.cleanup?.();effects[e.i]={deps:e.deps,cleanup:e.setup()}}if(!changed)return view}throw Error('Hook did not settle')}
+ function flush(){for(let i=0;i<25;i++){changed=false;slot=0;pending=[];view=root?hook():hook({inputScope,contextReady:ready,engineeringCrs:crs,onRoadGuardDraft:draft=>applied.push(draft),onDraftInput(){},defaultManualText:'',showToast:m=>messages.push(m),currentCoords:[],currentKmPoints:[],importedLengthKm:0});if(changed)continue;if(mapMode)view.mapState.mapContainerRef.current={};for(const e of pending){effects[e.i]?.cleanup?.();effects[e.i]={deps:e.deps,cleanup:e.setup()}}if(!changed)return view}throw Error('Hook did not settle')}
  flush()
- return{model,workflow,readers,applied,messages,mapInputs,calls,control,flush,v1,v2,get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
+ return{model,workflow,readers,applied,messages,mapInputs,calls,control,maps,fits,flush,v1,v2,convert:load('src/api/services/alignmentService.ts').utm48NToWgs84,loadMap(){maps[0].ready=true;maps[0].events.load()},get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 const tests=[];function test(name,run){tests.push({name,run})}
 test('sample waits for context and CRS match, preserves full DTO and remains unsaved',()=>{
@@ -54,7 +64,7 @@ test('real import/state/segments populate sidebar, isolate UTM from map and surv
  h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.equal(h.view.fileDraft,null);assert.match(h.view.importState.readMessage,/không khớp/)
  h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush()
  assert.deepEqual(plain(h.view.fileDraft),JSON.parse(sample));assert.equal(h.view.localDraftDirty,true);assert.equal(h.workflow.form.origin,'0');assert.equal(h.workflow.form.surveyWidth,'12');assert.equal(h.workflow.form.reason,JSON.parse(sample).changeReason);assert.equal(h.workflow.form.widths,'0, 701.290518512277, 7')
- assert.equal(h.view.activeSegments[0].roadWidthM,7);assert.equal(h.view.activeSegments[0].statusText,'BẢN CHỈNH CHƯA LƯU');assert.equal(h.view.rightTab,'WIDTH_PROFILE');assert.equal(h.view.alignmentStatus,'DRAFT');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.currentKmPoints.length,0);assert.ok(h.mapInputs.every(c=>c.length===0));assert.equal(h.view.segmentsState.slabs.length,0)
+ assert.equal(h.view.activeSegments[0].roadWidthM,7);assert.equal(h.view.activeSegments[0].statusText,'BẢN CHỈNH CHƯA LƯU');assert.equal(h.view.rightTab,'WIDTH_PROFILE');assert.equal(h.view.alignmentStatus,'DRAFT');assert.equal(h.view.currentCoords.length,119);assert.equal(h.view.currentKmPoints.length,119);assert.ok(h.mapInputs.every(c=>c.every(([lng,lat])=>Math.abs(lng)<=180&&Math.abs(lat)<=90)));assert.equal(h.view.segmentsState.slabs.length,0)
  h.read('{');assert.equal(h.view.activeSegments[0].roadWidthM,7)
  h.model.draft={data:{id:'a',projectId:'p',stationOriginMeters:-99,status:'CONFIRMED'}};h.flush();assert.equal(h.workflow.form.origin,'0');assert.match(h.view.importState.manualCoordsText,/^798577/);assert.equal(h.view.alignmentStatus,'DRAFT')
  const delayed=h.read();h.model.draftId='b';h.flush();assert.equal(h.view.fileDraft,null);assert.equal(h.view.activeSegments.length,0)
@@ -111,4 +121,27 @@ test('HTTP failure retains current draft and sidebar without automatic replay',a
 test('receipt missing version or readback with wrong draft/section/version is held and never acknowledged or rewritten',async()=>{
  for(const field of ['badReceipt','badReadback','badVersion','badSection']){const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R'}]};h.flush();h.read(sample);h.control[field]=true;await h.view.handleSubmitAlignment();h.flush();assert.equal(h.model.draftId,'');assert.ok(h.view.draftWorkflow.pending.receipt);await h.view.handleSubmitAlignment();assert.equal(h.calls.filter(c=>c.method==='POST').length,1);if(field!=='badReceipt'){h.control[field]=false;await h.view.draftWorkflow.retryCommand();h.flush();assert.equal(h.calls.filter(c=>c.method==='POST').length,1);h.hydrate();assert.equal(h.view.draftWorkflow.busy,false)}h.unmount()}
 })
-;(async()=>{let count=0;for(const {name,run}of tests){await run();console.log('PASS '+name);count++}console.log(`${count} Draft import/state/save scenarios PASS (mock HTTP; no runtime writes).`)})().catch(error=>{console.error(error);process.exitCode=1})
+test('existing converter matches independent PROJ references, not merely its inverse',()=>{
+ const h=harness()
+ // pyproj Transformer.from_crs(32648,4326,always_xy=True); tolerance ~1cm.
+ for(const [x,y,lng,lat]of [[500000,0,105,0],[500000,1105412.4913010783,105,10],[798577.937027,1269894.645247,107.73664210994504,11.474765619995503],[799082.92577,1269497.285237,107.7412322799448,11.47113272999294]]){const p=h.convert(x,y);assert.ok(Math.abs(p[0]-lng)<1e-7);assert.ok(Math.abs(p[1]-lat)<1e-7)}h.unmount()
+})
+test('file before map load draws and fits latest preview on existing centerline; replacement and scope clear it',()=>{
+ const h=harness(true,false,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
+ const draft=plain(h.view.fileDraft),length=h.view.importedLengthKm,preview=plain(h.view.currentCoords)
+ assert.equal(h.fits.length,0);assert.equal(h.maps[0].centerline,undefined);h.loadMap()
+ const line=h.maps[0].centerline.features.find(f=>f.geometry.type==='LineString');assert.equal(line.geometry.coordinates.length,119);assert.deepEqual(plain(line.geometry.coordinates[0]),preview[0]);assert.deepEqual(plain(h.fits.at(-1)),preview)
+ assert.deepEqual(plain(h.view.fileDraft),draft);assert.equal(h.view.importedLengthKm,length);assert.ok(Math.abs(h.view.currentKmPoints.at(-1)*1000-701.2905185122771)<1e-9);assert.equal(h.view.activeSegments[0].roadWidthM,7);assert.equal(h.view.alignmentStatus,'DRAFT');assert.equal(h.calls.length,0)
+ h.read('{');assert.deepEqual(plain(h.view.currentCoords),preview)
+ const next=JSON.parse(sample);next.coordinates.forEach(p=>p.x+=10);h.read(JSON.stringify(next));assert.notDeepEqual(plain(h.fits.at(-1)),preview)
+ h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.equal(h.maps[0].centerline.features.length,0)
+ h.read(sample);h.model.draftId='b';h.flush();assert.equal(h.maps[0].centerline.features.length,0);h.unmount()
+ const waiting=harness(true,false,true);waiting.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};waiting.flush();waiting.read(sample);waiting.model.draftId='b';waiting.flush();waiting.loadMap();assert.equal(waiting.maps[0].centerline.features.length,0);assert.equal(waiting.fits.length,0);waiting.unmount()
+})
+test('zone49 and CRS mismatch keep engineering input but never render a zone48 preview or stale queued line',()=>{
+ const h=harness(true,false,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
+ h.model.context={projectId:'p',engineeringUtmSrid:32649,roadSections:[]};h.flush();assert.equal(h.view.currentCoords.length,0)
+ const zone49={...JSON.parse(sample),sourceCrs:32649};h.read(JSON.stringify(zone49));assert.deepEqual(plain(h.view.fileDraft),zone49);assert.match(h.view.importState.readMessage,/Chưa hỗ trợ preview.*32649/);assert.equal(h.view.currentCoords.length,0)
+ h.loadMap();assert.ok(h.maps[0].centerline.features.every(f=>f.geometry.coordinates.length===0));assert.equal(h.fits.length,0);assert.ok(h.view.importedLengthKm>0);assert.equal(h.calls.length,0);h.unmount()
+})
+;(async()=>{let count=0;for(const {name,run}of tests){await run();console.log('PASS '+name);count++}console.log(`${count} Draft import/state/save/map scenarios PASS (mock HTTP/MapLibre; no runtime writes).`)})().catch(error=>{console.error(error);process.exitCode=1})
