@@ -39,6 +39,26 @@ await test('GeoJSON inspection preserves vertices and unknown CRS without axis g
  const coords=[[500000,1000000],[500000,1000000],[500020,1000010]]
  const value=parser.inspectGeoJsonCenterline(JSON.stringify({type:'LineString',coordinates:coords}));assert.equal(JSON.stringify(value.coords),JSON.stringify(coords));assert.ok(value.sourceCrs.includes('UNKNOWN'));assert.equal(value.estimatedLengthMeters,null);assert.equal(value.adjacentDuplicates,1)
  await assert.rejects(async()=>parser.inspectGeoJsonCenterline(JSON.stringify({type:'MultiLineString',coordinates:[coords]})))
+ const crs=srid=>({type:'name',properties:{name:`EPSG:${srid}`}})
+ for(const srid of [4326,32648,32649]) {
+   const feature={type:'Feature',properties:{type:'Centerline',sourceReference:'File source',axisOrder:'NE',metresPerUnit:0.001},geometry:{type:'LineString',coordinates:coords}}
+   for(const location of ['root','feature','geometry']) {
+     const input={type:'FeatureCollection',features:[JSON.parse(JSON.stringify(feature))]}
+     if(location==='root')input.crs=crs(srid);else if(location==='feature')input.features[0].crs=crs(srid);else input.features[0].geometry.crs=crs(srid)
+     const result=parser.inspectGeoJsonCenterline(JSON.stringify(input));assert.equal(result.declaredSrid,srid);assert.equal(JSON.stringify(result.declaredCrs),JSON.stringify(crs(srid)));assert.equal(JSON.stringify(result.metadata),JSON.stringify(feature.properties));assert.equal(JSON.stringify(result.coords),JSON.stringify(coords));assert.ok(result.sourceCrs.includes('UNKNOWN'));assert.equal(result.estimatedLengthMeters,null);assert.equal(JSON.stringify(parser.parseGeoJsonText(JSON.stringify(input))),JSON.stringify(coords))
+   }
+ }
+ for(const input of [
+   {type:'FeatureCollection',features:[null]},
+   {type:'FeatureCollection',features:[{type:'LineString',coordinates:coords}]},
+   {type:'Feature',properties:[],geometry:{type:'LineString',coordinates:coords}},
+   {type:'LineString',coordinates:[[1,2],[3,'4']]},
+   {type:'LineString',coordinates:[[1,2],[3,4,5]]},
+   {type:'LineString',coordinates:[[1,2],[null,4]]},
+   {type:'Feature',crs:crs(32648),geometry:{type:'LineString',crs:crs(32649),coordinates:coords}},
+   {type:'LineString',crs:{type:'name',properties:{name:'unverified'}},coordinates:coords}
+ ]) assert.throws(()=>parser.inspectGeoJsonCenterline(JSON.stringify(input)),e=>e instanceof parser.GeoJsonValidationError)
+ assert.throws(()=>parser.inspectGeoJsonCenterline('{'),e=>e instanceof parser.GeoJsonValidationError)
 })
 await test('active editor cannot restore or publish local approval; manual/preset imports do not manufacture engineering facts',async()=>{
  const state=fs.readFileSync('src/pages/(pm)/alignment/useAlignmentState.ts','utf8')

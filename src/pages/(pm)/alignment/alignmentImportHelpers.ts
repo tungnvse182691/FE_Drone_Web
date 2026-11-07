@@ -104,6 +104,9 @@ export function parseExtractedCoordinates(
 }
 
 export interface GeoJsonCenterlineReview {
+  declaredSrid?: number
+  metadata?: Record<string, unknown>
+  declaredCrs?: unknown
   coords: [number, number][]
   featureName: string
   layer: string
@@ -124,10 +127,11 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
   let parsed: any
   try { parsed = JSON.parse(text) } catch { throw new GeoJsonValidationError('Tệp GeoJSON sai cú pháp JSON.') }
   if (!parsed || typeof parsed !== 'object') throw new GeoJsonValidationError('Tệp GeoJSON không hợp lệ.')
-  if (parsed.crs) throw new GeoJsonValidationError('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
   const features = parsed.type === 'FeatureCollection' ? parsed.features
     : parsed.type === 'Feature' ? [parsed] : parsed.type === 'LineString' ? [{ geometry: parsed, properties: {} }] : []
   if (!Array.isArray(features)) throw new GeoJsonValidationError('FeatureCollection không hợp lệ.')
+  if (features.some((f: any) => !f || typeof f !== 'object' || Array.isArray(f) || parsed.type === 'FeatureCollection' && f.type !== 'Feature' ||
+      f.properties != null && (typeof f.properties !== 'object' || Array.isArray(f.properties)))) throw new GeoJsonValidationError('Feature hoặc properties không hợp lệ.')
   const centerlines = features.filter((f: any) => f.properties?.type === 'Centerline' || f.properties?.layer === 'TIM_TUYEN_CHINH')
   const lines = features.filter((f: any) => f.geometry?.type === 'LineString' && !['RoadEdge', 'RoadSurface'].includes(f.properties?.type) && !/^MEP_/.test(f.properties?.layer || ''))
   if (!centerlines.length && !lines.length) {
@@ -140,10 +144,18 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
   if (candidates.length !== 1) throw new GeoJsonValidationError('Cần đúng một Centerline rõ nguồn; không ghép nhiều tuyến/mép đường thành tim tuyến.')
   const feature = candidates[0]
   if (feature.geometry?.type !== 'LineString') throw new GeoJsonValidationError('Centerline phải là LineString; không dùng Polygon hoặc ghép MultiLineString khi chưa có topology.')
+  const declarations = [parsed.crs, feature.crs, feature.geometry.crs].filter(value => value != null)
+  const declaredSrids = declarations.map(value => {
+    const name = value?.type === 'name' ? value.properties?.name : undefined
+    const match = typeof name === 'string' ? /^(?:EPSG:|urn:ogc:def:crs:EPSG::)(4326|32648|32649)$/.exec(name) : null
+    if (!match) throw new GeoJsonValidationError('Tệp khai báo CRS riêng; chưa xác minh được hệ quy chiếu và đơn vị để ghi hình học.')
+    return Number(match[1])
+  })
+  if (new Set(declaredSrids).size > 1) throw new GeoJsonValidationError('Khai báo CRS của tim tuyến mâu thuẫn với tệp; chưa xác minh được hệ quy chiếu.')
   const raw = feature.geometry.coordinates
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > 100000) throw new GeoJsonValidationError('Tim tuyến cần 2–100000 đỉnh.')
   const coords: [number, number][] = raw.map((p: any) => {
-    if (!Array.isArray(p) || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
+    if (!Array.isArray(p) || p.length !== 2 || typeof p[0] !== 'number' || typeof p[1] !== 'number' || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) {
       throw new GeoJsonValidationError('Tọa độ phải là cặp số hữu hạn; chưa xác định trục hoặc đơn vị khi thiếu hệ quy chiếu.')
     }
     return [p[0], p[1]]
@@ -166,6 +178,8 @@ export function inspectGeoJsonCenterline(text: string): GeoJsonCenterlineReview 
   const width = features.find((f: any) => f.properties?.type === 'RoadSurface')?.properties?.roadWidth
   const declared = feature.properties?.totalLength ?? parsed.totalLengthMeters
   return {
+    declaredSrid: declaredSrids[0], declaredCrs: declarations[0],
+    metadata: { ...(feature.properties || {}) },
     coords, featureName: feature.properties?.name || 'LineString', layer: feature.properties?.layer || '',
     ignoredFeatureCount: features.length - 1, sourceCrs: 'UNKNOWN — Chưa xác định hệ quy chiếu, trục và đơn vị',
     estimatedLengthMeters: null, adjacentDuplicates, repeatedVertices: coords.length - new Set(coords.map(p => JSON.stringify(p))).size,
