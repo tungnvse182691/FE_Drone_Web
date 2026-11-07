@@ -3,12 +3,12 @@ import { SegmentItem, SlabItem } from './types'
 import { SEGMENT_COLORS } from './data'
 import {
   interpolateCoordAtKm,
-  checkAndEnrichSegmentsContinuity,
   generateMockSlabs
 } from './alignmentGeometryHelpers'
 import {
   computeAutoSplitSegments,
-  computeSplitSegmentPair
+  computeSplitSegmentPair,
+  checkMainlineSegmentsContinuity
 } from './alignmentSplitHelpers'
 
 export interface UseAlignmentSegmentsStateParams {
@@ -47,7 +47,11 @@ export function useAlignmentSegmentsState({
   const setSplitDistance = (value: number) => { splitDistanceRef.current = value; setSplitDistanceValue(value) }
   const [splitSortOrder, setSplitSortOrder] = useState<'asc' | 'desc'>('asc')
 
-  const [editingSegment, setEditingSegment] = useState<SegmentItem | null>(null)
+  const [editingSegment, setEditingSegmentValue] = useState<SegmentItem | null>(null)
+  const setEditingSegment: React.Dispatch<React.SetStateAction<SegmentItem | null>> = value => setEditingSegmentValue(old => {
+    const next = typeof value === 'function' ? value(old) : value
+    return next && !Object.is(next.lengthKm, next.endKm - next.startKm) ? { ...next, lengthKm: next.endKm - next.startKm } : next
+  })
   const [isAddSegmentModalOpen, setIsAddSegmentModalOpen] = useState<boolean>(false)
   const [newSegForm, setNewSegForm] = useState({
     code: '',
@@ -60,11 +64,11 @@ export function useAlignmentSegmentsState({
   })
   const [splitModalSegment, setSplitModalSegment] = useState<SegmentItem | null>(null)
   const [customSplitKm, setCustomSplitKm] = useState<number>(Number.NaN)
-  const splitInput = useRef({ segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast })
-  splitInput.current = { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast }
+  const splitInput = useRef({ segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, syncMap, handleFitBounds, showToast })
+  splitInput.current = { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, syncMap, handleFitBounds, showToast }
 
   const handleApplyAutoSplit = () => {
-    const { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, splitSortOrder, syncMap, handleFitBounds, showToast } = splitInput.current
+    const { segments, importedLengthKm, currentKmPoints, stationOriginKm, roadWidthM, syncMap, handleFitBounds, showToast } = splitInput.current
     const totalKm = importedLengthKm || (currentKmPoints.length >= 2 ? currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0] : 0.0)
     if (!Number.isFinite(totalKm) || totalKm <= 0) {
       showToast('Chưa có dữ liệu chiều dài tim tuyến để chia đoạn.')
@@ -77,7 +81,7 @@ export function useAlignmentSegmentsState({
       showToast('Cần cự ly chia đoạn và lý trình gốc có nguồn; chưa thay đổi bản nháp.')
       return
     }
-    const validated = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder, segments)
+    const validated = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, 'asc', segments)
     if (!validated.length) { showToast('Phạm vi bản chỉnh chưa liên tục hoặc cự ly chia không hợp lệ; chưa thay đổi bản nháp.'); return }
     setSegments(validated)
     setSlabs([])
@@ -102,15 +106,15 @@ export function useAlignmentSegmentsState({
     e.preventDefault()
     if (!editingSegment) return
 
-    const start = parseFloat(Number(editingSegment.startKm).toFixed(3))
-    const end = parseFloat(Number(editingSegment.endKm).toFixed(3))
+    const start = Number(editingSegment.startKm)
+    const end = Number(editingSegment.endKm)
 
     if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
       showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
       return
     }
 
-    const updatedLength = parseFloat((end - start).toFixed(3))
+    const updatedLength = end - start
     const updated: SegmentItem = {
       ...editingSegment,
       startKm: start,
@@ -120,7 +124,7 @@ export function useAlignmentSegmentsState({
     }
 
     const updatedList = segments.map((s) => (s.id === updated.id ? updated : s)).sort((a, b) => a.startKm - b.startKm)
-    const validated = checkAndEnrichSegmentsContinuity(updatedList)
+    const validated = checkMainlineSegmentsContinuity(updatedList)
     setSegments(validated)
     syncMap(validated, updated.id)
 
@@ -135,8 +139,8 @@ export function useAlignmentSegmentsState({
 
   const handleCreateNewSegment = (e: React.FormEvent) => {
     e.preventDefault()
-    const start = parseFloat(Number(newSegForm.startKm).toFixed(3))
-    const end = parseFloat(Number(newSegForm.endKm).toFixed(3))
+    const start = Number(newSegForm.startKm)
+    const end = Number(newSegForm.endKm)
 
     if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
       showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
@@ -148,7 +152,7 @@ export function useAlignmentSegmentsState({
       code: newSegForm.code || `Phân đoạn #${String(segments.length + 1).padStart(2, '0')}`,
       startKm: start,
       endKm: end,
-      lengthKm: parseFloat((end - start).toFixed(3)),
+      lengthKm: end - start,
       roadWidthM: Number(newSegForm.roadWidthM),
       status: 'VALID',
       statusText: 'HỢP LỆ',
@@ -158,7 +162,7 @@ export function useAlignmentSegmentsState({
     }
 
     const updatedList = [...segments, newSeg].sort((a, b) => a.startKm - b.startKm)
-    const validated = checkAndEnrichSegmentsContinuity(updatedList)
+    const validated = checkMainlineSegmentsContinuity(updatedList)
     setSegments(validated)
     setSelectedSegmentId(newSeg.id)
     syncMap(validated, newSeg.id)
@@ -171,7 +175,7 @@ export function useAlignmentSegmentsState({
     e.preventDefault()
     if (!splitModalSegment) return
 
-    const splitKm = parseFloat(Number(customSplitKm).toFixed(3))
+    const splitKm = Number(customSplitKm)
     if (!Number.isFinite(splitKm) || splitKm <= splitModalSegment.startKm || splitKm >= splitModalSegment.endKm) {
       showToast(`Điểm tách phải nằm giữa Km ${splitModalSegment.startKm.toFixed(3)} và Km ${splitModalSegment.endKm.toFixed(3)}!`)
       return
@@ -180,7 +184,7 @@ export function useAlignmentSegmentsState({
     const segIndex = segments.findIndex((s) => s.id === splitModalSegment.id)
     if (segIndex === -1) return
 
-    const { segA, segB } = computeSplitSegmentPair(splitModalSegment, splitKm, segIndex)
+    const { segA, segB } = computeSplitSegmentPair(splitModalSegment, splitKm, segIndex, true)
 
     const updatedList = [
       ...segments.slice(0, segIndex),
@@ -189,7 +193,7 @@ export function useAlignmentSegmentsState({
       ...segments.slice(segIndex + 1)
     ]
 
-    const validated = checkAndEnrichSegmentsContinuity(updatedList)
+    const validated = checkMainlineSegmentsContinuity(updatedList)
     setSegments(validated)
     setSelectedSegmentId(segA.id)
     syncMap(validated, segA.id)
@@ -200,7 +204,7 @@ export function useAlignmentSegmentsState({
 
   const handleDeleteSegment = (segId: string) => {
     const updatedList = segments.filter((s) => s.id !== segId)
-    const validated = checkAndEnrichSegmentsContinuity(updatedList)
+    const validated = checkMainlineSegmentsContinuity(updatedList)
     setSegments(validated)
     const nextSelId = selectedSegmentId === segId ? (validated[0]?.id || null) : selectedSegmentId
     setSelectedSegmentId(nextSelId)
@@ -221,16 +225,17 @@ export function useAlignmentSegmentsState({
   }
 
   const handleSnapSegment = (segId: string) => {
-    const idx = segments.findIndex((s) => s.id === segId)
+    const ordered = [...segments].sort((a, b) => a.startKm - b.startKm)
+    const idx = ordered.findIndex((s) => s.id === segId)
     if (idx <= 0) return
 
-    const prevSeg = segments[idx - 1]
-    const curSeg = segments[idx]
+    const prevSeg = ordered[idx - 1]
+    const curSeg = ordered[idx]
 
     const newStart = prevSeg.endKm
-    const newLen = parseFloat((curSeg.endKm - newStart).toFixed(3))
+    const newLen = curSeg.endKm - newStart
 
-    if (newLen <= 0) {
+    if (!Number.isFinite(newLen) || newLen <= 0) {
       showToast('Lỗi: Không thể nối vì lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
       return
     }
@@ -239,7 +244,7 @@ export function useAlignmentSegmentsState({
       s.id === segId ? { ...s, startKm: newStart, lengthKm: newLen } : s
     )
 
-    const validated = checkAndEnrichSegmentsContinuity(updated)
+    const validated = checkMainlineSegmentsContinuity(updated)
     setSegments(validated)
     syncMap(validated, curSeg.id)
 

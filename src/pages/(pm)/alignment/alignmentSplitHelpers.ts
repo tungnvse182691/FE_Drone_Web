@@ -18,7 +18,14 @@ export function computeAutoSplitSegments(
       profile.some((segment, index) => !Number.isFinite(segment.startKm) || !Number.isFinite(segment.endKm) || segment.endKm <= segment.startKm || index > 0 && segment.startKm !== profile[index - 1].endKm)) return []
   const count = Math.ceil((end - start) / dist)
   if (count > 100000) return []
-  const cuts = new Set([start, end, ...profile.flatMap(segment => [segment.startKm, segment.endKm])])
+  const regions: SegmentItem[] = []
+  for (const segment of profile) {
+    const previous = regions[regions.length - 1]
+    if (previous && Object.is(previous.roadWidthM, segment.roadWidthM) && Object.is(previous.laneCount, segment.laneCount) && previous.surfaceMaterial === segment.surfaceMaterial) {
+      previous.endKm = segment.endKm; previous.lengthKm = previous.endKm - previous.startKm
+    } else regions.push({ ...segment })
+  }
+  const cuts = new Set([start, end, ...regions.flatMap(segment => [segment.startKm, segment.endKm])])
   const stepMeters = dist * 1000
   for (let i = 1; i < count; i++) {
     const cut = start + i * stepMeters / 1000
@@ -27,7 +34,7 @@ export function computeAutoSplitSegments(
   const boundaries = [...cuts].sort((a, b) => a - b)
   for (let i = 1; i < boundaries.length; i++) {
     const currentKm = boundaries[i - 1], nextKm = boundaries[i], idx = i
-    const source = profile.find(segment => currentKm >= segment.startKm && nextKm <= segment.endKm)
+    const source = regions.find(segment => currentKm >= segment.startKm && nextKm <= segment.endKm)
     newSegments.push({
       id: `seg-${idx}`,
       code: `Phân đoạn #${String(idx).padStart(2, '0')}`,
@@ -53,7 +60,8 @@ export function computeAutoSplitSegments(
 export function computeSplitSegmentPair(
   splitModalSegment: SegmentItem,
   splitKm: number,
-  segIndex: number
+  segIndex: number,
+  preservePrecision = false
 ): { segA: SegmentItem; segB: SegmentItem } {
   const segA: SegmentItem = {
     ...splitModalSegment,
@@ -61,7 +69,7 @@ export function computeSplitSegmentPair(
     code: `${splitModalSegment.code}A`,
     startKm: splitModalSegment.startKm,
     endKm: splitKm,
-    lengthKm: parseFloat((splitKm - splitModalSegment.startKm).toFixed(3)),
+    lengthKm: preservePrecision ? splitKm - splitModalSegment.startKm : parseFloat((splitKm - splitModalSegment.startKm).toFixed(3)),
     roadWidthM: splitModalSegment.roadWidthM,
     color: splitModalSegment.color
   }
@@ -72,10 +80,21 @@ export function computeSplitSegmentPair(
     code: `${splitModalSegment.code}B`,
     startKm: splitKm,
     endKm: splitModalSegment.endKm,
-    lengthKm: parseFloat((splitModalSegment.endKm - splitKm).toFixed(3)),
+    lengthKm: preservePrecision ? splitModalSegment.endKm - splitKm : parseFloat((splitModalSegment.endKm - splitKm).toFixed(3)),
     roadWidthM: splitModalSegment.roadWidthM,
     color: SEGMENT_COLORS[(segIndex + 1) % SEGMENT_COLORS.length]
   }
 
   return { segA, segB }
+}
+
+// Mainline QA reports exact gaps/overlaps without moving either boundary.
+export function checkMainlineSegmentsContinuity(segments: SegmentItem[]): SegmentItem[] {
+  const sorted = [...segments].sort((a, b) => a.startKm - b.startKm)
+  return sorted.map((segment, index) => {
+    const difference = index ? segment.startKm - sorted[index - 1].endKm : 0
+    return { ...segment, hasGap: difference !== 0, gapDistance: Math.abs(difference) * 1000,
+      status: difference === 0 ? 'VALID' : 'GAP_WARNING',
+      statusText: difference === 0 ? 'BẢN CHỈNH CHƯA LƯU' : difference > 0 ? 'KHOẢNG HỞ' : 'CHỒNG LẤN' }
+  })
 }

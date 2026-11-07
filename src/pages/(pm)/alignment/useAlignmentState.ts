@@ -314,7 +314,7 @@ export function useAlignmentState() {
   })
 
   // Sidebar values are authoritative; preserve exact source offsets when only width changed.
-  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: segmentsState.segments.map(segment => {
+  const editedFileDraft = fileDraft ? { ...fileDraft, widthProfile: [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => {
     const origin = fileDraft.stationOriginMeters
     const originalFrom = fileDraft.widthProfile.find(width => segment.startKm === (origin + width.fromOffsetMeters) / 1000)
     const originalTo = fileDraft.widthProfile.find(width => segment.endKm === (origin + width.toOffsetMeters) / 1000)
@@ -392,7 +392,7 @@ export function useAlignmentState() {
     if (draftWorkflow.conflict || draftWorkflow.busy || !localWidthsDirty || selectedTargetType !== 'MAINLINE') return
     const origin = Number(draftWorkflow.form.origin)
     if (!draftWorkflow.form.origin.trim() || !Number.isFinite(origin)) return
-    draftWorkflow.setForm(old => ({ ...old, widths: segmentsState.segments.map(segment => `${segment.startKm * 1000 - origin}, ${segment.endKm * 1000 - origin}, ${Number.isFinite(segment.roadWidthM) ? segment.roadWidthM : ''}`).join('\n') }))
+    draftWorkflow.setForm(old => ({ ...old, widths: [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => `${segment.startKm * 1000 - origin}, ${segment.endKm * 1000 - origin}, ${Number.isFinite(segment.roadWidthM) ? segment.roadWidthM : ''}`).join('\n') }))
   }, [segmentsState.segments, localWidthsDirty, selectedTargetType, draftWorkflow.busy, draftWorkflow.conflict])
 
   // Chuyển đổi dự án PM phụ trách
@@ -416,9 +416,9 @@ export function useAlignmentState() {
 
   // Danh sách phân đoạn đang kích hoạt (Tuyến chính hoặc Tuyến nhánh được chọn)
   const activeSegments = useMemo(() => {
-    if (isMainline) return segmentsState.segments
+    if (isMainline) return [...segmentsState.segments].sort((a, b) => segmentsState.splitSortOrder === 'desc' ? b.startKm - a.startKm : a.startKm - b.startKm)
     return currentBranch?.segments || []
-  }, [isMainline, segmentsState.segments, currentBranch])
+  }, [isMainline, segmentsState.segments, segmentsState.splitSortOrder, currentBranch])
 
   // Chiều dài đang kích hoạt
   const activeLengthKm = useMemo(() => {
