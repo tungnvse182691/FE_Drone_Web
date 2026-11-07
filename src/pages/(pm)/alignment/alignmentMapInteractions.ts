@@ -193,9 +193,12 @@ export function setupAlignmentMapInteractions(
   }
 
   // Click vào tấm bê tông để kích hoạt chọn phân đoạn & xem popup kỹ thuật
-  map.on('click', 'slabs-outline-layer', (e) => {
+  let lastSlabEvent: Event | undefined
+  const openSlabPopup = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastSlabEvent) return
+    lastSlabEvent = e.originalEvent
 
     lastHandledClickTimestamp = Date.now()
 
@@ -239,7 +242,8 @@ export function setupAlignmentMapInteractions(
         </div>
       `)
       .addTo(map)
-  })
+  }
+  for (const layer of ['slabs-fill-layer', 'slabs-outline-layer', 'slabs-label-layer']) map.on('click', layer, openSlabPopup)
 
   // Click vào khe giãn nở để kích hoạt chọn phân đoạn & xem popup kỹ thuật
   map.on('click', 'joints-expansion-layer', (e) => {
@@ -288,8 +292,10 @@ export function setupAlignmentMapInteractions(
   map.on('mouseleave', 'segments-surface-layer', () => { map.getCanvas().style.cursor = '' })
   map.on('mouseenter', 'branches-surface-layer', () => { map.getCanvas().style.cursor = 'pointer' })
   map.on('mouseleave', 'branches-surface-layer', () => { map.getCanvas().style.cursor = '' })
-  map.on('mouseenter', 'slabs-outline-layer', () => { map.getCanvas().style.cursor = 'pointer' })
-  map.on('mouseleave', 'slabs-outline-layer', () => { map.getCanvas().style.cursor = '' })
+  for (const layer of ['slabs-fill-layer', 'slabs-outline-layer', 'slabs-label-layer']) {
+    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer' })
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = '' })
+  }
   map.on('mouseenter', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = 'pointer' })
   map.on('mouseleave', 'joints-expansion-layer', () => { map.getCanvas().style.cursor = '' })
 

@@ -635,6 +635,7 @@ export function buildSlabsAndJointsGeoJSON(
   branchList: any[] = []
 ): {
   slabsGeoJSON: GeoJSON.FeatureCollection
+  slabLabelsGeoJSON: GeoJSON.FeatureCollection
   jointsGeoJSON: GeoJSON.FeatureCollection
   edgesGeoJSON: GeoJSON.FeatureCollection
 } {
@@ -942,6 +943,7 @@ export function buildSlabsAndJointsGeoJSON(
 
   return {
     slabsGeoJSON: { type: 'FeatureCollection', features: slabFeatures },
+    slabLabelsGeoJSON: mainline.slabLabelsGeoJSON,
     jointsGeoJSON: { type: 'FeatureCollection', features: jointFeatures },
     edgesGeoJSON: { type: 'FeatureCollection', features: edgeFeatures }
   }

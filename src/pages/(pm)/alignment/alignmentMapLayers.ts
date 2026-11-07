@@ -57,7 +57,7 @@ export function setupAlignmentSourcesAndLayers(
   }
 
   // 2b. Thêm GeoJSON Sources cho Lưới tấm bê tông (Slabs), Khe co giãn, Khe giãn nở & Nhãn 2 mép đường (Cả chính lẫn nhánh)
-  const { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
+  const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
     segments,
     currentCoords,
     currentKmPoints,
@@ -84,6 +84,8 @@ export function setupAlignmentSourcesAndLayers(
       data: jointsGeoJSON
     })
   }
+
+  if (!map.getSource('slabs-labels-source')) map.addSource('slabs-labels-source', { type: 'geojson', data: slabLabelsGeoJSON, maxzoom: 24, tolerance: 0 })
 
   if (!map.getSource('edges-source')) {
     map.addSource('edges-source', {
@@ -121,8 +123,8 @@ export function setupAlignmentSourcesAndLayers(
         'fill-opacity': [
           'case',
           ['boolean', ['get', 'isSelected'], false],
-          0.85,
-          0.50
+          0.32,
+          0.18
         ]
       }
     })
@@ -133,20 +135,13 @@ export function setupAlignmentSourcesAndLayers(
     map.addLayer({
       id: 'segments-surface-outline',
       type: 'line',
-      source: 'segments-surface-source',
+      source: 'edges-source',
+      filter: ['==', ['get', 'isDimensionLine'], true],
+      minzoom: 13,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': [
-          'case',
-          ['boolean', ['get', 'isSelected'], false],
-          '#FFFFFF',
-          '#C9A227'
-        ],
-        'line-width': [
-          'case',
-          ['boolean', ['get', 'isSelected'], false],
-          2.8,
-          1.5
-        ],
+        'line-color': '#0F172A',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 3, 16, 4.5, 20, 6],
         'line-opacity': 0.95
       }
     })
@@ -162,8 +157,8 @@ export function setupAlignmentSourcesAndLayers(
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
         'line-color': '#0F172A',
-        'line-width': 5.0,
-        'line-opacity': 0.85
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3.5, 16, 5, 20, 6.5],
+        'line-opacity': 0.95
       }
     })
   }
@@ -176,8 +171,8 @@ export function setupAlignmentSourcesAndLayers(
       filter: ['==', ['get', 'isLine'], true],
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': '#FFFFFF',
-        'line-width': 2.4,
+        'line-color': '#C9A227',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.5, 16, 2.2, 20, 3],
         'line-dasharray': [3, 2]
       }
     })

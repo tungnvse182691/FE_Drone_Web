@@ -61,14 +61,15 @@ export function planMainlinePavement(segments: SegmentItem[], cfg: MainlinePavem
 export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [number, number][], kmPoints: number[], cfg: MainlinePavementConfig = {}) {
   const plan = planMainlinePavement(segments, cfg)
   const slabsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+  const slabLabelsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const jointsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const edgesGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const missing = [...plan.missing]
-  if (!plan.segments.length) return { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+  if (!plan.segments.length) return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
   if (coords.length < 2 || coords.length !== kmPoints.length || coords.some(p => !p.every(Number.isFinite) || Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90) ||
       kmPoints.some((km, i) => !Number.isFinite(km) || i > 0 && km <= kmPoints[i - 1]) ||
       plan.segments[0].startKm < kmPoints[0] || plan.segments[plan.segments.length - 1].endKm > kmPoints[kmPoints.length - 1] + 1e-10) {
-    missing.push('tọa độ preview gắn với lý trình engineering'); return { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+    missing.push('tọa độ preview gắn với lý trình engineering'); return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
   }
   // Station controls placement. Longitude/latitude are used only for display offsets.
   const pointAt = (km: number, lateral = 0): [number, number] => {
@@ -89,11 +90,14 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
     return stations.map(km => pointAt(km, offset))
   }
   try {
-    for (const slab of plan.slabs) {
+    for (const [index, slab] of plan.slabs.entries()) {
       const left = along(slab.startKm, slab.endKm, slab.leftOffsetM), right = along(slab.startKm, slab.endKm, slab.rightOffsetM)
-      slabsGeoJSON.features.push({ type: 'Feature', properties: { ...slab, code: slab.id, station: slab.stationing,
+      const properties = { ...slab, sequence: index + 1, code: slab.id, station: slab.stationing,
         lane: `Làn ${slab.laneIndex + 1}`, edgeOffset: `${slab.leftOffsetM}m → ${slab.rightOffsetM}m`, contractionSpacingM: cfg.contractionSpacingM, preview: true },
+      labelPoint = pointAt((slab.startKm + slab.endKm) / 2, (slab.leftOffsetM + slab.rightOffsetM) / 2)
+      slabsGeoJSON.features.push({ type: 'Feature', properties,
         geometry: { type: 'Polygon', coordinates: [[...left, ...right.reverse(), left[0]]] } })
+      slabLabelsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Point', coordinates: labelPoint } })
     }
     for (const segment of plan.segments) {
       if (!positive(segment.roadWidthM)) continue
@@ -127,8 +131,8 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
       }
     }
   } catch {
-    slabsGeoJSON.features = []; jointsGeoJSON.features = []; edgesGeoJSON.features = []
+    slabsGeoJSON.features = []; slabLabelsGeoJSON.features = []; jointsGeoJSON.features = []; edgesGeoJSON.features = []
     missing.push('hướng tim tuyến preview hợp lệ')
   }
-  return { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
+  return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON, missing }
 }

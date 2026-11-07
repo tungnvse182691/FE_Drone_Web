@@ -1,10 +1,9 @@
 import * as maplibregl from 'maplibre-gl'
 
 export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
-  // Dọn dẹp layer fill cũ nếu còn tồn tại trên bản đồ để tránh chồng chéo 2 lớp màu
-  if (map.getLayer('slabs-fill-layer')) {
-    map.removeLayer('slabs-fill-layer')
-  }
+  // A transparent hit surface uses the actual polygons; it creates no additional slabs.
+  if (!map.getLayer('slabs-fill-layer')) map.addLayer({ id: 'slabs-fill-layer', type: 'fill', source: 'slabs-source', minzoom: 16,
+    paint: { 'fill-color': '#0F172A', 'fill-opacity': 0.01 } })
 
   // 1. Viền đổ bóng dưới đáy tấm bê tông
   if (!map.getLayer('slabs-outline-shadow')) {
@@ -12,12 +11,12 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       id: 'slabs-outline-shadow',
       type: 'line',
       source: 'slabs-source',
-      minzoom: 14.0,
+      minzoom: 16,
       maxzoom: 24,
       paint: {
         'line-color': '#000000',
-        'line-width': 2.0,
-        'line-opacity': 0.4
+        'line-width': ['interpolate', ['linear'], ['zoom'], 16, 1.6, 21, 3],
+        'line-opacity': 0.85
       }
     })
   }
@@ -28,12 +27,12 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       id: 'slabs-outline-layer',
       type: 'line',
       source: 'slabs-source',
-      minzoom: 14.0,
+      minzoom: 16,
       maxzoom: 24,
       paint: {
         'line-color': '#FFFFFF',
-        'line-width': 1.0,
-        'line-opacity': 0.75
+        'line-width': ['interpolate', ['linear'], ['zoom'], 16, 0.7, 21, 1.2],
+        'line-opacity': 0.9
       }
     })
   }
@@ -79,12 +78,13 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       type: 'line',
       source: 'edges-source',
       filter: ['==', ['get', 'isDimensionLine'], true],
-      minzoom: 16.0,
+      minzoom: 13,
       maxzoom: 24,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': '#38BDF8',
-        'line-width': 2.0,
-        'line-dasharray': [2, 1.5]
+        'line-color': ['match', ['get', 'side'], 'LEFT', '#22D3EE', 'RIGHT', '#FB7185', '#FFFFFF'],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1, 16, 1.8, 20, 3],
+        'line-opacity': 1
       }
     })
   }
@@ -94,12 +94,15 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
     map.addLayer({
       id: 'slabs-label-layer',
       type: 'symbol',
-      source: 'slabs-source',
-      minzoom: 16.8,
+      source: 'slabs-labels-source',
+      minzoom: 18.5,
       maxzoom: 24,
       layout: {
-        'text-field': ['get', 'code'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 16.8, 9, 18.5, 11, 20, 13],
+        'symbol-placement': 'point',
+        'text-field': ['to-string', ['get', 'sequence']],
+        'text-anchor': 'center',
+        'text-padding': 2,
+        'text-size': ['interpolate', ['linear'], ['zoom'], 18.5, 9, 21.5, 12],
         'text-allow-overlap': false,
         'text-ignore-placement': false
       },
@@ -142,7 +145,7 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       type: 'symbol',
       source: 'edges-source',
       filter: ['!=', ['get', 'isDimensionLine'], true],
-      minzoom: 16.5,
+      minzoom: 17,
       maxzoom: 24,
       layout: {
         'text-field': ['get', 'label'],
@@ -153,14 +156,22 @@ export function setupSlabsAndJointsLayers(map: maplibregl.Map) {
       paint: {
         'text-color': [
           'case',
-          ['==', ['get', 'side'], 'LEFT'], '#38BDF8',
-          ['==', ['get', 'side'], 'RIGHT'], '#FBBF24',
+          ['==', ['get', 'side'], 'LEFT'], '#22D3EE',
+          ['==', ['get', 'side'], 'RIGHT'], '#FB7185',
           '#34D399'
         ],
         'text-halo-color': '#0F172A',
         'text-halo-width': 3.0
       }
     })
+  }
+  // Route strokes stay above the grid; compact slab numbers stay legible in their cells.
+  for (const id of ['segments-surface-outline', 'segments-glow-layer', 'segments-dash-layer', 'edges-dimension-line-layer', 'edges-label-layer', 'slabs-label-layer']) if (map.getLayer(id)) map.moveLayer(id)
+}
+
+export function setSlabGridVisibility(map: maplibregl.Map, visible: boolean) {
+  for (const id of ['slabs-fill-layer', 'slabs-outline-shadow', 'slabs-outline-layer', 'slabs-label-layer', 'joints-contraction-layer', 'joints-expansion-layer', 'joints-expansion-label-layer']) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none')
   }
 }
 

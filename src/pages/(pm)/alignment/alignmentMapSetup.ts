@@ -120,7 +120,7 @@ export function syncMapDataDirect(
   }
 
   try {
-    const { slabsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
+    const { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, edgesGeoJSON } = buildSlabsAndJointsGeoJSON(
       updatedSegs,
       coords,
       kmPts,
@@ -129,6 +129,8 @@ export function syncMapDataDirect(
     )
     const slabsSrc = map.getSource('slabs-source') as maplibregl.GeoJSONSource
     if (slabsSrc) slabsSrc.setData(slabsGeoJSON)
+    const labelsSrc = map.getSource('slabs-labels-source') as maplibregl.GeoJSONSource
+    if (labelsSrc) labelsSrc.setData(slabLabelsGeoJSON)
 
     const jointsSrc = map.getSource('joints-source') as maplibregl.GeoJSONSource
     if (jointsSrc) jointsSrc.setData(jointsGeoJSON)

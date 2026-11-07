@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle, hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import { initAlignmentMapLayers, syncMapDataDirect } from './alignmentMapSetup'
+import { setSlabGridVisibility } from './alignmentSlabLayers'
 import {
   calculateCoordsLengthKm,
   calculateStationFromCoordinate
@@ -51,6 +52,7 @@ export function useAlignmentMapState({
 
   const [mapLayer, setMapLayer] = useState<'SATELLITE' | 'VECTOR'>('SATELLITE')
   const [showSlabsAndJoints, setShowSlabsAndJoints] = useState<boolean>(true)
+  const slabGridVisible = useRef(showSlabsAndJoints); slabGridVisible.current = showSlabsAndJoints
   const [rulerActive, setRulerActive] = useState<boolean>(false)
   const [rulerPoints, setRulerPoints] = useState<[number, number][]>([])
 
@@ -270,6 +272,7 @@ export function useAlignmentMapState({
         isPickingRef,
         onSelectSegmentRef
       })
+      setSlabGridVisibility(map, slabGridVisible.current)
       if (latestMapData.current.currentCoords.length) handleFitBounds(latestMapData.current.currentCoords)
     })
 
@@ -318,22 +321,7 @@ export function useAlignmentMapState({
     const map = mapRef.current
     if (!hasMapBaseStyle(map)) return
 
-    const slabLayers = [
-      'slabs-outline-shadow',
-      'slabs-outline-layer',
-      'slabs-label-layer',
-      'joints-contraction-layer',
-      'joints-expansion-layer',
-      'joints-expansion-label-layer',
-      'edges-dimension-line-layer',
-      'edges-label-layer'
-    ]
-
-    slabLayers.forEach((layerId) => {
-      if (map.getLayer(layerId)) {
-        map.setLayoutProperty(layerId, 'visibility', showSlabsAndJoints ? 'visible' : 'none')
-      }
-    })
+    setSlabGridVisibility(map, showSlabsAndJoints)
   }, [showSlabsAndJoints])
 
   // Đổi con trỏ chuột sang crosshair khi đang trong chế độ chấm điểm
