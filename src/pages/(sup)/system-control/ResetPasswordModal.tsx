@@ -1,8 +1,11 @@
+import { personnelBlocks } from '../../../api/services/personnelScreen'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface ResetPasswordModalProps {
+  blockedReason?: string
+
   isOpen: boolean
   user: SystemUserAccount | null
   onClose: () => void
@@ -11,11 +14,12 @@ export interface ResetPasswordModalProps {
 
 export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   isOpen,
+  blockedReason = personnelBlocks.reset,
   user,
   onClose,
   onConfirm
 }) => {
-  const [tempPassword, setTempPassword] = useState('RoadGuard@2026')
+  const [tempPassword, setTempPassword] = useState('')
   const [copied, setCopied] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -39,7 +43,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!tempPassword.trim()) return
+    if (blockedReason || !tempPassword.trim()) return
 
     try {
       setIsSubmitting(true)
@@ -54,7 +58,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
     if (isSubmitting) return
     setIsSuccess(false)
     setCopied(false)
-    setTempPassword('RoadGuard@2026')
+    setTempPassword('')
     onClose()
   }
 
@@ -140,6 +144,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <p role="status" className="text-xs text-rose-700">{blockedReason}</p>
             {/* THÔNG TIN NHÂN SỰ */}
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1.5">
               <div className="flex items-center justify-between">
@@ -213,7 +218,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !tempPassword.trim()}
+                disabled={!!blockedReason || isSubmitting || !tempPassword.trim()}
                 className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (

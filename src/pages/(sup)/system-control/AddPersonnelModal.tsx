@@ -1,9 +1,12 @@
+import { personnelBlocks } from '../../../api/services/personnelScreen'
 import React, { useState } from 'react'
 import { UserPlus, X, Mail, UserCheck, Send, CheckSquare, Square, FolderKanban, AlertCircle, Lock } from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface AddPersonnelModalProps {
+  blockedReason?: string
+
   showAddPersonnelModal: boolean
   setShowAddPersonnelModal: (show: boolean) => void
   addPersonnelTab: 'NEW' | 'ASSIGN'
@@ -37,6 +40,7 @@ export interface AddPersonnelModalProps {
 
 export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   showAddPersonnelModal,
+  blockedReason = personnelBlocks.invitation,
   setShowAddPersonnelModal,
   addPersonnelTab,
   setAddPersonnelTab,
@@ -166,6 +170,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleAddPersonnelSubmit} className="p-6 overflow-y-auto space-y-3.5 text-xs">
+          <p role="status" className="text-rose-700">{blockedReason}</p>
+          <fieldset disabled={!!blockedReason} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
           {addPersonnelTab === 'NEW' ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -175,7 +181,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    required
+                    disabled
+                    title="DTO invitation không có field họ tên."
                     placeholder="VD: Kỹ sư Nguyễn Văn Nam"
                     value={newPersonnelName}
                     onChange={(e) => setNewPersonnelName(e.target.value)}
@@ -202,7 +209,9 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   <label className="font-semibold text-slate-700">Số điện thoại liên hệ:</label>
                   <input
                     type="text"
-                    placeholder="0912.xxx.xxx"
+                    disabled
+                    title="DTO invitation không có field số điện thoại."
+                    placeholder="Chưa hỗ trợ qua invitation"
                     value={newPersonnelPhone}
                     onChange={(e) => setNewPersonnelPhone(e.target.value)}
                     className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
@@ -363,7 +372,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     ))}
                 </select>
                 <p className="text-[11px] text-slate-500 italic mt-1.5">
-                  💡 <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (giúp PM đó trở về trạng thái &quot;Chưa phân công&quot;), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
+                  <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (giúp PM đó trở về trạng thái &quot;Chưa phân công&quot;), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
                 </p>
               </div>
 
@@ -526,6 +535,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </>
           )}
 
+          </fieldset>
           <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
@@ -536,7 +546,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={
+              disabled={!!blockedReason ||
                 addPersonnelTab === 'ASSIGN' &&
                 (!assignExistingUserId ||
                   (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&

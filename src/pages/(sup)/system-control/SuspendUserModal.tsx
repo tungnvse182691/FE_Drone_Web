@@ -1,8 +1,11 @@
+import { personnelBlocks } from '../../../api/services/personnelScreen'
 import React from 'react'
 import { AlertOctagon, X, Lock } from 'lucide-react'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface SuspendUserModalProps {
+  blockedReason?: string
+
   showSuspendModal: boolean
   setShowSuspendModal: (show: boolean) => void
   userToSuspend: SystemUserAccount | null
@@ -13,6 +16,7 @@ export interface SuspendUserModalProps {
 
 export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
   showSuspendModal,
+  blockedReason = personnelBlocks.account,
   setShowSuspendModal,
   userToSuspend,
   suspendReason = '',
@@ -41,6 +45,7 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
         </div>
 
         <div className="text-xs text-[#555F6F] space-y-3">
+          <p role="status">{blockedReason}</p>
           <p>
             Bạn đang chuẩn bị đình chỉ quyền truy cập của{' '}
             <strong className="text-[#151C27]">{userToSuspend.full_name}</strong> ({userToSuspend.email}).
@@ -88,6 +93,8 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
           </button>
           <button
             type="button"
+            disabled={!!blockedReason}
+            title={blockedReason}
             onClick={handleConfirmSuspend}
             className="px-4 py-2 rounded-lg bg-[#BA1A1A] hover:bg-[#93000A] text-white text-xs font-bold shadow-sm transition cursor-pointer"
           >

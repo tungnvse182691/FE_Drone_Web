@@ -1,10 +1,22 @@
 import React from 'react'
 import { Edit3, X, CheckCircle2, XCircle, Check, FolderKanban, Lock, Phone } from 'lucide-react'
+import { personnelBlocks } from '../../../api/services/personnelScreen'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 import { useAuthStore } from '../../../store/authStore'
 
 export interface EditUserModalProps {
+  detailLoading?: boolean
+  snapshotReady?: boolean
+  detailError?: string
+  commandBusy?: boolean
+  phonePending?: { receipt?: boolean; conflict?: boolean; rejected?: boolean; keyConflict?: boolean } | null
+  onRetryDetail?: () => void
+  onReadFresh?: () => void
+  onAcceptFresh?: () => void
+  hasFresh?: boolean
+  onRevisePhone?: () => void
+
   userToEdit: SystemUserAccount | null
   setUserToEdit: (u: SystemUserAccount | null) => void
   editFullName: string
@@ -29,6 +41,7 @@ export interface EditUserModalProps {
 
 export const EditUserModal: React.FC<EditUserModalProps> = ({
   userToEdit,
+  detailLoading = false, snapshotReady = false, detailError = '', commandBusy = false, phonePending = null, onRetryDetail, onReadFresh, onAcceptFresh, hasFresh = false, onRevisePhone,
   setUserToEdit,
   editFullName,
   setEditFullName,
@@ -49,9 +62,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
   projectsList,
   handleSaveEdit,
 }) => {
-  if (!userToEdit) return null
-
   const currentUser = useAuthStore((s) => s.user)
+  if (!userToEdit) return null
   const isSupervisorUser = currentUser?.role === RoleCode.SUPERVISOR
   const isReporter = userToEdit.role === RoleCode.REPORTER
 
@@ -60,7 +72,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
     userToEdit.role === RoleCode.PROJECT_MANAGER ||
     userToEdit.role === RoleCode.DRONE_OPERATOR ||
     userToEdit.role === RoleCode.REPAIR_CREW
-  const canEditPhone = !isReporter && isSupervisorUser && targetRoleAllowsPhoneEdit && userToEdit.status === 'ACTIVE'
+  const phoneEligible = !isReporter && isSupervisorUser && targetRoleAllowsPhoneEdit && userToEdit.status === 'ACTIVE'
+  const canEditPhone = phoneEligible && snapshotReady && !detailLoading && !commandBusy && !phonePending
 
   const isSupervisorRole = editRole === RoleCode.SUPERVISOR
   const isPmRole = editRole === RoleCode.PROJECT_MANAGER
@@ -121,6 +134,16 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
 
         {/* Modal Form */}
         <form onSubmit={handleSaveEdit} className="p-6 overflow-y-auto space-y-4 text-xs">
+          <p className="text-xs text-slate-600">{personnelBlocks.account} Họ tên/email và phân công dự án là thông tin chỉ đọc ở form này.</p>
+          {detailLoading && <p role="status">Đang đọc hồ sơ và phiên bản...</p>}
+          {detailError && <p role="alert" className="text-xs text-rose-700">{detailError}</p>}
+          {!snapshotReady && !detailLoading && <button type="button" className="underline" onClick={onRetryDetail}>Đọc lại hồ sơ</button>}
+          {phonePending && <div className="text-xs space-y-2">
+            <p>{phonePending.receipt ? 'Số mới đã được lưu; chỉ đọc lại kết quả.' : 'Đang giữ nguyên yêu cầu số điện thoại trước để đối chiếu.'}</p>
+            {phonePending.conflict && <><button type="button" onClick={onReadFresh} disabled={detailLoading || commandBusy} className="underline">Đọc hồ sơ mới để đối chiếu</button><button type="button" onClick={onAcceptFresh} disabled={!hasFresh || commandBusy} className="ml-3 underline">Giữ số mới và dùng phiên bản vừa đọc</button></>}
+            {phonePending.rejected && <button type="button" onClick={onRevisePhone} className="underline">Giữ bản nhập để sửa yêu cầu bị từ chối</button>}
+            {phonePending.keyConflict && <p>Khóa yêu cầu xung đột nội dung; không tự tạo khóa mới để gửi lại.</p>}
+          </div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="font-semibold text-slate-700">
@@ -180,7 +203,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
               />
               {isReporter && (
                 <p className="text-[10.5px] text-slate-500 italic">
-                  🔒 Theo quy định bảo mật, Số điện thoại định danh nhận OTP do người dân tự quản lý qua Mobile App.
+                  Theo quy định bảo mật, Số điện thoại định danh nhận OTP do người dân tự quản lý qua Mobile App.
                 </p>
               )}
             </div>
@@ -192,6 +215,8 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                   Vai trò phân quyền: <span className="text-rose-600">*</span>
                 </label>
                 <select
+                  disabled
+                  title={personnelBlocks.account}
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value as RoleCode)}
                   className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
@@ -227,7 +252,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                         >
                           <span className="font-mono text-[#8C6D15]">{p.code || 'PRJ'}</span>
                           <span>{p.name}</span>
-                          {isPmRole && (
+                          {userToEdit.project_memberships?.some(m => m.projectId === p.id && m.isPrimary) && (
                             <span className="text-[10px] text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-300 font-bold">
                               Chỉ huy trưởng chính
                             </span>
@@ -237,7 +262,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                   </div>
                   {isPmRole && (
                     <p className="text-[11px] text-slate-500 italic leading-relaxed pt-1 border-t border-slate-200">
-                      💡 <strong>Lưu ý nghiệp vụ:</strong> Phân công hoặc bàn giao dự án cho Chỉ huy trưởng (PM) phải thực hiện qua quy trình pháp lý tại nút <strong>"Điều chuyển &amp; Bàn giao dự án"</strong> (API-113) ngoài danh bạ, không thể tự ý gỡ bỏ qua form cập nhật thông tin chung.
+                      <strong>Lưu ý nghiệp vụ:</strong> Phân công hoặc bàn giao dự án cho Chỉ huy trưởng (PM) phải thực hiện qua quy trình pháp lý tại nút <strong>"Điều chuyển &amp; Bàn giao dự án"</strong> (API-113) ngoài danh bạ, không thể tự ý gỡ bỏ qua form cập nhật thông tin chung.
                     </p>
                   )}
                 </div>
@@ -253,7 +278,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             <label className="font-semibold text-slate-700">
               {isReporter ? 'Trạng thái tài khoản:' : 'Trạng thái làm việc:'}
             </label>
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            {userToEdit.status === 'UNKNOWN' ? <p>Chưa có thông tin trạng thái tài khoản.</p> : <fieldset disabled title={personnelBlocks.account} className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setEditStatus('ACTIVE')}
@@ -278,7 +303,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                 <XCircle className="w-4 h-4 text-rose-600" />
                 <span>{isReporter ? 'Khóa tài khoản (SUSPENDED)' : 'Đình chỉ phiên (SUSPENDED)'}</span>
               </button>
-            </div>
+            </fieldset>}
           </div>
 
           <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
@@ -291,10 +316,11 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </button>
             <button
               type="submit"
+              disabled={!phoneEligible || !snapshotReady || detailLoading || commandBusy || !!phonePending?.conflict || !!phonePending?.keyConflict}
               className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5"
             >
               <Check className="w-4 h-4" />
-              <span>{isReporter ? 'Lưu trạng thái tài khoản' : 'Lưu cập nhật nhân sự'}</span>
+              <span>{commandBusy ? 'Đang đối chiếu...' : phonePending?.receipt ? 'Đọc lại kết quả' : phonePending ? 'Gửi lại đúng yêu cầu' : 'Lưu số điện thoại'}</span>
             </button>
           </div>
         </form>

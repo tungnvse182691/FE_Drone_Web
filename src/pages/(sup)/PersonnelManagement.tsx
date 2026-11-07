@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { AccountsTab } from './system-control/AccountsTab'
@@ -7,18 +7,21 @@ import { UserDetailModal } from './system-control/UserDetailModal'
 import { EditUserModal } from './system-control/EditUserModal'
 import { AddPersonnelModal } from './system-control/AddPersonnelModal'
 import { ResetPasswordModal } from './system-control/ResetPasswordModal'
+import { personnelBlocks, type PersonnelNoticeKind } from '../../api/services/personnelScreen'
 import { usePersonnelState } from './system-control/usePersonnelState'
 
 export const PersonnelManagement: React.FC = () => {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
-  const [notice, setNotice] = useState<string | null>(null)
-  const triggerNotice = useCallback((msg: string) => {
-    setNotice(msg)
-    const isError = msg.includes('❌') || msg.toLowerCase().includes('lỗi')
-    setTimeout(() => setNotice(null), isError ? 8000 : 4000)
+  const [notice, setNotice] = useState<{ message: string; kind: PersonnelNoticeKind } | null>(null)
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const triggerNotice = useCallback((message: string, kind: PersonnelNoticeKind = 'info') => {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current)
+    setNotice({ message, kind })
+    noticeTimer.current = setTimeout(() => setNotice(null), kind === 'error' ? 8000 : 4000)
   }, [])
+  useEffect(() => () => { if (noticeTimer.current) clearTimeout(noticeTimer.current) }, [])
 
   const p = usePersonnelState(triggerNotice)
 
@@ -27,16 +30,13 @@ export const PersonnelManagement: React.FC = () => {
       {/* Toast thông báo - z-[9999] để luôn nổi trên tất cả modal */}
       {notice && (
         <div className="fixed top-6 right-6 z-[9999] max-w-md bg-slate-900/95 backdrop-blur-md text-white px-5 py-4 rounded-2xl shadow-2xl flex items-start gap-3 text-xs font-semibold animate-in fade-in slide-in-from-top-4 border border-slate-700/80">
-          <span className="material-symbols-outlined text-[20px] text-[#C9A227] shrink-0 mt-0.5">
-            {notice.includes('❌') ? 'error' : 'check_circle'}
-          </span>
-          <div className="flex-1 leading-relaxed break-words">{notice}</div>
+          <div className="flex-1 leading-relaxed break-words" role={notice.kind === 'error' ? 'alert' : 'status'}><strong>{notice.kind === 'error' ? 'Không thể hoàn tất' : notice.kind === 'success' ? 'Đã hoàn tất' : notice.kind === 'warning' ? 'Cần kiểm tra' : 'Thông tin'}: </strong>{notice.message}</div>
           <button
             type="button"
             onClick={() => setNotice(null)}
             className="text-slate-400 hover:text-white cursor-pointer ml-1"
           >
-            ✕
+            Đóng
           </button>
         </div>
       )}
@@ -117,6 +117,7 @@ export const PersonnelManagement: React.FC = () => {
         </div>
       </div>
 
+      {p.projectsError && <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">{p.projectsError}<button type="button" className="ml-3 underline" onClick={() => { void p.loadUsers() }}>Tải lại dự án và phân công</button></div>}
       {/* Nội dung danh sách nhân sự */}
       <div className="w-full">
         <AccountsTab
@@ -132,7 +133,7 @@ export const PersonnelManagement: React.FC = () => {
           setUserRoleFilter={p.setUserRoleFilter}
           setAddPersonnelTab={p.setAddPersonnelTab}
           setShowAddPersonnelModal={p.setShowAddPersonnelModal}
-          setSelectedUserDetail={p.setSelectedUserDetail}
+          setSelectedUserDetail={p.openDetail}
           handleOpenEdit={p.handleOpenEdit}
           handleRestoreUser={p.handleRestoreUser}
           setUserToSuspend={p.setUserToSuspend}
@@ -151,18 +152,34 @@ export const PersonnelManagement: React.FC = () => {
         setSuspendReason={p.setSuspendReason}
 
         handleConfirmSuspend={p.handleConfirmSuspend}
+        blockedReason={personnelBlocks.account}
       />
 
       <UserDetailModal
         selectedUserDetail={p.selectedUserDetail}
-        setSelectedUserDetail={p.setSelectedUserDetail}
+        setSelectedUserDetail={p.openDetail}
         isSupervisor={isSupervisor}
         handleOpenEdit={p.handleOpenEdit}
+        history={p.history}
+        historyError={p.historyError}
+        historyLoading={p.historyLoading}
+        historyLoaded={p.historyLoaded}
+        onLoadHistory={p.loadMembershipHistory}
       />
 
       <EditUserModal
         userToEdit={p.userToEdit}
-        setUserToEdit={p.setUserToEdit}
+        detailLoading={p.detailLoading}
+        snapshotReady={p.snapshotReady}
+        detailError={p.detailError}
+        commandBusy={p.commandBusy}
+        phonePending={p.phonePending}
+        onRetryDetail={() => { if (p.userToEdit) void p.handleOpenEdit(p.userToEdit) }}
+        onReadFresh={p.readFreshPhone}
+        onAcceptFresh={p.acceptFreshPhone}
+        hasFresh={!!p.freshSnapshot}
+        onRevisePhone={p.revisePhone}
+        setUserToEdit={() => p.closeEdit()}
         editFullName={p.editFullName}
         setEditFullName={p.setEditFullName}
         editEmail={p.editEmail}
@@ -184,6 +201,7 @@ export const PersonnelManagement: React.FC = () => {
       />
 
       <AddPersonnelModal
+        blockedReason={p.addPersonnelTab === 'NEW' ? personnelBlocks.invitation : personnelBlocks.primary}
         usersList={p.usersList}
         showAddPersonnelModal={p.showAddPersonnelModal}
         setShowAddPersonnelModal={p.setShowAddPersonnelModal}
@@ -218,6 +236,7 @@ export const PersonnelManagement: React.FC = () => {
 
       <ResetPasswordModal
         isOpen={p.showResetPasswordModal}
+        blockedReason={personnelBlocks.reset}
         user={p.userToResetPassword}
         onClose={() => p.setShowResetPasswordModal(false)}
         onConfirm={p.handleConfirmResetPassword}

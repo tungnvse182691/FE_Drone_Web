@@ -561,11 +561,12 @@ export interface SystemUserAccount {
   assigned_project_ids?: string[]
   device_info: string
   ip_address: string
-  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED'
+  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED' | 'UNKNOWN'
   last_active: string
   is_current_user?: boolean
   certificate?: string
   joined_date?: string
+  project_memberships?: Array<{ projectId: string; projectName: string; membershipId: string; role?: string | null; status?: string | null; isPrimary?: boolean; validFrom?: string | null; validTo?: string | null }>
 }
 
 export interface AIModelVersion {

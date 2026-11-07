@@ -12,6 +12,12 @@ import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface UserDetailModalProps {
+  history?: SystemUserAccount['project_memberships']
+  historyLoading?: boolean
+  historyLoaded?: boolean
+  historyError?: string
+  onLoadHistory?: () => void
+
   selectedUserDetail: SystemUserAccount | null
   setSelectedUserDetail: (u: SystemUserAccount | null) => void
   isSupervisor: boolean
@@ -20,6 +26,7 @@ export interface UserDetailModalProps {
 
 export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   selectedUserDetail,
+  history = [], historyError = '', historyLoading = false, historyLoaded = false, onLoadHistory,
   setSelectedUserDetail,
   isSupervisor,
   handleOpenEdit,
@@ -58,7 +65,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                       : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   }`}
                 >
-                  {selectedUserDetail.status}
+                  {selectedUserDetail.status === 'UNKNOWN' ? 'Chưa có thông tin trạng thái' : selectedUserDetail.status}
                 </span>
               </div>
               <p className="text-xs text-amber-100 font-mono mt-0.5">
@@ -99,13 +106,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 <span className="text-slate-500 text-[11px] block">Chứng chỉ hành nghề &amp; Chuyên môn:</span>
                 <span className="font-medium text-slate-800 flex items-center gap-1.5 mt-0.5">
                   <Award className="w-3.5 h-3.5 text-brand-gold shrink-0" />
-                  {selectedUserDetail.certificate || 'Hồ sơ lưu trữ nội bộ Hoàng Hải'}
+                  {selectedUserDetail.certificate || 'Chưa có thông tin'}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 text-[11px] block">Ngày tiếp nhận công tác:</span>
                 <span className="font-mono text-slate-700">
-                  {selectedUserDetail.joined_date || '15/01/2024'}
+                  {selectedUserDetail.joined_date || 'Chưa có thông tin'}
                 </span>
               </div>
               <div>
@@ -126,13 +133,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               <div>
                 <span className="text-slate-500 text-[11px] block">Số điện thoại di động:</span>
                 <span className="font-bold text-slate-800 font-mono">
-                  {selectedUserDetail.phone || '—'}
+                  {selectedUserDetail.phone || 'Chưa có thông tin'}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 text-[11px] block">Email / Gmail:</span>
                 <span className="font-mono text-slate-800">
-                  {selectedUserDetail.email || '—'}
+                  {selectedUserDetail.email || 'Chưa có thông tin'}
                 </span>
               </div>
               <div>
@@ -154,18 +161,28 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                     ? 'Đang hoạt động'
                     : selectedUserDetail.status === 'SUSPENDED'
                     ? 'Đã đình chỉ'
-                    : 'Chờ kích hoạt'}
+                    : selectedUserDetail.status === 'INVITED' ? 'Chờ kích hoạt' : 'Chưa có thông tin'}
                 </span>
               </div>
             </div>
           </div>
 
-
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <h4 className="font-bold">Membership hiệu lực trong phạm vi đã đọc</h4>
+            {(selectedUserDetail.project_memberships || []).map(m => <p key={m.membershipId}>{m.projectName} — {m.role || 'Chưa có vai trò'}{m.isPrimary ? ' — PM chính' : ''}; {m.status || 'Chưa có trạng thái'}; từ {m.validFrom || 'Chưa có thông tin'}; đến {m.validTo === null ? 'Chưa kết thúc' : m.validTo || 'Chưa có thông tin'}</p>)}
+            {!(selectedUserDetail.project_memberships || []).length && <p>{selectedUserDetail.project_scope}</p>}
+            <p>Membership không cung cấp trạng thái hoạt động/online của tài khoản. PM chính là một phân công riêng, không phải PM duy nhất có quyền.</p>
+            {isSupervisor && <button type="button" className="underline" disabled={historyLoading} onClick={onLoadHistory}>Đọc lịch sử thành viên</button>}
+            {historyLoading && <p role="status">Đang đọc lịch sử thành viên...</p>}
+            {historyLoaded && !history.length && !historyError && <p>Không có bản ghi lịch sử trong phạm vi đã đọc.</p>}
+            {historyError && <p role="alert" className="text-rose-700">{historyError}</p>}
+            {history.map(m => <p key={m.membershipId}>Lịch sử: {m.projectName}; {m.status || 'Chưa có thông tin'}; {m.isPrimary ? 'Phân công PM chính; ' : ''}{m.validFrom || 'Chưa có thông tin'} → {m.validTo === null ? 'Chưa kết thúc' : m.validTo || 'Chưa có thông tin'}</p>)}
+          </div>
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <span className="text-[11px] text-slate-500">
-            RoadGuard Security • Đã xác thực token phân quyền
+            Phân quyền thao tác do máy chủ kiểm tra
           </span>
           <div className="flex items-center gap-2">
             {isSupervisor && (

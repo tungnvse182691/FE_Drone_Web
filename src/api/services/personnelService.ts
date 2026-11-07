@@ -152,7 +152,7 @@ export function getRoleLabel(role: RoleCode): string {
 
 export const personnelService = {
   // Directory only: choosing a PM must not depend on project/member/statistic reads.
-  async fetchStaffDirectory(filters: { role?: string; status?: string } = {}): Promise<StaffUserDto[]> {
+  async fetchStaffDirectory(filters: { role?: string; status?: string; search?: string } = {}): Promise<StaffUserDto[]> {
     const epoch = useAuthStore.getState().authEpoch
     const items: StaffUserDto[] = []
     const seen = new Set<string>()
@@ -303,55 +303,14 @@ export const personnelService = {
     payload: { status: 'ACTIVE' | 'SUSPENDED'; role: RoleCode; reason: string },
     etag?: string
   ): Promise<any> {
-    console.log(`👤 [CANDIDATE3 BE] Gửi PATCH /api/v1/users/${userId}...`)
-
-    // Nếu chưa có etag, tự động lấy etag mới nhất từ API-238
-    let currentEtag = etag
-    if (!currentEtag) {
-      const detail = await this.fetchUserDetail(userId)
-      currentEtag = detail.etag
-    }
-
-    const idempotencyKey = crypto.randomUUID()
-    const backendRole = mapRoleCodeToBackendRole(payload.role)
-
-    const res = await apiClient.patch(
-      `/users/${userId}`,
-      {
-        status: payload.status,
-        role: backendRole,
-        reason: payload.reason || 'Cập nhật tài khoản bởi Supervisor'
-      },
-      {
-        headers: {
-          'If-Match': currentEtag,
-          'Idempotency-Key': idempotencyKey
-        }
-      }
-    )
-
-    return res.data
+    throw Object.assign(new Error('Đổi vai trò và trạng thái tài khoản chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
   },
 
   /**
    * Đặt lại mật khẩu tạm thời cho nhân sự (API-240: POST /api/v1/users/{userId}/password-reset)
    */
   async adminResetPassword(userId: string, temporaryPassword: string, reason?: string): Promise<void> {
-    console.log(`🔑 [CANDIDATE3 BE] Gửi POST /api/v1/users/${userId}/password-reset...`)
-    const idempotencyKey = crypto.randomUUID()
-
-    await apiClient.post(
-      `/users/${userId}/password-reset`,
-      {
-        temporaryPassword,
-        reason: reason || 'Quản trị viên đặt lại mật khẩu tạm thời cho nhân sự'
-      },
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey
-        }
-      }
-    )
+    throw Object.assign(new Error('Đặt lại mật khẩu chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
   },
 
   /**
@@ -362,25 +321,7 @@ export const personnelService = {
     role: RoleCode
     projectIds: string[]
   }): Promise<InvitationResponseDto> {
-    console.log(`✉️ [CANDIDATE3 BE] Gửi POST /api/v1/invitations cho: ${payload.email}...`)
-    const idempotencyKey = crypto.randomUUID()
-    const backendRole = mapRoleCodeToBackendRole(payload.role)
-
-    const res = await apiClient.post<InvitationResponseDto>(
-      '/invitations',
-      {
-        email: payload.email.trim().toLowerCase(),
-        role: backendRole,
-        projectIds: payload.projectIds
-      },
-      {
-        headers: {
-          'Idempotency-Key': idempotencyKey
-        }
-      }
-    )
-
-    return res.data
+    throw Object.assign(new Error('Gửi lời mời chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
   },
 
   /**
@@ -504,43 +445,12 @@ export const personnelService = {
     phoneNumber: string,
     options?: { etag?: string; idempotencyKey?: string }
   ): Promise<void> {
-    let etag = options?.etag
-
-    // Nếu chưa có ETag, tự động truy vấn GET /api/v1/users/{userId} để lấy header ETag mới nhất
-    if (!etag) {
-      console.log(`🔍 [CANDIDATE3 BE] Lấy header ETag từ GET /api/v1/users/${userId}...`)
-      const userRes = await apiClient.get(`/users/${userId}`)
-      etag = userRes.headers?.etag || userRes.headers?.['etag']
-      if (!etag && userRes.data?.rowVersion) {
-        etag = `"${userRes.data.rowVersion}"`
-      }
-    }
-
-    if (!etag) {
-      throw new Error('Không thể xác thực phiên bản dữ liệu (thiếu ETag) để cập nhật số điện thoại.')
-    }
-
-    // Đảm bảo định dạng ETag có ngoặc kép chuẩn HTTP If-Match
-    const formattedEtag = etag.startsWith('"') ? etag : `"${etag}"`
-    const idempotencyKey = options?.idempotencyKey || crypto.randomUUID()
-    const sanitizedPhoneNumber = phoneNumber.replace(/[\s.-]/g, '')
-
-    console.log(`🚀 [CANDIDATE3 BE] Gọi PATCH /api/v1/users/${userId}/phone-number:`, {
-      phoneNumber: sanitizedPhoneNumber,
-      etag: formattedEtag,
-      idempotencyKey
-    })
-
-    await apiClient.patch(
-      `/users/${userId}/phone-number`,
-      { phoneNumber: sanitizedPhoneNumber },
-      {
-        headers: {
-          'If-Match': formattedEtag,
-          'Idempotency-Key': idempotencyKey
-        }
-      }
-    )
+    if (useAuthStore.getState().user?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được cập nhật số điện thoại.')
+    const etag = options?.etag
+    if (!etag || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(etag)) throw new Error('Cần phiên bản người dùng đã xem trước khi cập nhật.')
+    const phone = phoneNumber.trim()
+    if (!/^\+?[0-9]{7,15}$/.test(phone)) throw new Error('Số điện thoại chưa hợp lệ.')
+    await apiClient.patch(`/users/${userId}/phone-number`, { phoneNumber: phone }, { headers: { 'If-Match': etag, 'Idempotency-Key': options?.idempotencyKey || crypto.randomUUID() } })
   }
 }
 

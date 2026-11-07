@@ -1,6 +1,7 @@
 import React from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
+import { personnelBlocks } from '../../../api/services/personnelScreen'
 import { mapBackendRoleToRoleCode } from '../../../api/services/personnelService'
 
 interface AccountsTabProps {
@@ -99,9 +100,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       {error && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between gap-3 text-xs animate-in fade-in">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-rose-600 text-[20px] shrink-0">error</span>
             <div>
-              <p className="font-bold">Lỗi truy vấn dữ liệu nhân sự từ Backend:</p>
+              <p className="font-bold">Danh sách nhân sự chưa tải đầy đủ:</p>
               <p className="text-rose-700 font-mono text-[11px] mt-0.5">{error}</p>
             </div>
           </div>
@@ -117,8 +117,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         </div>
       )}
 
+      {isLoading && filteredUsers.length > 0 && <p role="status" className="text-xs text-slate-500">Đang tải thêm dữ liệu; danh sách có thể chưa đầy đủ.</p>}
       {/* Trạng thái đang tải dữ liệu từ CSDL Docker */}
-      {isLoading ? (
+      {isLoading && filteredUsers.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-500">
           <div className="w-8 h-8 border-3 border-[#C9A227] border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-medium">Đang truy vấn danh sách nhân sự từ CSDL Backend Docker...</p>
@@ -126,7 +127,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       ) : filteredUsers.length === 0 ? (
         <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
           <span className="material-symbols-outlined text-4xl text-slate-300">person_off</span>
-          <p className="text-xs font-semibold text-slate-600">Không có dữ liệu nhân sự nào trong CSDL Backend</p>
+          <p className="text-xs font-semibold text-slate-600">{error ? 'Chưa tải được danh sách đầy đủ' : 'Không có nhân sự phù hợp trong phạm vi và bộ lọc hiện tại'}</p>
           <p className="text-[11px] text-slate-400">Vui lòng kiểm tra lại bộ lọc tìm kiếm hoặc thêm nhân sự mới vào hệ thống.</p>
         </div>
       ) : (
@@ -138,14 +139,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 <th className="py-3 px-3">Gmail / Email</th>
                 <th className="py-3 px-3">Số điện thoại</th>
                 <th className="py-3 px-3">Vai trò &amp; Dự án phụ trách</th>
-                <th className="py-3 px-3">Trạng thái</th>
+                <th className="py-3 px-3">Trạng thái tài khoản</th>
                 <th className="py-3 px-2 text-right">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#EDEFF2] text-slate-800">
               {filteredUsers.map((u, idx) => {
                 const isCurrent = Boolean(
-                  currentUser?.email && u.email && u.email.toLowerCase() === currentUser.email.toLowerCase()
+                  currentUser?.id && u.id === currentUser.id
                 )
 
                 const isSuspended = u.status === 'SUSPENDED'
@@ -198,7 +199,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     <td className="py-3 px-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-slate-700 font-mono text-[11.5px]">
                         <span className="material-symbols-outlined text-[15px] text-slate-400 shrink-0">mail</span>
-                        <span className="hover:text-slate-900 transition-colors select-all">{u.email || '—'}</span>
+                        <span className="hover:text-slate-900 transition-colors select-all">{u.email || 'Chưa có thông tin'}</span>
                       </div>
                     </td>
 
@@ -206,7 +207,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                     <td className="py-3 px-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5 text-slate-700 font-mono text-[11.5px]">
                         <span className="material-symbols-outlined text-[15px] text-slate-400 shrink-0">call</span>
-                        <span>{u.phone || '—'}</span>
+                        <span>{u.phone || 'Chưa có thông tin'}</span>
                       </div>
                     </td>
 
@@ -257,12 +258,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                           CHỜ KÍCH HOẠT
                         </span>
-                      ) : (
+                      ) : u.status === 'ACTIVE' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           ĐANG HOẠT ĐỘNG
                         </span>
-                      )}
+                      ) : <span className="text-slate-500">Chưa có thông tin</span>}
                     </td>
 
                     {/* Hành động */}
@@ -316,7 +317,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                                 type="button"
                                 onClick={() => handleRestoreUser(u.id)}
                                 className="p-1.5 rounded-[8px] border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-2xs shrink-0"
-                                title="Khôi phục quyền truy cập tài khoản (API-239)"
+                                disabled
+                                title={personnelBlocks.account}
                               >
                                 <span className="material-symbols-outlined text-[17px] block">
                                   restore
