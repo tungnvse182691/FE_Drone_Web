@@ -16,12 +16,15 @@ function harness(root=false,saveMode=false,mapMode=false){
  mocks['../../store/authStore']={useAuthStore:{subscribe(){}}};mocks['../client']={apiClient:client};mocks['./projectService']={projectService:{}}
  const maps=[],fits=[]
  if(mapMode){
-  delete mocks['./useAlignmentMapState'];mocks['maplibre-gl/dist/maplibre-gl.css']={};mocks['../../../utils/maplibre']={getMapLibreStyle:()=>({})};mocks['../../../api/services/projectService']={projectService:{}}
-  class MapMock{constructor(){this.ready=false;this.events={};maps.push(this)}on(name,fn){this.events[name]=fn;return this}isStyleLoaded(){return this.ready}getLayer(){return null}getCanvas(){return{style:{}}}fitBounds(bounds){fits.push(bounds.points)}flyTo(){}remove(){}}
+  delete mocks['./useAlignmentMapState'];mocks['maplibre-gl/dist/maplibre-gl.css']={};mocks['../../../utils/maplibre']={getMapLibreStyle:()=>({}),hasMapBaseStyle:map=>load('src/utils/maplibre.ts').hasMapBaseStyle(map)};mocks['../../../api/services/projectService']={projectService:{}}
+  class MapMock{constructor(){this.ready=false;this.tilesReady=false;this.events={};this.sources={};this.layers={};maps.push(this)}on(name,fn){this.events[name]=fn;return this}isStyleLoaded(){return this.ready&&this.tilesReady}getLayer(id){return this.layers[id]||(this.ready&&['satellite-layer','osm-layer'].includes(id)?{id}:null)}getSource(id){return this.sources[id]}addSource(id,definition){this.sources[id]={data:definition.data,setData:data=>{this.sources[id].data=data;if(id==='segments-source')this.centerline=data}};if(id==='segments-source')this.centerline=definition.data}addLayer(layer){this.layers[layer.id]=layer}setLayoutProperty(){}triggerRepaint(){}getCanvas(){return{style:{}}}fitBounds(bounds){fits.push(bounds.points)}flyTo(){}remove(){}}
   class Bounds{constructor(){this.points=[]}extend(point){this.points.push(point);return this}}
   mocks['maplibre-gl']={Map:MapMock,LngLatBounds:Bounds}
-  const draw=(map,segments,coords,kms,selected)=>{if(map?.ready)map.centerline=load(base+'data.ts').buildSegmentsGeoJSON(segments,coords,kms,selected)}
-  mocks['./alignmentMapSetup']={initAlignmentMapLayers:p=>draw(p.map,p.segments,p.currentCoords,p.currentKmPoints,p.selectedSegmentId),syncMapDataDirect:(map,segments,selected,coords,kms)=>draw(map,segments,coords,kms,selected)}
+  mocks['./data']=new Proxy({SEGMENT_COLORS:['#C9A227']},{get:(target,key)=>key in target?target[key]:load(base+'data.ts')[key]})
+  mocks['./alignmentMapInteractions']={setupAlignmentMapInteractions(){}}
+  mocks['./alignmentMapMarkers']={renderAlignmentMarkers(){}}
+  // Exercise actual layer/source setup and updates, with tiles permanently unavailable.
+  mocks['./alignmentMapSetup']={initAlignmentMapLayers:p=>load(base+'alignmentMapSetup.ts').initAlignmentMapLayers(p),syncMapDataDirect:(...args)=>load(base+'alignmentMapSetup.ts').syncMapDataDirect(...args)}
  }
  if(saveMode){
   delete mocks['./useGeometryDraftWorkflow'];model.draftId='';model.profiles=[]
@@ -35,7 +38,7 @@ function harness(root=false,saveMode=false,mapMode=false){
  const hook=load(base+(root?'useAlignmentState.ts':'useAlignmentImportState.ts'))[root?'useAlignmentState':'useAlignmentImportState']
  function flush(){for(let i=0;i<25;i++){changed=false;slot=0;pending=[];view=root?hook():hook({inputScope,contextReady:ready,engineeringCrs:crs,onRoadGuardDraft:draft=>applied.push(draft),onDraftInput(){},defaultManualText:'',showToast:m=>messages.push(m),currentCoords:[],currentKmPoints:[],importedLengthKm:0});if(changed)continue;if(mapMode)view.mapState.mapContainerRef.current={};for(const e of pending){effects[e.i]?.cleanup?.();effects[e.i]={deps:e.deps,cleanup:e.setup()}}if(!changed)return view}throw Error('Hook did not settle')}
  flush()
- return{model,workflow,readers,applied,messages,mapInputs,calls,control,maps,fits,flush,v1,v2,convert:load('src/api/services/alignmentService.ts').utm48NToWgs84,loadMap(){maps[0].ready=true;maps[0].events.load()},get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
+ return{model,workflow,readers,applied,messages,mapInputs,calls,control,maps,fits,flush,v1,v2,convert:load('src/api/services/alignmentService.ts').utm48NToWgs84,loadMap(){maps[0].ready=true;maps[0].events['style.load']()},get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 const tests=[];function test(name,run){tests.push({name,run})}
 test('file preview input applies independently of context and preserves full source DTO',()=>{
@@ -144,6 +147,19 @@ test('file before map load draws and fits latest preview on existing centerline;
  h.read(JSON.stringify({type:'LineString',coordinates:[[108,16],[108.1,16.1]]}));assert.deepEqual(plain(h.maps[0].centerline.features[0].geometry.coordinates),[[108,16],[108.1,16.1]])
  h.read(sample);h.model.draftId='b';h.flush();assert.equal(h.maps[0].centerline.features.length,0);h.unmount()
  const waiting=harness(true,false,true);waiting.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};waiting.flush();waiting.read(sample);waiting.model.draftId='b';waiting.flush();waiting.loadMap();assert.equal(waiting.maps[0].centerline.features.length,0);assert.equal(waiting.fits.length,0);waiting.unmount()
+})
+test('raster tile failure never blocks style-ready overlay setup, latest preview updates or fitBounds',()=>{
+ const h=harness(true,false,true);h.read(sample);const map=h.maps[0]
+ assert.equal(map.isStyleLoaded(),false);assert.equal(map.getSource('segments-source'),undefined)
+ h.loadMap() // style.load only: no map load event, no successful raster requests.
+ assert.equal(map.isStyleLoaded(),false);assert.equal(map.events.load,undefined)
+ assert.equal(map.getSource('segments-source').data.features[0].geometry.coordinates.length,119)
+ assert.ok(map.getLayer('segments-line-layer')||Object.values(map.layers).some(l=>l.type==='line'))
+ const geo={type:'LineString',coordinates:[[106,20],[106.01,20.02]]};h.read(JSON.stringify(geo))
+ assert.deepEqual(plain(map.getSource('segments-source').data.features[0].geometry.coordinates),geo.coordinates)
+ assert.deepEqual(plain(h.fits.at(-1)),geo.coordinates)
+ h.model.draftId='next';h.flush();assert.equal(map.getSource('segments-source').data.features.length,0)
+ assert.equal(h.calls.length,0);h.unmount()
 })
 test('zone49 and CRS mismatch keep engineering input but never render a zone48 preview or stale queued line',()=>{
  const h=harness(true,false,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)

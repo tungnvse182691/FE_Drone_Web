@@ -1,4 +1,5 @@
 import * as maplibregl from 'maplibre-gl'
+import { hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
@@ -18,7 +19,7 @@ export function setupAlignmentSourcesAndLayers(
   selectedSegmentId: string | null,
   branches: any[] = []
 ) {
-  if (!map || !map.isStyleLoaded()) return
+  if (!hasMapBaseStyle(map)) return
 
   // 0. Thêm GeoJSON Source cho bề mặt dải mặt đường (Polygon)
   if (!map.getSource('segments-surface-source')) {

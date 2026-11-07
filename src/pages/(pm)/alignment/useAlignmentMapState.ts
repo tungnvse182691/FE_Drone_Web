@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { getMapLibreStyle } from '../../../utils/maplibre'
+import { getMapLibreStyle, hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import { initAlignmentMapLayers, syncMapDataDirect } from './alignmentMapSetup'
 import {
@@ -258,7 +258,7 @@ export function useAlignmentMapState({
       }
     })
 
-    map.on('load', () => {
+    map.on('style.load', () => {
       initAlignmentMapLayers({
         map,
         ...latestMapData.current,
@@ -301,7 +301,7 @@ export function useAlignmentMapState({
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
-    if (!map.isStyleLoaded()) return
+    if (!hasMapBaseStyle(map)) return
 
     if (map.getLayer('satellite-layer')) {
       map.setLayoutProperty('satellite-layer', 'visibility', mapLayer === 'SATELLITE' ? 'visible' : 'none')
@@ -315,7 +315,7 @@ export function useAlignmentMapState({
   useEffect(() => {
     if (!mapRef.current) return
     const map = mapRef.current
-    if (!map.isStyleLoaded()) return
+    if (!hasMapBaseStyle(map)) return
 
     const slabLayers = [
       'slabs-outline-shadow',
@@ -511,7 +511,7 @@ export function useAlignmentMapState({
   }
 
   const handleFitBounds = (coords: [number, number][] = currentCoords) => {
-    if (!mapRef.current?.isStyleLoaded()) return
+    if (!hasMapBaseStyle(mapRef.current)) return
     if (mapRef.current) {
       if (coords.length > 0) {
         const bounds = new maplibregl.LngLatBounds()

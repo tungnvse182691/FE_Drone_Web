@@ -12,6 +12,11 @@ export const DEFAULT_MAP_ZOOM = 14
 export const SATELLITE_LAYER_ID = 'satellite-layer'
 export const OSM_LAYER_ID = 'osm-layer'
 
+// Base layers exist once the style is parsed; raster tiles may still be loading or failing.
+export function hasMapBaseStyle(map: maplibregl.Map | null): map is maplibregl.Map {
+  return !!map && !!(map.getLayer(SATELLITE_LAYER_ID) || map.getLayer(OSM_LAYER_ID))
+}
+
 /**
  * Sinh cấu hình StyleSpecification chuẩn cho MapLibre GL
  * Đảm bảo hiển thị ổn định, không bị vỡ ảnh hay lỗi CORS khi zoom sát mặt đường

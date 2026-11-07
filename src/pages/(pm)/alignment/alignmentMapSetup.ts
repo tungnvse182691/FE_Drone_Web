@@ -1,4 +1,5 @@
 import * as maplibregl from 'maplibre-gl'
+import { hasMapBaseStyle } from '../../../utils/maplibre'
 import { SegmentItem } from './types'
 import {
   buildSegmentsSurfaceGeoJSON,
@@ -78,7 +79,7 @@ export function syncMapDataDirect(
   customCfg?: SlabsCustomConfig,
   branches: any[] = []
 ) {
-  if (!map || !map.isStyleLoaded()) return
+  if (!hasMapBaseStyle(map)) return
 
   // Đảm bảo các nguồn và lớp luôn tồn tại trước khi cập nhật dữ liệu
   if (!map.getSource('segments-source') || !map.getSource('segments-surface-source')) {
