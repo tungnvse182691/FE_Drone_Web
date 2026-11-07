@@ -1,6 +1,7 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
+import { hasWarrantyData } from '../../../utils/projectWarranty'
 
 interface ProjectTimelineStepperProps {
   project: HubProject
@@ -15,6 +16,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   isSupervisor = false,
   onNavigate
 }) => {
+  const warrantyReady = hasWarrantyData(project)
   const isAlignmentDone = (project.length_km || 0) > 0
   const isClosed = project.status === 'CLOSED'
   const isSuspended = project.status === 'RESTRICTED'
@@ -210,7 +212,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                   ? (isAlignmentDone ? 'Đã hoàn thành nghĩa vụ' : 'Không phát sinh chu trình vận hành')
                   : isSuspended
                   ? 'Chu trình tạm ngưng vận hành'
-                  : `Chu trình lặp • Còn ${project.days_remaining} ngày`}
+                  : warrantyReady ? `Chu trình lặp • Còn ${project.days_remaining} ngày` : 'Chưa cập nhật'}
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed mb-2.5">
@@ -240,13 +242,13 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium">Thời hạn đã qua</span>
                 <span className="text-xs font-mono font-bold text-amber-900">
-                  {project.warranty_passed_percent}% thời gian
+                  {warrantyReady ? `${project.warranty_passed_percent}% thời gian` : 'Chưa cập nhật'}
                 </span>
               </div>
               <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium">Hết hạn bảo hành</span>
                 <span className="text-xs font-mono font-bold text-slate-800">
-                  {project.warranty_end_date || '3 năm từ bàn giao'}
+                  {warrantyReady ? project.warranty_end_date : 'Chưa cập nhật'}
                 </span>
               </div>
             </div>
