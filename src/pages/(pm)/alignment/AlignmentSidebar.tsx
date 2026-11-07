@@ -26,18 +26,18 @@ export interface AlignmentSidebarProps {
   currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
-  slabLengthM: number
-  onSetSlabLengthM: (val: number) => void
-  slabThicknessCm: number
-  onSetSlabThicknessCm: (val: number) => void
+  slabLengthM: number | string
+  onSetSlabLengthM: (val: number | string) => void
+  slabThicknessCm: number | string
+  onSetSlabThicknessCm: (val: number | string) => void
   syncJointWithSlab: boolean
   onSetSyncJointWithSlab: (val: boolean) => void
-  contractionSpacingM: number
-  onSetContractionSpacingM: (val: number) => void
-  expansionSpacingM: number
-  onSetExpansionSpacingM: (val: number) => void
-  expansionGapMm: number
-  onSetExpansionGapMm: (val: number) => void
+  contractionSpacingM: number | string
+  onSetContractionSpacingM: (val: number | string) => void
+  expansionSpacingM: number | string
+  onSetExpansionSpacingM: (val: number | string) => void
+  expansionGapMm: number | string
+  onSetExpansionGapMm: (val: number | string) => void
   onOpenSplitModal: (seg: SegmentItem) => void
   onEditSegment: (seg: SegmentItem) => void
   onDeleteSegment: (id: string) => void
@@ -206,6 +206,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {rightTab === 'SLABS' && (
           <fieldset disabled={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
+            segments={segments}
+            selectedSegmentId={selectedSegmentId}
             slabLengthM={slabLengthM}
             onSetSlabLengthM={onSetSlabLengthM}
             slabThicknessCm={slabThicknessCm}

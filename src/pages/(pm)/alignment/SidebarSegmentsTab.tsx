@@ -25,7 +25,7 @@ export interface SidebarSegmentsTabProps {
   currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
-  slabLengthM: number
+  slabLengthM: number | string
   onOpenSplitModal: (seg: SegmentItem) => void
   onEditSegment: (seg: SegmentItem) => void
   onDeleteSegment: (id: string) => void

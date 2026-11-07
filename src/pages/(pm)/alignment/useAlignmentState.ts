@@ -109,11 +109,11 @@ export function useAlignmentState() {
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
-  const [slabLengthM, setSlabLengthM] = useState<number>(Number.NaN)
-  const [slabThicknessCm, setSlabThicknessCm] = useState<number>(Number.NaN)
-  const [contractionSpacingM, setContractionSpacingM] = useState<number>(Number.NaN)
-  const [expansionSpacingM, setExpansionSpacingM] = useState<number>(Number.NaN)
-  const [expansionGapMm, setExpansionGapMm] = useState<number>(Number.NaN)
+  const [slabLengthM, setSlabLengthM] = useState<number | string>(Number.NaN)
+  const [slabThicknessCm, setSlabThicknessCm] = useState<number | string>(Number.NaN)
+  const [contractionSpacingM, setContractionSpacingM] = useState<number | string>(Number.NaN)
+  const [expansionSpacingM, setExpansionSpacingM] = useState<number | string>(Number.NaN)
+  const [expansionGapMm, setExpansionGapMm] = useState<number | string>(Number.NaN)
   const [syncJointWithSlab, setSyncJointWithSlab] = useState<boolean>(true)
 
   // Quản lý Tuyến nhánh (Branch Alignment)
@@ -184,8 +184,6 @@ export function useAlignmentState() {
   useEffect(() => {
     const plan = planMainlinePavement(segmentsState.segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
     segmentsState.setSlabs(plan.slabs)
-    if (rightTab === 'SLABS' && plan.missing.length) showToast(`Thiếu dữ liệu preview tấm/khe: ${plan.missing.join('; ')}. Không tự điền thông số.`)
-    else if (rightTab === 'SLABS' && (currentCoords.length < 2 || currentCoords.length !== currentKmPoints.length)) showToast('Thiếu tọa độ gắn với lý trình engineering để vẽ preview tấm/khe và hai mép.')
   }, [slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, segmentsState.segments, rightTab, currentCoords, currentKmPoints])
 
   // Refs theo dõi danh sách tuyến nhánh và phân đoạn mới nhất để tránh stale closure khi click trên map
@@ -600,15 +598,15 @@ export function useAlignmentState() {
     rightTab,
     setRightTab,
     slabLengthM,
-    setSlabLengthM: (value: number) => setPavementConfig(setSlabLengthM, value),
+    setSlabLengthM: (value: number | string) => setPavementConfig(setSlabLengthM, value),
     slabThicknessCm,
-    setSlabThicknessCm: (value: number) => setPavementConfig(setSlabThicknessCm, value),
+    setSlabThicknessCm: (value: number | string) => setPavementConfig(setSlabThicknessCm, value),
     contractionSpacingM,
-    setContractionSpacingM: (value: number) => setPavementConfig(setContractionSpacingM, value),
+    setContractionSpacingM: (value: number | string) => setPavementConfig(setContractionSpacingM, value),
     expansionSpacingM,
-    setExpansionSpacingM: (value: number) => setPavementConfig(setExpansionSpacingM, value),
+    setExpansionSpacingM: (value: number | string) => setPavementConfig(setExpansionSpacingM, value),
     expansionGapMm,
-    setExpansionGapMm: (value: number) => setPavementConfig(setExpansionGapMm, value),
+    setExpansionGapMm: (value: number | string) => setPavementConfig(setExpansionGapMm, value),
     syncJointWithSlab,
     setSyncJointWithSlab: (value: boolean) => setPavementConfig(setSyncJointWithSlab, value),
     // Branch Alignment

@@ -1,11 +1,48 @@
 import type { SegmentItem, SlabItem } from './types'
 
 export interface MainlinePavementConfig {
-  slabLenM?: number
-  thicknessCm?: number
-  contractionSpacingM?: number
-  expansionSpacingM?: number
-  expansionGapMm?: number
+  slabLenM?: number | string
+  thicknessCm?: number | string
+  contractionSpacingM?: number | string
+  expansionSpacingM?: number | string
+  expansionGapMm?: number | string
+}
+
+export interface PavementInputIssue {
+  kind: 'slab' | 'contraction' | 'expansion' | 'shared'
+  segmentId?: string
+  message: string
+}
+
+// Keep the input text in editor state; only complete decimal numbers reach geometry.
+export function pavementNumber(value: number | string | undefined): number {
+  if (typeof value === 'number') return value
+  return typeof value === 'string' && /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()) ? Number(value) : Number.NaN
+}
+
+export function normalizePavementConfig(input: MainlinePavementConfig = {}) {
+  return { slabLenM: pavementNumber(input.slabLenM), thicknessCm: pavementNumber(input.thicknessCm),
+    contractionSpacingM: pavementNumber(input.contractionSpacingM), expansionSpacingM: pavementNumber(input.expansionSpacingM), expansionGapMm: pavementNumber(input.expansionGapMm) }
+}
+
+export function pavementInputIssues(segments: SegmentItem[], input: MainlinePavementConfig = {}) {
+  const issues: PavementInputIssue[] = []
+  const check = (value: number | string | undefined, label: string, kind: PavementInputIssue['kind'], segment?: SegmentItem, integer = false) => {
+    const absent = value === undefined || typeof value === 'number' && Number.isNaN(value) || typeof value === 'string' && !value.trim()
+    const number = pavementNumber(value)
+    if (absent || !positive(number) || integer && !Number.isInteger(number)) issues.push({ kind, segmentId: segment?.id,
+      message: `${absent ? 'Chưa nhập' : 'Không hợp lệ'}: ${label}${segment ? ` — ${segment.code}` : ''}${absent ? '' : integer ? ' (cần số nguyên > 0)' : ' (cần số hữu hạn > 0)'}` })
+  }
+  check(input.slabLenM, 'chiều dài tấm L', 'slab')
+  check(input.thicknessCm, 'chiều dày tấm', 'slab')
+  for (const segment of segments) {
+    check(segment.roadWidthM, 'bề rộng', 'shared', segment)
+    check(segment.laneCount, 'số làn', 'slab', segment, true)
+  }
+  check(input.contractionSpacingM, 'cự ly khe co', 'contraction')
+  check(input.expansionSpacingM, 'cự ly khe giãn', 'expansion')
+  check(input.expansionGapMm, 'độ hở khe giãn', 'expansion')
+  return issues
 }
 
 interface PreviewSlab extends SlabItem {
@@ -21,23 +58,17 @@ interface PreviewSlab extends SlabItem {
 const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
 const station = (km: number) => `Km ${Math.floor(km)}+${((km - Math.floor(km)) * 1000).toFixed(3)}`
 
-export function planMainlinePavement(segments: SegmentItem[], cfg: MainlinePavementConfig = {}) {
+export function planMainlinePavement(segments: SegmentItem[], input: MainlinePavementConfig = {}) {
+  const cfg = normalizePavementConfig(input)
   const ordered = [...segments].sort((a, b) => a.startKm - b.startKm)
-  const missing: string[] = [], slabs: PreviewSlab[] = []
+  const issues = pavementInputIssues(ordered, input), missing = issues.map(issue => issue.message), slabs: PreviewSlab[] = []
   if (!ordered.length || ordered.some((s, i) => !Number.isFinite(s.startKm) || !Number.isFinite(s.endKm) || s.endKm <= s.startKm || i > 0 && s.startKm !== ordered[i - 1].endKm)) {
-    return { segments: [] as SegmentItem[], slabs, missing: ['phạm vi lý trình engineering liên tục'] }
+    return { segments: [] as SegmentItem[], slabs, missing: ['phạm vi lý trình engineering liên tục'], issues: [{ kind: 'shared' as const, message: 'Thiếu phạm vi lý trình engineering liên tục' }] }
   }
-  if (!positive(cfg.slabLenM)) missing.push('chiều dài tấm L')
-  if (!positive(cfg.thicknessCm)) missing.push('chiều dày tấm')
-  if (ordered.some(s => !positive(s.roadWidthM))) missing.push('bề rộng từng khoảng')
-  if (ordered.some(s => !Number.isInteger(s.laneCount) || s.laneCount <= 0)) missing.push('số làn từng khoảng')
-  const canMakeSlabs = !missing.length
-  if (!positive(cfg.contractionSpacingM)) missing.push('cự ly khe co')
-  if (!positive(cfg.expansionSpacingM)) missing.push('cự ly khe giãn')
-  if (!positive(cfg.expansionGapMm)) missing.push('độ hở khe giãn')
-  if (canMakeSlabs) {
+  if (positive(cfg.slabLenM) && positive(cfg.thicknessCm)) {
     const origin = ordered[0].startKm, length = cfg.slabLenM!
     for (const segment of ordered) {
+      if (issues.some(issue => issue.segmentId === segment.id)) continue
       const from = (segment.startKm - origin) * 1000, to = (segment.endKm - origin) * 1000
       for (let row = Math.floor(from / length); row * length < to; row++) {
         const d0 = Math.max(from, row * length), d1 = Math.min(to, (row + 1) * length)
@@ -55,22 +86,23 @@ export function planMainlinePavement(segments: SegmentItem[], cfg: MainlinePavem
       }
     }
   }
-  return { segments: ordered, slabs, missing }
+  return { segments: ordered, slabs, missing, issues }
 }
 
-export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [number, number][], kmPoints: number[], cfg: MainlinePavementConfig = {}) {
-  const plan = planMainlinePavement(segments, cfg)
+export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [number, number][], kmPoints: number[], input: MainlinePavementConfig = {}) {
+  const cfg = normalizePavementConfig(input)
+  const plan = planMainlinePavement(segments, input)
   const slabsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const slabLabelsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const jointsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const jointLabelsGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const edgesGeoJSON: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   const missing = [...plan.missing]
-  if (!plan.segments.length) return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
+  if (!plan.segments.length) return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing, issues: plan.issues }
   if (coords.length < 2 || coords.length !== kmPoints.length || coords.some(p => !p.every(Number.isFinite) || Math.abs(p[0]) > 180 || Math.abs(p[1]) > 90) ||
       kmPoints.some((km, i) => !Number.isFinite(km) || i > 0 && km <= kmPoints[i - 1]) ||
       plan.segments[0].startKm < kmPoints[0] || plan.segments[plan.segments.length - 1].endKm > kmPoints[kmPoints.length - 1] + 1e-10) {
-    missing.push('tọa độ preview gắn với lý trình engineering'); return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
+    missing.push('tọa độ preview gắn với lý trình engineering'); plan.issues.push({ kind: 'shared', message: 'Thiếu tọa độ preview gắn với lý trình engineering' }); return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing, issues: plan.issues }
   }
   // Station controls placement. Longitude/latitude are used only for display offsets.
   const pointAt = (km: number, lateral = 0): [number, number] => {
@@ -139,7 +171,7 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
     }
   } catch {
     slabsGeoJSON.features = []; slabLabelsGeoJSON.features = []; jointsGeoJSON.features = []; jointLabelsGeoJSON.features = []; edgesGeoJSON.features = []
-    missing.push('hướng tim tuyến preview hợp lệ')
+    missing.push('hướng tim tuyến preview hợp lệ'); plan.issues.push({ kind: 'shared', message: 'Thiếu hướng tim tuyến preview hợp lệ' })
   }
-  return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing }
+  return { slabsGeoJSON, slabLabelsGeoJSON, jointsGeoJSON, jointLabelsGeoJSON, edgesGeoJSON, missing, issues: plan.issues }
 }

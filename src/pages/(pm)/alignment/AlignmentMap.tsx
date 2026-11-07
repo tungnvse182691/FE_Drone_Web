@@ -1,3 +1,4 @@
+import { pavementNumber } from './alignmentPavementHelpers'
 import React, { useState } from 'react'
 import {
   Layers,
@@ -32,12 +33,12 @@ export interface AlignmentMapProps {
   selectedSegmentId: string | null
   segments: SegmentItem[]
   importedLengthKm: number
-  slabLengthM: number
-  slabThicknessCm: number
+  slabLengthM: number | string
+  slabThicknessCm: number | string
   pavementPreview?: PavementPreview
-  contractionSpacingM: number
-  expansionSpacingM: number
-  expansionGapMm: number
+  contractionSpacingM: number | string
+  expansionSpacingM: number | string
+  expansionGapMm: number | string
   // Props cho tuyến nhánh và phân đoạn kích hoạt
   branches?: any[]
   selectedTargetType?: string
@@ -246,8 +247,10 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
               {(() => {
                 const isAll = selectedSegmentId === 'ALL' || !selectedSegmentId
                 const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
-                const metric = (value: unknown, unit: string, digits?: number) => positive(value)
-                  ? `${digits === undefined ? value : value.toFixed(digits)}${unit}` : 'Chưa có dữ liệu'
+                const metric = (value: number | string | undefined | null, unit: string, digits?: number) => {
+                  const number = pavementNumber(value ?? undefined)
+                  return positive(number) ? `${digits === undefined ? number : number.toFixed(digits)}${unit}` : 'Chưa có dữ liệu'
+                }
                 const selectedBranch = currentBranch && selectedTargetType === currentBranch.id ? currentBranch : null
                 let currSeg: any = null
                 let branch: any = selectedBranch
@@ -272,7 +275,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                 const currW = isAll ? avgRoadWidth : currSeg?.roadWidthM
                 const halfWidth = positive(currW) ? currW / 2 : null
                 const summary = summarizePavementPreview(pavementPreview, isAll ? undefined : currSeg?.id || null, !!branch)
-                const countText = (count: number | null, missing: string[], unit: string) => count === null ? `Thiếu: ${missing.join('; ')}` : `${count.toLocaleString('vi-VN')} ${unit} thực`
+                const countText = (count: number | null, missing: string[], unit: string) => count === null ? missing.join('; ') : `${count.toLocaleString('vi-VN')} ${unit} thực`
                 const displayTitle = isAll
                   ? (selectedBranch ? `[${selectedBranch.code}] Toàn tuyến nhánh` : 'Toàn tuyến trục chính')
                   : currSeg ? `${branch ? `[${branch.code}] ` : ''}${currSeg.code}` : 'Chưa chọn được phân đoạn'

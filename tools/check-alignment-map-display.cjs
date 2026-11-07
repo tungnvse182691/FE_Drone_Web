@@ -50,7 +50,7 @@ test('T/KC/KG codes and counts bind source geometry, scope and readiness rather 
  assert.deepEqual(plain(geo.jointsGeoJSON.features.map(f=>f.geometry)),plain(old.buildMainlinePavementGeoJSON(segments,coords,[0,.023],cfg).jointsGeoJSON.features.map(f=>f.geometry)))
  const zero=helper.buildMainlinePavementGeoJSON([segment(0,.003)],coords,[0,.003],{...cfg,contractionSpacingM:7,expansionSpacingM:11});assert.equal(summary(zero).contractionCount,0);assert.equal(summary(zero).expansionCount,0)
  const overlap=helper.buildMainlinePavementGeoJSON([segment(0,.023)],coords,[0,.023],{...cfg,contractionSpacingM:5,expansionSpacingM:10});assert.deepEqual(plain(overlap.jointsGeoJSON.features.filter(f=>!f.properties.isExpansion).map(f=>f.properties.code)),['KC1','KC2'])
- const missing=summary(helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{}));assert.equal(missing.slabCount,null);assert.ok(missing.slabMissing.includes('chiều dài tấm L'));assert.ok(missing.contractionMissing.includes('cự ly khe co'));assert.equal(missing.expansionCount,null)
+ const missing=summary(helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{}));assert.equal(missing.slabCount,null);assert.ok(missing.slabMissing.some(message=>message.includes('chiều dài tấm L')));assert.ok(missing.contractionMissing.some(message=>message.includes('cự ly khe co')));assert.equal(missing.expansionCount,null)
  const missingThickness=summary(helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{...cfg,thicknessCm:NaN}));assert.equal(missingThickness.slabCount,null);assert.equal(missingThickness.contractionCount,3);assert.equal(missingThickness.expansionCount,2)
 })
 test('HUD and legend show three distinct actual-count categories, variable sizes and preview state; joint popup matches either type',()=>{
@@ -58,7 +58,7 @@ test('HUD and legend show three distinct actual-count categories, variable sizes
  const segments=[segment(0,.007,7,1,'a'),segment(.007,.023,9,3,'b')],preview=helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],cfg),props={mapContainerRef:{current:null},mapRef:{current:null},mapLayer:'VECTOR',showSlabsAndJoints:true,cursorPos:{lat:10,lng:105,elevation:'',station:''},segments,selectedSegmentId:'ALL',importedLengthKm:.023,slabLengthM:5,slabThicknessCm:31,contractionSpacingM:7,expansionSpacingM:11,expansionGapMm:20,pavementPreview:preview}
  let hud=render(React.createElement(C,props));assert.ok(hud.includes(`${preview.slabsGeoJSON.features.length} tấm thực`));assert.ok(hud.includes('3 khe co thực'));assert.ok(hud.includes('2 khe giãn thực'));assert.ok(hud.includes('Nhiều kích thước'));assert.ok(hud.includes('KC1, KC2'));assert.ok(hud.includes('KG1, KG2'));assert.ok(!hud.includes('~'));assert.ok(hud.includes('Preview'))
  hud=render(React.createElement(C,{...props,selectedSegmentId:'a'}));assert.ok(hud.includes('2 tấm thực'));assert.ok(hud.includes('0 khe co thực'))
- const absent=helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{});hud=render(React.createElement(C,{...props,pavementPreview:absent}));assert.ok(hud.includes('Thiếu:'));assert.ok(hud.includes('chiều dài tấm L'));assert.ok(!hud.includes('0 tấm thực'))
+ const absent=helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{});hud=render(React.createElement(C,{...props,pavementPreview:absent}));assert.ok(hud.includes('Chưa nhập:'));assert.ok(hud.includes('chiều dài tấm L'));assert.ok(!hud.includes('0 tấm thực'))
  const map=new MapMock();load(base+'alignmentMapInteractions.ts').setupAlignmentMapInteractions(map,{current:null},()=>{})
  for(const expansion of [false,true])for(const labels of [false,true]){const f=(labels?preview.jointLabelsGeoJSON:preview.jointsGeoJSON).features.find(f=>f.properties.isExpansion===expansion),layer=expansion?'joints-expansion':'joints-contraction';map.handlers['click:'+layer+(labels?'-label-layer':'-layer')]({features:[f],lngLat:{lng:105,lat:10},originalEvent:{}});assert.ok(html.includes(f.properties.code));assert.ok(html.includes(f.properties.station));assert.ok(html.includes(f.properties.spacingMeters+'m'));assert.ok(html.includes('Preview'));assert.ok(!html.includes('Đạt chuẩn'));assert.ok(!html.includes('undefined'));if(expansion)assert.ok(html.includes(f.properties.gapMm+'mm'));else assert.ok(!html.includes('Độ hở:'))}
 })
@@ -72,4 +72,30 @@ test('pavement click retains close zoom and cannot be overwritten by underlying 
  }
  map.getZoom=()=>15.2;const joint=geo.jointsGeoJSON.features.find(f=>!f.properties.isExpansion);map.handlers['click:joints-contraction-layer']({features:[joint],lngLat:{lng:105,lat:10},originalEvent:{}});assert.equal(map.camera.at(-1).zoom,18.5)
 })
+test('decimal editor text is retained, empty/invalid fields clear only their own sources and joint inputs stay independent of L',()=>{
+ const React=require('react'),{renderToStaticMarkup:render}=require('react-dom/server'),C=load(base+'SidebarSlabsTab.tsx').SidebarSlabsTab
+ const segments=[segment(0,.007,7,NaN,'a'),segment(.007,.023,9,3,'b')],toasts=[],state={slabLengthM:'5',slabThicknessCm:'5.125',contractionSpacingM:'7',expansionSpacingM:'11',expansionGapMm:'20.125'}
+ const geo=()=>helper.buildMainlinePavementGeoJSON(segments,coords,[0,.023],{slabLenM:state.slabLengthM,thicknessCm:state.slabThicknessCm,...state})
+ const view=(selection='ALL')=>C({...state,segments,selectedSegmentId:selection,slabs:helper.planMainlinePavement(segments,{slabLenM:state.slabLengthM,thicknessCm:state.slabThicknessCm,...state}).slabs,syncJointWithSlab:true,showToast:m=>toasts.push(m),...Object.fromEntries(Object.keys(state).map(key=>['onSet'+key[0].toUpperCase()+key.slice(1),value=>state[key]=value]))})
+ const walk=node=>!node||typeof node!=='object'?[]:[node,...React.Children.toArray(node.props?.children).flatMap(walk)]
+ const input=label=>walk(view()).find(node=>node.type==='input'&&node.props['aria-label']===label)
+ const change=(label,value)=>{input(label).props.onChange({target:{value}});assert.equal(input(label).props.value,value)}
+ assert.equal(geo().slabsGeoJSON.features.length,12);assert.equal(geo().slabLabelsGeoJSON.features.length,12)
+ let summary=load(base+'alignmentPavementDisplay.ts').summarizePavementPreview;assert.equal(summary(geo(),'a').slabCount,null);assert.ok(summary(geo(),'a').slabMissing.some(m=>m.includes('số làn')&&m.includes('a')));assert.equal(summary(geo(),'b').slabCount,12)
+ const markup=render(view('a'));assert.ok(markup.includes('số làn — a'));assert.ok(!markup.includes('Vui lòng thiết lập tim tuyến'));assert.ok(!markup.includes('30m</button>'));assert.ok(markup.includes('Mẫu L:'))
+ change('Độ hở khe giãn (mm)','20.12567');let band=geo().jointsGeoJSON.features.find(f=>f.properties.isExpansion);assert.equal(band.properties.gapMm,20.12567)
+ const map=new MapMock();load(base+'alignmentMapInteractions.ts').setupAlignmentMapInteractions(map,{current:null},()=>{});map.handlers['click:joints-expansion-layer']({features:[band],lngLat:{lng:105,lat:10},originalEvent:{}});assert.ok(html.includes('20.12567mm'))
+ assert.ok(Math.abs((band.geometry.coordinates[0][3][0]-band.geometry.coordinates[0][0][0])/.001*23-.02012567)<1e-7)
+ for(const [label,key,type]of [['Độ hở khe giãn (mm)','expansionGapMm','expansion'],['Khoảng cách Khe co (m)','contractionSpacingM','contraction'],['Khoảng cách Khe giãn (m)','expansionSpacingM','expansion'],['Chiều dài tấm L (m)','slabLengthM','slab'],['Chiều dày tấm H (cm)','slabThicknessCm','slab']]){
+  const old=state[key];change(label,'');let g=geo(),summ=summary(g);assert.ok(summ[type+'Missing'].some(m=>m.includes('Chưa nhập')));assert.equal(type==='slab'?g.slabsGeoJSON.features.length:g.jointsGeoJSON.features.filter(f=>f.properties.isExpansion===(type==='expansion')).length,0)
+  for(const text of ['-','1.','0','-2','bad','1e999']){change(label,text);g=geo();assert.ok(summary(g)[type+'Missing'].some(m=>m.includes('Không hợp lệ')))}
+  change(label,old);assert.equal(summary(geo())[type+'Missing'].some(m=>!m.includes('số làn')),false)
+ }
+ assert.ok(render(view('b')).includes('Danh Sách Tấm BTXM (12)'));assert.ok(render(view('a')).includes('Danh Sách Tấm BTXM (0)'))
+ const kc=state.contractionSpacingM;change('Chiều dài tấm L (m)','6.125');assert.equal(state.contractionSpacingM,kc)
+ change('Khoảng cách Khe co (m)','3');assert.deepEqual(plain(geo().jointsGeoJSON.features.filter(f=>!f.properties.isExpansion).map(f=>f.properties.offsetMeters)),[3,6,9,12,15,18,21])
+ change('Khoảng cách Khe giãn (m)','8');assert.deepEqual(plain(geo().jointsGeoJSON.features.filter(f=>f.properties.isExpansion).map(f=>f.properties.offsetMeters)),[8,16])
+ segments[0].laneCount=1;assert.equal(summary(geo()).slabMissing.length,0);assert.equal(geo().slabsGeoJSON.features.length,geo().slabLabelsGeoJSON.features.length);assert.equal(toasts.length,0)
+})
+
 console.log(`${count} map display scenarios PASS (style validation/mock events; not browser visual acceptance).`)

@@ -18,11 +18,11 @@ export interface UseAlignmentMapStateParams {
   selectedSegmentId: string | null
   setSelectedSegmentId: (id: string | null) => void
   showToast: (msg: string) => void
-  slabLengthM: number
-  slabThicknessCm: number
-  contractionSpacingM: number
-  expansionSpacingM: number
-  expansionGapMm: number
+  slabLengthM: number | string
+  slabThicknessCm: number | string
+  contractionSpacingM: number | string
+  expansionSpacingM: number | string
+  expansionGapMm: number | string
   initialCoords: [number, number][]
   initialStationText: string
   branches?: any[]
@@ -288,6 +288,11 @@ export function useAlignmentMapState({
       map.remove()
     }
   }, [])
+
+  // A popup describes a source feature; remove it when its configuration changes.
+  useEffect(() => {
+    popupRef.current?.remove()
+  }, [segments, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
 
   // Đồng bộ GeoJSON và Markers khi state thay đổi
   useEffect(() => {

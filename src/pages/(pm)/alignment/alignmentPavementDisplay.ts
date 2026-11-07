@@ -4,17 +4,13 @@ export type PavementPreview = ReturnType<typeof buildSlabsAndJointsGeoJSON>
 
 // Count source features, never rendered tiles (duplicates) or label points.
 export function summarizePavementPreview(preview?: PavementPreview, segmentId?: string | null, branch = false) {
-  const onlySlab = ['chiều dài tấm L', 'chiều dày tấm', 'số làn từng khoảng']
-  const onlyContraction = ['cự ly khe co'], onlyExpansion = ['cự ly khe giãn', 'độ hở khe giãn']
-  const known = [...onlySlab, ...onlyContraction, ...onlyExpansion]
-  const missing = branch ? ['chưa có preview pavement tuyến nhánh'] : segmentId === null ? ['chưa chọn được phân đoạn'] : preview?.missing || ['chưa có dữ liệu geometry preview']
-  const shared = missing.filter(field => !known.includes(field))
+  const fallback = branch ? ['chưa có preview pavement tuyến nhánh'] : segmentId === null ? ['chưa chọn được phân đoạn'] : !preview ? ['chưa có dữ liệu geometry preview'] : []
+  const issues = (preview?.issues || []).filter(issue => !issue.segmentId || segmentId === undefined || issue.segmentId === segmentId)
   const scoped = (feature: GeoJSON.Feature) => !feature.properties?.branchId && (segmentId === undefined || feature.properties?.segmentId === segmentId)
   const slabs = preview?.slabsGeoJSON.features.filter(feature => feature.geometry.type === 'Polygon' && scoped(feature)) || []
   const joints = preview?.jointsGeoJSON.features.filter(feature => ['LineString', 'Polygon'].includes(feature.geometry.type) && scoped(feature)) || []
-  const slabMissing = [...shared, ...missing.filter(field => onlySlab.includes(field))]
-  const contractionMissing = [...shared, ...missing.filter(field => onlyContraction.includes(field))]
-  const expansionMissing = [...shared, ...missing.filter(field => onlyExpansion.includes(field))]
+  const messages = (kind: 'slab' | 'contraction' | 'expansion') => [...fallback, ...issues.filter(issue => issue.kind === 'shared' || issue.kind === kind).map(issue => issue.message)]
+  const slabMissing = messages('slab'), contractionMissing = messages('contraction'), expansionMissing = messages('expansion')
   const range = (field: string, unit: string) => {
     const values = slabs.map(feature => feature.properties?.[field]).filter(value => typeof value === 'number' && Number.isFinite(value))
     if (values.length !== slabs.length || !values.length) return 'Chưa có dữ liệu'

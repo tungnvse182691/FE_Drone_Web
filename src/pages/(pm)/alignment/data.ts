@@ -1,5 +1,5 @@
 import { branchLineRange, validateBranchCoordinates } from './alignmentBranchHelpers'
-import { buildMainlinePavementGeoJSON } from './alignmentPavementHelpers'
+import { pavementNumber, buildMainlinePavementGeoJSON } from './alignmentPavementHelpers'
 import { AssignedProjectOption, SegmentItem } from './types'
 import {
   calculateCoordsLengthKm,
@@ -616,11 +616,11 @@ export function buildPlanningCorridorGeoJSON(
 // ==========================================
 
 export interface SlabsCustomConfig {
-  slabLenM?: number
-  thicknessCm?: number
-  contractionSpacingM?: number
-  expansionSpacingM?: number
-  expansionGapMm?: number
+  slabLenM?: number | string
+  thicknessCm?: number | string
+  contractionSpacingM?: number | string
+  expansionSpacingM?: number | string
+  expansionGapMm?: number | string
 }
 
 export function getBranchLineCoords(startKm: number, endKm: number, coords: [number, number][], _totalLenKm: number): [number, number][] {
@@ -631,7 +631,7 @@ export function buildSlabsAndJointsGeoJSON(
   segList: SegmentItem[],
   coords: [number, number][],
   kmPts: number[],
-  customCfg?: SlabsCustomConfig,
+  inputCfg?: SlabsCustomConfig,
   branchList: any[] = []
 ): {
   slabsGeoJSON: GeoJSON.FeatureCollection
@@ -640,9 +640,12 @@ export function buildSlabsAndJointsGeoJSON(
   jointLabelsGeoJSON: GeoJSON.FeatureCollection
   edgesGeoJSON: GeoJSON.FeatureCollection
   missing: string[]
+  issues: import('./alignmentPavementHelpers').PavementInputIssue[]
 } {
   // Mainline shares the engineering plan with the sidebar; legacy branches remain below.
-  const mainline = buildMainlinePavementGeoJSON(segList, coords, kmPts, customCfg)
+  const customCfg = inputCfg && Object.fromEntries(Object.entries(inputCfg).map(([key, value]) =>
+    [key, value === undefined ? undefined : pavementNumber(value)])) as { [K in keyof SlabsCustomConfig]?: number } | undefined
+  const mainline = buildMainlinePavementGeoJSON(segList, coords, kmPts, inputCfg)
   const slabFeatures = mainline.slabsGeoJSON.features
   const jointFeatures = mainline.jointsGeoJSON.features
   const edgeFeatures = mainline.edgesGeoJSON.features
@@ -949,6 +952,7 @@ export function buildSlabsAndJointsGeoJSON(
     jointsGeoJSON: { type: 'FeatureCollection', features: jointFeatures },
     jointLabelsGeoJSON: mainline.jointLabelsGeoJSON,
     missing: mainline.missing,
+    issues: mainline.issues,
     edgesGeoJSON: { type: 'FeatureCollection', features: edgeFeatures }
   }
 }
