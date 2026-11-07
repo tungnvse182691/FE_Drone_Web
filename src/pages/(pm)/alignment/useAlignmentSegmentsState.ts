@@ -4,8 +4,7 @@ import { SEGMENT_COLORS } from './data'
 import {
   interpolateCoordAtKm,
   checkAndEnrichSegmentsContinuity,
-  generateMockSlabs,
-  calculatePavementSlabs
+  generateMockSlabs
 } from './alignmentGeometryHelpers'
 import {
   computeAutoSplitSegments,
@@ -17,6 +16,7 @@ export interface UseAlignmentSegmentsStateParams {
   currentKmPoints: number[]
   currentCoords: [number, number][]
   importedLengthKm: number
+  stationOriginKm: number
   roadWidthM: number
   showToast: (msg: string) => void
   syncMap: (updatedSegs: SegmentItem[], selId?: string | null) => void
@@ -30,6 +30,7 @@ export function useAlignmentSegmentsState({
   currentKmPoints,
   currentCoords,
   importedLengthKm,
+  stationOriginKm,
   roadWidthM,
   showToast,
   syncMap,
@@ -38,45 +39,49 @@ export function useAlignmentSegmentsState({
   handleFitBounds
 }: UseAlignmentSegmentsStateParams) {
   const [segments, setSegments] = useState<SegmentItem[]>(initialSegments)
-  const [slabs, setSlabs] = useState<SlabItem[]>(() => calculatePavementSlabs(initialSegments))
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>('seg-1')
+  const [slabs, setSlabs] = useState<SlabItem[]>([])
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null)
 
-  const [splitDistance, setSplitDistance] = useState<number>(5.0)
+  const [splitDistance, setSplitDistance] = useState<number>(Number.NaN)
   const [splitSortOrder, setSplitSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const [editingSegment, setEditingSegment] = useState<SegmentItem | null>(null)
   const [isAddSegmentModalOpen, setIsAddSegmentModalOpen] = useState<boolean>(false)
   const [newSegForm, setNewSegForm] = useState({
     code: '',
-    startKm: 1020.0,
-    endKm: 1025.0,
-    roadWidthM: 8.0,
-    laneCount: 4,
-    surfaceMaterial: 'Mặt BTN C12.5',
+    startKm: Number.NaN,
+    endKm: Number.NaN,
+    roadWidthM: Number.NaN,
+    laneCount: Number.NaN,
+    surfaceMaterial: '',
     color: SEGMENT_COLORS[0]
   })
   const [splitModalSegment, setSplitModalSegment] = useState<SegmentItem | null>(null)
-  const [customSplitKm, setCustomSplitKm] = useState<number>(1022.5)
+  const [customSplitKm, setCustomSplitKm] = useState<number>(Number.NaN)
 
   const handleApplyAutoSplit = () => {
     const totalKm = importedLengthKm || (currentKmPoints.length >= 2 ? currentKmPoints[currentKmPoints.length - 1] - currentKmPoints[0] : 0.0)
-    if (totalKm <= 0) {
+    if (!Number.isFinite(totalKm) || totalKm <= 0) {
       showToast('Chưa có dữ liệu chiều dài tim tuyến để chia đoạn.')
       return
     }
 
-    const dist = splitDistance || 5.0
-    const startBaseKm = currentKmPoints.length > 0 ? currentKmPoints[0] : 0.0
+    const dist = splitDistance
+    const startBaseKm = currentKmPoints.length > 0 ? currentKmPoints[0] : stationOriginKm
+    if (!Number.isFinite(dist) || dist <= 0 || !Number.isFinite(startBaseKm)) {
+      showToast('Cần cự ly chia đoạn và lý trình gốc có nguồn; chưa thay đổi bản nháp.')
+      return
+    }
     const newSegments = computeAutoSplitSegments(totalKm, startBaseKm, dist, roadWidthM, splitSortOrder)
     const validated = checkAndEnrichSegmentsContinuity(newSegments)
     setSegments(validated)
-    setSlabs(calculatePavementSlabs(validated))
+    setSlabs([])
     setSelectedSegmentId(validated[0]?.id || null)
 
     syncMap(validated, validated[0]?.id || null)
 
     const distText = dist >= 1 ? `${dist.toFixed(2)} km` : `${(dist * 1000).toFixed(0)} m`
-    showToast(`Đã chia tuyến thành ${validated.length} phân đoạn (${distText}/đoạn). Tuyến đường hiển thị liên tục chuẩn thiết kế!`)
+    showToast(`Đã chia tuyến thành ${validated.length} phân đoạn (${distText}/đoạn). Bản chỉnh cục bộ, chưa lưu máy chủ.`)
     handleFitBounds()
   }
 
@@ -95,7 +100,7 @@ export function useAlignmentSegmentsState({
     const start = parseFloat(Number(editingSegment.startKm).toFixed(3))
     const end = parseFloat(Number(editingSegment.endKm).toFixed(3))
 
-    if (isNaN(start) || isNaN(end) || start >= end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
       showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
       return
     }
@@ -106,7 +111,7 @@ export function useAlignmentSegmentsState({
       startKm: start,
       endKm: end,
       lengthKm: updatedLength,
-      roadWidthM: Number(editingSegment.roadWidthM) || 8.0
+      roadWidthM: Number(editingSegment.roadWidthM)
     }
 
     const updatedList = segments.map((s) => (s.id === updated.id ? updated : s)).sort((a, b) => a.startKm - b.startKm)
@@ -116,9 +121,9 @@ export function useAlignmentSegmentsState({
 
     const hasGap = validated.find((s: SegmentItem) => s.id === updated.id)?.hasGap
     if (hasGap) {
-      showToast(`Đã lưu ${updated.code}! Lưu ý: Phát hiện khoảng hở/chồng lấn với phân đoạn kề bên (GAP_WARNING). Bấm 'Nối tiếp giáp' để khép kín!`)
+      showToast(`Đã chỉnh ${updated.code} trong bản cục bộ, chưa lưu máy chủ. Lưu ý: Phát hiện khoảng hở/chồng lấn với phân đoạn kề bên (GAP_WARNING). Bấm 'Nối tiếp giáp' để khép kín!`)
     } else {
-      showToast(`Đã lưu cập nhật ${updated.code} (Km ${start.toFixed(3)} - Km ${end.toFixed(3)})`)
+      showToast(`Đã chỉnh cục bộ ${updated.code}, chưa lưu máy chủ (Km ${start.toFixed(3)} - Km ${end.toFixed(3)})`)
     }
     setEditingSegment(null)
   }
@@ -128,7 +133,7 @@ export function useAlignmentSegmentsState({
     const start = parseFloat(Number(newSegForm.startKm).toFixed(3))
     const end = parseFloat(Number(newSegForm.endKm).toFixed(3))
 
-    if (isNaN(start) || isNaN(end) || start >= end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
       showToast('Lỗi: Lý trình kết thúc phải lớn hơn lý trình bắt đầu!')
       return
     }
@@ -139,11 +144,11 @@ export function useAlignmentSegmentsState({
       startKm: start,
       endKm: end,
       lengthKm: parseFloat((end - start).toFixed(3)),
-      roadWidthM: Number(newSegForm.roadWidthM) || 8.0,
+      roadWidthM: Number(newSegForm.roadWidthM),
       status: 'VALID',
       statusText: 'HỢP LỆ',
-      laneCount: newSegForm.laneCount || 4,
-      surfaceMaterial: newSegForm.surfaceMaterial || 'Mặt BTN C12.5',
+      laneCount: newSegForm.laneCount,
+      surfaceMaterial: newSegForm.surfaceMaterial,
       color: newSegForm.color || SEGMENT_COLORS[segments.length % SEGMENT_COLORS.length]
     }
 
@@ -154,7 +159,7 @@ export function useAlignmentSegmentsState({
     syncMap(validated, newSeg.id)
 
     setIsAddSegmentModalOpen(false)
-    showToast(`Đã thêm mới ${newSeg.code} (${newSeg.lengthKm} km) vào tim tuyến!`)
+    showToast(`Đã thêm mới ${newSeg.code} (${newSeg.lengthKm} km) vào bản chỉnh cục bộ, chưa lưu máy chủ!`)
   }
 
   const handleSplitSegmentSubmit = (e: React.FormEvent) => {
@@ -162,7 +167,7 @@ export function useAlignmentSegmentsState({
     if (!splitModalSegment) return
 
     const splitKm = parseFloat(Number(customSplitKm).toFixed(3))
-    if (splitKm <= splitModalSegment.startKm || splitKm >= splitModalSegment.endKm) {
+    if (!Number.isFinite(splitKm) || splitKm <= splitModalSegment.startKm || splitKm >= splitModalSegment.endKm) {
       showToast(`Điểm tách phải nằm giữa Km ${splitModalSegment.startKm.toFixed(3)} và Km ${splitModalSegment.endKm.toFixed(3)}!`)
       return
     }
@@ -252,7 +257,7 @@ export function useAlignmentSegmentsState({
 
   const handleSelectSegment = (seg: SegmentItem) => {
     setSelectedSegmentId(seg.id)
-    if (mapRef.current) {
+    if (mapRef.current && currentCoords.length >= 2 && currentKmPoints.length === currentCoords.length) {
       const centerCoord = interpolateCoordAtKm((seg.startKm + seg.endKm) / 2, currentCoords, currentKmPoints)
       mapRef.current.flyTo({
         center: centerCoord,

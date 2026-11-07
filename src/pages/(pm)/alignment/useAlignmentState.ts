@@ -62,12 +62,17 @@ export function useAlignmentState() {
   useEffect(() => {
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     segmentsState.setSegments([]); segmentsState.setSlabs([]); setBranches([])
+    segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
+    segmentsState.setSelectedSegmentId(null); segmentsState.setSplitDistance(Number.NaN)
+    segmentsState.setNewSegForm(old => ({ ...old, code: '', startKm: Number.NaN, endKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '' }))
+    setSelectedTargetType('MAINLINE'); setIsAddBranchModalOpen(false)
     setAlignmentStatus('DRAFT')
+    setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
   }, [selectedProjectId, authEpoch])
 
   useEffect(() => {
     const geometry = geometryRead.geometry
-    setAlignmentStatus(geometryRead.draft?.data.status !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    setAlignmentStatus(geometryRead.draft?.data.status === 'CONFIRMED' || geometryRead.draft?.data.status !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     if (Number.isFinite(geometry?.lengthMeters) && geometry!.lengthMeters > 0) setImportedLengthKm(geometry!.lengthMeters / 1000)
     const line = geometry?.wgs84Centerline
@@ -78,6 +83,11 @@ export function useAlignmentState() {
   }, [geometryRead.geometry, geometryRead.draft?.data.status])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
+  const [localDraftDirty, setLocalDraftDirty] = useState(false)
+  const [localWidthsDirty, setLocalWidthsDirty] = useState(false)
+  const markLocalDraft = () => setLocalDraftDirty(true)
+  const markWidthDraft = () => { setLocalDraftDirty(true); setLocalWidthsDirty(true) }
+  useEffect(() => { setLocalDraftDirty(false); setLocalWidthsDirty(false) }, [selectedProjectId, authEpoch])
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
@@ -140,11 +150,12 @@ export function useAlignmentState() {
 
   const segmentsState = useAlignmentSegmentsState({
     initialSegments,
+    stationOriginKm: geometryRead.draft?.data.stationOriginMeters !== undefined ? geometryRead.draft.data.stationOriginMeters / 1000 : Number.NaN,
     currentKmPoints,
     currentCoords,
     importedLengthKm,
     roadWidthM,
-    showToast,
+    showToast: message => showToast(`${message} — bản chỉnh cục bộ, chưa lưu máy chủ.`),
     syncMap: (...args) => mapState.syncMap(...args),
     mapRef: { current: null }, // updated dynamically below
     popupRef: { current: null },
@@ -152,7 +163,7 @@ export function useAlignmentState() {
   })
   // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
   useEffect(() => {
-    if (segmentsState.segments && segmentsState.segments.length > 0) {
+    if (Number.isFinite(slabLengthM) && slabLengthM > 0 && Number.isFinite(slabThicknessCm) && slabThicknessCm > 0 && segmentsState.segments.length > 0 && segmentsState.segments.every(segment => Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 && Number.isFinite(segment.laneCount) && segment.laneCount > 0)) {
       segmentsState.setSlabs(
         calculatePavementSlabs(segmentsState.segments, slabLengthM, slabThicknessCm)
       )
@@ -254,6 +265,7 @@ export function useAlignmentState() {
   // Hook 3: Import State
   const importState = useAlignmentImportState({
     inputScope: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`,
+    onDraftInput: markLocalDraft,
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,
     roadWidthM,
@@ -275,7 +287,35 @@ export function useAlignmentState() {
 
   })
 
-  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast)
+  const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile)
+
+  useEffect(() => {
+    const context = geometryRead.context
+    if (context?.projectId !== selectedProjectId) return
+    const section = geometryRead.draft?.data.roadSectionId || (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
+    if (section) draftWorkflow.setForm(old => old.sectionId ? old : { ...old, sectionId: section })
+  }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, selectedProjectId])
+  const editorDraft = useRef('')
+  useEffect(() => { editorDraft.current = '' }, [selectedProjectId, authEpoch, geometryRead.draftId])
+  useEffect(() => {
+    const draft = geometryRead.draft?.data
+    if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === draft.id || localDraftDirty || draftWorkflow.busy || draftWorkflow.conflict) return
+    editorDraft.current = draft.id
+    if (!Number.isFinite(draft.stationOriginMeters)) return
+    const origin = draft.stationOriginMeters
+    segmentsState.setSegments((draft.widthProfile || []).map((width, index) => ({
+      id: `draft-width-${draft.id}-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+      startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
+      lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN NHÁP ĐÃ ĐỌC', color: '#C9A227'
+    })))
+  }, [geometryRead.draft, geometryRead.draftId, selectedProjectId, localDraftDirty, draftWorkflow.busy, draftWorkflow.conflict])
+  useEffect(() => {
+    if (draftWorkflow.conflict || draftWorkflow.busy || !localWidthsDirty || selectedTargetType !== 'MAINLINE') return
+    const origin = Number(draftWorkflow.form.origin)
+    if (!draftWorkflow.form.origin.trim() || !Number.isFinite(origin)) return
+    draftWorkflow.setForm(old => ({ ...old, widths: segmentsState.segments.map(segment => `${segment.startKm * 1000 - origin}, ${segment.endKm * 1000 - origin}, ${Number.isFinite(segment.roadWidthM) ? segment.roadWidthM : ''}`).join('\n') }))
+  }, [segmentsState.segments, localWidthsDirty, selectedTargetType, draftWorkflow.busy, draftWorkflow.conflict])
 
   // Chuyển đổi dự án PM phụ trách
   const handleSwitchProject = (prjId: string) => {
@@ -305,13 +345,13 @@ export function useAlignmentState() {
   // Chiều dài đang kích hoạt
   const activeLengthKm = useMemo(() => {
     if (isMainline) return importedLengthKm
-    return currentBranch?.lengthKm || 1.85
+    return currentBranch?.lengthKm ?? Number.NaN
   }, [isMainline, importedLengthKm, currentBranch])
 
   // Cự ly chia đoạn đang kích hoạt
   const activeSplitDistance = useMemo(() => {
     if (isMainline) return segmentsState.splitDistance
-    return currentBranch?.splitDistance || 0.5
+    return currentBranch?.splitDistance ?? Number.NaN
   }, [isMainline, segmentsState.splitDistance, currentBranch])
 
   // Cập nhật cự ly chia đoạn
@@ -330,8 +370,9 @@ export function useAlignmentState() {
     if (isMainline) {
       segmentsState.handleApplyAutoSplit()
     } else if (currentBranch) {
-      const dist = currentBranch.splitDistance || 0.5
-      const totalLen = (currentBranch.coords && currentBranch.coords.length >= 2 ? calculateCoordsLengthKm(currentBranch.coords) : 0) || currentBranch.lengthKm || 1.0
+      const dist = currentBranch.splitDistance
+      const totalLen = (currentBranch.coords && currentBranch.coords.length >= 2 ? calculateCoordsLengthKm(currentBranch.coords) : 0) || currentBranch.lengthKm
+      if (!Number.isFinite(dist) || !(dist > 0) || !Number.isFinite(totalLen) || !(totalLen > 0)) { showToast('Thiếu chiều dài hoặc cự ly chia nhánh; chưa thay đổi bản nháp.'); return }
       const count = Math.max(1, Math.ceil(totalLen / dist))
       const newSegs: any[] = []
       let cur = 0.0
@@ -370,7 +411,7 @@ export function useAlignmentState() {
       e.preventDefault()
       const segToSplit = segmentsState.splitModalSegment
       const splitKm = parseFloat(Number(segmentsState.customSplitKm).toFixed(3))
-      if (splitKm <= segToSplit.startKm || splitKm >= segToSplit.endKm) {
+      if (!Number.isFinite(splitKm) || splitKm <= segToSplit.startKm || splitKm >= segToSplit.endKm) {
         showToast(`Điểm tách phải nằm giữa Km ${segToSplit.startKm.toFixed(3)} và Km ${segToSplit.endKm.toFixed(3)}!`)
         return
       }
@@ -463,6 +504,7 @@ export function useAlignmentState() {
 
   // Sửa thông số phân đoạn
   const handleSaveEditedSegment = (edited: any) => {
+    markWidthDraft()
     if (isMainline) {
       segmentsState.handleSaveEditedSegment(edited)
     } else if (currentBranch) {
@@ -516,6 +558,7 @@ export function useAlignmentState() {
 
   return {
     geometryRead,
+    localDraftDirty, markLocalDraft, markWidthDraft,
     draftWorkflow,
     isSupervisor,
     basePath,

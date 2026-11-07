@@ -72,7 +72,10 @@ export function useGeometryReadModel(projectId: string) {
     let active = true
     setContext(null)
     if (projectId && projects.some(project => project.projectId === projectId)) {
-      alignmentService.readProjectContext(projectId).then(value => {if (active) setContext(value)})
+      alignmentService.readProjectContext(projectId).then(value => {if (active) {
+        setContext(value)
+        setGeometryError(error => error === 'Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.' ? '' : error)
+      }})
         .catch(() => {if (active) setGeometryError('Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.')})
     }
     return () => { active = false }

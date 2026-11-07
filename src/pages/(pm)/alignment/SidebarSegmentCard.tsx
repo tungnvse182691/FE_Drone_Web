@@ -72,10 +72,10 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
           Dài: {segment.lengthKm >= 1 ? `${segment.lengthKm.toFixed(2)} km` : `${Math.round(segment.lengthKm * 1000)} mét`}
         </span>
         <span className="bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full font-mono font-bold">
-          Rộng: {segment.roadWidthM || 8.0}m (±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m)
+          Rộng: {Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 ? `${segment.roadWidthM}m (±${(segment.roadWidthM / 2).toFixed(1)}m)` : 'Chưa có dữ liệu'}
         </span>
-        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.laneCount} làn</span>
-        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.surfaceMaterial}</span>
+        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{Number.isFinite(segment.laneCount) ? `${segment.laneCount} làn` : 'Chưa có số làn'}</span>
+        <span className="bg-slate-100 px-2 py-0.5 rounded-full">{segment.surfaceMaterial || 'Chưa có vật liệu'}</span>
       </div>
 
       {/* Cảnh báo khoảng hở & Nút nối tiếp giáp */}

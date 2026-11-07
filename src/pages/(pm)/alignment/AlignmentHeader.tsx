@@ -4,6 +4,10 @@ import { Icon } from '../../../components/ui/Icon'
 import { AssignedProjectOption } from './types'
 
 export interface AlignmentHeaderProps {
+  workflowActions?: React.ReactNode
+  statusMessage?: string
+  serverDraftStatus?: string | null
+  loading?: boolean
   commandBusy?: boolean
   saveDisabledReason?: string
   confirmDisabledReason?: string
@@ -27,6 +31,7 @@ export interface AlignmentHeaderProps {
 
 export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   basePath,
+  workflowActions, statusMessage = '', serverDraftStatus, loading = false,
   commandBusy = false,
   saveDisabledReason = '',
   confirmDisabledReason = 'Chưa đọc điều kiện xác nhận.',
@@ -75,7 +80,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           <span className="text-slate-300">•</span>
 
           {/* Trạng thái tim tuyến Badge */}
-          {displayTotalKm <= 0 && (!currentCoords || currentCoords.length === 0) ? (
+          {!serverDraftStatus && alignmentStatus !== 'CONFIRMED' && displayTotalKm <= 0 && (!currentCoords || currentCoords.length === 0) ? (
             <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 text-slate-600 font-semibold text-[11px]">
               Chưa có tim tuyến
             </span>
@@ -103,6 +108,8 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           )}
         </div>
 
+        {loading && <p role="status" className="text-xs text-slate-500">Đang tải hồ sơ tuyến...</p>}
+        {statusMessage && <p role="status" className="text-xs text-slate-600">{statusMessage}</p>}
         {/* Project Title & Project Switcher */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
           <h1 className="text-lg font-bold text-brand-dark tracking-tight">
@@ -152,7 +159,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             </div>
           ) : (
             <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
-              Chưa có tim tuyến • 0.00 km
+              {serverDraftStatus ? 'Chưa có chiều dài đã xác nhận' : 'Chưa có dữ liệu chiều dài'}
             </span>
           )}
           <span className="hidden xl:flex items-center gap-1 text-[11px] text-slate-500 font-mono">
@@ -165,6 +172,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
       {/* Action Button Group */}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         {/* PM: Import Coordinates Button (Only allowed when in DRAFT) */}
+        {workflowActions}
         {!isSupervisor && alignmentStatus === 'DRAFT' && (
           <button
             onClick={onOpenImportModal}

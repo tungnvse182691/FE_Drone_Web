@@ -57,6 +57,7 @@ export interface AlignmentSidebarProps {
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
   alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  editingDisabled?: boolean
   isSupervisor?: boolean
 }
 
@@ -106,7 +107,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   onOpenImportModal,
   mainlineLengthKm,
   alignmentStatus,
-  isSupervisor
+  isSupervisor,
+  editingDisabled = false
 }) => {
   return (
     <div className="xl:col-span-4 flex flex-col gap-3">
@@ -185,7 +187,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             onOpenImportModal={onOpenImportModal}
             mainlineLengthKm={mainlineLengthKm}
             alignmentStatus={alignmentStatus}
-            isSupervisor={isSupervisor}
+            isSupervisor={isSupervisor || editingDisabled}
           />
         )}
 
@@ -196,12 +198,13 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             selectedSegmentId={selectedSegmentId}
             onUpdateSegmentWidth={onUpdateSegmentWidth}
             onUpdateAllWidths={onUpdateAllWidths}
-            isReadOnly={alignmentStatus === 'CONFIRMED' || isSupervisor}
+            isReadOnly={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled}
           />
         )}
 
         {/* TAB CONTENT: SLABS & JOINTS CONFIG */}
         {rightTab === 'SLABS' && (
+          <fieldset disabled={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
             slabLengthM={slabLengthM}
             onSetSlabLengthM={onSetSlabLengthM}
@@ -218,6 +221,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             slabs={slabs}
             showToast={showToast}
           />
+          </fieldset>
         )}
       </div>
 

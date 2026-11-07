@@ -96,7 +96,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-700">
-              Nhập tọa độ nguồn [X, Y] theo hồ sơ CRS đã chọn:
+              Nhập tọa độ nguồn [X, Y]:
             </label>
             <button
               type="button"
@@ -104,7 +104,7 @@ export const ImportPanel: React.FC<ImportPanelProps> = ({
               className="text-[11px] text-[#8F7212] hover:underline flex items-center gap-1 cursor-pointer font-semibold"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Khôi phục mẫu mặc định</span>
+              <span>Xóa bản nhập</span>
             </button>
           </div>
 

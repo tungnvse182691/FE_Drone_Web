@@ -51,7 +51,7 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
   return { sourceKind: 'COORDINATES', sourceCrs: definition.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: form.reason.trim(), roadCode: road.code, roadName: road.name }
 }
 
-export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void) {
+export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void, sourceUnverified = false) {
   const { user, authEpoch } = useAuthStore()
   const [form, setForm] = useState<GeometryDraftForm>(emptyForm)
   const [awaitingDraftId, setAwaitingDraftId] = useState('')
@@ -143,6 +143,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (draft && draft.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp đã xác nhận, không được sửa.')
     if (draft && draft.sourceKind !== 'COORDINATES') throw new GeometryCommandUiError('Bản nháp dùng hình học native; hồ sơ đọc chưa đủ thông tin tuyến và hiệu chỉnh để sửa an toàn.')
     if (draft && !model.draft?.etag) throw new GeometryCommandUiError('Chưa đọc được phiên bản bản nháp.')
+    if (sourceUnverified) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
     input = coordinateDraftInput(form, coordinatesText, model)
   } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const section = draft?.roadSectionId ? model.context?.roadSections.find(section => section.roadSectionId === draft.roadSectionId) : undefined

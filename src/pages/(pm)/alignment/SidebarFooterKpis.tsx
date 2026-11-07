@@ -23,7 +23,7 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
               ? `${displayLen.toFixed(displayLen >= 10 ? 1 : 2)} km`
               : displayLen > 0
               ? `${Math.round(displayLen * 1000)} mét`
-              : '0 km'}
+              : 'Chưa có dữ liệu'}
           </span>
           <span className="text-[10px] text-slate-500">Tổng chiều dài</span>
         </div>
@@ -41,10 +41,10 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
                 : 'text-emerald-600'
             }`}
           >
-            {!hasRoute ? 'Chưa có tuyến' : segments.some((s) => s.hasGap) ? 'Cảnh báo hở' : 'Đạt chuẩn'}
+            {!hasRoute ? 'Chưa có tuyến' : segments.some((s) => s.hasGap) ? 'Cảnh báo hở' : 'Chưa xác nhận'}
           </span>
           <span className="text-[10px] text-slate-500">
-            {!hasRoute ? '0.00 km' : segments.some((s) => s.hasGap) ? 'Cần khép kín' : 'Sẵn sàng duyệt'}
+            {!hasRoute ? 'Chưa có dữ liệu' : segments.some((s) => s.hasGap) ? 'Cần khép kín' : 'Chờ kiểm tra máy chủ'}
           </span>
         </div>
       </div>

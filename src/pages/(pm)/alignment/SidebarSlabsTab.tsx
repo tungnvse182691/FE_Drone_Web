@@ -47,7 +47,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
           </span>
         </div>
         <p className="text-[11px] text-slate-600 leading-relaxed">
-          Chỉ huy trưởng (PM) có thể tùy chỉnh kích thước từng tấm bê tông, cự ly cưa cắt khe co giãn và khe giãn nở nhiệt theo hồ sơ thiết kế thi công. Bản đồ và bảng thông số sẽ tự động cập nhật ngay lập tức.
+          Chỉnh kích thước tấm và khe theo hồ sơ thiết kế để xem thử trên bản đồ. Đây là bản chỉnh cục bộ, chưa lưu hoặc xác nhận trên máy chủ.
         </p>
 
         {/* THIẾT LẬP KÍCH THƯỚC TẤM BÊ TÔNG */}
@@ -57,7 +57,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
               <span>🧱 Kích thước tấm BTXM (Dài × Dày):</span>
             </span>
             <span className="text-[11px] font-mono font-bold text-[#8F7212] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              {slabLengthM.toFixed(1)}m × {slabThicknessCm}cm
+              {Number.isFinite(slabLengthM) && Number.isFinite(slabThicknessCm) ? `${slabLengthM.toFixed(1)}m × ${slabThicknessCm}cm` : 'Chưa có dữ liệu'}
             </span>
           </div>
 
@@ -72,9 +72,9 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   step="0.5"
                   min="2.0"
                   max="12.0"
-                  value={slabLengthM}
+                  value={Number.isFinite(slabLengthM) ? slabLengthM : ''} placeholder="Chưa có dữ liệu"
                   onChange={(e) => {
-                    const val = parseFloat(e.target.value) || 5.0
+                    const val = parseFloat(e.target.value)
                     onSetSlabLengthM(val)
                     if (syncJointWithSlab) onSetContractionSpacingM(val)
                   }}
@@ -94,8 +94,8 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   step="1"
                   min="15"
                   max="45"
-                  value={slabThicknessCm}
-                  onChange={(e) => onSetSlabThicknessCm(parseInt(e.target.value) || 26)}
+                  value={Number.isFinite(slabThicknessCm) ? slabThicknessCm : ''} placeholder="Chưa có dữ liệu"
+                  onChange={(e) => onSetSlabThicknessCm(parseInt(e.target.value))}
                   className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
                 <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">cm</span>
@@ -144,8 +144,8 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   step="0.5"
                   min="2.0"
                   max="12.0"
-                  value={contractionSpacingM}
-                  onChange={(e) => onSetContractionSpacingM(parseFloat(e.target.value) || 5.0)}
+                  value={Number.isFinite(contractionSpacingM) ? contractionSpacingM : ''} placeholder="Chưa có dữ liệu"
+                  onChange={(e) => onSetContractionSpacingM(parseFloat(e.target.value))}
                   className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
                 <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
@@ -162,8 +162,8 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                   step="5"
                   min="20"
                   max="300"
-                  value={expansionSpacingM}
-                  onChange={(e) => onSetExpansionSpacingM(parseFloat(e.target.value) || 50.0)}
+                  value={Number.isFinite(expansionSpacingM) ? expansionSpacingM : ''} placeholder="Chưa có dữ liệu"
+                  onChange={(e) => onSetExpansionSpacingM(parseFloat(e.target.value))}
                   className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
                 <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
@@ -226,7 +226,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
             <span>Danh Sách Tấm BTXM ({slabs.length})</span>
           </span>
           <span className="text-[10px] text-slate-500 font-mono">
-            L = {slabLengthM}m
+            {Number.isFinite(slabLengthM) ? `L = ${slabLengthM}m` : 'Chưa có dữ liệu'}
           </span>
         </div>
 

@@ -5,7 +5,7 @@ import { ImportPanel } from './ImportPanel'
 
 export interface AlignmentImportModalProps {
   importDisabled?: boolean
-  draftControls?: React.ReactNode
+  importStatus?: string
   isOpen: boolean
   onClose: () => void
   importTab: 'FILE' | 'MANUAL'
@@ -20,7 +20,7 @@ export interface AlignmentImportModalProps {
 
 export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
   isOpen,
-  draftControls,
+  importStatus = '',
   importDisabled = false,
   onClose,
   importTab,
@@ -62,7 +62,7 @@ export const AlignmentImportModal: React.FC<AlignmentImportModalProps> = ({
           activeProject={activeProject}
         />
         </fieldset>
-        {draftControls}
+        {importStatus && <p role="status" className="text-xs text-slate-600">{importStatus}</p>}
       </div>
     </div>
   )

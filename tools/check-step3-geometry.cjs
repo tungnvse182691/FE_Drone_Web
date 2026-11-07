@@ -4,7 +4,7 @@ const auth={useAuthStore:Object.assign(selector=>selector?selector({authEpoch:ep
 function load(file,mocks={}){const module={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8').replaceAll('import.meta.env','({})'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;vm.runInNewContext(code,{module,exports:module.exports,require:n=>{if(n==='react'&&n in mocks)return {useRef:v=>({current:v}),useEffect(){},...mocks[n]};if(n in mocks)return mocks[n];if(n.endsWith('/geometryCommandErrors'))return load('src/api/services/geometryCommandErrors.ts');if(n.endsWith('/authStore'))return auth;if(n==='./projectService')return{projectService:{}};throw Error('Missing '+n)},console,Error,FileReader:mocks.__FileReader,crypto:webcrypto,localStorage:{getItem:()=>null},sessionStorage:mocks.__sessionStorage||{getItem:()=>null,setItem(){},removeItem(){}},setTimeout,clearTimeout,AbortController,URLSearchParams});return module.exports}
 const ok=data=>({data,headers:{etag:'"AAAAAAAAAAE="'}})
 const service=client=>load('src/api/services/alignmentService.ts',{'../client':{apiClient:client}}).alignmentService
-let count=0;async function test(name,run){epoch=1;actor={id:'pm',role:'PROJECT_MANAGER'};await run();console.log('PASS '+name);count++}
+let count=0;async function test(name,run){if(process.env.RG_STEP3_FILTER&&!new RegExp(process.env.RG_STEP3_FILTER,'i').test(name))return;epoch=1;actor={id:'pm',role:'PROJECT_MANAGER'};await run();console.log('PASS '+name);count++}
 ;(async()=>{
 await test('CRS failure/wrong project/null never becomes empty; no automatic checksum profile',async()=>{
  for(const data of [null,{},[{projectId:'other'}]])await assert.rejects(service({get:async()=>ok(data)}).fetchCrsProfiles('p'))
@@ -83,7 +83,7 @@ await test('GeoJSON import preserves syntax/ambiguity/geometry/CRS/validation er
  model.processGeoJSONFile({});reader.onload({target:{result:null}});assert.match(message,/Không đọc được nội dung/)
  for(const error of [null,Error('Unexpected internal failure'),new TypeError('Unexpected shape')]){const unknown=make(()=>{throw error});unknown.processGeoJSONFile({});reader.onload({target:{result:'{}'}});assert.match(message,/Không thể kiểm tra nội dung/)}
  const sync=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react:{useState:v=>[v,()=>{}]},'maplibre-gl':{},'./alignmentImportHelpers':parser,__FileReader:class{readAsText(){throw Error('read failure')}}}).useAlignmentImportState({defaultManualText:'',showToast:m=>message=m});sync.processGeoJSONFile({});assert.match(message,/Không đọc được tệp/)
- model.processGeoJSONFile({});reader.onload({target:{result:JSON.stringify({type:'LineString',coordinates:[[1,2],[3,4]]})}});assert.match(message,/CRS UNKNOWN/);assert.equal(writes,0)
+ model.processGeoJSONFile({});reader.onload({target:{result:JSON.stringify({type:'LineString',coordinates:[[1,2],[3,4]]})}});assert.match(message,/Đã đọc tệp, chưa lưu/);assert.match(message,/chưa được xác minh/);assert.equal(writes,0)
 })
 
 const roles={PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}
@@ -186,7 +186,7 @@ await test('first dispatch uses the same immutable payload that was journaled, e
  const request=c.runDraftCommand('p',{kind:'create',sectionId:'road',input});input.changeReason='Changed after dispatch';finish();await request;assert.equal(observed,draftInput.changeReason)
 })
 
-function hydrateHarness(){
+function hydrateHarness(sourceUnverified=false){
  const React=require('react');let slot=0,view,coords='',versionReads=0,held=null;const values=[],effects=[],writes=[]
  const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
  const model={draftId:dto.id,draft:{data:{...dto},etag:'"AAAAAAAAAAE="'},draftLoading:false,draftError:'',context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],readiness:{ready:true,missingFields:[],errors:[]},retry(){versionReads++;model.draft=null;model.draftLoading=true;model.draftError=''},openDraft(){},openConfirmed(){},setReadiness(){}}
@@ -194,7 +194,7 @@ function hydrateHarness(){
  const api={getGeometryDraft:async()=>model.draft,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100}),readDraftReadiness:async()=>model.readiness}
  const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
  const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
- const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,text=>notices.push(text));effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,text=>notices.push(text),sourceUnverified);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
  const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
  const prepare=async()=>{render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập chưa được quyết định'});render();return view}
  const hydrate=(etag)=>{model.draft={data:{...dto,version:etag.slice(1,-1),stationOriginMeters:999},etag};model.draftLoading=false;model.draftError='';render()}
@@ -223,6 +223,64 @@ await test('ProblemDetails codes distinguish CSRF, permissions, state/idempotenc
  assert.match(message({code:'ERR_NETWORK',request:{}},true,null),/Không kết nối/);assert.match(message({code:'ERR_NETWORK'},true,{}),/Chưa rõ kết quả/);assert.match(message(fail(500,'internal_error'),true,{}),/Chưa rõ kết quả/)
  assert.match(message({receipt:dto,cause:fail(403,'access_forbidden')},true,{receipt:dto}),/đã tiếp nhận lệnh; chưa đọc/)
  const secret='STACK SECRET TOKEN';const result=message({message:secret,stack:secret,response:{status:409,data:{code:'unknown',detail:secret,title:secret}}},true,null);assert.ok(!result.includes(secret));assert.ok(!message(Error(secret),true,null).includes(secret))
+})
+await test('UI restore sidebar edits survive busy/conflict and are not replaced by a newer server snapshot',async()=>{
+ const React=require('react');let slot=0,view;const values=[],effects=[]
+ const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useMemo:fn=>fn(),useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||!deps||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}}),segments=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split})
+ const model={projects:[],error:'',draftId:dto.id,draft:{data:{...dto}},context:{projectId:'p',roadSections:[]},geometry:null}
+ const workflow={form:{sectionId:'road',origin:'0',widths:'0, 100, 6'},busy:false,conflict:false,setForm:next=>workflow.form=typeof next==='function'?next(workflow.form):next}
+ const hook=load('src/pages/(pm)/alignment/useAlignmentState.ts',{react,'react-router-dom':{useNavigate:()=>()=>{},useParams:()=>({id:'p'})},'maplibre-gl':{},'../../../types/enums':{RoleCode:roles},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split,'./useGeometryReadModel':{useGeometryReadModel:()=>model},'./useGeometryDraftWorkflow':{useGeometryDraftWorkflow:()=>workflow},'./useAlignmentSegmentsState':segments,'./useAlignmentMapState':{useAlignmentMapState:()=>({syncMap(){},handleFitBounds(){},mapRef:{current:null}})},'./useAlignmentImportState':{useAlignmentImportState:()=>({manualCoordsText:'',setManualCoordsText(){}})}}).useAlignmentState
+ const render=()=>{slot=0;view=hook();effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})};for(let i=0;i<4;i++)render();assert.equal(view.activeSegments[0].roadWidthM,6)
+ view.segmentsState.setSegments(old=>old.map(s=>({...s,roadWidthM:12})));view.markWidthDraft();render();render();assert.equal(workflow.form.widths,'0, 100, 12')
+ workflow.busy=true;model.draft={data:{...dto,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:20}]}};render();render();assert.equal(view.activeSegments[0].roadWidthM,12)
+ workflow.busy=false;workflow.conflict=true;render();render();assert.equal(view.activeSegments[0].roadWidthM,12);assert.equal(workflow.form.widths,'0, 100, 12');assert.equal(view.localDraftDirty,true)
+ workflow.conflict=false;render();render();assert.equal(view.activeSegments[0].roadWidthM,12);assert.equal(workflow.form.widths,'0, 100, 12');effects.forEach(e=>e?.cleanup?.())
+})
+await test('UI restore header keeps status/retry in its existing toolbar and does not invent zero length for a server draft',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
+ const C=load('src/pages/(pm)/alignment/AlignmentHeader.tsx',{react:{__esModule:true,default:React,...React},'react-router-dom':{useNavigate:()=>()=>{}},'../../../components/ui/Icon':{Icon:()=>null}}).AlignmentHeader
+ const html=renderToStaticMarkup(React.createElement(C,{serverDraftStatus:'DRAFT',alignmentStatus:'DRAFT',activeProject:{},assignedProjects:[],currentCoords:[],importedLengthKm:0,isSupervisor:false,loading:true,statusMessage:'Lỗi đọc hồ sơ; hãy thử lại.',workflowActions:React.createElement('button',null,'Tải lại')}))
+ for(const text of ['Breadcrumb','Đang tải hồ sơ tuyến','Lỗi đọc hồ sơ','Tải lại','Chưa có chiều dài đã xác nhận'])assert.ok(html.includes(text),text);assert.ok(!html.includes('0.00 km'));assert.ok(!html.includes('Chưa có tim tuyến'))
+})
+await test('UI restore unverified file cannot reuse a previous valid profile to send a mutation',async()=>{
+ const h=hydrateHarness(true);await h.prepare();assert.match(h.view.saveReason,/chưa có mapping/);await h.view.save();assert.equal(h.writes.length,0);assert.equal(h.view.form.origin,'0');h.unmount()
+})
+await test('UI restore local segment edits require real origin/distance, keep unknown width/lanes and never manufacture slabs',async()=>{
+ const React=require('react');let slot=0,view;const values=[];const react={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]}}
+ const geometry=load('src/pages/(pm)/alignment/alignmentGeometryHelpers.ts'),split=load('src/pages/(pm)/alignment/alignmentSplitHelpers.ts',{'./data':{SEGMENT_COLORS:['#C9A227']}})
+ const hook=load('src/pages/(pm)/alignment/useAlignmentSegmentsState.ts',{react,'./data':{SEGMENT_COLORS:['#C9A227']},'./alignmentGeometryHelpers':geometry,'./alignmentSplitHelpers':split}).useAlignmentSegmentsState
+ const params={initialSegments:[],currentCoords:[],currentKmPoints:[],importedLengthKm:0.1,stationOriginKm:NaN,roadWidthM:NaN,showToast(){},syncMap(){},mapRef:{current:null},popupRef:{current:null},handleFitBounds(){}}
+ const render=()=>{slot=0;view=hook(params)};render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,0);view.setSplitDistance(.05);render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,0)
+ params.stationOriginKm=1;render();view.handleApplyAutoSplit();render();assert.equal(view.segments.length,2);assert.equal(view.segments[0].startKm,1);assert.equal(view.segments[1].endKm,1.1);assert.ok(view.segments.every(s=>Number.isNaN(s.roadWidthM)&&Number.isNaN(s.laneCount)&&!s.surfaceMaterial));assert.equal(view.slabs.length,0)
+ view.handleUpdateSegmentWidth(view.segments[0].id,12);render();assert.equal(view.segments[0].roadWidthM,12);assert.equal(view.slabs.length,0)
+})
+await test('UI restore context retry clears its error without dropping the draft and old context cannot replace a new project',async()=>{
+ const React=require('react');let slot=0,id='a',view,failContext=true;const values=[],effects=[],calls=[];let query=new URLSearchParams('draftId=11111111-1111-4111-8111-111111111111')
+ const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ const api={fetchCrsProfiles:async()=>[],getGeometryDraft:async(projectId,draftId)=>({data:{id:draftId,projectId}}),readDraftReadiness:async()=>({ready:false}),readProjectContext:async projectId=>{calls.push(projectId);if(failContext)throw Error('test503');return{projectId,roadSections:[]}}}
+ const hook=load('src/pages/(pm)/alignment/useGeometryReadModel.ts',{react:hooks,'react-router-dom':{useSearchParams:()=>[query,next=>query=next]},'../../../api/client':{apiClient:{get:async()=>ok({items:[{projectId:'a'},{projectId:'b'}]})}},'../../../api/services/alignmentService':{alignmentService:api}}).useGeometryReadModel
+ const render=()=>{slot=0;view=hook(id);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})},flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
+ render();await flush();await flush();assert.ok(view.geometryError);assert.equal(view.draft.data.projectId,'a');failContext=false;view.retry();render();await flush();await flush();assert.equal(view.geometryError,'');assert.equal(view.context.projectId,'a');assert.equal(view.draft.data.projectId,'a');assert.ok(calls.length>=2)
+ id='b';render();await flush();await flush();assert.equal(view.context.projectId,'b');assert.equal(view.draft.data.projectId,'b');effects.forEach(e=>e?.cleanup?.())
+})
+await test('UI restore renders original import tabs without technical form; sidebar unknown values stay unknown and valid values calculate',async()=>{
+ const React=require('react'),{renderToStaticMarkup:render}=require('react-dom/server'),react={__esModule:true,default:React,...React},icons=new Proxy({},{get:()=>()=>null})
+ const component=(name,extra={})=>load(`src/pages/(pm)/alignment/${name}.tsx`,{react,'lucide-react':icons,...extra})[name]
+ const ImportPanel=component('ImportPanel'),Modal=component('AlignmentImportModal',{'./ImportPanel':{ImportPanel}})
+ const modal=tab=>render(React.createElement(Modal,{isOpen:true,importTab:tab,manualCoordsText:'',activeProject:{defaultManualText:''},importStatus:'Đã đọc tệp, chưa lưu'}))
+ for(const tab of ['FILE','MANUAL']){const html=modal(tab);assert.ok(html.includes('Thiết Lập Tim Tuyến'));assert.ok(html.includes('Đã đọc tệp, chưa lưu'));for(const text of ['Hồ sơ hệ tọa độ nguồn','Lý trình gốc (m)','Bề rộng khảo sát (m)','Lý do thay đổi'])assert.ok(!html.includes(text),text);assert.ok(!html.includes('<select'))}
+ assert.ok(modal('FILE').includes('type="file"'));assert.ok(modal('MANUAL').includes('<textarea'))
+ const width=component('SidebarWidthProfileTab'),slab=component('SidebarSlabsTab'),card=component('SidebarSegmentCard'),edit=component('AlignmentEditModal'),add=component('AlignmentAddModal')
+ const segment={id:'s',code:'S',startKm:1,endKm:1.1,lengthKm:0.1,roadWidthM:NaN,laneCount:NaN,surfaceMaterial:'',statusText:'BẢN CHỈNH',color:'#C9A227'}
+ for(const invalid of [NaN,null,undefined,Infinity,-Infinity]){
+   const unknown={...segment,roadWidthM:invalid,laneCount:invalid};const props={slabLengthM:invalid,slabThicknessCm:invalid,contractionSpacingM:invalid,expansionSpacingM:invalid,expansionGapMm:invalid,slabs:[]}
+   for(const html of [render(React.createElement(width,{segments:[unknown]})),render(React.createElement(slab,props)),render(React.createElement(card,{segment:unknown})),render(React.createElement(edit,{segment:unknown,colors:[]})),render(React.createElement(add,{isOpen:true,newSegForm:unknown,segmentsCount:0,colors:[]}))]){for(const bad of ['NaN','Infinity','±4.0m'])assert.ok(!html.includes(bad),bad);assert.ok(html.includes('Chưa có'))}
+ }
+ const valid=render(React.createElement(width,{segments:[{...segment,roadWidthM:12}]}));assert.ok(valid.includes('1,200 m²'));assert.ok(valid.includes('12.0 m'));assert.ok(valid.includes('Trái ±6.0m'))
+ const Sidebar=component('AlignmentSidebar',{'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:width},'./SidebarSlabsTab':{SidebarSlabsTab:slab},'./SidebarFooterKpis':{SidebarFooterKpis:()=>null}})
+ const sidebar=(isSupervisor,editingDisabled=false)=>render(React.createElement(Sidebar,{rightTab:'SLABS',alignmentStatus:'DRAFT',isSupervisor,editingDisabled,segments:[],slabs:[]}))
+ assert.ok(!sidebar(false).includes('<fieldset disabled'));assert.ok(sidebar(true).includes('<fieldset disabled'));assert.ok(sidebar(false,true).includes('<fieldset disabled'));for(const tab of ['Phân đoạn','Bề rộng (m)','Tấm &amp; Khe'])assert.ok(sidebar(true).includes(tab))
 })
 console.log(`${count} Step 3 scoped scenarios PASS (mock/hooks/static; NOT E2E).`)
 })().catch(e=>{console.error(e);process.exitCode=1})

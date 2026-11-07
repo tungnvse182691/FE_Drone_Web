@@ -150,7 +150,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           </option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.name} ({b.lengthKm.toFixed(2)} km - rẽ tại {b.branchStationText})
+              {b.name} ({Number.isFinite(b.lengthKm) ? b.lengthKm.toFixed(2) : 'Chưa có dữ liệu'} km - rẽ tại {b.branchStationText})
             </option>
           ))}
         </select>
@@ -195,8 +195,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                   step="0.05"
                   min="0.01"
                   max="50"
-                  value={splitDistance}
-                  onChange={(e) => onSetSplitDistance(parseFloat(e.target.value) || 0.1)}
+                  value={Number.isFinite(splitDistance) ? splitDistance : ''}
+                  onChange={(e) => onSetSplitDistance(parseFloat(e.target.value))}
                   className="w-full h-8.5 pl-3 pr-14 bg-white border border-slate-300 rounded-lg font-mono text-xs font-bold text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-gold"
                   placeholder="Nhập km..."
                 />
@@ -258,7 +258,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
         {(() => {
           const isMain = selectedTargetType === 'MAINLINE'
           const curBranch = !isMain ? branches.find((b) => b.id === selectedTargetType) : null
-          const hasCoords = isMain ? currentCoords.length > 0 : true
+          const hasCoords = isMain ? currentCoords.length > 0 || segments.length > 0 || importedLengthKm > 0 : true
           const title = isMain
             ? hasCoords
               ? `Toàn tuyến chính (${mainlineLenText})`
@@ -268,7 +268,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             ? !hasCoords
               ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ" để nạp`
               : segments.length > 0
-              ? `Toàn bộ ${segments.length} phân đoạn liên tục • Chuẩn trắc địa WGS84`
+              ? `Bản chỉnh ${segments.length} phân đoạn • Chờ xác minh máy chủ`
               : `Chưa phân đoạn • Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động"`
             : `Tổng chiều dài ${(curBranch?.lengthKm || 0).toFixed(2)} km • ${segments.length} phân đoạn • Rẽ tại ${curBranch?.branchStationText || ''}`
 
@@ -299,7 +299,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                     </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      HỢP LỆ
+                      BẢN CHỈNH
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">

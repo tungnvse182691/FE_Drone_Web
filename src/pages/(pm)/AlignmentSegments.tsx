@@ -36,6 +36,7 @@ export const AlignmentSegments: React.FC = () => {
     activeProject,
     geometryRead,
     draftWorkflow,
+    localDraftDirty, markLocalDraft, markWidthDraft,
     alignmentStatus,
     handleSwitchProject,
     handleSubmitAlignment,
@@ -89,33 +90,28 @@ export const AlignmentSegments: React.FC = () => {
     importState
   } = useAlignmentState()
 
+  const missingDraftInput = [
+    !geometryRead.context ? 'phạm vi tuyến từ máy chủ' : '',
+    !draftWorkflow.form.sectionId ? 'tuyến đường trong dự án' : '',
+    importState.hasUnverifiedFile || !draftWorkflow.form.profileId ? 'hồ sơ hệ tọa độ, trục và đơn vị có nguồn' : '',
+    !draftWorkflow.form.origin.trim() ? 'lý trình gốc' : '',
+    !draftWorkflow.form.surveyWidth.trim() ? 'bề rộng khảo sát' : '',
+    !draftWorkflow.form.widths.trim() ? 'các khoảng bề rộng' : '',
+    !draftWorkflow.form.reason.trim() ? 'lý do thay đổi' : ''
+  ].filter(Boolean)
 
-  const fieldClass = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-xs bg-slate-50'
-  const draftControls = <div className="space-y-3 text-xs border-t border-slate-200 pt-3">
-    <fieldset disabled={draftWorkflow.busy || !!draftWorkflow.pending} className="space-y-3 min-w-0">
-      <label className="block">Tuyến đường
-        <select aria-label="Tuyến đường" className={fieldClass} value={draftWorkflow.form.sectionId} onChange={e => draftWorkflow.setForm(f => ({ ...f, sectionId: e.target.value }))}>
-          <option value="">Chọn tuyến từ máy chủ</option>
-          {geometryRead.context?.roadSections.map(road => <option key={road.roadSectionId} value={road.roadSectionId}>{road.name || road.code}</option>)}
-        </select>
-      </label>
-      <label className="block">Hồ sơ hệ tọa độ nguồn
-        <select aria-label="Hồ sơ hệ tọa độ nguồn" className={fieldClass} value={draftWorkflow.form.profileId} onChange={e => draftWorkflow.setForm(f => ({ ...f, profileId: e.target.value }))}>
-          <option value="">Chọn hồ sơ CRS từ máy chủ</option>
-          {geometryRead.profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.code || 'Hồ sơ chưa có tên'} – {profile.definition?.sourceSrid}</option>)}
-        </select>
-      </label>
-      <p>Tọa độ được giữ theo trục EN, đơn vị mét của hồ sơ phù hợp engineering CRS; không tự chuyển datum hoặc trục. Preview bản đồ không chứng nhận độ chính xác kỹ thuật.</p>
-      <div className="grid grid-cols-2 gap-3">
-        <label>Lý trình gốc (m)<input aria-label="Lý trình gốc (m)" type="number" className={fieldClass} value={draftWorkflow.form.origin} onChange={e => draftWorkflow.setForm(f => ({ ...f, origin: e.target.value }))} /></label>
-        <label>Bề rộng khảo sát (m)<input aria-label="Bề rộng khảo sát (m)" type="number" className={fieldClass} value={draftWorkflow.form.surveyWidth} onChange={e => draftWorkflow.setForm(f => ({ ...f, surveyWidth: e.target.value }))} /></label>
-      </div>
-      <label className="block">Bề rộng theo khoảng: mỗi dòng Từ (m), Đến (m), Rộng (m)<textarea aria-label="Bề rộng theo khoảng" rows={3} className={fieldClass} value={draftWorkflow.form.widths} onChange={e => draftWorkflow.setForm(f => ({ ...f, widths: e.target.value }))} /></label>
-      <label className="block">Lý do thay đổi<textarea aria-label="Lý do thay đổi" className={fieldClass} value={draftWorkflow.form.reason} onChange={e => draftWorkflow.setForm(f => ({ ...f, reason: e.target.value }))} /></label>
-    </fieldset>
-    {draftWorkflow.saveReason && <p role="status" className="text-slate-600">{draftWorkflow.saveReason}</p>}
-    <button type="button" disabled={!!draftWorkflow.saveReason || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.save() }} className="px-3 py-2 rounded-lg bg-brand-gold text-white disabled:opacity-50">Lưu bản nháp</button>
-  </div>
+  const workflowActions = <>
+    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={geometryRead.retry} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
+    {geometryRead.draft && <button type="button" disabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.loadPreview() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Xem trước bản đã lưu</button>}
+    {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc lại bản đã lưu</button>}
+    {draftWorkflow.pending && <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>}
+    {draftWorkflow.pending?.rejected && <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.reviseRejected} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Sửa bản nhập</button>}
+    {draftWorkflow.conflict && <>
+      <button type="button" disabled={draftWorkflow.busy} onClick={() => { void draftWorkflow.reviewConflict() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc hồ sơ đối chiếu</button>
+      <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Giữ bản nhập, dùng phiên bản vừa đọc</button>
+    </>}
+    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
+  </>
 
   // Nếu vai trò Supervisor truy cập danh mục menu /sup/alignment mà chưa chọn dự án: hiển thị danh sách thẩm duyệt thay vì trỏ thẳng vào 1 tuyến
   if (isSupervisor && !urlProjectId) {
@@ -139,7 +135,6 @@ export const AlignmentSegments: React.FC = () => {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
-          <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
           <span className="text-xs font-medium">{toastMessage}</span>
           <button
             onClick={() => setToastMessage(null)}
@@ -153,15 +148,15 @@ export const AlignmentSegments: React.FC = () => {
       {/* MODALS */}
       <AlignmentModals
         isImportModalOpen={importState.isImportModalOpen}
-        draftControls={draftControls}
         importDisabled={draftWorkflow.busy || !!draftWorkflow.pending}
+        importStatus={importState.readMessage ? `${importState.readMessage}${missingDraftInput.length ? ` Cần nguồn được xác minh cho: ${missingDraftInput.join('; ')}.` : draftWorkflow.saveReason ? ` ${draftWorkflow.saveReason}` : ''}` : ''}
         onCloseImportModal={() => importState.setIsImportModalOpen(false)}
         importTab={importState.importTab}
         onSetImportTab={importState.setImportTab}
         onLoadPreset={importState.handleLoadPreset}
         onProcessGeoJsonFile={importState.processGeoJSONFile}
         manualCoordsText={importState.manualCoordsText}
-        onSetManualCoordsText={importState.setManualCoordsText}
+        onSetManualCoordsText={text => { importState.setManualCoordsText(text); markLocalDraft() }}
         onProcessManualCoordinates={importState.processManualCoordinates}
         activeProject={activeProject}
 
@@ -174,14 +169,14 @@ export const AlignmentSegments: React.FC = () => {
         onCloseAddSegmentModal={() => segmentsState.setIsAddSegmentModalOpen(false)}
         newSegForm={segmentsState.newSegForm}
         onChangeNewSegForm={segmentsState.setNewSegForm}
-        onCreateNewSegment={segmentsState.handleCreateNewSegment}
+        onCreateNewSegment={event => { segmentsState.handleCreateNewSegment(event); markWidthDraft() }}
         segmentsCount={activeSegments.length}
 
         splitModalSegment={segmentsState.splitModalSegment}
         onCloseSplitModal={() => segmentsState.setSplitModalSegment(null)}
         customSplitKm={segmentsState.customSplitKm}
         onChangeCustomSplitKm={segmentsState.setCustomSplitKm}
-        onSplitSegmentSubmit={handleSplitSegmentSubmit}
+        onSplitSegmentSubmit={event => { handleSplitSegmentSubmit(event); markWidthDraft() }}
       />
 
       {/* MODAL TẠO TUYẾN NHÁNH MỚI */}
@@ -196,49 +191,12 @@ export const AlignmentSegments: React.FC = () => {
       />
 
       {/* TOP HEADER */}
-      <section className="flex flex-wrap items-center gap-3 text-xs">
-        <button type="button" onClick={geometryRead.retry} disabled={geometryRead.loading} className="border rounded-lg px-3 py-2">Tải lại từ máy chủ</button>
-        {geometryRead.loading && <p role="status">Đang tải danh sách dự án...</p>}
-        {geometryRead.error && <p role="alert" className="text-rose-700">{geometryRead.error}</p>}
-        {!geometryRead.loading && !geometryRead.error && geometryRead.projects.length === 0 && <p>Không có dự án trong phạm vi tài khoản.</p>}
-        {geometryRead.geometryError && <p role="alert" className="text-rose-700">{geometryRead.geometryError}</p>}
-        {geometryRead.context?.roadSections.map(road => <button key={road.roadSectionId} type="button" disabled={geometryRead.geometryLoading || !road.currentVersionId} onClick={() => { geometryRead.openGeometry(road.roadSectionId, road.currentVersionId) }} className="border rounded-lg px-3 py-2">Đọc tuyến {road.name || road.code}</button>)}
-        {geometryRead.geometryLoading && <p role="status">Đang đọc geometry đã chọn...</p>}
-        {geometryRead.geometry && <p>Hình học từ máy chủ: {Number.isFinite(geometryRead.geometry.lengthMeters) ? `${geometryRead.geometry.lengthMeters} m` : 'Chưa có chiều dài'}</p>}
-        {geometryRead.geometry && !geometryRead.geometry.wgs84Centerline && <p>Chưa có hình học WGS84 từ máy chủ để vẽ tuyến lên bản đồ.</p>}
-      </section>
-      <section className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 text-xs">
-        <p>Lưu bản nháp, xem trước và xác nhận là các bước riêng; trạng thái luôn đọc từ máy chủ.</p>
-        {geometryRead.profileError && <p role="alert" className="text-rose-700">{geometryRead.profileError}</p>}
-        {draftWorkflow.message && <p role="status">{draftWorkflow.message}</p>}
-        {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="border rounded-lg px-3 py-2">Đọc lại bản nháp đã lưu</button>}
-        {draftWorkflow.pending && <div className="space-y-2">
-          <p>{draftWorkflow.pending.receipt ? 'Lệnh đã được tiếp nhận; cần đọc lại kết quả.' : 'Yêu cầu trước cần được đối chiếu trước khi gửi nội dung mới.'}</p>
-          <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="border rounded-lg px-3 py-2">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>
-          {draftWorkflow.pending.rejected && <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.reviseRejected} className="ml-2 border rounded-lg px-3 py-2">Sửa đầu vào sau lỗi từ chối</button>}
-        </div>}
-        {draftWorkflow.conflict && <div>
-          <p>Bản nhập được giữ nguyên. Hãy đọc lại hồ sơ và quyết định trước khi tiếp tục.</p>
-          <button type="button" onClick={() => { void draftWorkflow.reviewConflict() }} disabled={draftWorkflow.busy} className="border rounded-lg px-3 py-2">Đọc phiên bản mới</button>
-          <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="ml-2 border rounded-lg px-3 py-2">Giữ bản nhập và dùng phiên bản mới</button>
-        </div>}
-        {geometryRead.draftId && <a className="underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Liên kết hồ sơ cho Giám sát</a>}
-        {!isSupervisor && geometryRead.draft && !draftWorkflow.pending && <button type="button" disabled={draftWorkflow.busy} className="border rounded-lg px-3 py-2" onClick={() => geometryRead.openDraft('')}>Tạo bản nháp khác</button>}
-        {geometryRead.draftLoading && <p role="status">Đang đọc bản nháp và readiness...</p>}
-        {geometryRead.draftError && <p role="alert" className="text-rose-700">{geometryRead.draftError}</p>}
-        {geometryRead.draft && <p>Hồ sơ tuyến {geometryRead.draft.data.roadName || geometryRead.draft.data.roadCode || ''}: {geometryRead.draft.data.status === 'CONFIRMED' ? 'Đã xác nhận theo máy chủ' : 'Bản nháp chưa xác nhận'}.</p>}
-        {geometryRead.readiness && <p>Readiness: {geometryRead.readiness.ready ? 'Đủ điều kiện theo kiểm tra máy chủ' : 'Chưa đủ điều kiện'}; {geometryRead.readiness.missingFields.join(', ')} {geometryRead.readiness.errors.join(', ')}</p>}
-        <button type="button" disabled={!geometryRead.draft || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.loadPreview() }} className="border rounded-lg px-3 py-2">Xem trước và kiểm tra điều kiện</button>
-        {draftWorkflow.preview && <p>Preview máy chủ: {draftWorkflow.preview.lengthMeters} m; {(draftWorkflow.preview.warnings || []).join(', ')}. Chưa phải xác nhận tuyến.</p>}
-        {isSupervisor && <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label>Ngày hiệu lực xác nhận<input aria-label="Ngày hiệu lực xác nhận" type="datetime-local" className={fieldClass} value={draftWorkflow.effectiveFrom} onChange={e => draftWorkflow.setEffectiveFrom(e.target.value)} /></label>
-          <label>Lý do xác nhận<input aria-label="Lý do xác nhận" className={fieldClass} value={draftWorkflow.reason} onChange={e => draftWorkflow.setReason(e.target.value)} /></label>
-          {draftWorkflow.confirmReason && <p className="text-slate-600">{draftWorkflow.confirmReason}</p>}
-        </div>}
-        <p>Phân đoạn/pavement chưa được nối khi vòng nhập và xác nhận chưa đủ điều kiện.</p>
-      </section>
       <AlignmentHeader
         basePath={basePath}
+        workflowActions={workflowActions}
+        loading={geometryRead.loading || geometryRead.draftLoading || geometryRead.geometryLoading}
+        statusMessage={[draftWorkflow.message, draftWorkflow.preview ? `Bản đã lưu xem trước: ${draftWorkflow.preview.lengthMeters.toLocaleString()} m; ${geometryRead.readiness?.ready ? 'máy chủ cho phép xác nhận' : 'máy chủ chưa cho phép xác nhận'}.` : '', geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError, localDraftDirty ? 'Đang chỉnh bản nháp cục bộ — chưa lưu máy chủ.' : ''].filter(Boolean).join(' ')}
+        serverDraftStatus={geometryRead.draft?.data.status}
         alignmentStatus={alignmentStatus}
         activeProject={activeProject}
         selectedProjectId={selectedProjectId}
@@ -301,7 +259,6 @@ export const AlignmentSegments: React.FC = () => {
           onCancelPickingCoords={mapState.cancelPickingCoords}
         />
 
-        <fieldset disabled className="xl:col-span-4 min-w-0 border-0 p-0 m-0" title="Phân đoạn/pavement chờ vòng xác nhận và đầu vào chính thức">
         <AlignmentSidebar
           rightTab={rightTab}
           onSetRightTab={setRightTab}
@@ -312,48 +269,48 @@ export const AlignmentSegments: React.FC = () => {
           onSetSplitDistance={handleSetSplitDistance}
           splitSortOrder={segmentsState.splitSortOrder}
           onSetSplitSortOrder={segmentsState.setSplitSortOrder}
-          onApplyAutoSplit={handleApplyAutoSplit}
-          onOpenAddSegmentModal={() => {}}
+          onApplyAutoSplit={() => { handleApplyAutoSplit(); markWidthDraft() }}
+          onOpenAddSegmentModal={() => segmentsState.setIsAddSegmentModalOpen(true)}
           onSelectAllRoute={handleSelectAllRoute}
           currentCoords={currentCoords}
           currentKmPoints={currentKmPoints}
           importedLengthKm={activeLengthKm}
           slabLengthM={slabLengthM}
-          onSetSlabLengthM={setSlabLengthM}
+          onSetSlabLengthM={value => { setSlabLengthM(value); markLocalDraft() }}
           slabThicknessCm={slabThicknessCm}
-          onSetSlabThicknessCm={setSlabThicknessCm}
+          onSetSlabThicknessCm={value => { setSlabThicknessCm(value); markLocalDraft() }}
           syncJointWithSlab={syncJointWithSlab}
           onSetSyncJointWithSlab={setSyncJointWithSlab}
           contractionSpacingM={contractionSpacingM}
-          onSetContractionSpacingM={setContractionSpacingM}
+          onSetContractionSpacingM={value => { setContractionSpacingM(value); markLocalDraft() }}
           expansionSpacingM={expansionSpacingM}
-          onSetExpansionSpacingM={setExpansionSpacingM}
+          onSetExpansionSpacingM={value => { setExpansionSpacingM(value); markLocalDraft() }}
           expansionGapMm={expansionGapMm}
-          onSetExpansionGapMm={setExpansionGapMm}
+          onSetExpansionGapMm={value => { setExpansionGapMm(value); markLocalDraft() }}
           onOpenSplitModal={(seg) => {
             segmentsState.setSplitModalSegment(seg)
             segmentsState.setCustomSplitKm(parseFloat(((seg.startKm + seg.endKm) / 2).toFixed(3)))
           }}
           onEditSegment={(seg) => segmentsState.setEditingSegment({ ...seg })}
-          onDeleteSegment={handleDeleteSegment}
-          onSnapSegment={handleSnapSegment}
-          onUpdateSegmentWidth={handleUpdateSegmentWidth}
-          onUpdateAllWidths={handleUpdateAllWidths}
+          onDeleteSegment={id => { handleDeleteSegment(id); markWidthDraft() }}
+          onSnapSegment={id => { handleSnapSegment(id); markWidthDraft() }}
+          onUpdateSegmentWidth={(id, width) => { handleUpdateSegmentWidth(id, width); markWidthDraft() }}
+          onUpdateAllWidths={width => { handleUpdateAllWidths(width); markWidthDraft() }}
           slabs={segmentsState.slabs}
-          showToast={showToast}
+          showToast={message => showToast(`${message} — bản chỉnh cục bộ, chưa lưu máy chủ.`)}
           branches={branches}
           selectedTargetType={selectedTargetType}
           onSelectTargetType={setSelectedTargetType}
-          onOpenAddBranchModal={() => setIsAddBranchModalOpen(true)}
+          onOpenAddBranchModal={() => showToast('Chưa có nguồn hình học và ngữ cảnh tuyến nhánh được xác minh; chưa thêm tuyến.')}
           onDeleteBranch={handleDeleteBranch}
-          onClearAllSegments={segmentsState.handleClearAllSegments}
+          onClearAllSegments={() => { segmentsState.handleClearAllSegments(); markWidthDraft() }}
           onClearMainline={handleClearMainline}
           onOpenImportModal={() => importState.setIsImportModalOpen(true)}
           mainlineLengthKm={importedLengthKm}
           alignmentStatus={alignmentStatus}
           isSupervisor={isSupervisor}
+          editingDisabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
         />
-        </fieldset>
       </section>
     </div>
   )

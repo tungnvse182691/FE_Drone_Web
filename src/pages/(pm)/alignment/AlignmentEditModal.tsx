@@ -62,9 +62,9 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={segment.startKm}
+                value={Number.isFinite(segment.startKm) ? segment.startKm : ''}
                 onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0
+                  const val = parseFloat(e.target.value)
                   onChangeSegment({
                     ...segment,
                     startKm: val,
@@ -82,9 +82,9 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               <input
                 type="number"
                 step="0.001"
-                value={segment.endKm}
+                value={Number.isFinite(segment.endKm) ? segment.endKm : ''}
                 onChange={(e) => {
-                  const val = parseFloat(e.target.value) || 0
+                  const val = parseFloat(e.target.value)
                   onChangeSegment({
                     ...segment,
                     endKm: val,
@@ -100,7 +100,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
           <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
             <span className="text-slate-500 font-medium">Chiều dài tính toán:</span>
             <span className="font-mono font-bold text-[#8F7212]">
-              {segment.endKm - segment.startKm >= 1
+              {!Number.isFinite(segment.startKm) || !Number.isFinite(segment.endKm) ? 'Chưa có dữ liệu' : segment.endKm - segment.startKm >= 1
                 ? `${(segment.endKm - segment.startKm).toFixed(3)} km`
                 : `${Math.round((segment.endKm - segment.startKm) * 1000)} mét`}
             </span>
@@ -112,10 +112,11 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                 Số làn xe
               </label>
               <select
-                value={segment.laneCount}
-                onChange={(e) => onChangeSegment({ ...segment, laneCount: parseInt(e.target.value) || 4 })}
+                value={Number.isFinite(segment.laneCount) ? segment.laneCount : ''}
+                onChange={(e) => onChangeSegment({ ...segment, laneCount: parseInt(e.target.value) })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
+                <option value="">Chưa có thông tin</option>
                 <option value={2}>2 làn xe</option>
                 <option value={4}>4 làn xe (Tiêu chuẩn)</option>
                 <option value={6}>6 làn xe (Cao tốc)</option>
@@ -131,6 +132,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                 onChange={(e) => onChangeSegment({ ...segment, surfaceMaterial: e.target.value })}
                 className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
               >
+                <option value="">Chưa có thông tin</option>
                 <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
                 <option value="Mặt BTN C19">Mặt BTN C19</option>
                 <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
@@ -147,7 +149,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                 <span>Bề rộng mặt đường (RoadWidthProfile - mét)</span>
               </label>
               <span className="text-[11px] font-mono font-bold text-[#8F7212]">
-                ±{((segment.roadWidthM || 8.0) / 2).toFixed(1)}m mỗi bên tim
+                {Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 ? `±${(segment.roadWidthM / 2).toFixed(1)}m mỗi bên tim` : 'Chưa có dữ liệu'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -157,11 +159,11 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                   step="0.5"
                   min="2"
                   max="60"
-                  value={segment.roadWidthM || 8.0}
+                  value={Number.isFinite(segment.roadWidthM) ? segment.roadWidthM : ''} placeholder="Chưa có dữ liệu"
                   onChange={(e) =>
                     onChangeSegment({
                       ...segment,
-                      roadWidthM: parseFloat(e.target.value) || 3.0
+                      roadWidthM: parseFloat(e.target.value)
                     })
                   }
                   className="w-full h-8 px-3 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
@@ -179,7 +181,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
                     type="button"
                     onClick={() => onChangeSegment({ ...segment, roadWidthM: w })}
                     className={`px-2 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
-                      (segment.roadWidthM || 8.0) === w
+                      segment.roadWidthM === w
                         ? 'bg-brand-gold text-white shadow-2xs'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                     }`}
@@ -190,7 +192,9 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               </div>
             </div>
             <p className="text-[10px] text-slate-500 mt-1">
-              Đoạn này rộng {segment.roadWidthM || 8.0}m (trái {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m, phải {((segment.roadWidthM || 8.0) / 2).toFixed(1)}m). Diện tích: {Math.round((segment.lengthKm || 0) * 1000 * (segment.roadWidthM || 8.0)).toLocaleString()} m².
+              {Number.isFinite(segment.roadWidthM) && segment.roadWidthM > 0 && Number.isFinite(segment.lengthKm)
+                ? `Đoạn này rộng ${segment.roadWidthM}m (±${(segment.roadWidthM / 2).toFixed(1)}m). Diện tích: ${Math.round(segment.lengthKm * 1000 * segment.roadWidthM).toLocaleString()} m².`
+                : 'Chưa có dữ liệu bề rộng hoặc chiều dài.'}
             </p>
           </div>
 
@@ -227,7 +231,7 @@ export const AlignmentEditModal: React.FC<AlignmentEditModalProps> = ({
               type="submit"
               className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-brand-gold hover:bg-[#B38E1F] transition-colors shadow-xs cursor-pointer"
             >
-              Lưu thay đổi
+              Áp dụng bản chỉnh
             </button>
           </div>
         </form>
