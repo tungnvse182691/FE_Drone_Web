@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
-import { personnelService, getRoleLabel } from '../../../api/services/personnelService'
+import { personnelService, getRoleLabel, invitationInput } from '../../../api/services/personnelService'
 import { projectService } from '../../../api/services/projectService'
 import { accountRow, acceptPhoneVersion, pendingPersonnelPhone, personnelBlocks, personnelMessage, personnelRole, personnelSnapshot, readPersonnelProjects, reviseRejectedPhone, savePersonnelPhone, type PersonnelNoticeKind } from '../../../api/services/personnelScreen'
 import { useAuthStore } from '../../../store/authStore'
@@ -60,6 +60,12 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   const [newPersonnelPhone, setNewPersonnelPhone] = useState<string>('')
   const [newPersonnelRole, setNewPersonnelRole] = useState<RoleCode>(RoleCode.PROJECT_MANAGER)
   const [newPersonnelProjectIds, setNewPersonnelProjectIds] = useState<string[]>([])
+  const invitationRunning = useRef(false)
+  const [invitationBusy, setInvitationBusy] = useState(false)
+  useEffect(() => {
+    const allowed = [RoleCode.PROJECT_MANAGER, RoleCode.DRONE_OPERATOR, RoleCode.REPAIR_CREW].includes(newPersonnelRole)
+    setNewPersonnelProjectIds(ids => ids.filter(id => allowed && projectsList.some(p => p.id === id) && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)))
+  }, [newPersonnelRole, projectsList])
   const [assignExistingUserId, setAssignExistingUserId] = useState<string>('')
   const [assignExistingProjectIds, setAssignExistingProjectIds] = useState<string[]>([])
   const [assignEffectiveFrom, setAssignEffectiveFrom] = useState<string>(new Date().toISOString().split('T')[0])
@@ -194,13 +200,14 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
 
   // Toggle dự án trong Add/Invite Modal
   const toggleNewPersonnelProject = (projectId: string) => {
+    if (!projectsList.some(p => p.id === projectId) || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(projectId)) return
     setNewPersonnelProjectIds((prev) =>
       prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
     )
   }
 
   const selectAllNewPersonnelProjects = () => {
-    setNewPersonnelProjectIds(projectsList.map((p) => p.id))
+    setNewPersonnelProjectIds(projectsList.filter(p => /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(p.id)).map((p) => p.id))
   }
 
   const clearAllNewPersonnelProjects = () => {
@@ -261,7 +268,28 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     if (!freshSnapshot) return
     acceptPhoneVersion(); setSnapshot(freshSnapshot); setEditRole(freshSnapshot.account.role); setEditStatus(freshSnapshot.account.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE'); setEditFullName(freshSnapshot.account.full_name); setEditEmail(freshSnapshot.account.email); setUserToEdit(old => old ? { ...old, ...freshSnapshot.account, project_memberships: old.project_memberships, assigned_project_ids: old.assigned_project_ids, project_scope: old.project_scope } : null); setPhonePending(null); setFreshSnapshot(null); setDetailError('Đã giữ số mới và chọn phiên bản vừa đọc. Hãy kiểm tra rồi lưu lại.')
   }
-  const handleAddPersonnelSubmit = async (event: React.FormEvent) => { event.preventDefault(); blocked(addPersonnelTab === 'NEW' ? personnelBlocks.invitation : personnelBlocks.primary) }
+  const handleAddPersonnelSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (addPersonnelTab !== 'NEW') return blocked(personnelBlocks.primary)
+    if (invitationRunning.current) return
+    if (user?.role !== RoleCode.SUPERVISOR) return blocked('Chỉ Giám sát được gửi lời mời nhân sự.')
+    if (projectsError || isLoading) return blocked('Cần tải đầy đủ phạm vi dự án trước khi gửi lời mời.')
+    if (newPersonnelProjectIds.some(id => !projectsList.some(p => p.id === id))) return blocked('Dự án đã chọn không còn trong phạm vi máy chủ.')
+    let input
+    try { input = invitationInput({ email: newPersonnelEmail, role: newPersonnelRole, projectIds: newPersonnelProjectIds }) }
+    catch { return blocked('Email, vai trò hoặc dự án nhận lời mời chưa hợp lệ.') }
+    const epoch = authEpoch
+    invitationRunning.current = true; setInvitationBusy(true)
+    try {
+      const receipt = await personnelService.createInvitation({ email: input.email, role: newPersonnelRole, projectIds: input.projectIds })
+      if (useAuthStore.getState().authEpoch !== epoch) return
+      if (!receipt?.id || !receipt.version || !receipt.status || !Number.isFinite(Date.parse(receipt.expiresAt))) throw new Error('invalid_receipt')
+      triggerNoticeRef.current('Máy chủ đã tiếp nhận lời mời nhân sự.', 'success')
+      setShowAddPersonnelModal(false)
+    } catch (error: any) {
+      if (useAuthStore.getState().authEpoch === epoch) blocked(error?.code === 'web_cookie_unsupported' ? personnelBlocks.invitation : personnelMessage(error))
+    } finally { invitationRunning.current = false; if (useAuthStore.getState().authEpoch === epoch) setInvitationBusy(false) }
+  }
   const handleConfirmResetPassword = async (_userId: string, _password: string) => { blocked(personnelBlocks.reset); throw Error('web_cookie_unsupported') }
   const loadMembershipHistory = async () => {
     if (!selectedUserDetail || user?.role !== RoleCode.SUPERVISOR) return
@@ -332,6 +360,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     newPersonnelRole,
     setNewPersonnelRole,
     newPersonnelProjectIds,
+    invitationBusy,
     toggleNewPersonnelProject,
     selectAllNewPersonnelProjects,
     clearAllNewPersonnelProjects,

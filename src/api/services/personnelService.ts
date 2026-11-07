@@ -97,6 +97,15 @@ export interface InvitationResponseDto {
   version: string
 }
 
+export function invitationInput(payload: { email: string; role: RoleCode; projectIds: string[] }): CreateInvitationPayload {
+  const email = payload.email.trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email nhận lời mời chưa hợp lệ.')
+  if (![RoleCode.PROJECT_MANAGER, RoleCode.DRONE_OPERATOR, RoleCode.REPAIR_CREW].includes(payload.role)) throw new Error('Vai trò lời mời chưa hợp lệ.')
+  const projectIds = [...new Set(payload.projectIds)]
+  if (projectIds.some(id => !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))) throw new Error('Cần định danh dự án thật từ máy chủ.')
+  return { email, role: mapRoleCodeToBackendRole(payload.role) as 'PM' | 'OPERATOR' | 'CREW', projectIds }
+}
+
 export interface UpdateUserPayload {
   status: 'ACTIVE' | 'SUSPENDED'
   role: 'SUPERVISOR' | 'PM' | 'OPERATOR' | 'CREW' | 'REPORTER'
@@ -321,6 +330,7 @@ export const personnelService = {
     role: RoleCode
     projectIds: string[]
   }): Promise<InvitationResponseDto> {
+    invitationInput(payload)
     throw Object.assign(new Error('Gửi lời mời chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
   },
 

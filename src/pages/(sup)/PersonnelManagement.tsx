@@ -201,6 +201,7 @@ export const PersonnelManagement: React.FC = () => {
       />
 
       <AddPersonnelModal
+        invitationBusy={p.invitationBusy}
         blockedReason={p.addPersonnelTab === 'NEW' ? personnelBlocks.invitation : personnelBlocks.primary}
         usersList={p.usersList}
         showAddPersonnelModal={p.showAddPersonnelModal}

@@ -5,6 +5,7 @@ import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface AddPersonnelModalProps {
+  invitationBusy?: boolean
   blockedReason?: string
 
   showAddPersonnelModal: boolean
@@ -40,6 +41,7 @@ export interface AddPersonnelModalProps {
 
 export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   showAddPersonnelModal,
+  invitationBusy = false,
   blockedReason = personnelBlocks.invitation,
   setShowAddPersonnelModal,
   addPersonnelTab,
@@ -74,15 +76,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
   const isPmRole = newPersonnelRole === RoleCode.PROJECT_MANAGER
 
-  // Kiểm tra dự án có bị PM khác nắm giữ hay không (cho form mời nhân sự mới)
-  const isProjectLockedForNewPm = (p: { pm_user_id?: string; pm_name?: string }) => {
-    if (!isPmRole) return false
-    return Boolean(
-      p.pm_user_id &&
-      p.pm_name &&
-      !p.pm_name.toLowerCase().includes('chưa')
-    )
-  }
+  // Invitation acceptance creates non-primary memberships, including PM.
+  const isProjectLockedForNewPm = (p: { id: string }) => !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(p.id)
 
   // Chọn tất cả các dự án hợp lệ cho nhân sự mới (bỏ qua những dự án đã có PM)
   const handleSelectAllValidNewProjects = () => {
@@ -171,7 +166,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleAddPersonnelSubmit} className="p-6 overflow-y-auto space-y-3.5 text-xs">
           <p role="status" className="text-rose-700">{blockedReason}</p>
-          <fieldset disabled={!!blockedReason} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
+          <fieldset disabled={addPersonnelTab === 'NEW' ? invitationBusy : !!blockedReason} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
           {addPersonnelTab === 'NEW' ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -182,8 +177,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   <input
                     type="text"
                     disabled
-                    title="DTO invitation không có field họ tên."
-                    placeholder="VD: Kỹ sư Nguyễn Văn Nam"
+                    title="Người nhận nhập họ tên khi chấp nhận lời mời."
+                    placeholder="Người nhận nhập khi chấp nhận lời mời"
                     value={newPersonnelName}
                     onChange={(e) => setNewPersonnelName(e.target.value)}
                     className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
@@ -210,8 +205,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                   <input
                     type="text"
                     disabled
-                    title="DTO invitation không có field số điện thoại."
-                    placeholder="Chưa hỗ trợ qua invitation"
+                    title="Điện thoại được cập nhật qua luồng riêng sau khi kích hoạt; DTO nhận lời mời không có điện thoại."
+                    placeholder="Cập nhật sau khi kích hoạt tài khoản"
                     value={newPersonnelPhone}
                     onChange={(e) => setNewPersonnelPhone(e.target.value)}
                     className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
@@ -242,9 +237,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                       Dự án bảo hành phụ trách ban đầu:
                     </label>
                     <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
-                      {isPmRole
-                        ? `Đã chọn: ${newPersonnelProjectIds.length} dự án (1 PM / Dự án - BR-01)`
-                        : `Đã chọn: ${newPersonnelProjectIds.length} / ${projectsList.length} dự án`}
+                      {`Đã chọn: ${newPersonnelProjectIds.length} / ${projectsList.length} dự án`}
                     </span>
                   </div>
 
@@ -329,26 +322,10 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                       })}
                     </div>
 
-                    {isPmRole && (
-                      <div className="p-2.5 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900 text-[11px] leading-relaxed flex items-start gap-2">
-                        <Lock className="w-4 h-4 text-[#C9A227] shrink-0 mt-0.5" />
-                        <span>
-                          <strong>Quy tắc BR-01:</strong> Một Chỉ huy trưởng (PM) có thể kiêm nhiệm nhiều dự án bảo hành, nhưng mỗi dự án chỉ có duy nhất 1 PM chính. Các dự án đã có PM khác phụ trách sẽ bị <strong>khóa cứng</strong> để chống gán nhầm. Nếu cần thay thế PM của dự án đã có người quản lý, vui lòng chuyển sang tab <strong>"Điều chuyển nhân sự hiện có"</strong>.
-                        </span>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
 
-              <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 text-[11px] text-amber-900 leading-relaxed flex items-start gap-2">
-                <span className="material-symbols-outlined text-[16px] text-[#C9A227] shrink-0 mt-0.5">
-                  info
-                </span>
-                <span>
-                  Hệ thống sẽ phát hành mã thư mời kích hoạt gửi đến Email công vụ (thu thập tại Mailpit <code>localhost:18026</code>). Nhân sự truy cập đường link để xác nhận thông tin và tạo mật khẩu.
-                </span>
-              </div>
             </>
           ) : (
             /* TAB ĐIỀU CHUYỂN NHÂN SỰ HIỆN CÓ */
@@ -546,7 +523,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!!blockedReason ||
+              disabled={!!blockedReason || addPersonnelTab === 'NEW' && invitationBusy ||
                 addPersonnelTab === 'ASSIGN' &&
                 (!assignExistingUserId ||
                   (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&
