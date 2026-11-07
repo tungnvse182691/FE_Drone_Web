@@ -27,11 +27,32 @@ function load(file, client, extra = {}) {
 }
 const input = { code: 'RG-STEP2', name: 'Step 2', primaryPmId: '72f84201-a001-4000-8000-000000000002', handoverDate: '2026-11-06', warrantyEndDate: '2027-11-06', handoverFileIds: [] }
 const created = { id: 'created', code: input.code, name: input.name, primaryProjectManagerUserId: input.primaryPmId }
-const project = (client, extra) => load('src/api/services/projectService.ts', client, extra).projectService
+const project = (client, extra) => load('src/api/services/projectService.ts', { ...client, get: (url, config) => url.endsWith('/work-package')
+  ? client.workPackage ? client.workPackage(url, config) : Promise.resolve({data:{projectId:url.split('/')[2],description:null}})
+  : client.get(url, config) }, extra).projectService
 const staff = client => load('src/api/services/personnelService.ts', client).personnelService
 let passed = 0
 async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS '+name) }
 ;(async () => {
+  await test('region uses server description for list/detail/create readback; empty is distinct from failure and wrong project', async () => {
+    let description='Bảo Lộc - Lâm Đồng', broken=false, wrong=false, posts=0
+    const s=project({get:async url=>url==='/projects'?page([created]):page([]),post:async()=>{posts++;return{status:201,data:{id:'created'}}},workPackage:async()=>{if(broken)throw fail(503,'unavailable');return{data:{projectId:wrong?'other':'created',description}}}})
+    assert.equal((await s.fetchProjects())[0].region,description)
+    assert.equal((await s.fetchProjectById('created')).region,description)
+    const result=await s.createProject({...input,region:'form must not win'});assert.equal(result.region,description);assert.equal(posts,1)
+    description=null;assert.equal((await s.fetchProjects())[0].region,'')
+    broken=true;const partial=(await s.fetchProjects())[0];assert.equal(partial.id,'created');assert.equal(partial.region,'Chưa tải được địa bàn');assert.match(partial.stats_error,/địa bàn/)
+    await assert.rejects(s.createProject(input),/đã được tạo/);assert.equal(s.pendingProjectCreate().hasReceipt,true)
+    broken=false;wrong=true;assert.equal((await s.fetchProjects())[0].region,'Chưa tải được địa bàn')
+    wrong=false;description='Server after retry';assert.equal((await s.createProject(input,true)).region,description);assert.equal(posts,2)
+  })
+  await test('region in-flight dedup has no settled cache and drops responses from previous actor/epoch',async()=>{
+    let resolve,count=0
+    const s=project({get:async url=>url==='/projects'?page([created,created]):page([]),workPackage:()=>{count++;return new Promise(r=>resolve=r)}})
+    const a=s.fetchProjects(),b=s.fetchProjects();for(let i=0;i<30;i++)await Promise.resolve();assert.equal(count,1)
+    resolve({data:{projectId:'created',description:'confirmed'}});assert.equal((await a)[0].region,'confirmed');await b
+    const next=s.fetchProjects();for(let i=0;i<30;i++)await Promise.resolve();assert.equal(count,2);state.authEpoch++;state.user.id='other';resolve({data:{projectId:'created',description:'old'}});await assert.rejects(next,/Phiên/)
+  })
   await test('directory paginates without project reads; errors/loop/stale epoch reject', async () => {
     const calls = []
     const s = staff({ get: async (url, config) => { calls.push({ url, ...config.params }); return page([{ userId: config.params.cursor || 'first' }], config.params.cursor ? null : 'opaque') } })

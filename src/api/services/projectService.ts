@@ -344,6 +344,31 @@ async function getUsersLookup(): Promise<Map<string, UserLookupInfo>> {
   return map
 }
 
+const projectDescriptions = new Map<string, Promise<string>>()
+function readProjectDescription(projectId: string, epoch: number): Promise<string> {
+  const actor = useAuthStore.getState().user?.id
+  const key = `${epoch}:${actor}:${projectId.toLowerCase()}`
+  const existing = projectDescriptions.get(key)
+  if (existing) return existing
+  const current = () => {
+    if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor) throw new Error('Phiên đã thay đổi; bỏ địa bàn dự án cũ.')
+  }
+  const request = (async () => {
+    current()
+    const response = await apiClient.get(`/projects/${projectId}/work-package`)
+    current()
+    const data = response.data
+    if (typeof data?.projectId !== 'string' || data.projectId.toLowerCase() !== projectId.toLowerCase() ||
+        !Object.prototype.hasOwnProperty.call(data, 'description') || data.description !== null && typeof data.description !== 'string') {
+      throw new Error('Không xác minh được địa bàn từ đúng hồ sơ dự án.')
+    }
+    return data.description?.trim() || ''
+  })()
+  projectDescriptions.set(key, request)
+  void request.finally(() => { if (projectDescriptions.get(key) === request) projectDescriptions.delete(key) }).catch(() => {})
+  return request
+}
+
 function mapBackendProjectToHub(
   item: any,
   usersMap?: Map<string, UserLookupInfo>,
@@ -527,6 +552,12 @@ export const projectService = {
         const currentUser = useAuthStore.getState().user
         const isPM = currentUser?.role === RoleCode.PROJECT_MANAGER
         const statsErrors = new Map<string, string>()
+        const descriptions = new Map<string, string>()
+        const descriptionErrors = new Map<string, string>()
+        await Promise.all([...new Set(rawItems.map(item => String(item.projectId || item.id)))].map(async id => {
+          try { descriptions.set(id.toLowerCase(), await readProjectDescription(id, epoch)) }
+          catch { descriptionErrors.set(id.toLowerCase(), 'Chưa tải được địa bàn dự án. Hãy thử lại.') }
+        }))
         const statsMap = new Map<string, { openDefects: number; repairPackages: number }>()
         await Promise.all(
           rawItems.map(async (item) => {
@@ -557,8 +588,12 @@ export const projectService = {
           })
         )
 
-        const mapped = rawItems.map((item) => ({ ...mapBackendProjectToHub(item, usersMap, statsMap),
-          stats_error: [directoryError, statsErrors.get((item.projectId || item.id).toLowerCase())].filter(Boolean).join('; ') }))
+        const mapped = rawItems.map((item) => {
+          const id = (item.projectId || item.id).toLowerCase()
+          const project = mapBackendProjectToHub(item, usersMap, statsMap)
+          return { ...project, region: descriptionErrors.has(id) ? 'Chưa tải được địa bàn' : descriptions.get(id)!, location_detail: '',
+            stats_error: [directoryError, statsErrors.get(id), descriptionErrors.get(id)].filter(Boolean).join('; ') }
+        })
         if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
         projectStore = mapped
         try {
@@ -700,7 +735,9 @@ export const projectService = {
           if (cursor) seen.add(cursor)
         } while (!readBack && cursor)
         if (!readBack) throw new Error('Đã nhận201 nhưng chưa đọc lại được dự án từ danh sách server. Hãy đối chiếu cùng yêu cầu.')
-        const createdHub = mapBackendProjectToHub(readBack)
+        const description = await readProjectDescription(createdId, epoch)
+        if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả dự án cũ.')
+        const createdHub = { ...mapBackendProjectToHub(readBack), region: description, location_detail: '' }
         if (createdHub.pm_user_id?.toLowerCase() !== command.body.primaryPmId.toLowerCase()) throw new Error('Đã tạo dự án nhưng phân công PM đọc lại chưa khớp. Chỉ đọc lại kết quả, không tạo mới.')
         if (projectCreateCommand === command) { projectCreateCommand = null; saveProjectCommand(actor, null) }
         return createdHub
