@@ -11,6 +11,7 @@ export function setupAlignmentMapInteractions(
   isPickingRef?: React.RefObject<boolean>,
   onSelectSegmentRef?: React.RefObject<((id: string, branchId?: string, feature?: any) => void) | null>
 ) {
+  let lastPavementEvent: Event | undefined
   const triggerSelectSegment = (id: string, branchId?: string, feature?: any) => {
     if (onSelectSegmentRef?.current) {
       onSelectSegmentRef.current(id, branchId, feature)
@@ -105,6 +106,7 @@ export function setupAlignmentMapInteractions(
   const handleFeatureClick = (e: maplibregl.MapLayerMouseEvent) => {
     if (isPickingRef?.current) return
     if (!e.features || e.features.length === 0) return
+    if (e.originalEvent && e.originalEvent === lastPavementEvent) return
 
     lastHandledClickTimestamp = Date.now()
 
@@ -199,6 +201,7 @@ export function setupAlignmentMapInteractions(
     if (!e.features || e.features.length === 0) return
     if (e.originalEvent && e.originalEvent === lastSlabEvent) return
     lastSlabEvent = e.originalEvent
+    lastPavementEvent = e.originalEvent
 
     lastHandledClickTimestamp = Date.now()
 
@@ -215,8 +218,8 @@ export function setupAlignmentMapInteractions(
     // 1. Kích hoạt chọn phân đoạn và chuyển đúng tuyến (Trục chính hoặc Nhánh)
     triggerSelectSegment(targetSegId, targetBranchId, f)
 
-    // 2. Cắm ghim và zoom tới vị trí tấm vừa ấn với zoom 16.5
-    pinAndFocusFeature(e.lngLat, f, displayLabel, 16.5)
+    // Keep close inspection zoom; do not hide labels by zooming out after a cell click.
+    pinAndFocusFeature(e.lngLat, f, displayLabel, Math.max(map.getZoom(), 18.5))
 
     // 3. Mở popup chi tiết tấm phong cách RoadGuard Dark
     if (popupRef.current) popupRef.current.remove()
@@ -250,6 +253,7 @@ export function setupAlignmentMapInteractions(
     if (!e.features || e.features.length === 0) return
     if (e.originalEvent && e.originalEvent === lastJointEvent) return
     lastJointEvent = e.originalEvent
+    lastPavementEvent = e.originalEvent
 
     lastHandledClickTimestamp = Date.now()
 
@@ -260,7 +264,7 @@ export function setupAlignmentMapInteractions(
     const targetSegId = p.segmentId || p.id
     const targetBranchId = p.branchId
     triggerSelectSegment(targetSegId, targetBranchId, f)
-    pinAndFocusFeature(e.lngLat, f, p.label || p.name || p.id, 16.5)
+    pinAndFocusFeature(e.lngLat, f, p.label || p.name || p.id, Math.max(map.getZoom(), 18.5))
 
     if (popupRef.current) popupRef.current.remove()
     popupRef.current = new maplibregl.Popup({ offset: 14, closeButton: true, className: 'roadguard-maplibre-popup' })
