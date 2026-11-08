@@ -3781,3 +3781,9 @@ Tái hiện native click KC50 bị handler tuyến ghi đè popup và kéo zoom1
 ### 09/11/2026 — Sửa fileDraft không ghi đè confirmed geometry
 - Baseline1a54cb57b00e732f04d82b84cfce2d543e1dd1e3, hoang. Đọc AGENTS/Spec17_10 geometry và useAlignmentState/readmodel/helper/test trực tiếp; không sửa UI/BE/API/pavement/segment. F5 confirmed hydration metric-only và chainage đã có từ lượt trước; lượt này sửa thêm effect fileDraft: nếu server cùng draft/statusCONFIRMED/road/version thì giữ confirmed state/geometry, không set DRAFT, không nạp filePreview cũ vào form/map, không xóa local edit khác scope.
 - Test focused 3 draft groups + 4 readmodel groups PASS, typecheck/diff-check PASS. Browser confirmed runtime NOT_RUN: ABC1 current geometry vẫn LEGACY_INCOMPLETE/sourceDraftIdnull, readinessfalse; không tạo/confirm dữ liệu.
+
+
+### 09/11/2026 — Hydrate widthProfile confirmed geometry-only sau F5
+- Baseline9def8d1e803791eedf9a75a22321f00574c61e4b, hoang. Chỉ sửa useAlignmentState effect và test state; giữ confirmed metric-only fix, UI/layout/style, pavement snapshot/config và local ngoài nhiệm vụ.
+- Geometry đã xác minh đúng project/road/version với widthProfile + stationOrigin giờ hydrate segmentsState.segments: start/end=(origin+offset)/1000, precision nguồn giữ nguyên, status HÌNH HỌC ĐÃ XÁC NHẬN, không điền lane/material hoặc coi segment set/PUBLISHED. Scope fingerprint gồm project/road/version/widthProfile; localDraftDirty giữ local segments, đổi scope không rò dữ liệu. FileDraft effect confirmed guard giữ CONFIRMED và không nạp preview file cũ.
+- Test focused geometry-only confirmed F5 kiểm segments thực, origin khác0, nhiều khoảng width, local width edit không bị ghi đè; draft/update/readmodel tests PASS. Typecheck/diff-check PASS. Chrome confirmed runtime NOT_RUN: ABC1 current geometry vẫn LEGACY_INCOMPLETE/sourceDraftIdnull, chưa có confirmed version phù hợp; không mutation.

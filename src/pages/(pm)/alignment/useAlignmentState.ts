@@ -64,6 +64,7 @@ export function useAlignmentState() {
   const currentScope = useRef(scopeKey); currentScope.current = scopeKey
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
   const editorDraft = useRef('')
+  const confirmedGeometryScope = useRef('')
   const [fileDraft, setFileDraft] = useState<CoordinateDraftSource | null>(null)
   const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
@@ -101,7 +102,20 @@ export function useAlignmentState() {
     if (geometry) {
       const restored = confirmedGeometryDisplay(geometry)
       setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
+      const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
+      if (!localDraftDirty && confirmedGeometryScope.current !== scope && Array.isArray(geometry.widthProfile) && Number.isFinite(geometry.stationOriginMeters)) {
+        confirmedGeometryScope.current = scope
+        segmentsState.setSegments(geometry.widthProfile.map((width, index) => ({
+          id: `confirmed-width-${scope}-${index}`, code: `Khoảng bề rộng ${index + 1}`,
+          startKm: (geometry.stationOriginMeters! + width.fromOffsetMeters) / 1000,
+          endKm: (geometry.stationOriginMeters! + width.toOffsetMeters) / 1000,
+          lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
+          laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'HÌNH HỌC ĐÃ XÁC NHẬN', color: '#C9A227'
+        })))
+      }
       if (restored.warnings.length) showToast(restored.warnings.join(' '))
+    } else if (!geometryRead.roadReference || !geometryRead.versionReference) {
+      confirmedGeometryScope.current = ''
     }
   }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, geometryRead.roadReference, geometryRead.versionReference, selectedProjectId])
 
