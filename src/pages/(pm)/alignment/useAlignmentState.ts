@@ -109,7 +109,7 @@ export function useAlignmentState() {
       const restored = confirmedGeometryDisplay(geometry)
       setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
       const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
-      const pendingKey = `${selectedProjectId}:${geometry.sourceDraftId || ''}`
+      const pendingKey = `${authEpoch}:${selectedProjectId}:${geometry.sourceDraftId || ''}:${geometry.roadSectionId}:${geometry.routeVersionId}`
       const pendingPavement = pendingConfirmedPavement.current?.key === pendingKey ? pendingConfirmedPavement.current.value : null
       if (pendingPavement && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
         setStripWidthMeters(pendingPavement.stripWidthMeters); setSlabLengthM(pendingPavement.slabLengthM); setSlabThicknessCm(pendingPavement.slabThicknessCm)
@@ -292,6 +292,7 @@ export function useAlignmentState() {
       toOffsetMeters: segment.endKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN), widthMeters: segment.roadWidthM
     })), localWidthsDirty, selectedTargetType === 'MAINLINE',
     layout => {
+      pendingConfirmedPavement.current = null
       setStripWidthMeters(layout?.stripWidthMeters ?? Number.NaN); setSlabLengthM(layout?.slabLengthMeters ?? Number.NaN)
       setSlabThicknessCm(layout?.slabThicknessCentimeters ?? Number.NaN); setContractionSpacingM(layout?.contractionJointSpacingMeters ?? Number.NaN)
       setExpansionSpacingM(layout?.expansionJointSpacingMeters ?? Number.NaN); setExpansionGapMm(layout?.expansionJointGapMillimeters ?? Number.NaN)
@@ -419,19 +420,22 @@ export function useAlignmentState() {
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {
     const draftScope = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}::`
+    const previousScope = editorScope.split(':')
+    const previousDraftOnly = previousScope[3] === '' && previousScope[4] === ''
+    const previousUnboundDraft = previousScope[2] === '' && !!geometryRead.draftId && previousScope[3] === geometryRead.roadReference && previousScope[4] === geometryRead.versionReference
     const confirmedGeometry = geometryRead.geometry
     const confirmedDraftTransition = geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId &&
-      geometryRead.draft.data.projectId === selectedProjectId && editorScope === draftScope &&
+      geometryRead.draft.data.projectId === selectedProjectId && (editorScope === draftScope || previousUnboundDraft) &&
       !!geometryRead.roadReference && !!geometryRead.versionReference && !!confirmedGeometry &&
       confirmedGeometry.projectId === selectedProjectId && confirmedGeometry.sourceDraftId === geometryRead.draftId &&
       confirmedGeometry.roadSectionId === geometryRead.roadReference && confirmedGeometry.routeVersionId === geometryRead.versionReference
-    if (geometryRead.draft?.data.id === geometryRead.draftId && geometryRead.draft.data.projectId === selectedProjectId && editorScope === draftScope && !confirmedDraftTransition) {
-      pendingConfirmedPavement.current = { key: `${selectedProjectId}:${geometryRead.draftId}`, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
+    if ((previousDraftOnly || previousUnboundDraft) && geometryRead.draftId && geometryRead.roadReference && geometryRead.versionReference) {
+      pendingConfirmedPavement.current = { key: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
     }
     setEditorScope(scopeKey)
     editorDraft.current = ''
     confirmedGeometryScope.current = ''
-    resetEditor(confirmedDraftTransition)
+    resetEditor(false)
     importState.setManualCoordsText('')
     setToastMessage(null)
   }
@@ -647,6 +651,7 @@ export function useAlignmentState() {
     changeBranchSegments(segments => [...segments, segment]); segmentsState.setIsAddSegmentModalOpen(false)
   }
   const setPavementConfig = (setter: (value: any) => void, value: any) => {
+    pendingConfirmedPavement.current = null
     if (!isMainline) { showToast('Chưa biên tập pavement tuyến nhánh; cấu hình tuyến chính được giữ nguyên.'); return }
     setPavementEditRevision(n => n + 1); setter(value)
   }

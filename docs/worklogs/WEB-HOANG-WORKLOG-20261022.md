@@ -3814,3 +3814,8 @@ Tái hiện native click KC50 bị handler tuyến ghi đè popup và kéo zoom1
 ### 09/11/2026 — Chặn race preserve pavement khi URL/CONFIRMED response đảo thứ tự
 - Baseline246f5e9aff3b150bc80dbe0fb04c240412bb9897, hoang. Sửa useAlignmentState/test trực tiếp. Pending pavement chuyển từ Map sang một bản chờ duy nhất có key project:draft; capture ngay khi scope draft-only đổi URL, không cần status CONFIRMED đã về. Chỉ restore khi draft/project/sourceDraft/road/version geometry khớp đầy đủ; scope khác không áp dụng và bản chờ không tích lũy.
 - Test delayed Draft→URL→geometry kiểm đủ strip/L/H/KC/KG/gap trước đổi URL, draft status DRAFT vẫn giữ chờ rồi CONFIRMED restore; version khác không giữ L; v1 null→v1 width hydrate lại; local/Pavement/F5 assertions giữ. Focused test PASS, typecheck/diff-check PASS. Browser confirmed NOT_RUN (ABC1 chưa confirmed version), không mutation.
+
+
+### 09/11/2026 — Race pending pavement target theo đầy đủ URL scope
+- Baseline3e9467afee32751d88725b0c2a147a74cb409fa3, hoang. Pending cấu hình draft→confirmed nay capture cả khi draft GET còn null/chưa CONFIRMED, chỉ một bản chờ có key authEpoch/project/draft/road/version đích. Restore chỉ khi draft CONFIRMED và geometry project/sourceDraft/road/version khớp; PM sửa config hoặc hydrate layout server hủy pending. Scope khác không áp dụng, consume sau restore, reset confirmedGeometryScope giữ nguyên.
+- Test focused delayed race giữ đủ6 trường, version khác không giữ, v1 width hydrate lại, same scope/F5/draft/pavement không hồi quy; typecheck/diff-check PASS. Browser NOT_RUN vì ABC1 chưa confirmed version; không mutation.
