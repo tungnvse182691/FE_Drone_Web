@@ -13,7 +13,7 @@ export interface MainlinePavementConfig {
 export const MAX_PREVIEW_SLABS = 20000
 
 export interface PavementInputIssue {
-  kind: 'slab' | 'contraction' | 'expansion' | 'shared'
+  kind: 'slab' | 'contraction' | 'expansion' | 'shared' | 'thickness'
   segmentId?: string
   message: string
 }
@@ -39,6 +39,9 @@ export function pavementInputIssues(segments: SegmentItem[], input: MainlinePave
   }
   check(input.slabLenM, 'chiều dài tấm L', 'slab')
   check(input.stripWidthMeters, 'bề rộng tấm', 'slab')
+  const thicknessAbsent = input.thicknessCm === undefined || typeof input.thicknessCm === 'number' && Number.isNaN(input.thicknessCm) || typeof input.thicknessCm === 'string' && !input.thicknessCm.trim()
+  if (thicknessAbsent) issues.push({ kind: 'thickness', message: 'Chưa nhập chiều dày tấm' })
+  else if (!positive(pavementNumber(input.thicknessCm))) issues.push({ kind: 'slab', message: 'Chiều dày tấm không hợp lệ' })
   for (const segment of segments) {
     check(segment.roadWidthM, 'bề rộng', 'shared', segment)
   }

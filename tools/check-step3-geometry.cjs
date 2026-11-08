@@ -325,5 +325,24 @@ await test('draft switch isolates dirty A from delayed or failed B while same-dr
  model.draftError='';model.draft={data:b};render();render();assert.equal(view.activeSegments[0].roadWidthM,9);assert.ok(view.activeSegments.every(s=>s.id.includes('b')));assert.equal(workflow.form.widths,'0, 100, 12') // No write into the next draft; workflow owns its form hydrate.
  effects.forEach(e=>e?.cleanup?.())
 })
+await test('import modal closes only after applied preview and ignores cancelled, superseded or old-scope readers',async()=>{
+ let slot=0,view,inputScope='p:d',reader,applied=[],notices=[],accept=true;const values=[],effects=[]
+ const react={useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
+ class Reader{constructor(){reader=this}readAsText(){}}
+ const parser=load('src/pages/(pm)/alignment/alignmentImportHelpers.ts',{'./data':{SEGMENT_COLORS:[]},'./alignmentGeometryHelpers':{}})
+ const hook=load('src/pages/(pm)/alignment/useAlignmentImportState.ts',{react,'maplibre-gl':{},'./alignmentImportHelpers':parser,__FileReader:Reader}).useAlignmentImportState
+ const render=()=>{slot=0;view=hook({inputScope,defaultManualText:'',contextReady:false,showToast:m=>notices.push(m),onRoadGuardDraft:(draft,preview)=>{if(!accept)return false;applied.push({draft,preview});return preview.length>=2}});effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
+ const text=JSON.stringify({type:'LineString',coordinates:[[105,10],[105.001,10]]}),done=(r,value=text)=>{r.onload({target:{result:value}});render()}
+ render();view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});const first=reader;assert.equal(view.isImportModalOpen,true);done(first);assert.equal(view.isImportModalOpen,false);assert.equal(applied.length,1);assert.equal(applied[0].preview.length,2);assert.match(view.readMessage,/Đã đọc tệp, chưa lưu/)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});done(reader,'{bad');assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1)
+ accept=false;view.processGeoJSONFile({});done(reader);assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1);accept=true
+ view.processGeoJSONFile({});const cancelled=reader;view.setIsImportModalOpen(false);view.setIsImportModalOpen(true);render();const before=notices.length;done(cancelled);assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1);assert.equal(notices.length,before)
+ view.processGeoJSONFile({});const oldFile=reader;view.processGeoJSONFile({});const latest=reader;done(oldFile);assert.equal(applied.length,1);assert.equal(view.isImportModalOpen,true);done(latest);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,false)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});const oldScope=reader;inputScope='q:d2';render();done(oldScope);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,true)
+ const draft=JSON.stringify({sourceKind:'COORDINATES',sourceCrs:32648,coordinates:[{x:500000,y:1200000},{x:500100,y:1200000}],stationOriginMeters:0,changeReason:'Nguồn thiết kế',surveyWidthMeters:7,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:7}]})
+ view.processGeoJSONFile({});done(reader,draft);assert.equal(view.isImportModalOpen,false);assert.equal(applied.at(-1).draft.sourceCrs,32648);assert.equal(applied.at(-1).preview.length,2);assert.match(view.readMessage,/chưa lưu/);assert.match(view.readMessage,/context/)
+ view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});done(reader,draft.replace('32648','32649'));assert.equal(view.isImportModalOpen,true);assert.match(view.readMessage,/Chưa hỗ trợ preview/)
+ effects.forEach(e=>e?.cleanup?.())
+})
 console.log(`${count} Step 3 scoped scenarios PASS (mock/hooks/static; NOT E2E).`)
 })().catch(e=>{console.error(e);process.exitCode=1})

@@ -51,4 +51,12 @@ test('independent PM strip width covers both residual directions without lane/th
  const blocked=preview(segments,{...cfg,slabLenM:.001});assert.equal(blocked.slabsGeoJSON.features.length,0);assert.equal(blocked.slabLabelsGeoJSON.features.length,0);assert.ok(blocked.missing.some(s=>s.includes('ngân sách')));assert.deepEqual(plain(blocked.jointsGeoJSON),plain(oldJoints))
  const partial=plan([segment(0,.01,NaN),segment(.01,.701290518512277,7,NaN,'valid')],{...cfg,slabLenM:.001});assert.equal(partial.slabs.length,0);assert.ok(partial.missing.some(s=>s.includes('ngân sách')))
 })
+test('optional H distinguishes blank, positive decimals and invalid supplied values without changing joints or technical dimensions',()=>{
+ const segments=[segment(0,.023)],base=preview(segments),normal=plan(segments,config).slabs
+ for(const thicknessCm of ['', '  ', undefined]) {
+  const geo=preview(segments,{...config,thicknessCm});assert.equal(geo.slabsGeoJSON.features.length,normal.length);assert.ok(geo.missing.includes('Chưa nhập chiều dày tấm'));assert.ok(!geo.missing.includes('Chiều dày tấm không hợp lệ'));assert.deepEqual(plain(geo.jointsGeoJSON),plain(base.jointsGeoJSON))
+ }
+ const decimal=preview(segments,{...config,thicknessCm:'25.12567'});assert.ok(decimal.slabsGeoJSON.features.every(f=>f.properties.thicknessCm===25.12567))
+ for(const thicknessCm of ['-5','0','abc','NaN','Infinity','1e999',Infinity,-Infinity]){const geo=preview(segments,{...config,thicknessCm});assert.ok(geo.missing.includes('Chiều dày tấm không hợp lệ'));assert.ok(!geo.missing.includes('Chưa nhập chiều dày tấm'));assert.deepEqual(plain(geo.jointsGeoJSON),plain(base.jointsGeoJSON))}
+})
 console.log(`${count} mainline pavement preview scenarios PASS (pure helpers/render data; no API writes).`)

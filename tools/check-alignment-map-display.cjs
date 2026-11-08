@@ -92,6 +92,13 @@ test('decimal editor text is retained, empty/invalid fields clear only their own
   change(label,old);assert.equal(summary(geo())[type+'Missing'].some(m=>!m.includes('số làn')),false)
  }
  assert.ok(render(view('b')).includes('Danh Sách Tấm BTXM (12)'));assert.ok(render(view('a')).includes('Danh Sách Tấm BTXM (6)'))
+ for(const value of ['', '5.25', '-5', '0', 'abc', 'Infinity']) {
+  change('Chiều dày tấm H (cm)',value);const markup=render(view()),g=geo()
+  if(value===''){assert.ok(markup.includes('Chưa nhập chiều dày tấm'));assert.ok(g.slabsGeoJSON.features.length>0)}
+  else if(value==='5.25'){assert.ok(!markup.includes('Chiều dày tấm không hợp lệ'));assert.ok(g.slabsGeoJSON.features.every(f=>f.properties.thicknessCm===5.25))}
+  else {assert.ok(markup.includes('Chiều dày tấm không hợp lệ'));assert.ok(!markup.includes('Chưa nhập chiều dày tấm'))}
+ }
+ change('Chiều dày tấm H (cm)','5.125')
  const kc=state.contractionSpacingM;change('Chiều dài tấm L (m)','6.125');assert.equal(state.contractionSpacingM,kc)
  change('Khoảng cách Khe co (m)','3');assert.deepEqual(plain(geo().jointsGeoJSON.features.filter(f=>!f.properties.isExpansion).map(f=>f.properties.offsetMeters)),[3,6,9,12,15,18,21])
  change('Khoảng cách Khe giãn (m)','8');assert.deepEqual(plain(geo().jointsGeoJSON.features.filter(f=>f.properties.isExpansion).map(f=>f.properties.offsetMeters)),[8,16])

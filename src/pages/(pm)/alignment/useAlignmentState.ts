@@ -293,6 +293,7 @@ export function useAlignmentState() {
       draftWorkflow.setForm(old => ({ ...old, profileId: '', origin: '', reason: '', surveyWidth: '', widths: '' }))
       if (draft) setRightTab('WIDTH_PROFILE')
       else setImportedLengthKm(Number.NaN)
+      return !!preview && preview.length >= 2
     },
     stationOriginKm: activeProject.stationOriginKm,
     splitDistance: segmentsState.splitDistance,

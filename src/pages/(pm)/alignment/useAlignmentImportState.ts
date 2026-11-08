@@ -10,7 +10,7 @@ export interface UseAlignmentImportStateParams {
   contextReady?: boolean
   roadSectionCount?: number
   engineeringCrs?: number | null
-  onRoadGuardDraft?: (draft: RoadGuardCoordinatesDraft | null, preview?: [number, number][]) => void
+  onRoadGuardDraft?: (draft: RoadGuardCoordinatesDraft | null, preview?: [number, number][]) => boolean | void
   stationOriginKm: number
   splitDistance: number
   roadWidthM: number
@@ -59,7 +59,7 @@ export function useAlignmentImportState({
   setImportedLengthKm,
   onAutoSave
 }: UseAlignmentImportStateParams) {
-  const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false)
+  const [isImportModalOpen, setImportModalOpen] = useState<boolean>(false)
   const [readMessage, setReadMessage] = useState('')
   const [hasUnverifiedFile, setHasUnverifiedFile] = useState(false)
   const [importTab, setImportTab] = useState<'FILE' | 'MANUAL'>('FILE')
@@ -71,6 +71,10 @@ export function useAlignmentImportState({
   if (scope.current !== inputScope) readAttempt.current++
   scope.current = inputScope
   useEffect(() => { mounted.current = true; setReadMessage(''); setHasUnverifiedFile(false); return () => { mounted.current = false; readAttempt.current++ } }, [inputScope])
+  const setIsImportModalOpen = (open: boolean) => {
+    readAttempt.current++ // Closing/cancelling or reopening starts a new modal session.
+    setImportModalOpen(open)
+  }
   const processGeoJSONFile = (file: File) => {
     const attempt = ++readAttempt.current, selectedScope = inputScope
     const current = () => mounted.current && attempt === readAttempt.current && scope.current === selectedScope
@@ -86,7 +90,8 @@ export function useAlignmentImportState({
         if (content && typeof content === 'object' && 'sourceKind' in content) {
           const draft = parseRoadGuardDraftJson(text)
           const preview = draft.sourceCrs === 32648 ? previewCenterlineCoordinates(draft.coordinates.map(p => [p.x, p.y]), draft.sourceCrs) : []
-          latest.current.onRoadGuardDraft?.(draft, preview)
+          const applied = latest.current.onRoadGuardDraft?.(draft, preview)
+          if (!current()) return
           setManualCoordsText(draft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
           setHasUnverifiedFile(true); latest.current.onDraftInput?.()
           let message = `Đã nạp Draft (${draft.coordinates.length} điểm), chưa lưu/chưa xác nhận.${draft.sourceCrs === 32649 ? ' Chưa hỗ trợ preview EPSG:32649; giữ nguyên bản chỉnh hợp lệ.' : ' Đã chuẩn bị preview từ CRS của tệp.'}`
@@ -94,16 +99,20 @@ export function useAlignmentImportState({
           else if (engineeringCrs == null) message += ' Dự án chưa thiết lập engineeringUtmSrid; chỉ preview, chưa lưu.'
           else if (draft.sourceCrs !== engineeringCrs) message += ' CRS tệp không khớp CRS dự án; chỉ preview, chưa lưu.'
           if (contextReady && roadSectionCount === 0) message += ' Dự án chưa có road section/version; chưa đủ điều kiện lưu.'
-          setReadMessage(message); latest.current.showToast(message); return
+          setReadMessage(message); latest.current.showToast(message)
+          if (preview.length >= 2 && latest.current.onRoadGuardDraft && applied !== false) setImportModalOpen(false)
+          return
         }
         const inspection = inspectGeoJsonCenterline(text)
         if (inspection.metadata?.axisOrder != null && inspection.metadata.axisOrder !== 'EN' || inspection.metadata?.metresPerUnit != null && inspection.metadata.metresPerUnit !== 1) throw new GeoJsonValidationError('Khai báo trục/đơn vị của tệp chưa hỗ trợ preview; không tự đảo trục hoặc đổi đơn vị.')
         const preview = previewCenterlineCoordinates(inspection.coords, inspection.declaredSrid ?? 4326)
-        latest.current.onRoadGuardDraft?.(null, preview)
+        const applied = latest.current.onRoadGuardDraft?.(null, preview)
+        if (!current()) return
         setManualCoordsText(inspection.coords.map(point => point.join(', ')).join('\n'))
         setHasUnverifiedFile(true); onDraftInput?.()
         const message = `Đã đọc tệp, chưa lưu (${inspection.coords.length} điểm). Preview theo ${inspection.declaredSrid ? `EPSG:${inspection.declaredSrid}` : 'GeoJSON RFC7946 [longitude, latitude]'}; chưa được xác minh để lưu hoặc xác nhận tuyến.`
         setReadMessage(message); showToast(message)
+        if (preview.length >= 2 && latest.current.onRoadGuardDraft && applied !== false) setImportModalOpen(false)
       } catch (error) {
         const message = (error instanceof GeoJsonValidationError || error instanceof RoadGuardDraftValidationError) && error.message ? error.message : 'Không thể kiểm tra nội dung tệp GeoJSON hoặc RoadGuard Draft. Vui lòng kiểm tra lại tệp.'
         setReadMessage(message); showToast(message)
