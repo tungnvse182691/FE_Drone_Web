@@ -41,7 +41,6 @@ export const AlignmentSegments: React.FC = () => {
     alignmentStatus,
     handleSwitchProject,
     handleSubmitAlignment,
-    handleLockAlignment,
     handleClearMainline,
     toastMessage,
     setToastMessage,
@@ -165,6 +164,26 @@ export const AlignmentSegments: React.FC = () => {
           </form>
         </div>
       )}
+      {isSupervisor && draftWorkflow.confirmModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form role="dialog" aria-modal="true" aria-labelledby="confirm-geometry-title" onSubmit={event => { event.preventDefault(); void draftWorkflow.confirm() }} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4">
+            <h3 id="confirm-geometry-title" className="font-bold text-slate-900 text-base">Xác nhận tim tuyến</h3>
+            <label className="text-sm text-slate-700 flex flex-col gap-2">
+              Ngày giờ hiệu lực <span className="text-xs text-slate-500">Múi giờ Asia/Ho_Chi_Minh (+07:00)</span>
+              <input autoFocus type="datetime-local" disabled={draftWorkflow.busy || !!draftWorkflow.pending} value={draftWorkflow.effectiveFrom} onChange={event => { draftWorkflow.setEffectiveFrom(event.target.value); draftWorkflow.setConfirmInputError('') }} className="w-full border border-slate-200 rounded-lg p-2.5 outline-none focus:border-brand-gold" />
+            </label>
+            <label className="text-sm text-slate-700 flex flex-col gap-2">
+              Lý do xác nhận
+              <textarea rows={3} disabled={draftWorkflow.busy || !!draftWorkflow.pending} value={draftWorkflow.reason} onChange={event => { draftWorkflow.setReason(event.target.value); draftWorkflow.setConfirmInputError('') }} className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-brand-gold" />
+            </label>
+            {draftWorkflow.confirmInputError && <p role="alert" className="text-xs text-rose-700">{draftWorkflow.confirmInputError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.cancelConfirm} className="px-4 py-2 rounded-lg border border-slate-200 text-sm">Hủy</button>
+              <button type="submit" disabled={draftWorkflow.busy || !!draftWorkflow.pending || !!draftWorkflow.conflict} className="px-4 py-2 rounded-lg bg-brand-gold text-white text-sm font-semibold disabled:opacity-50">{draftWorkflow.busy ? 'Đang xác nhận…' : 'Xác nhận'}</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* MODALS */}
       <AlignmentModals
         isImportModalOpen={importState.isImportModalOpen}
@@ -231,7 +250,7 @@ export const AlignmentSegments: React.FC = () => {
         onOpenImportModal={() => importState.setIsImportModalOpen(true)}
         onClearMainline={handleClearMainline}
         onSubmitAlignment={handleSubmitAlignment}
-        onLockAlignment={handleLockAlignment}
+        onLockAlignment={draftWorkflow.openConfirm}
         commandBusy={draftWorkflow.busy}
         saveDisabledReason={draftWorkflow.saveDisabledReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
         confirmDisabledReason={draftWorkflow.confirmReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}

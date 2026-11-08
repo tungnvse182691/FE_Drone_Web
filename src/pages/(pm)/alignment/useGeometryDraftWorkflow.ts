@@ -7,6 +7,17 @@ import { GeometryCommandUiError, geometryCommandErrorMessage } from '../../../ap
 import type { useGeometryReadModel } from './useGeometryReadModel'
 import { validateCoordinateDraft, RoadGuardDraftValidationError, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
 
+export function confirmationIso(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new GeometryCommandUiError('Ngày giờ hiệu lực không hợp lệ theo Asia/Ho_Chi_Minh (+07:00).')
+  const date = new Date(`${value}:00+07:00`)
+  if (!Number.isFinite(date.getTime()) || new Date(date.getTime() + 7 * 3600000).toISOString().slice(0, 16) !== value) throw new GeometryCommandUiError('Ngày giờ hiệu lực không hợp lệ theo Asia/Ho_Chi_Minh (+07:00).')
+  return date.toISOString()
+}
+export function readinessBlocker(ready: { ready: boolean; missingFields: string[]; errors: string[]; sampleOnly?: boolean } | null) {
+  return !ready ? 'Chưa đọc readiness máy chủ.' : !ready.ready || ready.missingFields.length || ready.errors.length || ready.sampleOnly
+    ? `Readiness chưa cho phép xác nhận. Thiếu: ${ready.missingFields.join(', ') || 'không có'}; lỗi: ${ready.errors.join(', ') || 'không có'}${ready.sampleOnly ? '; sampleOnly=true' : ''}.` : ''
+}
+
 type ReadModel = ReturnType<typeof useGeometryReadModel>
 export interface GeometryDraftForm {
   sectionId: string; profileId: string; origin: string; surveyWidth: string; widths: string; reason: string
@@ -73,15 +84,16 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   const [pending, setPending] = useState<ReturnType<typeof pendingDraftCommand>>(null)
   const [preview, setPreview] = useState<Awaited<ReturnType<typeof alignmentService.previewGeometryDraft>> | null>(null)
-  const [previewVersion, setPreviewVersion] = useState('')
+  const [previewVersion, setPreviewVersion] = useState(''), [previewRouteVersion, setPreviewRouteVersion] = useState('')
   const [conflict, setConflict] = useState(false), [freshVersion, setFreshVersion] = useState(false)
   const [effectiveFrom, setEffectiveFrom] = useState(''), [confirmReason, setConfirmReason] = useState('')
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false), [confirmInputError, setConfirmInputError] = useState('')
   const selection = useRef({ projectId, draftId: model.draftId, version: model.draft?.etag, authEpoch })
   selection.current = { projectId, draftId: model.draftId, version: model.draft?.etag, authEpoch }
   const attempt = useRef(0), running = useRef(false), hydrated = useRef('')
   useEffect(() => {
     attempt.current++; running.current = false; hydrated.current = ''; acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId(''); setHydrateReadError(false)
-    setReasonModalOpen(false); setReasonError('')
+    setReasonModalOpen(false); setReasonError(''); setConfirmModalOpen(false); setConfirmInputError('')
     setForm(emptyForm); setCoordinatesText(''); setPreview(null); setPreviewVersion(''); setMessage(''); setBusy(false); setConflict(false); setFreshVersion(false); setEffectiveFrom(''); setConfirmReason('')
     try {
       const held = projectId ? pendingDraftCommand(projectId) : null
@@ -102,7 +114,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (awaitingAcknowledgement.current && model.draftId === acceptedDraft.current || hydrated.current === model.draftId) return
     hydrated.current = ''
     setForm(emptyForm); setCoordinatesText('')
-    setReasonModalOpen(false); setReasonError('')
+    setReasonModalOpen(false); setReasonError(''); setConfirmModalOpen(false); setConfirmInputError('')
   }, [model.draftId])
   useEffect(() => {
     const draft = model.draft?.data
@@ -139,7 +151,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (pending.command.kind === 'confirm') {
       setConfirmReason(pending.command.input.reason || '')
       const date = new Date(pending.command.input.effectiveFrom)
-      if (Number.isFinite(date.getTime())) setEffectiveFrom(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16))
+      if (Number.isFinite(date.getTime())) setEffectiveFrom(new Date(date.getTime() + 7 * 3600000).toISOString().slice(0, 16))
       return
     }
     const input = pending.command.input
@@ -171,9 +183,8 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     : draft?.status === 'CONFIRMED' ? 'Hồ sơ đã được xác nhận từ máy chủ.'
     : !draft || draft.status !== 'DRAFT' || !model.draft?.etag ? 'Cần bản nháp DRAFT và phiên bản từ máy chủ.'
     : !model.context || !section?.currentVersionId ? 'Chưa đọc được tuyến/phiên bản hiện tại từ context máy chủ.'
-    : !readiness?.ready || readiness.missingFields.length || readiness.errors.length ? 'Readiness máy chủ chưa cho phép xác nhận.'
-    : !preview || previewVersion !== model.draft.etag ? 'Cần xem trước đúng phiên bản bản nháp.'
-    : !effectiveFrom || !Number.isFinite(Date.parse(effectiveFrom)) || !confirmReason.trim() ? 'Cần ngày hiệu lực và lý do xác nhận.' : ''
+    : readinessBlocker(readiness) ? readinessBlocker(readiness)
+    : !preview || previewVersion !== model.draft.etag ? 'Cần xem trước đúng phiên bản bản nháp.' : ''
   const begin = () => {
     if (running.current || awaitingAcknowledgement.current) return null
     running.current = true; setBusy(true)
@@ -202,7 +213,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   }
   const complete = async (result: Awaited<ReturnType<typeof runDraftCommand>>, current: () => boolean) => {
     if (!current()) return
-    setReasonModalOpen(false); setReasonError('')
+    setReasonModalOpen(false); setReasonError(''); setConfirmModalOpen(false); setConfirmInputError('')
     setPending(null); setPreview(null); setPreviewVersion(''); setHydrateReadError(false); awaitingAcknowledgement.current = true
     if (result.kind === 'confirm') { acceptedDraft.current = result.draftId; acceptedVersion.current = 'CONFIRMED'; setAwaitingDraftId(result.draftId); model.openConfirmed(result.draftId, result.geometry) }
     else { acceptedDraft.current = result.draft.data.id; acceptedVersion.current = result.draft.etag; setAwaitingDraftId(result.draft.data.id); model.openDraft(result.draft.data.id) }
@@ -232,27 +243,33 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (![RoleCode.PROJECT_MANAGER, RoleCode.SUPERVISOR].includes(user?.role as RoleCode)) { notify('Chỉ PM hoặc Giám sát được xem trước tuyến.'); return }
     if (!draft || !model.draft?.etag || pending || conflict) { notify('Cần bản nháp đã đọc và giải quyết yêu cầu cũ trước khi xem trước.'); return }
     const current = begin(); if (!current) return
+    setPreview(null); setPreviewVersion(''); setPreviewRouteVersion('')
     try {
       const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag)
       if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new GeometryCommandUiError('Preview chưa có chiều dài hợp lệ từ máy chủ.')
-      if (current() && selection.current.version === model.draft.etag) { setPreview(value); setPreviewVersion(model.draft.etag) }
       const ready = await alignmentService.readDraftReadiness(projectId, draft.id)
-      if (current() && selection.current.version === model.draft.etag) { model.setReadiness(ready); notify('Đã đọc preview/readiness từ máy chủ. Preview chưa phải xác nhận tuyến.') }
+      const context = await alignmentService.readProjectContext(projectId)
+      if (current()) setPreviewRouteVersion(context.roadSections.find(road => road.roadSectionId === draft.roadSectionId)?.currentVersionId || '')
+      if (current() && selection.current.version === model.draft.etag) { setPreview(value); setPreviewVersion(model.draft.etag); model.setReadiness(ready); notify(`Đã đọc preview/readiness từ máy chủ. Preview chưa phải xác nhận tuyến. ${readinessBlocker(ready)}`) }
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
   const confirm = async () => {
     if (confirmGate || pending || conflict) { notify(confirmGate || 'Cần đối chiếu yêu cầu/phiên bản cũ trước.'); return }
+    let effectiveIso: string
+    try { effectiveIso = confirmationIso(effectiveFrom); if (!confirmReason.trim()) throw new Error('Cần lý do xác nhận, không chỉ khoảng trắng.') }
+    catch (error) { setConfirmModalOpen(true); setConfirmInputError((error as Error).message); return }
     const current = begin(); if (!current) return
     try {
       const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])
       if (!current()) return
       const road = context.roadSections.find(road => road.roadSectionId === draft!.roadSectionId)
-      if (fresh.etag !== model.draft!.etag || road?.currentVersionId !== section!.currentVersionId) {
+      if (fresh.etag !== model.draft!.etag || road?.currentVersionId !== previewRouteVersion) {
         setConflict(true); setFreshVersion(true); model.retry(); throw new GeometryCommandUiError('Phiên bản đã thay đổi. Hãy xem lại trước khi xác nhận.')
       }
-      if (fresh.data.status !== 'DRAFT' || !ready.ready || ready.missingFields.length || ready.errors.length) throw new GeometryCommandUiError('Bản nháp/readiness không còn đủ điều kiện xác nhận.')
-      await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: road!.currentVersionId, effectiveFrom: new Date(effectiveFrom).toISOString(), reason: confirmReason.trim() } }), current)
+      if (fresh.data.projectId !== projectId || fresh.data.id !== draft!.id || fresh.data.roadSectionId !== draft!.roadSectionId || fresh.data.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp không còn đúng project/tuyến/trạng thái DRAFT.')
+      if (readinessBlocker(ready)) { model.setReadiness(ready); throw new GeometryCommandUiError(readinessBlocker(ready)) }
+      await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: road!.currentVersionId, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
@@ -277,6 +294,8 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     setPending(null); setConflict(false); setPreview(null); setPreviewVersion(''); notify('Đã giữ bản nhập và chọn phiên bản máy chủ mới. Hãy kiểm tra rồi lưu/xem trước lại.')
   }
   const reviseRejected = () => { reviseRejectedDraftCommand(projectId); setPending(null); notify('Đã giữ bản nhập để sửa sau lỗi từ chối. Hãy kiểm tra nội dung trước khi lưu ý định mới.') }
+  const openConfirm = () => { if (confirmGate || pending || conflict || running.current) { notify(confirmGate || 'Cần đối chiếu yêu cầu/phiên bản cũ.'); return }; setConfirmInputError(''); setConfirmModalOpen(true) }
+  const cancelConfirm = () => { if (!running.current) { setConfirmModalOpen(false); setConfirmInputError('') } }
   const cancelReason = () => { if (!running.current) { setReasonModalOpen(false); setReasonError('') } }
-  return { form, setForm, reasonModalOpen, reasonError, cancelReason, saveDisabledReason, busy, message, hydrateReadError, retryHydrate, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, save, confirm, loadPreview, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
+  return { form, setForm, reasonModalOpen, reasonError, cancelReason, saveDisabledReason, busy, message, hydrateReadError, retryHydrate, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, confirmModalOpen, confirmInputError, openConfirm, cancelConfirm, setConfirmInputError, save, confirm, loadPreview, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
 }

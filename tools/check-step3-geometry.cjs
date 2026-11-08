@@ -173,7 +173,7 @@ await test('workflow fences create/update receipt-to-URL transition, previews wi
  const oldSave=view.save;await oldSave();await oldSave();assert.equal(writes.length,1);assert.equal(opened,dto.id);render();assert.match(view.saveReason,/Đang nạp/)
  model.draftId=dto.id;model.draft={data:{...dto},etag:'"AAAAAAAAAAE="'};render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập sửa'});render();const oldUpdate=view.save;await oldUpdate();await oldUpdate();assert.equal(writes.length,2);assert.equal(writes[1].kind,'update')
  model.draft={data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'};render();await flush();await view.loadPreview();await flush();assert.equal(writes.length,2);assert.ok(view.preview)
- actor={id:'sup',role:'SUPERVISOR'};epoch++;render();await flush();view.setEffectiveFrom('2026-11-07T10:00');view.setReason('Đã xem hồ sơ');render();await view.loadPreview();await flush();assert.equal(view.confirmReason,'');const confirm=view.confirm;await confirm();await confirm();assert.equal(writes.length,3);assert.equal(writes[2].kind,'confirm');assert.equal(writes[2].input.expectedCurrentVersionId,'route-old');assert.equal(writes[2].etag,'"AAAAAAAAAAI="');assert.equal(confirmedRef.geometry.routeVersionId,'route-new')
+ actor={id:'sup',role:'SUPERVISOR'};epoch++;render();await flush();view.setEffectiveFrom('2026-11-07T10:00');view.setReason('Đã xem hồ sơ');render();await view.loadPreview();await flush();assert.equal(view.confirmReason,'');const confirm=view.confirm;await confirm();await confirm();assert.equal(writes.length,3);assert.equal(writes[2].kind,'confirm');assert.equal(writes[2].input.effectiveFrom,'2026-11-07T03:00:00.000Z');assert.equal(writes[2].input.reason,'Đã xem hồ sơ');assert.equal(writes[2].input.expectedCurrentVersionId,'route-old');assert.equal(writes[2].etag,'"AAAAAAAAAAI="');assert.equal(confirmedRef.geometry.routeVersionId,'route-new')
  effects.forEach(e=>e?.cleanup?.())
 })
 await test('late GeoJSON FileReader cannot replace another project/draft input',async()=>{
@@ -219,7 +219,7 @@ function hydrateHarness(sourceUnverified=false){
  const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
  const prepare=async()=>{render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập chưa được quyết định'});render();return view}
  const hydrate=(etag)=>{model.draft={data:{...dto,version:etag.slice(1,-1),stationOriginMeters:999},etag};model.draftLoading=false;model.draftError='';render()}
- return{control,model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
+ return{api,control,model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
 }
 await test('reason modal opens after F5, validates whitespace, cancels without writes and sends the current update once',async()=>{
  const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render()
@@ -238,6 +238,18 @@ await test('reason modal preserves reason/editor on API error; pending retry can
  assert.equal(h.view.pending.key,'same-key');assert.equal(h.view.pending.command.input.changeReason,'PM giữ lý do khi lỗi')
  const writes=h.writes.length;h.view.setForm({...h.view.form,reason:'Không sửa command đang chờ'});h.render();await h.view.save(true);assert.equal(h.writes.length,writes)
  h.control.error=null;await h.view.retryCommand();h.render();assert.equal(h.writes.at(-1),undefined);assert.equal(h.view.reasonModalOpen,false);h.unmount()
+})
+await test('Sup modal technical gate, timezone, cancel, whitespace and fresh version checks never invent approval',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'}
+ const h=hydrateHarness();await h.prepare();await h.view.loadPreview();await h.flush()
+ assert.equal(h.view.confirmReason,'');h.view.openConfirm();h.render();assert.equal(h.view.confirmModalOpen,true);assert.equal(h.view.reason,'');assert.equal(h.view.effectiveFrom,'')
+ h.view.setEffectiveFrom('2026-11-09T09:15');h.view.setReason('   ');h.render();await h.view.confirm();h.render();assert.equal(h.writes.length,0);assert.match(h.view.confirmInputError,/lý do/)
+ h.view.cancelConfirm();h.render();assert.equal(h.view.confirmModalOpen,false);assert.equal(h.view.effectiveFrom,'2026-11-09T09:15')
+ h.view.setReason('Sup kiểm tra');h.render();h.api.getGeometryDraft=async()=>({...h.model.draft,etag:'"AAAAAAAAAAI="'});await h.view.confirm();h.render();assert.equal(h.writes.length,0);assert.equal(h.view.conflict,true);assert.equal(h.view.reason,'Sup kiểm tra');h.unmount()
+ const {confirmationIso,readinessBlocker}=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:require('react'),'../../../types/enums':{RoleCode:roles},'../../../api/services/geometryDraftCommands':{}})
+ assert.equal(confirmationIso('2026-11-09T09:15'),'2026-11-09T02:15:00.000Z');for(const value of ['','2026-02-30T09:15','2026-11-09T25:00'])assert.throws(()=>confirmationIso(value))
+ assert.match(readinessBlocker({ready:false,missingFields:['nativeAlignment'],errors:['crs_unverified']}),/nativeAlignment.*crs_unverified/)
+ actor={id:'pm',role:'PROJECT_MANAGER'};const pm=hydrateHarness();await pm.prepare();await pm.view.loadPreview();await pm.flush();pm.view.openConfirm();pm.render();assert.equal(pm.view.confirmModalOpen,false);assert.equal(pm.writes.length,0);pm.unmount()
 })
 await test('saved V2 then hydrate a different opaque V3 releases busy without overwriting input, accepting it or writing again',async()=>{
  const h=hydrateHarness();await h.prepare();const save=h.view.save;await save();h.render();assert.equal(h.view.busy,true);assert.equal(h.writes.length,1)
