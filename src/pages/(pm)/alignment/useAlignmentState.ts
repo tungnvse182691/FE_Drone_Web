@@ -71,7 +71,8 @@ export function useAlignmentState() {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
     if (geometryRead.error) showToast(geometryRead.error)
   }, [geometryRead.projects, geometryRead.error])
-  const resetEditor = () => {
+  const resetEditor = (preservePavement = false) => {
+    const pavement = preservePavement ? { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } : null
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     segmentsState.setSegments([]); segmentsState.setSlabs([]); setBranches([])
     segmentsState.setEditingSegment(null); segmentsState.setSplitModalSegment(null); segmentsState.setIsAddSegmentModalOpen(false)
@@ -82,6 +83,10 @@ export function useAlignmentState() {
     setStripWidthMeters(Number.NaN); setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
     segmentsState.setCustomSplitKm(Number.NaN); segmentsState.setSplitSortOrder('asc')
     setSyncJointWithSlab(true)
+    if (pavement) {
+      setStripWidthMeters(pavement.stripWidthMeters); setSlabLengthM(pavement.slabLengthM); setSlabThicknessCm(pavement.slabThicknessCm)
+      setContractionSpacingM(pavement.contractionSpacingM); setExpansionSpacingM(pavement.expansionSpacingM); setExpansionGapMm(pavement.expansionGapMm); setSyncJointWithSlab(pavement.syncJointWithSlab)
+    }
     setLocalDraftDirty(false); setLocalWidthsDirty(false)
     setFileDraft(null)
     setFilePreviewCoords(null)
@@ -405,9 +410,10 @@ export function useAlignmentState() {
 
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {
+    const confirmedDraftTransition = geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId && editorScope.startsWith(`${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:`)
     setEditorScope(scopeKey)
     editorDraft.current = ''
-    resetEditor()
+    resetEditor(confirmedDraftTransition)
     importState.setManualCoordsText('')
     setToastMessage(null)
   }
