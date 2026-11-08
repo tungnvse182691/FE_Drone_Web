@@ -65,7 +65,7 @@ export function useAlignmentState() {
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
   const editorDraft = useRef('')
   const confirmedGeometryScope = useRef('')
-  const pendingConfirmedPavement = useRef(new Map<string, { stripWidthMeters: number | string; slabLengthM: number | string; slabThicknessCm: number | string; contractionSpacingM: number | string; expansionSpacingM: number | string; expansionGapMm: number | string; syncJointWithSlab: boolean }>())
+  const pendingConfirmedPavement = useRef<{ key: string; value: { stripWidthMeters: number | string; slabLengthM: number | string; slabThicknessCm: number | string; contractionSpacingM: number | string; expansionSpacingM: number | string; expansionGapMm: number | string; syncJointWithSlab: boolean } } | null>(null)
   const [fileDraft, setFileDraft] = useState<CoordinateDraftSource | null>(null)
   const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
@@ -109,11 +109,12 @@ export function useAlignmentState() {
       const restored = confirmedGeometryDisplay(geometry)
       setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
       const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
-      const pendingPavement = pendingConfirmedPavement.current.get(`${selectedProjectId}:${geometry.sourceDraftId || ''}`)
+      const pendingKey = `${selectedProjectId}:${geometry.sourceDraftId || ''}`
+      const pendingPavement = pendingConfirmedPavement.current?.key === pendingKey ? pendingConfirmedPavement.current.value : null
       if (pendingPavement && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
         setStripWidthMeters(pendingPavement.stripWidthMeters); setSlabLengthM(pendingPavement.slabLengthM); setSlabThicknessCm(pendingPavement.slabThicknessCm)
         setContractionSpacingM(pendingPavement.contractionSpacingM); setExpansionSpacingM(pendingPavement.expansionSpacingM); setExpansionGapMm(pendingPavement.expansionGapMm); setSyncJointWithSlab(pendingPavement.syncJointWithSlab)
-        pendingConfirmedPavement.current.delete(`${selectedProjectId}:${geometry.sourceDraftId}`)
+        pendingConfirmedPavement.current = null
       }
       if (!localDraftDirty && confirmedGeometryScope.current !== scope && Array.isArray(geometry.widthProfile) && Number.isFinite(geometry.stationOriginMeters)) {
         confirmedGeometryScope.current = scope
@@ -424,8 +425,8 @@ export function useAlignmentState() {
       !!geometryRead.roadReference && !!geometryRead.versionReference && !!confirmedGeometry &&
       confirmedGeometry.projectId === selectedProjectId && confirmedGeometry.sourceDraftId === geometryRead.draftId &&
       confirmedGeometry.roadSectionId === geometryRead.roadReference && confirmedGeometry.routeVersionId === geometryRead.versionReference
-    if (geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId && geometryRead.draft.data.projectId === selectedProjectId && editorScope === draftScope && !confirmedDraftTransition) {
-      pendingConfirmedPavement.current.set(`${selectedProjectId}:${geometryRead.draftId}`, { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab })
+    if (geometryRead.draft?.data.id === geometryRead.draftId && geometryRead.draft.data.projectId === selectedProjectId && editorScope === draftScope && !confirmedDraftTransition) {
+      pendingConfirmedPavement.current = { key: `${selectedProjectId}:${geometryRead.draftId}`, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
     }
     setEditorScope(scopeKey)
     editorDraft.current = ''
