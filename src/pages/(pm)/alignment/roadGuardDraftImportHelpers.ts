@@ -1,4 +1,4 @@
-import type { GeometryDraftInput, GeometryPoint } from '../../../api/services/alignmentService'
+import type { GeometryDraftInput, GeometryDraftView, GeometryPoint } from '../../../api/services/alignmentService'
 
 export type RoadGuardCoordinatesDraft = GeometryDraftInput & {
   sourceKind: 'COORDINATES'
@@ -8,10 +8,25 @@ export type RoadGuardCoordinatesDraft = GeometryDraftInput & {
 
 export class RoadGuardDraftValidationError extends Error {}
 
+export type CoordinateDraftSource = Omit<RoadGuardCoordinatesDraft, 'changeReason'> & { changeReason?: string | null }
+
+export function restoreCoordinateDraft(draft: GeometryDraftView): CoordinateDraftSource {
+  const source = { sourceKind: draft.sourceKind, sourceCrs: draft.sourceCrs, coordinates: draft.editedCoordinates ?? draft.originalCoordinates,
+    stationOriginMeters: draft.stationOriginMeters, widthProfile: draft.widthProfile, surveyWidthMeters: draft.surveyWidthMeters,
+    roadCode: draft.roadCode, roadName: draft.roadName }
+  validateCoordinateDraft(source, false)
+  return source as CoordinateDraftSource
+}
+
 // File checks only; project CRS compatibility and server geometry validation are separate.
 export function parseRoadGuardDraftJson(text: string): RoadGuardCoordinatesDraft {
   let draft: any
   try { draft = JSON.parse(text) } catch { throw new RoadGuardDraftValidationError('Tệp RoadGuard Draft sai cú pháp JSON.') }
+  validateCoordinateDraft(draft, true)
+  return draft
+}
+
+function validateCoordinateDraft(draft: any, requireReason: boolean): void {
   const fail = (field: string, message: string): never => { throw new RoadGuardDraftValidationError(`${field}: ${message}`) }
   const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) fail('Draft', 'phải là đối tượng JSON, không phải GeoJSON.')
@@ -36,7 +51,7 @@ export function parseRoadGuardDraftJson(text: string): RoadGuardCoordinatesDraft
   }
   if (!Number.isFinite(length) || length <= 0) fail('coordinates', 'chiều dài tuyến phải hữu hạn và lớn hơn 0.')
   if (!finite(draft.stationOriginMeters) || !Number.isFinite(draft.stationOriginMeters + length)) fail('stationOriginMeters', 'lý trình gốc và cuối tuyến phải hữu hạn.')
-  if (typeof draft.changeReason !== 'string' || !draft.changeReason.trim()) fail('changeReason', 'lý do không được để trống.')
+  if (requireReason && (typeof draft.changeReason !== 'string' || !draft.changeReason.trim())) fail('changeReason', 'lý do không được để trống.')
   if (!finite(draft.surveyWidthMeters) || draft.surveyWidthMeters <= 0) fail('surveyWidthMeters', 'phải là số hữu hạn lớn hơn 0.')
   if (!Array.isArray(draft.widthProfile) || !draft.widthProfile.length) fail('widthProfile', 'cần ít nhất một khoảng bề rộng.')
   let end = 0
@@ -49,5 +64,4 @@ export function parseRoadGuardDraftJson(text: string): RoadGuardCoordinatesDraft
     end = width.toOffsetMeters
   }
   if (Math.abs(end - length) > 1e-7) fail('widthProfile', 'điểm kết thúc phải phủ chiều dài tuyến (sai số tối đa 1e-7 m).')
-  return draft
 }

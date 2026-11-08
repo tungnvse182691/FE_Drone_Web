@@ -41,6 +41,21 @@ function harness(root=false,saveMode=false,mapMode=false){
  return{model,workflow,readers,applied,messages,mapInputs,calls,control,maps,fits,flush,v1,v2,buildInput:(...args)=>load(base+'useGeometryDraftWorkflow.ts').coordinateDraftInput(...args),convert:load('src/api/services/alignmentService.ts').utm48NToWgs84,loadMap(){maps[0].ready=true;maps[0].events['style.load']()},get view(){return view},hydrate(){model.draft={data:serverDraft,etag:v2};model.draftLoading=false;flush()},scope(v){inputScope=v;flush()},context(v,c){ready=v;crs=c;flush()},project(v){project=v;flush()},read(text){(root?view.importState:view).processGeoJSONFile({name:'input.json'});const r=readers.at(-1);if(text!==undefined){r.onload({target:{result:text}});flush()}return r},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 const tests=[];function test(name,run){tests.push({name,run})}
+
+test('server draft restores engineering state and map after F5 without file/profile and fences another project',()=>{
+ const h=harness(true,true,true),source=JSON.parse(sample)
+ h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',currentVersionId:'route'}]}
+ h.model.draftId='a';h.flush()
+ h.model.draft={data:{...source,changeReason:undefined,coordinates:undefined,editedCoordinates:source.coordinates,id:'a',projectId:'p',roadSectionId:'road',status:'DRAFT',version:'AAAAAAAAAAI='},etag:h.v2};h.flush();h.loadMap()
+ assert.equal(h.view.currentCoords.length,119);assert.equal(h.view.currentKmPoints.length,119);assert.ok(h.view.mapState.mapRef.current.getSource('segments-source').data.features.length)
+ assert.equal(h.view.draftWorkflow.form.origin,'0');assert.equal(h.view.draftWorkflow.form.surveyWidth,'12');assert.equal(h.view.draftWorkflow.form.reason,'')
+ assert.match(h.view.draftWorkflow.saveReason,/changeReason/);assert.ok(!h.view.draftWorkflow.saveReason.includes('hồ sơ CRS'))
+ h.view.draftWorkflow.setForm(old=>({...old,reason:'PM nhập lý do cập nhật'}));h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
+ const input=h.buildInput(h.view.draftWorkflow.form,h.view.importState.manualCoordsText,h.model,h.view.fileDraft)
+ assert.deepEqual(plain(input.coordinates),source.coordinates);assert.deepEqual(plain(input.widthProfile),source.widthProfile);assert.equal(h.calls.length,0)
+ h.project('q');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.fileDraft,null);assert.equal(h.calls.length,0);h.unmount()
+})
+
 test('file preview input applies independently of context and preserves full source DTO',()=>{
  const h=harness();h.context(false,null);h.read(sample);assert.equal(h.applied.length,1);assert.match(h.view.readMessage,/chưa tải được context/i)
  h.context(true,null);h.context(true,32649);h.context(true,32648);assert.equal(h.applied.length,1)
@@ -232,16 +247,16 @@ test('mainline nonzero origin edits and explicit snap preserve precision; gaps a
  const input=h.buildInput(h.workflow.form,h.view.importState.manualCoordsText,h.model,h.workflow.fileInput);assert.equal(input.stationOriginMeters,draft.stationOriginMeters);assert.equal(input.widthProfile.at(-1).toOffsetMeters,draft.widthProfile[0].toOffsetMeters);assert.equal(h.calls.length,0);h.unmount()
 })
 test('mainline pavement state and actual map sources share configuration, late style load and width/split updates',()=>{
- const h=harness(true,false,true);h.read(sample);h.view.setRightTab('SLABS');h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.match(h.view.toastMessage,/số làn/)
- h.view.segmentsState.setSegments(h.view.segmentsState.segments.map(s=>({...s,laneCount:3})));h.view.setSlabLengthM(5);h.view.setSlabThicknessCm(28);h.view.setContractionSpacingM(7);h.view.setExpansionSpacingM(11);h.view.setExpansionGapMm(20);h.flush();h.loadMap()
+ const h=harness(true,false,true);h.read(sample);h.view.setRightTab('SLABS');h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.ok(h.view.mapState.pavementPreview.issues.some(issue=>/bề rộng tấm/.test(issue.message)));assert.ok(!h.view.mapState.pavementPreview.issues.some(issue=>/số làn/.test(issue.message)))
+ h.view.setStripWidthMeters(7/3);h.view.setSlabLengthM(5);h.view.setSlabThicknessCm(28);h.view.setContractionSpacingM(7);h.view.setExpansionSpacingM(11);h.view.setExpansionGapMm(20);h.flush();h.loadMap()
  const compare=()=>{const rows=h.view.segmentsState.slabs,features=h.maps[0].getSource('slabs-source').data.features,labels=h.maps[0].getSource('slabs-labels-source').data.features;assert.equal(rows.length,features.length);assert.equal(rows.length,labels.length);assert.deepEqual(plain(h.view.mapState.pavementPreview.slabsGeoJSON),plain(h.maps[0].getSource('slabs-source').data));assert.deepEqual(plain(h.view.mapState.pavementPreview.jointsGeoJSON),plain(h.maps[0].getSource('joints-source').data));for(let i=0;i<rows.length;i++){for(const key of ['id','lengthM','widthM','thicknessCm'])assert.equal(rows[i][key],features[i].properties[key]);assert.equal(labels[i].properties.id,rows[i].id);assert.equal(labels[i].properties.sequence,i+1)}}
  compare();assert.equal(h.view.segmentsState.slabs.length,423)
- h.view.handleUpdateAllWidths(12);h.view.markWidthDraft();h.flush();compare();assert.ok(h.view.segmentsState.slabs.every(s=>s.widthM===4))
+ h.view.handleUpdateAllWidths(12);h.view.setStripWidthMeters(4);h.view.markWidthDraft();h.flush();compare();assert.ok(h.view.segmentsState.slabs.every(s=>s.widthM===4))
  h.view.setSlabLengthM(4);h.view.setContractionSpacingM(4);h.view.setSlabThicknessCm(33);h.view.setExpansionGapMm(30);h.flush();compare();assert.equal(h.view.segmentsState.slabs.length,528);assert.ok(h.view.segmentsState.slabs.every(s=>s.thicknessCm===33))
- h.view.segmentsState.setSegments(h.view.segmentsState.segments.map(s=>({...s,laneCount:2})));h.view.markWidthDraft();h.flush();compare();assert.equal(h.view.segmentsState.slabs.length,352)
+ h.view.setStripWidthMeters(6);h.view.markWidthDraft();h.flush();compare();assert.equal(h.view.segmentsState.slabs.length,352)
  h.view.handleSetSplitDistance(.2);h.flush();h.view.handleApplyAutoSplit();h.view.markWidthDraft();h.flush();compare();const before=plain(h.maps[0].getSource('edges-source').data),labelsBefore=plain(h.maps[0].getSource('slabs-labels-source').data);h.view.segmentsState.setSplitSortOrder('desc');h.flush();compare();assert.deepEqual(plain(h.maps[0].getSource('edges-source').data),before);assert.deepEqual(plain(h.maps[0].getSource('slabs-labels-source').data),labelsBefore)
  h.view.mapState.setShowSlabsAndJoints(false);h.flush();assert.equal(h.maps[0].layers['slabs-label-layer'].layout.visibility,'none');assert.notEqual(h.maps[0].layers['edges-dimension-line-layer'].layout?.visibility,'none')
- h.view.handleUpdateAllWidths(NaN);h.view.markWidthDraft();h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.equal(h.maps[0].getSource('slabs-source').data.features.length,0);assert.match(h.view.toastMessage,/bề rộng/);assert.equal(h.calls.length,0);h.unmount()
+ h.view.handleUpdateAllWidths(NaN);h.view.markWidthDraft();h.flush();assert.equal(h.view.segmentsState.slabs.length,0);assert.equal(h.maps[0].getSource('slabs-source').data.features.length,0);assert.ok(h.view.mapState.pavementPreview.issues.some(issue=>/bề rộng/.test(issue.message)));assert.equal(h.calls.length,0);h.unmount()
 })
 test('branch A/B editing is isolated, redivide uses newest distance and source geometry/mainline pavement stay intact',()=>{
  const h=harness(true,false,true);h.read(sample);h.view.segmentsState.setSegments(h.view.segmentsState.segments.map(s=>({...s,laneCount:3})));h.view.setSlabLengthM(5);h.view.setSlabThicknessCm(28);h.view.setContractionSpacingM(7);h.view.setExpansionSpacingM(50);h.view.setExpansionGapMm(20);h.flush();h.loadMap()

@@ -5,14 +5,14 @@ import { alignmentService, type GeometryDraftInput } from '../../../api/services
 import { acceptFreshDraftVersion, pendingDraftCommand, reviseRejectedDraftCommand, runDraftCommand } from '../../../api/services/geometryDraftCommands'
 import { GeometryCommandUiError, geometryCommandErrorMessage } from '../../../api/services/geometryCommandErrors'
 import type { useGeometryReadModel } from './useGeometryReadModel'
-import { parseRoadGuardDraftJson, RoadGuardDraftValidationError, type RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
+import { parseRoadGuardDraftJson, RoadGuardDraftValidationError, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
 
 type ReadModel = ReturnType<typeof useGeometryReadModel>
 export interface GeometryDraftForm {
   sectionId: string; profileId: string; origin: string; surveyWidth: string; widths: string; reason: string
 }
 const emptyForm: GeometryDraftForm = { sectionId: '', profileId: '', origin: '', surveyWidth: '', widths: '', reason: '' }
-export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>, fileDraft?: RoadGuardCoordinatesDraft | null): GeometryDraftInput {
+export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>, fileDraft?: CoordinateDraftSource | null): GeometryDraftInput {
   const context = model.context
   if (!context) throw new GeometryCommandUiError('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
   const roads = context.roadSections.filter(section => section.roadSectionId === form.sectionId)
@@ -43,7 +43,8 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
     length += distance
   }
   if (!Number.isFinite(length)) throw new GeometryCommandUiError('Chiều dài không hợp lệ.')
-  if (!form.origin.trim() || !Number.isFinite(Number(form.origin)) || !form.surveyWidth.trim() || !(Number(form.surveyWidth) > 0) || !Number.isFinite(Number(form.surveyWidth)) || !form.reason.trim()) {
+  if (!form.reason.trim()) throw new GeometryCommandUiError('changeReason: cần PM nhập lý do cập nhật; GET draft không trả lý do gốc.')
+  if (!form.origin.trim() || !Number.isFinite(Number(form.origin)) || !form.surveyWidth.trim() || !(Number(form.surveyWidth) > 0) || !Number.isFinite(Number(form.surveyWidth))) {
     throw new GeometryCommandUiError('Cần lý trình gốc, bề rộng khảo sát và lý do thay đổi có nguồn.')
   }
   let end = 0
@@ -61,7 +62,7 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
   return input
 }
 
-export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void, sourceUnverified = false, fileDraft?: RoadGuardCoordinatesDraft | null) {
+export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, coordinatesText: string, setCoordinatesText: (text: string) => void, showToast: (message: string) => void, sourceUnverified = false, fileDraft?: CoordinateDraftSource | null) {
   const { user, authEpoch } = useAuthStore()
   const [form, setForm] = useState<GeometryDraftForm>(emptyForm)
   const [awaitingDraftId, setAwaitingDraftId] = useState('')

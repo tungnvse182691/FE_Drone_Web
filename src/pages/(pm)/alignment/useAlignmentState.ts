@@ -14,7 +14,8 @@ import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
-import type { RoadGuardCoordinatesDraft } from './roadGuardDraftImportHelpers'
+import { restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
+import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import { planMainlinePavement } from './alignmentPavementHelpers'
 
 export function useAlignmentState() {
@@ -61,7 +62,7 @@ export function useAlignmentState() {
   const currentScope = useRef(scopeKey); currentScope.current = scopeKey
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
   const editorDraft = useRef('')
-  const [fileDraft, setFileDraft] = useState<RoadGuardCoordinatesDraft | null>(null)
+  const [fileDraft, setFileDraft] = useState<CoordinateDraftSource | null>(null)
   const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
@@ -332,7 +333,7 @@ export function useAlignmentState() {
   useEffect(() => {
     if (!fileDraft || editorScope !== scopeKey) return
     const origin = fileDraft.stationOriginMeters
-    draftWorkflow.setForm(old => ({ ...old, origin: String(origin), reason: fileDraft.changeReason,
+    draftWorkflow.setForm(old => ({ ...old, origin: String(origin), reason: fileDraft.changeReason ?? old.reason,
       surveyWidth: String(fileDraft.surveyWidthMeters),
       widths: localWidthsDirty ? old.widths : fileDraft.widthProfile.map(width => `${width.fromOffsetMeters}, ${width.toOffsetMeters}, ${width.widthMeters}`).join('\n') }))
     importState.setManualCoordsText(fileDraft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
@@ -381,6 +382,20 @@ export function useAlignmentState() {
   useEffect(() => {
     const draft = geometryRead.draft?.data
     if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === draft.id || localDraftDirty || draftWorkflow.busy || draftWorkflow.conflict) return
+    if (draft.status === 'DRAFT' && draft.sourceKind === 'COORDINATES') {
+      if (geometryRead.context?.projectId !== selectedProjectId) return
+      try {
+        if (!geometryRead.draft?.etag || !draft.version || geometryRead.draft.etag !== `"${draft.version}"`) throw new Error('version: bản nháp chưa có ETag khớp phiên bản máy chủ.')
+        if (!draft.roadSectionId || !geometryRead.context.roadSections.some(road => road.roadSectionId === draft.roadSectionId)) throw new Error('roadSectionId: tuyến của bản nháp không thuộc context dự án.')
+        if (draft.sourceCrs !== geometryRead.context.engineeringUtmSrid) throw new Error('sourceCrs: không khớp engineeringUtmSrid dự án.')
+        const source = restoreCoordinateDraft(draft)
+        editorDraft.current = draft.id
+        setFileDraft(source)
+        try { setFilePreviewCoords(previewCenterlineCoordinates(source.coordinates.map(point => [point.x, point.y]), source.sourceCrs)) }
+        catch (error) { showToast(error instanceof Error ? error.message : 'sourceCrs: chưa hỗ trợ preview bản nháp.'); setFilePreviewCoords([]) }
+      } catch (error) { showToast(error instanceof Error ? error.message : 'Không khôi phục được metadata bản nháp.') }
+      return
+    }
     editorDraft.current = draft.id
     if (!Number.isFinite(draft.stationOriginMeters)) return
     const origin = draft.stationOriginMeters
@@ -390,7 +405,7 @@ export function useAlignmentState() {
       lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
       laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN NHÁP ĐÃ ĐỌC', color: '#C9A227'
     })))
-  }, [geometryRead.draft, geometryRead.draftId, selectedProjectId, localDraftDirty, draftWorkflow.busy, draftWorkflow.conflict])
+  }, [geometryRead.draft, geometryRead.draftId, geometryRead.context, selectedProjectId, localDraftDirty, draftWorkflow.busy, draftWorkflow.conflict])
   useEffect(() => {
     if (draftWorkflow.conflict || draftWorkflow.busy || !localWidthsDirty || selectedTargetType !== 'MAINLINE') return
     const origin = Number(draftWorkflow.form.origin)

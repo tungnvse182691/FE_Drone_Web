@@ -4,7 +4,7 @@ const code = ts.transpileModule(fs.readFileSync('src/pages/(pm)/alignment/roadGu
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
 }).outputText
 vm.runInNewContext(code, { module: moduleUnderTest, exports: moduleUnderTest.exports, Error })
-const { parseRoadGuardDraftJson: parse, RoadGuardDraftValidationError } = moduleUnderTest.exports
+const { parseRoadGuardDraftJson: parse, restoreCoordinateDraft, RoadGuardDraftValidationError } = moduleUnderTest.exports
 const sampleText = fs.readFileSync('tools/fixtures/Roadguard1_RoadGuard_GeometryDraft.json', 'utf8')
 const sample = JSON.parse(sampleText)
 const clone = value => JSON.parse(JSON.stringify(value))
@@ -24,6 +24,19 @@ test('original Roadguard1 DTO sample is preserved with all 119 points and nullab
   assert.deepEqual(plain(parse(sampleText)), sample)
   assert.equal(parse(sampleText).coordinates[0].x, 798577.937027)
 })
+test('server metadata restores without inventing changeReason; missing engineering fields name the field', () => {
+  const server = { ...sample, coordinates: undefined, editedCoordinates: sample.coordinates }
+  delete server.changeReason
+  const restored = restoreCoordinateDraft(server)
+  assert.deepEqual(plain(restored.coordinates), sample.coordinates)
+  assert.equal(restored.changeReason, undefined)
+  for (const field of ['sourceCrs', 'stationOriginMeters', 'widthProfile', 'surveyWidthMeters']) {
+    const missing = { ...server }; delete missing[field]
+    assert.throws(() => restoreCoordinateDraft(missing), error => error.message.includes(field))
+  }
+  assert.throws(() => restoreCoordinateDraft({ ...server, editedCoordinates: [] }), /coordinates/)
+})
+
 test('malformed JSON, non-object and GeoJSON are rejected', () => {
   assert.throws(() => parse('{'), error => error instanceof RoadGuardDraftValidationError && /JSON/.test(error.message))
   for (const value of [null, [], 42]) invalid(value, 'Draft')
