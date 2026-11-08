@@ -17,6 +17,7 @@ import { useAlignmentImportState } from './useAlignmentImportState'
 import { restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
 import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import { planMainlinePavement } from './alignmentPavementHelpers'
+import { confirmedGeometryDisplay } from './confirmedGeometryDisplay'
 import { usePavementWorkflow } from './usePavementWorkflow'
 
 export function useAlignmentState() {
@@ -88,20 +89,21 @@ export function useAlignmentState() {
   }
 
   useEffect(() => {
-    if (localDraftDirty) return
     const draft = geometryRead.draft?.data
     const draftStatus = draft?.id === geometryRead.draftId && draft.projectId === selectedProjectId ? draft.status : undefined
     const geometry = geometryRead.geometry?.projectId === selectedProjectId &&
-      (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) ? geometryRead.geometry : null
+      (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) &&
+      (!geometryRead.versionReference || geometryRead.geometry.routeVersionId === geometryRead.versionReference) &&
+      (!geometryRead.roadReference || geometryRead.geometry.roadSectionId === geometryRead.roadReference) ? geometryRead.geometry : null
+    if (localDraftDirty && draftStatus !== 'CONFIRMED') return
     setAlignmentStatus(draftStatus === 'CONFIRMED' || draftStatus !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
-    if (Number.isFinite(geometry?.lengthMeters) && geometry!.lengthMeters > 0) setImportedLengthKm(geometry!.lengthMeters / 1000)
-    const line = geometry?.wgs84Centerline
-    if (line?.type === 'LineString' && Array.isArray(line.coordinates) && line.coordinates.length >= 2 &&
-        line.coordinates.every(point => Array.isArray(point) && point.length === 2 && point.every(Number.isFinite) && Math.abs(point[0]) <= 180 && Math.abs(point[1]) <= 90)) {
-      setCurrentCoords(line.coordinates)
+    if (geometry) {
+      const restored = confirmedGeometryDisplay(geometry)
+      setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
+      if (restored.warnings.length) showToast(restored.warnings.join(' '))
     }
-  }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, selectedProjectId])
+  }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, geometryRead.roadReference, geometryRead.versionReference, selectedProjectId])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   const [pavementWidthRevision, setPavementWidthRevision] = useState(0)

@@ -12,7 +12,7 @@ function environment(){
  const service=load('src/api/services/pavementService.ts').pavementService,commands=load('src/api/services/pavementCommands.ts')
  return{service,commands,storage,calls,state,mocks,load,client,setResult:v=>result=v,setReadError:v=>readError=v,setCreateError:v=>createError=v,setDelay:v=>delay=v}
 }
-let count=0;async function test(name,run){await run();console.log('PASS '+name);count++}
+let count=0;async function test(name,run){if(process.env.RG_PAVEMENT_FILTER&&!new RegExp(process.env.RG_PAVEMENT_FILTER,'i').test(name))return;await run();console.log('PASS '+name);count++}
 ;(async()=>{
 await test('payload maps editor decimals with no rounding, zero gap and optional absence',()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1)
@@ -153,6 +153,16 @@ await test('actual slab click handler uses snapshot status/layoutId and missing 
  const actual=build(built,null,32648).preview.slabsGeoJSON.features[0]
  handlers['clickslabs-fill-layer']({features:[actual],originalEvent:{},lngLat:{lng:1,lat:1}})
  assert.match(html,/Chưa có dữ liệu/);assert.ok(!html.includes('undefined'));assert.ok(selected)
+})
+await test('confirmed metric-only restore uses adapter and exact engineering station origin; WGS server preferred without mutation',()=>{
+ const e=environment();e.mocks['./alignmentImportHelpers']={previewCenterlineCoordinates:(coords,srid)=>{assert.equal(srid,32648);return coords.map(([x,y])=>[x/100000,y/100000])}};const build=e.load('src/pages/(pm)/alignment/confirmedGeometryDisplay.ts').confirmedGeometryDisplay
+ // Load real supported adapter dependencies via this harness.
+ const metric=[[500000,1000000],[500003,1000004],[500006,1000008]],route={projectId:project,roadSectionId:'road',routeVersionId:'route',sourceDraftId:'draft',metadataStatus:'COMPLETE',sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:1234.123456789,lengthMeters:10,widthProfile:widths,metricCenterline:{type:'LineString',coordinates:metric}}
+ const before=JSON.stringify(route),result=build(route);assert.equal(result.coordinates.length,3);assert.deepEqual(plain(result.kmPoints),metric.map((_,i)=>(route.stationOriginMeters+i*5)/1000));assert.equal(JSON.stringify(route),before)
+ const server={type:'LineString',coordinates:result.coordinates.map(p=>[p[0]+1e-8,p[1]])},preferred=build({...route,wgs84Centerline:server});assert.deepEqual(plain(preferred.coordinates),server.coordinates)
+ const unsupported=build({...route,engineeringSrid:32649,sourceCrs:32649});assert.equal(unsupported.coordinates.length,0);assert.match(unsupported.warnings.join(' '),/32649/)
+ const missing=build({...route,stationOriginMeters:null});assert.equal(missing.kmPoints.length,0);assert.match(missing.warnings.join(' '),/stationOriginMeters/)
+ assert.equal(build({...route,crsProfileRevisionId:'native'}).kmPoints.length,0);assert.equal(build({...route,lengthMeters:12}).kmPoints.length,0)
 })
 console.log(`${count} pavement scoped groups PASS (mock HTTP/hooks, not live persistence).`)
 })().catch(error=>{console.error(error);process.exitCode=1})

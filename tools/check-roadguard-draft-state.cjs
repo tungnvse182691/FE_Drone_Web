@@ -56,6 +56,17 @@ test('server draft restores engineering state and map after F5 without file/prof
  h.project('q');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.fileDraft,null);assert.equal(h.calls.length,0);h.unmount()
 })
 
+test('confirmed geometry F5 hydrates metric-only map/chainage without dirtying editor or replacing pavement config',()=>{
+ const h=harness(true),sampleDto=JSON.parse(sample);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',currentVersionId:'v1'}]}
+ h.model.draftId='a';h.model.draft={data:{id:'a',projectId:'p',roadSectionId:'road',status:'CONFIRMED'}}
+ h.view.setSlabLengthM('5.25');h.flush()
+ const g={projectId:'p',roadSectionId:'road',routeVersionId:'v1',sourceDraftId:'a',metadataStatus:'COMPLETE',sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:1234.123456789,lengthMeters:5,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5,widthMeters:7}],metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500003,1000004]]}}
+ h.model.geometry=g;h.model.versionReference='v1';h.model.roadReference='road';h.flush()
+ assert.equal(h.view.currentCoords.length,2);assert.deepEqual(plain(h.view.currentKmPoints),[1234.123456789/1000,1239.123456789/1000]);assert.equal(h.view.localDraftDirty,false);assert.equal(h.view.slabLengthM,'5.25');assert.equal(h.view.alignmentStatus,'CONFIRMED')
+ h.model.versionReference='v2';h.flush();assert.equal(h.view.currentCoords.length,0)
+ h.model.geometry={...g,routeVersionId:'v2'};h.flush();assert.equal(h.view.currentCoords.length,2)
+ h.project('q');assert.equal(h.view.currentCoords.length,0);h.model.geometry=g;h.flush();assert.equal(h.view.currentCoords.length,0);h.unmount()
+})
 test('file preview input applies independently of context and preserves full source DTO',()=>{
  const h=harness();h.context(false,null);h.read(sample);assert.equal(h.applied.length,1);assert.match(h.view.readMessage,/chưa tải được context/i)
  h.context(true,null);h.context(true,32649);h.context(true,32648);assert.equal(h.applied.length,1)

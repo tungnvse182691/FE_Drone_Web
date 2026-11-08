@@ -8,6 +8,8 @@ import { useAuthStore } from '../../../store/authStore'
 export function useGeometryReadModel(projectId: string) {
   const [params, setParams] = useSearchParams()
   const draftId = params.get('draftId') || ''
+  const roadReference = params.get('roadSectionId') || ''
+  const versionReference = params.get('routeVersionId') || ''
   const epoch = useAuthStore(state => state.authEpoch)
   const [projects, setProjects] = useState<Array<{projectId: string; name: string; projectCode: string}>>([])
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [reload, setReload] = useState(0)
@@ -43,8 +45,8 @@ export function useGeometryReadModel(projectId: string) {
     return () => { active = false }
   }, [projectId, draftId, epoch, reload])
   const attempt = useRef(0)
-  const selection = useRef({ projectId, epoch })
-  selection.current = { projectId, epoch }
+  const selection = useRef({ projectId, epoch, roadReference, versionReference, draftId })
+  selection.current = { projectId, epoch, roadReference, versionReference, draftId }
   useEffect(() => {
     attempt.current++; setGeometry(null); setGeometryError(''); setGeometryLoading(false)
     return () => { attempt.current++ }
@@ -82,22 +84,22 @@ export function useGeometryReadModel(projectId: string) {
   }, [projectId, epoch, projects])
   const invalidate = () => {attempt.current++;setGeometry(null);setGeometryError('');setGeometryLoading(false)}
   const read = async (roadId: string, versionId: string) => {
-    const currentAttempt = ++attempt.current, actorEpoch = epoch, selectedProject = projectId
-    const current = () => attempt.current === currentAttempt && selection.current.projectId === selectedProject && selection.current.epoch === actorEpoch
+    const currentAttempt = ++attempt.current, actorEpoch = epoch, selectedProject = projectId, selectedDraft = draftId, selectedRoad = roadReference, selectedVersion = versionReference
+    const current = () => attempt.current === currentAttempt && selection.current.projectId === selectedProject && selection.current.epoch === actorEpoch && selection.current.draftId === selectedDraft && selection.current.roadReference === selectedRoad && selection.current.versionReference === selectedVersion
     setGeometry(null);setGeometryError('');setGeometryLoading(true)
     try {
       const value = await alignmentService.readConfirmedGeometry(selectedProject, roadId, versionId)
       if (!current()) return
-      if (value.projectId !== selectedProject || value.routeVersionId !== versionId || value.roadSectionId && value.roadSectionId !== roadId) throw new Error('Sai reference')
+      if (value.projectId !== selectedProject || value.routeVersionId !== versionId || value.roadSectionId !== roadId || selectedDraft && value.sourceDraftId !== selectedDraft) throw new Error('Sai reference')
       setGeometry(value)
     } catch {if (current()) setGeometryError('Không thể tải hình học đúng tuyến và phiên bản đã chọn.')}
     finally {if (current()) setGeometryLoading(false)}
   }
-  const roadReference = params.get('roadSectionId') || ''
-  const versionReference = params.get('routeVersionId') || ''
   useEffect(() => {
     if (projectId && roadReference && versionReference) void read(roadReference, versionReference)
-  }, [projectId, epoch, roadReference, versionReference, reload])
+    else invalidate()
+    return () => { attempt.current++ }
+  }, [projectId, epoch, draftId, roadReference, versionReference, reload])
   const openDraft = (id: string) => {
     invalidate()
     const next = new URLSearchParams(params)
