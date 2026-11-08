@@ -35,6 +35,7 @@ export interface AlignmentMapProps {
   importedLengthKm: number
   slabLengthM: number | string
   slabThicknessCm: number | string
+  pavementStatus?: string
   pavementPreview?: PavementPreview
   contractionSpacingM: number | string
   expansionSpacingM: number | string
@@ -68,6 +69,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
   segments,
   importedLengthKm,
   pavementPreview,
+  pavementStatus,
   contractionSpacingM,
   expansionSpacingM,
   expansionGapMm,
@@ -359,7 +361,7 @@ export const AlignmentMap: React.FC<AlignmentMapProps> = ({
                         </div>
                       </div>
 
-                      <span className="text-[10px] text-sky-300">Preview — chưa lưu/chưa xác nhận · Theo chiều Km tăng</span>
+                      <span className="text-[10px] text-sky-300">{pavementStatus || 'Preview — chưa lưu/chưa xác nhận · Theo chiều Km tăng'}</span>
                       <div className="grid grid-cols-1 gap-2 text-[11px]">
                         <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col gap-0.5">
                           <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">

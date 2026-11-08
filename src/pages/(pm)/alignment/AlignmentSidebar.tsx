@@ -213,6 +213,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {rightTab === 'SLABS' && (
           <fieldset disabled={isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
+            serverSnapshot={!!pavementWorkflow?.display}
             stripWidthMeters={stripWidthMeters}
             onSetStripWidthMeters={onSetStripWidthMeters}
             segments={segments}

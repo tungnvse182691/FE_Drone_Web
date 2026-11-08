@@ -6,8 +6,8 @@ function fixture(input){return{id:'layout',projectId:project,routeVersionId:'rou
 function environment(){
  const storage=new Map(),calls=[],cache=new Map(),state={user:{id:'pm',role:'PROJECT_MANAGER'},authEpoch:1,isAuthenticated:true}
  let result,readError=false,createError=false,delay=null
- const client={async post(url,body,options){calls.push({method:'POST',url,body:plain(body),key:options.headers['Idempotency-Key']});if(delay)await delay;if(createError)throw Error('timeout');return{data:result||fixture(body)}},async get(url,options){calls.push({method:'GET',url,options});if(readError)throw Error('GET failed');if(url.endsWith('/work-package'))return{data:{projectId:project,status:'ACTIVE',roadSections:[{roadSectionId:'road',currentVersionId:'route'}]}};if(url.endsWith('/geometry'))return{data:{projectId:project,roadSectionId:'road',routeVersionId:'route',lengthMeters:10}};if(url.endsWith('/segment-sets'))return{data:{items:[{id:'set',routeVersionId:'route',status:'PUBLISHED'}],nextCursor:null}};if(url.endsWith('/segment-sets/set'))return{data:{id:'set',routeVersionId:'route',status:'PUBLISHED'}};return{data:result}}}
- const auth={useAuthStore:Object.assign(()=>state,{getState:()=>state,subscribe(){}})},mocks={'../client':{apiClient:client},'../../store/authStore':auth,'../../../store/authStore':auth,'../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'../../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'./alignmentService':{alignmentService:{readProjectContext:async p=>(await client.get('/projects/'+p+'/work-package')).data,readConfirmedGeometry:async(p,r,v)=>(await client.get(`/projects/${p}/road-sections/${r}/versions/${v}/geometry`)).data}}}
+ const client={async post(url,body,options){calls.push({method:'POST',url,body:plain(body),key:options.headers['Idempotency-Key']});if(delay)await delay;if(createError)throw Error('timeout');return{data:result||fixture(body)}},async get(url,options){calls.push({method:'GET',url,options});if(readError)throw Error('GET failed');if(url.endsWith('/work-package'))return{data:{projectId:project,status:'ACTIVE',roadSections:[{roadSectionId:'road',currentVersionId:'route'}]}};if(url.endsWith('/geometry'))return{data:{projectId:project,roadSectionId:'road',routeVersionId:'route',engineeringSrid:32648,stationOriginMeters:0,lengthMeters:10}};if(url.endsWith('/segment-sets'))return{data:{items:[{id:'set',routeVersionId:'route',status:'PUBLISHED'}],nextCursor:null}};if(url.endsWith('/segment-sets/set'))return{data:{id:'set',routeVersionId:'route',status:'PUBLISHED'}};return{data:result}}}
+ const auth={useAuthStore:Object.assign(()=>state,{getState:()=>state,subscribe(){}})},mocks={'../../../api/services/alignmentService':{utm48NToWgs84:(x,y)=>[x/100000,y/100000]},'../client':{apiClient:client},'../../store/authStore':auth,'../../../store/authStore':auth,'../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'../../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'./alignmentService':{alignmentService:{readProjectContext:async p=>(await client.get('/projects/'+p+'/work-package')).data,readConfirmedGeometry:async(p,r,v)=>(await client.get(`/projects/${p}/road-sections/${r}/versions/${v}/geometry`)).data}}}
  function load(file){file=path.normalize(file);if(cache.has(file))return cache.get(file);const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;cache.set(file,module.exports);vm.runInNewContext(code,{module,exports:module.exports,require(n){if(n in mocks)return mocks[n];return load(path.join(path.dirname(file),n+'.ts'))},console,Error,URLSearchParams,crypto:webcrypto,sessionStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}});return module.exports}
  const service=load('src/api/services/pavementService.ts').pavementService,commands=load('src/api/services/pavementCommands.ts')
  return{service,commands,storage,calls,state,mocks,load,client,setResult:v=>result=v,setReadError:v=>readError=v,setCreateError:v=>createError=v,setDelay:v=>delay=v}
@@ -81,7 +81,7 @@ await test('F5 hook hydrates server fields/tolerance, Sup reads without writes a
  const oldRead=e.service.readConfiguration;e.service.readConfiguration=()=>new Promise(r=>deferred=r);query=new URLSearchParams('layoutId=late');render();const old=deferred;projectId='q';query=new URLSearchParams();render();old({snapshot:fixture(input),configuration:fixture(input)});await flush();assert.equal(view.snapshot,null);assert.equal(restored.length,1);assert.equal(e.calls.filter(x=>x.method==='POST').length,0)
 })
 await test('PM hook save keeps layoutId in scoped URL after verified readback without resetting the editor',async()=>{
- const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));e.storage.set('rg_pavement_tolerance_p',JSON.stringify({source:'operator',value:.1}))
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));e.storage.set('unused','not a tolerance default')
  let slot=0,changed=false,view,query=new URLSearchParams(),restored=[];const values=[],effects=[]
  e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
  e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=next]}
@@ -91,6 +91,33 @@ await test('PM hook save keeps layoutId in scoped URL after verified readback wi
  render();await flush();assert.equal(view.disabledReason,'');await view.save();render();await flush()
  assert.equal(query.get('layoutId'),'layout');assert.equal(query.get('routeVersionId'),'route');assert.equal(query.get('segmentSetId'),'set');assert.equal(e.calls.filter(x=>x.method==='POST').length,1);assert.equal(view.pending,null)
  assert.equal(restored.length,0);assert.equal(view.snapshot.id,'layout');assert.equal(view.disabledReason,'')
+})
+await test('saved snapshot uses server widths/codes/footprints for map list HUD; unsupported CRS fails without synthesis',()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input)
+ const build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement
+ const localWidths=[{...widths[0],widthMeters:99}]
+ const view=build(snapshot,input.layout,32648,1000)
+ assert.equal(view.segments[0].roadWidthM,7);assert.equal(localWidths[0].widthMeters,99)
+ assert.equal(view.slabs[0].id,snapshot.geometry.slabs[0].key);assert.equal(view.slabs[0].lengthM,5)
+ assert.equal(view.preview.slabsGeoJSON.features[0].properties.id,view.slabs[0].id)
+ assert.deepEqual(plain(view.preview.slabsGeoJSON.features[0].geometry.coordinates[0][0]),[.00001,.00001])
+ assert.equal(view.preview.slabsGeoJSON.features.length,view.slabs.length);assert.equal(view.preview.jointsGeoJSON.features.length,0);assert.match(view.label,/.37/)
+ assert.throws(()=>build(snapshot,input.layout,32649,0),/adapter/);assert.equal(snapshot.geometry.slabs[0].footprint[0].x,1)
+})
+await test('layout retry reissues GET after error, preserves server tolerance and rejects late responses and newer PM edits',async()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input)
+ let slot=0,changed=false,view,id=project,revision=0,query=new URLSearchParams('layoutId=layout'),restored=[],fail=true,reads=0,resolve
+ e.service.readConfiguration=async()=>{reads++;if(fail)throw Error('network');return{snapshot,configuration:snapshot}}
+ const values=[],effects=[];e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
+ e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=next]};const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow
+ function render(){for(let i=0;i<20;i++){changed=false;slot=0;view=hook(id,'road',editor,widths,false,true,x=>restored.push(x),()=>{},revision);for(const fx of effects)if(fx?.pending){fx.pending=false;fx.cleanup?.();fx.cleanup=fx.fn()}if(!changed)return}throw Error('settle')}
+ async function flush(){for(let i=0;i<35;i++){await Promise.resolve();render()}}
+ render();await flush();assert.match(view.error,/network/);assert.equal(view.loading,false);assert.equal(restored.length,0)
+ fail=false;view.retry();render();await flush();assert.equal(reads,2);assert.equal(view.error,'');assert.equal(view.display.slabs.length,1);assert.equal(restored.length,1)
+ assert.match(view.display.label,/.37/);e.setResult(fixture({...input,displayToleranceMeters:.1}));await view.save();render();await flush();const write=e.calls.find(x=>x.method==='POST');assert.equal(write.body.displayToleranceMeters,.1)
+ revision++;render();assert.equal(view.display,null)
+ e.service.readConfiguration=()=>new Promise(r=>resolve=r);view.retry();render();const late=resolve;revision++;render();late({snapshot,configuration:snapshot});await flush();assert.equal(restored.length,1);assert.equal(view.display,null)
+ query=new URLSearchParams('layoutId=other');render();const old=resolve;id='other-project';query=new URLSearchParams();render();old({snapshot,configuration:snapshot});await flush();assert.equal(view.snapshot,null);assert.equal(view.display,null)
 })
 console.log(`${count} pavement scoped groups PASS (mock HTTP/hooks, not live persistence).`)
 })().catch(error=>{console.error(error);process.exitCode=1})

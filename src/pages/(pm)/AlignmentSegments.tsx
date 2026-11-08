@@ -259,11 +259,12 @@ export const AlignmentSegments: React.FC = () => {
           }}
           onSelectAllRoute={handleSelectAllRoute}
           selectedSegmentId={segmentsState.selectedSegmentId}
-          segments={segmentsState.segments}
+          segments={pavementWorkflow.previewBase?.segments || segmentsState.segments}
           importedLengthKm={importedLengthKm}
           slabLengthM={slabLengthM}
           slabThicknessCm={slabThicknessCm}
           pavementPreview={mapState.pavementPreview}
+          pavementStatus={pavementWorkflow.display?.label}
           contractionSpacingM={contractionSpacingM}
           expansionSpacingM={expansionSpacingM}
           expansionGapMm={expansionGapMm}
@@ -285,7 +286,7 @@ export const AlignmentSegments: React.FC = () => {
           onSetStripWidthMeters={setStripWidthMeters}
           rightTab={rightTab}
           onSetRightTab={setRightTab}
-          segments={activeSegments}
+          segments={rightTab === 'SLABS' ? pavementWorkflow.display?.segments || activeSegments : activeSegments}
           selectedSegmentId={segmentsState.selectedSegmentId}
           onSelectSegment={segmentsState.handleSelectSegment}
           splitDistance={activeSplitDistance}

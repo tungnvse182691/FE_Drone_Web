@@ -104,10 +104,12 @@ export function useAlignmentState() {
   }, [geometryRead.geometry, geometryRead.draft?.data.status, geometryRead.draftId, selectedProjectId])
 
   // Trạng thái các Tab quản lý bên phải: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
+  const [pavementWidthRevision, setPavementWidthRevision] = useState(0)
+  const [pavementEditRevision, setPavementEditRevision] = useState(0)
   const [localDraftDirty, setLocalDraftDirty] = useState(false)
   const [localWidthsDirty, setLocalWidthsDirty] = useState(false)
   const markLocalDraft = () => setLocalDraftDirty(true)
-  const markWidthDraft = () => { setLocalDraftDirty(true); if (selectedTargetType === 'MAINLINE') setLocalWidthsDirty(true) }
+  const markWidthDraft = () => { setPavementWidthRevision(n => n + 1); setPavementEditRevision(n => n + 1); setLocalDraftDirty(true); if (selectedTargetType === 'MAINLINE') setLocalWidthsDirty(true) }
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
@@ -254,12 +256,25 @@ export function useAlignmentState() {
     onSelectSegmentRef.current = handleSelectSegmentFromMap
   })
 
+  const pavementWorkflow = usePavementWorkflow(selectedProjectId, geometryRead.draft?.data.roadSectionId || '',
+    { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
+    fileDraft && !localWidthsDirty ? fileDraft.widthProfile : [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
+      fromOffsetMeters: segment.startKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN),
+      toOffsetMeters: segment.endKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN), widthMeters: segment.roadWidthM
+    })), localWidthsDirty, selectedTargetType === 'MAINLINE',
+    layout => {
+      setStripWidthMeters(layout?.stripWidthMeters ?? Number.NaN); setSlabLengthM(layout?.slabLengthMeters ?? Number.NaN)
+      setSlabThicknessCm(layout?.slabThicknessCentimeters ?? Number.NaN); setContractionSpacingM(layout?.contractionJointSpacingMeters ?? Number.NaN)
+      setExpansionSpacingM(layout?.expansionJointSpacingMeters ?? Number.NaN); setExpansionGapMm(layout?.expansionJointGapMillimeters ?? Number.NaN)
+    }, showToast, pavementEditRevision, pavementWidthRevision)
+
   // Hook 2: Map State & Interactions
   const mapState = useAlignmentMapState({
-    segments: segmentsState.segments,
-    currentCoords,
-    currentKmPoints,
-    selectedSegmentId: selectedTargetType !== 'MAINLINE' && segmentsState.selectedSegmentId === 'ALL' ? selectedTargetType : segmentsState.selectedSegmentId,
+    segments: pavementWorkflow.previewBase?.segments || segmentsState.segments,
+    savedPavement: pavementWorkflow.display?.preview,
+    currentCoords: pavementWorkflow.previewBase ? pavementWorkflow.previewBase.coordinates : currentCoords,
+    currentKmPoints: pavementWorkflow.previewBase ? [] : currentKmPoints,
+    selectedSegmentId: pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : selectedTargetType !== 'MAINLINE' && segmentsState.selectedSegmentId === 'ALL' ? selectedTargetType : segmentsState.selectedSegmentId,
     setSelectedSegmentId: (id: string | null) => {
       if (id) {
         handleSelectSegmentFromMap(id)
@@ -586,20 +601,8 @@ export function useAlignmentState() {
   }
   const setPavementConfig = (setter: (value: any) => void, value: any) => {
     if (!isMainline) { showToast('Chưa biên tập pavement tuyến nhánh; cấu hình tuyến chính được giữ nguyên.'); return }
-    setter(value)
+    setPavementEditRevision(n => n + 1); setter(value)
   }
-
-  const pavementWorkflow = usePavementWorkflow(selectedProjectId, draftWorkflow.form.sectionId,
-    { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
-    editedFileDraft?.widthProfile || [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
-      fromOffsetMeters: segment.startKm * 1000 - (draftWorkflow.form.origin.trim() ? Number(draftWorkflow.form.origin) : Number.NaN),
-      toOffsetMeters: segment.endKm * 1000 - (draftWorkflow.form.origin.trim() ? Number(draftWorkflow.form.origin) : Number.NaN), widthMeters: segment.roadWidthM
-    })), localWidthsDirty, isMainline,
-    layout => {
-      setStripWidthMeters(layout?.stripWidthMeters ?? Number.NaN); setSlabLengthM(layout?.slabLengthMeters ?? Number.NaN)
-      setSlabThicknessCm(layout?.slabThicknessCentimeters ?? Number.NaN); setContractionSpacingM(layout?.contractionJointSpacingMeters ?? Number.NaN)
-      setExpansionSpacingM(layout?.expansionJointSpacingMeters ?? Number.NaN); setExpansionGapMm(layout?.expansionJointGapMillimeters ?? Number.NaN)
-    }, showToast)
 
   const handleSubmitAlignment = () => draftWorkflow.save()
   const handleLockAlignment = draftWorkflow.confirm
@@ -655,7 +658,7 @@ export function useAlignmentState() {
     handleAddBranch,
     isMainline,
     currentBranch,
-    activeSegments,
+    activeSegments: rightTab === 'SLABS' && pavementWorkflow.previewBase ? pavementWorkflow.previewBase.segments : activeSegments,
     activeLengthKm,
     activeSplitDistance,
     handleSetSplitDistance,
@@ -673,7 +676,7 @@ export function useAlignmentState() {
     setCurrentKmPoints,
     importedLengthKm,
     setImportedLengthKm,
-    segmentsState: { ...segmentsState, slabs: isMainline ? segmentsState.slabs : [],
+    segmentsState: { ...segmentsState, selectedSegmentId: pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : segmentsState.selectedSegmentId, slabs: isMainline ? pavementWorkflow.display?.slabs || (pavementWorkflow.previewBase ? planMainlinePavement(pavementWorkflow.previewBase.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).slabs : segmentsState.slabs) : [],
       splitSortOrder: isMainline ? segmentsState.splitSortOrder : currentBranch?.splitSortOrder || 'asc',
       setSplitSortOrder: (order: 'asc' | 'desc') => isMainline ? segmentsState.setSplitSortOrder(order) : commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, splitSortOrder: order } : branch)),
       handleCreateNewSegment: handleCreateBranchSegment,

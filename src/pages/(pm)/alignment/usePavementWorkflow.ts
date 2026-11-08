@@ -1,3 +1,5 @@
+import { PAVEMENT_RENDER_TOLERANCE_METERS } from '../../../config/pavement'
+import { buildSavedPavement } from './savedPavementDisplay'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
@@ -7,16 +9,21 @@ import { pavementInput, pendingPavement, sameLayout, revisePavement, savePavemen
 
 export function usePavementWorkflow(projectId: string, sectionId: string, editor: PavementEditor,
   widthProfile: PavementLayoutInput['widthProfile'], widthsDirty: boolean, mainline: boolean,
-  restore: (layout: PavementLayoutInput | null) => void, notify: (message: string) => void) {
+  restore: (layout: PavementLayoutInput | null) => void, notify: (message: string) => void, editRevision = 0, widthRevision = 0) {
   const [params, setParams] = useSearchParams()
   const actor = useAuthStore(), epoch = actor.authEpoch, layoutId = params.get('layoutId') || ''
   const scope = `${epoch}:${projectId}:${layoutId}`, selection = useRef(scope); selection.current = `${scope}:${sectionId}:${params.get('routeVersionId') || ''}:${params.get('segmentSetId') || ''}`
   const [pins, setPins] = useState<PavementPins | null>(null), [prerequisite, setPrerequisite] = useState('Đang đọc prerequisite tấm/khe.')
   const [snapshot, setSnapshot] = useState<PavementLayoutView | null>(null), [savedProfile, setSavedProfile] = useState<PavementLayoutInput['widthProfile'] | null>(null)
-  const [tolerance, setTolerance] = useState<number | string>(''), [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState(''), [busy, setBusy] = useState(false)
   const [pending, setPending] = useState<ReturnType<typeof pendingPavement>>(null), [reload, setReload] = useState(0)
+  const [loading, setLoading] = useState(false), [error, setError] = useState('')
+  const [display, setDisplay] = useState<ReturnType<typeof buildSavedPavement> | null>(null)
+  const [savedWidthRevision, setSavedWidthRevision] = useState(widthRevision)
+  const [savedRevision, setSavedRevision] = useState(editRevision)
+  const revision = useRef(editRevision); revision.current = editRevision
   const running = useRef(false), hydrated = useRef(''), refs = useRef({ restore, notify }); refs.current = { restore, notify }
-  const editorSignature = JSON.stringify(editor), latestEditor = useRef(editorSignature); latestEditor.current = editorSignature
+  useEffect(() => { running.current = false; setBusy(false) }, [scope])
   const pinnedRoute = params.get('routeVersionId') || '', pinnedSet = params.get('segmentSetId') || ''
   useEffect(() => {
     let active = true
@@ -28,40 +35,37 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
   }, [projectId, sectionId, pinnedRoute, pinnedSet, epoch, reload])
   useEffect(() => {
     let active = true
-    const initialEditor = latestEditor.current
-    setSnapshot(null); setSavedProfile(null); setTolerance(''); setMessage(''); setBusy(false); running.current = false
+    const initialRevision = revision.current
+    const initialWidthRevision = widthRevision
+    setLoading(!!layoutId); setError('')
+    if (hydrated.current !== scope) { setSnapshot(null); setDisplay(null); setSavedProfile(null); setMessage('') }
     try {
       setPending(projectId ? pendingPavement(projectId) : null)
-      // Operator-approved rendering tolerance for a first save, scoped to this project/session.
-      // Existing layouts always restore their server value instead.
-      if (!layoutId && projectId) {
-        const approved = sessionStorage.getItem(`rg_pavement_tolerance_${projectId}`)
-        if (approved) { const value = JSON.parse(approved); if (value.source === 'operator' && Number.isFinite(value.value) && value.value > 0) setTolerance(value.value) }
-      }
-    } catch { setMessage('Không đọc được yêu cầu/tolerance tấm/khe đang chờ; chưa gửi lệnh mới.') }
+    } catch { setMessage('Không đọc được yêu cầu tấm/khe đang chờ; chưa gửi lệnh mới.') }
     if (layoutId && projectId) {
-      pavementService.readConfiguration(projectId, layoutId).then(({ snapshot: value, configuration }) => {
+      pavementService.readConfiguration(projectId, layoutId).then(async ({ snapshot: value, configuration }) => {
+        const route = await pavementService.layoutRoute(projectId, value, sectionId, pinnedRoute, pinnedSet)
+        const rendered = buildSavedPavement(value, configuration?.layout || null, route.engineeringSrid, route.stationOriginMeters, route)
         if (!active) return
-        setSnapshot(value)
+        setSnapshot(value); setDisplay(rendered)
         if (hydrated.current !== scope) {
           hydrated.current = scope
           const layout = configuration?.layout || null
-          if (latestEditor.current === initialEditor) refs.current.restore(layout)
+          if (revision.current === initialRevision) { refs.current.restore(layout); setSavedRevision(initialRevision) }
           else refs.current.notify('Đã đọc layout; bản chỉnh mới hơn được giữ, chưa nạp đè form.')
         }
-        setSavedProfile(configuration?.layout?.widthProfile || null)
-        setTolerance(configuration?.geometry.displayToleranceMeters ?? '')
+        setSavedProfile(configuration?.layout?.widthProfile || null); setSavedWidthRevision(initialWidthRevision)
         setMessage(`Đã đọc layout ${value.id}: ${value.geometry.plan?.cells?.length ?? 0} cell, ${value.geometry.slabs.length} tấm từ geometry server. ${value.kind === 'AS_BUILT' ? configuration ? 'Form lấy từ sourcePlanId, geometry vẫn là AS_BUILT.' : 'layout=null, chưa có cấu hình PLANNED nguồn.' : configuration ? 'KC/KG chỉ là cấu hình, chưa phải hình học khe được server xác nhận.' : 'layout=null: máy chủ không có cấu hình gốc.'}`)
-      }).catch(error => { if (active) { setMessage(`Không đọc được layout: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`) } })
+      }).catch(error => { if (active) { setError(`Không đọc được layout: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`) } }).finally(() => { if (active) setLoading(false) })
     }
     return () => { active = false }
-  }, [projectId, layoutId, epoch])
+  }, [projectId, layoutId, epoch, sectionId, pinnedRoute, pinnedSet, reload])
 
   let disabledReason = actor.user?.role !== RoleCode.PROJECT_MANAGER ? 'Chỉ PM được lưu cấu hình tấm/khe.'
-    : !mainline ? 'Chưa hỗ trợ lưu cấu hình tuyến nhánh.' : prerequisite
+    : loading ? 'Đang đọc layout server.' : error ? error : !mainline ? 'Chưa hỗ trợ lưu cấu hình tuyến nhánh.' : prerequisite
   let input: ReturnType<typeof pavementInput> | null = null
   if (!disabledReason && pins) {
-    try { input = pavementInput(editor, savedProfile && !widthsDirty ? savedProfile : widthProfile, pins.lengthMeters, tolerance) }
+    try { input = pavementInput(editor, savedProfile && savedWidthRevision === widthRevision ? savedProfile : widthProfile, pins.lengthMeters, PAVEMENT_RENDER_TOLERANCE_METERS) }
     catch (error) { disabledReason = (error as Error).message }
   }
   const revised = !!(pending?.rejected && input && (!sameLayout(pending.input.layout, input.layout) || pending.input.displayToleranceMeters !== input.displayToleranceMeters))
@@ -83,8 +87,10 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       }
       const result = await savePavement(projectId, held ? undefined : { pins: pins!, input: input! })
       if (!current()) return
-      sessionStorage.removeItem(`rg_pavement_tolerance_${projectId}`)
-      setPending(null); setSnapshot(result); setSavedProfile(result.layout!.widthProfile); setTolerance(result.geometry.displayToleranceMeters)
+      const route = await pavementService.layoutRoute(projectId, result, pins?.roadSectionId, result.routeVersionId, result.segmentSetId)
+      if (!current()) return
+      setDisplay(buildSavedPavement(result, result.layout!, route.engineeringSrid, route.stationOriginMeters, route)); setSavedRevision(revision.current)
+      setPending(null); setSnapshot(result); setSavedProfile(result.layout!.widthProfile); setSavedWidthRevision(widthRevision)
       const next = new URLSearchParams(params)
       next.set('layoutId', result.id); next.set('routeVersionId', result.routeVersionId); next.set('segmentSetId', result.segmentSetId)
       if (pins) next.set('roadSectionId', pins.roadSectionId)
@@ -96,11 +102,11 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       if (!current()) return
       try {
         const held = pendingPavement(projectId); setPending(held)
-        if (held?.receipt?.id) { const next = new URLSearchParams(params); next.set('layoutId', held.receipt.id); hydrated.current = `${epoch}:${projectId}:${held.receipt.id}`; setParams(next) }
+        if (held?.receipt?.id) { setDisplay(null); setSnapshot(null); const next = new URLSearchParams(params); next.set('layoutId', held.receipt.id); hydrated.current = `${epoch}:${projectId}:${held.receipt.id}`; setParams(next) }
       } catch { /* Retain the editor and surface the command error. */ }
       const text = error?.response ? `Lưu tấm/khe lỗi HTTP ${error.response.status}: ${error.response.data?.code || 'unknown'}. Bản chỉnh và command được giữ.` : error.message
       setMessage(text); refs.current.notify(text)
     } finally { if (current()) { running.current = false; setBusy(false) } }
   }
-  return { save, busy, pending, snapshot, layoutId, message, disabledReason, actionLabel, scopeMessage: pins ? `Lưu trên route ${pins.routeVersionId}, segment set ${pins.segmentSetId} đã PUBLISHED từ server; hình học khe preview chưa được xác nhận.` : '', retry: () => setReload(value => value + 1) }
+  return { save, busy, loading, error, previewBase: hydrated.current === scope ? display : null, display: hydrated.current === scope && savedRevision === editRevision ? display : null, savedProfile, pending, snapshot, layoutId, message: [message, loading ? 'Đang đọc layout server…' : error, display && savedRevision !== editRevision ? 'Preview PM mới chưa lưu; snapshot server được giữ riêng.' : ''].filter(Boolean).join(' '), disabledReason, actionLabel, scopeMessage: pins ? `Lưu trên route ${pins.routeVersionId}, segment set ${pins.segmentSetId} đã PUBLISHED từ server; hình học khe preview chưa được xác nhận.` : '', retry: () => setReload(value => value + 1) }
 }

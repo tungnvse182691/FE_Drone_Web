@@ -4,6 +4,7 @@ import { SlabItem, SegmentItem } from './types'
 import { pavementInputIssues, pavementNumber } from './alignmentPavementHelpers'
 
 export interface SidebarSlabsTabProps {
+  serverSnapshot?: boolean
   stripWidthMeters: number | string
   onSetStripWidthMeters: (val: number | string) => void
   slabLengthM: number | string
@@ -25,6 +26,7 @@ export interface SidebarSlabsTabProps {
 }
 
 export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
+  serverSnapshot = false,
   stripWidthMeters,
   onSetStripWidthMeters,
   slabLengthM,
@@ -44,8 +46,8 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
 }) => {
   const scopedSegments = selectedSegmentId === 'ALL' || !selectedSegmentId ? segments : segments.filter(segment => segment.id === selectedSegmentId)
   const scopedSlabs = slabs.filter(slab => scopedSegments.some(segment => segment.id === slab.segmentId))
-  const issues = pavementInputIssues(segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).filter(issue => !issue.segmentId || scopedSegments.some(segment => segment.id === issue.segmentId))
-  const notice = !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
+  const issues = serverSnapshot ? [] : pavementInputIssues(segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).filter(issue => !issue.segmentId || scopedSegments.some(segment => segment.id === issue.segmentId))
+  const notice = serverSnapshot ? 'Snapshot tấm đã lưu trên máy chủ; KC/KG chỉ là cấu hình, chưa phải geometry khe được xác nhận.' : !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
     : issues.map(issue => issue.message).join('; ')
   const inputValue = (value: number | string) => typeof value === 'string' ? value : Number.isFinite(value) ? value : ''
   return (

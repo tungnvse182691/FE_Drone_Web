@@ -44,6 +44,17 @@ export const pavementService = {
     if (set.id !== published[0].id || set.routeVersionId !== version || set.status !== 'PUBLISHED') throw new Error('Segment set đã thay đổi hoặc không đúng phạm vi.')
     return { projectId, roadSectionId: road.roadSectionId, routeVersionId: version, segmentSetId: set.id, lengthMeters: route.lengthMeters }
   },
+  async layoutRoute(projectId: string, layout: PavementLayoutView, sectionId?: string, routeId?: string, setId?: string) {
+    if (layout.projectId !== projectId || routeId && routeId !== layout.routeVersionId || setId && setId !== layout.segmentSetId) throw new Error('Layout không khớp project/routeVersionId/segmentSetId đang mở.')
+    const context = await alignmentService.readProjectContext(projectId)
+    const roads = context.roadSections.filter(road => sectionId ? road.roadSectionId === sectionId : road.currentVersionId === layout.routeVersionId)
+    if (roads.length !== 1) throw new Error('Cần roadSectionId server để đối chiếu route của layout; không dùng tuyến draft khác.')
+    const route = await alignmentService.readConfirmedGeometry(projectId, roads[0].roadSectionId, layout.routeVersionId)
+    if (route.projectId !== projectId || route.roadSectionId !== roads[0].roadSectionId || route.routeVersionId !== layout.routeVersionId) throw new Error('Geometry route của layout sai scope.')
+    const set = (await apiClient.get(`/projects/${projectId}/road-sections/${roads[0].roadSectionId}/versions/${layout.routeVersionId}/segment-sets/${layout.segmentSetId}`)).data
+    if (set.id !== layout.segmentSetId || set.routeVersionId !== layout.routeVersionId) throw new Error('Layout segment set không thuộc route server.')
+    return route
+  },
   async create(pins: PavementPins, input: PavementPlanInput, key: string): Promise<PavementLayoutView> {
     return (await apiClient.post(`/projects/${pins.projectId}/route-versions/${pins.routeVersionId}/segment-sets/${pins.segmentSetId}/pavement-plans`, input, { headers: { 'Idempotency-Key': key } })).data
   },
