@@ -56,6 +56,21 @@ test('server draft restores engineering state and map after F5 without file/prof
  h.project('q');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.fileDraft,null);assert.equal(h.calls.length,0);h.unmount()
 })
 
+test('pending order A URL→draft→geometry restores six pavement values only after confirmed references',()=>{
+ const h=harness(true);h.model.draftId='a';h.model.draft={data:{id:'a',projectId:'p',roadSectionId:null,status:'DRAFT'}};h.model.roadReference='';h.model.versionReference='';h.model.geometry=null;h.flush()
+ h.view.setStripWidthMeters('3.5');h.view.setSlabLengthM('5.25');h.view.setSlabThicknessCm('27');h.view.setContractionSpacingM('5');h.view.setExpansionSpacingM('50');h.view.setExpansionGapMm('20');h.flush()
+ h.model.roadReference='road';h.model.versionReference='v1';h.model.geometry=null;h.flush();h.model.draft={data:{id:'a',projectId:'p',roadSectionId:'road',status:'CONFIRMED'}};h.flush();assert.ok(Number.isNaN(h.view.slabLengthM))
+ const geometry={projectId:'p',roadSectionId:'road',routeVersionId:'v1',sourceDraftId:'a',metadataStatus:'COMPLETE',sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:0,lengthMeters:5,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5,widthMeters:7}],metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500003,1000004]]}};h.model.geometry=geometry;h.flush()
+ assert.equal(h.view.stripWidthMeters,'3.5');assert.equal(h.view.slabLengthM,'5.25');assert.equal(h.view.slabThicknessCm,'27');assert.equal(h.view.contractionSpacingM,'5');assert.equal(h.view.expansionSpacingM,'50');assert.equal(h.view.expansionGapMm,'20');assert.equal(h.view.alignmentStatus,'CONFIRMED');h.unmount()
+})
+test('pending order B URL→geometry→draft does not restore before confirmed and restores after',()=>{
+ const h=harness(true),g={projectId:'p',roadSectionId:'road',routeVersionId:'v1',sourceDraftId:'a',metadataStatus:'COMPLETE',sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:0,lengthMeters:5,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5,widthMeters:7}],metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500003,1000004]]}}
+ h.model.draftId='a';h.model.draft=null;h.model.roadReference='road';h.model.versionReference='v1';h.model.geometry=null;h.flush();h.view.setSlabLengthM('5.25');h.view.setSlabThicknessCm('27');h.view.setContractionSpacingM('5');h.view.setExpansionSpacingM('50');h.view.setExpansionGapMm('20');h.view.setStripWidthMeters('3.5');h.flush();h.model.geometry=g;h.flush();assert.equal(h.view.slabLengthM,'5.25');assert.equal(h.view.alignmentStatus,'CONFIRMED');h.model.draft={data:{id:'a',projectId:'p',roadSectionId:'road',status:'CONFIRMED'}};h.flush();assert.equal(h.view.slabLengthM,'5.25');assert.equal(h.view.alignmentStatus,'CONFIRMED');h.unmount()
+})
+test('pending order C/D and scope cancellation never restore a departed draft',()=>{
+ const h=harness(true),g={projectId:'p',roadSectionId:'road',routeVersionId:'v1',sourceDraftId:'a',metadataStatus:'COMPLETE',sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:0,lengthMeters:5,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5,widthMeters:7}],metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500003,1000004]]}}
+ h.model.draftId='a';h.model.draft={data:{id:'a',projectId:'p',roadSectionId:'road',status:'DRAFT'}};h.model.roadReference='';h.model.versionReference='';h.model.geometry=null;h.flush();h.view.setSlabLengthM('5.25');h.flush();h.model.roadReference='road';h.model.versionReference='v1';h.flush();h.model.geometry=null;h.model.versionReference='v2';h.flush();h.model.versionReference='v1';h.model.geometry=g;h.flush();assert.ok(Number.isNaN(h.view.slabLengthM));h.unmount()
+})
 test('confirmed geometry F5 hydrates metric-only map/chainage without dirtying editor or replacing pavement config',()=>{
  const h=harness(true),sampleDto=JSON.parse(sample);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',currentVersionId:'v1'}]}
  h.model.draftId='a';h.model.draft={data:{id:'a',projectId:'p',roadSectionId:'road',status:'CONFIRMED'}}

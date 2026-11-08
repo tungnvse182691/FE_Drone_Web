@@ -3819,3 +3819,8 @@ Tái hiện native click KC50 bị handler tuyến ghi đè popup và kéo zoom1
 ### 09/11/2026 — Race pending pavement target theo đầy đủ URL scope
 - Baseline3e9467afee32751d88725b0c2a147a74cb409fa3, hoang. Pending cấu hình draft→confirmed nay capture cả khi draft GET còn null/chưa CONFIRMED, chỉ một bản chờ có key authEpoch/project/draft/road/version đích. Restore chỉ khi draft CONFIRMED và geometry project/sourceDraft/road/version khớp; PM sửa config hoặc hydrate layout server hủy pending. Scope khác không áp dụng, consume sau restore, reset confirmedGeometryScope giữ nguyên.
 - Test focused delayed race giữ đủ6 trường, version khác không giữ, v1 width hydrate lại, same scope/F5/draft/pavement không hồi quy; typecheck/diff-check PASS. Browser NOT_RUN vì ABC1 chưa confirmed version; không mutation.
+
+
+### 09/11/2026 — Hoàn tất pending cấu hình với 4 thứ tự response
+- Baseline3e9467afee32751d88725b0c2a147a74cb409fa3, hoang. Thêm test tách A URL→draft→geometry, B URL→geometry→draft, C/D scope draft/URL/geometry; pending capture ngay trước reset chỉ khi scope draft/project đúng, target key đầy đủ auth/project/draft/road/version. Chỉ restore sau draft CONFIRMED + geometry khớp; pending một bản, scope rời hủy, PM/layout đổi hủy, restore consume.
+- 34 nhóm draft state/map/save + 17 nhóm pavement related PASS; typecheck/diff-check PASS. Các test kiểm state sáu giá trị thực, widthProfile, dirty/status/scope; không chỉ log PASS. Browser NOT_RUN confirmed vì ABC1 chưa confirmed version, không mutation. Giữ local ngoài nhiệm vụ.

@@ -111,7 +111,7 @@ export function useAlignmentState() {
       const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
       const pendingKey = `${authEpoch}:${selectedProjectId}:${geometry.sourceDraftId || ''}:${geometry.roadSectionId}:${geometry.routeVersionId}`
       const pendingPavement = pendingConfirmedPavement.current?.key === pendingKey ? pendingConfirmedPavement.current.value : null
-      if (pendingPavement && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
+      if (pendingPavement && geometryRead.draft?.data.status === 'CONFIRMED' && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
         setStripWidthMeters(pendingPavement.stripWidthMeters); setSlabLengthM(pendingPavement.slabLengthM); setSlabThicknessCm(pendingPavement.slabThicknessCm)
         setContractionSpacingM(pendingPavement.contractionSpacingM); setExpansionSpacingM(pendingPavement.expansionSpacingM); setExpansionGapMm(pendingPavement.expansionGapMm); setSyncJointWithSlab(pendingPavement.syncJointWithSlab)
         pendingConfirmedPavement.current = null
@@ -423,6 +423,8 @@ export function useAlignmentState() {
     const previousScope = editorScope.split(':')
     const previousDraftOnly = previousScope[3] === '' && previousScope[4] === ''
     const previousUnboundDraft = previousScope[2] === '' && !!geometryRead.draftId && previousScope[3] === geometryRead.roadReference && previousScope[4] === geometryRead.versionReference
+    const targetPendingKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId || ''}:${geometryRead.roadReference}:${geometryRead.versionReference}`
+    if (pendingConfirmedPavement.current && pendingConfirmedPavement.current.key !== targetPendingKey) pendingConfirmedPavement.current = null
     const confirmedGeometry = geometryRead.geometry
     const confirmedDraftTransition = geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId &&
       geometryRead.draft.data.projectId === selectedProjectId && (editorScope === draftScope || previousUnboundDraft) &&
