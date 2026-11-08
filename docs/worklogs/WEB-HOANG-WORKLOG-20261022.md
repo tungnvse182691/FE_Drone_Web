@@ -3799,3 +3799,8 @@ Tái hiện native click KC50 bị handler tuyến ghi đè popup và kéo zoom1
 - Baseline690f4b3765c2f7fd55697589169dbb1b9b4731a3, hoang. Đọc AGENTS/status/diff và chỉ sửa useAlignmentState + focused state test. Scope confirmed/draft chuyển route có thể gọi resetEditor làm mất slabLength/H/KC/KG/strip; resetEditor nay nhận preservePavement chỉ khi cùng project+draf t confirmed chuyển thêm road/version, giữ toàn bộ cấu hình PM chưa lưu. Chuyển route/version/project thật sự vẫn reset.
 - Test confirmed transition nhập đủ strip/L/H/KC/KG/gap trước server CONFIRMED, kiểm toàn bộ còn nguyên + status CONFIRMED + geometry; v1 dirty→v2 width khác nhận đúng v2/dirtyfalse; same-scope/local, scope cũ/response trễ, draft/F5 tests PASS. Typecheck/diff-check PASS.
 - Browser confirmed NOT_RUN (ABC1 chưa confirmed version phù hợp), không mutation. Giữ local ngoài nhiệm vụ.
+
+
+### 09/11/2026 — Reset dấu hydrate khi đổi confirmed route/version
+- Baseline6f2700692ba797e73b45c6d3e5ac500fe22bfa42, hoang. Scope editor đã gồm route/version nhưng confirmedGeometryScope cũ chưa reset khi geometry=null/đổi scope, làm quay lại v1 bỏ sót widthProfile; confirmedDraftTransition cũng preserve pavement quá rộng. Sửa reset scope xoá confirmedGeometryScope, và chỉ preserve pavement khi draft CONFIRMED đúng cùng project/draft trong prefix scope cũ; đổi route/version/project reset thật.
+- Test A v1→v2 geometry=null→v1 kiểm lại số khoảng/width; B draft→confirmed nhập đủ strip/L/H/KC/KG/gap trước chuyển và giữ toàn bộ; C confirmed v1→version khác không giữ cấu hình; D same-scope local edit/F5 giữ. Draft/F5/pavement config checks không hồi quy. Focused test PASS, typecheck/diff-check PASS. Browser confirmed NOT_RUN (ABC1 chưa confirmed version), không mutation.

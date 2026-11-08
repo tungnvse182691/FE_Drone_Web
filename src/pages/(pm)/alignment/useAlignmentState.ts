@@ -413,6 +413,7 @@ export function useAlignmentState() {
     const confirmedDraftTransition = geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId && editorScope.startsWith(`${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:`)
     setEditorScope(scopeKey)
     editorDraft.current = ''
+    confirmedGeometryScope.current = ''
     resetEditor(confirmedDraftTransition)
     importState.setManualCoordsText('')
     setToastMessage(null)
