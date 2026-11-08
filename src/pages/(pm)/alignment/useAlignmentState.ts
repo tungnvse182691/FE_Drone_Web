@@ -59,7 +59,7 @@ export function useAlignmentState() {
 
   // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
   const geometryRead = useGeometryReadModel(selectedProjectId)
-  const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`
+  const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`
   const [editorScope, setEditorScope] = useState(scopeKey)
   const currentScope = useRef(scopeKey); currentScope.current = scopeKey
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
