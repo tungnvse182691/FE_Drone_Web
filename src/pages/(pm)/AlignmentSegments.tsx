@@ -147,6 +147,23 @@ export const AlignmentSegments: React.FC = () => {
         </div>
       )}
 
+      {draftWorkflow.reasonModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form role="dialog" aria-modal="true" aria-labelledby="draft-reason-title" onSubmit={event => { event.preventDefault(); void (draftWorkflow.pending ? draftWorkflow.retryCommand() : draftWorkflow.save(true)) }} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4">
+            <h3 id="draft-reason-title" className="font-bold text-slate-900 text-base">Lý do cập nhật</h3>
+            <label className="text-sm text-slate-700 flex flex-col gap-2">
+              Lý do cập nhật
+              <textarea autoFocus rows={3} disabled={draftWorkflow.busy || !!draftWorkflow.pending} value={draftWorkflow.form.reason} onChange={event => draftWorkflow.setForm(old => ({ ...old, reason: event.target.value }))} className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-brand-gold" />
+            </label>
+            {draftWorkflow.reasonError && <p role="alert" className="text-xs text-rose-700">{draftWorkflow.reasonError}</p>}
+            {draftWorkflow.message && <p role="status" className="text-xs text-slate-600">{draftWorkflow.message}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.cancelReason} className="px-4 py-2 rounded-lg border border-slate-200 text-sm">Hủy</button>
+              <button type="submit" disabled={draftWorkflow.busy || draftWorkflow.conflict || !!draftWorkflow.pending?.rejected} className="px-4 py-2 rounded-lg bg-brand-gold text-white text-sm font-semibold disabled:opacity-50">{draftWorkflow.busy ? 'Đang lưu…' : draftWorkflow.pending ? draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu' : 'Lưu'}</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* MODALS */}
       <AlignmentModals
         isImportModalOpen={importState.isImportModalOpen}
@@ -215,7 +232,7 @@ export const AlignmentSegments: React.FC = () => {
         onSubmitAlignment={handleSubmitAlignment}
         onLockAlignment={handleLockAlignment}
         commandBusy={draftWorkflow.busy}
-        saveDisabledReason={draftWorkflow.saveReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
+        saveDisabledReason={draftWorkflow.saveDisabledReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
         confirmDisabledReason={draftWorkflow.confirmReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
       />
 

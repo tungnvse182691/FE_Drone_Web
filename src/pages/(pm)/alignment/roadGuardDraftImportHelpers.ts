@@ -26,7 +26,7 @@ export function parseRoadGuardDraftJson(text: string): RoadGuardCoordinatesDraft
   return draft
 }
 
-function validateCoordinateDraft(draft: any, requireReason: boolean): void {
+export function validateCoordinateDraft(draft: any, requireReason: boolean): void {
   const fail = (field: string, message: string): never => { throw new RoadGuardDraftValidationError(`${field}: ${message}`) }
   const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) fail('Draft', 'phải là đối tượng JSON, không phải GeoJSON.')

@@ -588,7 +588,7 @@ export function useAlignmentState() {
     setter(value)
   }
 
-  const handleSubmitAlignment = draftWorkflow.save
+  const handleSubmitAlignment = () => draftWorkflow.save()
   const handleLockAlignment = draftWorkflow.confirm
 
   const basePath = isSupervisor ? '/sup' : '/pm'

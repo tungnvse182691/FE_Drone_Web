@@ -207,19 +207,38 @@ await test('first dispatch uses the same immutable payload that was journaled, e
 })
 
 function hydrateHarness(sourceUnverified=false){
+ const control={error:null}
  const React=require('react');let slot=0,view,coords='',versionReads=0,held=null;const values=[],effects=[],writes=[]
  const hooks={...React,useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={setup,deps,cleanup:old?.cleanup,pending:true}}}
  const model={draftId:dto.id,draft:{data:{...dto},etag:'"AAAAAAAAAAE="'},draftLoading:false,draftError:'',context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],readiness:{ready:true,missingFields:[],errors:[]},retry(){versionReads++;model.draft=null;model.draftLoading=true;model.draftError=''},openDraft(){},openConfirmed(){},setReadiness(){}}
  const notices=[]
  const api={getGeometryDraft:async()=>model.draft,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100}),readDraftReadiness:async()=>model.readiness}
- const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
+ const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);if(control.error)throw control.error;return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
  const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
  const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,text=>notices.push(text),sourceUnverified);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
  const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
  const prepare=async()=>{render();await flush();view.setForm({...view.form,profileId:'profile',reason:'Bản nhập chưa được quyết định'});render();return view}
  const hydrate=(etag)=>{model.draft={data:{...dto,version:etag.slice(1,-1),stationOriginMeters:999},etag};model.draftLoading=false;model.draftError='';render()}
- return{model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
+ return{control,model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
 }
+await test('reason modal opens after F5, validates whitespace, cancels without writes and sends the current update once',async()=>{
+ const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render()
+ assert.equal(h.view.saveDisabledReason,'');await h.view.save();h.render();assert.equal(h.view.reasonModalOpen,true);assert.equal(h.writes.length,0)
+ h.view.setForm({...h.view.form,reason:'   '});h.render();await h.view.save(true);h.render();assert.match(h.view.reasonError,/khoảng trắng/);assert.equal(h.writes.length,0)
+ const coords=h.coords;h.view.cancelReason();h.render();assert.equal(h.view.reasonModalOpen,false);assert.equal(h.coords,coords);assert.equal(h.view.form.origin,'0')
+ await h.view.save();h.render();h.view.setForm({...h.view.form,reason:'PM cập nhật sau F5'});h.render();const save=h.view.save;await save(true);await save(true);h.render()
+ assert.equal(h.writes.length,1);assert.equal(h.writes[0].kind,'update');assert.equal(h.writes[0].draftId,dto.id);assert.equal(h.writes[0].etag,'"AAAAAAAAAAE="');assert.equal(h.writes[0].input.changeReason,'PM cập nhật sau F5');assert.equal(h.view.reasonModalOpen,false);h.unmount()
+})
+await test('reason modal preserves reason/editor on API error; pending retry cannot replace its payload',async()=>{
+ const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render();await h.view.save();h.render()
+ h.view.setForm({...h.view.form,reason:'PM giữ lý do khi lỗi'});h.render();h.control.error=fail(503,'dependency_unavailable')
+ const command={kind:'update',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{...draftInput,changeReason:h.view.form.reason}}
+ h.setHeld({key:'same-key',command});await h.view.save(true);h.render()
+ assert.equal(h.view.reasonModalOpen,true);assert.equal(h.view.form.reason,'PM giữ lý do khi lỗi');assert.ok(h.coords.includes('500000'));assert.equal(h.view.busy,false)
+ assert.equal(h.view.pending.key,'same-key');assert.equal(h.view.pending.command.input.changeReason,'PM giữ lý do khi lỗi')
+ const writes=h.writes.length;h.view.setForm({...h.view.form,reason:'Không sửa command đang chờ'});h.render();await h.view.save(true);assert.equal(h.writes.length,writes)
+ h.control.error=null;await h.view.retryCommand();h.render();assert.equal(h.writes.at(-1),undefined);assert.equal(h.view.reasonModalOpen,false);h.unmount()
+})
 await test('saved V2 then hydrate a different opaque V3 releases busy without overwriting input, accepting it or writing again',async()=>{
  const h=hydrateHarness();await h.prepare();const save=h.view.save;await save();h.render();assert.equal(h.view.busy,true);assert.equal(h.writes.length,1)
  h.hydrate('"AAAAAAAAAAA="');await h.flush();assert.equal(h.view.busy,false);assert.equal(h.view.conflict,true);assert.equal(h.view.freshVersion,false);assert.equal(h.view.form.origin,'0');assert.equal(h.view.form.reason,'Bản nhập chưa được quyết định');assert.ok(h.coords.includes('500000'));assert.match(h.view.message,/phiên bản khác/);assert.ok(!h.view.saveReason.includes('Đang nạp'))
