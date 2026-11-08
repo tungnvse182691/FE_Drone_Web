@@ -1,3 +1,4 @@
+import { slabPopupValues } from './alignmentSlabPopup'
 import * as maplibregl from 'maplibre-gl'
 
 // Biến lưu trữ marker ghim vị trí toàn cục trong tương tác bản đồ
@@ -211,15 +212,13 @@ export function setupAlignmentMapInteractions(
 
     const targetSegId = p.segmentId || p.id
     const targetBranchId = p.branchId
-    const displayLabel = p.branchCode
-      ? `[${p.branchCode}] ${p.segmentCode || p.code}`
-      : (p.segmentCode || p.code)
+    const content = slabPopupValues(p)
 
     // 1. Kích hoạt chọn phân đoạn và chuyển đúng tuyến (Trục chính hoặc Nhánh)
     triggerSelectSegment(targetSegId, targetBranchId, f)
 
     // Keep close inspection zoom; do not hide labels by zooming out after a cell click.
-    pinAndFocusFeature(e.lngLat, f, displayLabel, Math.max(map.getZoom(), 18.5))
+    pinAndFocusFeature(e.lngLat, f, content.code, Math.max(map.getZoom(), 18.5))
 
     // 3. Mở popup chi tiết tấm phong cách RoadGuard Dark
     if (popupRef.current) popupRef.current.remove()
@@ -230,15 +229,15 @@ export function setupAlignmentMapInteractions(
           <div class="flex items-center justify-between pb-2 border-b border-slate-700/80 mb-2">
             <span class="font-bold text-white text-sm flex items-center gap-1.5">
               <span>🧱</span>
-              <span>${p.code}</span>
+              <span>${content.code}</span>
             </span>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">Preview — chưa lưu/chưa xác nhận</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">${content.status}</span>
           </div>
           <div class="space-y-1.5 text-slate-300">
-            <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${p.station}</span> (${p.lane})</div>
-            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${p.lengthM}m × ${p.widthM}m × ${Number.isFinite(p.thicknessCm) ? p.thicknessCm : "Chưa có dữ liệu"}cm</span></div>
-            <div>🛣️ <strong>Cự ly mép đường:</strong> <span class="font-mono text-sky-400 font-semibold">${p.edgeOffset}</span></div>
-            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly ${Number.isFinite(p.contractionSpacingM) ? p.contractionSpacingM : "Chưa có dữ liệu"}m</div>
+            <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${content.station}</span> (${content.lane})</div>
+            <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${content.dimensions}</span></div>
+            <div>🛣️ <strong>${content.lateralLabel}:</strong> <span class="font-mono text-sky-400 font-semibold">${content.edgeOffset}</span></div>
+            <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly ${content.contraction}</div>
           </div>
         </div>
       `)

@@ -8,7 +8,7 @@ function environment(){
  let result,readError=false,createError=false,delay=null
  const client={async post(url,body,options){calls.push({method:'POST',url,body:plain(body),key:options.headers['Idempotency-Key']});if(delay)await delay;if(createError)throw Error('timeout');return{data:result||fixture(body)}},async get(url,options){calls.push({method:'GET',url,options});if(readError)throw Error('GET failed');if(url.endsWith('/work-package'))return{data:{projectId:project,status:'ACTIVE',roadSections:[{roadSectionId:'road',currentVersionId:'route'}]}};if(url.endsWith('/geometry'))return{data:{projectId:project,roadSectionId:'road',routeVersionId:'route',engineeringSrid:32648,stationOriginMeters:0,lengthMeters:10}};if(url.endsWith('/segment-sets'))return{data:{items:[{id:'set',routeVersionId:'route',status:'PUBLISHED'}],nextCursor:null}};if(url.endsWith('/segment-sets/set'))return{data:{id:'set',routeVersionId:'route',status:'PUBLISHED'}};return{data:result}}}
  const auth={useAuthStore:Object.assign(()=>state,{getState:()=>state,subscribe(){}})},mocks={'../../../api/services/alignmentService':{utm48NToWgs84:(x,y)=>[x/100000,y/100000]},'../client':{apiClient:client},'../../store/authStore':auth,'../../../store/authStore':auth,'../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'../../../types/enums':{RoleCode:{PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}},'./alignmentService':{alignmentService:{readProjectContext:async p=>(await client.get('/projects/'+p+'/work-package')).data,readConfirmedGeometry:async(p,r,v)=>(await client.get(`/projects/${p}/road-sections/${r}/versions/${v}/geometry`)).data}}}
- function load(file){file=path.normalize(file);if(cache.has(file))return cache.get(file);const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;cache.set(file,module.exports);vm.runInNewContext(code,{module,exports:module.exports,require(n){if(n in mocks)return mocks[n];return load(path.join(path.dirname(file),n+'.ts'))},console,Error,URLSearchParams,crypto:webcrypto,sessionStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}});return module.exports}
+ function load(file){file=path.normalize(file);if(cache.has(file))return cache.get(file);const module={exports:{}},code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;cache.set(file,module.exports);vm.runInNewContext(code,{module,exports:module.exports,require(n){if(n in mocks)return mocks[n];return load(path.join(path.dirname(file),n+'.ts'))},console,Error,document:{createElement:()=>({})},URLSearchParams,crypto:webcrypto,sessionStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)}});return module.exports}
  const service=load('src/api/services/pavementService.ts').pavementService,commands=load('src/api/services/pavementCommands.ts')
  return{service,commands,storage,calls,state,mocks,load,client,setResult:v=>result=v,setReadError:v=>readError=v,setCreateError:v=>createError=v,setDelay:v=>delay=v}
 }
@@ -115,9 +115,44 @@ await test('layout retry reissues GET after error, preserves server tolerance an
  render();await flush();assert.match(view.error,/network/);assert.equal(view.loading,false);assert.equal(restored.length,0)
  fail=false;view.retry();render();await flush();assert.equal(reads,2);assert.equal(view.error,'');assert.equal(view.display.slabs.length,1);assert.equal(restored.length,1)
  assert.match(view.display.label,/.37/);e.setResult(fixture({...input,displayToleranceMeters:.1}));await view.save();render();await flush();const write=e.calls.find(x=>x.method==='POST');assert.equal(write.body.displayToleranceMeters,.1)
- revision++;render();assert.equal(view.display,null)
- e.service.readConfiguration=()=>new Promise(r=>resolve=r);view.retry();render();const late=resolve;revision++;render();late({snapshot,configuration:snapshot});await flush();assert.equal(restored.length,1);assert.equal(view.display,null)
+ revision++;render();assert.ok(view.display);assert.match(view.message,/Chưa đủ quan hệ/)
+ e.service.readConfiguration=()=>new Promise(r=>resolve=r);view.retry();render();const late=resolve;revision++;render();late({snapshot,configuration:snapshot});await flush();assert.equal(restored.length,1);assert.ok(view.display)
  query=new URLSearchParams('layoutId=other');render();const old=resolve;id='other-project';query=new URLSearchParams();render();old({snapshot,configuration:snapshot});await flush();assert.equal(view.snapshot,null);assert.equal(view.display,null)
+})
+await test('PLANNED preview uses authoritative metric offsets, never haversine; incomplete/native chainage keeps snapshot',()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input),build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement
+ const route={projectId:project,routeVersionId:'route',stationOriginMeters:1000,lengthMeters:10,metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500004,1000000],[500010,1000000]]}}
+ const view=build(snapshot,input.layout,32648,1000,route);assert.equal(view.previewReady,true);assert.deepEqual(plain(view.kmPoints),[1,1.004,1.01]);assert.equal(view.previewCoordinates.length,3)
+ const plan=e.load('src/pages/(pm)/alignment/alignmentPavementHelpers.ts').planMainlinePavement
+ assert.ok(plan(view.segments,{stripWidthMeters:3.5,slabLenM:2}).slabs.length>view.slabs.length);assert.equal(view.slabs.length,1);assert.equal(snapshot.geometry.slabs[0].lengthMeters,5)
+ assert.equal(build(snapshot,input.layout,32648,1000,{...route,lengthMeters:12}).previewReady,false)
+ assert.equal(build(snapshot,input.layout,32648,1000,{...route,crsProfileRevisionId:'native'}).previewReady,false)
+ assert.equal(build(snapshot,input.layout,32648,null,route).previewReady,false)
+})
+await test('snapshot popup binds actual cell/slab metadata and escapes missing values; AS_BUILT accepts plan null with real footprint',()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input),build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement,popup=e.load('src/pages/(pm)/alignment/alignmentSlabPopup.ts').slabPopupValues
+ const view=build(snapshot,input.layout,32648,1000),p=view.preview.slabsGeoJSON.features[0].properties,text=popup(p)
+ assert.equal(p.fromLateralMeters,0);assert.equal(p.toLateralMeters,3.5);assert.match(text.station,/1000–1005/);assert.match(text.lane,/0–3.5/);assert.match(text.status,/Đã lưu trên máy chủ.*layout/);assert.ok(!text.status.includes('Preview'));assert.ok(!JSON.stringify(text).includes('undefined'))
+ const built={...snapshot,kind:'AS_BUILT',layout:null,geometry:{...snapshot.geometry,plan:null,slabs:[{...snapshot.geometry.slabs[0],plannedSequence:null,lengthMeters:null,widthMeters:null}]}}
+ const actual=build(built,input.layout,32648,1000);assert.equal(actual.slabs.length,1);assert.deepEqual(plain(actual.preview.slabsGeoJSON.features[0].geometry.coordinates),plain(view.preview.slabsGeoJSON.features[0].geometry.coordinates))
+ const unknown=popup(actual.preview.slabsGeoJSON.features[0].properties);assert.equal(unknown.station,'Chưa có dữ liệu');assert.match(unknown.dimensions,/Chưa có dữ liệu/);assert.ok(!JSON.stringify(unknown).includes('undefined'));assert.ok(!Number.isFinite(actual.slabs[0].lengthM))
+ assert.throws(()=>build({...snapshot,geometry:{...snapshot.geometry,plan:null}},input.layout,32648,0),/cells/)
+ assert.match(popup({code:'<script>'}).code,/&lt;script&gt;/);assert.match(popup({}).status,/Preview/)
+})
+await test('actual slab click handler uses snapshot status/layoutId and missing AS_BUILT values without undefined',()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input),build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement
+ let html='',selected;class Marker{setLngLat(){return this}addTo(){return this}remove(){}}
+ class Popup{setLngLat(){return this}setHTML(s){html=s;return this}addTo(){return this}remove(){}}
+ e.mocks['maplibre-gl']={Marker,Popup}
+ const handlers={},map={on(event,layer,fn){if(typeof layer==='string')handlers[event+layer]=fn},getZoom:()=>19,flyTo(){}}
+ e.load('src/pages/(pm)/alignment/alignmentMapInteractions.ts').setupAlignmentMapInteractions(map,{current:null},id=>selected=id)
+ const saved=build(snapshot,input.layout,32648,1000).preview.slabsGeoJSON.features[0]
+ handlers['clickslabs-fill-layer']({features:[saved],originalEvent:{},lngLat:{lng:1,lat:1}})
+ assert.match(html,/Đã lưu trên máy chủ/);assert.match(html,/layoutId: layout/);assert.match(html,/1000–1005/);assert.match(html,/Vị trí dải ngang/);assert.ok(!html.includes('undefined'));assert.ok(!html.includes('Preview — chưa lưu'))
+ const built={...snapshot,kind:'AS_BUILT',geometry:{...snapshot.geometry,plan:null,slabs:[{...snapshot.geometry.slabs[0],plannedSequence:null,lengthMeters:null,widthMeters:null}]}}
+ const actual=build(built,null,32648).preview.slabsGeoJSON.features[0]
+ handlers['clickslabs-fill-layer']({features:[actual],originalEvent:{},lngLat:{lng:1,lat:1}})
+ assert.match(html,/Chưa có dữ liệu/);assert.ok(!html.includes('undefined'));assert.ok(selected)
 })
 console.log(`${count} pavement scoped groups PASS (mock HTTP/hooks, not live persistence).`)
 })().catch(error=>{console.error(error);process.exitCode=1})

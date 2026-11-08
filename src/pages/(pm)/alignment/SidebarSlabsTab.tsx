@@ -239,7 +239,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-mono font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                    Dài {slab.lengthM}m × Rộng {slab.widthM}m
+                    Dài {Number.isFinite(slab.lengthM) ? `${slab.lengthM}m` : 'Chưa có dữ liệu'} × Rộng {Number.isFinite(slab.widthM) ? `${slab.widthM}m` : 'Chưa có dữ liệu'}
                   </span>
                 </div>
               </div>

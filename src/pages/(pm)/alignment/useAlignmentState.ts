@@ -272,8 +272,8 @@ export function useAlignmentState() {
   const mapState = useAlignmentMapState({
     segments: pavementWorkflow.previewBase?.segments || segmentsState.segments,
     savedPavement: pavementWorkflow.display?.preview,
-    currentCoords: pavementWorkflow.previewBase ? pavementWorkflow.previewBase.coordinates : currentCoords,
-    currentKmPoints: pavementWorkflow.previewBase ? [] : currentKmPoints,
+    currentCoords: pavementWorkflow.previewBase ? pavementWorkflow.display ? pavementWorkflow.previewBase.coordinates : pavementWorkflow.previewBase.previewCoordinates : currentCoords,
+    currentKmPoints: pavementWorkflow.previewBase ? pavementWorkflow.previewBase.kmPoints : currentKmPoints,
     selectedSegmentId: pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : selectedTargetType !== 'MAINLINE' && segmentsState.selectedSegmentId === 'ALL' ? selectedTargetType : segmentsState.selectedSegmentId,
     setSelectedSegmentId: (id: string | null) => {
       if (id) {
