@@ -35,6 +35,7 @@ export const AlignmentSegments: React.FC = () => {
     assignedProjects,
     activeProject,
     geometryRead,
+    pavementWorkflow,
     draftWorkflow,
     localDraftDirty, markLocalDraft, markWidthDraft,
     alignmentStatus,
@@ -103,7 +104,7 @@ export const AlignmentSegments: React.FC = () => {
   ].filter(Boolean)
 
   const workflowActions = <>
-    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={geometryRead.retry} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
+    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={() => { geometryRead.retry(); pavementWorkflow.retry() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
     {geometryRead.draft && <button type="button" disabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.loadPreview() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Xem trước bản đã lưu</button>}
     {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc lại bản đã lưu</button>}
     {draftWorkflow.pending && <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>}
@@ -112,7 +113,7 @@ export const AlignmentSegments: React.FC = () => {
       <button type="button" disabled={draftWorkflow.busy} onClick={() => { void draftWorkflow.reviewConflict() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc hồ sơ đối chiếu</button>
       <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Giữ bản nhập, dùng phiên bản vừa đọc</button>
     </>}
-    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
+    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${pavementWorkflow.layoutId ? `&layoutId=${encodeURIComponent(pavementWorkflow.layoutId)}` : ''}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
   </>
 
   // Nếu vai trò Supervisor truy cập danh mục menu /sup/alignment mà chưa chọn dự án: hiển thị danh sách thẩm duyệt thay vì trỏ thẳng vào 1 tuyến
@@ -331,7 +332,8 @@ export const AlignmentSegments: React.FC = () => {
           mainlineLengthKm={importedLengthKm}
           alignmentStatus={alignmentStatus}
           isSupervisor={isSupervisor}
-          editingDisabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
+          pavementWorkflow={pavementWorkflow}
+          editingDisabled={pavementWorkflow.busy || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
         />
       </section>
     </div>

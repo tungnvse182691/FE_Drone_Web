@@ -9,8 +9,10 @@ import { SidebarSegmentsTab } from './SidebarSegmentsTab'
 import { SidebarWidthProfileTab } from './SidebarWidthProfileTab'
 import { SidebarSlabsTab } from './SidebarSlabsTab'
 import { SidebarFooterKpis } from './SidebarFooterKpis'
+import type { usePavementWorkflow } from './usePavementWorkflow'
 
 export interface AlignmentSidebarProps {
+  pavementWorkflow?: ReturnType<typeof usePavementWorkflow>
   rightTab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   onSetRightTab: (tab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS') => void
   segments: SegmentItem[]
@@ -65,6 +67,7 @@ export interface AlignmentSidebarProps {
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
+  pavementWorkflow,
   onSetRightTab,
   segments,
   selectedSegmentId,
@@ -208,7 +211,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
 
         {/* TAB CONTENT: SLABS & JOINTS CONFIG */}
         {rightTab === 'SLABS' && (
-          <fieldset disabled={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
+          <fieldset disabled={isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
             stripWidthMeters={stripWidthMeters}
             onSetStripWidthMeters={onSetStripWidthMeters}
@@ -231,6 +234,10 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           />
           </fieldset>
         )}
+        {rightTab === 'SLABS' && pavementWorkflow && <>
+          {!isSupervisor && <button type="button" disabled={pavementWorkflow.busy || (!pavementWorkflow.pending && !!pavementWorkflow.disabledReason)} title={pavementWorkflow.disabledReason} onClick={() => { void pavementWorkflow.save() }} className="px-3 py-2 rounded-lg border border-brand-gold text-brand-dark text-xs font-semibold disabled:opacity-50">{pavementWorkflow.busy ? 'Đang lưu/đọc lại…' : pavementWorkflow.actionLabel}</button>}
+          {(pavementWorkflow.message || pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage) && <p role="status" className="text-xs text-slate-600">{[pavementWorkflow.message, !isSupervisor && (pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage)].filter(Boolean).join(' ')}</p>}
+        </>}
       </div>
 
       {/* KPI TỔNG KẾT DƯỚI SIDEBAR */}

@@ -17,6 +17,7 @@ import { useAlignmentImportState } from './useAlignmentImportState'
 import { restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
 import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import { planMainlinePavement } from './alignmentPavementHelpers'
+import { usePavementWorkflow } from './usePavementWorkflow'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -588,6 +589,18 @@ export function useAlignmentState() {
     setter(value)
   }
 
+  const pavementWorkflow = usePavementWorkflow(selectedProjectId, draftWorkflow.form.sectionId,
+    { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
+    editedFileDraft?.widthProfile || [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
+      fromOffsetMeters: segment.startKm * 1000 - (draftWorkflow.form.origin.trim() ? Number(draftWorkflow.form.origin) : Number.NaN),
+      toOffsetMeters: segment.endKm * 1000 - (draftWorkflow.form.origin.trim() ? Number(draftWorkflow.form.origin) : Number.NaN), widthMeters: segment.roadWidthM
+    })), localWidthsDirty, isMainline,
+    layout => {
+      setStripWidthMeters(layout?.stripWidthMeters ?? Number.NaN); setSlabLengthM(layout?.slabLengthMeters ?? Number.NaN)
+      setSlabThicknessCm(layout?.slabThicknessCentimeters ?? Number.NaN); setContractionSpacingM(layout?.contractionJointSpacingMeters ?? Number.NaN)
+      setExpansionSpacingM(layout?.expansionJointSpacingMeters ?? Number.NaN); setExpansionGapMm(layout?.expansionJointGapMillimeters ?? Number.NaN)
+    }, showToast)
+
   const handleSubmitAlignment = () => draftWorkflow.save()
   const handleLockAlignment = draftWorkflow.confirm
 
@@ -596,6 +609,7 @@ export function useAlignmentState() {
 
   return {
     geometryRead,
+    pavementWorkflow,
     fileDraft,
     localDraftDirty, markLocalDraft, markWidthDraft,
     draftWorkflow,
