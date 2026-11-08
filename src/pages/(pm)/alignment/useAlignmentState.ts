@@ -350,6 +350,13 @@ export function useAlignmentState() {
 
   useEffect(() => {
     if (!fileDraft || editorScope !== scopeKey) return
+    const confirmedDraft = geometryRead.draft?.data
+    const confirmedGeometry = geometryRead.geometry
+    if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'CONFIRMED' &&
+      confirmedDraft.id === geometryRead.draftId && confirmedGeometry?.projectId === selectedProjectId &&
+      confirmedGeometry.sourceDraftId === confirmedDraft.id &&
+      (!geometryRead.roadReference || confirmedGeometry.roadSectionId === geometryRead.roadReference) &&
+      (!geometryRead.versionReference || confirmedGeometry.routeVersionId === geometryRead.versionReference)) return
     const origin = fileDraft.stationOriginMeters
     draftWorkflow.setForm(old => ({ ...old, origin: String(origin), reason: fileDraft.changeReason ?? old.reason,
       surveyWidth: String(fileDraft.surveyWidthMeters),
