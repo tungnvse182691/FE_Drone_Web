@@ -18,6 +18,7 @@ export interface UseAlignmentMapStateParams {
   selectedSegmentId: string | null
   setSelectedSegmentId: (id: string | null) => void
   showToast: (msg: string) => void
+  stripWidthMeters: number | string
   slabLengthM: number | string
   slabThicknessCm: number | string
   contractionSpacingM: number | string
@@ -36,6 +37,7 @@ export function useAlignmentMapState({
   selectedSegmentId,
   setSelectedSegmentId,
   showToast,
+  stripWidthMeters,
   slabLengthM,
   slabThicknessCm,
   contractionSpacingM,
@@ -74,9 +76,9 @@ export function useAlignmentMapState({
   // Ref theo dõi tọa độ và lý trình trục chính để tránh stale closure trong các event listener của bản đồ
   const coordsRef = useRef<[number, number][]>(currentCoords)
   const kmPointsRef = useRef<number[]>(currentKmPoints)
-  const customCfg = { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }
+  const customCfg = { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }
   const pavementPreview = useMemo(() => buildSlabsAndJointsGeoJSON(segments, currentCoords, currentKmPoints, customCfg, branches),
-    [segments, currentCoords, currentKmPoints, branches, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
+    [segments, currentCoords, currentKmPoints, branches, stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
   const latestMapData = useRef({ segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview })
   latestMapData.current = { segments, currentCoords, currentKmPoints, selectedSegmentId, branches, customCfg, pavementPreview }
 
@@ -133,6 +135,7 @@ export function useAlignmentMapState({
       setSelectedSegmentId,
       showToast,
       {
+        stripWidthMeters,
         slabLenM: slabLengthM,
         thicknessCm: slabThicknessCm,
         contractionSpacingM,
@@ -292,7 +295,7 @@ export function useAlignmentMapState({
   // A popup describes a source feature; remove it when its configuration changes.
   useEffect(() => {
     popupRef.current?.remove()
-  }, [segments, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
+  }, [segments, stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm])
 
   // Đồng bộ GeoJSON và Markers khi state thay đổi
   useEffect(() => {
@@ -303,6 +306,7 @@ export function useAlignmentMapState({
     currentCoords,
     currentKmPoints,
     branches,
+    stripWidthMeters,
     slabLengthM,
     slabThicknessCm,
     contractionSpacingM,

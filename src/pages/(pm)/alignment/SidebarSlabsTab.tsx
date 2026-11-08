@@ -4,6 +4,8 @@ import { SlabItem, SegmentItem } from './types'
 import { pavementInputIssues, pavementNumber } from './alignmentPavementHelpers'
 
 export interface SidebarSlabsTabProps {
+  stripWidthMeters: number | string
+  onSetStripWidthMeters: (val: number | string) => void
   slabLengthM: number | string
   onSetSlabLengthM: (val: number | string) => void
   slabThicknessCm: number | string
@@ -23,6 +25,8 @@ export interface SidebarSlabsTabProps {
 }
 
 export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
+  stripWidthMeters,
+  onSetStripWidthMeters,
   slabLengthM,
   onSetSlabLengthM,
   slabThicknessCm,
@@ -40,7 +44,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
 }) => {
   const scopedSegments = selectedSegmentId === 'ALL' || !selectedSegmentId ? segments : segments.filter(segment => segment.id === selectedSegmentId)
   const scopedSlabs = slabs.filter(slab => scopedSegments.some(segment => segment.id === slab.segmentId))
-  const issues = pavementInputIssues(scopedSegments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
+  const issues = pavementInputIssues(segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).filter(issue => !issue.segmentId || scopedSegments.some(segment => segment.id === issue.segmentId))
   const notice = !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
     : issues.map(issue => issue.message).join('; ')
   const inputValue = (value: number | string) => typeof value === 'string' ? value : Number.isFinite(value) ? value : ''
@@ -105,6 +109,19 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
                 />
                 <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">cm</span>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-semibold text-slate-600 block mb-1">Bề rộng tấm (m):</label>
+            <div className="relative flex items-center">
+              <input
+                type="text" inputMode="decimal" aria-label="Bề rộng tấm (m)"
+                value={inputValue(stripWidthMeters)} placeholder="Chưa có dữ liệu"
+                onChange={(e) => onSetStripWidthMeters(e.target.value)}
+                className="w-full h-8 pl-2.5 pr-8 bg-white rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+              />
+              <span className="absolute right-2 text-[10px] font-bold text-slate-400 pointer-events-none">mét</span>
             </div>
           </div>
 

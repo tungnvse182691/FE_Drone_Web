@@ -616,6 +616,7 @@ export function buildPlanningCorridorGeoJSON(
 // ==========================================
 
 export interface SlabsCustomConfig {
+  stripWidthMeters?: number | string
   slabLenM?: number | string
   thicknessCm?: number | string
   contractionSpacingM?: number | string

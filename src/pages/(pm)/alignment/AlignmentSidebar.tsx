@@ -26,6 +26,8 @@ export interface AlignmentSidebarProps {
   currentCoords?: [number, number][]
   currentKmPoints: number[]
   importedLengthKm: number
+  stripWidthMeters: number | string
+  onSetStripWidthMeters: (val: number | string) => void
   slabLengthM: number | string
   onSetSlabLengthM: (val: number | string) => void
   slabThicknessCm: number | string
@@ -77,6 +79,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   currentCoords = [],
   currentKmPoints,
   importedLengthKm,
+  stripWidthMeters,
+  onSetStripWidthMeters,
   slabLengthM,
   onSetSlabLengthM,
   slabThicknessCm,
@@ -206,6 +210,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {rightTab === 'SLABS' && (
           <fieldset disabled={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled} className="min-w-0 border-0 p-0 m-0">
           <SidebarSlabsTab
+            stripWidthMeters={stripWidthMeters}
+            onSetStripWidthMeters={onSetStripWidthMeters}
             segments={segments}
             selectedSegmentId={selectedSegmentId}
             slabLengthM={slabLengthM}

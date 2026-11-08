@@ -1,12 +1,16 @@
 import type { SegmentItem, SlabItem } from './types'
 
 export interface MainlinePavementConfig {
+  stripWidthMeters?: number | string
   slabLenM?: number | string
   thicknessCm?: number | string
   contractionSpacingM?: number | string
   expansionSpacingM?: number | string
   expansionGapMm?: number | string
 }
+
+// Rendering budget, not a technical limit: refuse the entire slab preview, never truncate it.
+export const MAX_PREVIEW_SLABS = 20000
 
 export interface PavementInputIssue {
   kind: 'slab' | 'contraction' | 'expansion' | 'shared'
@@ -21,23 +25,29 @@ export function pavementNumber(value: number | string | undefined): number {
 }
 
 export function normalizePavementConfig(input: MainlinePavementConfig = {}) {
-  return { slabLenM: pavementNumber(input.slabLenM), thicknessCm: pavementNumber(input.thicknessCm),
+  return { stripWidthMeters: pavementNumber(input.stripWidthMeters), slabLenM: pavementNumber(input.slabLenM), thicknessCm: pavementNumber(input.thicknessCm),
     contractionSpacingM: pavementNumber(input.contractionSpacingM), expansionSpacingM: pavementNumber(input.expansionSpacingM), expansionGapMm: pavementNumber(input.expansionGapMm) }
 }
 
 export function pavementInputIssues(segments: SegmentItem[], input: MainlinePavementConfig = {}) {
   const issues: PavementInputIssue[] = []
-  const check = (value: number | string | undefined, label: string, kind: PavementInputIssue['kind'], segment?: SegmentItem, integer = false) => {
+  const check = (value: number | string | undefined, label: string, kind: PavementInputIssue['kind'], segment?: SegmentItem) => {
     const absent = value === undefined || typeof value === 'number' && Number.isNaN(value) || typeof value === 'string' && !value.trim()
     const number = pavementNumber(value)
-    if (absent || !positive(number) || integer && !Number.isInteger(number)) issues.push({ kind, segmentId: segment?.id,
-      message: `${absent ? 'Chưa nhập' : 'Không hợp lệ'}: ${label}${segment ? ` — ${segment.code}` : ''}${absent ? '' : integer ? ' (cần số nguyên > 0)' : ' (cần số hữu hạn > 0)'}` })
+    if (absent || !positive(number)) issues.push({ kind, segmentId: segment?.id,
+      message: `${absent ? 'Chưa nhập' : 'Không hợp lệ'}: ${label}${segment ? ` — ${segment.code}` : ''}${absent ? '' : ' (cần số hữu hạn > 0)'}` })
   }
   check(input.slabLenM, 'chiều dài tấm L', 'slab')
-  check(input.thicknessCm, 'chiều dày tấm', 'slab')
+  check(input.stripWidthMeters, 'bề rộng tấm', 'slab')
   for (const segment of segments) {
     check(segment.roadWidthM, 'bề rộng', 'shared', segment)
-    check(segment.laneCount, 'số làn', 'slab', segment, true)
+  }
+  if (!issues.some(issue => issue.kind === 'slab') && segments.length) {
+    const cfg = normalizePavementConfig(input), origin = segments.reduce((min, segment) => Math.min(min, segment.startKm), Infinity)
+    const expected = segments.reduce((sum, segment) => sum + (positive(segment.roadWidthM) ?
+      (Math.ceil((segment.endKm - origin) * 1000 / cfg.slabLenM) - Math.floor((segment.startKm - origin) * 1000 / cfg.slabLenM)) * Math.ceil(segment.roadWidthM / cfg.stripWidthMeters) : 0), 0)
+    if (!Number.isSafeInteger(expected) || expected > MAX_PREVIEW_SLABS) issues.push({ kind: 'slab',
+      message: `Preview dự kiến ${expected.toLocaleString('vi-VN')} tấm, vượt ngân sách hiển thị ${MAX_PREVIEW_SLABS.toLocaleString('vi-VN')} tấm; chưa sinh tấm. Giữ nguyên thông số PM.` })
   }
   check(input.contractionSpacingM, 'cự ly khe co', 'contraction')
   check(input.expansionSpacingM, 'cự ly khe giãn', 'expansion')
@@ -49,7 +59,7 @@ interface PreviewSlab extends SlabItem {
   segmentId: string
   startKm: number
   endKm: number
-  laneIndex: number
+  stripIndex: number
   roadWidthM: number
   leftOffsetM: number
   rightOffsetM: number
@@ -65,7 +75,7 @@ export function planMainlinePavement(segments: SegmentItem[], input: MainlinePav
   if (!ordered.length || ordered.some((s, i) => !Number.isFinite(s.startKm) || !Number.isFinite(s.endKm) || s.endKm <= s.startKm || i > 0 && s.startKm !== ordered[i - 1].endKm)) {
     return { segments: [] as SegmentItem[], slabs, missing: ['phạm vi lý trình engineering liên tục'], issues: [{ kind: 'shared' as const, message: 'Thiếu phạm vi lý trình engineering liên tục' }] }
   }
-  if (positive(cfg.slabLenM) && positive(cfg.thicknessCm)) {
+  if (!issues.some(issue => issue.kind === 'slab')) {
     const origin = ordered[0].startKm, length = cfg.slabLenM!
     for (const segment of ordered) {
       if (issues.some(issue => issue.segmentId === segment.id)) continue
@@ -75,14 +85,17 @@ export function planMainlinePavement(segments: SegmentItem[], input: MainlinePav
         if (!(d1 > d0)) continue
         const startKm = d0 === from ? segment.startKm : origin + d0 / 1000
         const endKm = d1 === to ? segment.endKm : origin + d1 / 1000
-        const width = segment.roadWidthM / segment.laneCount
-        for (let lane = 0; lane < segment.laneCount; lane++) slabs.push({
-          id: `SLAB-${String(slabs.length + 1).padStart(3, '0')}`, segmentId: segment.id, segmentCode: segment.code,
-          stationing: station(startKm), startKm, endKm, lengthM: d1 - d0, widthM: width,
-          thicknessCm: cfg.thicknessCm!, laneIndex: lane, roadWidthM: segment.roadWidthM,
-          leftOffsetM: segment.roadWidthM / 2 - lane * width,
-          rightOffsetM: segment.roadWidthM / 2 - (lane + 1) * width, status: 'GOOD'
-        })
+        for (let strip = 0; strip < Math.ceil(segment.roadWidthM / cfg.stripWidthMeters); strip++) {
+          const fromLateral = strip * cfg.stripWidthMeters, toLateral = Math.min(segment.roadWidthM, (strip + 1) * cfg.stripWidthMeters)
+          const width = toLateral - fromLateral
+          slabs.push({
+            id: `T${slabs.length + 1}`, segmentId: segment.id, segmentCode: segment.code,
+            stationing: station(startKm), startKm, endKm, lengthM: d1 - d0, widthM: width,
+            thicknessCm: positive(cfg.thicknessCm) ? cfg.thicknessCm : Number.NaN, stripIndex: strip, roadWidthM: segment.roadWidthM,
+            leftOffsetM: segment.roadWidthM / 2 - fromLateral,
+            rightOffsetM: segment.roadWidthM / 2 - toLateral, status: 'GOOD'
+          })
+        }
       }
     }
   }
@@ -126,7 +139,7 @@ export function buildMainlinePavementGeoJSON(segments: SegmentItem[], coords: [n
     for (const [index, slab] of plan.slabs.entries()) {
       const left = along(slab.startKm, slab.endKm, slab.leftOffsetM), right = along(slab.startKm, slab.endKm, slab.rightOffsetM)
       const properties = { ...slab, sequence: index + 1, code: `T${index + 1}`, station: slab.stationing,
-        lane: `Làn ${slab.laneIndex + 1}`, edgeOffset: `${slab.leftOffsetM}m → ${slab.rightOffsetM}m`, contractionSpacingM: cfg.contractionSpacingM, preview: true },
+        lane: `Dải tấm ${slab.stripIndex + 1}`, edgeOffset: `${slab.leftOffsetM}m → ${slab.rightOffsetM}m`, contractionSpacingM: cfg.contractionSpacingM, preview: true },
       labelPoint = pointAt((slab.startKm + slab.endKm) / 2, (slab.leftOffsetM + slab.rightOffsetM) / 2)
       slabsGeoJSON.features.push({ type: 'Feature', properties,
         geometry: { type: 'Polygon', coordinates: [[...left, ...right.reverse(), left[0]]] } })

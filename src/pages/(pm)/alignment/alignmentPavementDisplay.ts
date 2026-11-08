@@ -18,6 +18,7 @@ export function summarizePavementPreview(preview?: PavementPreview, segmentId?: 
     const format = (value: number) => value.toLocaleString('vi-VN', { maximumFractionDigits: 6 })
     return format(min) === format(max) ? `${format(min)}${unit}` : `${format(min)}–${format(max)}${unit}`
   }
+  const thickness = slabs.every(feature => Number.isFinite(feature.properties?.thicknessCm) && feature.properties!.thicknessCm > 0) ? range('thicknessCm', 'cm') : 'Chưa có chiều dày'
   const dimensions = new Set(slabs.map(feature => JSON.stringify([feature.properties?.lengthM, feature.properties?.widthM, feature.properties?.thicknessCm].map(value => typeof value === 'number' ? value.toFixed(6) : value))))
   return {
     slabCount: slabMissing.length ? null : slabs.length,
@@ -25,7 +26,7 @@ export function summarizePavementPreview(preview?: PavementPreview, segmentId?: 
     expansionCount: expansionMissing.length ? null : joints.filter(feature => feature.properties?.isExpansion === true).length,
     slabMissing, contractionMissing, expansionMissing,
     dimensions: slabMissing.length ? 'Chưa đủ dữ liệu' : !slabs.length ? 'Không có tấm trong phạm vi' : dimensions.size === 1
-      ? `${range('lengthM', 'm')} × ${range('widthM', 'm')} × ${range('thicknessCm', 'cm')}`
-      : `Nhiều kích thước: dài ${range('lengthM', 'm')}, rộng ${range('widthM', 'm')}, dày ${range('thicknessCm', 'cm')} (gồm phần dư/chuyển tiếp)`
+      ? `${range('lengthM', 'm')} × ${range('widthM', 'm')} · Dày: ${thickness}`
+      : `Nhiều kích thước: dài ${range('lengthM', 'm')}, rộng ${range('widthM', 'm')}, dày: ${thickness} (gồm phần dư/chuyển tiếp)`
   }
 }

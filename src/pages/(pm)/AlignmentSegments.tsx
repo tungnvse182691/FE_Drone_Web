@@ -47,6 +47,8 @@ export const AlignmentSegments: React.FC = () => {
     showToast,
     rightTab,
     setRightTab,
+    stripWidthMeters,
+    setStripWidthMeters,
     slabLengthM,
     setSlabLengthM,
     slabThicknessCm,
@@ -261,6 +263,8 @@ export const AlignmentSegments: React.FC = () => {
         />
 
         <AlignmentSidebar
+          stripWidthMeters={stripWidthMeters}
+          onSetStripWidthMeters={setStripWidthMeters}
           rightTab={rightTab}
           onSetRightTab={setRightTab}
           segments={activeSegments}

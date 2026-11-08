@@ -119,9 +119,10 @@ export function checkAndEnrichSegmentsContinuity(segs: SegmentItem[]): SegmentIt
 export function calculatePavementSlabs(
   segments: SegmentItem[],
   slabLengthM?: number,
-  slabThicknessCm?: number
+  slabThicknessCm?: number,
+  stripWidthMeters?: number
 ): SlabItem[] {
-  return planMainlinePavement(segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm }).slabs
+  return planMainlinePavement(segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, stripWidthMeters }).slabs
 }
 
 // Hàm tương thích ngược: nhận array SegmentItem hoặc trả về rỗng nếu không có dữ liệu thật

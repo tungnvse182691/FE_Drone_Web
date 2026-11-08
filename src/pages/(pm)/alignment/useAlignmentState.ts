@@ -75,7 +75,7 @@ export function useAlignmentState() {
     segmentsState.setNewSegForm(old => ({ ...old, code: '', startKm: Number.NaN, endKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '' }))
     setSelectedTargetType('MAINLINE'); setIsAddBranchModalOpen(false)
     setAlignmentStatus('DRAFT')
-    setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
+    setStripWidthMeters(Number.NaN); setSlabLengthM(Number.NaN); setSlabThicknessCm(Number.NaN); setContractionSpacingM(Number.NaN); setExpansionSpacingM(Number.NaN); setExpansionGapMm(Number.NaN)
     segmentsState.setCustomSplitKm(Number.NaN); segmentsState.setSplitSortOrder('asc')
     setSyncJointWithSlab(true)
     setLocalDraftDirty(false); setLocalWidthsDirty(false)
@@ -109,6 +109,7 @@ export function useAlignmentState() {
   const [rightTab, setRightTab] = useState<'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'>('SEGMENTS')
 
   // Cấu hình Kích thước tấm BTXM & Khe co giãn / Khe giãn nở
+  const [stripWidthMeters, setStripWidthMeters] = useState<number | string>(Number.NaN)
   const [slabLengthM, setSlabLengthM] = useState<number | string>(Number.NaN)
   const [slabThicknessCm, setSlabThicknessCm] = useState<number | string>(Number.NaN)
   const [contractionSpacingM, setContractionSpacingM] = useState<number | string>(Number.NaN)
@@ -182,9 +183,9 @@ export function useAlignmentState() {
   })
   // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
   useEffect(() => {
-    const plan = planMainlinePavement(segmentsState.segments, { slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
+    const plan = planMainlinePavement(segmentsState.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm })
     segmentsState.setSlabs(plan.slabs)
-  }, [slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, segmentsState.segments, rightTab, currentCoords, currentKmPoints])
+  }, [stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, segmentsState.segments, rightTab, currentCoords, currentKmPoints])
 
   // Refs theo dõi danh sách tuyến nhánh và phân đoạn mới nhất để tránh stale closure khi click trên map
   const branchesRef = useRef<any[]>(branches)
@@ -265,6 +266,7 @@ export function useAlignmentState() {
       }
     },
     showToast,
+    stripWidthMeters,
     slabLengthM,
     slabThicknessCm,
     contractionSpacingM,
@@ -597,7 +599,9 @@ export function useAlignmentState() {
     showToast,
     rightTab,
     setRightTab,
+    stripWidthMeters,
     slabLengthM,
+    setStripWidthMeters: (value: number | string) => setPavementConfig(setStripWidthMeters, value),
     setSlabLengthM: (value: number | string) => setPavementConfig(setSlabLengthM, value),
     slabThicknessCm,
     setSlabThicknessCm: (value: number | string) => setPavementConfig(setSlabThicknessCm, value),
