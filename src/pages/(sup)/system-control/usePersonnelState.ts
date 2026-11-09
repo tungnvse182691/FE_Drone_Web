@@ -3,7 +3,7 @@ import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 import { personnelService, getRoleLabel, invitationInput } from '../../../api/services/personnelService'
 import { projectService } from '../../../api/services/projectService'
-import { accountRow, PersonnelUiError, reviseRejectedPersonnelStatus, pendingPersonnelStatus, savePersonnelStatus, acceptPhoneVersion, pendingPersonnelPhone, personnelBlocks, personnelMessage, personnelRole, personnelSnapshot, readPersonnelProjects, reviseRejectedPhone, savePersonnelPhone, type PersonnelNoticeKind } from '../../../api/services/personnelScreen'
+import { accountRow, readPersonnelStatusConflict, resolvePersonnelStatusConflict, PersonnelUiError, reviseRejectedPersonnelStatus, pendingPersonnelStatus, savePersonnelStatus, acceptPhoneVersion, pendingPersonnelPhone, personnelBlocks, personnelMessage, personnelRole, personnelSnapshot, readPersonnelProjects, reviseRejectedPhone, savePersonnelPhone, type PersonnelNoticeKind } from '../../../api/services/personnelScreen'
 import { useAuthStore } from '../../../store/authStore'
 
 export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelNoticeKind) => void) {
@@ -39,8 +39,9 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   const [statusSnapshot, setStatusSnapshot] = useState<Awaited<ReturnType<typeof personnelSnapshot>> | null>(null)
   const [statusLoading, setStatusLoading] = useState(false), [statusBusy, setStatusBusy] = useState(false), [statusError, setStatusError] = useState('')
   const [statusPending, setStatusPending] = useState<ReturnType<typeof pendingPersonnelStatus>>(null)
+  const [statusComparison, setStatusComparison] = useState<Awaited<ReturnType<typeof readPersonnelStatusConflict>> | null>(null)
   const statusAttempt = useRef(0), statusRunning = useRef(false)
-  useEffect(() => { setShowSuspendModal(false); setUserToSuspend(null); setStatusSnapshot(null); setStatusPending(null); setStatusError(''); setStatusBusy(false); setSuspendReason(''); return () => { statusAttempt.current++; statusRunning.current = false } }, [authEpoch, user?.id])
+  useEffect(() => { setShowSuspendModal(false); setUserToSuspend(null); setStatusSnapshot(null); setStatusPending(null); setStatusComparison(null); setStatusError(''); setStatusBusy(false); setSuspendReason(''); return () => { statusAttempt.current++; statusRunning.current = false } }, [authEpoch, user?.id])
 
   // Modal Đặt lại mật khẩu (API-240 / CN10)
   const [userToResetPassword, setUserToResetPassword] = useState<SystemUserAccount | null>(null)
@@ -171,7 +172,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   const blocked = (message: string) => triggerNoticeRef.current(message, 'error')
   const openStatus = async (account: SystemUserAccount | null, action: 'ACTIVE' | 'SUSPENDED') => {
     const attempt = ++statusAttempt.current, epoch = authEpoch
-    setUserToSuspend(account); setStatusAction(action); setSuspendReason(''); setStatusSnapshot(null); setStatusError(''); setStatusPending(null); setStatusBusy(false); statusRunning.current = false
+    setUserToSuspend(account); setStatusAction(action); setSuspendReason(''); setStatusSnapshot(null); setStatusError(''); setStatusPending(null); setStatusComparison(null); setStatusBusy(false); statusRunning.current = false
     if (!account || user?.role !== RoleCode.SUPERVISOR) { setShowSuspendModal(false); return }
     setShowSuspendModal(true); setStatusLoading(true)
     const current = () => statusAttempt.current === attempt && useAuthStore.getState().authEpoch === epoch && useAuthStore.getState().user?.id === user?.id
@@ -185,9 +186,37 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     } catch (error) { if (current()) setStatusError(personnelMessage(error)) }
     finally { if (current()) setStatusLoading(false) }
   }
-  const closeStatus = (open: boolean) => { if (open) return; statusAttempt.current++; setShowSuspendModal(false); setStatusLoading(false); setStatusBusy(false); statusRunning.current = false }
+  const closeStatus = (open: boolean) => {
+    if (open) return
+    statusAttempt.current++; setShowSuspendModal(false); setStatusLoading(false); setStatusBusy(false); statusRunning.current = false; setStatusComparison(null)
+  }
+  const abandonStatus = () => {
+    if (statusRunning.current) return
+    if (statusComparison) {
+      try { resolvePersonnelStatusConflict(statusComparison); setStatusPending(null) }
+      catch (error) { setStatusError(personnelMessage(error)); return }
+    }
+    closeStatus(false)
+  }
   const handleConfirmSuspend = async () => {
     if (statusRunning.current || !userToSuspend || user?.role !== RoleCode.SUPERVISOR) return
+    if (statusPending?.conflict) {
+      if (statusComparison) {
+        try { resolvePersonnelStatusConflict(statusComparison); setStatusSnapshot(statusComparison.snapshot); setStatusPending(null); setStatusComparison(null); setStatusError('Đã chọn snapshot mới, giữ lý do. Bấm xác nhận lần nữa để gửi ý định mới với key mới.') }
+        catch (error) { setStatusError(personnelMessage(error)) }
+        return
+      }
+      const attempt = statusAttempt.current, epoch = authEpoch
+      statusRunning.current = true; setStatusBusy(true)
+      try {
+        const comparison = await readPersonnelStatusConflict(userToSuspend.id)
+        if (attempt !== statusAttempt.current || useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== user?.id) return
+        setStatusComparison(comparison); setUserToSuspend(old => old ? { ...old, ...comparison.snapshot.account } : old)
+        setStatusError(`Đối chiếu mới: ${comparison.snapshot.account.status}, role ${comparison.snapshot.wireRole}, ETag ${comparison.snapshot.etag}. Chọn dùng snapshot này hoặc bỏ ý định cũ; chưa gửi PATCH.`)
+      } catch (error) { if (attempt === statusAttempt.current && useAuthStore.getState().authEpoch === epoch) setStatusError(personnelMessage(error)) }
+      finally { if (attempt === statusAttempt.current && useAuthStore.getState().authEpoch === epoch) { statusRunning.current = false; setStatusBusy(false) } }
+      return
+    }
     if (statusPending?.rejected) {
       try { reviseRejectedPersonnelStatus(); setStatusPending(null); setStatusError('Yêu cầu cũ bị từ chối. Giữ lý do để sửa; chưa gửi lệnh mới.') }
       catch (error) { setStatusError(personnelMessage(error)) }
@@ -369,8 +398,8 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     filteredUsers,
     showSuspendModal,
     setShowSuspendModal: closeStatus,
-    statusAction, statusBusy, statusLoading, statusError, statusPending,
-    statusBlockedReason: statusBusy ? 'Đang gửi/đọc lại yêu cầu.' : statusLoading ? 'Đang đọc snapshot tài khoản.' : statusPending?.conflict ? 'Xung đột phiên bản; giữ lý do để đối chiếu.' : !statusSnapshot && !statusPending ? 'Chưa đọc được snapshot tài khoản.' : '',
+    statusAction, statusBusy, statusLoading, statusError, statusPending, statusComparison, abandonStatus,
+    statusBlockedReason: statusBusy ? 'Đang gửi/đọc lại yêu cầu.' : statusLoading ? 'Đang đọc snapshot tài khoản.' : statusPending?.conflict && statusPending.conflictStatus !== 412 ? 'Xung đột key; cần đối chiếu yêu cầu gốc.' : !statusSnapshot && !statusPending ? 'Chưa đọc được snapshot tài khoản.' : '',
     userToSuspend,
     setUserToSuspend: (account: SystemUserAccount | null) => { void openStatus(account, 'SUSPENDED') },
     suspendReason,

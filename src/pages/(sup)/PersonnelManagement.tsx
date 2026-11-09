@@ -157,6 +157,9 @@ export const PersonnelManagement: React.FC = () => {
         busy={p.statusBusy}
         pending={!!p.statusPending}
         rejected={!!p.statusPending?.rejected}
+        conflict={!!p.statusPending?.conflict}
+        compared={!!p.statusComparison}
+        onCancel={p.abandonStatus}
         error={p.statusError}
       />
 

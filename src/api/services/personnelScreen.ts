@@ -123,7 +123,7 @@ export async function savePersonnelPhone(userId: string, phone: string, etag: st
 
 // Status-only account commands. Memberships and project roles are never patched here.
 type StatusSnapshot = Awaited<ReturnType<typeof personnelSnapshot>>
-type StatusCommand = { userId: string; payload: import('./personnelService').UpdateUserPayload; etag: string; key: string; receipt?: { etag: string; id?: string; role?: string | null }; conflict?: boolean; rejected?: boolean }
+type StatusCommand = { userId: string; payload: import('./personnelService').UpdateUserPayload; etag: string; key: string; receipt?: { etag: string; id?: string; role?: string | null }; conflict?: boolean; rejected?: boolean; uncertain?: boolean; conflictStatus?: number }
 const statusWrites = new Set<string>(), statusMemory = new Map<string, StatusCommand>()
 const statusJournal = () => `rg_personnel_status_${useAuthStore.getState().user?.id}`
 export function pendingPersonnelStatus(): StatusCommand | null {
@@ -133,6 +133,10 @@ export function pendingPersonnelStatus(): StatusCommand | null {
   if (!text) return null
   const value = JSON.parse(text)
   if (!value.userId || !value.key || !value.etag || !value.payload?.reason) throw new PersonnelUiError('Không đọc được lệnh trạng thái đang chờ; cần đối chiếu.')
+  if (value.uncertain == null && !value.receipt) {
+    // Older journals did not record whether a retry followed a timeout: never infer refusal.
+    value.uncertain = true; value.conflict = false; value.rejected = false
+  }
   return value
 }
 export async function savePersonnelStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED', reason: string, snapshot: StatusSnapshot | null, retry = false) {
@@ -142,16 +146,18 @@ export async function savePersonnelStatus(userId: string, status: 'ACTIVE' | 'SU
   let held = pendingPersonnelStatus()
   if (statusWrites.has(journal)) throw new PersonnelUiError('Đang đối chiếu lệnh trạng thái. Vui lòng chờ.')
   if (held && (!retry || held.userId !== userId || held.payload.status !== status || held.payload.reason !== reason.trim())) throw new PersonnelUiError('Cần đối chiếu đúng lệnh cũ; chưa tạo ý định mới.')
-  if (held?.conflict) throw new PersonnelUiError('Phiên bản tài khoản xung đột; giữ lý do, không tự gửi lại với ETag mới.')
-  if (held?.rejected) throw new PersonnelUiError('Lệnh đã bị từ chối; chọn sửa yêu cầu trước khi thay nội dung.')
+  if (held?.conflict && !held.uncertain) throw new PersonnelUiError('Phiên bản tài khoản xung đột; giữ lý do, không tự gửi lại với ETag mới.')
+  if (held?.rejected && !held.uncertain) throw new PersonnelUiError('Lệnh đã bị từ chối; chọn sửa yêu cầu trước khi thay nội dung.')
   if (!held) {
     if (!snapshot || snapshot.account.id !== userId || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(snapshot.etag) || !reason.trim() || !['ACTIVE', 'SUSPENDED'].includes(status) || !['SUPERVISOR', 'PM', 'OPERATOR', 'CREW', 'REPORTER'].includes(snapshot.wireRole || '')) throw new PersonnelUiError('Cần snapshot/ETag/role wire hợp lệ và lý do không để trống.')
-    held = { userId, payload: { status, role: snapshot.wireRole as StatusCommand['payload']['role'], reason: reason.trim() }, etag: snapshot.etag, key: crypto.randomUUID() }
+    held = { userId, payload: { status, role: snapshot.wireRole as StatusCommand['payload']['role'], reason: reason.trim() }, etag: snapshot.etag, key: crypto.randomUUID(), uncertain: false }
   }
   const persist = () => { statusMemory.set(journal, held!); sessionStorage.setItem(journal, JSON.stringify(held)) }
+  const wasUncertain = held.uncertain === true
   persist(); statusWrites.add(journal)
   try {
     if (!held.receipt) {
+      held.uncertain = true; persist() // Interrupted dispatch/reload must retain an ambiguous command.
       const response = await personnelService.updateUser(userId, held.payload, held.etag, held.key)
       held.receipt = { etag: response.etag, id: response.data?.id, role: response.data?.role }; persist(); current()
     }
@@ -162,8 +168,13 @@ export async function savePersonnelStatus(userId: string, status: 'ACTIVE' | 'SU
     sessionStorage.removeItem(journal); statusMemory.delete(journal); return result
   } catch (error: any) {
     current()
-    if (!held.receipt && [409, 412].includes(error?.response?.status)) held.conflict = true
-    else if (!held.receipt && error?.response?.status >= 400 && error.response.status < 500) held.rejected = true
+    if (!held.receipt) {
+      const status = error?.response?.status
+      held.uncertain = wasUncertain || !status || status >= 500
+      if (held.uncertain) { held.conflict = false; held.rejected = false }
+      else if ([409, 412].includes(status)) { held.conflict = true; held.conflictStatus = status }
+      else if (status >= 400 && status < 500) held.rejected = true
+    }
     statusMemory.set(journal, held); try { persist() } catch { /* Receipt/key also retained in memory. */ }
     if (held.receipt) throw Object.assign(new PersonnelUiError('Trạng thái đã được lưu; chưa đọc lại đầy đủ. Retry chỉ GET, không PATCH mới.'), { accepted: true })
     throw error
@@ -172,6 +183,23 @@ export async function savePersonnelStatus(userId: string, status: 'ACTIVE' | 'SU
 
 export function reviseRejectedPersonnelStatus() {
   const journal = statusJournal(), held = pendingPersonnelStatus()
-  if (!held?.rejected || held.receipt || held.conflict || statusWrites.has(journal)) throw new PersonnelUiError('Chưa được sửa yêu cầu đang chờ hoặc đã có receipt.')
+  if (!held?.rejected || held.receipt || held.conflict || held.uncertain || statusWrites.has(journal)) throw new PersonnelUiError('Chưa được sửa yêu cầu đang chờ hoặc đã có receipt.')
+  sessionStorage.removeItem(journal); statusMemory.delete(journal)
+}
+
+type StatusComparison = { key: string; actorId: string; epoch: number; snapshot: StatusSnapshot }
+export async function readPersonnelStatusConflict(userId: string): Promise<StatusComparison> {
+  const state = useAuthStore.getState(), held = pendingPersonnelStatus()
+  if (!state.isAuthenticated || state.user?.role !== RoleCode.SUPERVISOR || !held?.conflict || held.conflictStatus !== 412 || held.uncertain || held.receipt || held.userId !== userId || statusWrites.has(statusJournal())) throw new PersonnelUiError('Chỉ đối chiếu lại lệnh 412 đã xác định chưa ghi; không bỏ lệnh chưa rõ kết quả/có receipt.')
+  const snapshot = await personnelSnapshot(userId), now = useAuthStore.getState()
+  if (now.authEpoch !== state.authEpoch || now.user?.id !== state.user.id || pendingPersonnelStatus()?.key !== held.key) throw new PersonnelUiError('Phiên hoặc yêu cầu đối chiếu đã thay đổi.')
+  return { key: held.key, actorId: state.user.id, epoch: state.authEpoch, snapshot }
+}
+export function resolvePersonnelStatusConflict(comparison: StatusComparison): void {
+  const state = useAuthStore.getState(), journal = statusJournal(), held = pendingPersonnelStatus()
+  if (!state.isAuthenticated || state.user?.role !== RoleCode.SUPERVISOR || state.user.id !== comparison.actorId || state.authEpoch !== comparison.epoch ||
+    !held?.conflict || held.conflictStatus !== 412 || held.uncertain || held.receipt || held.key !== comparison.key || held.userId !== comparison.snapshot.account.id || statusWrites.has(journal) ||
+    !/^"[A-Za-z0-9+/]+={0,2}"$/.test(comparison.snapshot.etag)) throw new PersonnelUiError('Chưa có đối chiếu 412 hợp lệ; giữ nguyên journal.')
+  // Only called by an explicit UI decision after displaying the fresh snapshot.
   sessionStorage.removeItem(journal); statusMemory.delete(journal)
 }

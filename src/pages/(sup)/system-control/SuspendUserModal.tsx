@@ -7,6 +7,9 @@ export interface SuspendUserModalProps {
   action?: 'ACTIVE' | 'SUSPENDED'
   busy?: boolean
   pending?: boolean
+  onCancel?: () => void
+  conflict?: boolean
+  compared?: boolean
   rejected?: boolean
   error?: string
   blockedReason?: string
@@ -21,7 +24,8 @@ export interface SuspendUserModalProps {
 
 export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
   showSuspendModal,
-  action = 'SUSPENDED', busy = false, pending = false, rejected = false, error = '',
+  onCancel,
+  action = 'SUSPENDED', busy = false, pending = false, conflict = false, compared = false, rejected = false, error = '',
   blockedReason = personnelBlocks.account,
   setShowSuspendModal,
   userToSuspend,
@@ -93,10 +97,10 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
         <div className="flex justify-end gap-2 pt-2 border-t border-brand-border">
           <button
             type="button"
-            onClick={() => setShowSuspendModal(false)}
+            onClick={onCancel || (() => setShowSuspendModal(false))}
             className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#374151] text-xs font-semibold transition cursor-pointer"
           >
-            Hủy bỏ
+            {compared ? 'Bỏ ý định cũ và đóng' : 'Hủy bỏ'}
           </button>
           <button
             type="button"
@@ -105,7 +109,7 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
             onClick={handleConfirmSuspend}
             className="px-4 py-2 rounded-lg bg-[#BA1A1A] hover:bg-[#93000A] text-white text-xs font-bold shadow-sm transition cursor-pointer"
           >
-            {rejected ? 'Sửa yêu cầu đã từ chối' : pending ? 'Thử lại đúng yêu cầu' : action === 'ACTIVE' ? 'Xác nhận khôi phục tài khoản' : 'Xác nhận đình chỉ tài khoản'}
+            {conflict ? compared ? 'Dùng snapshot mới' : 'Đọc snapshot để đối chiếu' : rejected ? 'Sửa yêu cầu đã từ chối' : pending ? 'Thử lại đúng yêu cầu' : action === 'ACTIVE' ? 'Xác nhận khôi phục tài khoản' : 'Xác nhận đình chỉ tài khoản'}
           </button>
         </div>
       </div>
