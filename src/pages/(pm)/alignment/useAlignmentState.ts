@@ -67,6 +67,7 @@ export function useAlignmentState() {
   const confirmedGeometryScope = useRef('')
   const pendingConfirmedPavement = useRef<{ key: string; value: { stripWidthMeters: number | string; slabLengthM: number | string; slabThicknessCm: number | string; contractionSpacingM: number | string; expansionSpacingM: number | string; expansionGapMm: number | string; syncJointWithSlab: boolean } } | null>(null)
   const [fileDraft, setFileDraft] = useState<CoordinateDraftSource | null>(null)
+  const appliedFileDraft = useRef<CoordinateDraftSource | null>(null)
   const [filePreviewCoords, setFilePreviewCoords] = useState<[number, number][] | null>(null)
   useEffect(() => {
     setAssignedProjects(geometryRead.projects.map(project => ({id:project.projectId,code:project.projectCode,name:project.name,defaultCoords:[],defaultKmPoints:[],defaultSegments:[],stationOriginKm:Number.NaN,stationOriginText:'Chưa cập nhật',endKm:Number.NaN,lengthKm:Number.NaN,crs:'Chưa xác định',defaultManualText:''})))
@@ -378,6 +379,8 @@ export function useAlignmentState() {
 
   useEffect(() => {
     if (!fileDraft || editorScope !== scopeKey) return
+    if (appliedFileDraft.current === fileDraft && localDraftDirty && geometryRead.draft?.data.status !== 'CONFIRMED') return
+    appliedFileDraft.current = fileDraft
     const confirmedDraft = geometryRead.draft?.data
     const confirmedGeometry = geometryRead.geometry
     if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'CONFIRMED' &&

@@ -73,7 +73,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
               <span>🧱 Kích thước tấm BTXM (Dài × Dày):</span>
             </span>
             <span className="text-[11px] font-mono font-bold text-[#8F7212] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              {pavementNumber(slabLengthM) > 0 && pavementNumber(slabThicknessCm) > 0 ? `${slabLengthM}m × ${slabThicknessCm}cm` : 'Chưa đủ thông số hợp lệ'}
+              {Number.isFinite(pavementNumber(slabLengthM)) && pavementNumber(slabLengthM) > 0 && Number.isFinite(pavementNumber(slabThicknessCm)) && pavementNumber(slabThicknessCm) > 0 ? `${slabLengthM}m × ${slabThicknessCm}cm` : 'Chưa đủ thông số hợp lệ'}
             </span>
           </div>
 
@@ -211,7 +211,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
             <span>Danh Sách Tấm BTXM ({scopedSlabs.length})</span>
           </span>
           <span className="text-[10px] text-slate-500 font-mono">
-            {pavementNumber(slabLengthM) > 0 ? `L = ${slabLengthM}m` : 'Chưa có chiều dài tấm hợp lệ'}
+            {Number.isFinite(pavementNumber(slabLengthM)) && pavementNumber(slabLengthM) > 0 ? `L = ${slabLengthM}m` : 'Chưa có chiều dài tấm hợp lệ'}
           </span>
         </div>
 
