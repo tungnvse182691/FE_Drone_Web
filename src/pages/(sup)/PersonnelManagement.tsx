@@ -152,7 +152,12 @@ export const PersonnelManagement: React.FC = () => {
         setSuspendReason={p.setSuspendReason}
 
         handleConfirmSuspend={p.handleConfirmSuspend}
-        blockedReason={personnelBlocks.account}
+        blockedReason={p.statusBlockedReason}
+        action={p.statusAction}
+        busy={p.statusBusy}
+        pending={!!p.statusPending}
+        rejected={!!p.statusPending?.rejected}
+        error={p.statusError}
       />
 
       <UserDetailModal

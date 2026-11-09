@@ -4,6 +4,11 @@ import { AlertOctagon, X, Lock } from 'lucide-react'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface SuspendUserModalProps {
+  action?: 'ACTIVE' | 'SUSPENDED'
+  busy?: boolean
+  pending?: boolean
+  rejected?: boolean
+  error?: string
   blockedReason?: string
 
   showSuspendModal: boolean
@@ -16,6 +21,7 @@ export interface SuspendUserModalProps {
 
 export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
   showSuspendModal,
+  action = 'SUSPENDED', busy = false, pending = false, rejected = false, error = '',
   blockedReason = personnelBlocks.account,
   setShowSuspendModal,
   userToSuspend,
@@ -32,7 +38,7 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
           <div className="flex items-center gap-2 text-[#BA1A1A]">
             <AlertOctagon className="w-5 h-5" />
             <h3 className="text-base font-bold text-[#151C27]">
-              Đình chỉ tài khoản nhân sự
+              {action === 'ACTIVE' ? 'Khôi phục tài khoản nhân sự' : 'Đình chỉ tài khoản nhân sự'}
             </h3>
           </div>
           <button
@@ -45,9 +51,9 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
         </div>
 
         <div className="text-xs text-[#555F6F] space-y-3">
-          <p role="status">{blockedReason}</p>
+          <p role="status">{error || blockedReason}</p>
           <p>
-            Bạn đang chuẩn bị đình chỉ quyền truy cập của{' '}
+            Bạn đang chuẩn bị {action === 'ACTIVE' ? 'khôi phục' : 'đình chỉ'} quyền truy cập của{' '}
             <strong className="text-[#151C27]">{userToSuspend.full_name}</strong> ({userToSuspend.email}).
           </p>
 
@@ -61,23 +67,24 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
           <div className="p-3 bg-[#FFDAD6] border border-[#FFCDD2] rounded-xl text-[#BA1A1A] space-y-1">
             <div className="font-bold flex items-center gap-1.5">
               <Lock className="w-4 h-4" />
-              Quy trình thu hồi token trên CSDL Backend (API-239):
+              {action === 'ACTIVE' ? 'Khôi phục trạng thái tài khoản (API-239):' : 'Quy trình thu hồi token trên CSDL Backend (API-239):'}
             </div>
             <p className="text-[11px] leading-relaxed">
-              Trạng thái tài khoản sẽ chuyển thành <strong>SUSPENDED</strong> trên Backend. Toàn bộ phiên làm việc (Web/Mobile) sẽ bị thu hồi ngay lập tức. Toàn bộ lịch sử thao tác của nhân sự này được bảo tồn nguyên vẹn trên hệ thống.
+              {action === 'ACTIVE' ? 'Trạng thái sẽ chuyển thành ACTIVE. Tài khoản cần đăng nhập lại; lịch sử và phân công dự án được giữ nguyên.' : 'Trạng thái sẽ chuyển thành SUSPENDED trên Backend. Các phiên làm việc bị thu hồi; lịch sử thao tác và phân công được giữ nguyên.'}
             </p>
           </div>
 
           {/* Lý do đình chỉ */}
           <div className="space-y-1.5">
             <label className="font-semibold text-[#151C27] block">
-              Lý do đình chỉ tài khoản:
+              Lý do {action === 'ACTIVE' ? 'khôi phục' : 'đình chỉ'} tài khoản:
             </label>
             <textarea
+              disabled={busy || pending}
               rows={2}
               value={suspendReason}
               onChange={(e) => setSuspendReason?.(e.target.value)}
-              placeholder="Nhập lý do đình chỉ tài khoản..."
+              placeholder={action === 'ACTIVE' ? 'Nhập lý do khôi phục tài khoản...' : 'Nhập lý do đình chỉ tài khoản...'}
               className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs text-[#151C27] focus:outline-none focus:border-[#C9A227] resize-none"
             />
           </div>
@@ -98,7 +105,7 @@ export const SuspendUserModal: React.FC<SuspendUserModalProps> = ({
             onClick={handleConfirmSuspend}
             className="px-4 py-2 rounded-lg bg-[#BA1A1A] hover:bg-[#93000A] text-white text-xs font-bold shadow-sm transition cursor-pointer"
           >
-            Xác nhận đình chỉ tài khoản
+            {rejected ? 'Sửa yêu cầu đã từ chối' : pending ? 'Thử lại đúng yêu cầu' : action === 'ACTIVE' ? 'Xác nhận khôi phục tài khoản' : 'Xác nhận đình chỉ tài khoản'}
           </button>
         </div>
       </div>

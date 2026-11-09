@@ -312,10 +312,13 @@ export const personnelService = {
    */
   async updateUser(
     userId: string,
-    payload: { status: 'ACTIVE' | 'SUSPENDED'; role: RoleCode; reason: string },
-    etag?: string
-  ): Promise<any> {
-    throw Object.assign(new Error('Đổi vai trò và trạng thái tài khoản chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
+    payload: UpdateUserPayload,
+    etag?: string,
+    idempotencyKey?: string
+  ): Promise<{ data: UserDetailDto; etag: string }> {
+    if (!etag || !idempotencyKey || !payload.reason.trim() || !['ACTIVE', 'SUSPENDED'].includes(payload.status) || !['SUPERVISOR', 'PM', 'OPERATOR', 'CREW', 'REPORTER'].includes(payload.role)) throw new Error('Thiếu snapshot/phiên bản hoặc payload trạng thái hợp lệ.')
+    const response = await apiClient.patch<UserDetailDto>(`/users/${userId}`, payload, { headers: { 'If-Match': etag, 'Idempotency-Key': idempotencyKey } })
+    return { data: response.data, etag: response.headers['etag'] || '' }
   },
 
   /**

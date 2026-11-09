@@ -1,7 +1,6 @@
 import React from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
-import { personnelBlocks } from '../../../api/services/personnelScreen'
 import { mapBackendRoleToRoleCode } from '../../../api/services/personnelService'
 
 interface AccountsTabProps {
@@ -317,8 +316,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                                 type="button"
                                 onClick={() => handleRestoreUser(u.id)}
                                 className="p-1.5 rounded-[8px] border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-2xs shrink-0"
-                                disabled
-                                title={personnelBlocks.account}
+                                title="Khôi phục tài khoản — nhập lý do trước khi xác nhận"
                               >
                                 <span className="material-symbols-outlined text-[17px] block">
                                   restore

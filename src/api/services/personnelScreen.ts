@@ -6,7 +6,7 @@ import { personnelService, getRoleLabel, type StaffUserDto } from './personnelSe
 
 export type PersonnelNoticeKind = 'success' | 'error' | 'warning' | 'info'
 export const personnelBlocks = {
-  account: 'Đổi vai trò, đình chỉ/khôi phục chưa được API hỗ trợ bằng phiên Web. Chưa gửi lệnh.',
+  account: 'Đổi vai trò chưa được tích hợp trên màn hình này bằng phiên Web. Chưa gửi lệnh.',
   invitation: 'Gửi lời mời chưa được API hỗ trợ bằng phiên Web. Chưa gửi thư mời.',
   reset: 'Đặt lại mật khẩu chưa được API hỗ trợ bằng phiên Web. Chưa đổi mật khẩu.',
   primary: 'Chuyển PM chính chưa được API hỗ trợ bằng phiên Web. Chưa chuyển phân công.',
@@ -62,13 +62,14 @@ export async function personnelSnapshot(userId: string) {
   if (useAuthStore.getState().user?.role !== RoleCode.SUPERVISOR) throw new PersonnelUiError('Chỉ Giám sát được đọc snapshot tài khoản quản trị.')
   const epoch = useAuthStore.getState().authEpoch
   const before = await personnelService.fetchUserDetail(userId)
-  const rows = await personnelService.fetchStaffDirectory({ role: before.data.role || undefined })
+  if (!['SUPERVISOR', 'PM', 'OPERATOR', 'CREW', 'REPORTER'].includes(before.data.role || '')) throw new PersonnelUiError('Role wire tài khoản chưa hợp lệ; chưa tạo snapshot.')
+  const rows = await personnelService.fetchStaffDirectory({ role: before.data.role! })
   const after = await personnelService.fetchUserDetail(userId)
   if (useAuthStore.getState().authEpoch !== epoch) throw new PersonnelUiError('Phiên đã thay đổi; bỏ hồ sơ cũ.')
   if (!/^"[A-Za-z0-9+/]+={0,2}"$/.test(before.etag) || before.etag !== after.etag || before.data.id !== userId || after.data.id !== userId) throw new PersonnelUiError('Hồ sơ thay đổi trong lúc đọc. Hãy đọc lại trước khi sửa.')
   const row = rows.find(row => row.userId === userId)
   if (!row || row.role !== after.data.role) throw new PersonnelUiError('Chưa đọc đầy đủ hồ sơ tài khoản.')
-  return { account: accountRow(row), etag: after.etag }
+  return { account: accountRow(row), etag: after.etag, wireRole: after.data.role }
 }
 
 type PhoneCommand = { userId: string; phone: string; etag: string; key: string; receipt?: boolean; conflict?: boolean; rejected?: boolean; keyConflict?: boolean }
@@ -118,4 +119,59 @@ export async function savePersonnelPhone(userId: string, phone: string, etag: st
     if (held.receipt) throw Object.assign(new PersonnelUiError('Số điện thoại đã được lưu; chưa đọc lại đầy đủ kết quả. Chỉ thử đọc lại, không gửi PATCH mới.'), { accepted: true })
     throw error
   } finally { writes.delete(journal) }
+}
+
+// Status-only account commands. Memberships and project roles are never patched here.
+type StatusSnapshot = Awaited<ReturnType<typeof personnelSnapshot>>
+type StatusCommand = { userId: string; payload: import('./personnelService').UpdateUserPayload; etag: string; key: string; receipt?: { etag: string; id?: string; role?: string | null }; conflict?: boolean; rejected?: boolean }
+const statusWrites = new Set<string>(), statusMemory = new Map<string, StatusCommand>()
+const statusJournal = () => `rg_personnel_status_${useAuthStore.getState().user?.id}`
+export function pendingPersonnelStatus(): StatusCommand | null {
+  const journal = statusJournal(), memory = statusMemory.get(journal)
+  if (memory) return JSON.parse(JSON.stringify(memory))
+  const text = sessionStorage.getItem(journal)
+  if (!text) return null
+  const value = JSON.parse(text)
+  if (!value.userId || !value.key || !value.etag || !value.payload?.reason) throw new PersonnelUiError('Không đọc được lệnh trạng thái đang chờ; cần đối chiếu.')
+  return value
+}
+export async function savePersonnelStatus(userId: string, status: 'ACTIVE' | 'SUSPENDED', reason: string, snapshot: StatusSnapshot | null, retry = false) {
+  const state = useAuthStore.getState(), actor = state.user, epoch = state.authEpoch, journal = statusJournal()
+  if (!state.isAuthenticated || actor?.role !== RoleCode.SUPERVISOR) throw new PersonnelUiError('Chỉ Giám sát được đình chỉ/khôi phục tài khoản.')
+  const current = () => { const now = useAuthStore.getState(); if (!now.isAuthenticated || now.authEpoch !== epoch || now.user?.id !== actor.id) throw new PersonnelUiError('Phiên đã thay đổi; bỏ kết quả trạng thái cũ.') }
+  let held = pendingPersonnelStatus()
+  if (statusWrites.has(journal)) throw new PersonnelUiError('Đang đối chiếu lệnh trạng thái. Vui lòng chờ.')
+  if (held && (!retry || held.userId !== userId || held.payload.status !== status || held.payload.reason !== reason.trim())) throw new PersonnelUiError('Cần đối chiếu đúng lệnh cũ; chưa tạo ý định mới.')
+  if (held?.conflict) throw new PersonnelUiError('Phiên bản tài khoản xung đột; giữ lý do, không tự gửi lại với ETag mới.')
+  if (held?.rejected) throw new PersonnelUiError('Lệnh đã bị từ chối; chọn sửa yêu cầu trước khi thay nội dung.')
+  if (!held) {
+    if (!snapshot || snapshot.account.id !== userId || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(snapshot.etag) || !reason.trim() || !['ACTIVE', 'SUSPENDED'].includes(status) || !['SUPERVISOR', 'PM', 'OPERATOR', 'CREW', 'REPORTER'].includes(snapshot.wireRole || '')) throw new PersonnelUiError('Cần snapshot/ETag/role wire hợp lệ và lý do không để trống.')
+    held = { userId, payload: { status, role: snapshot.wireRole as StatusCommand['payload']['role'], reason: reason.trim() }, etag: snapshot.etag, key: crypto.randomUUID() }
+  }
+  const persist = () => { statusMemory.set(journal, held!); sessionStorage.setItem(journal, JSON.stringify(held)) }
+  persist(); statusWrites.add(journal)
+  try {
+    if (!held.receipt) {
+      const response = await personnelService.updateUser(userId, held.payload, held.etag, held.key)
+      held.receipt = { etag: response.etag, id: response.data?.id, role: response.data?.role }; persist(); current()
+    }
+    current()
+    if (held.receipt.id !== userId || held.receipt.role !== held.payload.role || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(held.receipt.etag)) throw new PersonnelUiError('Receipt tài khoản/role/ETag chưa khớp; giữ lệnh, không PATCH lại.')
+    const result = await personnelSnapshot(userId); current()
+    if (result.account.status !== held.payload.status || result.wireRole !== held.payload.role || result.etag !== held.receipt.etag) throw new PersonnelUiError('Readback trạng thái/role/version chưa khớp receipt; chỉ thử đọc lại.')
+    sessionStorage.removeItem(journal); statusMemory.delete(journal); return result
+  } catch (error: any) {
+    current()
+    if (!held.receipt && [409, 412].includes(error?.response?.status)) held.conflict = true
+    else if (!held.receipt && error?.response?.status >= 400 && error.response.status < 500) held.rejected = true
+    statusMemory.set(journal, held); try { persist() } catch { /* Receipt/key also retained in memory. */ }
+    if (held.receipt) throw Object.assign(new PersonnelUiError('Trạng thái đã được lưu; chưa đọc lại đầy đủ. Retry chỉ GET, không PATCH mới.'), { accepted: true })
+    throw error
+  } finally { statusWrites.delete(journal) }
+}
+
+export function reviseRejectedPersonnelStatus() {
+  const journal = statusJournal(), held = pendingPersonnelStatus()
+  if (!held?.rejected || held.receipt || held.conflict || statusWrites.has(journal)) throw new PersonnelUiError('Chưa được sửa yêu cầu đang chờ hoặc đã có receipt.')
+  sessionStorage.removeItem(journal); statusMemory.delete(journal)
 }
