@@ -213,7 +213,7 @@ function hydrateHarness(sourceUnverified=false){
  const model={draftId:dto.id,draft:{data:{...dto},etag:'"AAAAAAAAAAE="'},draftLoading:false,draftError:'',context:{projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'R',currentVersionId:'route-old'}]},profiles:[{id:'profile',projectId:'p',definition:{sourceSrid:32648,axisOrder:'EN',metresPerUnit:1,datum:'sourced',projection:'sourced',sourceReference:'source',sourceChecksum:'a'.repeat(64),sampleOnly:false}}],readiness:{ready:true,missingFields:[],errors:[]},retry(){versionReads++;model.draft=null;model.draftLoading=true;model.draftError=''},openDraft(){},openConfirmed(){},setReadiness(){}}
  const notices=[]
  const api={getGeometryDraft:async()=>model.draft,readProjectContext:async()=>model.context,previewGeometryDraft:async()=>({lengthMeters:100}),readDraftReadiness:async()=>model.readiness}
- const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);if(control.error)throw control.error;return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
+ const commandMock={pendingDraftCommand:()=>held,acceptFreshDraftVersion(){held=null},reviseRejectedDraftCommand(){held=null},runDraftCommand:async(_,intent)=>{writes.push(intent);if(intent?.kind==='confirm'&&control.confirmGeometry)return{kind:'confirm',draftId:intent.draftId,geometry:control.confirmGeometry};if(control.error)throw control.error;return{kind:'update',draft:{data:{...dto,version:'AAAAAAAAAAI='},etag:'"AAAAAAAAAAI="'}}}}
  const hook=load('src/pages/(pm)/alignment/useGeometryDraftWorkflow.ts',{react:hooks,'../../../types/enums':{RoleCode:roles},'../../../api/services/alignmentService':{alignmentService:api},'../../../api/services/geometryDraftCommands':commandMock}).useGeometryDraftWorkflow
  const render=()=>{slot=0;view=hook('p',model,coords,text=>coords=text,text=>notices.push(text),sourceUnverified);effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
  const flush=async()=>{for(let i=0;i<8;i++)await Promise.resolve();render()}
@@ -221,6 +221,46 @@ function hydrateHarness(sourceUnverified=false){
  const hydrate=(etag)=>{model.draft={data:{...dto,version:etag.slice(1,-1),stationOriginMeters:999},etag};model.draftLoading=false;model.draftError='';render()}
  return{api,control,model,render,flush,prepare,hydrate,get view(){return view},get coords(){return coords},writes,notices,get reads(){return versionReads},setHeld:value=>held=value,unmount:()=>effects.forEach(e=>e?.cleanup?.())}
 }
+await test('null-section Sup preview opens existing modal and confirms expected null without borrowing project routes',async()=>{
+ for(const roads of [[],[{roadSectionId:'unrelated',currentVersionId:'other-version'},{roadSectionId:'another',currentVersionId:'another-version'}]]){
+ const h=hydrateHarness();let opened;h.control.confirmGeometry={projectId:'p',roadSectionId:'created-section',routeVersionId:'created-version',sourceDraftId:dto.id};h.model.openConfirmed=(id,geometry)=>opened={id,geometry};h.model.draft.data.roadSectionId=null;h.model.context.roadSections=roads;actor={id:'sup',role:'SUPERVISOR'};await h.prepare();await h.view.loadPreview();await h.flush();assert.equal(h.view.confirmReason,'');h.view.openConfirm();h.render();assert.equal(h.view.confirmModalOpen,true);h.view.setEffectiveFrom('2026-11-09T10:00');h.view.setReason('Sup xác nhận nguồn');h.render();await h.view.confirm();assert.equal(h.writes.length,1);assert.equal(h.writes[0].input.expectedCurrentVersionId,null);assert.equal(h.writes[0].etag,'"AAAAAAAAAAE="');assert.equal(opened.id,dto.id);assert.equal(opened.geometry.roadSectionId,'created-section');assert.equal(opened.geometry.routeVersionId,'created-version');h.unmount()
+ }
+})
+
+await test('null-section confirm rejects changed section version ETag context readiness and PM after preview',async()=>{
+ for(const change of ['section','etag','context','version','readiness','sample','pm','missing-section','missing-version','model-version']){
+ const h=hydrateHarness();const linked=change.startsWith('missing-')||change==='version';if(!linked)h.model.draft.data.roadSectionId=null;actor={id:'sup',role:'SUPERVISOR'};await h.prepare();await h.view.loadPreview();await h.flush();assert.equal(h.view.confirmReason,'');h.view.setEffectiveFrom('2026-11-09T10:00');h.view.setReason('Sup lý do');h.render();const confirm=h.view.confirm
+ if(change==='section')h.api.getGeometryDraft=async()=>({data:{...dto},etag:'"AAAAAAAAAAE="'})
+ if(change==='etag')h.api.getGeometryDraft=async()=>({data:{...h.model.draft.data},etag:'"AAAAAAAAAAI="'})
+ if(change==='version')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[{roadSectionId:'road',currentVersionId:'changed-version'}]})
+ if(change==='context')h.api.readProjectContext=async()=>({...h.model.context,projectId:'q'})
+ if(change==='readiness')h.api.readDraftReadiness=async()=>({ready:false,missingFields:['official'],errors:[]})
+ if(change==='sample')h.api.readDraftReadiness=async()=>({ready:true,missingFields:[],errors:[],sampleOnly:true})
+ if(change==='missing-section')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[]})
+ if(change==='missing-version')h.api.readProjectContext=async()=>({...h.model.context,roadSections:[{roadSectionId:'road',currentVersionId:null}]})
+ if(change==='model-version'){h.model.draft={...h.model.draft,etag:'"AAAAAAAAAAI="'};h.render()}
+ if(change==='pm'){actor={id:'pm',role:'PROJECT_MANAGER'};epoch++;h.render();await h.view.confirm()}else await confirm()
+ assert.equal(h.writes.length,0,change);h.unmount()
+ }
+})
+
+await test('null-section confirm command timeout replay and receipt F5 only GET geometry with server references',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'};const journal=storage(),posts=[],gets=[];let timeout=true,broken=true
+ const geometry={projectId:'p',roadSectionId:'created-section',routeVersionId:'created-version',sourceDraftId:dto.id,metadataStatus:'COMPLETE'}
+ const client={post:async(url,body,config)=>{posts.push({url,body:JSON.stringify(body),key:config.headers['Idempotency-Key'],etag:config.headers['If-Match']});assert.equal(body.expectedCurrentVersionId,null);if(timeout)throw Error('timeout');return ok(geometry)},get:async url=>{gets.push(url);if(broken)throw fail(503,'read_failed');return ok(geometry)}}
+ const c=commands(client,journal),intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:null,effectiveFrom:'2026-11-09T03:00:00Z',reason:'Sup nhập'}}
+ await assert.rejects(c.runDraftCommand('p',intent),/timeout/);timeout=false;await assert.rejects(c.runDraftCommand('p'),e=>!!e.receipt);assert.deepEqual(posts[0],posts[1]);const afterF5=commands(client,journal);broken=false;const result=await afterF5.runDraftCommand('p');assert.equal(posts.length,2);assert.ok(gets.every(url=>url==='/projects/p/road-sections/created-section/versions/created-version/geometry'));assert.equal(result.geometry.sourceDraftId,dto.id);assert.equal(afterF5.pendingDraftCommand('p'),null)
+})
+
+await test('null-section confirm rejects wrong geometry project source section version without replaying receipt',async()=>{
+ actor={id:'sup',role:'SUPERVISOR'}
+ for(const field of ['projectId','sourceDraftId','roadSectionId','routeVersionId']){let posts=0;const geometry={projectId:'p',roadSectionId:'new-road',routeVersionId:'new-version',sourceDraftId:dto.id};const c=commands({post:async()=>{posts++;return ok(geometry)},get:async()=>ok({...geometry,[field]:'wrong'})});const intent={kind:'confirm',draftId:dto.id,etag:'"AAAAAAAAAAE="',input:{expectedCurrentVersionId:null,effectiveFrom:'2026-11-09T03:00:00Z',reason:'Sup nhập'}};await assert.rejects(c.runDraftCommand('p',intent),e=>!!e.receipt);await assert.rejects(c.runDraftCommand('p'),e=>!!e.receipt);assert.equal(posts,1,field)}
+})
+
+await test('late null-section preview response cannot authorize another draft or actor epoch',async()=>{
+ for(const change of ['draft','epoch']){const h=hydrateHarness();h.model.draft.data.roadSectionId=null;actor={id:'sup',role:'SUPERVISOR'};await h.prepare();let finish;h.api.previewGeometryDraft=()=>new Promise(resolve=>finish=resolve);const read=h.view.loadPreview();if(change==='draft'){h.model.draftId='other';h.model.draft={data:{...dto,id:'other',roadSectionId:null},etag:'"AAAAAAAAAAE="'}}else epoch++;h.render();finish({lengthMeters:100});await read;await h.flush();assert.equal(h.view.preview,null);assert.ok(h.view.confirmReason);assert.equal(h.writes.length,0);h.unmount()}
+})
+
 await test('reason modal opens after F5, validates whitespace, cancels without writes and sends the current update once',async()=>{
  const h=hydrateHarness();await h.prepare();h.view.setForm({...h.view.form,reason:''});h.render()
  assert.equal(h.view.saveDisabledReason,'');await h.view.save();h.render();assert.equal(h.view.reasonModalOpen,true);assert.equal(h.writes.length,0)

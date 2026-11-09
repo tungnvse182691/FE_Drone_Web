@@ -19,6 +19,13 @@ export function readinessBlocker(ready: { ready: boolean; missingFields: string[
 }
 
 type ReadModel = ReturnType<typeof useGeometryReadModel>
+function confirmationVersion(projectId: string, draft: NonNullable<ReadModel['draft']>['data'], context: ReadModel['context']): string | null {
+  if (context?.projectId !== projectId) throw new GeometryCommandUiError('Chưa đọc đúng context dự án.')
+  if (draft.roadSectionId === null && draft.sourceKind === 'COORDINATES') return null
+  const section = context.roadSections.find(road => road.roadSectionId === draft.roadSectionId)
+  if (!draft.roadSectionId || !section?.currentVersionId) throw new GeometryCommandUiError('Chưa đọc được tuyến/phiên bản hiện tại từ context máy chủ.')
+  return section.currentVersionId
+}
 export interface GeometryDraftForm {
   sectionId: string; profileId: string; origin: string; surveyWidth: string; widths: string; reason: string
 }
@@ -85,12 +92,13 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   const [pending, setPending] = useState<ReturnType<typeof pendingDraftCommand>>(null)
   const [preview, setPreview] = useState<Awaited<ReturnType<typeof alignmentService.previewGeometryDraft>> | null>(null)
-  const [previewVersion, setPreviewVersion] = useState(''), [previewRouteVersion, setPreviewRouteVersion] = useState('')
+  const [previewVersion, setPreviewVersion] = useState(''), [previewRouteVersion, setPreviewRouteVersion] = useState<string | null | undefined>(undefined)
+  const [previewSectionId, setPreviewSectionId] = useState<string | null | undefined>(undefined)
   const [conflict, setConflict] = useState(false), [freshVersion, setFreshVersion] = useState(false)
   const [effectiveFrom, setEffectiveFrom] = useState(''), [confirmReason, setConfirmReason] = useState('')
   const [confirmModalOpen, setConfirmModalOpen] = useState(false), [confirmInputError, setConfirmInputError] = useState('')
-  const selection = useRef({ projectId, draftId: model.draftId, version: model.draft?.etag, authEpoch })
-  selection.current = { projectId, draftId: model.draftId, version: model.draft?.etag, authEpoch }
+  const selection = useRef({ projectId, draftId: model.draftId, version: model.draft?.etag, sectionId: model.draft?.data.roadSectionId, authEpoch })
+  selection.current = { projectId, draftId: model.draftId, version: model.draft?.etag, sectionId: model.draft?.data.roadSectionId, authEpoch }
   const attempt = useRef(0), running = useRef(false), hydrated = useRef('')
   useEffect(() => {
     attempt.current++; running.current = false; hydrated.current = ''; acceptedDraft.current = ''; acceptedVersion.current = ''; awaitingAcknowledgement.current = false; setAwaitingDraftId(''); setHydrateReadError(false)
@@ -178,19 +186,21 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const saveDisabledReason = saveReason
   if (!saveReason && !form.reason.trim()) saveReason = 'changeReason: cần PM nhập lý do cập nhật; GET draft không trả lý do gốc.'
-  const section = draft?.roadSectionId ? model.context?.roadSections.find(section => section.roadSectionId === draft.roadSectionId) : undefined
+  let contextReason = '', currentRouteVersion: string | null | undefined
+  try { if (draft) currentRouteVersion = confirmationVersion(projectId, draft, model.context) }
+  catch (error) { contextReason = (error as Error).message }
   const readiness = model.readiness
   const confirmGate = hydrateReadError ? 'Hồ sơ đã lưu nhưng chưa tải lại được. Hãy thử đọc lại.' : user?.role !== RoleCode.SUPERVISOR ? 'Chỉ Giám sát được xác nhận.'
     : draft?.status === 'CONFIRMED' ? 'Hồ sơ đã được xác nhận từ máy chủ.'
-    : !draft || draft.status !== 'DRAFT' || !model.draft?.etag ? 'Cần bản nháp DRAFT và phiên bản từ máy chủ.'
-    : !model.context || !section?.currentVersionId ? 'Chưa đọc được tuyến/phiên bản hiện tại từ context máy chủ.'
+    : !draft || draft.id !== model.draftId || draft.projectId !== projectId || draft.status !== 'DRAFT' || !model.draft?.etag ? 'Cần bản nháp DRAFT và phiên bản từ máy chủ.'
+    : contextReason ? contextReason
     : readinessBlocker(readiness) ? readinessBlocker(readiness)
-    : !preview || previewVersion !== model.draft.etag ? 'Cần xem trước đúng phiên bản bản nháp.' : ''
+    : !preview || previewVersion !== model.draft.etag || previewSectionId !== draft.roadSectionId || previewRouteVersion !== currentRouteVersion ? 'Cần xem trước đúng phiên bản bản nháp.' : ''
   const begin = () => {
     if (running.current || awaitingAcknowledgement.current) return null
     running.current = true; setBusy(true)
     const id = ++attempt.current, selected = { ...selection.current }
-    return () => attempt.current === id && selection.current.projectId === selected.projectId && selection.current.draftId === selected.draftId && selection.current.authEpoch === selected.authEpoch && useAuthStore.getState().authEpoch === selected.authEpoch
+    return () => attempt.current === id && selection.current.projectId === selected.projectId && selection.current.draftId === selected.draftId && selection.current.authEpoch === selected.authEpoch && selection.current.sectionId === selected.sectionId && useAuthStore.getState().authEpoch === selected.authEpoch
   }
   const notify = (text: string) => { setMessage(text); showToast(text) }
   const failure = async (error: any, current: () => boolean) => {
@@ -244,13 +254,14 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (![RoleCode.PROJECT_MANAGER, RoleCode.SUPERVISOR].includes(user?.role as RoleCode)) { notify('Chỉ PM hoặc Giám sát được xem trước tuyến.'); return }
     if (!draft || !model.draft?.etag || pending || conflict) { notify('Cần bản nháp đã đọc và giải quyết yêu cầu cũ trước khi xem trước.'); return }
     const current = begin(); if (!current) return
-    setPreview(null); setPreviewVersion(''); setPreviewRouteVersion('')
+    setPreview(null); setPreviewVersion(''); setPreviewRouteVersion(undefined); setPreviewSectionId(undefined)
     try {
       const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag)
       if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new GeometryCommandUiError('Preview chưa có chiều dài hợp lệ từ máy chủ.')
       const ready = await alignmentService.readDraftReadiness(projectId, draft.id)
       const context = await alignmentService.readProjectContext(projectId)
-      if (current()) setPreviewRouteVersion(context.roadSections.find(road => road.roadSectionId === draft.roadSectionId)?.currentVersionId || '')
+      const routeVersion = confirmationVersion(projectId, draft, context)
+      if (current()) { setPreviewRouteVersion(routeVersion); setPreviewSectionId(draft.roadSectionId) }
       if (current() && selection.current.version === model.draft.etag) { setPreview(value); setPreviewVersion(model.draft.etag); model.setReadiness(ready); notify(`Đã đọc preview/readiness từ máy chủ. Preview chưa phải xác nhận tuyến. ${readinessBlocker(ready)}`) }
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
@@ -264,13 +275,13 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     try {
       const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])
       if (!current()) return
-      const road = context.roadSections.find(road => road.roadSectionId === draft!.roadSectionId)
-      if (fresh.etag !== model.draft!.etag || road?.currentVersionId !== previewRouteVersion) {
+      const routeVersion = confirmationVersion(projectId, fresh.data, context)
+      if (fresh.etag !== previewVersion || selection.current.version !== previewVersion || fresh.data.roadSectionId !== previewSectionId || routeVersion !== previewRouteVersion) {
         setConflict(true); setFreshVersion(true); model.retry(); throw new GeometryCommandUiError('Phiên bản đã thay đổi. Hãy xem lại trước khi xác nhận.')
       }
       if (fresh.data.projectId !== projectId || fresh.data.id !== draft!.id || fresh.data.roadSectionId !== draft!.roadSectionId || fresh.data.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp không còn đúng project/tuyến/trạng thái DRAFT.')
       if (readinessBlocker(ready)) { model.setReadiness(ready); throw new GeometryCommandUiError(readinessBlocker(ready)) }
-      await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: road!.currentVersionId, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
+      await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: routeVersion, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
