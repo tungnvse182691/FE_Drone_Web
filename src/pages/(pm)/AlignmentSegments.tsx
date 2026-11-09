@@ -95,8 +95,11 @@ export const AlignmentSegments: React.FC = () => {
 
   const segmentWorkflow = useSegmentSetWorkflow(selectedProjectId, geometryRead.roadReference, geometryRead.versionReference,
     geometryRead.geometry, isMainline, activeSplitDistance, segmentsState.setSplitDistance, showToast)
-  const segmentRows = isMainline && rightTab !== 'SLABS' ? segmentWorkflow.display : null
+  const segmentRows = isMainline && rightTab === 'SEGMENTS' ? segmentWorkflow.display : null
   const displayedSegments = segmentRows || activeSegments
+  const segmentCount = !isMainline ? activeSegments.length : segmentWorkflow.loading || segmentWorkflow.error ? null
+    : segmentWorkflow.preview?.value.segments.length ?? segmentWorkflow.snapshot?.data.segments.length ?? null
+  const segmentCountMessage = segmentWorkflow.loading ? 'Đang đọc…' : segmentWorkflow.error ? 'Lỗi đọc set' : 'Chưa chọn set'
   React.useEffect(() => {
     if (segmentRows) {
       const selected = segmentRows.some(segment => segment.id === segmentsState.selectedSegmentId) ? segmentsState.selectedSegmentId : 'ALL'
@@ -346,6 +349,8 @@ export const AlignmentSegments: React.FC = () => {
         />
 
         <AlignmentSidebar
+          segmentCount={segmentCount}
+          segmentCountMessage={segmentCountMessage}
           stripWidthMeters={stripWidthMeters}
           onSetStripWidthMeters={setStripWidthMeters}
           rightTab={rightTab}

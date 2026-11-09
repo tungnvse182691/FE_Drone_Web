@@ -12,6 +12,8 @@ import { SidebarFooterKpis } from './SidebarFooterKpis'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 
 export interface AlignmentSidebarProps {
+  segmentCount?: number | null
+  segmentCountMessage?: string
   segmentPlanning?: boolean
   segmentSetStatus?: string
   pavementWorkflow?: ReturnType<typeof usePavementWorkflow>
@@ -69,6 +71,7 @@ export interface AlignmentSidebarProps {
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
+  segmentCount = null, segmentCountMessage = 'Chưa chọn set',
   pavementWorkflow,
   segmentPlanning = false, segmentSetStatus,
   onSetRightTab,
@@ -137,7 +140,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             <SplitSquareVertical className="w-3.5 h-3.5 text-brand-gold" />
             <span className="truncate">Phân đoạn</span>
             <span className="text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-brand-gold">
-              {segments.length}
+              {segmentCount ?? segmentCountMessage}
             </span>
           </button>
           <button
@@ -248,6 +251,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
 
       {/* KPI TỔNG KẾT DƯỚI SIDEBAR */}
       <SidebarFooterKpis
+        segmentCount={segmentCount}
+        segmentCountMessage={segmentCountMessage}
         segments={segments}
         importedLengthKm={importedLengthKm}
         alignmentStatus={selectedTargetType === 'MAINLINE' ? alignmentStatus : 'DRAFT'}

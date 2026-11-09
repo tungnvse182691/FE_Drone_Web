@@ -144,7 +144,10 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     reasonOpen, reason, setReason, closeReason: () => { if (!busy) setReasonOpen(false) }, openPublish: () => { if (editable && currentSnapshot && !currentPreview) { setReason(''); setReasonOpen(true) } },
     split: (stationKm: number) => {
       const rows = currentPreview?.value.segments || currentSnapshot?.data.segments
-      if (!editable || !rows || geometry?.sourceCrs !== geometry?.engineeringSrid || !Number.isFinite(geometry?.stationOriginMeters)) return
+      if (!editable) { refs.current.notify('Chỉ PM được tách segment set DRAFT trên đúng route đã đọc.'); return }
+      if (!rows?.length || !Number.isFinite(geometry?.stationOriginMeters) || rows.some(s => ![s.startStationMeters, s.endStationMeters, s.fromOffsetMeters, s.toOffsetMeters].every(Number.isFinite) || Math.abs(s.startStationMeters - geometry!.stationOriginMeters! - s.fromOffsetMeters) > 1e-9 || Math.abs(s.endStationMeters - geometry!.stationOriginMeters! - s.toOffsetMeters) > 1e-9)) {
+        refs.current.notify('Chưa hỗ trợ ánh xạ lý trình/offset này; cần mốc server liên tục theo stationOriginMeters, không tự suy từ CRS nguồn.'); return
+      }
       const offset = stationKm * 1000 - geometry!.stationOriginMeters!
       if (!(offset > 0 && offset < geometry!.lengthMeters)) { refs.current.notify('Mốc tách phải nằm trong phạm vi lý trình server.'); return }
       const bounds = [0, ...rows.map(s => s.toOffsetMeters)]

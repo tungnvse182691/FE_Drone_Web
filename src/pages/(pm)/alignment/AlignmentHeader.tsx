@@ -55,11 +55,11 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
   const displayTotalKm = totalProjectLengthKm !== undefined ? totalProjectLengthKm : importedLengthKm
 
   return (
-    <section className="bg-white rounded-xl px-5 py-3.5 shadow-2xs border border-brand-border flex flex-col md:flex-row md:items-center justify-between gap-3">
-      <div className="flex flex-col gap-1 min-w-0">
+    <section className="bg-white rounded-xl px-5 py-3.5 shadow-2xs border border-brand-border flex flex-col gap-3">
+      <div className="flex flex-col gap-1 min-w-0 w-full">
         {/* Breadcrumb & Status */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-slate-500 font-medium">
+          <nav aria-label="Breadcrumb" className="flex flex-wrap min-w-0 items-center gap-1.5 text-slate-500 font-medium">
             <button
               onClick={() => navigate(`${basePath}/dashboard`)}
               className="hover:text-brand-gold transition-colors cursor-pointer"
@@ -109,22 +109,22 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         </div>
 
         {loading && <p role="status" className="text-xs text-slate-500">Đang tải hồ sơ tuyến...</p>}
-        {statusMessage && <p role="status" className="text-xs text-slate-600">{statusMessage}</p>}
+        {statusMessage && <p role="status" className="text-xs text-slate-600 break-words">{statusMessage}</p>}
         {/* Project Title & Project Switcher */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600">
-          <h1 className="text-lg font-bold text-brand-dark tracking-tight">
+          <h1 className="w-full min-w-0 text-lg font-bold text-brand-dark tracking-tight">
             Quản Lý Hình Học Tuyến &amp; Phân Đoạn Lý Trình
           </h1>
           <span className="hidden lg:inline text-slate-300">|</span>
 
           {/* Dropdown chọn dự án PM phụ trách */}
-          <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 bg-amber-50/80 border border-amber-200/90 px-2.5 py-1 rounded-xl shadow-2xs">
             <Icon name="domain" size={14} className="text-brand-gold shrink-0" />
             <span className="text-[11px] font-semibold text-slate-600">Dự án phụ trách:</span>
             <select
               value={selectedProjectId}
               onChange={(e) => onSwitchProject(e.target.value)}
-              className="text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer hover:text-[#8F7212] transition-colors"
+              className="min-w-0 max-w-full flex-1 text-xs font-bold text-slate-900 bg-transparent outline-none cursor-pointer hover:text-[#8F7212] transition-colors"
             >
               {assignedProjects.length === 0 ? (
                 <option value="">Đang tải dự án...</option>
@@ -170,7 +170,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
       </div>
 
       {/* Action Button Group */}
-      <div className="flex flex-wrap items-center gap-2 shrink-0">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 [&>*]:max-w-full [&>button]:h-auto [&>button]:min-h-8 [&>button]:py-1.5 [&>button]:whitespace-normal [&>a]:break-words">
         {/* PM: Import Coordinates Button (Only allowed when in DRAFT) */}
         {workflowActions}
         {!isSupervisor && alignmentStatus === 'DRAFT' && (

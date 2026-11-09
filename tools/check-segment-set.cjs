@@ -49,7 +49,7 @@ function hookHarness(setId=''){
  const geometry={projectId:'p',roadSectionId:'road',routeVersionId:'route',lengthMeters:5,sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:100,metadataStatus:'COMPLETE',isCurrent:true}
  const render=()=>{for(let tries=0;tries<30;tries++){changed=false;slot=0;pending=[];view=mod.useSegmentSetWorkflow(project,section,route,geometry,true,distance,n=>{distance=n;changed=true},text=>notices.push(text));for(const eff of pending){effects[eff.i]?.cleanup?.();effects[eff.i]={deps:eff.deps,cleanup:eff.setup()}}if(!changed)return}throw Error('render loop')}
  const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}}
- render();return {...e,mod,render,flush,notices,get server(){return e.server},set server(v){e.server=v},get view(){return view},get params(){return params},distance(n){distance=n;render()},switchRoute(){route='route-B';render()},unmount(){effects.forEach(e=>e?.cleanup?.())}}
+ render();return {...e,mod,geometry,render,flush,notices,get server(){return e.server},set server(v){e.server=v},get view(){return view},get params(){return params},distance(n){distance=n;render()},switchRoute(){route='route-B';render()},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 test('hook F5 reads selected set, new empty DB stays empty, PM preview/save URL then Sup reads same reference',async()=>{
  const h=hookHarness('set-1');await h.flush();assert.equal(h.view.snapshot.data.id,'set-1');assert.equal(h.view.display[0].id,'part-1');assert.equal(h.calls.filter(c=>c.method!=='GET').length,0);h.distance(.0025);await h.view.loadPreview();await h.flush();assert.ok(h.view.preview);await h.view.save();await h.flush();assert.equal(h.params.get('segmentSetId'),'set-1');assert.equal(h.view.snapshot.data.status,'DRAFT');h.unmount()
@@ -83,5 +83,35 @@ test('actual sidebar enables only segment splitting for PM and preserves geometr
 })
 test('pending set B cannot retry command for set A without explicitly opening its reference',async()=>{
  const h=hookHarness('set-1');await h.flush();const commands=h.load('src/api/services/segmentSetCommands.ts');h.control.error=Error('timeout');await assert.rejects(commands.runSegment(pins,{pins,kind:'edit',setId:'set-A',etag:v1,input}),/timeout/);h.control.error=null;h.view.reload();h.render();await h.flush();const writes=h.calls.filter(c=>c.method!=='GET').length;await h.view.retry();assert.equal(h.calls.filter(c=>c.method!=='GET').length,writes);assert.match(h.notices.at(-1),/reference/);h.unmount()
+})
+test('split uses server stations and offsets for source4326 engineering32648 and reports unsupported mappings',async()=>{
+ const h=hookHarness('set-1');h.geometry.sourceCrs=4326;await h.flush();h.view.split(.1025);await h.flush();const preview=h.calls.find(c=>c.url.endsWith('/preview'));assert.ok(preview,'different source CRS must not suppress preview');assert.deepEqual(preview.body.boundariesMeters,[0,2.5,5]);assert.equal(h.calls.filter(c=>c.method==='PUT'||c.url.endsWith('/publish')).length,0);h.unmount()
+ const bad=hookHarness('set-1');await bad.flush();bad.server={...bad.server,segments:[{...parts[0],endStationMeters:110}]};bad.view.reload();bad.render();await bad.flush();bad.view.split(.1025);await bad.flush();assert.match(bad.notices.at(-1),/lý trình|offset/);assert.equal(bad.calls.filter(c=>c.method==='POST').length,0);bad.unmount()
+})
+test('width profile tab receives geometry intervals rather than a crossing server segment through actual caller',()=>{
+ const e=env(),React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),react={__esModule:true,default:React,...React},base='src/pages/(pm)/alignment/'
+ const Width=e.load(base+'SidebarWidthProfileTab.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null})}).SidebarWidthProfileTab
+ const Sidebar=e.load(base+'AlignmentSidebar.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null}),'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:Width},'./SidebarSlabsTab':{SidebarSlabsTab:()=>null},'./SidebarFooterKpis':{SidebarFooterKpis:()=>null}}).AlignmentSidebar
+ const src=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element,rowsDeclaration;function walk(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)==='segmentRows'))rowsDeclaration=n.getText(ast);ts.forEachChild(n,walk)}walk(ast)
+ const attrs=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','rightTab','alignmentStatus','selectedTargetType'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
+ const code=ts.transpileModule('function renderCaller(rightTab,activeSegments,display){const isMainline=true,selectedTargetType="MAINLINE",alignmentStatus="CONFIRMED",segmentWorkflow={display},pavementWorkflow={};'+rowsDeclaration+';const displayedSegments=segmentRows||activeSegments;return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar})
+ const widths=[{id:'width-1',code:'Khoảng bề rộng 1',startKm:.1,endKm:.102,lengthKm:.002,roadWidthM:7},{id:'width-2',code:'Khoảng bề rộng 2',startKm:.102,endKm:.105,lengthKm:.003,roadWidthM:9}]
+ const html=renderToStaticMarkup(renderCaller('WIDTH_PROFILE',widths,[{id:'crossing',code:'Server segment crossing widths',startKm:.1,endKm:.105,lengthKm:.005,roadWidthM:NaN}]))
+ assert.ok(html.includes('Khoảng bề rộng 1'));assert.ok(html.includes('Khoảng bề rộng 2'));assert.ok(!html.replace(/<[^>]*>/g,'').includes('Chưa có dữ liệu'));assert.ok(html.includes('value="7"'));assert.ok(html.includes('value="9"'))
+})
+test('caller badge and footer keep selected set count across segments widths slabs tabs and unknown states',()=>{
+ const e=env(),React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),react={__esModule:true,default:React,...React},base='src/pages/(pm)/alignment/'
+ const Footer=e.load(base+'SidebarFooterKpis.tsx',{react}).SidebarFooterKpis
+ const Sidebar=e.load(base+'AlignmentSidebar.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null}),'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:()=>null},'./SidebarSlabsTab':{SidebarSlabsTab:()=>null},'./SidebarFooterKpis':{SidebarFooterKpis:Footer}}).AlignmentSidebar
+ const src=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element;const declarations=[]
+ function walk(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>['segmentRows','displayedSegments','segmentCount','segmentCountMessage'].includes(d.name.getText(ast))))declarations.push(n.getText(ast));ts.forEachChild(n,walk)}walk(ast)
+ const attrs=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','rightTab','alignmentStatus','selectedTargetType','segmentCount','segmentCountMessage'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
+ const code=ts.transpileModule('function renderCaller(rightTab,segmentWorkflow,isMainline=true){const selectedTargetType=isMainline?"MAINLINE":"local",alignmentStatus="CONFIRMED",activeSegments=[{id:"width",lengthKm:.1}],pavementWorkflow={display:{segments:[{id:"slab1"},{id:"slab2"}]}};'+declarations.join(';')+';return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar}),segments=[{},{},{},{}],baseWorkflow={display:segments,snapshot:{data:{segments}},preview:null,loading:false,error:''}
+ const render=(tab,w=baseWorkflow)=>renderToStaticMarkup(renderCaller(tab,w)).replace(/<[^>]*>/g,'')
+ for(const tab of ['SEGMENTS','WIDTH_PROFILE','SLABS']){const html=render(tab);assert.match(html,/Phân đoạn4/);assert.match(html,/4 đoạnPhân đoạn/)}
+ const preview={...baseWorkflow,snapshot:null,preview:{value:{segments}}};assert.match(render('WIDTH_PROFILE',preview),/4 đoạnPhân đoạn/)
+ for(const [patch,label]of [[{loading:true},'Đang đọc'],[{error:'failed'},'Lỗi đọc set'],[{snapshot:null,display:null},'Chưa chọn set']]){const html=render('WIDTH_PROFILE',{...baseWorkflow,...patch});assert.ok(html.includes(label));assert.ok(!html.includes('4 đoạn'));assert.ok(!html.includes('1 đoạn'))}
 })
 ;(async()=>{for(const t of tests){await t.run();console.log('PASS '+t.name)}console.log(`${tests.length} segment-set groups PASS (mock HTTP/hooks; runtime mutations not implied).`)})().catch(e=>{console.error(e);process.exitCode=1})

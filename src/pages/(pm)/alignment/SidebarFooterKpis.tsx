@@ -2,6 +2,8 @@ import React from 'react'
 import { SegmentItem } from './types'
 
 export interface SidebarFooterKpisProps {
+  segmentCount?: number | null
+  segmentCountMessage?: string
   segments: SegmentItem[]
   importedLengthKm: number
   alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
@@ -9,6 +11,7 @@ export interface SidebarFooterKpisProps {
 
 export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
   segments,
+  segmentCount = null, segmentCountMessage = 'Chưa chọn set',
   importedLengthKm,
   alignmentStatus = 'DRAFT'
 }) => {
@@ -30,7 +33,7 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
           <span className="text-[10px] text-slate-500">Tổng chiều dài</span>
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-brand-dark font-mono">{segments.length} đoạn</span>
+          <span className="text-sm font-bold text-brand-dark font-mono">{segmentCount == null ? segmentCountMessage : `${segmentCount} đoạn`}</span>
           <span className="text-[10px] text-slate-500">Phân đoạn</span>
         </div>
         <div className="flex flex-col">
