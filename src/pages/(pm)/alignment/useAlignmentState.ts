@@ -59,7 +59,7 @@ export function useAlignmentState() {
 
   // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
   const geometryRead = useGeometryReadModel(selectedProjectId)
-  const scopeKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`
+  const scopeKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`
   const [editorScope, setEditorScope] = useState(scopeKey)
   const currentScope = useRef(scopeKey); currentScope.current = scopeKey
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
@@ -109,9 +109,9 @@ export function useAlignmentState() {
       const restored = confirmedGeometryDisplay(geometry)
       setImportedLengthKm(restored.lengthKm); setCurrentCoords(restored.coordinates); setCurrentKmPoints(restored.kmPoints)
       const scope = `${selectedProjectId}:${geometry.roadSectionId}:${geometry.routeVersionId}:${JSON.stringify(geometry.widthProfile || [])}`
-      const pendingKey = `${authEpoch}:${selectedProjectId}:${geometry.sourceDraftId || ''}:${geometry.roadSectionId}:${geometry.routeVersionId}`
+      const pendingKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometry.sourceDraftId || ''}:${geometry.roadSectionId}:${geometry.routeVersionId}`
       const pendingPavement = pendingConfirmedPavement.current?.key === pendingKey ? pendingConfirmedPavement.current.value : null
-      if (pendingPavement && geometryRead.draft?.data.status === 'CONFIRMED' && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
+      if (pendingPavement && geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId && geometryRead.draft.data.projectId === selectedProjectId && geometryRead.draft.data.roadSectionId === geometry.roadSectionId && geometry.sourceDraftId === geometryRead.draftId && geometry.roadSectionId === geometryRead.roadReference && geometry.routeVersionId === geometryRead.versionReference) {
         setStripWidthMeters(pendingPavement.stripWidthMeters); setSlabLengthM(pendingPavement.slabLengthM); setSlabThicknessCm(pendingPavement.slabThicknessCm)
         setContractionSpacingM(pendingPavement.contractionSpacingM); setExpansionSpacingM(pendingPavement.expansionSpacingM); setExpansionGapMm(pendingPavement.expansionGapMm); setSyncJointWithSlab(pendingPavement.syncJointWithSlab)
         pendingConfirmedPavement.current = null
@@ -327,7 +327,7 @@ export function useAlignmentState() {
 
   // Hook 3: Import State
   const importState = useAlignmentImportState({
-    inputScope: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}`,
+    inputScope: `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}`,
     onDraftInput: markLocalDraft,
     contextReady: geometryRead.context?.projectId === selectedProjectId,
     roadSectionCount: geometryRead.context?.projectId === selectedProjectId ? geometryRead.context.roadSections.length : undefined,
@@ -419,20 +419,13 @@ export function useAlignmentState() {
 
   // Reset this hook before children can render the new draft with the previous draft's edits.
   if (editorScope !== scopeKey) {
-    const draftScope = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}::`
-    const previousScope = editorScope.split(':')
-    const previousDraftOnly = previousScope[3] === '' && previousScope[4] === ''
-    const previousUnboundDraft = previousScope[2] === '' && !!geometryRead.draftId && previousScope[3] === geometryRead.roadReference && previousScope[4] === geometryRead.versionReference
-    const targetPendingKey = `${authEpoch}:${selectedProjectId}:${geometryRead.draftId || ''}:${geometryRead.roadReference}:${geometryRead.versionReference}`
+    const draftScope = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}::`
+    const targetPendingKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId || ''}:${geometryRead.roadReference}:${geometryRead.versionReference}`
     if (pendingConfirmedPavement.current && pendingConfirmedPavement.current.key !== targetPendingKey) pendingConfirmedPavement.current = null
-    const confirmedGeometry = geometryRead.geometry
-    const confirmedDraftTransition = geometryRead.draft?.data.status === 'CONFIRMED' && geometryRead.draft.data.id === geometryRead.draftId &&
-      geometryRead.draft.data.projectId === selectedProjectId && (editorScope === draftScope || previousUnboundDraft) &&
-      !!geometryRead.roadReference && !!geometryRead.versionReference && !!confirmedGeometry &&
-      confirmedGeometry.projectId === selectedProjectId && confirmedGeometry.sourceDraftId === geometryRead.draftId &&
-      confirmedGeometry.roadSectionId === geometryRead.roadReference && confirmedGeometry.routeVersionId === geometryRead.versionReference
-    if ((previousDraftOnly || previousUnboundDraft) && geometryRead.draftId && geometryRead.roadReference && geometryRead.versionReference) {
-      pendingConfirmedPavement.current = { key: `${authEpoch}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
+    // Source identity must already belong to this draft. An unbound editor has no
+    // receipt identity here, so opening a newly discovered draft cannot borrow it.
+    if (geometryRead.draftId && editorScope === draftScope && geometryRead.roadReference && geometryRead.versionReference) {
+      pendingConfirmedPavement.current = { key: targetPendingKey, value: { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm, syncJointWithSlab } }
     }
     setEditorScope(scopeKey)
     editorDraft.current = ''
