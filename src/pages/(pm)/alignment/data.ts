@@ -425,7 +425,7 @@ export function buildSegmentsGeoJSON(
   })
 
   segList.forEach((seg, idx) => {
-    const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
+    const lineCoords = seg.serverCoordinates || getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
 
     // 1. Tim tuyến phân đoạn
     features.push({
@@ -436,7 +436,7 @@ export function buildSegmentsGeoJSON(
         startKm: seg.startKm,
         endKm: seg.endKm,
         lengthKm: seg.lengthKm,
-        roadWidthM: seg.roadWidthM || 8.0,
+        roadWidthM: seg.serverCoordinates ? (Number.isFinite(seg.roadWidthM) ? seg.roadWidthM : null) : seg.roadWidthM || 8.0,
         color: seg.color || SEGMENT_COLORS[idx % SEGMENT_COLORS.length] || '#0284C7',
         isSelected: activeSegId === 'ALL' ? true : seg.id === activeSegId,
         isLine: true,
@@ -504,7 +504,8 @@ export function buildSegmentsSurfaceGeoJSON(
   const features: GeoJSON.Feature[] = []
 
   segList.forEach((seg, idx) => {
-    const lineCoords = getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
+    if (seg.serverCoordinates && (!Number.isFinite(seg.roadWidthM) || seg.roadWidthM <= 0)) return
+    const lineCoords = seg.serverCoordinates || getSubLineCoordinates(seg.startKm, seg.endKm, coords, kmPts)
     if (!lineCoords || lineCoords.length < 2) return
 
     const prevSeg = segList.find((s) => s.id !== seg.id && Math.abs(s.endKm - seg.startKm) < 0.005)

@@ -14,6 +14,7 @@ import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
 import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/data'
 import { AlignmentApprovalList } from './alignment/AlignmentApprovalList'
+import { useSegmentSetWorkflow } from './alignment/useSegmentSetWorkflow'
 import { AlignmentAddBranchModal } from './alignment/AlignmentAddBranchModal'
 
 export type { SegmentItem, SlabItem, AssignedProjectOption } from './alignment/types'
@@ -92,6 +93,18 @@ export const AlignmentSegments: React.FC = () => {
     importState
   } = useAlignmentState()
 
+  const segmentWorkflow = useSegmentSetWorkflow(selectedProjectId, geometryRead.roadReference, geometryRead.versionReference,
+    geometryRead.geometry, isMainline, activeSplitDistance, segmentsState.setSplitDistance, showToast)
+  const segmentRows = isMainline && rightTab !== 'SLABS' ? segmentWorkflow.display : null
+  const displayedSegments = segmentRows || activeSegments
+  React.useEffect(() => {
+    if (segmentRows) {
+      const selected = segmentRows.some(segment => segment.id === segmentsState.selectedSegmentId) ? segmentsState.selectedSegmentId : 'ALL'
+      if (selected !== segmentsState.selectedSegmentId) segmentsState.setSelectedSegmentId(selected)
+      mapState.syncMap(segmentRows, selected, currentCoords, currentKmPoints, branches)
+    }
+  }, [segmentRows, currentCoords, currentKmPoints, segmentsState.selectedSegmentId])
+
   const missingDraftInput = [
     !geometryRead.context ? 'phạm vi tuyến từ máy chủ' : '',
     !draftWorkflow.form.sectionId ? 'tuyến đường trong dự án' : '',
@@ -103,7 +116,7 @@ export const AlignmentSegments: React.FC = () => {
   ].filter(Boolean)
 
   const workflowActions = <>
-    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={() => { geometryRead.retry(); pavementWorkflow.retry() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
+    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={() => { geometryRead.retry(); pavementWorkflow.retry(); segmentWorkflow.reload() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
     {geometryRead.draft && <button type="button" disabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.loadPreview() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Xem trước bản đã lưu</button>}
     {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc lại bản đã lưu</button>}
     {draftWorkflow.pending && <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>}
@@ -112,7 +125,24 @@ export const AlignmentSegments: React.FC = () => {
       <button type="button" disabled={draftWorkflow.busy} onClick={() => { void draftWorkflow.reviewConflict() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc hồ sơ đối chiếu</button>
       <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Giữ bản nhập, dùng phiên bản vừa đọc</button>
     </>}
-    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${pavementWorkflow.layoutId ? `&layoutId=${encodeURIComponent(pavementWorkflow.layoutId)}` : ''}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
+    {segmentWorkflow.enabled && <>
+      <select aria-label="Segment set máy chủ" value={segmentWorkflow.setId} disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onChange={event => segmentWorkflow.openSet(event.target.value)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">
+        <option value="">{segmentWorkflow.sets.length ? 'Chọn segment set / bản mới' : 'Chưa có segment set trong CSDL'}</option>
+        {segmentWorkflow.sets.map(set => <option key={set.id} value={set.id}>{set.id} · {set.status}</option>)}
+      </select>
+      {!isSupervisor && <>
+        <button type="button" disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onClick={() => segmentWorkflow.openSet('')} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Bản phân đoạn mới</button>
+        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.preview} onClick={() => { void segmentWorkflow.save() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.snapshot ? 'Lưu sửa segment set DRAFT' : 'Lưu segment set DRAFT'}</button>
+        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.snapshot || !!segmentWorkflow.preview} onClick={segmentWorkflow.openPublish} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Publish segment set</button>
+        {segmentWorkflow.held && <button type="button" disabled={segmentWorkflow.busy} onClick={segmentWorkflow.openHeldSet} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Mở set của yêu cầu đang chờ</button>}
+        {segmentWorkflow.held && <button type="button" disabled={segmentWorkflow.busy || segmentWorkflow.held.conflict || segmentWorkflow.held.rejected} onClick={() => { void segmentWorkflow.retry() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.held.receipt ? 'GET lại segment set đã lưu' : 'Gửi lại đúng yêu cầu phân đoạn'}</button>}
+        {(segmentWorkflow.held?.conflict || segmentWorkflow.held?.rejected) && <>
+          <button type="button" disabled={segmentWorkflow.busy} onClick={() => { void segmentWorkflow.review() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc segment set đối chiếu</button>
+          <button type="button" disabled={segmentWorkflow.busy || !segmentWorkflow.reviewed} onClick={segmentWorkflow.revise} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Chấp nhận hồ sơ vừa đọc, sửa ý định</button>
+        </>}
+      </>}
+    </>}
+    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${pavementWorkflow.layoutId ? `&layoutId=${encodeURIComponent(pavementWorkflow.layoutId)}` : ''}${segmentWorkflow.setId ? `&segmentSetId=${encodeURIComponent(segmentWorkflow.setId)}` : ''}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
   </>
 
   // Nếu vai trò Supervisor truy cập danh mục menu /sup/alignment mà chưa chọn dự án: hiển thị danh sách thẩm duyệt thay vì trỏ thẳng vào 1 tuyến
@@ -184,6 +214,21 @@ export const AlignmentSegments: React.FC = () => {
           </form>
         </div>
       )}
+      {segmentWorkflow.reasonOpen && !isSupervisor && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <form role="dialog" aria-modal="true" aria-labelledby="publish-segments-title" onSubmit={event => { event.preventDefault(); void segmentWorkflow.publish() }} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4">
+            <h3 id="publish-segments-title" className="font-bold text-slate-900 text-base">Publish segment set {segmentWorkflow.setId}</h3>
+            <label className="text-sm text-slate-700 flex flex-col gap-2">Lý do publish
+              <textarea autoFocus rows={3} disabled={segmentWorkflow.busy} value={segmentWorkflow.reason} onChange={event => segmentWorkflow.setReason(event.target.value)} className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-brand-gold" />
+            </label>
+            {segmentWorkflow.message && <p role="status" className="text-xs text-slate-600">{segmentWorkflow.message}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={segmentWorkflow.busy} onClick={segmentWorkflow.closeReason} className="px-4 py-2 rounded-lg border border-slate-200 text-sm">Hủy</button>
+              <button type="submit" disabled={segmentWorkflow.busy || !!segmentWorkflow.held} className="px-4 py-2 rounded-lg bg-brand-gold text-white text-sm font-semibold disabled:opacity-50">Publish</button>
+            </div>
+          </form>
+        </div>
+      )}
       {/* MODALS */}
       <AlignmentModals
         isImportModalOpen={importState.isImportModalOpen}
@@ -215,7 +260,7 @@ export const AlignmentSegments: React.FC = () => {
         onCloseSplitModal={() => segmentsState.setSplitModalSegment(null)}
         customSplitKm={segmentsState.customSplitKm}
         onChangeCustomSplitKm={segmentsState.setCustomSplitKm}
-        onSplitSegmentSubmit={event => { handleSplitSegmentSubmit(event); markWidthDraft() }}
+        onSplitSegmentSubmit={event => { if (segmentWorkflow.enabled && isMainline) { event.preventDefault(); segmentWorkflow.split(segmentsState.customSplitKm); segmentsState.setSplitModalSegment(null) } else { handleSplitSegmentSubmit(event); markWidthDraft() } }}
       />
 
       {/* MODAL TẠO TUYẾN NHÁNH MỚI */}
@@ -234,7 +279,7 @@ export const AlignmentSegments: React.FC = () => {
         basePath={basePath}
         workflowActions={workflowActions}
         loading={geometryRead.loading || geometryRead.draftLoading || geometryRead.geometryLoading}
-        statusMessage={[draftWorkflow.message, draftWorkflow.preview ? `Bản đã lưu xem trước: ${draftWorkflow.preview.lengthMeters.toLocaleString()} m; ${geometryRead.readiness?.ready ? 'máy chủ cho phép xác nhận' : 'máy chủ chưa cho phép xác nhận'}.` : '', geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError, localDraftDirty ? 'Đang chỉnh bản nháp cục bộ — chưa lưu máy chủ.' : ''].filter(Boolean).join(' ')}
+        statusMessage={[segmentWorkflow.enabled && (segmentWorkflow.loading ? 'Đang đọc segment set…' : segmentWorkflow.error || segmentWorkflow.message || (segmentWorkflow.snapshot ? `Segment set ${segmentWorkflow.setId}: ${segmentWorkflow.snapshot.data.status}` : 'Chưa chọn segment set server; khoảng bề rộng chưa phải phân đoạn đã lưu.')), draftWorkflow.message, draftWorkflow.preview ? `Bản đã lưu xem trước: ${draftWorkflow.preview.lengthMeters.toLocaleString()} m; ${geometryRead.readiness?.ready ? 'máy chủ cho phép xác nhận' : 'máy chủ chưa cho phép xác nhận'}.` : '', geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError, localDraftDirty ? 'Đang chỉnh bản nháp cục bộ — chưa lưu máy chủ.' : ''].filter(Boolean).join(' ')}
         serverDraftStatus={geometryRead.draft?.data.status}
         alignmentStatus={alignmentStatus}
         activeProject={activeProject}
@@ -278,7 +323,7 @@ export const AlignmentSegments: React.FC = () => {
           }}
           onSelectAllRoute={handleSelectAllRoute}
           selectedSegmentId={segmentsState.selectedSegmentId}
-          segments={pavementWorkflow.previewBase?.segments || segmentsState.segments}
+          segments={segmentRows || pavementWorkflow.previewBase?.segments || segmentsState.segments}
           importedLengthKm={importedLengthKm}
           slabLengthM={slabLengthM}
           slabThicknessCm={slabThicknessCm}
@@ -305,14 +350,14 @@ export const AlignmentSegments: React.FC = () => {
           onSetStripWidthMeters={setStripWidthMeters}
           rightTab={rightTab}
           onSetRightTab={setRightTab}
-          segments={rightTab === 'SLABS' ? pavementWorkflow.display?.segments || activeSegments : activeSegments}
+          segments={rightTab === 'SLABS' ? pavementWorkflow.display?.segments || activeSegments : displayedSegments}
           selectedSegmentId={segmentsState.selectedSegmentId}
           onSelectSegment={segmentsState.handleSelectSegment}
           splitDistance={activeSplitDistance}
           onSetSplitDistance={handleSetSplitDistance}
           splitSortOrder={segmentsState.splitSortOrder}
           onSetSplitSortOrder={segmentsState.setSplitSortOrder}
-          onApplyAutoSplit={() => { handleApplyAutoSplit(); markWidthDraft() }}
+          onApplyAutoSplit={() => { if (segmentWorkflow.enabled && isMainline) void segmentWorkflow.loadPreview(); else { handleApplyAutoSplit(); markWidthDraft() } }}
           onOpenAddSegmentModal={() => segmentsState.setIsAddSegmentModalOpen(true)}
           onSelectAllRoute={handleSelectAllRoute}
           currentCoords={currentCoords}
@@ -332,7 +377,7 @@ export const AlignmentSegments: React.FC = () => {
           onSetExpansionGapMm={value => { setExpansionGapMm(value); markLocalDraft() }}
           onOpenSplitModal={(seg) => {
             segmentsState.setSplitModalSegment(seg)
-            segmentsState.setCustomSplitKm(parseFloat(((seg.startKm + seg.endKm) / 2).toFixed(3)))
+            segmentsState.setCustomSplitKm((seg.startKm + seg.endKm) / 2)
           }}
           onEditSegment={(seg) => segmentsState.setEditingSegment({ ...seg })}
           onDeleteSegment={id => { handleDeleteSegment(id); markWidthDraft() }}
@@ -352,6 +397,8 @@ export const AlignmentSegments: React.FC = () => {
           mainlineLengthKm={importedLengthKm}
           alignmentStatus={alignmentStatus}
           isSupervisor={isSupervisor}
+          segmentPlanning={segmentWorkflow.enabled && isMainline && segmentWorkflow.editable}
+          segmentSetStatus={isMainline ? segmentWorkflow.preview ? 'PREVIEW' : segmentWorkflow.snapshot?.data.status : undefined}
           pavementWorkflow={pavementWorkflow}
           editingDisabled={pavementWorkflow.busy || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
         />

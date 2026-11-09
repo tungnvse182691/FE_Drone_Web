@@ -12,6 +12,8 @@ import { SidebarFooterKpis } from './SidebarFooterKpis'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 
 export interface AlignmentSidebarProps {
+  segmentPlanning?: boolean
+  segmentSetStatus?: string
   pavementWorkflow?: ReturnType<typeof usePavementWorkflow>
   rightTab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS'
   onSetRightTab: (tab: 'SEGMENTS' | 'WIDTH_PROFILE' | 'SLABS') => void
@@ -68,6 +70,7 @@ export interface AlignmentSidebarProps {
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
   pavementWorkflow,
+  segmentPlanning = false, segmentSetStatus,
   onSetRightTab,
   segments,
   selectedSegmentId,
@@ -166,6 +169,8 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {/* TAB CONTENT: SEGMENTS */}
         {rightTab === 'SEGMENTS' && (
           <SidebarSegmentsTab
+            segmentPlanning={segmentPlanning}
+            segmentSetStatus={segmentSetStatus}
             segments={segments}
             selectedSegmentId={selectedSegmentId}
             onSelectSegment={onSelectSegment}

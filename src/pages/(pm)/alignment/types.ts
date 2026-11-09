@@ -1,4 +1,5 @@
 export interface SegmentItem {
+  serverCoordinates?: [number, number][]
   id: string
   code: string
   startKm: number

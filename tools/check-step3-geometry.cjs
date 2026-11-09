@@ -13,7 +13,7 @@ await test('selected route caller sidebar footer isolates local branch from conf
  const source=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element
  function visit(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;ts.forEachChild(n,visit)}visit(ast);assert.ok(element)
  const props=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','importedLengthKm','alignmentStatus','selectedTargetType'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
- const code=ts.transpileModule('function renderCaller(selectedTargetType, activeSegments, activeLengthKm){const alignmentStatus="CONFIRMED",rightTab="SEGMENTS",pavementWorkflow={};return <AlignmentSidebar '+props+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const code=ts.transpileModule('function renderCaller(selectedTargetType, activeSegments, activeLengthKm){const alignmentStatus="CONFIRMED",rightTab="SEGMENTS",pavementWorkflow={},displayedSegments=activeSegments;return <AlignmentSidebar '+props+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
  const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar})
  const segment={id:'s',lengthKm:0.1},render=(target,segments=[segment],length=.1)=>renderToStaticMarkup(renderCaller(target,segments,length))
  assert.match(render('MAINLINE'),/Đã xác nhận/);assert.match(render('MAINLINE'),/Hình học đã khóa/)

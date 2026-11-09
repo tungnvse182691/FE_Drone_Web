@@ -104,14 +104,16 @@ export function useGeometryReadModel(projectId: string) {
     invalidate()
     const next = new URLSearchParams(params)
     if (id) next.set('draftId', id); else next.delete('draftId')
-    next.delete('roadSectionId'); next.delete('routeVersionId'); setParams(next)
+    next.delete('roadSectionId'); next.delete('routeVersionId'); next.delete('segmentSetId'); next.delete('layoutId'); setParams(next)
   }
   const openGeometry = (roadId: string, versionId: string) => {
     const next = new URLSearchParams(params)
+    if (roadId !== roadReference || versionId !== versionReference) { next.delete('segmentSetId'); next.delete('layoutId') }
     next.set('roadSectionId', roadId); next.set('routeVersionId', versionId); setParams(next)
   }
   const openConfirmed = (id: string, geometry: RoadGeometryVersionView) => {
     const next = new URLSearchParams(params)
+    if (id !== draftId || geometry.roadSectionId !== roadReference || geometry.routeVersionId !== versionReference) { next.delete('segmentSetId'); next.delete('layoutId') }
     next.set('draftId', id); next.set('roadSectionId', geometry.roadSectionId!); next.set('routeVersionId', geometry.routeVersionId)
     setParams(next)
   }

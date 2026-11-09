@@ -17,6 +17,7 @@ export interface SidebarSegmentCardProps {
   onEdit: () => void
   onOpenSplit: () => void
   onDelete: () => void
+  allowSplit?: boolean
   isReadOnly?: boolean
 }
 
@@ -28,6 +29,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
   onEdit,
   onOpenSplit,
   onDelete,
+  allowSplit = false,
   isReadOnly = false
 }) => {
   return (
@@ -116,9 +118,9 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
             Tiếp giáp khép kín
           </span>
         )}
-        {!isReadOnly && (
+        {(!isReadOnly || allowSplit) && (
           <div className="flex items-center gap-1">
-            <button
+            {!isReadOnly && <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
@@ -128,7 +130,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               title="Chỉnh sửa lý trình & thông số"
             >
               <Edit2 className="w-3.5 h-3.5" />
-            </button>
+            </button>}
 
             <button
               type="button"
@@ -142,7 +144,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               <SplitSquareVertical className="w-3.5 h-3.5" />
             </button>
 
-            <button
+            {!isReadOnly && <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
@@ -152,7 +154,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
               title="Xóa phân đoạn"
             >
               <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            </button>}
           </div>
         )}
       </div>

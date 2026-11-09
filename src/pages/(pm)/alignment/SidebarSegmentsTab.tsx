@@ -12,6 +12,8 @@ import { SegmentItem, BranchItem } from './types'
 import { SidebarSegmentCard } from './SidebarSegmentCard'
 
 export interface SidebarSegmentsTabProps {
+  segmentPlanning?: boolean
+  segmentSetStatus?: string
   segments: SegmentItem[]
   selectedSegmentId: string | null
   onSelectSegment: (seg: SegmentItem) => void
@@ -46,6 +48,7 @@ export interface SidebarSegmentsTabProps {
 
 export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   segments,
+  segmentPlanning = false, segmentSetStatus,
   selectedSegmentId,
   onSelectSegment,
   splitDistance,
@@ -168,12 +171,12 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           </span>
         </div>
 
-        {isLocked ? (
+        {isLocked && !segmentPlanning ? (
           <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg flex items-center gap-2 text-xs text-emerald-900 font-medium">
             <Lock className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {isConfirmed
-                ? 'Tim tuyến & phân đoạn đã được Giám sát phê duyệt khóa bất biến (CONFIRMED).'
+                ? 'Hình học đã xác nhận; segment set có trạng thái riêng từ máy chủ.'
                 : 'Hồ sơ tim tuyến đang chờ Giám sát phê duyệt (PENDING_APPROVAL).'}
             </span>
           </div>
@@ -267,6 +270,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           const subTitle = isMain
             ? !hasCoords
               ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ" để nạp`
+              : segmentSetStatus
+              ? segmentSetStatus === 'PREVIEW' ? 'Preview BE • Chưa lưu ID phân đoạn' : `Segment set ${segmentSetStatus} • ID, thứ tự và phạm vi từ máy chủ`
               : isConfirmed
               ? 'Hình học đã xác nhận • Các khoảng bề rộng chỉ là dữ liệu kỹ thuật'
               : segments.length > 0
@@ -301,7 +306,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                     </span>
                   ) : isMain && isConfirmed ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      HÌNH HỌC ĐÃ XÁC NHẬN
+                      {segmentSetStatus ? `SEGMENT SET ${segmentSetStatus}` : 'HÌNH HỌC ĐÃ XÁC NHẬN'}
                     </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -361,7 +366,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             </button>
           ) : (
             <span className="text-[10px] lowercase text-slate-400 font-normal">
-              {segments.length > 0 ? (isLocked ? 'Đã khóa phân đoạn' : 'Bấm chọn để xem từng đoạn') : 'Trống'}
+              {segments.length > 0 ? (segmentPlanning ? 'Chỉnh mốc phân đoạn; hình học đã khóa' : isLocked ? 'Chỉ đọc' : 'Bấm chọn để xem từng đoạn') : 'Trống'}
             </span>
           )}
         </div>
@@ -408,6 +413,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               onEdit={() => onEditSegment(seg)}
               onOpenSplit={() => onOpenSplitModal(seg)}
               onDelete={() => onDeleteSegment(seg.id)}
+              allowSplit={segmentPlanning}
               isReadOnly={isLocked || isSupervisor}
             />
           ))
