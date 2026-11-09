@@ -98,7 +98,7 @@ export function useAlignmentImportState({
           if (!contextReady) message += ' Chưa tải được context dự án; chưa đủ điều kiện lưu.'
           else if (engineeringCrs == null) message += ' Dự án chưa thiết lập engineeringUtmSrid; chỉ preview, chưa lưu.'
           else if (draft.sourceCrs !== engineeringCrs) message += ' CRS tệp không khớp CRS dự án; chỉ preview, chưa lưu.'
-          if (contextReady && roadSectionCount === 0) message += ' Dự án chưa có road section/version; chưa đủ điều kiện lưu.'
+          if (contextReady && roadSectionCount === 0) message += ' Dự án chưa có road section/version; bản nháp sẽ lưu ở cấp project.'
           setReadMessage(message); latest.current.showToast(message)
           if (preview.length >= 2 && latest.current.onRoadGuardDraft && applied !== false) setImportModalOpen(false)
           return

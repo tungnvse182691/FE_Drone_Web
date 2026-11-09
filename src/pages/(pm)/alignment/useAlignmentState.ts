@@ -438,7 +438,7 @@ export function useAlignmentState() {
   useEffect(() => {
     const context = geometryRead.context
     if (context?.projectId !== selectedProjectId) return
-    const section = geometryRead.draft?.data.roadSectionId || (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
+    const section = geometryRead.draftId ? geometryRead.draft?.data.roadSectionId : (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
     if (section) draftWorkflow.setForm(old => old.sectionId ? old : { ...old, sectionId: section })
   }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, selectedProjectId])
   useEffect(() => {
@@ -448,7 +448,7 @@ export function useAlignmentState() {
       if (geometryRead.context?.projectId !== selectedProjectId) return
       try {
         if (!geometryRead.draft?.etag || !draft.version || geometryRead.draft.etag !== `"${draft.version}"`) throw new Error('version: bản nháp chưa có ETag khớp phiên bản máy chủ.')
-        if (!draft.roadSectionId || !geometryRead.context.roadSections.some(road => road.roadSectionId === draft.roadSectionId)) throw new Error('roadSectionId: tuyến của bản nháp không thuộc context dự án.')
+        if (draft.roadSectionId && !geometryRead.context.roadSections.some(road => road.roadSectionId === draft.roadSectionId)) throw new Error('roadSectionId: tuyến của bản nháp không thuộc context dự án.')
         if (draft.sourceCrs !== geometryRead.context.engineeringUtmSrid) throw new Error('sourceCrs: không khớp engineeringUtmSrid dự án.')
         const source = restoreCoordinateDraft(draft)
         editorDraft.current = draft.id

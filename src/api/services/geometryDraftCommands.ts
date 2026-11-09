@@ -3,8 +3,8 @@ import { RoleCode } from '../../types/enums'
 import { alignmentService, type GeometryDraftInput, type GeometryConfirmInput, type GeometryDraftView, type RoadGeometryVersionView } from './alignmentService'
 
 export type DraftCommand =
-  | { kind: 'create'; sectionId: string; input: GeometryDraftInput }
-  | { kind: 'update'; draftId: string; etag: string; input: GeometryDraftInput }
+  | { kind: 'create'; sectionId?: string; input: GeometryDraftInput }
+  | { kind: 'update'; sectionId?: string | null; draftId: string; etag: string; input: GeometryDraftInput }
   | { kind: 'confirm'; draftId: string; etag: string; input: GeometryConfirmInput }
 type Pending = { command: DraftCommand; key: string; receipt?: GeometryDraftView | RoadGeometryVersionView; conflict?: boolean; duplicate?: boolean; rejected?: boolean }
 const busy = new Set<string>()
@@ -89,13 +89,15 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     }
     const draft = receipt as GeometryDraftView
     if (!draft.id || intent.kind === 'update' && draft.id !== intent.draftId) throw new Error('Receipt bản nháp thiếu hoặc sai reference.')
-    const sectionId = intent.kind === 'create' ? intent.sectionId : draft.roadSectionId
+    const sectionId = intent.kind === 'create' ? intent.sectionId : intent.sectionId === undefined ? draft.roadSectionId : intent.sectionId
     const receiptEtag = `"${draft.version || ''}"`
-    if (!sectionId || draft.roadSectionId !== sectionId || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(receiptEtag)) throw new Error('Receipt bản nháp thiếu tuyến hoặc phiên bản hợp lệ.')
+    if (draft.roadSectionId !== (sectionId || null) || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(receiptEtag)) throw new Error('Receipt bản nháp thiếu tuyến hoặc phiên bản hợp lệ.')
     const readback = await alignmentService.getGeometryDraft(projectId, draft.id)
     current()
     if (!/^"[A-Za-z0-9+/]+={0,2}"$/.test(readback.etag)) throw new Error('Readback chưa có phiên bản hợp lệ.')
-    if (readback.data.projectId !== projectId || readback.data.id !== draft.id || readback.data.roadSectionId !== sectionId || readback.etag !== receiptEtag) throw new Error('Readback không khớp draft/tuyến/phiên bản của receipt; cần đối chiếu trước khi gửi lệnh mới.')
+    if (readback.data.projectId !== projectId || readback.data.id !== draft.id || readback.data.roadSectionId !== (sectionId || null) || readback.etag !== receiptEtag || readback.etag !== `"${readback.data.version}"`) throw new Error('Readback không khớp draft/tuyến/phiên bản của receipt; cần đối chiếu trước khi gửi lệnh mới.')
+    const source = readback.data
+    if (source.status !== 'DRAFT' || source.sourceKind !== intent.input.sourceKind || source.sourceCrs !== intent.input.sourceCrs || source.roadCode !== intent.input.roadCode || source.roadName !== intent.input.roadName || source.stationOriginMeters !== intent.input.stationOriginMeters || source.surveyWidthMeters !== intent.input.surveyWidthMeters || JSON.stringify(source.widthProfile?.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) !== JSON.stringify(intent.input.widthProfile.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) || JSON.stringify((source.editedCoordinates ?? source.originalCoordinates)?.map(p => [p.x, p.y])) !== JSON.stringify(intent.input.coordinates?.map(p => [p.x, p.y]))) throw new Error('Readback không khớp dữ liệu nguồn đã gửi.')
     save(journal, null)
     return { kind: intent.kind, draft: readback }
   } catch (error: any) {

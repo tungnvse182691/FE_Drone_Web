@@ -107,8 +107,8 @@ await test('GeoJSON import preserves syntax/ambiguity/geometry/CRS/validation er
 })
 
 const roles={PROJECT_MANAGER:'PROJECT_MANAGER',SUPERVISOR:'SUPERVISOR'}
-const draftInput={sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:0,coordinates:[{x:500000,y:1000000},{x:500100,y:1000000}],widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:6}],surveyWidthMeters:10,changeReason:'Hồ sơ đo đã kiểm',roadCode:'R'}
-const dto={id:'11111111-1111-4111-8111-111111111111',projectId:'p',roadSectionId:'road',status:'DRAFT',sourceKind:'COORDINATES',version:'AAAAAAAAAAE=',stationOriginMeters:0,surveyWidthMeters:10,widthProfile:draftInput.widthProfile,originalCoordinates:draftInput.coordinates}
+const draftInput={sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:0,coordinates:[{x:500000,y:1000000},{x:500100,y:1000000}],widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:6}],surveyWidthMeters:10,changeReason:'Hồ sơ đo đã kiểm',roadCode:'R',roadName:'Road'}
+const dto={sourceCrs:draftInput.sourceCrs,roadCode:draftInput.roadCode,roadName:draftInput.roadName,id:'11111111-1111-4111-8111-111111111111',projectId:'p',roadSectionId:'road',status:'DRAFT',sourceKind:'COORDINATES',version:'AAAAAAAAAAE=',stationOriginMeters:0,surveyWidthMeters:10,widthProfile:draftInput.widthProfile,originalCoordinates:draftInput.coordinates}
 const storage=()=>{const map=new Map();return{getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)}}
 const commands=(client,journal=storage())=>load('src/api/services/geometryDraftCommands.ts',{'./alignmentService':{alignmentService:service(client)},'../../types/enums':{RoleCode:roles},__sessionStorage:journal})
 const fail=(status,code)=>Object.assign(Error(code),{response:{status,data:{code}}})
@@ -382,7 +382,7 @@ await test('import modal closes only after applied preview and ignores cancelled
  view.processGeoJSONFile({});const cancelled=reader;view.setIsImportModalOpen(false);view.setIsImportModalOpen(true);render();const before=notices.length;done(cancelled);assert.equal(view.isImportModalOpen,true);assert.equal(applied.length,1);assert.equal(notices.length,before)
  view.processGeoJSONFile({});const oldFile=reader;view.processGeoJSONFile({});const latest=reader;done(oldFile);assert.equal(applied.length,1);assert.equal(view.isImportModalOpen,true);done(latest);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,false)
  view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});const oldScope=reader;inputScope='q:d2';render();done(oldScope);assert.equal(applied.length,2);assert.equal(view.isImportModalOpen,true)
- const draft=JSON.stringify({sourceKind:'COORDINATES',sourceCrs:32648,coordinates:[{x:500000,y:1200000},{x:500100,y:1200000}],stationOriginMeters:0,changeReason:'Nguồn thiết kế',surveyWidthMeters:7,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:7}]})
+ const draft=JSON.stringify({sourceKind:'COORDINATES',roadCode:'TEST-SOURCE',roadName:'Tuyến nguồn kiểm thử',sourceCrs:32648,coordinates:[{x:500000,y:1200000},{x:500100,y:1200000}],stationOriginMeters:0,changeReason:'Nguồn thiết kế',surveyWidthMeters:7,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:100,widthMeters:7}]})
  view.processGeoJSONFile({});done(reader,draft);assert.equal(view.isImportModalOpen,false);assert.equal(applied.at(-1).draft.sourceCrs,32648);assert.equal(applied.at(-1).preview.length,2);assert.match(view.readMessage,/chưa lưu/);assert.match(view.readMessage,/context/)
  view.setIsImportModalOpen(true);render();view.processGeoJSONFile({});done(reader,draft.replace('32648','32649'));assert.equal(view.isImportModalOpen,true);assert.match(view.readMessage,/Chưa hỗ trợ preview/)
  effects.forEach(e=>e?.cleanup?.())

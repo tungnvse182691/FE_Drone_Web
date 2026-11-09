@@ -27,7 +27,8 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
   const context = model.context
   if (!context) throw new GeometryCommandUiError('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
   const roads = context.roadSections.filter(section => section.roadSectionId === form.sectionId)
-  if (!form.sectionId || roads.length !== 1) throw new GeometryCommandUiError('Hãy chọn đúng một tuyến từ phạm vi máy chủ đã trả về.')
+  if (form.sectionId && roads.length !== 1) throw new GeometryCommandUiError('Hãy chọn đúng một tuyến từ phạm vi máy chủ đã trả về.')
+  if (!form.sectionId && !fileDraft) throw new GeometryCommandUiError('Cần JSON có roadCode, roadName và thông số nguồn để lưu draft cấp project.')
   const road = roads[0]
   const profile = model.profiles.find(profile => profile.id === form.profileId && profile.projectId === context.projectId)
   const definition = profile?.definition
@@ -64,7 +65,7 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
     return { fromOffsetMeters, toOffsetMeters, widthMeters }
   })
   if (Math.abs(end - length) > 1e-7) throw new GeometryCommandUiError('Khoảng bề rộng phải phủ đúng chiều dài tim tuyến đã nhập.')
-  const input: GeometryDraftInput = { sourceKind: 'COORDINATES', sourceCrs: fileDraft ? fileDraft.sourceCrs : definition!.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: fileDraft ? form.reason : form.reason.trim(), roadCode: road.code, roadName: road.name }
+  const input: GeometryDraftInput = { sourceKind: 'COORDINATES', sourceCrs: fileDraft ? fileDraft.sourceCrs : definition!.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: fileDraft ? form.reason : form.reason.trim(), roadCode: fileDraft ? fileDraft.roadCode : road?.code, roadName: fileDraft ? fileDraft.roadName : road?.name }
   if (requireReason && !form.reason.trim()) throw new GeometryCommandUiError('changeReason: cần PM nhập lý do cập nhật; GET draft không trả lý do gốc.')
   if (fileDraft) {
     try { validateCoordinateDraft(input, requireReason); return input }
@@ -155,7 +156,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       return
     }
     const input = pending.command.input
-    setForm(old => ({ ...old, sectionId: pending.command.kind === 'create' ? pending.command.sectionId : model.draft?.data.roadSectionId || '', origin: String(input.stationOriginMeters), surveyWidth: String(input.surveyWidthMeters), widths: input.widthProfile.map(w => `${w.fromOffsetMeters}, ${w.toOffsetMeters}, ${w.widthMeters}`).join('\n'), reason: input.changeReason || '' }))
+    setForm(old => ({ ...old, sectionId: pending.command.kind === 'create' ? pending.command.sectionId || '' : model.draft?.data.roadSectionId || '', origin: String(input.stationOriginMeters), surveyWidth: String(input.surveyWidthMeters), widths: input.widthProfile.map(w => `${w.fromOffsetMeters}, ${w.toOffsetMeters}, ${w.widthMeters}`).join('\n'), reason: input.changeReason || '' }))
     setCoordinatesText((input.coordinates || []).map(p => `${p.x}, ${p.y}`).join('\n'))
   }, [pending])
   const draft = model.draft?.data
@@ -172,7 +173,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (draft && !model.draft?.etag) throw new GeometryCommandUiError('Chưa đọc được phiên bản bản nháp.')
     if (sourceUnverified && !fileDraft) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
     if (model.context?.projectId !== projectId) throw new GeometryCommandUiError('Chưa tải đúng context dự án từ máy chủ.')
-    if (draft && (!draft.roadSectionId || form.sectionId !== draft.roadSectionId)) throw new GeometryCommandUiError('Tuyến đích phải khớp road section của bản nháp đang sửa.')
+    if (draft && (form.sectionId !== (draft.roadSectionId || ''))) throw new GeometryCommandUiError('Tuyến đích phải khớp road section của bản nháp đang sửa.')
     input = coordinateDraftInput(form, coordinatesText, model, fileDraft, false)
   } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const saveDisabledReason = saveReason
@@ -229,7 +230,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       return
     }
     const current = begin(); if (!current) return
-    try { await complete(await runDraftCommand(projectId, draft ? { kind: 'update', draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
+    try { await complete(await runDraftCommand(projectId, draft ? { kind: 'update', sectionId: draft.roadSectionId ?? null, draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
     catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }

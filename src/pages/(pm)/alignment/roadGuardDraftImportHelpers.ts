@@ -30,6 +30,9 @@ export function validateCoordinateDraft(draft: any, requireReason: boolean): voi
   const fail = (field: string, message: string): never => { throw new RoadGuardDraftValidationError(`${field}: ${message}`) }
   const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) fail('Draft', 'phải là đối tượng JSON, không phải GeoJSON.')
+  for (const field of ['roadCode', 'roadName']) {
+    if (typeof draft[field] !== 'string' || !draft[field].trim()) fail(field, 'cần tên tuyến có nguồn trong JSON hoặc GET draft.')
+  }
   if (draft.sourceKind !== 'COORDINATES') fail('sourceKind', 'phải là COORDINATES.')
   if (draft.sourceCrs !== 32648 && draft.sourceCrs !== 32649) fail('sourceCrs', 'chỉ hỗ trợ 32648 hoặc 32649.')
   for (const field of ['sourceFileId', 'trackIndex', 'trackSegmentIndex']) {

@@ -12,7 +12,7 @@ function harness(root=false,saveMode=false,mapMode=false){
  let serverDraft={...JSON.parse(sample),id:'saved-draft',projectId:'p',roadSectionId:'road',status:'DRAFT',version:'AAAAAAAAAAI='}
  const response=data=>({data,headers:{etag:v2}})
  const client={async post(url,body,config){return write('POST',url,body,config)},async put(url,body,config){return write('PUT',url,body,config)},async get(url){calls.push({method:'GET',url});return{data:{...serverDraft,...(control.badReadback?{id:'wrong-draft'}:{}),...(control.badSection?{roadSectionId:'other'}:{})},headers:{etag:control.badVersion?v1:v2}}}}
- async function write(method,url,body,config){calls.push({method,url,body:plain(body),headers:config.headers});if(control.error)throw control.error;serverDraft={...serverDraft,...plain(body)};return response(control.badReceipt?{...serverDraft,version:null}:serverDraft)}
+ async function write(method,url,body,config){calls.push({method,url,body:plain(body),headers:config.headers});if(control.error)throw control.error;serverDraft={...serverDraft,...plain(body),id:method==='PUT'?url.split('/').at(-1):serverDraft.id,roadSectionId:method==='POST'?(url.includes('/road-sections/')?'road':null):(control.nullSection?null:serverDraft.roadSectionId),editedCoordinates:plain(body.coordinates)};return response(control.badReceipt?{...serverDraft,version:null}:serverDraft)}
  mocks['../../types/enums']=mocks['../../../types/enums'];mocks['../../store/authStore']={useAuthStore:{subscribe(){}}};mocks['../client']={apiClient:client};mocks['./projectService']={projectService:{}}
  const maps=[],fits=[]
  if(mapMode){
@@ -42,6 +42,19 @@ function harness(root=false,saveMode=false,mapMode=false){
 }
 const tests=[];function test(name,run){tests.push({name,run})}
 
+test('project-level missing source names or invalid project CRS never writes',async()=>{
+ for(const field of ['roadCode','roadName']){const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(JSON.stringify({...JSON.parse(sample),[field]:undefined}));assert.equal(h.view.fileDraft,null);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0);h.unmount()}
+ for(const crs of [null,4326,32649]){const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:crs,roadSections:[]};h.flush();h.read(sample);assert.ok(h.view.draftWorkflow.saveDisabledReason);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0);h.unmount()}
+})
+
+test('project-level JSON saves and reads null section without duplicate POST on GET failure',async()=>{
+ const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]};h.flush();h.read(sample)
+ assert.equal(h.view.draftWorkflow.saveReason,'');h.control.badReadback=true
+ await h.view.handleSubmitAlignment();h.flush();assert.ok(h.view.draftWorkflow.pending.receipt)
+ h.control.badReadback=false;await h.view.draftWorkflow.retryCommand();h.flush()
+ assert.equal(h.calls.filter(c=>c.method==='POST').length,1);assert.equal(h.calls[0].url,'/projects/p/road-geometry-drafts');h.hydrate();assert.equal(h.view.draftWorkflow.busy,false);h.unmount()
+})
+
 test('server draft restores engineering state and map after F5 without file/profile and fences another project',()=>{
  const h=harness(true,true,true),source=JSON.parse(sample)
  h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',currentVersionId:'route'}]}
@@ -54,6 +67,20 @@ test('server draft restores engineering state and map after F5 without file/prof
  const input=h.buildInput(h.view.draftWorkflow.form,h.view.importState.manualCoordsText,h.model,h.view.fileDraft)
  assert.deepEqual(plain(input.coordinates),source.coordinates);assert.deepEqual(plain(input.widthProfile),source.widthProfile);assert.equal(h.calls.length,0)
  h.project('q');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.fileDraft,null);assert.equal(h.calls.length,0);h.unmount()
+})
+
+test('null-section F5 restores source and edits with latest GET ETag and new reason',async()=>{
+ const h=harness(true,true,true),source=JSON.parse(sample);h.control.nullSection=true
+ h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[]}
+ h.model.draftId='a';h.flush()
+ h.model.draft={data:{...source,changeReason:undefined,coordinates:undefined,editedCoordinates:source.coordinates,id:'a',projectId:'p',roadSectionId:null,status:'DRAFT',version:'AAAAAAAAAAI='},etag:h.v2};h.flush();h.loadMap()
+ assert.equal(h.view.currentCoords.length,119);assert.equal(h.view.currentKmPoints.length,119);assert.ok(h.view.mapState.mapRef.current.getSource('segments-source').data.features.length)
+ assert.equal(h.view.draftWorkflow.form.origin,'0');assert.equal(h.view.draftWorkflow.form.surveyWidth,'12');assert.equal(h.view.draftWorkflow.form.reason,'')
+ assert.match(h.view.draftWorkflow.saveReason,/changeReason/);assert.ok(!h.view.draftWorkflow.saveReason.includes('hồ sơ CRS'))
+ h.view.draftWorkflow.setForm(old=>({...old,reason:'PM nhập lý do cập nhật'}));h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
+ const input=h.buildInput(h.view.draftWorkflow.form,h.view.importState.manualCoordsText,h.model,h.view.fileDraft)
+ assert.deepEqual(plain(input.coordinates),source.coordinates);assert.deepEqual(plain(input.widthProfile),source.widthProfile);assert.equal(h.calls.length,0)
+ await h.view.handleSubmitAlignment();h.flush();const put=h.calls.find(c=>c.method==='PUT');assert.ok(put);assert.equal(put.headers['If-Match'],h.v2);assert.equal(h.view.draftWorkflow.pending,null);assert.equal(put.body.roadCode,source.roadCode);assert.equal(put.body.roadName,source.roadName);assert.equal(put.body.changeReason,'PM nhập lý do cập nhật');h.project('q');assert.equal(h.view.currentCoords.length,0);assert.equal(h.view.fileDraft,null);assert.equal(h.calls.filter(c=>c.method==='PUT').length,1);h.unmount()
 })
 
 test('pending order A URL→draft→geometry restores six pavement values only after confirmed references',()=>{
@@ -182,7 +209,7 @@ test('Draft JSON update sends loaded If-Match and current edited fields',async()
  await h.view.handleSubmitAlignment();h.flush();const write=h.calls.find(c=>c.method==='PUT');assert.ok(write);assert.equal(write.headers['If-Match'],h.v1);assert.equal(write.body.widthProfile[0].widthMeters,10);assert.equal(write.body.stationOriginMeters,100);assert.equal(write.body.changeReason,'Lý do mới');assert.equal(write.body.surveyWidthMeters,15);h.hydrate();assert.equal(h.view.draftWorkflow.busy,false);h.unmount()
 })
 test('missing or ambiguous target, wrong CRS/project, unknown GeoJSON and invalid edited width never write',async()=>{
- const h=harness(true,true),sections=[{roadSectionId:'r1',code:'R1'},{roadSectionId:'r2',code:'R2'}];h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:sections};h.flush();h.read(sample);assert.match(h.view.draftWorkflow.saveReason,/một tuyến/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
+ const h=harness(true,true),sections=[{roadSectionId:'r1',code:'R1'},{roadSectionId:'r2',code:'R2'}];h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:sections};h.flush();h.read(sample);assert.equal(h.view.draftWorkflow.saveReason,'');h.view.draftWorkflow.setForm(old=>({...old,sectionId:'outside-project'}));h.flush();assert.match(h.view.draftWorkflow.saveReason,/một tuyến/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
  h.view.draftWorkflow.setForm(old=>({...old,sectionId:'r1'}));h.flush();assert.equal(h.view.draftWorkflow.saveReason,'')
  h.model.context={...h.model.context,engineeringUtmSrid:32649};h.flush();assert.match(h.view.draftWorkflow.saveReason,/không khớp/);await h.view.handleSubmitAlignment();assert.equal(h.calls.length,0)
  h.model.context={...h.model.context,projectId:'other'};h.flush();assert.match(h.view.draftWorkflow.saveReason,/context/)
@@ -234,7 +261,7 @@ test('zone49 and CRS mismatch keep engineering input but never render a zone48 p
 })
 test('two independent Draft locations and third RFC7946 file preview without project setup or business writes',async()=>{
  const h=harness(true,true,true)
- const draft=(x,y,count)=>({sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:25,changeReason:'Dữ liệu kiểm thử cục bộ',coordinates:Array.from({length:count},(_,i)=>({x:x+3*i,y:y+4*i})),surveyWidthMeters:12,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5*(count-1),widthMeters:7}]})
+ const draft=(x,y,count)=>({sourceKind:'COORDINATES',sourceCrs:32648,stationOriginMeters:25,roadCode:'TEST-SOURCE',roadName:'Tuyến nguồn kiểm thử',changeReason:'Dữ liệu kiểm thử cục bộ',coordinates:Array.from({length:count},(_,i)=>({x:x+3*i,y:y+4*i})),surveyWidthMeters:12,widthProfile:[{fromOffsetMeters:0,toOffsetMeters:5*(count-1),widthMeters:7}]})
  const a=draft(500000,1000000,3),b=draft(700000,1800000,4)
  h.read(JSON.stringify(a));const first=plain(h.view.currentCoords);assert.deepEqual(plain(h.view.fileDraft),a);assert.equal(first.length,a.coordinates.length);h.loadMap()
  const old=h.read();h.read(JSON.stringify(b));old.onload({target:{result:JSON.stringify(a)}});h.flush()
