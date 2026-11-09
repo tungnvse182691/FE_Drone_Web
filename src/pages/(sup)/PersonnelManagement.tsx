@@ -210,7 +210,13 @@ export const PersonnelManagement: React.FC = () => {
 
       <AddPersonnelModal
         invitationBusy={p.invitationBusy}
-        blockedReason={p.addPersonnelTab === 'NEW' ? '' : personnelBlocks.primary}
+        blockedReason=""
+        assignmentBusy={p.primaryBusy}
+        assignmentMessage={p.primaryMessage}
+        assignmentLabel={p.primaryPending?.conflict || p.primaryPending?.rejected ? p.primaryComparison ? 'Dùng snapshot mới' : 'Đọc lại để đối chiếu' : p.primaryPending?.receipt ? 'Đọc lại kết quả' : p.primaryPending ? 'Gửi lại đúng yêu cầu' : 'Xác nhận điều chuyển'}
+        assignmentPending={!!p.primaryPending}
+        assignmentCompared={!!p.primaryComparison}
+        onCancel={p.cancelAdd}
         usersList={p.usersList}
         showAddPersonnelModal={p.showAddPersonnelModal}
         setShowAddPersonnelModal={p.setShowAddPersonnelModal}

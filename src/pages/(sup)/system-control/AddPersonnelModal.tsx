@@ -4,6 +4,12 @@ import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface AddPersonnelModalProps {
+  assignmentBusy?: boolean
+  assignmentMessage?: string
+  assignmentLabel?: string
+  assignmentPending?: boolean
+  assignmentCompared?: boolean
+  onCancel?: () => void
   invitationBusy?: boolean
   blockedReason?: string
 
@@ -40,6 +46,7 @@ export interface AddPersonnelModalProps {
 
 export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   showAddPersonnelModal,
+  assignmentBusy = false, assignmentMessage = '', assignmentLabel = 'Xác nhận điều chuyển', assignmentPending = false, assignmentCompared = false, onCancel,
   invitationBusy = false,
   blockedReason = '',
   setShowAddPersonnelModal,
@@ -164,8 +171,8 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleAddPersonnelSubmit} className="p-6 overflow-y-auto space-y-3.5 text-xs">
-          <p role="status" className="text-rose-700">{blockedReason}</p>
-          <fieldset disabled={addPersonnelTab === 'NEW' ? invitationBusy : !!blockedReason} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
+          <p role="status" className="text-rose-700">{blockedReason || assignmentMessage}</p>
+          <fieldset disabled={addPersonnelTab === 'NEW' ? invitationBusy : !!blockedReason || assignmentBusy || assignmentPending} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
           {addPersonnelTab === 'NEW' ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -348,7 +355,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     ))}
                 </select>
                 <p className="text-[11px] text-slate-500 italic mt-1.5">
-                  <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (giúp PM đó trở về trạng thái &quot;Chưa phân công&quot;), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
+                  <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (quyền khác vẫn theo membership còn hiệu lực), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
                 </p>
               </div>
 
@@ -370,7 +377,6 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                       onChange={(e) => {
                         const val = e.target.value
                         if (val) {
-                          assignExistingProjectIds.length = 0
                           toggleAssignExistingProject(val)
                         } else {
                           clearAllAssignExistingProjects()
@@ -408,17 +414,17 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                     <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
                       <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                       <span>
-                        <strong>Cảnh báo bàn giao thay thế:</strong> Dự án này hiện đang do PM <strong>{selectedTargetProject?.pm_name}</strong> phụ trách. Khi xác nhận điều chuyển, hệ thống sẽ <strong>thu hồi quyền PM của {selectedTargetProject?.pm_name}</strong> và chuyển giao quyền Chỉ huy trưởng chính duy nhất cho PM <strong>{selectedExistingUser?.full_name}</strong>.
+                        <strong>Cảnh báo bàn giao thay thế:</strong> Dự án này hiện đang do PM <strong>{selectedTargetProject?.pm_name}</strong> phụ trách. Khi xác nhận điều chuyển, hệ thống sẽ <strong>kết thúc phân công PM chính của {selectedTargetProject?.pm_name}</strong> và chuyển giao quyền Chỉ huy trưởng chính duy nhất cho PM <strong>{selectedExistingUser?.full_name}</strong>. Quyền khác của PM cũ còn phụ thuộc membership hiệu lực.
                       </span>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="font-semibold text-slate-700">Ngày hiệu lực bàn giao:</label>
+                      <label className="font-semibold text-slate-700">Ngày hiệu lực bàn giao (ngày UTC hiện tại):</label>
                       <input
                         type="date"
-                        value={assignEffectiveFrom || new Date().toISOString().split('T')[0]}
+                        value={assignEffectiveFrom || ''}
                         onChange={(e) => setAssignEffectiveFrom?.(e.target.value)}
                         className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                       />
@@ -515,14 +521,14 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
           <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setShowAddPersonnelModal(false)}
+              onClick={onCancel || (() => setShowAddPersonnelModal(false))}
               className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition cursor-pointer"
             >
-              Hủy
+              {assignmentCompared ? 'Bỏ ý định cũ và đóng' : 'Hủy'}
             </button>
             <button
               type="submit"
-              disabled={!!blockedReason || addPersonnelTab === 'NEW' && invitationBusy ||
+              disabled={!!blockedReason || assignmentBusy || addPersonnelTab === 'NEW' && invitationBusy ||
                 addPersonnelTab === 'ASSIGN' &&
                 (!assignExistingUserId ||
                   (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&
@@ -545,7 +551,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
               ) : (
                 <>
                   <UserCheck className="w-4 h-4" />
-                  <span>Xác nhận điều chuyển</span>
+                  <span>{assignmentLabel}</span>
                 </>
               )}
             </button>

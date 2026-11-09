@@ -390,12 +390,11 @@ export const personnelService = {
       primaryProjectManagerUserId: string
       effectiveFrom: string
       reason: string
-      expectedCurrentMembershipRowVersion?: string
+      expectedCurrentMembershipRowVersion: string
+      operationId: string
     }
-  ): Promise<any> {
-    throw Object.assign(new Error('Chưa hỗ trợ đổi PM bằng phiên Web: backend PUT primary-project-manager chỉ nhận Bearer. Chưa gửi lệnh; cần backend bổ sung cookie eligibility và CSRF.'), {
-      code: 'web_cookie_unsupported', projectId, input: payload
-    })
+  ): Promise<{ previousMembershipId: string; currentMembershipId: string; currentMembershipRowVersion: string }> {
+    return (await apiClient.put(`/projects/${projectId}/primary-project-manager`, payload)).data
   },
 
   /**

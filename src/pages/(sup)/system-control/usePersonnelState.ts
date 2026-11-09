@@ -1,3 +1,4 @@
+import { comparePrimaryPm, pendingPrimaryPm, readPrimaryPmSnapshot, resolvePrimaryPm, savePrimaryPm } from '../../../api/services/primaryPmCommands'
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
@@ -77,7 +78,72 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   const [assignExistingUserId, setAssignExistingUserId] = useState<string>('')
   const [assignExistingProjectIds, setAssignExistingProjectIds] = useState<string[]>([])
   const [assignEffectiveFrom, setAssignEffectiveFrom] = useState<string>(new Date().toISOString().split('T')[0])
-  const [assignReason, setAssignReason] = useState<string>('Điều chuyển nhân sự theo quyết định của Ban điều hành')
+  const [assignReason, setAssignReason] = useState<string>('')
+
+  const [primarySnapshot, setPrimarySnapshot] = useState<Awaited<ReturnType<typeof readPrimaryPmSnapshot>> | null>(null)
+  const [primaryPending, setPrimaryPending] = useState<ReturnType<typeof pendingPrimaryPm>>(null)
+  const [primaryComparison, setPrimaryComparison] = useState<Awaited<ReturnType<typeof comparePrimaryPm>> | null>(null)
+  const [primaryMessage, setPrimaryMessage] = useState(''), [primaryBusy, setPrimaryBusy] = useState(false)
+  const primaryAttempt = useRef(0), primaryRunning = useRef(false)
+  const primaryScope = `${user?.id}:${authEpoch}:${showAddPersonnelModal}:${addPersonnelTab}:${assignExistingProjectIds.join(',')}:${assignExistingUserId}`
+  const selectedPrimaryScope = useRef(primaryScope); selectedPrimaryScope.current = primaryScope
+  useEffect(() => {
+    let active = true
+    const attempt = ++primaryAttempt.current
+    setPrimarySnapshot(null); setPrimaryComparison(null); setPrimaryMessage(''); setPrimaryBusy(false); primaryRunning.current = false
+    if (!showAddPersonnelModal || addPersonnelTab !== 'ASSIGN' || user?.role !== RoleCode.SUPERVISOR) return
+    try {
+      const held = pendingPrimaryPm(); setPrimaryPending(held)
+      if (held) {
+        setAssignEffectiveFrom(held.body.effectiveFrom); setAssignReason(held.body.reason)
+        if (assignExistingProjectIds.length !== 1 || assignExistingProjectIds[0] !== held.projectId || assignExistingUserId !== held.body.primaryProjectManagerUserId) {
+          setAssignExistingProjectIds([held.projectId]); setAssignExistingUserId(held.body.primaryProjectManagerUserId); return
+        }
+      }
+    } catch (error) { setPrimaryMessage(personnelMessage(error)); return }
+    if (assignExistingProjectIds.length !== 1 || !assignExistingUserId) return
+    setPrimaryBusy(true)
+    readPrimaryPmSnapshot(assignExistingProjectIds[0], assignExistingUserId).then(value => {
+      if (!active || attempt !== primaryAttempt.current) return
+      setPrimarySnapshot(value); setPrimaryMessage(`PM chính server: ${value.current.displayName || value.current.userId}; membership ${value.current.membershipId}, validFrom ${value.current.validFrom}, version ${value.current.membershipVersion}. Lệnh mới chỉ nhận ngày UTC hiện tại, phải sau validFrom.`)
+    }).catch(error => { if (active) setPrimaryMessage(personnelMessage(error)) }).finally(() => { if (active) setPrimaryBusy(false) })
+    return () => { active = false; primaryAttempt.current++ }
+  }, [primaryScope])
+  const handlePrimarySubmit = async () => {
+    if (primaryRunning.current || user?.role !== RoleCode.SUPERVISOR) return
+    const scope = primaryScope, attempt = primaryAttempt.current, epoch = authEpoch, actor = user.id
+    const current = () => selectedPrimaryScope.current === scope && primaryAttempt.current === attempt && useAuthStore.getState().authEpoch === epoch && useAuthStore.getState().user?.id === actor
+    if (assignExistingProjectIds.length !== 1 || !assignExistingUserId) return blocked('Cần chọn đúng một dự án và một PM tiếp quản.')
+    primaryRunning.current = true; setPrimaryBusy(true)
+    try {
+      const held = pendingPrimaryPm()
+      if (held && (held.projectId !== assignExistingProjectIds[0] || held.body.primaryProjectManagerUserId !== assignExistingUserId)) throw new PersonnelUiError('Có lệnh dự án/PM khác đang chờ; mở đúng hồ sơ đó để đối chiếu.')
+      if (held?.conflict || held?.rejected) {
+        if (!primaryComparison) {
+          const comparison = await comparePrimaryPm()
+          if (!current()) return
+          setPrimaryComparison(comparison); setPrimaryMessage(`Đối chiếu: PM ${comparison.snapshot.current.displayName || comparison.snapshot.current.userId}, validFrom ${comparison.snapshot.current.validFrom}, version ${comparison.snapshot.current.membershipVersion}. Bấm dùng snapshot mới hoặc bỏ ý định cũ; chưa PUT.`)
+        } else { resolvePrimaryPm(primaryComparison); setPrimaryPending(null); setPrimarySnapshot(primaryComparison.snapshot); setPrimaryComparison(null); setPrimaryMessage('Đã chọn snapshot mới và giữ lý do. Kiểm lại rồi bấm xác nhận để tạo ý định mới.') }
+        return
+      }
+      if (!held && (!primarySnapshot || primarySnapshot.projectId !== assignExistingProjectIds[0] || primarySnapshot.targetId !== assignExistingUserId)) throw new PersonnelUiError('Chưa đọc snapshot đúng dự án/PM.')
+      const result = await savePrimaryPm(held ? undefined : primarySnapshot!, assignEffectiveFrom, assignReason)
+      if (!current()) return
+      setPrimaryPending(null); setPrimaryMessage('Đã lưu và đọc lại PM chính; đang tải lại phân công.')
+      const refreshed = await loadUsers()
+      if (!current()) return
+      setShowAddPersonnelModal(false)
+      triggerNoticeRef.current(refreshed ? `Đã chuyển PM chính và đọc lại membership ${result.assignment.membershipId}. Quyền khác của PM cũ phụ thuộc membership còn hiệu lực.` : 'Đã chuyển và đọc lại PM chính; danh sách/phân công chưa tải đầy đủ. Hãy tải lại.', refreshed ? 'success' : 'warning')
+    } catch (error: any) {
+      if (!current()) return
+      try { setPrimaryPending(pendingPrimaryPm()) } catch { /* Keep the original error visible. */ }
+      const code = error?.response?.data?.code
+      const message = !error?.response && !(error instanceof PersonnelUiError) ? 'Chưa rõ kết quả chuyển PM trên máy chủ; giữ nguyên operationId/body/ngày để replay đúng yêu cầu.' : code === 'project_concurrency_conflict' ? 'Membership PM chính đã đổi; giữ bản nhập, cần chủ động đối chiếu.' : code === 'duplicate_request' ? 'operationId đã có nội dung khác; cần đối chiếu ý định gốc.' : code === 'project_closed' ? 'Dự án đã đóng; chưa thể chuyển PM chính.' : personnelMessage(error)
+      setPrimaryMessage(message); triggerNoticeRef.current(message, 'error')
+    } finally { if (current()) { primaryRunning.current = false; setPrimaryBusy(false) } }
+  }
+  const closeAdd = (open: boolean) => { if (!open) { primaryAttempt.current++; primaryRunning.current = false; setPrimaryBusy(false); setPrimaryComparison(null) }; setShowAddPersonnelModal(open) }
+  const cancelAdd = () => { if (primaryRunning.current) return; if (primaryComparison) { try { resolvePrimaryPm(primaryComparison); setPrimaryPending(null) } catch (error) { setPrimaryMessage(personnelMessage(error)); return } }; closeAdd(false) }
 
   // Directory accounts and effective project memberships are independent read models.
   const loadSequence = useRef(0), projectSequence = useRef(0)
@@ -294,7 +360,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   // Toggle dự án trong Assign Modal
   const toggleAssignExistingProject = (projectId: string) => {
     setAssignExistingProjectIds((prev) =>
-      prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
+      prev.includes(projectId) ? [] : [projectId]
     )
   }
 
@@ -347,7 +413,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
   }
   const handleAddPersonnelSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (addPersonnelTab !== 'NEW') return blocked(personnelBlocks.primary)
+    if (addPersonnelTab === 'ASSIGN') return handlePrimarySubmit()
     if (invitationRunning.current) return
     if (user?.role !== RoleCode.SUPERVISOR) return blocked('Chỉ Giám sát được gửi lời mời nhân sự.')
     if (projectsError || isLoading) return blocked('Cần tải đầy đủ phạm vi dự án trước khi gửi lời mời.')
@@ -430,7 +496,8 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     editStatus,
     setEditStatus,
     showAddPersonnelModal,
-    setShowAddPersonnelModal,
+    setShowAddPersonnelModal: closeAdd,
+    primarySnapshot, primaryPending, primaryBusy, primaryMessage, primaryComparison, cancelAdd,
     addPersonnelTab,
     setAddPersonnelTab,
     newPersonnelName,
