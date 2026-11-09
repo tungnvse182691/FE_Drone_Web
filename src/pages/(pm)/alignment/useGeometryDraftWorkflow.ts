@@ -65,7 +65,7 @@ export function coordinateDraftInput(form: GeometryDraftForm, text: string, mode
     return { fromOffsetMeters, toOffsetMeters, widthMeters }
   })
   if (Math.abs(end - length) > 1e-7) throw new GeometryCommandUiError('Khoảng bề rộng phải phủ đúng chiều dài tim tuyến đã nhập.')
-  const input: GeometryDraftInput = { sourceKind: 'COORDINATES', sourceCrs: fileDraft ? fileDraft.sourceCrs : definition!.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: fileDraft ? form.reason : form.reason.trim(), roadCode: fileDraft ? fileDraft.roadCode : road?.code, roadName: fileDraft ? fileDraft.roadName : road?.name }
+  const input: GeometryDraftInput = { sourceKind: 'COORDINATES', sourceCrs: fileDraft ? fileDraft.sourceCrs : definition!.sourceSrid, stationOriginMeters: Number(form.origin), coordinates, widthProfile, surveyWidthMeters: Number(form.surveyWidth), changeReason: fileDraft ? form.reason : form.reason.trim(), roadCode: road ? road.code : fileDraft?.roadCode, roadName: fileDraft ? fileDraft.roadName : road?.name }
   if (requireReason && !form.reason.trim()) throw new GeometryCommandUiError('changeReason: cần PM nhập lý do cập nhật; GET draft không trả lý do gốc.')
   if (fileDraft) {
     try { validateCoordinateDraft(input, requireReason); return input }

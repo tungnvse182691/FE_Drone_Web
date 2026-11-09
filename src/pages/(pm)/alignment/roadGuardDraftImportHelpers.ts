@@ -22,17 +22,18 @@ export function restoreCoordinateDraft(draft: GeometryDraftView): CoordinateDraf
 export function parseRoadGuardDraftJson(text: string): RoadGuardCoordinatesDraft {
   let draft: any
   try { draft = JSON.parse(text) } catch { throw new RoadGuardDraftValidationError('Tệp RoadGuard Draft sai cú pháp JSON.') }
-  validateCoordinateDraft(draft, true)
+  validateCoordinateDraft(draft, true, true)
   return draft
 }
 
-export function validateCoordinateDraft(draft: any, requireReason: boolean): void {
+export function validateCoordinateDraft(draft: any, requireReason: boolean, requireFileMetadata = false): void {
   const fail = (field: string, message: string): never => { throw new RoadGuardDraftValidationError(`${field}: ${message}`) }
   const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) fail('Draft', 'phải là đối tượng JSON, không phải GeoJSON.')
-  for (const field of ['roadCode', 'roadName']) {
+  for (const field of requireFileMetadata ? ['roadCode', 'roadName'] : ['roadCode']) {
     if (typeof draft[field] !== 'string' || !draft[field].trim()) fail(field, 'cần tên tuyến có nguồn trong JSON hoặc GET draft.')
   }
+  if (draft.roadName != null && typeof draft.roadName !== 'string') fail('roadName', 'phải là chuỗi hoặc null theo contract.')
   if (draft.sourceKind !== 'COORDINATES') fail('sourceKind', 'phải là COORDINATES.')
   if (draft.sourceCrs !== 32648 && draft.sourceCrs !== 32649) fail('sourceCrs', 'chỉ hỗ trợ 32648 hoặc 32649.')
   for (const field of ['sourceFileId', 'trackIndex', 'trackSegmentIndex']) {
