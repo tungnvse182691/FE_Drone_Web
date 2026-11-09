@@ -444,6 +444,7 @@ export function useAlignmentState() {
   useEffect(() => {
     const draft = geometryRead.draft?.data
     if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === draft.id || localDraftDirty || draftWorkflow.busy || draftWorkflow.conflict) return
+    if (draft.status === 'CONFIRMED') return
     if (draft.status === 'DRAFT' && draft.sourceKind === 'COORDINATES') {
       if (geometryRead.context?.projectId !== selectedProjectId) return
       try {

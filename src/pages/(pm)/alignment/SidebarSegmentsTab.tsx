@@ -267,6 +267,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           const subTitle = isMain
             ? !hasCoords
               ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ" để nạp`
+              : isConfirmed
+              ? 'Hình học đã xác nhận • Các khoảng bề rộng chỉ là dữ liệu kỹ thuật'
               : segments.length > 0
               ? `Bản chỉnh ${segments.length} phân đoạn • Chờ xác minh máy chủ`
               : `Chưa phân đoạn • Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động"`
@@ -296,6 +298,10 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                   {isMain && !hasCoords ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
                       CHƯA CÓ TIM TUYẾN
+                    </span>
+                  ) : isMain && isConfirmed ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      HÌNH HỌC ĐÃ XÁC NHẬN
                     </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">

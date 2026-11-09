@@ -4,11 +4,13 @@ import { SegmentItem } from './types'
 export interface SidebarFooterKpisProps {
   segments: SegmentItem[]
   importedLengthKm: number
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
 }
 
 export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
   segments,
-  importedLengthKm
+  importedLengthKm,
+  alignmentStatus = 'DRAFT'
 }) => {
   const totalLen = segments.reduce((sum, s) => sum + (s.lengthKm || 0), 0)
   const displayLen = totalLen > 0 ? totalLen : (importedLengthKm || 0.0)
@@ -41,10 +43,10 @@ export const SidebarFooterKpis: React.FC<SidebarFooterKpisProps> = ({
                 : 'text-emerald-600'
             }`}
           >
-            {!hasRoute ? 'Chưa có tuyến' : segments.some((s) => s.hasGap) ? 'Cảnh báo hở' : 'Chưa xác nhận'}
+            {!hasRoute ? 'Chưa có tuyến' : segments.some((s) => s.hasGap) ? 'Cảnh báo hở' : alignmentStatus === 'CONFIRMED' ? 'Đã xác nhận' : alignmentStatus === 'PENDING_APPROVAL' ? 'Chờ phê duyệt' : 'Chưa xác nhận'}
           </span>
           <span className="text-[10px] text-slate-500">
-            {!hasRoute ? 'Chưa có dữ liệu' : segments.some((s) => s.hasGap) ? 'Cần khép kín' : 'Chờ kiểm tra máy chủ'}
+            {!hasRoute ? 'Chưa có dữ liệu' : segments.some((s) => s.hasGap) ? 'Cần khép kín' : alignmentStatus === 'CONFIRMED' ? 'Hình học đã khóa' : alignmentStatus === 'PENDING_APPROVAL' ? 'Chờ kiểm tra máy chủ' : 'Chờ kiểm tra máy chủ'}
           </span>
         </div>
       </div>

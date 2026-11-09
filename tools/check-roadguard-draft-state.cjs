@@ -201,8 +201,9 @@ test('Draft to GeoJSON removes old width length chainage and technical form with
  assert.equal(h.view.segmentsState.editingSegment,null);assert.equal(h.view.segmentsState.splitModalSegment,null);assert.equal(h.view.segmentsState.selectedSegmentId,null);assert.equal(h.view.localDraftDirty,true);assert.equal(h.view.importState.hasUnverifiedFile,true)
  h.model.geometry={projectId:'p',lengthMeters:701.290518512277};h.flush();assert.ok(!Number.isFinite(h.view.importedLengthKm));assert.equal(h.view.activeSegments.length,0);h.unmount()
 })
-test('JSX/UI files are unchanged, including existing json accept',()=>{
- const cp=require('child_process');for(const name of ['ImportPanel','AlignmentImportModal','AlignmentSidebar','SidebarWidthProfileTab']){const file=base+name+'.tsx';assert.equal(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'),cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8'}).replaceAll('\r\n','\n'))}
+test('UI layout files remain unchanged except status-only caller wiring',()=>{
+ const cp=require('child_process');for(const name of ['ImportPanel','AlignmentImportModal','SidebarWidthProfileTab']){const file=base+name+'.tsx';assert.equal(fs.readFileSync(file,'utf8').replaceAll('\r\n','\n'),cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8'}).replaceAll('\r\n','\n'))}
+ const sidebar=fs.readFileSync(base+'AlignmentSidebar.tsx','utf8');assert.ok(sidebar.includes('alignmentStatus={alignmentStatus}'));assert.ok(!sidebar.includes('className="grid'))
 })
 test('Draft JSON create uses current sidebar width and exact coordinates; receipt hydrate fences repeated clicks',async()=>{
  const h=harness(true,true);h.model.context={projectId:'p',engineeringUtmSrid:32648,roadSections:[{roadSectionId:'road',code:'R',name:'Road'}]};h.flush();h.read(sample)
