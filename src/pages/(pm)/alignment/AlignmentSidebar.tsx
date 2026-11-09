@@ -245,7 +245,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
       <SidebarFooterKpis
         segments={segments}
         importedLengthKm={importedLengthKm}
-        alignmentStatus={alignmentStatus}
+        alignmentStatus={selectedTargetType === 'MAINLINE' ? alignmentStatus : 'DRAFT'}
       />
     </div>
   )

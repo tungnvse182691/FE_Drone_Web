@@ -6,6 +6,22 @@ const ok=data=>({data,headers:{etag:'"AAAAAAAAAAE="'}})
 const service=client=>load('src/api/services/alignmentService.ts',{'../client':{apiClient:client}}).alignmentService
 let count=0;async function test(name,run){if(process.env.RG_STEP3_FILTER&&!new RegExp(process.env.RG_STEP3_FILTER,'i').test(name))return;epoch=1;actor={id:'pm',role:'PROJECT_MANAGER'};await run();console.log('PASS '+name);count++}
 ;(async()=>{
+await test('selected route caller sidebar footer isolates local branch from confirmed mainline',async()=>{
+ const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),react={__esModule:true,default:React,...React},base='src/pages/(pm)/alignment/'
+ const Footer=load(base+'SidebarFooterKpis.tsx',{react}).SidebarFooterKpis
+ const Sidebar=load(base+'AlignmentSidebar.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null}),'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:()=>null},'./SidebarSlabsTab':{SidebarSlabsTab:()=>null},'./SidebarFooterKpis':{SidebarFooterKpis:Footer}}).AlignmentSidebar
+ const source=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element
+ function visit(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;ts.forEachChild(n,visit)}visit(ast);assert.ok(element)
+ const props=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','importedLengthKm','alignmentStatus','selectedTargetType'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
+ const code=ts.transpileModule('function renderCaller(selectedTargetType, activeSegments, activeLengthKm){const alignmentStatus="CONFIRMED",rightTab="SEGMENTS",pavementWorkflow={};return <AlignmentSidebar '+props+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar})
+ const segment={id:'s',lengthKm:0.1},render=(target,segments=[segment],length=.1)=>renderToStaticMarkup(renderCaller(target,segments,length))
+ assert.match(render('MAINLINE'),/Đã xác nhận/);assert.match(render('MAINLINE'),/Hình học đã khóa/)
+ const branch=render('local-branch');assert.ok(!branch.includes('Đã xác nhận'));assert.ok(!branch.includes('Hình học đã khóa'));assert.match(branch,/Chưa xác nhận/)
+ const gap=render('local-branch',[{...segment,hasGap:true}]);assert.match(gap,/Cảnh báo hở/);assert.match(gap,/Cần khép kín/)
+ const empty=render('local-branch',[],0);assert.match(empty,/Chưa có tuyến/);assert.match(empty,/Chưa có dữ liệu/);assert.ok(!empty.includes('Đã xác nhận'))
+ assert.match(render('MAINLINE'),/Đã xác nhận/);assert.match(render('MAINLINE',[{...segment,hasGap:true}]),/Cảnh báo hở/)
+})
 await test('CRS failure/wrong project/null never becomes empty; no automatic checksum profile',async()=>{
  for(const data of [null,{},[{projectId:'other'}]])await assert.rejects(service({get:async()=>ok(data)}).fetchCrsProfiles('p'))
  assert.equal((await service({get:async()=>ok([])}).fetchCrsProfiles('p')).length,0)
