@@ -1,4 +1,5 @@
 import React from 'react'
+import { DrawerReportDetails } from './DrawerReportDetails'
 import type { TriageCase } from './types'
 import { DrawerHeader } from './DrawerHeader'
 import { DrawerDecisionBanners } from './DrawerDecisionBanners'
@@ -16,10 +17,10 @@ export interface ReviewDetailDrawerProps {
   detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
   setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
   drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
-  currentUrgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
-  setCurrentUrgency: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
+  currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -102,6 +103,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
             />
 
+            <DrawerReportDetails key={selectedCase.id} caseId={selectedCase.id} />
             <DrawerMediaViewer
               selectedCase={selectedCase}
               detailViewMode={detailViewMode}

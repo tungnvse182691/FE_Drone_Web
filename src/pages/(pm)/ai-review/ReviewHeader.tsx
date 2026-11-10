@@ -68,6 +68,8 @@ export const ReviewHeader: React.FC<ReviewHeaderProps> = ({
           {selectedReportIds.length >= 2 && !isSupervisor && (
             <button
               onClick={onOpenLinkReportsModal}
+              disabled
+              title="Chưa tích hợp thao tác này"
               type="button"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 hover:bg-amber-400 border border-amber-400 shadow-sm animate-pulse cursor-pointer"
             >

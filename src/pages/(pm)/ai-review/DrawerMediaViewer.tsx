@@ -1,6 +1,7 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
+import { CaseReportImage } from './useCaseReportMedia'
 
 export interface DrawerMediaViewerProps {
   selectedCase: TriageCase
@@ -62,24 +63,14 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
       {detailViewMode === 'PHOTO' ? (
         /* Photo Viewport with Telemetry HUD */
         <div className="relative w-full rounded-xl overflow-hidden bg-slate-900 shadow-inner group h-80 lg:h-[380px]">
-          {selectedCase.image_url ? (
-            <img
-              src={selectedCase.image_url}
-              alt={selectedCase.defect_title}
-              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-1.5">
-              <Icon name="photo_camera" size={32} />
-              <span className="text-xs">Không có ảnh đính kèm</span>
-            </div>
-          )}
+          <CaseReportImage caseId={selectedCase.id} alt={selectedCase.defect_title}
+            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
           {/* Top-left GPS & telemetry overlay */}
           <div className="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
             <div className="flex items-center gap-1 font-bold text-brand-gold">
               <Icon name="location_on" size={12} className="text-brand-gold" />
               <span>
-                {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+                {selectedCase.gps.lat != null && selectedCase.gps.lng != null ? `${selectedCase.gps.lat}° N, ${selectedCase.gps.lng}° E` : 'Chưa có vị trí được xác nhận'}
               </span>
             </div>
             {selectedCase.source === 'DRONE_AI' && selectedCase.gps.altitude_m > 0 && (
@@ -134,7 +125,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="absolute bottom-2.5 left-2.5 bg-slate-900/90 text-white px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/20">
               <Icon name="engineering" size={13} className="text-amber-400" />
-              <span>Ghi nhận hiện trường Đội tuần tra</span>
+              <span>{selectedCase.source === 'PATROL' ? 'Ghi nhận hiện trường Đội tuần tra' : selectedCase.source === 'CITIZEN' ? 'Phản ánh từ người dân' : 'Chưa xác định nguồn tiếp nhận'}</span>
             </div>
           )}
         </div>
@@ -143,7 +134,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
         <div className="w-full h-80 lg:h-[380px] rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
           <div ref={drawerMapContainerRef} className="w-full h-full" />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md text-white px-2 py-0.5 rounded text-[10px] font-mono border border-white/10">
-            {selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E
+            {selectedCase.gps.lat != null && selectedCase.gps.lng != null ? `${selectedCase.gps.lat}° N, ${selectedCase.gps.lng}° E` : 'Chưa có vị trí được xác nhận'}
           </div>
         </div>
       )}

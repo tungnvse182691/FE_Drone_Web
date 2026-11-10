@@ -3955,3 +3955,10 @@ Tái hiện native click KC50 bị handler tuyến ghi đè popup và kéo zoom1
 - Tổng hợp lưu/sửa draft; quyết định từchối córeasonserver; PMsửa cùngdraft/trìnhlạilượt2; Supautopreview/readiness vàconfirm201mộtlần; lookupCONFIRMED/geometry/F5PM/Sup; PMquảnlý/publishsegment; layoutsave/readback/discoveryPM/Sup. Chi tiết STEP3-FINAL-ACCEPTANCE-20261111.md; phân biệt capturetrước và userxácnhận.
 - Giữ guardlayoutdiscovery không thayDRAFT/bảnmới PMchọn; chỉđúngreference/explicitPUBLISHED; regressionFAILtrước/PASSsau đãreview. Khe chỉcấuhình, chưa geometrykhevậtlýchínhthức; khôngmởkếhoạchkhảosát.
 - Commit chỉfile/hunkBước3/CRSđãreview; giữlocalAI/survey/personnel vàworklogcũngoàiphạmvi. KhôngsửaBE/Docker/migration/DB, khôngmutationruntime, chưapush. Kiểmstageddiff/source vàregression/buildtrênindexexport; lỗi baseline đượcbáoriêng, khôngnớiassertion.
+
+
+### 11/11/2026 — Chốt Reporter/Case: giao diện cũ, ảnh private, Sup điều phối, PM đọc
+- Giữ AIReviewInbox tại /sup/cases và /pm/ai-inbox; đọc Case/Report/private evidence có cursor/scope/epoch fence. Drawer/phóng to ảnh dùng chung state; UNKNOWN không tự thành tọa độ, tên hoặc số đo.
+- Sup triage có If-Match/Idempotency-Key/Web cookie/CSRF và journal/retry/readback. Chặn bulk verify/bulk need survey/link chưa tích hợp ở cả handler/nút; không mở thêm nghiệp vụ PM/AI/Defect/khảo sát/Drone/gộp/tách/công bố.
+- Runtime local: người dùng tự thao tác Reporter trong Postman, không nhận đã quan sát mọi HTTP upload. Quan sát đúng một POST triage200; Case9409f2eb-e0e1-4c8e-9c01-1d246f91114d → OPEN, project321, EXISTING_EVIDENCE; GET/F5 Sup và PM khớp Case/Report/ảnh/ETag. Description JSON do nhập thử và UNKNOWN giữ nguyên; không phải dữ liệu hư hỏng thật.
+- Bản staged riêng: Case14, ảnh6, guard5 PASS cô lập; typecheck/build PASS; full review còn lỗi baseline thiếu mock primaryPmCommands. Không stage hunk khảo sát BLOCKED hoặc các mở rộng PM/link/split local; không sửa BE/DB hoặc mutation runtime trong lượt chốt. Chi tiết: REPORTER-CASE-TRIAGE-ACCEPTANCE-20261111.md.

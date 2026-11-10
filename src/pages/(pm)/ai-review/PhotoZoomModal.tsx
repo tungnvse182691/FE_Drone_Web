@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
+import { CaseReportImage } from './useCaseReportMedia'
 
 export interface PhotoZoomModalProps {
   isOpen: boolean
@@ -19,7 +20,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
   if (!isOpen) return null
 
   const severityText =
-    selectedCase.severity === 'CRITICAL'
+    selectedCase.severity === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.severity === 'CRITICAL'
       ? 'Khẩn cấp (Cấp 4)'
       : selectedCase.severity === 'HIGH'
       ? 'Nghiêm trọng (Cấp 3)'
@@ -28,7 +29,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
       : 'Nhẹ (Cấp 1)'
 
   const urgencyText =
-    selectedCase.urgency === 'EMERGENCY'
+    selectedCase.urgency === 'UNKNOWN' ? 'Chưa xác định' : selectedCase.urgency === 'EMERGENCY'
       ? 'Đặc biệt khẩn cấp'
       : selectedCase.urgency === 'URGENT'
       ? 'Khẩn cấp (24 - 48 giờ)'
@@ -87,8 +88,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
         {/* Modal Body: Single View or Side-by-Side View */}
         {viewMode === 'SINGLE' ? (
           <div className="w-full h-[450px] rounded-xl overflow-hidden bg-black flex items-center justify-center relative">
-            <img
-              src={selectedCase.image_url}
+            <CaseReportImage
+              caseId={selectedCase.id}
               alt="Ảnh phóng to chi tiết"
               className="w-full h-full object-contain"
             />
@@ -109,8 +110,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
                 <span className="text-[10px] text-slate-400 font-mono">{selectedCase.created_at}</span>
               </div>
               <div className="flex-1 overflow-hidden flex items-center justify-center bg-black">
-                <img
-                  src={selectedCase.image_url}
+                <CaseReportImage
+                  caseId={selectedCase.id}
                   alt="Ảnh hiện trường"
                   className="w-full h-full object-contain"
                 />

@@ -694,7 +694,8 @@ export interface PolicyThresholdConfig {
 export interface TriageCase {
   id: string
   code: string
-  source: 'DRONE_AI' | 'CITIZEN' | 'PATROL'
+  source: 'DRONE_AI' | 'CITIZEN' | 'PATROL' | 'UNKNOWN'
+  case_status?: string
   verification_method?: string
   source_label: string
   source_detail: string

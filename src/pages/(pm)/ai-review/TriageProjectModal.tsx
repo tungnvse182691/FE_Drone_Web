@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
@@ -6,7 +6,16 @@ export interface TriageProjectModalProps {
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
-  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  busy?: boolean
+  error?: string
+  held?: boolean
+  initialInput?: {verificationMethod?: string | null; reason?: string | null}
+  retryLabel?: string
+  onRetry?: ()=>void
+  onReview?: ()=>void
+  onAcceptReviewed?: ()=>void
+  comparison?: string
   selectedProjectId: string
   setSelectedProjectId: (id: string) => void
   onConfirmTriageProject: (
@@ -16,6 +25,7 @@ export interface TriageProjectModalProps {
 }
 
 export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
+  busy = false, error = '', held = false, initialInput, retryLabel, onRetry, onReview, onAcceptReviewed, comparison = '',
   isOpen,
   onClose,
   targetTriageCase,
@@ -24,14 +34,16 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   setSelectedProjectId,
   onConfirmTriageProject,
 }) => {
-  const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE'>('FIELD')
+  const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' | ''>('')
   const [reason, setReason] = useState<string>('')
 
+  useEffect(()=>{if(isOpen){setVerificationMethod(initialInput?.verificationMethod as any || '');setReason(initialInput?.reason || '')}},[isOpen,targetTriageCase?.id])
   if (!isOpen || !targetTriageCase) return null
 
-  const selectedProj = projects.find((p) => p.id === selectedProjectId) || projects[0]
+  const selectedProj = projects.find((p) => p.id === selectedProjectId)
 
   const handleConfirm = () => {
+    if (busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
     onConfirmTriageProject(verificationMethod, reason)
   }
 
@@ -53,7 +65,8 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            disabled={busy}
+              onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
           >
             <Icon name="close" size={20} />
@@ -61,7 +74,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <div className="space-y-3.5 text-xs">
+        <fieldset disabled={busy || held} className="space-y-3.5 text-xs border-0 p-0 m-0 min-w-0">
           {/* Hồ sơ phản ánh tiếp nhận gốc */}
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
             <div className="flex items-center justify-between mb-1.5">
@@ -79,11 +92,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                     src={targetTriageCase.image_url}
                     alt={targetTriageCase.defect_title}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback nếu ảnh lỗi
-                      e.currentTarget.src =
-                        'https://images.unsplash.com/photo-1578953186255-a13f70ecb1e5?auto=format&fit=crop&w=400&q=80'
-                    }}
+
                   />
                 </div>
               )}
@@ -92,7 +101,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                 <div className="flex items-center justify-between text-slate-700">
                   <span className="font-bold text-slate-900 truncate">{targetTriageCase.defect_title}</span>
                   <span className="font-mono text-slate-600 text-[11px] shrink-0 ml-2">
-                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Làn xe thô sơ'})
+                    {targetTriageCase.stationing} ({targetTriageCase.lane || 'Chưa có dữ liệu làn'})
                   </span>
                 </div>
                 {targetTriageCase.description && (
@@ -101,7 +110,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   </p>
                 )}
                 <span className="text-[10px] text-slate-500 block pt-0.5">
-                  Người gửi: {targetTriageCase.reporter_name || targetTriageCase.source_label} • {targetTriageCase.reporter_phone || 'Kênh ứng dụng di động'}
+                  Người gửi: {targetTriageCase.reporter_name || 'Chưa đọc thông tin người gửi'} • {targetTriageCase.reporter_phone || 'Chưa có thông tin liên hệ'}
                 </span>
               </div>
             </div>
@@ -114,15 +123,17 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </label>
             <select
               value={selectedProjectId}
+              required
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
+              <option value="">Chọn dự án</option>
               {projects.map((p) => {
                 // Kiểm tra nếu p.name đã chứa chuỗi Km thì không nối thêm tránh lặp chuỗi
                 const hasKmInName = p.name.includes('Km')
                 const displayLabel = hasKmInName
                   ? `${p.code} — ${p.name}`
-                  : `${p.code} — ${p.name} (Km ${p.start_km} → Km ${p.end_km})`
+                  : `${p.code} — ${p.name}`
                 return (
                   <option key={p.id} value={p.id}>
                     {displayLabel}
@@ -130,7 +141,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                 )
               })}
             </select>
-            {selectedProj && (
+            {selectedProj && Number.isFinite(selectedProj.start_km) && Number.isFinite(selectedProj.end_km) && (
               <span className="text-[10px] text-slate-500 mt-1 pl-1">
                 Phạm vi bảo hành: Km {selectedProj.start_km} đến Km {selectedProj.end_km}
               </span>
@@ -157,7 +168,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   <span>Đo đạc hiện trường</span>
                 </div>
                 <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
-                  Cử tổ đo đạc kiểm tra thước đo
+                  Kiểm tra trực tiếp tại hiện trường
                 </span>
               </button>
 
@@ -175,7 +186,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   <span>Khảo sát Drone</span>
                 </div>
                 <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
-                  Tạo yêu cầu bay quét bổ sung
+                  Xác minh bằng khảo sát Drone
                 </span>
               </button>
 
@@ -193,7 +204,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                   <span>Ảnh hiện có</span>
                 </div>
                 <span className="text-[9.5px] text-slate-500 block mt-0.5 leading-tight">
-                  Thẩm định trên ảnh người dân gửi
+                  Xem xét bằng chứng đã có
                 </span>
               </button>
             </div>
@@ -208,6 +219,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
             </div>
             <textarea
+              required maxLength={1000}
               rows={2}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -216,15 +228,19 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             />
           </div>
 
+          <p className="text-[11px] text-slate-500">Điều phối xác định dự án phụ trách và phương thức xác minh; chưa phải kết luận phản ánh.</p>
           {/* Hộp thông báo quyền hạn */}
           <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-[11px] text-blue-900 flex items-start gap-2">
             <Icon name="check_circle" size={15} className="text-blue-600 shrink-0 mt-0.5" />
             <span>
-              Sau khi xác nhận điều phối, hồ sơ sẽ chuyển sang trạng thái <strong>Chờ PM thẩm định</strong> và xuất hiện trong hộp thư tiếp nhận của Chỉ huy trưởng dự án.
+              Sau khi xác nhận điều phối, hồ sơ sẽ chuyển sang trạng thái <strong>đã phân công dự án</strong> và xuất hiện trong hộp thư tiếp nhận của Chỉ huy trưởng dự án.
             </span>
           </div>
-        </div>
+        </fieldset>
 
+        {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+        {comparison && <p role="status" className="text-xs text-slate-600">{comparison}</p>}
+        <div className="flex flex-wrap gap-2 text-xs">{onRetry && <button type="button" disabled={busy} onClick={onRetry} className="border rounded-lg px-3 py-1">{retryLabel || 'Đối chiếu yêu cầu đang chờ'}</button>}{onReview && <button type="button" disabled={busy} onClick={onReview} className="border rounded-lg px-3 py-1">Đọc lại hồ sơ để đối chiếu</button>}{onAcceptReviewed && <button type="button" disabled={busy} onClick={onAcceptReviewed} className="border rounded-lg px-3 py-1">Tiếp tục với hồ sơ vừa đọc</button>}</div>
         {/* Modal Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
           <span className="text-[11px] text-slate-500 font-medium truncate">
@@ -233,6 +249,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              disabled={busy}
               onClick={onClose}
               className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
             >
@@ -240,11 +257,12 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </button>
             <button
               type="button"
+              disabled={busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
               onClick={handleConfirm}
               className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >
               <Icon name="domain" size={15} />
-              <span>Xác nhận điều phối</span>
+              <span>{busy ? 'Đang gửi/đọc lại…' : 'Xác nhận điều phối'}</span>
             </button>
           </div>
         </div>

@@ -38,8 +38,9 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           <button
             type="button"
             onClick={onBulkVerify}
+            disabled
             className="px-3 py-1.5 rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-            title="Xác nhận hàng loạt các khiếm khuyết đã chọn"
+            title="Chưa tích hợp thao tác này"
           >
             <Icon name="check_circle" size={14} />
             <span>Xác nhận hàng loạt</span>
@@ -49,8 +50,9 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           <button
             type="button"
             onClick={onBulkNeedSurvey}
+            disabled
             className="px-3 py-1.5 rounded-lg bg-blue-700 text-white hover:bg-blue-800 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-            title="Đánh dấu yêu cầu đo đạc/khảo sát lại hiện trường"
+            title="Chưa tích hợp thao tác này"
           >
             <Icon name="rule" size={14} />
             <span>Đánh dấu kiểm tra lại</span>
@@ -60,13 +62,9 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           <button
             type="button"
             onClick={onOpenLinkReportsModal}
-            disabled={selectedReportIds.length < 2}
+            disabled
             className="px-3 py-1.5 rounded-lg bg-slate-950 text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-            title={
-              selectedReportIds.length < 2
-                ? 'Chọn từ 2 phản ánh trở lên để liên kết báo trùng'
-                : 'Liên kết báo trùng'
-            }
+            title="Chưa tích hợp thao tác này"
           >
             <Icon name="link" size={14} className="text-brand-gold" />
             <span>Liên kết báo trùng</span>

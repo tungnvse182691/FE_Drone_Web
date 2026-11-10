@@ -30,7 +30,7 @@ function load(file, mocks = {}) {
     sessionStorage: mocks.__sessionStorage || { getItem: () => null, setItem() {}, removeItem() {} }, localStorage: { getItem: () => null, setItem() {} }, window: mocks.__window, BroadcastChannel: mocks.__BroadcastChannel, URL, Blob }, { filename: file })
   return module.exports
 }
-const detail = (extra = {}) => ({ id: 'case-new', projectId: 'p', version: 'AAAAAAAAAAE=', reportIds: ['r1', 'r2'], ...extra })
+const detail = (extra = {}) => ({ id: 'case-new', projectId: 'p', status: 'OPEN', version: 'AAAAAAAAAAE=', reportIds: ['r1', 'r2'], ...extra })
 const response = data => ({ data, headers: { etag: '"AAAAAAAAAAE="' } })
 const failure = (status, code) => Object.assign(new Error(code), { response: { status, data: { code, detail: code } } })
 const json = value => JSON.parse(JSON.stringify(value))
@@ -158,7 +158,7 @@ function caseLifecycleHarness() {
     } })
     const items = await service.getCases()
     assert.equal(queries.length, 2); assert.ok(queries.every(q => q.projectId === 'p'))
-    assert.equal(queries[1].cursor, 'page2'); assert.equal(items[0].source, 'CITIZEN')
+    assert.equal(queries[1].cursor, 'page2'); assert.equal(items[0].source, 'UNKNOWN')
     assert.equal(items[0].reporter_name, undefined); assert.equal(items[0].gps.lat, null); assert.equal(items[0].image_url, '')
   })
   await test('Supervisor always requests unassigned AND project scopes', async () => {
@@ -167,9 +167,9 @@ function caseLifecycleHarness() {
     const service = triage({ get: async (url, config) => {
       if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }] })
       scopes.push(config.params.projectId)
-      return response({ items: [detail({ id: config.params.projectId ? 'assigned' : 'unassigned', projectId: config.params.projectId })] })
+      return response({ items: [detail({ id: config.params.projectId ? 'assigned' : 'unassigned', projectId: config.params.projectId, status: config.params.projectId ? 'OPEN' : 'UNASSIGNED' })] })
     } })
-    assert.equal((await service.getCases()).length, 2); assert.deepEqual(scopes, [undefined, undefined, undefined, undefined, undefined, 'p'])
+    assert.equal((await service.getCases()).length, 2); assert.deepEqual(scopes, [undefined, 'p'])
   })
   await test('project source failure is error, never complete empty list', async () => {
     const service = triage({ get: async url => { if (url === '/projects') return response({ items: [{ id: 'p', name: 'P' }] }); throw failure(503, 'dependency_unavailable') } })
@@ -1157,8 +1157,8 @@ function caseLifecycleHarness() {
     const { triageService: service } = load('src/api/services/triageService.ts', {
       __sessionStorage: { getItem: key => journal.get(key) || null, setItem: (key, value) => journal.set(key, value), removeItem: key => journal.delete(key) },
       '../client': { apiClient: {
-        post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response(detail({ id: caseId, projectId })) },
-        get: async () => { if (readFailure) throw failure(503, 'read_failed'); return response(detail({ id: caseId, projectId })) }
+        post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response(detail({ id: caseId, projectId, verificationMethod: 'EXISTING_EVIDENCE' })) },
+        get: async url => { if(url==='/projects')return response({items:[{projectId,projectCode:'P',name:'P'}],nextCursor:null}); if(!posts.length)return response(detail({id:caseId,projectId:null,status:'UNASSIGNED'})); if (readFailure) throw failure(503, 'read_failed'); return response(detail({ id: caseId, projectId, verificationMethod:'EXISTING_EVIDENCE' })) }
       } }
     })
     const input = { projectId, verificationMethod: 'EXISTING_EVIDENCE', reason: 'Supervisor selected', version: 'AAAAAAAAAAE=' }
@@ -1179,7 +1179,7 @@ function caseLifecycleHarness() {
     const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', projectId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
     for (const status of [409, 412, 428]) {
       let posts = 0
-      const service = triage({ post: async () => { posts++; throw failure(status, 'conflict') } })
+      const service = triage({ get:async url=>url==='/projects'?response({items:[{projectId,projectCode:'P',name:'P'}],nextCursor:null}):response(detail({id,projectId:null,status:'UNASSIGNED'})),post: async () => { posts++; throw failure(status, 'conflict') } })
       await assert.rejects(service.triageCase(id, { projectId }), /Thiếu version/)
       await assert.rejects(service.triageCase(id, { projectId, verificationMethod: 'FIELD', reason: 'reason', version: 'AAAAAAAAAAE=' }), error => error.response.status === status)
       assert.equal(posts, 1)

@@ -107,8 +107,7 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <Icon name="warning" size={16} className="text-amber-600 shrink-0 mt-0.5" />
             <span>
-              Các phản ánh vệ tinh sẽ được gắn cờ <strong>MERGED</strong>, toàn bộ ảnh hiện trường và thông tin
-              người dân được giữ nguyên và tổng hợp vào hồ sơ chính, đảm bảo không tạo 2 lệnh sửa chữa cùng 1 lỗi.
+              Chưa tích hợp thao tác này
             </span>
           </div>
         </div>
@@ -124,6 +123,8 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
           <button
             type="button"
             onClick={onConfirmLinkReports}
+            disabled
+            title="Chưa tích hợp thao tác này"
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="link" size={16} />

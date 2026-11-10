@@ -3,6 +3,9 @@ import { ReviewDetailDrawer } from './ReviewDetailDrawer'
 import { TriageCase } from './types'
 
 export interface ReviewDetailModalProps {
+  loading?: boolean
+  error?: string
+  onRetry?: () => void
   isOpen: boolean
   onClose: () => void
   selectedCase: TriageCase
@@ -11,10 +14,10 @@ export interface ReviewDetailModalProps {
   detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
   setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
   drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
-  currentSeverity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  setCurrentSeverity: (s: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
-  currentUrgency: 'NORMAL' | 'URGENT' | 'EMERGENCY'
-  setCurrentUrgency: (u: 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
+  currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
+  currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
+  setCurrentUrgency: (u: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY') => void
   currentArea: number
   setCurrentArea: (a: number) => void
   currentDepth: number
@@ -39,6 +42,7 @@ export interface ReviewDetailModalProps {
 
 export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
   isOpen,
+  loading = false, error = '', onRetry,
   onClose,
   ...drawerProps
 }) => {
@@ -53,7 +57,11 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
         className="bg-white rounded-2xl max-w-7xl w-full max-h-[95vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <ReviewDetailDrawer {...drawerProps} onClose={onClose} />
+        {loading || error || !drawerProps.selectedCase.id ? <div className="p-6 space-y-3">
+          {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : <p role="status" className="text-sm text-slate-500">Đang tải chi tiết hồ sơ...</p>}
+          {error && <button type="button" onClick={onRetry} className="text-xs underline">Thử lại</button>}
+          <button type="button" onClick={onClose} className="text-xs px-3 py-2 border rounded-lg">Đóng lại</button>
+        </div> : <ReviewDetailDrawer {...drawerProps} onClose={onClose} />}
       </div>
     </div>
   )

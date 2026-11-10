@@ -1,7 +1,6 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { projectService } from '../../api/services/projectService'
 import { Icon } from '../../components/ui/Icon'
 
 import { ReviewHeader } from './ai-review/ReviewHeader'
@@ -10,6 +9,7 @@ import { ReviewCasesTable } from './ai-review/ReviewCasesTable'
 import { ReviewDetailModal } from './ai-review/ReviewDetailModal'
 import { ReviewModals } from './ai-review/ReviewModals'
 import { useAIReviewState } from './ai-review/useAIReviewState'
+import { CaseReportMediaProvider } from './ai-review/useCaseReportMedia'
 
 export type { TriageCase } from './ai-review/types'
 
@@ -18,44 +18,8 @@ export const AIReviewInbox: React.FC = () => {
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
-  const activeProjects = React.useMemo(() => {
-    try {
-      const real = projectService.getProjects()
-      if (real && real.length > 0) {
-        const scoped = isSupervisor
-          ? real
-          : real.filter((p) => {
-              if (!user) return false
-              const userId = user.id
-              const userEmail = (user.email || '').toLowerCase()
-              const userName = (user.full_name || (user as any).name || '').toLowerCase()
-              const pmUserId = p.pm_user_id
-              const pmEmail = (p.pm_email || '').toLowerCase()
-              const pmName = (p.pm_name || '').toLowerCase()
-
-              if (userId && pmUserId && userId === pmUserId) return true
-              if (pmEmail && userEmail && pmEmail === userEmail) return true
-              if (pmName && userName && (pmName === userName || pmName.includes(userName) || userName.includes(pmName))) return true
-              if (userEmail.includes('pm-a') && (pmEmail.includes('pm-a') || pmName.includes('pm-a'))) return true
-              if (userEmail.includes('pm-b') && (pmEmail.includes('pm-b') || pmName.includes('pm-b'))) return true
-              return false
-            })
-
-        return scoped.map((p) => ({
-          id: p.id,
-          code: p.code,
-          name: p.name,
-          start_km: p.start_km || 0,
-          end_km: p.end_km || 0
-        }))
-      }
-    } catch (err) {
-      console.error('Lỗi khi nạp danh sách dự án CSDL:', err)
-    }
-    return []
-  }, [isSupervisor, user])
-
   const state = useAIReviewState()
+  const activeProjects = state.projects
   const {
     cases, viewSourceMode, handleSetViewSourceMode, expandedMasterIds, handleToggleExpandMaster,
     collapseMergedRows, setCollapseMergedRows, selectedReportIds, setSelectedReportIds,
@@ -82,6 +46,7 @@ export const AIReviewInbox: React.FC = () => {
   } = state
 
   return (
+    <CaseReportMediaProvider caseId={state.intake.selected?.id || ''}>
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
@@ -129,8 +94,11 @@ export const AIReviewInbox: React.FC = () => {
         showToast={showToast}
       />
 
+      {state.isLoading && <p role="status" className="text-sm text-slate-500">Đang tải hồ sơ...</p>}
+      {state.loadError && <div role="alert" className="text-sm text-rose-700">{state.loadError} <button type="button" onClick={state.retryLoad} className="underline">Thử lại</button></div>}
+
       {/* 3. BẢNG DANH SÁCH HỒ SƠ */}
-      <div className="w-full">
+      {(!state.isLoading && !state.loadError || cases.length > 0) && <div className="w-full">
         <ReviewCasesTable
           viewSourceMode={viewSourceMode}
           cases={cases}
@@ -158,11 +126,14 @@ export const AIReviewInbox: React.FC = () => {
           onBulkVerify={handleBulkVerify}
           onBulkNeedSurvey={handleBulkNeedSurvey}
         />
-      </div>
+      </div>}
 
       {/* 4. MODAL HỒ SƠ THẨM ĐỊNH */}
       <ReviewDetailModal
         isOpen={isDetailModalOpen}
+        loading={state.intake.detailLoading}
+        error={state.intake.detailError}
+        onRetry={state.intake.retryDetail}
         onClose={() => setIsDetailModalOpen(false)}
         selectedCase={selectedCase}
         isSupervisor={isSupervisor}
@@ -171,9 +142,9 @@ export const AIReviewInbox: React.FC = () => {
         detailViewMode={detailViewMode}
         setDetailViewMode={setDetailViewMode}
         drawerMapContainerRef={drawerMapContainerRef}
-        currentSeverity={currentSeverity === 'UNKNOWN' ? 'MEDIUM' : currentSeverity}
+        currentSeverity={currentSeverity}
         setCurrentSeverity={setCurrentSeverity}
-        currentUrgency={currentUrgency === 'UNKNOWN' ? 'NORMAL' : currentUrgency}
+        currentUrgency={currentUrgency}
         setCurrentUrgency={setCurrentUrgency}
         currentArea={currentArea}
         setCurrentArea={setCurrentArea}
@@ -228,6 +199,7 @@ export const AIReviewInbox: React.FC = () => {
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
         onConfirmTriageProject={handleConfirmTriageProject}
+        triagePending={state.intake}
         isNoDefectModalOpen={isNoDefectModalOpen}
         setIsNoDefectModalOpen={setIsNoDefectModalOpen}
         noDefectReason={noDefectReason}
@@ -251,6 +223,7 @@ export const AIReviewInbox: React.FC = () => {
         onConfirmRequestSurvey={handleConfirmRequestSurvey}
       />
     </div>
+    </CaseReportMediaProvider>
   )
 }
 

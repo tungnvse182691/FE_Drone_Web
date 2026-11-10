@@ -123,6 +123,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
   // Badge mức độ ưu tiên (Bo tròn 999px, font 11px font-weight 700, padding 5px 14px)
   const priorityBadge = (() => {
+    if (item.severity === 'UNKNOWN') return { label: 'Chưa xác định ưu tiên', bg: '#F1F5F9', text: '#475569' }
     if (item.severity === 'CRITICAL') {
       return { bg: '#F3E0E0', text: '#7F1D1D', label: 'Khẩn cấp' }
     }
@@ -165,6 +166,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
 
   // Nguồn tiếp nhận chuẩn hóa tiếng Việt (Xóa icon trang trí thừa)
   const sourceLabel = (() => {
+    if (item.source === 'UNKNOWN') return 'Chưa xác định nguồn tiếp nhận'
     if (item.source === 'DRONE_AI') return 'Thiết bị bay quét'
     if (item.source === 'CITIZEN') return item.reporter_name ? `Người dân: ${item.reporter_name}` : 'Người dân báo'
     return item.reporter_name ? `Tổ tuần tra: ${item.reporter_name}` : 'Đội tuần tra'
@@ -225,7 +227,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
                 color: statusBadge.text
               }}
             >
-              {statusBadge.label}
+              {item.case_status ? item.status_label : statusBadge.label}
             </span>
           </div>
         </div>
@@ -246,7 +248,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
         {/* Hàng 3: Mô tả ngắn 1-2 dòng + Thumbnail GPS nhỏ gọn */}
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed flex-1">
-            {item.description || item.pm_notes || 'Ghi nhận hiện trường đang chờ kỹ sư đối chiếu và thẩm định phân cấp.'}
+            {item.description || item.pm_notes || 'Chưa có nội dung; mở hồ sơ để xem từng phản ánh.'}
           </p>
           {item.image_url && (
             <div className="relative w-12 h-10 rounded-lg overflow-hidden bg-slate-900 border border-slate-200 shrink-0">
@@ -337,7 +339,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             <span className="font-mono text-xs font-bold text-slate-800 tracking-wider">
               {item.code}
             </span>
-            {isUnassigned && isSupervisor && (
+            {isUnassigned && isSupervisor && (!item.case_status || item.case_status === 'UNASSIGNED') && (
               <button
                 type="button"
                 onClick={(e) => onOpenTriageProject(item, e)}

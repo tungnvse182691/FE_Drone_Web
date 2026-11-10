@@ -5,6 +5,7 @@ import { GisMapModal } from './GisMapModal'
 import { PhotoZoomModal } from './PhotoZoomModal'
 import { LinkReportsModal } from './LinkReportsModal'
 import { TriageProjectModal } from './TriageProjectModal'
+import type { useCaseIntake } from './useCaseIntake'
 import { NoDefectModal } from './NoDefectModal'
 import { PublishModal } from './PublishModal'
 import { RequestSurveyModal } from './RequestSurveyModal'
@@ -14,7 +15,8 @@ export interface ReviewModalsProps {
   targetTriageCase: TriageCase | null
   cases: TriageCase[]
   selectedReportIds: string[]
-  projects: { id: string; code: string; name: string; start_km: number; end_km: number }[]
+  projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  triagePending?: ReturnType<typeof useCaseIntake>
 
   // Modal 1: Merge
   isMergeModalOpen: boolean
@@ -85,6 +87,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   cases,
   selectedReportIds,
   projects,
+  triagePending,
   isMergeModalOpen,
   setIsMergeModalOpen,
   onExecuteMerge,
@@ -178,6 +181,15 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
         onConfirmTriageProject={onConfirmTriageProject}
+        busy={triagePending?.busy}
+        error={triagePending?.commandError}
+        held={!!triagePending?.held}
+        initialInput={triagePending?.held?.body}
+        onRetry={triagePending?.held && !triagePending.held.rejected ? () => triagePending.execute(undefined, undefined, true) : undefined}
+        retryLabel={triagePending?.held?.received ? 'Đọc lại kết quả điều phối' : 'Thử lại yêu cầu đang chờ'}
+        onReview={triagePending?.held?.rejected ? triagePending.review : undefined}
+        onAcceptReviewed={triagePending?.reviewed ? triagePending.acceptReviewed : undefined}
+        comparison={triagePending?.comparison}
       />
 
       {/* MODAL 6: KẾT LUẬN KHÔNG CÓ KHIẾM KHUYẾT (NO_DEFECT - PA05, BR-39) */}

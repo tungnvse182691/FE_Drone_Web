@@ -1,65 +1,29 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
-import { triageService } from '../../../api/services/triageService'
-import { STORAGE_KEYS } from '../../../api/services/storageHelper'
+import { useCaseIntake } from './useCaseIntake'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
 import { useAIReviewLinkActions } from './useAIReviewLinkActions'
 
 export const useAIReviewState = () => {
-  // Dữ liệu hồ sơ tiếp nhận từ Candidate3 Backend CSDL
-  const [cases, setCases] = useState<TriageCase[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [selectedCaseId, setSelectedCaseId] = useState<string>('')
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
+  const intake = useCaseIntake('ALL')
+  const { cases, setCases } = intake
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-
+  const selectedCaseId = intake.caseId
+  const setSelectedCaseId = (id: string) => intake.openCase(id)
+  const selectedCase = useMemo(() => {
+    if (!intake.selected) return {} as TriageCase
+    const project = intake.projects.find(p => p.id === intake.selected!.project_id)
+    return project ? {...intake.selected, project_name: project.name, project_code: project.code} : intake.selected
+  }, [intake.selected, intake.projects])
   const showToast = (msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3800)
   }
-
-  // Nạp dữ liệu từ Backend CSDL khi khởi tạo
-  useEffect(() => {
-    let isMounted = true
-    const loadCases = async () => {
-      try {
-        setIsLoading(true)
-        const data = await triageService.getCases()
-        if (isMounted) {
-          setCases(data)
-          if (data.length > 0) {
-            setSelectedCaseId(data[0].id)
-          }
-        }
-      } catch (err: any) {
-        console.error('Lỗi khi nạp danh sách hồ sơ Triage từ API CSDL:', err)
-        if (isMounted) {
-          showToast(`❌ Lỗi kết nối CSDL: ${err?.message || 'Không thể nạp ca từ backend'}`)
-        }
-      } finally {
-        if (isMounted) setIsLoading(false)
-      }
-    }
-    loadCases()
-
-    const handleStorageChange = (e: any) => {
-      if (e.detail?.key === STORAGE_KEYS.TRIAGE_CASES && e.detail?.value) {
-        setCases(e.detail.value)
-      }
-    }
-    window.addEventListener('roadguard_state_change', handleStorageChange)
-
-    return () => {
-      isMounted = false
-      window.removeEventListener('roadguard_state_change', handleStorageChange)
-    }
-  }, [])
-
-  const selectedCase = useMemo(() => {
-    return cases.find((c) => c.id === selectedCaseId) || cases[0] || ({} as TriageCase)
-  }, [cases, selectedCaseId])
+  useEffect(() => { setIsDetailModalOpen(!!intake.caseId) }, [intake.caseId])
+  useEffect(() => { if (intake.message) showToast(intake.message) }, [intake.message])
 
   // Thu gọn / Mở rộng nhóm báo cáo trùng (Accordion)
   const [expandedMasterIds, setExpandedMasterIds] = useState<string[]>([])
@@ -74,24 +38,33 @@ export const useAIReviewState = () => {
 
   // Form states for selected case editing
   const [currentSeverity, setCurrentSeverity] = useState<TriageCase['severity']>(
-    selectedCase?.severity || 'CRITICAL'
+    selectedCase?.severity || 'UNKNOWN'
   )
   const [currentUrgency, setCurrentUrgency] = useState<TriageCase['urgency']>(
-    selectedCase?.urgency || 'EMERGENCY'
+    selectedCase?.urgency || 'UNKNOWN'
   )
-  const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm || 0)
-  const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm || 0)
+  const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm ?? Number.NaN)
+  const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm ?? Number.NaN)
   const [currentNotes, setCurrentNotes] = useState<string>(selectedCase?.pm_notes || '')
 
-  // Update form inputs when selectedCase changes
+  useEffect(() => {
+    if (!intake.selected) return
+    setCurrentSeverity(intake.selected.severity)
+    setCurrentUrgency(intake.selected.urgency)
+    setCurrentArea(intake.selected.area_sqm)
+    setCurrentDepth(intake.selected.max_depth_cm)
+    setCurrentNotes(intake.selected.pm_notes)
+  }, [intake.selected])
+
   const handleSelectCase = (c: TriageCase) => {
-    setSelectedCaseId(c.id)
-    setCurrentSeverity(c.severity)
-    setCurrentUrgency(c.urgency)
-    setCurrentArea(c.area_sqm)
-    setCurrentDepth(c.max_depth_cm)
-    setCurrentNotes(c.pm_notes)
+    intake.openCase(c.id)
     setIsDetailModalOpen(true)
+  }
+  const handleOpenTriageProject = (c: TriageCase, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (!intake.isSupervisor) return
+    if (intake.selected?.id === c.id) intake.openTriage()
+    else intake.openCase(c.id, true)
   }
 
   // Checkbox toggle for duplicate cluster items
@@ -140,55 +113,19 @@ export const useAIReviewState = () => {
     setIsDetailModalOpen
   })
 
-  // Thao tác hàng loạt (Bulk Actions): Xác nhận hàng loạt & Đánh dấu kiểm tra lại
-  const handleBulkVerify = () => {
-    const ids = linkActions.selectedReportIds
-    if (ids.length === 0) return
-
-    setCases((prev) =>
-      prev.map((c) =>
-        ids.includes(c.id)
-          ? {
-              ...c,
-              status: 'VERIFIED',
-              status_label: 'Đã xác minh (Verified)',
-              conclusion: 'DEFECT_FOUND',
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_VERIFY] Đã xác nhận hàng loạt ngày ${new Date().toLocaleDateString('vi-VN')}`
-            }
-          : c
-      )
-    )
-    linkActions.setSelectedReportIds([])
-    showToast(`Đã xác nhận hàng loạt ${ids.length} khiếm khuyết thành công! Sẵn sàng đưa vào kế hoạch sửa chữa.`)
-  }
-
-  const handleBulkNeedSurvey = () => {
-    const ids = linkActions.selectedReportIds
-    if (ids.length === 0) return
-
-    const surveyCode = `SR-2026-BULK-${Date.now().toString().slice(-4)}`
-    setCases((prev) =>
-      prev.map((c) =>
-        ids.includes(c.id)
-          ? {
-              ...c,
-              status: 'NEED_SURVEY',
-              status_label: 'Cần đo đạc bổ sung',
-              conclusion: null,
-              survey_request_code: surveyCode,
-              pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[BULK_SURVEY] Đã yêu cầu đo đạc lại hiện trường (${surveyCode})`
-            }
-          : c
-      )
-    )
-    linkActions.setSelectedReportIds([])
-    showToast(`Đã đánh dấu kiểm tra lại hiện trường cho ${ids.length} hồ sơ! Mã phiếu: ${surveyCode}`)
-  }
+  // Chưa tích hợp các lệnh này; không mô phỏng thay đổi Case trên FE.
+  const handleBulkVerify = () => {}
+  const handleBulkNeedSurvey = () => {}
 
   return {
+    intake,
+    projects: intake.projects,
+    loadError: intake.listError,
+    retryLoad: intake.retry,
+    reloadCases: intake.retry,
     cases,
     setCases,
-    isLoading,
+    isLoading: intake.listLoading,
     expandedMasterIds,
     handleToggleExpandMaster,
     collapseMergedRows,
@@ -196,7 +133,7 @@ export const useAIReviewState = () => {
     selectedCaseId,
     setSelectedCaseId,
     isDetailModalOpen,
-    setIsDetailModalOpen,
+    setIsDetailModalOpen: (open: boolean) => { setIsDetailModalOpen(open); if (!open) intake.openCase('') },
     selectedCase,
     toastMessage,
     setToastMessage,
@@ -261,22 +198,21 @@ export const useAIReviewState = () => {
     setLinkMasterCaseId: linkActions.setLinkMasterCaseId,
     linkAuditNotes: linkActions.linkAuditNotes,
     setLinkAuditNotes: linkActions.setLinkAuditNotes,
-    isTriageProjectModalOpen: linkActions.isTriageProjectModalOpen,
-    setIsTriageProjectModalOpen: linkActions.setIsTriageProjectModalOpen,
-    selectedProjectId: linkActions.selectedProjectId,
-    setSelectedProjectId: linkActions.setSelectedProjectId,
+    isTriageProjectModalOpen: intake.triageOpen,
+    setIsTriageProjectModalOpen: (open: boolean) => { if (open) intake.openTriage(); else intake.closeTriage() },
+    selectedProjectId: intake.projectId,
+    setSelectedProjectId: intake.setProjectId,
     handleToggleSelectReport: linkActions.handleToggleSelectReport,
     handleSelectAllReports: linkActions.handleSelectAllReports,
     handleOpenLinkReportsModal: linkActions.handleOpenLinkReportsModal,
     handleConfirmLinkReports: linkActions.handleConfirmLinkReports,
     handleUnlinkReport: linkActions.handleUnlinkReport,
-    handleOpenTriageProject: linkActions.handleOpenTriageProject,
-    handleConfirmTriageProject: linkActions.handleConfirmTriageProject,
+    handleOpenTriageProject,
+    handleConfirmTriageProject: intake.execute,
 
     // Spread triage decisions & actions
-    targetTriageCase: linkActions.targetTriageCase || actions.targetTriageCase,
+    targetTriageCase: intake.triageOpen ? intake.selected : actions.targetTriageCase,
     setTargetTriageCase: (c: import('./types').TriageCase | null) => {
-      linkActions.setTargetTriageCase(c)
       actions.setTargetTriageCase(c)
     },
     isNoDefectModalOpen: actions.isNoDefectModalOpen,
