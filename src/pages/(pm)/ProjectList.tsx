@@ -126,6 +126,7 @@ export const ProjectList: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
+  const [newEngineeringCrs, setNewEngineeringCrs] = useState('')
   const [pendingCreate, setPendingCreate] = useState(false)
   const [receivedCreate, setReceivedCreate] = useState(false)
 
@@ -137,6 +138,7 @@ export const ProjectList: React.FC = () => {
     setPendingCreate(!!pending)
     setReceivedCreate(!!pending?.hasReceipt)
     if (pending) {
+      setNewEngineeringCrs(pending.body.engineeringUtmSrid == null ? '' : String(pending.body.engineeringUtmSrid))
       setNewProjectName(pending.body.name)
       setNewProjectCode(pending.body.code)
       setNewProjectPM(pending.body.primaryPmId)
@@ -148,6 +150,7 @@ export const ProjectList: React.FC = () => {
       setIsModalOpen(true)
       return
     }
+    setNewEngineeringCrs('')
     setNewProjectName('')
     setNewProjectCode('')
     setNewProjectRegion('')
@@ -174,6 +177,7 @@ export const ProjectList: React.FC = () => {
         throw new Error('Hãy chọn PM đang hoạt động từ danh sách nhân sự đã tải.')
       }
       const created = await projectService.createProject({
+        engineeringUtmSrid: newEngineeringCrs ? Number(newEngineeringCrs) : null,
         code: newProjectCode,
         name: newProjectName,
         primaryPmId: newProjectPM,
@@ -368,6 +372,8 @@ export const ProjectList: React.FC = () => {
           setNewProjectCode(val)
           if (createErrorMessage) setCreateErrorMessage(null)
         }}
+        engineeringCrs={newEngineeringCrs}
+        onChangeEngineeringCrs={setNewEngineeringCrs}
         projectRegion={newProjectRegion}
         onChangeProjectRegion={setNewProjectRegion}
         projectPM={newProjectPM}

@@ -176,6 +176,7 @@ export const INITIAL_HUB_PROJECTS: HubProject[] = [
 ]
 
 export interface ProjectCreatePayload {
+  engineeringUtmSrid?: number | null
   code: string
   name: string
   primaryPmId: string
@@ -702,7 +703,8 @@ export const projectService = {
           !validDate(payload.handoverDate) || !validDate(payload.warrantyEndDate) || payload.warrantyEndDate < payload.handoverDate) {
         throw new Error('Kiểm tra mã/tên dự án, PM và ngày bảo hành không trước ngày bàn giao.')
       }
-      const body = { name: payload.name.trim(), code: payload.code.trim().toUpperCase(), description: payload.region?.trim() || '',
+      if ((!replay || !projectCreateCommand) && ![32648, 32649].includes(payload.engineeringUtmSrid!)) throw new Error('engineeringUtmSrid: bắt buộc chọn CRS kỹ thuật theo hồ sơ tọa độ (EPSG:32648 hoặc EPSG:32649).')
+      const body = { ...(payload.engineeringUtmSrid != null ? { engineeringUtmSrid: payload.engineeringUtmSrid } : {}), name: payload.name.trim(), code: payload.code.trim().toUpperCase(), description: payload.region?.trim() || '',
         primaryPmId: payload.primaryPmId, handoverDate: payload.handoverDate, warrantyEndDate: payload.warrantyEndDate, handoverFileIds: [] }
       const fingerprint = JSON.stringify(body)
       if (projectCreateCommand && (projectCreateCommand.busy || !replay || fingerprint !== projectCreateCommand.fingerprint)) {
@@ -735,6 +737,11 @@ export const projectService = {
           if (cursor) seen.add(cursor)
         } while (!readBack && cursor)
         if (!readBack) throw new Error('Đã nhận201 nhưng chưa đọc lại được dự án từ danh sách server. Hãy đối chiếu cùng yêu cầu.')
+        if (command.body.engineeringUtmSrid != null) {
+          const context = (await apiClient.get(`/projects/${createdId}/work-package`)).data
+          if (!current()) throw new Error('Phiên đã thay đổi; bỏ context dự án cũ.')
+          if (context?.projectId !== createdId || context.engineeringUtmSrid !== command.body.engineeringUtmSrid) throw new Error('Đã tạo dự án nhưng CRS GET chưa khớp lựa chọn. Chỉ đọc lại kết quả, không tạo lại.')
+        }
         const description = await readProjectDescription(createdId, epoch)
         if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả dự án cũ.')
         const createdHub = { ...mapBackendProjectToHub(readBack), region: description, location_detail: '' }

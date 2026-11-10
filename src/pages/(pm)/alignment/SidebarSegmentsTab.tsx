@@ -12,6 +12,7 @@ import { SegmentItem, BranchItem } from './types'
 import { SidebarSegmentCard } from './SidebarSegmentCard'
 
 export interface SidebarSegmentsTabProps {
+  draftContentSaved?: boolean
   segmentPlanning?: boolean
   segmentSetStatus?: string
   segments: SegmentItem[]
@@ -42,12 +43,13 @@ export interface SidebarSegmentsTabProps {
   onClearMainline?: () => void
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
-  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
   isSupervisor?: boolean
 }
 
 export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   segments,
+  draftContentSaved = false,
   segmentPlanning = false, segmentSetStatus,
   selectedSegmentId,
   onSelectSegment,
@@ -86,8 +88,8 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
 
   const isConfirmed = alignmentStatus === 'CONFIRMED'
   const isPending = alignmentStatus === 'PENDING_APPROVAL'
-  const isLocked = isConfirmed || isPending
-  const canEdit = !isLocked && !isSupervisor && alignmentStatus === 'DRAFT'
+  const isLocked = isConfirmed || isPending || alignmentStatus === 'SUBMITTED'
+  const canEdit = !isLocked && !isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus)
 
   return (
     <>
@@ -177,7 +179,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             <span>
               {isConfirmed
                 ? 'Hình học đã xác nhận; segment set có trạng thái riêng từ máy chủ.'
-                : 'Hồ sơ tim tuyến đang chờ Giám sát phê duyệt (PENDING_APPROVAL).'}
+                : alignmentStatus === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận; nội dung tuyến chỉ đọc.' : 'Hồ sơ tim tuyến đang chờ Giám sát phê duyệt (PENDING_APPROVAL).'}
             </span>
           </div>
         ) : isSupervisor ? (
@@ -274,6 +276,10 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
               ? segmentSetStatus === 'PREVIEW' ? 'Preview BE • Chưa lưu ID phân đoạn' : `Segment set ${segmentSetStatus} • ID, thứ tự và phạm vi từ máy chủ`
               : isConfirmed
               ? 'Hình học đã xác nhận • Các khoảng bề rộng chỉ là dữ liệu kỹ thuật'
+              : alignmentStatus === 'SUBMITTED'
+              ? 'Hồ sơ đã trình • Nội dung chỉ đọc; chờ Giám sát xác nhận'
+              : draftContentSaved
+              ? 'Tọa độ và thông số đã lưu; chưa được Giám sát xác nhận'
               : segments.length > 0
               ? `Bản chỉnh ${segments.length} phân đoạn • Chờ xác minh máy chủ`
               : `Chưa phân đoạn • Vui lòng chọn cự ly và bấm "Áp dụng chia đoạn tự động"`
@@ -310,7 +316,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                     </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      BẢN CHỈNH
+                      {alignmentStatus === 'SUBMITTED' ? 'HỒ SƠ ĐÃ TRÌNH' : draftContentSaved ? 'BẢN NHÁP ĐÃ LƯU' : 'BẢN CHỈNH'}
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">

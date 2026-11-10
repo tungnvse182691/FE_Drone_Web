@@ -1,3 +1,4 @@
+import { geometrySubmissionService } from '../../../api/services/geometrySubmissionService'
 import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
@@ -33,6 +34,7 @@ const emptyForm: GeometryDraftForm = { sectionId: '', profileId: '', origin: '',
 export function coordinateDraftInput(form: GeometryDraftForm, text: string, model: Pick<ReadModel, 'context' | 'profiles'>, fileDraft?: CoordinateDraftSource | null, requireReason = true): GeometryDraftInput {
   const context = model.context
   if (!context) throw new GeometryCommandUiError('Chưa tải được phạm vi tuyến và engineering CRS từ máy chủ.')
+  if (context.engineeringUtmSrid == null) throw new GeometryCommandUiError('Dự án chưa cấu hình CRS kỹ thuật; chưa thể lưu tuyến. Bản nhập được giữ. Chưa có luồng cập nhật CRS dự án cũ trong màn hình này.')
   const roads = context.roadSections.filter(section => section.roadSectionId === form.sectionId)
   if (form.sectionId && roads.length !== 1) throw new GeometryCommandUiError('Hãy chọn đúng một tuyến từ phạm vi máy chủ đã trả về.')
   if (!form.sectionId && !fileDraft) throw new GeometryCommandUiError('Cần JSON có roadCode, roadName và thông số nguồn để lưu draft cấp project.')
@@ -92,6 +94,8 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const [busy, setBusy] = useState(false), [message, setMessage] = useState('')
   const [pending, setPending] = useState<ReturnType<typeof pendingDraftCommand>>(null)
   const [preview, setPreview] = useState<Awaited<ReturnType<typeof alignmentService.previewGeometryDraft>> | null>(null)
+  const [previewError, setPreviewError] = useState('')
+  const autoPreview = useRef('')
   const [previewVersion, setPreviewVersion] = useState(''), [previewRouteVersion, setPreviewRouteVersion] = useState<string | null | undefined>(undefined)
   const [previewSectionId, setPreviewSectionId] = useState<string | null | undefined>(undefined)
   const [conflict, setConflict] = useState(false), [freshVersion, setFreshVersion] = useState(false)
@@ -176,7 +180,8 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (awaitingDraftId) throw new GeometryCommandUiError('Đang nạp đúng bản nháp vừa lưu. Chưa gửi lệnh mới.')
     if (user?.role !== RoleCode.PROJECT_MANAGER) throw new GeometryCommandUiError('Chỉ PM được lưu hoặc sửa bản nháp.')
     if (model.draftId && (!draft || draft.id !== model.draftId || draft.projectId !== projectId)) throw new GeometryCommandUiError('Cần đọc đúng bản nháp trước khi sửa.')
-    if (draft && draft.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp đã xác nhận, không được sửa.')
+    if (model.submissionLoading || model.submissionError || !model.submissionReady || model.submission && (model.submission.status !== 'REJECTED' || model.submission.draftId !== model.draftId)) throw new GeometryCommandUiError(model.submissionError || 'Đang đọc hoặc hồ sơ dự án đã trình; không được sửa/tạo thay thế.')
+    if (draft && !['DRAFT','REJECTED'].includes(draft.status || '')) throw new GeometryCommandUiError('Bản nháp đã xác nhận, không được sửa.')
     if (draft && draft.sourceKind !== 'COORDINATES') throw new GeometryCommandUiError('Bản nháp dùng hình học native; hồ sơ đọc chưa đủ thông tin tuyến và hiệu chỉnh để sửa an toàn.')
     if (draft && !model.draft?.etag) throw new GeometryCommandUiError('Chưa đọc được phiên bản bản nháp.')
     if (sourceUnverified && !fileDraft) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
@@ -192,10 +197,12 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const readiness = model.readiness
   const confirmGate = hydrateReadError ? 'Hồ sơ đã lưu nhưng chưa tải lại được. Hãy thử đọc lại.' : user?.role !== RoleCode.SUPERVISOR ? 'Chỉ Giám sát được xác nhận.'
     : draft?.status === 'CONFIRMED' ? 'Hồ sơ đã được xác nhận từ máy chủ.'
-    : !draft || draft.id !== model.draftId || draft.projectId !== projectId || draft.status !== 'DRAFT' || !model.draft?.etag ? 'Cần bản nháp DRAFT và phiên bản từ máy chủ.'
+    : !draft || draft.id !== model.draftId || draft.projectId !== projectId || draft.status !== 'SUBMITTED' || !model.draft?.etag ? 'Cần hồ sơ SUBMITTED và phiên bản từ máy chủ.'
+    : model.submissionError || model.submissionLoading || model.submission?.draftId !== draft.id || model.submission?.status !== 'SUBMITTED' ? 'Cần lookup đúng hồ sơ SUBMITTED của dự án.'
     : contextReason ? contextReason
     : readinessBlocker(readiness) ? readinessBlocker(readiness)
-    : !preview || previewVersion !== model.draft.etag || previewSectionId !== draft.roadSectionId || previewRouteVersion !== currentRouteVersion ? 'Cần xem trước đúng phiên bản bản nháp.' : ''
+    : previewError ? previewError
+    : !preview || previewVersion !== model.draft.etag || previewSectionId !== draft.roadSectionId || previewRouteVersion !== currentRouteVersion ? 'Đang tải và kiểm tra hồ sơ đã trình từ máy chủ.' : ''
   const begin = () => {
     if (running.current || awaitingAcknowledgement.current) return null
     running.current = true; setBusy(true)
@@ -254,7 +261,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (![RoleCode.PROJECT_MANAGER, RoleCode.SUPERVISOR].includes(user?.role as RoleCode)) { notify('Chỉ PM hoặc Giám sát được xem trước tuyến.'); return }
     if (!draft || !model.draft?.etag || pending || conflict) { notify('Cần bản nháp đã đọc và giải quyết yêu cầu cũ trước khi xem trước.'); return }
     const current = begin(); if (!current) return
-    setPreview(null); setPreviewVersion(''); setPreviewRouteVersion(undefined); setPreviewSectionId(undefined)
+    setPreviewError(''); setPreview(null); setPreviewVersion(''); setPreviewRouteVersion(undefined); setPreviewSectionId(undefined)
     try {
       const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag)
       if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new GeometryCommandUiError('Preview chưa có chiều dài hợp lệ từ máy chủ.')
@@ -263,7 +270,13 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       const routeVersion = confirmationVersion(projectId, draft, context)
       if (current()) { setPreviewRouteVersion(routeVersion); setPreviewSectionId(draft.roadSectionId) }
       if (current() && selection.current.version === model.draft.etag) { setPreview(value); setPreviewVersion(model.draft.etag); model.setReadiness(ready); notify(`Đã đọc preview/readiness từ máy chủ. Preview chưa phải xác nhận tuyến. ${readinessBlocker(ready)}`) }
-    } catch (error) { await failure(error, current) }
+    } catch (error: any) {
+      if (current() && selection.current.version === draftVersion) {
+        const text = geometryCommandErrorMessage(error, useAuthStore.getState().isAuthenticated, null)
+        setPreviewError(text); notify(text)
+        if ([409, 412, 428].includes(error?.response?.status)) model.retry()
+      }
+    }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
   const confirm = async () => {
@@ -273,18 +286,27 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     catch (error) { setConfirmModalOpen(true); setConfirmInputError((error as Error).message); return }
     const current = begin(); if (!current) return
     try {
+      const lookup = await geometrySubmissionService.read(projectId)
+      if (!current()) return
+      if (!lookup || lookup.draftId !== draft!.id || lookup.status !== 'SUBMITTED') throw new GeometryCommandUiError('Hồ sơ trình đã thay đổi; đọc lại trước khi xác nhận.')
       const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])
       if (!current()) return
       const routeVersion = confirmationVersion(projectId, fresh.data, context)
       if (fresh.etag !== previewVersion || selection.current.version !== previewVersion || fresh.data.roadSectionId !== previewSectionId || routeVersion !== previewRouteVersion) {
         setConflict(true); setFreshVersion(true); model.retry(); throw new GeometryCommandUiError('Phiên bản đã thay đổi. Hãy xem lại trước khi xác nhận.')
       }
-      if (fresh.data.projectId !== projectId || fresh.data.id !== draft!.id || fresh.data.roadSectionId !== draft!.roadSectionId || fresh.data.status !== 'DRAFT') throw new GeometryCommandUiError('Bản nháp không còn đúng project/tuyến/trạng thái DRAFT.')
+      if (fresh.data.projectId !== projectId || fresh.data.id !== draft!.id || fresh.data.roadSectionId !== draft!.roadSectionId || fresh.data.status !== 'SUBMITTED') throw new GeometryCommandUiError('Hồ sơ không còn đúng project/tuyến/trạng thái SUBMITTED.')
       if (readinessBlocker(ready)) { model.setReadiness(ready); throw new GeometryCommandUiError(readinessBlocker(ready)) }
       await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: routeVersion, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
+  const previewKey = `${authEpoch}:${projectId}:${model.draftId}:${draftVersion}:${draft?.status}:${draft?.roadSectionId}:${currentRouteVersion}`
+  useEffect(() => {
+    if (user?.role !== RoleCode.SUPERVISOR || draft?.status !== 'SUBMITTED' || !model.submissionReady || model.submissionLoading || model.submissionError || model.submission?.draftId !== draft.id || model.submission?.status !== 'SUBMITTED' || model.context?.projectId !== projectId || model.draftLoading || pending || conflict || busy || autoPreview.current === previewKey) return
+    autoPreview.current = previewKey
+    void loadPreview()
+  }, [previewKey, user?.role, model.submissionReady, model.submissionLoading, model.submissionError, model.submission, model.context, model.draftLoading, pending, conflict, busy])
   const reviewConflict = async () => {
     const current = begin(); if (!current) return
     setFreshVersion(false)
@@ -309,5 +331,5 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
   const openConfirm = () => { if (confirmGate || pending || conflict || running.current) { notify(confirmGate || 'Cần đối chiếu yêu cầu/phiên bản cũ.'); return }; setConfirmInputError(''); setConfirmModalOpen(true) }
   const cancelConfirm = () => { if (!running.current) { setConfirmModalOpen(false); setConfirmInputError('') } }
   const cancelReason = () => { if (!running.current) { setReasonModalOpen(false); setReasonError('') } }
-  return { form, setForm, reasonModalOpen, reasonError, cancelReason, saveDisabledReason, busy, message, hydrateReadError, retryHydrate, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, confirmModalOpen, confirmInputError, openConfirm, cancelConfirm, setConfirmInputError, save, confirm, loadPreview, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
+  return { form, setForm, reasonModalOpen, reasonError, cancelReason, saveDisabledReason, busy, message, hydrateReadError, retryHydrate, pending, conflict, freshVersion, saveReason, confirmReason: confirmGate, confirmModalOpen, confirmInputError, openConfirm, cancelConfirm, setConfirmInputError, save, confirm, loadPreview, previewError, reviewNeedsRetry: !!previewError || !!contextReason || !!model.draftError || !!preview && !!readinessBlocker(readiness), retryPreview: () => { if (contextReason || model.draftError) { autoPreview.current = ''; model.retry() } else { autoPreview.current = previewKey; void loadPreview() } }, retryCommand, reviseRejected, reviewConflict, acceptVersion, preview, effectiveFrom, setEffectiveFrom, reason: confirmReason, setReason: setConfirmReason }
 }

@@ -69,3 +69,12 @@ export function validateCoordinateDraft(draft: any, requireReason: boolean, requ
   }
   if (Math.abs(end - length) > 1e-7) fail('widthProfile', 'điểm kết thúc phải phủ chiều dài tuyến (sai số tối đa 1e-7 m).')
 }
+
+// GET does not expose changeReason; compare only persisted geometry/design fields.
+export function sameCoordinateDraftContent(input: GeometryDraftInput, draft: GeometryDraftView): boolean {
+  return ['DRAFT','REJECTED'].includes(draft.status || '') && draft.sourceKind === 'COORDINATES' && input.sourceKind === draft.sourceKind &&
+    input.roadCode?.trim() === draft.roadCode && (input.roadName ?? null) === (draft.roadName ?? null) &&
+    input.sourceCrs === draft.sourceCrs && input.stationOriginMeters === draft.stationOriginMeters && input.surveyWidthMeters === draft.surveyWidthMeters &&
+    JSON.stringify(input.coordinates?.map(p => [p.x, p.y])) === JSON.stringify((draft.editedCoordinates ?? draft.originalCoordinates)?.map(p => [p.x, p.y])) &&
+    JSON.stringify(input.widthProfile.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) === JSON.stringify(draft.widthProfile?.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters]))
+}

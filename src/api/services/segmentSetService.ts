@@ -10,6 +10,13 @@ export interface SegmentGeometry {
 }
 export interface SegmentPreview { routeVersionId: string; totalLengthMeters: number; boundariesMeters: number[]; segments: SegmentGeometry[]; definitionHash: string }
 export interface SegmentSummary { id: string; routeVersionId: string; status: string; version: string }
+export function publishedSetForRoute(sets: SegmentSummary[], routeVersionId: string): SegmentSummary | null {
+  if (sets.some(set => !set.id || set.routeVersionId !== routeVersionId || !['DRAFT', 'PUBLISHED', 'SUPERSEDED'].includes(set.status))) throw new Error('Segment set không thuộc route version hoặc sai contract.')
+  if (new Set(sets.map(set => set.id)).size !== sets.length) throw new Error('Danh sách segment set trùng ID.')
+  const published = sets.filter(set => set.status === 'PUBLISHED')
+  if (published.length > 1) throw new Error('Dữ liệu bất thường: nhiều segment set PUBLISHED trên cùng route version.')
+  return published[0] || null
+}
 export interface ServerSegmentSet extends SegmentSummary {
   definition: SegmentDefinition | null; geometryHash: string | null; segments: SegmentGeometry[]
   metadataStatus: string; missingMetadata: string[]; publishedBy?: string | null; publishedAt?: string | null

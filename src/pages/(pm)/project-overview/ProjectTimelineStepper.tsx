@@ -4,6 +4,7 @@ import { HubProject } from '../projects/types'
 import { hasWarrantyData } from '../../../utils/projectWarranty'
 
 interface ProjectTimelineStepperProps {
+  geometryStatus?: 'SUBMITTED' | 'REJECTED' | 'CONFIRMED' | null
   project: HubProject
   basePath: string
   isSupervisor?: boolean
@@ -11,13 +12,14 @@ interface ProjectTimelineStepperProps {
 }
 
 export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
+  geometryStatus,
   project,
   basePath,
   isSupervisor = false,
   onNavigate
 }) => {
   const warrantyReady = hasWarrantyData(project)
-  const isAlignmentDone = (project.length_km || 0) > 0
+  const isAlignmentDone = geometryStatus === undefined ? (project.length_km || 0) > 0 : geometryStatus === 'CONFIRMED'
   const isClosed = project.status === 'CLOSED'
   const isSuspended = project.status === 'RESTRICTED'
   const isOperating = isAlignmentDone && !isClosed && !isSuspended
@@ -121,7 +123,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              {isAlignmentDone ? (
+              {geometryStatus === 'CONFIRMED' ? 'Hồ sơ hình học đã được Giám sát xác nhận từ máy chủ. Phân đoạn do PM quản lý và công bố.' : geometryStatus === 'REJECTED' ? 'Hồ sơ đã từ chối — PM sửa cùng bản nháp và trình lại.' : geometryStatus === 'SUBMITTED' ? 'Hồ sơ đã trình — chờ Giám sát xác nhận hình học. Phân đoạn do PM quản lý và công bố.' : isAlignmentDone ? (
                 <>
                   Đã chuẩn hóa tim tuyến trục chính dài <strong className="text-slate-900">{project.length_km} km</strong>, hệ quy chiếu WGS84 EPSG:4326. Giám sát đã ký duyệt khóa mốc lý trình bất biến.
                 </>
@@ -130,10 +132,10 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                   Dự án đã được Giám sát thực hiện thủ tục đóng kết thúc bảo hành trước hạn khi chưa phát sinh hồ sơ tim tuyến trắc địa.
                 </>
               ) : (
-                <>PM cần nạp tệp tọa độ KML / GeoJSON và thiết lập phân đoạn để Giám sát thẩm duyệt khóa mốc lý trình.</>
+                <>PM nhập và lưu hồ sơ tuyến; Giám sát xác nhận hình học. Phân đoạn do PM quản lý và công bố.</>
               )}
             </p>
-            {!isAlignmentDone && !isClosed && (
+            {!isAlignmentDone && !isClosed && geometryStatus !== 'SUBMITTED' && (
               <div className="mt-2.5">
                 {!isSupervisor ? (
                   <button

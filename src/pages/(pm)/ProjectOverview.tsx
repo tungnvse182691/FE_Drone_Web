@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { projectService, personnelService } from '../../api/services'
 import { alignmentService } from '../../api/services/alignmentService'
+import { geometrySubmissionService, type GeometrySubmission } from '../../api/services/geometrySubmissionService'
 import { Icon } from '../../components/ui/Icon'
 import { HubProject } from './projects/types'
 import { Segment, ProjectMember } from './project-overview/types'
@@ -27,6 +28,20 @@ export const ProjectOverview: React.FC = () => {
 
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
+  const submissionScope = `${authEpoch}:${projectId}`
+  const [submissionRead, setSubmissionRead] = useState<{scope: string; data: GeometrySubmission | null; loading: boolean; error: string}>({scope: '', data: null, loading: true, error: ''})
+  const [submissionReload, setSubmissionReload] = useState(0)
+  const submission = submissionRead.scope === submissionScope ? submissionRead : {data: null, loading: true, error: ''}
+  useEffect(() => {
+    let active = true
+    setSubmissionRead({scope: submissionScope, data: null, loading: true, error: ''})
+    geometrySubmissionService.read(projectId).then(data => {
+      if (active && useAuthStore.getState().authEpoch === authEpoch) setSubmissionRead({scope: submissionScope, data, loading: false, error: ''})
+    }).catch(error => {
+      if (active && useAuthStore.getState().authEpoch === authEpoch) setSubmissionRead({scope: submissionScope, data: null, loading: false, error: `Không đọc được hồ sơ tuyến: HTTP ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`})
+    })
+    return () => { active = false }
+  }, [submissionScope, submissionReload])
 
   const [project, setProject] = useState<HubProject | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -193,6 +208,11 @@ export const ProjectOverview: React.FC = () => {
 
       {/* 1. TOP BAR & BREADCRUMB CONTEXT */}
       <ProjectOverviewHeader
+        submission={submission.data}
+        submissionLoading={submission.loading}
+        submissionError={submission.error}
+        submissionReady={!submission.loading && !submission.error}
+        onRetrySubmission={() => setSubmissionReload(n => n + 1)}
         project={project}
         basePath={basePath}
         isSupervisor={isSupervisor}
@@ -216,6 +236,7 @@ export const ProjectOverview: React.FC = () => {
         {/* LEFT COLUMN: 8 COLS */}
         <div className="lg:col-span-8 space-y-6">
           <ProjectTimelineStepper
+            geometryStatus={submission.data?.status ?? null}
             project={project}
             basePath={basePath}
             isSupervisor={isSupervisor}

@@ -1,8 +1,14 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
+import type { GeometrySubmission } from '../../../api/services/geometrySubmissionService'
 
 interface ProjectOverviewHeaderProps {
+  submission?: GeometrySubmission | null
+  submissionLoading?: boolean
+  submissionError?: string
+  submissionReady?: boolean
+  onRetrySubmission?: () => void
   project: HubProject
   basePath: string
   isSupervisor: boolean
@@ -14,6 +20,7 @@ interface ProjectOverviewHeaderProps {
 }
 
 export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
+  submission, submissionLoading = false, submissionError = '', submissionReady = false, onRetrySubmission,
   project,
   basePath,
   isSupervisor,
@@ -24,6 +31,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
   branchesCount = 0
 }) => {
   const hasPendingProposals = project.repair_packages > 0
+  const submissionManaged = submissionReady || submissionLoading || !!submissionError || !!submission
 
   return (
     <div className="flex flex-col gap-3 font-body">
@@ -221,7 +229,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </button>
           </div>
         </div>
-      ) : project.length_km === 0 ? (
+      ) : !submissionManaged && project.length_km === 0 ? (
         <div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-amber-100 text-[#D97706] flex items-center justify-center shrink-0">
@@ -254,7 +262,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
           )}
         </div>
-      ) : project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT' ? (
+      ) : !submissionManaged && (project.kml_status === 'Chờ duyệt tim tuyến' || project.status === 'PENDING_ALIGNMENT') ? (
         <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
@@ -285,6 +293,12 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
           </button>
         </div>
       ) : null}
+      {submissionManaged && <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <p role="status">{submissionLoading ? 'Đang đọc hồ sơ tuyến từ máy chủ…' : submissionError || (submission?.status === 'CONFIRMED' ? 'Hình học đã xác nhận; phân đoạn do PM quản lý và công bố.' : submission?.status === 'REJECTED' ? `Đã từ chối — lượt ${submission.currentReview?.number}: ${submission.currentReview?.rejectionReason}` : submission?.status === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận hình học.' : 'Chưa có hồ sơ trình')}</p>
+        {submissionError && <button type="button" onClick={onRetrySubmission} className="px-3 py-2 rounded-lg border border-slate-200">Thử lại hồ sơ tuyến</button>}
+        {submission && !submissionLoading && !submissionError && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-slate-200 font-semibold">Xem hồ sơ tuyến</button>}
+        {!submission && submissionReady && !isSupervisor && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-slate-200 font-semibold">Thiết lập tim tuyến</button>}
+      </div>}
     </div>
   )
 }

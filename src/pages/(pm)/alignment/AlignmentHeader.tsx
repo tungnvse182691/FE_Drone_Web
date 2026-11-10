@@ -12,7 +12,7 @@ export interface AlignmentHeaderProps {
   saveDisabledReason?: string
   confirmDisabledReason?: string
   basePath: string
-  alignmentStatus: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  alignmentStatus: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
   activeProject: AssignedProjectOption
   selectedProjectId: string
   assignedProjects: AssignedProjectOption[]
@@ -86,6 +86,8 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             </span>
           ) : (
             <>
+              {alignmentStatus === 'REJECTED' && <span className="text-xs font-semibold text-rose-700">Đã từ chối — PM cần sửa hồ sơ và trình lại</span>}
+              {alignmentStatus === 'SUBMITTED' && <span className="text-xs font-semibold text-blue-700">Đã trình — chờ Giám sát xác nhận</span>}
               {alignmentStatus === 'DRAFT' && (
                 <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
@@ -173,7 +175,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
       <div className="flex w-full min-w-0 flex-wrap items-center gap-2 [&>*]:max-w-full [&>button]:h-auto [&>button]:min-h-8 [&>button]:py-1.5 [&>button]:whitespace-normal [&>a]:break-words">
         {/* PM: Import Coordinates Button (Only allowed when in DRAFT) */}
         {workflowActions}
-        {!isSupervisor && alignmentStatus === 'DRAFT' && (
+        {!isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus) && (
           <button
             onClick={onOpenImportModal}
             className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
@@ -185,7 +187,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
         )}
 
         {/* PM: Clear Mainline Button (Strictly only when DRAFT - never allowed when CONFIRMED) */}
-        {!isSupervisor && alignmentStatus === 'DRAFT' && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
+        {!isSupervisor && ['DRAFT','REJECTED'].includes(alignmentStatus) && onClearMainline && (currentCoords.length > 0 || importedLengthKm > 0) && (
           <button
             onClick={() => {
               if (confirm('Bạn có chắc chắn muốn xóa toàn bộ tim tuyến trục chính và các mốc lý trình của dự án này không? Bản đồ sẽ trở về trạng thái trống để bạn nhập hoặc vẽ lại từ đầu.')) {
@@ -203,10 +205,12 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
 
         {/* PM: Submit Approval */}
         {!isSupervisor && (
+          <>
           <button
             onClick={onSubmitAlignment}
             disabled={commandBusy || !!saveDisabledReason}
             title={saveDisabledReason}
+            aria-describedby={commandBusy || saveDisabledReason ? 'alignment-draft-save-reason' : undefined}
             className={`h-8 px-3.5 rounded-lg font-semibold text-xs transition-all flex items-center gap-1.5 ${
               alignmentStatus === 'CONFIRMED'
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
@@ -218,17 +222,24 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
           >
             <Icon name="send" size={14} />
             <span>
-              {alignmentStatus === 'PENDING_APPROVAL'
+              {alignmentStatus === 'SUBMITTED' ? 'Đã trình Giám sát' : alignmentStatus === 'PENDING_APPROVAL'
                 ? 'Đã trình duyệt tim tuyến'
                 : alignmentStatus === 'CONFIRMED'
                 ? 'Đã khóa tim tuyến'
                 : 'Lưu bản nháp'}
             </span>
           </button>
+          {(commandBusy || saveDisabledReason) && (
+            <p id="alignment-draft-save-reason" role="status" className="text-xs text-slate-600 break-words">
+              {saveDisabledReason || 'Đang lưu hoặc đọc lại hồ sơ; vui lòng chờ.'}
+            </p>
+          )}
+          </>
         )}
 
         {/* Supervisor: Lock Baseline */}
         {isSupervisor && (
+          <>
           <button
             onClick={onLockAlignment}
             disabled={commandBusy || !!confirmDisabledReason}
@@ -245,6 +256,8 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             <Icon name="lock" size={14} />
             <span>{alignmentStatus === 'CONFIRMED' ? 'Đã khóa tim tuyến' : 'Xác nhận & Khóa tim tuyến'}</span>
           </button>
+          {confirmDisabledReason && alignmentStatus !== 'CONFIRMED' && <p role="status" className="text-xs text-slate-600 break-words">{confirmDisabledReason}</p>}
+          </>
         )}
       </div>
     </section>

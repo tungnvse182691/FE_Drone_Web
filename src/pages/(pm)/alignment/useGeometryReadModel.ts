@@ -1,3 +1,4 @@
+import { geometrySubmissionService, type GeometrySubmission } from '../../../api/services/geometrySubmissionService'
 import { useSearchParams } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { apiClient } from '../../../api/client'
@@ -7,9 +8,13 @@ import { useAuthStore } from '../../../store/authStore'
 /** Read-only discovery for the restored alignment screen. No local approval or draft authority. */
 export function useGeometryReadModel(projectId: string) {
   const [params, setParams] = useSearchParams()
-  const draftId = params.get('draftId') || ''
-  const roadReference = params.get('roadSectionId') || ''
-  const versionReference = params.get('routeVersionId') || ''
+  const [submission, setSubmission] = useState<GeometrySubmission | null>(null), [submissionError, setSubmissionError] = useState(''), [submissionLoading, setSubmissionLoading] = useState(true), [submissionScope, setSubmissionScope] = useState('')
+  const scope = `${projectId}:${useAuthStore(s => s.authEpoch)}`
+  const activeSubmission = submissionScope === scope ? submission : null
+  const historicalLayout = !!params.get('layoutId') && !!params.get('roadSectionId') && !!params.get('routeVersionId') && activeSubmission?.status === 'CONFIRMED' && (params.get('roadSectionId') !== activeSubmission.roadSectionId || params.get('routeVersionId') !== activeSubmission.confirmedRouteVersionId)
+  const draftId = historicalLayout ? params.get('draftId') || '' : activeSubmission?.draftId || params.get('draftId') || ''
+  const roadReference = activeSubmission && !historicalLayout ? activeSubmission.status === 'CONFIRMED' ? activeSubmission.roadSectionId! : '' : params.get('roadSectionId') || ''
+  const versionReference = activeSubmission && !historicalLayout ? activeSubmission.status === 'CONFIRMED' ? activeSubmission.confirmedRouteVersionId! : '' : params.get('routeVersionId') || ''
   const epoch = useAuthStore(state => state.authEpoch)
   const [projects, setProjects] = useState<Array<{projectId: string; name: string; projectCode: string}>>([])
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [reload, setReload] = useState(0)
@@ -22,6 +27,12 @@ export function useGeometryReadModel(projectId: string) {
   const [draft, setDraft] = useState<Awaited<ReturnType<typeof alignmentService.getGeometryDraft>> | null>(null)
   const [readiness, setReadiness] = useState<Awaited<ReturnType<typeof alignmentService.readDraftReadiness>> | null>(null)
   const [draftLoading, setDraftLoading] = useState(false), [draftError, setDraftError] = useState('')
+  useEffect(() => {
+    let active=true;setSubmissionLoading(true);setSubmissionError('');setSubmission(null);setSubmissionScope('')
+    if(!projectId){setSubmissionLoading(false);return}
+    geometrySubmissionService.read(projectId).then(value=>{if(active){setSubmission(value);setSubmissionScope(scope)}}).catch(e=>{if(active)setSubmissionError(`Không đọc được hồ sơ trình: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e.message}`)}).finally(()=>{if(active)setSubmissionLoading(false)})
+    return()=>{active=false}
+  },[scope,reload])
   useEffect(() => {
     let active = true
     setProfiles([]); setProfileError(''); setDraft(null); setReadiness(null); setDraftError(''); setDraftLoading(false)
@@ -36,6 +47,7 @@ export function useGeometryReadModel(projectId: string) {
       ;(async () => {
         const result = await alignmentService.getGeometryDraft(projectId, draftId)
         if (!active) return
+        if (activeSubmission && !historicalLayout && (result.data.status !== activeSubmission.status || result.data.roadSectionId !== activeSubmission.roadSectionId || result.etag !== `"${activeSubmission.version}"` || result.data.version !== activeSubmission.version)) throw new Error('GET draft không khớp lookup hồ sơ trình.')
         setDraft(result)
         const value = await alignmentService.readDraftReadiness(projectId, draftId)
         if (active) setReadiness(value)
@@ -43,7 +55,15 @@ export function useGeometryReadModel(projectId: string) {
         .finally(() => { if (active) setDraftLoading(false) })
     }
     return () => { active = false }
-  }, [projectId, draftId, epoch, reload])
+  }, [projectId, draftId, epoch, reload, activeSubmission, historicalLayout])
+  useEffect(()=>{
+    if(!activeSubmission || historicalLayout)return
+    const next=new URLSearchParams(params);next.set('draftId',activeSubmission.draftId)
+    if (params.get('draftId') !== activeSubmission.draftId || params.get('roadSectionId') !== roadReference || params.get('routeVersionId') !== versionReference) { next.delete('segmentSetId'); next.delete('layoutId') }
+    if(activeSubmission.status==='CONFIRMED'){next.set('roadSectionId',activeSubmission.roadSectionId!);next.set('routeVersionId',activeSubmission.confirmedRouteVersionId!)}
+    else { next.delete('roadSectionId'); next.delete('routeVersionId') }
+    if(next.toString()!==params.toString())setParams(next,{replace:true})
+  },[activeSubmission,params,historicalLayout])
   const attempt = useRef(0)
   const selection = useRef({ projectId, epoch, roadReference, versionReference, draftId })
   selection.current = { projectId, epoch, roadReference, versionReference, draftId }
@@ -117,5 +137,5 @@ export function useGeometryReadModel(projectId: string) {
     next.set('draftId', id); next.set('roadSectionId', geometry.roadSectionId!); next.set('routeVersionId', geometry.routeVersionId)
     setParams(next)
   }
-  return {draftId,roadReference,versionReference,openDraft,openGeometry,openConfirmed,setReadiness,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
+  return {submission:activeSubmission,submissionError,submissionLoading,submissionReady:submissionScope===scope, draftId,roadReference,versionReference,openDraft,openGeometry,openConfirmed,setReadiness,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
 }

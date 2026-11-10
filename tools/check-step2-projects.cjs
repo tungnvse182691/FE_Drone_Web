@@ -25,18 +25,34 @@ function load(file, client, extra = {}) {
   vm.runInNewContext(code, { module, exports: module.exports, require: name => { if (name in mocks) return mocks[name]; throw Error('Missing mock '+name) }, console: { log() {}, warn() {}, error() {} }, window: { addEventListener() {}, removeEventListener() {} }, crypto: webcrypto, setTimeout, sessionStorage: { getItem: k => saved.get(k) || null, setItem: (k,v) => saved.set(k,v), removeItem: k => saved.delete(k) }, localStorage: { getItem: () => null } })
   return module.exports
 }
-const input = { code: 'RG-STEP2', name: 'Step 2', primaryPmId: '72f84201-a001-4000-8000-000000000002', handoverDate: '2026-11-06', warrantyEndDate: '2027-11-06', handoverFileIds: [] }
+const input = { engineeringUtmSrid:32648, code: 'RG-STEP2', name: 'Step 2', primaryPmId: '72f84201-a001-4000-8000-000000000002', handoverDate: '2026-11-06', warrantyEndDate: '2027-11-06', handoverFileIds: [] }
 const created = { id: 'created', code: input.code, name: input.name, primaryProjectManagerUserId: input.primaryPmId }
 const project = (client, extra) => load('src/api/services/projectService.ts', { ...client, get: (url, config) => url.endsWith('/work-package')
-  ? client.workPackage ? client.workPackage(url, config) : Promise.resolve({data:{projectId:url.split('/')[2],description:null}})
+  ? client.workPackage ? client.workPackage(url, config) : Promise.resolve({data:{projectId:url.split('/')[2],description:null,engineeringUtmSrid:32648}})
   : client.get(url, config) }, extra).projectService
 const staff = client => load('src/api/services/personnelService.ts', client).personnelService
 let passed = 0
 async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS '+name) }
 ;(async () => {
+  await test('project CRS required selector and exact payload/readback with immutable retries',async()=>{
+    const C=load('src/pages/(pm)/projects/CreateProjectModal.tsx',{}).CreateProjectModal
+    const nodes=x=>!x||typeof x!=='object'?[]:Array.isArray(x)?x.flatMap(nodes):[x,...nodes(x.props?.children)]
+    const props={isOpen:true,projectName:'Test',projectCode:'TEST',projectPM:input.primaryPmId,pmOptions:[{id:input.primaryPmId,status:'ACTIVE'}],projectRegion:'',startDate:input.handoverDate,endDate:input.warrantyEndDate}
+    for(const crs of ['', '4326']){const view=C({...props,engineeringCrs:crs});assert.equal(nodes(view).find(n=>n.props?.type==='submit').props.disabled,true);assert.ok(renderToStaticMarkup(view).includes('Bắt buộc chọn CRS'))}
+    for(const crs of ['32648','32649'])assert.equal(nodes(C({...props,engineeringCrs:crs})).find(n=>n.props?.type==='submit').props.disabled,false)
+    const blank=nodes(C(props)).find(n=>n.type==='select'&&n.props['aria-label']==='CRS kỹ thuật dự án');assert.equal(blank.props.value,'');assert.equal(blank.props.required,true)
+    for(const invalid of [undefined,null,4326]){let writes=0;const s=project({post:async()=>writes++});await assert.rejects(s.createProject({...input,engineeringUtmSrid:invalid}),/engineeringUtmSrid/);assert.equal(writes,0)}
+    for(const srid of [32648,32649]){const writes=[];let broken=true,serverCrs=srid
+      const s=project({post:async(url,body,c)=>{writes.push({url,body:JSON.stringify(body),key:c.headers['Idempotency-Key']});return {status:201,data:{id:'created'}}},get:async()=>page([created]),workPackage:async()=>{if(broken)throw fail(503,'read');return {data:{projectId:'created',description:null,engineeringUtmSrid:serverCrs}}}})
+      await assert.rejects(s.createProject({...input,engineeringUtmSrid:srid}));assert.equal(JSON.parse(writes[0].body).engineeringUtmSrid,srid);assert.equal(s.pendingProjectCreate().hasReceipt,true)
+      broken=false;serverCrs=srid===32648?32649:32648;await assert.rejects(s.createProject({...input,engineeringUtmSrid:srid},true));assert.equal(writes.length,1)
+      serverCrs=srid;await s.createProject({...input,engineeringUtmSrid:srid},true);assert.equal(writes.length,1);assert.equal(s.pendingProjectCreate(),null)
+    }
+  })
+
   await test('region uses server description for list/detail/create readback; empty is distinct from failure and wrong project', async () => {
     let description='Bảo Lộc - Lâm Đồng', broken=false, wrong=false, posts=0
-    const s=project({get:async url=>url==='/projects'?page([created]):page([]),post:async()=>{posts++;return{status:201,data:{id:'created'}}},workPackage:async()=>{if(broken)throw fail(503,'unavailable');return{data:{projectId:wrong?'other':'created',description}}}})
+    const s=project({get:async url=>url==='/projects'?page([created]):page([]),post:async()=>{posts++;return{status:201,data:{id:'created'}}},workPackage:async()=>{if(broken)throw fail(503,'unavailable');return{data:{projectId:wrong?'other':'created',description,engineeringUtmSrid:32648}}}})
     assert.equal((await s.fetchProjects())[0].region,description)
     assert.equal((await s.fetchProjectById('created')).region,description)
     const result=await s.createProject({...input,region:'form must not win'});assert.equal(result.region,description);assert.equal(posts,1)
@@ -92,6 +108,7 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
     const s = project({ post: async (_, b, c) => { writes.push(JSON.stringify([b,c.headers])); if(timeout) throw Error('timeout'); return { status: 201, data: { id:'created' } } }, get: async () => page([created]) })
     await assert.rejects(s.createProject(input), /timeout/)
     await assert.rejects(s.createProject({ ...input, name: 'other' }, true), /chưa rõ/)
+    await assert.rejects(s.createProject({ ...input, engineeringUtmSrid: 32649 }, true), /chưa rõ/)
     timeout=false; await s.createProject(input,true); assert.equal(writes.length,2); assert.equal(writes[0],writes[1])
   })
   await test('invalid dates/PM/length/filename and PM actor never dispatch POST', async () => {
@@ -123,7 +140,7 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
   })
   await test('overview drops old project success/error and keeps independent primary when members fail', async () => {
     let id = 'a', slot = 0, view
-    const values = [], effects = [], calls = []
+    const values = [], effects = [], calls = [], submissions = []
     const hooks = {
       ...React,
       useState(initial) { const i=slot++; if (!(i in values)) values[i]=typeof initial==='function'?initial():initial; return [values[i], next=>{values[i]=typeof next==='function'?next(values[i]):next}] },
@@ -135,6 +152,7 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
     const mocks={
       react:{__esModule:true,default:hooks,...hooks}, 'react-router-dom':{useParams:()=>({id}),useNavigate:()=>()=>{}},
       '../../api/services':{projectService:{fetchProjectById:id=>new Promise((resolve,reject)=>calls.push({id,resolve,reject})),fetchProjectMembers:async()=>{throw fail(503,'members')}},personnelService:{getPrimaryProjectManager:async()=>({userId:'pm',displayName:'Server primary'})}},
+      '../../api/services/geometrySubmissionService':{geometrySubmissionService:{read:projectId=>new Promise((resolve,reject)=>submissions.push({projectId,resolve,reject}))}},
       '../../api/services/alignmentService':{alignmentService:{getAlignmentData:()=>({coords:[],branches:[],segments:[]})}},
       '../../api/services/personnelService':{}, '../../components/ui/Icon':{Icon:()=>null},
       './alignment/alignmentGeometryHelpers':{calculateCoordsLengthKm:()=>0}, './projects/CloseProjectModal':{CloseProjectModal:'CloseProjectModal'}
@@ -145,11 +163,11 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
     const render=()=>{slot=0;view=C();effects.forEach(e=>{if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}})}
     const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();render()}
     render(); id='b'; render()
-    calls[1].resolve({id:'b',code:'B',name:'B'});await flush()
-    calls[0].reject(Error('old project failure'));await flush()
+    submissions[1].resolve({projectId:'b',draftId:'server-draft',status:'SUBMITTED'});calls[1].resolve({id:'b',code:'B',name:'B'});await flush()
+    submissions[0].reject(fail(500,'old_submission'));calls[0].reject(Error('old project failure'));await flush()
     const nodes=x=>!x||typeof x!=='object'?[]:Array.isArray(x)?x.flatMap(nodes):[x,...nodes(x.props?.children)]
     const card=nodes(view).find(n=>n.type==='ProjectPersonnelCard')
-    assert.equal(card.props.project.id,'b');assert.ok(card.props.memberError);assert.equal(card.props.primaryPm.displayName,'Server primary')
+    assert.equal(card.props.project.id,'b');assert.ok(card.props.memberError);assert.equal(card.props.primaryPm.displayName,'Server primary');const overview=nodes(view).find(n=>n.type==='ProjectOverviewHeader');assert.equal(overview.props.submission.status,'SUBMITTED');assert.equal(overview.props.submission.draftId,'server-draft');assert.equal(overview.props.submissionError,'');assert.equal(overview.props.submissionReady,true)
     id='c';render();effects.forEach(e=>e?.cleanup?.());calls[2].resolve({id:'c',code:'C',name:'C'});await flush()
     assert.ok(!nodes(view).some(n=>n.type==='ProjectPersonnelCard'&&n.props.project.id==='c'))
   })

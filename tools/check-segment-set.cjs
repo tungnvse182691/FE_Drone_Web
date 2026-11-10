@@ -42,13 +42,13 @@ test('412/409 publication conflict and rejected input require explicit review de
 test('actor epoch route journals and concurrent writes fence stale outcomes and Sup cannot mutate',async()=>{
  const e=env(),c=e.load('src/api/services/segmentSetCommands.ts');let release;e.control.pause=new Promise(r=>release=r);const request=c.runSegment(pins,{pins,kind:'create',input});await assert.rejects(c.runSegment(pins),/Đang/);e.state.authEpoch++;release();await assert.rejects(request,/Phiên/);assert.ok(c.pendingSegment(pins));e.state.user={id:'sup',role:'SUPERVISOR'};assert.equal(c.pendingSegment(pins),null);await assert.rejects(c.runSegment(pins,{pins,kind:'create',input}),/PM/);e.state.user={id:'pm',role:'PROJECT_MANAGER'};assert.equal(c.pendingSegment({...pins,routeVersionId:'other'}),null)
 })
-function hookHarness(setId=''){
- const e=env();let slot=0,pending=[],view,changed=false,params=new URLSearchParams({segmentSetId:setId}),project='p',section='road',route='route',distance=NaN,notices=[];const values=[],effects=[]
+function hookHarness(setId='',items){
+ const e=env();if(items)e.control.items=items;let slot=0,pending=[],view,changed=false,params=new URLSearchParams({segmentSetId:setId,roadSectionId:'road',routeVersionId:'route'}),project='p',section='road',route='route',distance=NaN,notices=[];const values=[],effects=[]
  Object.assign(e.react,{useState(initial){const i=slot++;if(!(i in values))values[i]=typeof initial==='function'?initial():initial;return [values[i],next=>{const v=typeof next==='function'?next(values[i]):next;if(!Object.is(v,values[i])){values[i]=v;changed=true}}]},useRef(initial){const i=slot++;return values[i]||(values[i]={current:initial})},useEffect(setup,deps){const i=slot++,old=effects[i];if(!old||deps.some((v,j)=>!Object.is(v,old.deps[j])))pending.push({i,setup,deps})}})
- const mod=e.load('src/pages/(pm)/alignment/useSegmentSetWorkflow.ts',{'react-router-dom':{useSearchParams:()=>[params,next=>{params=next;changed=true}]}})
+ const mod=e.load('src/pages/(pm)/alignment/useSegmentSetWorkflow.ts',{'react-router-dom':{useSearchParams:()=>[params,next=>{params=typeof next==='function'?next(params):next;changed=true}]}})
  const geometry={projectId:'p',roadSectionId:'road',routeVersionId:'route',lengthMeters:5,sourceCrs:32648,engineeringSrid:32648,stationOriginMeters:100,metadataStatus:'COMPLETE',isCurrent:true}
  const render=()=>{for(let tries=0;tries<30;tries++){changed=false;slot=0;pending=[];view=mod.useSegmentSetWorkflow(project,section,route,geometry,true,distance,n=>{distance=n;changed=true},text=>notices.push(text));for(const eff of pending){effects[eff.i]?.cleanup?.();effects[eff.i]={deps:eff.deps,cleanup:eff.setup()}}if(!changed)return}throw Error('render loop')}
- const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}}
+ const flush=async()=>{for(let i=0;i<30;i++){await Promise.resolve();render()}}
  render();return {...e,mod,geometry,render,flush,notices,get server(){return e.server},set server(v){e.server=v},get view(){return view},get params(){return params},distance(n){distance=n;render()},switchRoute(){route='route-B';render()},unmount(){effects.forEach(e=>e?.cleanup?.())}}
 }
 test('hook F5 reads selected set, new empty DB stays empty, PM preview/save URL then Sup reads same reference',async()=>{
@@ -58,8 +58,19 @@ test('hook F5 reads selected set, new empty DB stays empty, PM preview/save URL 
 })
 test('published set is immutable; new draft must be explicit and no latest selection from multiple sets',async()=>{
  const h=hookHarness('set-1');h.server={...h.server,status:'PUBLISHED'};await h.flush();assert.equal(h.view.editable,false);await h.view.save();assert.equal(h.calls.filter(c=>c.method!=='GET').length,0);h.view.openSet('');h.render();await h.flush();assert.equal(h.view.snapshot,null);h.unmount()
- const multi=hookHarness();multi.control.items=[{id:'a',routeVersionId:'route',status:'DRAFT'},{id:'b',routeVersionId:'route',status:'PUBLISHED'}];await multi.flush();assert.equal(multi.view.snapshot,null);assert.equal(multi.params.get('segmentSetId'),'');multi.unmount()
+ const multi=hookHarness('',[{id:'a',routeVersionId:'route',status:'DRAFT'},{id:'b',routeVersionId:'route',status:'DRAFT'}]);await multi.flush();assert.equal(multi.view.snapshot,null);assert.equal(multi.params.get('segmentSetId'),'');multi.unmount()
 })
+test('PM/Sup auto-open only unique publication; explicit draft/new choice and anomalies remain distinct',async()=>{
+ const pub={...dto,id:'published',status:'PUBLISHED'},draft={...dto,id:'draft-new'}
+ for(const role of ['PROJECT_MANAGER','SUPERVISOR']){
+  const h=hookHarness('',[pub,draft]);h.server=pub;h.state.user.role=role;await h.flush();assert.equal(h.params.get('segmentSetId'),'published');assert.equal(h.view.snapshot.data.status,'PUBLISHED');assert.equal(h.calls.filter(c=>c.method!=='GET').length,0)
+  if(role==='PROJECT_MANAGER'){h.view.openSet('');h.render();await h.flush();assert.equal(h.params.get('segmentSetId'),null);assert.equal(h.view.snapshot,null)}h.unmount()
+ }
+ const editing=hookHarness('draft-new',[pub,draft]);editing.server=draft;await editing.flush();assert.equal(editing.params.get('segmentSetId'),'draft-new');assert.equal(editing.view.snapshot.data.status,'DRAFT');editing.unmount()
+ for(const rows of [[],[draft]]){const h=hookHarness('',rows);await h.flush();assert.match(h.view.message,/PM chưa công bố phân đoạn/);assert.equal(h.view.snapshot,null);h.unmount()}
+ for(const rows of [[pub,{...pub,id:'another'}],[{...pub,routeVersionId:'wrong'}],[pub,pub]]){const h=hookHarness('',rows);await h.flush();assert.ok(h.view.error);assert.equal(h.view.snapshot,null);assert.notEqual(h.params.get('segmentSetId'),'published');h.unmount()}
+})
+
 test('hook late preview after route switch does not replace new scope and boundary offsets preserve precision',async()=>{
  const h=hookHarness();await h.flush();h.distance(.005);let release;h.control.pause=new Promise(r=>release=r);const request=h.view.loadPreview();h.switchRoute();release();await request;await h.flush();assert.equal(h.view.preview,null);h.unmount()
  const input=h.mod.segmentDefinition(.123456789,[0,1.23456789,5]);assert.equal(input.targetLengthMeters,123.456789);assert.deepEqual(plain(input.boundariesMeters),[0,1.23456789,5]);assert.throws(()=>h.mod.segmentDefinition(NaN),/cự ly/)
@@ -94,7 +105,7 @@ test('width profile tab receives geometry intervals rather than a crossing serve
  const Sidebar=e.load(base+'AlignmentSidebar.tsx',{react,'lucide-react':new Proxy({},{get:()=>()=>null}),'./SidebarSegmentsTab':{SidebarSegmentsTab:()=>null},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:Width},'./SidebarSlabsTab':{SidebarSlabsTab:()=>null},'./SidebarFooterKpis':{SidebarFooterKpis:()=>null}}).AlignmentSidebar
  const src=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element,rowsDeclaration;function walk(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)==='segmentRows'))rowsDeclaration=n.getText(ast);ts.forEachChild(n,walk)}walk(ast)
  const attrs=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','rightTab','alignmentStatus','selectedTargetType'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
- const code=ts.transpileModule('function renderCaller(rightTab,activeSegments,display){const isMainline=true,selectedTargetType="MAINLINE",alignmentStatus="CONFIRMED",segmentWorkflow={display},pavementWorkflow={};'+rowsDeclaration+';const displayedSegments=segmentRows||activeSegments;return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const code=ts.transpileModule('function renderCaller(rightTab,activeSegments,display){const submitted=false,isMainline=true,selectedTargetType="MAINLINE",alignmentStatus="CONFIRMED",segmentWorkflow={display},pavementWorkflow={};'+rowsDeclaration+';const displayedSegments=segmentRows||activeSegments;return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
  const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar})
  const widths=[{id:'width-1',code:'Khoảng bề rộng 1',startKm:.1,endKm:.102,lengthKm:.002,roadWidthM:7},{id:'width-2',code:'Khoảng bề rộng 2',startKm:.102,endKm:.105,lengthKm:.003,roadWidthM:9}]
  const html=renderToStaticMarkup(renderCaller('WIDTH_PROFILE',widths,[{id:'crossing',code:'Server segment crossing widths',startKm:.1,endKm:.105,lengthKm:.005,roadWidthM:NaN}]))
@@ -107,7 +118,7 @@ test('caller badge and footer keep selected set count across segments widths sla
  const src=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8'),ast=ts.createSourceFile('caller.tsx',src,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let element;const declarations=[]
  function walk(n){if(ts.isJsxSelfClosingElement(n)&&n.tagName.getText(ast)==='AlignmentSidebar')element=n;if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>['segmentRows','displayedSegments','segmentCount','segmentCountMessage'].includes(d.name.getText(ast))))declarations.push(n.getText(ast));ts.forEachChild(n,walk)}walk(ast)
  const attrs=element.attributes.properties.filter(p=>ts.isJsxAttribute(p)&&['segments','rightTab','alignmentStatus','selectedTargetType','segmentCount','segmentCountMessage'].includes(p.name.text)).map(p=>p.getText(ast)).join(' ')
- const code=ts.transpileModule('function renderCaller(rightTab,segmentWorkflow,isMainline=true){const selectedTargetType=isMainline?"MAINLINE":"local",alignmentStatus="CONFIRMED",activeSegments=[{id:"width",lengthKm:.1}],pavementWorkflow={display:{segments:[{id:"slab1"},{id:"slab2"}]}};'+declarations.join(';')+';return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
+ const code=ts.transpileModule('function renderCaller(rightTab,segmentWorkflow,isMainline=true){const submitted=false,draftContentSaved=false,selectedTargetType=isMainline?"MAINLINE":"local",alignmentStatus="CONFIRMED",activeSegments=[{id:"width",lengthKm:.1}],pavementWorkflow={display:{segments:[{id:"slab1"},{id:"slab2"}]}};'+declarations.join(';')+';return <AlignmentSidebar '+attrs+' />}',{compilerOptions:{jsx:ts.JsxEmit.React}}).outputText
  const renderCaller=vm.runInNewContext(code+';renderCaller',{React,AlignmentSidebar:Sidebar}),segments=[{},{},{},{}],baseWorkflow={display:segments,snapshot:{data:{segments}},preview:null,loading:false,error:''}
  const render=(tab,w=baseWorkflow)=>renderToStaticMarkup(renderCaller(tab,w)).replace(/<[^>]*>/g,'')
  for(const tab of ['SEGMENTS','WIDTH_PROFILE','SLABS']){const html=render(tab);assert.match(html,/Phân đoạn4/);assert.match(html,/4 đoạnPhân đoạn/)}

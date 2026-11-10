@@ -1,5 +1,6 @@
 import { apiClient } from '../client'
 import { alignmentService, type WidthProfileItem } from './alignmentService'
+import { publishedSetForRoute, type SegmentSummary } from './segmentSetService'
 
 export interface PavementLayoutInput {
   stripWidthMeters: number; slabLengthMeters: number; widthProfile: WidthProfileItem[]
@@ -18,7 +19,27 @@ export interface PavementLayoutView {
   }
 }
 export interface PavementPins { projectId: string; roadSectionId: string; routeVersionId: string; segmentSetId: string; lengthMeters: number }
+export interface PavementLayoutSummary {
+  layoutId: string; projectId: string; roadSectionId: string; routeVersionId: string; segmentSetId: string
+  kind: 'PLANNED' | 'AS_BUILT'; sourcePlanId: string | null; createdAt: string; contentHash: string
+}
 export const pavementService = {
+  async list(pins: PavementPins): Promise<PavementLayoutSummary[]> {
+    const all: PavementLayoutSummary[] = [], seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const {data} = await apiClient.get(`/projects/${pins.projectId}/road-sections/${pins.roadSectionId}/versions/${pins.routeVersionId}/segment-sets/${pins.segmentSetId}/pavement-layouts`, {params: {pageSize: 100, cursor}})
+      if (!Array.isArray(data?.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string' && !!data.nextCursor)) throw new Error('Danh sách layout sai contract/phân trang.')
+      for (const row of data.items as PavementLayoutSummary[]) {
+        if (!row.layoutId || row.projectId !== pins.projectId || row.roadSectionId !== pins.roadSectionId || row.routeVersionId !== pins.routeVersionId || row.segmentSetId !== pins.segmentSetId || !['PLANNED','AS_BUILT'].includes(row.kind) || !Number.isFinite(Date.parse(row.createdAt)) || !/^[a-f0-9]{64}$/i.test(row.contentHash) || !(row.sourcePlanId === null || typeof row.sourcePlanId === 'string' && !!row.sourcePlanId) || all.some(item => item.layoutId === row.layoutId)) throw new Error('Layout summary sai reference/metadata hoặc trùng ID.')
+        all.push(row)
+      }
+      cursor = data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor layout bị lặp; chưa đọc đầy đủ danh sách.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return all
+  },
   async discover(projectId: string, sectionId?: string, routeId?: string, setId?: string): Promise<PavementPins> {
     const context = await alignmentService.readProjectContext(projectId)
     if ((context as typeof context & { status?: string }).status !== 'ACTIVE') throw new Error('Project server chưa có trạng thái ACTIVE; chưa tạo pavement plan.')
@@ -28,7 +49,7 @@ export const pavementService = {
     const route = await alignmentService.readConfirmedGeometry(projectId, road.roadSectionId, version)
     if (route.projectId !== projectId || route.roadSectionId !== road.roadSectionId || route.routeVersionId !== version || !(route.lengthMeters > 0)) throw new Error('Route version trả sai phạm vi hoặc thiếu lengthMeters.')
     const base = `/projects/${projectId}/road-sections/${road.roadSectionId}/versions/${version}/segment-sets`
-    const sets: Array<{ id: string; routeVersionId: string; status: string }> = [], seen = new Set<string>()
+    const sets: SegmentSummary[] = [], seen = new Set<string>()
     let cursor: string | undefined
     do {
       const response = await apiClient.get(base, { params: { pageSize: 100, cursor } })
@@ -37,11 +58,11 @@ export const pavementService = {
       if (cursor && seen.has(cursor)) throw new Error('Cursor segment set bị lặp.')
       if (cursor) seen.add(cursor)
     } while (cursor)
-    if (sets.some(set => set.routeVersionId !== version)) throw new Error('Segment set không thuộc route version đã đọc.')
-    const published = sets.filter(set => set.status === 'PUBLISHED' && (!setId || set.id === setId))
-    if (published.length !== 1) throw new Error(`Route ${version}: cần đúng một segment set PUBLISHED từ server; hiện ${sets.length} set, ${published.length} set phù hợp. Chưa lưu tấm/khe.`)
-    const set = (await apiClient.get(`${base}/${published[0].id}`)).data
-    if (set.id !== published[0].id || set.routeVersionId !== version || set.status !== 'PUBLISHED') throw new Error('Segment set đã thay đổi hoặc không đúng phạm vi.')
+    const published = publishedSetForRoute(sets, version)
+    if (!published) throw new Error(`PM chưa công bố phân đoạn: route ${version}, ${sets.length} set, 0 set PUBLISHED. Chưa lưu tấm/khe.`)
+    if (setId && setId !== published.id) throw new Error(`Reference segment set ${setId} không khớp PUBLISHED ${published.id} của route ${version}; chưa lưu tấm/khe.`)
+    const set = (await apiClient.get(`${base}/${published.id}`)).data
+    if (set.id !== published.id || set.routeVersionId !== version || set.status !== 'PUBLISHED') throw new Error('Segment set đã thay đổi hoặc không đúng phạm vi.')
     return { projectId, roadSectionId: road.roadSectionId, routeVersionId: version, segmentSetId: set.id, lengthMeters: route.lengthMeters }
   },
   async layoutRoute(projectId: string, layout: PavementLayoutView, sectionId?: string, routeId?: string, setId?: string) {

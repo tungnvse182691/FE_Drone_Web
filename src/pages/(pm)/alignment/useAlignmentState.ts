@@ -9,12 +9,12 @@ import {
 } from './alignmentGeometryHelpers'
 import { computeSplitSegmentPair, computeAutoSplitSegments, checkMainlineSegmentsContinuity } from './alignmentSplitHelpers'
 import { prepareBranchPreview } from './alignmentBranchHelpers'
-import { useGeometryDraftWorkflow } from './useGeometryDraftWorkflow'
+import { coordinateDraftInput, useGeometryDraftWorkflow } from './useGeometryDraftWorkflow'
 import { useGeometryReadModel } from './useGeometryReadModel'
 import { useAlignmentMapState } from './useAlignmentMapState'
 import { useAlignmentSegmentsState } from './useAlignmentSegmentsState'
 import { useAlignmentImportState } from './useAlignmentImportState'
-import { restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
+import { sameCoordinateDraftContent, restoreCoordinateDraft, type CoordinateDraftSource } from './roadGuardDraftImportHelpers'
 import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import { planMainlinePavement } from './alignmentPavementHelpers'
 import { confirmedGeometryDisplay } from './confirmedGeometryDisplay'
@@ -55,7 +55,7 @@ export function useAlignmentState() {
   }, [assignedProjects, selectedProjectId])
 
   // Trạng thái tim tuyến: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
-  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'>('DRAFT')
+  const [alignmentStatus, setAlignmentStatus] = useState<'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'>('DRAFT')
 
   // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
   const geometryRead = useGeometryReadModel(selectedProjectId)
@@ -103,8 +103,9 @@ export function useAlignmentState() {
       (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) &&
       (!geometryRead.versionReference || geometryRead.geometry.routeVersionId === geometryRead.versionReference) &&
       (!geometryRead.roadReference || geometryRead.geometry.roadSectionId === geometryRead.roadReference) ? geometryRead.geometry : null
-    if (localDraftDirty && draftStatus !== 'CONFIRMED') return
-    setAlignmentStatus(draftStatus === 'CONFIRMED' || draftStatus !== 'DRAFT' && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    if (localDraftDirty && draftStatus !== 'CONFIRMED' && draftStatus !== 'SUBMITTED') return
+    setAlignmentStatus(draftStatus === 'REJECTED' ? 'REJECTED' : draftStatus === 'SUBMITTED' ? 'SUBMITTED' : draftStatus === 'CONFIRMED' || !['DRAFT','REJECTED'].includes(draftStatus || '') && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    if (draftStatus === 'SUBMITTED') return // The draft preview owns the map until confirmed geometry exists.
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     if (geometry) {
       const restored = confirmedGeometryDisplay(geometry)
@@ -286,7 +287,7 @@ export function useAlignmentState() {
     onSelectSegmentRef.current = handleSelectSegmentFromMap
   })
 
-  const pavementWorkflow = usePavementWorkflow(selectedProjectId, geometryRead.draft?.data.roadSectionId || '',
+  const pavementWorkflow = usePavementWorkflow(selectedProjectId, geometryRead.roadReference || geometryRead.draft?.data.roadSectionId || '',
     { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
     fileDraft && !localWidthsDirty ? fileDraft.widthProfile : [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
       fromOffsetMeters: segment.startKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN),
@@ -377,12 +378,20 @@ export function useAlignmentState() {
   }) } : null
   const draftWorkflow = useGeometryDraftWorkflow(selectedProjectId, geometryRead, importState.manualCoordsText, importState.setManualCoordsText, showToast, importState.hasUnverifiedFile, editorScope === scopeKey ? editedFileDraft : null)
 
+  let draftContentSaved = false
+  const savedDraft = geometryRead.draft?.data
+  if (['DRAFT','REJECTED'].includes(savedDraft?.status || '') && savedDraft?.id === geometryRead.draftId && savedDraft?.projectId === selectedProjectId && geometryRead.draft?.etag === `"${savedDraft.version}"` && editorScope === scopeKey) {
+    try { draftContentSaved = sameCoordinateDraftContent(coordinateDraftInput(draftWorkflow.form, importState.manualCoordsText, geometryRead, editedFileDraft, false), savedDraft) }
+    catch { /* Invalid or unverified local input is never marked saved. */ }
+  }
+
   useEffect(() => {
     if (!fileDraft || editorScope !== scopeKey) return
-    if (appliedFileDraft.current === fileDraft && localDraftDirty && geometryRead.draft?.data.status !== 'CONFIRMED') return
+    if (appliedFileDraft.current === fileDraft && localDraftDirty && !['CONFIRMED','SUBMITTED'].includes(geometryRead.draft?.data.status || '')) return
     appliedFileDraft.current = fileDraft
     const confirmedDraft = geometryRead.draft?.data
     const confirmedGeometry = geometryRead.geometry
+    if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'SUBMITTED') return
     if (confirmedDraft?.projectId === selectedProjectId && confirmedDraft.status === 'CONFIRMED' &&
       confirmedDraft.id === geometryRead.draftId && confirmedGeometry?.projectId === selectedProjectId &&
       confirmedGeometry.sourceDraftId === confirmedDraft.id &&
@@ -393,7 +402,7 @@ export function useAlignmentState() {
       surveyWidth: String(fileDraft.surveyWidthMeters),
       widths: localWidthsDirty ? old.widths : fileDraft.widthProfile.map(width => `${width.fromOffsetMeters}, ${width.toOffsetMeters}, ${width.widthMeters}`).join('\n') }))
     importState.setManualCoordsText(fileDraft.coordinates.map(point => `${point.x}, ${point.y}`).join('\n'))
-    setAlignmentStatus('DRAFT')
+    setAlignmentStatus(confirmedDraft?.status === 'REJECTED' ? 'REJECTED' : 'DRAFT')
     let length = 0
     for (let i = 1; i < fileDraft.coordinates.length; i++) {
       const a = fileDraft.coordinates[i - 1], b = fileDraft.coordinates[i]
@@ -446,30 +455,35 @@ export function useAlignmentState() {
   }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, selectedProjectId])
   useEffect(() => {
     const draft = geometryRead.draft?.data
-    if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === draft.id || localDraftDirty || draftWorkflow.busy || draftWorkflow.conflict) return
+    if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === `${draft.id}:${draft.status}` || localDraftDirty && draft.status !== 'SUBMITTED' || draftWorkflow.busy || draftWorkflow.conflict) return
     if (draft.status === 'CONFIRMED') return
-    if (draft.status === 'DRAFT' && draft.sourceKind === 'COORDINATES') {
+    if (['DRAFT','REJECTED','SUBMITTED'].includes(draft.status || '') && draft.sourceKind === 'COORDINATES') {
       if (geometryRead.context?.projectId !== selectedProjectId) return
       try {
         if (!geometryRead.draft?.etag || !draft.version || geometryRead.draft.etag !== `"${draft.version}"`) throw new Error('version: bản nháp chưa có ETag khớp phiên bản máy chủ.')
         if (draft.roadSectionId && !geometryRead.context.roadSections.some(road => road.roadSectionId === draft.roadSectionId)) throw new Error('roadSectionId: tuyến của bản nháp không thuộc context dự án.')
         if (draft.sourceCrs !== geometryRead.context.engineeringUtmSrid) throw new Error('sourceCrs: không khớp engineeringUtmSrid dự án.')
         const source = restoreCoordinateDraft(draft)
-        editorDraft.current = draft.id
+        editorDraft.current = `${draft.id}:${draft.status}`
         setFileDraft(source)
+        if (draft.status === 'SUBMITTED') {
+          setLocalDraftDirty(false);setLocalWidthsDirty(false)
+          segmentsState.setSegments(source.widthProfile.map((w,i)=>({id:`submitted-width-${draft.id}-${i}`,code:`Khoảng bề rộng ${i+1}`,startKm:(source.stationOriginMeters+w.fromOffsetMeters)/1000,endKm:(source.stationOriginMeters+w.toOffsetMeters)/1000,lengthKm:(w.toOffsetMeters-w.fromOffsetMeters)/1000,roadWidthM:w.widthMeters,laneCount:Number.NaN,surfaceMaterial:'',status:'VALID',statusText:'HỒ SƠ ĐÃ TRÌNH',color:'#C9A227'})))
+          setImportedLengthKm((source.widthProfile.at(-1)?.toOffsetMeters || 0)/1000)
+        }
         try { setFilePreviewCoords(previewCenterlineCoordinates(source.coordinates.map(point => [point.x, point.y]), source.sourceCrs)) }
         catch (error) { showToast(error instanceof Error ? error.message : 'sourceCrs: chưa hỗ trợ preview bản nháp.'); setFilePreviewCoords([]) }
       } catch (error) { showToast(error instanceof Error ? error.message : 'Không khôi phục được metadata bản nháp.') }
       return
     }
-    editorDraft.current = draft.id
+    editorDraft.current = `${draft.id}:${draft.status}`
     if (!Number.isFinite(draft.stationOriginMeters)) return
     const origin = draft.stationOriginMeters
     segmentsState.setSegments((draft.widthProfile || []).map((width, index) => ({
       id: `draft-width-${draft.id}-${index}`, code: `Khoảng bề rộng ${index + 1}`,
       startKm: (origin + width.fromOffsetMeters) / 1000, endKm: (origin + width.toOffsetMeters) / 1000,
       lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
-      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'BẢN NHÁP ĐÃ ĐỌC', color: '#C9A227'
+      laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: draft.status === 'SUBMITTED' ? 'HỒ SƠ ĐÃ TRÌNH' : 'BẢN NHÁP ĐÃ ĐỌC', color: '#C9A227'
     })))
   }, [geometryRead.draft, geometryRead.draftId, geometryRead.context, selectedProjectId, localDraftDirty, draftWorkflow.busy, draftWorkflow.conflict])
   useEffect(() => {
@@ -665,6 +679,7 @@ export function useAlignmentState() {
     geometryRead,
     pavementWorkflow,
     fileDraft,
+    draftContentSaved,
     localDraftDirty, markLocalDraft, markWidthDraft,
     draftWorkflow,
     isSupervisor,

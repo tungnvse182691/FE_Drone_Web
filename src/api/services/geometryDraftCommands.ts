@@ -1,3 +1,4 @@
+import { geometrySubmissionService } from './geometrySubmissionService'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { alignmentService, type GeometryDraftInput, type GeometryConfirmInput, type GeometryDraftView, type RoadGeometryVersionView } from './alignmentService'
@@ -81,6 +82,9 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     if (intent.kind === 'confirm') {
       const route = receipt as RoadGeometryVersionView
       if (!route.roadSectionId || !route.routeVersionId || route.sourceDraftId !== intent.draftId) throw new Error('Receipt xác nhận thiếu reference hợp lệ.')
+      const lookup = await geometrySubmissionService.read(projectId)
+      current()
+      if (!lookup || lookup.status !== 'CONFIRMED' || lookup.draftId !== intent.draftId || lookup.roadSectionId !== route.roadSectionId || lookup.confirmedRouteVersionId !== route.routeVersionId) throw new Error('Lookup sau confirm không khớp receipt.')
       const geometry = await alignmentService.readConfirmedGeometry(projectId, route.roadSectionId, route.routeVersionId)
       current()
       if (geometry.projectId !== projectId || geometry.routeVersionId !== route.routeVersionId || geometry.roadSectionId !== route.roadSectionId || geometry.sourceDraftId !== intent.draftId) throw new Error('Readback geometry không khớp receipt.')
@@ -97,7 +101,7 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     if (!/^"[A-Za-z0-9+/]+={0,2}"$/.test(readback.etag)) throw new Error('Readback chưa có phiên bản hợp lệ.')
     if (readback.data.projectId !== projectId || readback.data.id !== draft.id || readback.data.roadSectionId !== (sectionId || null) || readback.etag !== receiptEtag || readback.etag !== `"${readback.data.version}"`) throw new Error('Readback không khớp draft/tuyến/phiên bản của receipt; cần đối chiếu trước khi gửi lệnh mới.')
     const source = readback.data
-    if (source.status !== 'DRAFT' || source.sourceKind !== intent.input.sourceKind || source.sourceCrs !== intent.input.sourceCrs || source.roadCode !== (sectionId ? intent.input.roadCode : intent.input.roadCode?.trim()) || (source.roadName ?? null) !== (intent.input.roadName ?? null) || source.stationOriginMeters !== intent.input.stationOriginMeters || source.surveyWidthMeters !== intent.input.surveyWidthMeters || JSON.stringify(source.widthProfile?.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) !== JSON.stringify(intent.input.widthProfile.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) || JSON.stringify((source.editedCoordinates ?? source.originalCoordinates)?.map(p => [p.x, p.y])) !== JSON.stringify(intent.input.coordinates?.map(p => [p.x, p.y]))) throw new Error('Readback không khớp dữ liệu nguồn đã gửi.')
+    if (source.status !== draft.status || !['DRAFT','REJECTED'].includes(source.status || '') || source.sourceKind !== intent.input.sourceKind || source.sourceCrs !== intent.input.sourceCrs || source.roadCode !== (sectionId ? intent.input.roadCode : intent.input.roadCode?.trim()) || (source.roadName ?? null) !== (intent.input.roadName ?? null) || source.stationOriginMeters !== intent.input.stationOriginMeters || source.surveyWidthMeters !== intent.input.surveyWidthMeters || JSON.stringify(source.widthProfile?.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) !== JSON.stringify(intent.input.widthProfile.map(w => [w.fromOffsetMeters, w.toOffsetMeters, w.widthMeters])) || JSON.stringify((source.editedCoordinates ?? source.originalCoordinates)?.map(p => [p.x, p.y])) !== JSON.stringify(intent.input.coordinates?.map(p => [p.x, p.y]))) throw new Error('Readback không khớp dữ liệu nguồn đã gửi.')
     save(journal, null)
     return { kind: intent.kind, draft: readback }
   } catch (error: any) {

@@ -14,6 +14,7 @@ import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
 import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/data'
 import { AlignmentApprovalList } from './alignment/AlignmentApprovalList'
+import { useGeometrySubmission } from './alignment/useGeometrySubmission'
 import { useSegmentSetWorkflow } from './alignment/useSegmentSetWorkflow'
 import { AlignmentAddBranchModal } from './alignment/AlignmentAddBranchModal'
 
@@ -39,6 +40,7 @@ export const AlignmentSegments: React.FC = () => {
     pavementWorkflow,
     draftWorkflow,
     localDraftDirty, markLocalDraft, markWidthDraft,
+    fileDraft, draftContentSaved,
     alignmentStatus,
     handleSwitchProject,
     handleSubmitAlignment,
@@ -93,10 +95,13 @@ export const AlignmentSegments: React.FC = () => {
     importState
   } = useAlignmentState()
 
+  const submissionWorkflow = useGeometrySubmission(selectedProjectId, geometryRead, draftContentSaved, showToast)
+  const submitted = geometryRead.submission?.status === 'SUBMITTED' || geometryRead.draft?.data.status === 'SUBMITTED'
+  const contentLocked = submissionWorkflow.busy || !!submissionWorkflow.held || submitted || !!geometryRead.submission && geometryRead.submission.status !== 'REJECTED' || geometryRead.submissionLoading || !!geometryRead.submissionError || !geometryRead.submissionReady
   const segmentWorkflow = useSegmentSetWorkflow(selectedProjectId, geometryRead.roadReference, geometryRead.versionReference,
     geometryRead.geometry, isMainline, activeSplitDistance, segmentsState.setSplitDistance, showToast)
   const segmentRows = isMainline && rightTab === 'SEGMENTS' ? segmentWorkflow.display : null
-  const displayedSegments = segmentRows || activeSegments
+  const displayedSegments = segmentRows || (draftContentSaved && isMainline ? activeSegments.map(segment => ({ ...segment, statusText: 'BẢN NHÁP ĐÃ LƯU' })) : activeSegments)
   const segmentCount = !isMainline ? activeSegments.length : segmentWorkflow.loading || segmentWorkflow.error ? null
     : segmentWorkflow.preview?.value.segments.length ?? segmentWorkflow.snapshot?.data.segments.length ?? null
   const segmentCountMessage = segmentWorkflow.loading ? 'Đang đọc…' : segmentWorkflow.error ? 'Lỗi đọc set' : 'Chưa chọn set'
@@ -119,8 +124,14 @@ export const AlignmentSegments: React.FC = () => {
   ].filter(Boolean)
 
   const workflowActions = <>
-    <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={() => { geometryRead.retry(); pavementWorkflow.retry(); segmentWorkflow.reload() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>
-    {geometryRead.draft && <button type="button" disabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={() => { void draftWorkflow.loadPreview() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Xem trước bản đã lưu</button>}
+    {isSupervisor && geometryRead.submission?.status === 'SUBMITTED' && <button type="button" disabled={!submissionWorkflow.canReject || submissionWorkflow.busy || !!submissionWorkflow.held || draftWorkflow.busy || !!draftWorkflow.pending} onClick={submissionWorkflow.openReject} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Từ chối</button>}
+
+    {!isSupervisor && <button type="button" disabled={submissionWorkflow.busy || !!submissionWorkflow.held || !!submissionWorkflow.reason || draftWorkflow.busy || !!draftWorkflow.pending} title={submissionWorkflow.reason} onClick={()=>{void submissionWorkflow.submit()}} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{geometryRead.submission?.status === 'REJECTED' ? 'Trình lại' : 'Trình Giám sát'}</button>}
+    {submissionWorkflow.held && <button type="button" disabled={submissionWorkflow.busy || submissionWorkflow.held.rejected} onClick={()=>{void submissionWorkflow.submit(true)}} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{submissionWorkflow.held.received?'Đọc lại hồ sơ trình':'Gửi lại đúng yêu cầu trình'}</button>}
+    {submissionWorkflow.held?.rejected && <button type="button" disabled={submissionWorkflow.busy} onClick={submissionWorkflow.revise} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc lại, sửa yêu cầu trình bị từ chối</button>}
+
+    {(geometryRead.submissionError || geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError || segmentWorkflow.error) && <button type="button" disabled={geometryRead.loading || draftWorkflow.busy} onClick={() => { geometryRead.retry(); pavementWorkflow.retry(); segmentWorkflow.reload() }} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Tải lại</button>}
+    {isSupervisor && draftWorkflow.reviewNeedsRetry && geometryRead.draft?.data.status === 'SUBMITTED' && <button type="button" disabled={draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict} onClick={draftWorkflow.retryPreview} className="h-8 px-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs border border-slate-200">Thử lại xem xét hồ sơ</button>}
     {draftWorkflow.hydrateReadError && <button type="button" disabled={draftWorkflow.busy || geometryRead.draftLoading} onClick={draftWorkflow.retryHydrate} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Đọc lại bản đã lưu</button>}
     {draftWorkflow.pending && <button type="button" disabled={draftWorkflow.busy || draftWorkflow.conflict} onClick={() => { void draftWorkflow.retryCommand() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{draftWorkflow.pending.receipt ? 'Đọc lại kết quả' : 'Gửi lại đúng yêu cầu'}</button>}
     {draftWorkflow.pending?.rejected && <button type="button" disabled={draftWorkflow.busy} onClick={draftWorkflow.reviseRejected} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Sửa bản nhập</button>}
@@ -145,7 +156,7 @@ export const AlignmentSegments: React.FC = () => {
         </>}
       </>}
     </>}
-    {geometryRead.draftId && !isSupervisor && <a className="text-xs underline" href={`/sup/projects/${selectedProjectId}/alignment?draftId=${encodeURIComponent(geometryRead.draftId)}${pavementWorkflow.layoutId ? `&layoutId=${encodeURIComponent(pavementWorkflow.layoutId)}` : ''}${segmentWorkflow.setId ? `&segmentSetId=${encodeURIComponent(segmentWorkflow.setId)}` : ''}${geometryRead.roadReference && geometryRead.versionReference ? `&roadSectionId=${encodeURIComponent(geometryRead.roadReference)}&routeVersionId=${encodeURIComponent(geometryRead.versionReference)}` : ''}`}>Hồ sơ cho Giám sát</a>}
+
   </>
 
   // Nếu vai trò Supervisor truy cập danh mục menu /sup/alignment mà chưa chọn dự án: hiển thị danh sách thẩm duyệt thay vì trỏ thẳng vào 1 tuyến
@@ -232,10 +243,12 @@ export const AlignmentSegments: React.FC = () => {
           </form>
         </div>
       )}
+      {submissionWorkflow.rejectOpen && <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4"><form role="dialog" aria-modal="true" aria-label="Từ chối hồ sơ tuyến" onSubmit={event => { event.preventDefault(); void submissionWorkflow.reject() }} className="bg-white rounded-2xl p-6 max-w-md w-full flex flex-col gap-4"><h2 className="font-bold">Từ chối hồ sơ tuyến</h2><label className="text-xs">Lý do từ chối (bắt buộc, tối đa 2.000 ký tự)<textarea required maxLength={2000} value={submissionWorkflow.rejectReason} disabled={submissionWorkflow.busy || !!submissionWorkflow.held} onChange={event => submissionWorkflow.setRejectReason(event.target.value)} className="mt-1 border rounded-lg p-2 w-full" /></label>{(submissionWorkflow.rejectError || submissionWorkflow.error) && <p role="alert" className="text-xs text-rose-700">{submissionWorkflow.rejectError || submissionWorkflow.error}</p>}<div className="flex justify-end gap-2"><button type="button" disabled={submissionWorkflow.busy} onClick={submissionWorkflow.closeReject} className="border rounded-lg px-3 py-2 text-xs">Đóng</button><button type="submit" disabled={submissionWorkflow.busy || !!submissionWorkflow.held || !submissionWorkflow.canReject} className="border rounded-lg px-3 py-2 text-xs">Từ chối</button></div></form></div>}
       {/* MODALS */}
+      <fieldset disabled={contentLocked && alignmentStatus !== 'CONFIRMED'} className="border-0 p-0 m-0 min-w-0">
       <AlignmentModals
-        isImportModalOpen={importState.isImportModalOpen}
-        importDisabled={draftWorkflow.busy || !!draftWorkflow.pending}
+        isImportModalOpen={!contentLocked && importState.isImportModalOpen}
+        importDisabled={contentLocked || draftWorkflow.busy || !!draftWorkflow.pending}
         importStatus={importState.readMessage ? `${importState.readMessage}${missingDraftInput.length ? ` Cần nguồn được xác minh cho: ${missingDraftInput.join('; ')}.` : draftWorkflow.saveReason ? ` ${draftWorkflow.saveReason}` : ''}` : ''}
         onCloseImportModal={() => importState.setIsImportModalOpen(false)}
         importTab={importState.importTab}
@@ -247,12 +260,12 @@ export const AlignmentSegments: React.FC = () => {
         onProcessManualCoordinates={importState.processManualCoordinates}
         activeProject={activeProject}
 
-        editingSegment={segmentsState.editingSegment}
+        editingSegment={contentLocked ? null : segmentsState.editingSegment}
         onCloseEditSegment={() => segmentsState.setEditingSegment(null)}
         onChangeEditingSegment={segmentsState.setEditingSegment}
         onSaveEditedSegment={handleSaveEditedSegment}
 
-        isAddSegmentModalOpen={segmentsState.isAddSegmentModalOpen}
+        isAddSegmentModalOpen={!contentLocked && segmentsState.isAddSegmentModalOpen}
         onCloseAddSegmentModal={() => segmentsState.setIsAddSegmentModalOpen(false)}
         newSegForm={segmentsState.newSegForm}
         onChangeNewSegForm={segmentsState.setNewSegForm}
@@ -268,23 +281,24 @@ export const AlignmentSegments: React.FC = () => {
 
       {/* MODAL TẠO TUYẾN NHÁNH MỚI */}
       <AlignmentAddBranchModal
-        isOpen={isAddBranchModalOpen}
+        isOpen={!contentLocked && isAddBranchModalOpen}
         onClose={() => setIsAddBranchModalOpen(false)}
-        onAddBranch={handleAddBranch}
+        onAddBranch={input => { if (!contentLocked) handleAddBranch(input) }}
         mainlineLengthKm={importedLengthKm}
         stationOriginKm={activeProject.stationOriginKm}
         currentCoords={currentCoords}
         currentKmPoints={currentKmPoints}
       />
 
+      </fieldset>
       {/* TOP HEADER */}
       <AlignmentHeader
         basePath={basePath}
         workflowActions={workflowActions}
         loading={geometryRead.loading || geometryRead.draftLoading || geometryRead.geometryLoading}
-        statusMessage={[segmentWorkflow.enabled && (segmentWorkflow.loading ? 'Đang đọc segment set…' : segmentWorkflow.error || segmentWorkflow.message || (segmentWorkflow.snapshot ? `Segment set ${segmentWorkflow.setId}: ${segmentWorkflow.snapshot.data.status}` : 'Chưa chọn segment set server; khoảng bề rộng chưa phải phân đoạn đã lưu.')), draftWorkflow.message, draftWorkflow.preview ? `Bản đã lưu xem trước: ${draftWorkflow.preview.lengthMeters.toLocaleString()} m; ${geometryRead.readiness?.ready ? 'máy chủ cho phép xác nhận' : 'máy chủ chưa cho phép xác nhận'}.` : '', geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError, localDraftDirty ? 'Đang chỉnh bản nháp cục bộ — chưa lưu máy chủ.' : ''].filter(Boolean).join(' ')}
+        statusMessage={[geometryRead.submission?.status === 'REJECTED' ? `Đã từ chối — lượt ${geometryRead.submission.currentReview?.number}: ${geometryRead.submission.currentReview?.rejectionReason}` : '', geometryRead.submission?.previousRejection ? `Quyết định trước — lượt ${geometryRead.submission.previousRejection.number}: ${geometryRead.submission.previousRejection.rejectionReason}` : '', submitted ? 'Đã trình — chờ Giám sát xác nhận' : geometryRead.submissionReady && !geometryRead.submission ? 'Chưa có hồ sơ trình' : '', geometryRead.submissionError, submissionWorkflow.error, geometryRead.context && geometryRead.context.engineeringUtmSrid == null ? 'Dự án chưa cấu hình CRS kỹ thuật; bản nhập được giữ. Chưa hỗ trợ cập nhật CRS dự án cũ tại đây.' : '', !isSupervisor && fileDraft ? draftWorkflow.saveDisabledReason : '', segmentWorkflow.enabled && (segmentWorkflow.loading ? 'Đang đọc segment set…' : segmentWorkflow.error || segmentWorkflow.message || (segmentWorkflow.snapshot ? `Segment set ${segmentWorkflow.setId}: ${segmentWorkflow.snapshot.data.status}` : 'Chưa chọn segment set server; khoảng bề rộng chưa phải phân đoạn đã lưu.')), draftWorkflow.message, draftWorkflow.preview ? `Bản đã lưu xem trước: ${draftWorkflow.preview.lengthMeters.toLocaleString()} m; ${geometryRead.readiness?.ready ? 'máy chủ cho phép xác nhận' : 'máy chủ chưa cho phép xác nhận'}.` : '', geometryRead.error || geometryRead.geometryError || geometryRead.draftError || geometryRead.profileError, !submitted && localDraftDirty && !draftContentSaved ? 'Đang chỉnh bản nháp cục bộ — chưa lưu máy chủ.' : draftContentSaved ? 'Tọa độ và thông số khớp bản nháp đã GET từ máy chủ; chưa xác nhận tuyến.' : ''].filter(Boolean).join(' ')}
         serverDraftStatus={geometryRead.draft?.data.status}
-        alignmentStatus={alignmentStatus}
+        alignmentStatus={submitted ? 'SUBMITTED' : alignmentStatus}
         activeProject={activeProject}
         selectedProjectId={selectedProjectId}
         assignedProjects={assignedProjects}
@@ -295,12 +309,12 @@ export const AlignmentSegments: React.FC = () => {
         currentCoords={currentCoords}
         isSupervisor={isSupervisor}
         onSwitchProject={handleSwitchProject}
-        onOpenImportModal={() => importState.setIsImportModalOpen(true)}
-        onClearMainline={handleClearMainline}
+        onOpenImportModal={() => { if (!contentLocked) importState.setIsImportModalOpen(true) }}
+        onClearMainline={() => { if (!contentLocked) handleClearMainline() }}
         onSubmitAlignment={handleSubmitAlignment}
         onLockAlignment={draftWorkflow.openConfirm}
-        commandBusy={draftWorkflow.busy}
-        saveDisabledReason={draftWorkflow.saveDisabledReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
+        commandBusy={draftWorkflow.busy || submissionWorkflow.busy}
+        saveDisabledReason={(submissionWorkflow.held ? 'Yêu cầu trước đang chờ đối chiếu. Nếu máy chủ đã từ chối rõ ràng, hãy chủ động đọc lại/sửa yêu cầu trước khi sửa tiếp.' : contentLocked ? 'Hồ sơ đã khóa hoặc chưa đọc được lookup; không được sửa.' : '') || draftWorkflow.saveDisabledReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
         confirmDisabledReason={draftWorkflow.confirmReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
       />
 
@@ -397,15 +411,16 @@ export const AlignmentSegments: React.FC = () => {
           onOpenAddBranchModal={() => setIsAddBranchModalOpen(true)}
           onDeleteBranch={handleDeleteBranch}
           onClearAllSegments={() => { segmentsState.handleClearAllSegments(); markWidthDraft() }}
-          onClearMainline={handleClearMainline}
-          onOpenImportModal={() => importState.setIsImportModalOpen(true)}
+          onClearMainline={() => { if (!contentLocked) handleClearMainline() }}
+          onOpenImportModal={() => { if (!contentLocked) importState.setIsImportModalOpen(true) }}
           mainlineLengthKm={importedLengthKm}
-          alignmentStatus={alignmentStatus}
+          alignmentStatus={submitted ? 'SUBMITTED' : alignmentStatus}
           isSupervisor={isSupervisor}
           segmentPlanning={segmentWorkflow.enabled && isMainline && segmentWorkflow.editable}
+          draftContentSaved={draftContentSaved && isMainline}
           segmentSetStatus={isMainline ? segmentWorkflow.preview ? 'PREVIEW' : segmentWorkflow.snapshot?.data.status : undefined}
           pavementWorkflow={pavementWorkflow}
-          editingDisabled={pavementWorkflow.busy || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
+          editingDisabled={submitted || (contentLocked && alignmentStatus !== 'CONFIRMED') || pavementWorkflow.busy || draftWorkflow.busy || !!draftWorkflow.pending || draftWorkflow.conflict}
         />
       </section>
     </div>

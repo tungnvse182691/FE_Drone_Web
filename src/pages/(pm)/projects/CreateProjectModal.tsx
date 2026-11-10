@@ -11,6 +11,8 @@ export interface PmOption {
 export interface CreateProjectModalProps {
   isOpen: boolean
   onClose: () => void
+  engineeringCrs?: string
+  onChangeEngineeringCrs?: (value: string) => void
   projectName: string
   onChangeProjectName: (val: string) => void
   projectCode: string
@@ -39,6 +41,7 @@ export interface CreateProjectModalProps {
 export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   isOpen,
   onClose,
+  engineeringCrs = '', onChangeEngineeringCrs,
   projectName,
   onChangeProjectName,
   projectCode,
@@ -78,6 +81,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const isFormValid = useMemo(() => {
     if (pendingCreate) return !isSubmitting
     return (
+      ['32648', '32649'].includes(engineeringCrs) &&
       projectName.trim().length > 0 && projectName.trim().length <= 255 &&
       projectCode.trim().length > 0 && projectCode.trim().length <= 50 &&
       pmOptions.some(option => option.id === projectPM && option.status === 'ACTIVE') &&
@@ -88,7 +92,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       !isDateInvalid &&
       !isSubmitting
     )
-  }, [projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pendingCreate, pmOptions])
+  }, [engineeringCrs, projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pendingCreate, pmOptions])
 
   if (!isOpen) return null
 
@@ -136,6 +140,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
           {pmError && <div role="alert" className="text-xs text-rose-700">{pmError} <button type="button" onClick={onRetryPms} className="underline">Thử lại danh sách PM</button></div>}
           <fieldset disabled={pendingCreate || isSubmitting} className="space-y-4 border-0 p-0 m-0 min-w-0">
+            <label className="block text-xs font-semibold text-slate-700">CRS kỹ thuật dự án <span className="text-rose-600">*</span>
+              <select required aria-label="CRS kỹ thuật dự án" aria-invalid={!pendingCreate && !['32648', '32649'].includes(engineeringCrs)} aria-describedby="project-crs-help project-crs-error" value={engineeringCrs} onChange={event => onChangeEngineeringCrs?.(event.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg p-2 text-sm">
+                <option value="">Chọn CRS theo hồ sơ tọa độ</option>
+                <option value="32648">WGS 84 / UTM múi 48 Bắc — EPSG:32648</option>
+                <option value="32649">WGS 84 / UTM múi 49 Bắc — EPSG:32649</option>
+              </select>
+            </label>
+            <p id="project-crs-help" className="text-xs text-slate-500">Chọn theo hồ sơ tọa độ kỹ thuật của dự án, không suy từ địa điểm. CRS nguồn tuyến phải khớp; FE không tự chuyển tọa độ.</p>
+            {!pendingCreate && !['32648', '32649'].includes(engineeringCrs) && <p id="project-crs-error" role="alert" className="text-xs text-rose-700">Bắt buộc chọn CRS kỹ thuật trước khi tạo dự án.</p>}
           {/* Mã dự án & Tên dự án */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-1">

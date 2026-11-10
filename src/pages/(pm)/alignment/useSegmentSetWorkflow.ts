@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { alignmentService, type RoadGeometryVersionView } from '../../../api/services/alignmentService'
-import { segmentSetService, type SegmentDefinition, type SegmentPreview, type SegmentPins, type SegmentSummary } from '../../../api/services/segmentSetService'
+import { publishedSetForRoute, segmentSetService, type SegmentDefinition, type SegmentPreview, type SegmentPins, type SegmentSummary } from '../../../api/services/segmentSetService'
 import { pendingSegment, reviseSegment, runSegment, type SegmentIntent } from '../../../api/services/segmentSetCommands'
 import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import type { SegmentItem } from './types'
@@ -35,7 +35,9 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
   const [held, setHeld] = useState<ReturnType<typeof pendingSegment>>(null), [busy, setBusy] = useState(false), [reload, setReload] = useState(0)
   const [reasonOpen, setReasonOpen] = useState(false), [reason, setReason] = useState(''), [reviewed, setReviewed] = useState(false)
   const attempt = useRef(0), running = useRef(false)
+  const newSetRoute = useRef('')
   const validRoute = !!projectId && !!roadSectionId && !!routeVersionId
+  useEffect(() => { newSetRoute.current = '' }, [routeKey])
   const routeMatches = geometry?.projectId === projectId && geometry.roadSectionId === roadSectionId && geometry.routeVersionId === routeVersionId && geometry.metadataStatus === 'COMPLETE'
   useEffect(() => {
     let active = true; attempt.current++; running.current = false
@@ -45,18 +47,30 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     try { setHeld(pendingSegment(pins)) } catch (e) { setError((e as Error).message) }
     ;(async () => {
       const rows = await segmentSetService.list(pins)
+      const published = publishedSetForRoute(rows, routeVersionId)
       const value = setId ? await segmentSetService.read(pins, setId) : null
-      if (!active) return
+      if (!active || selection.current !== key || useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actorId) return
       setSets(rows); setSnapshot(value); setLoadedKey(key)
+      if (!published) setMessage('PM chưa công bố phân đoạn')
       if (value?.data.definition) refs.current.restoreDistance(value.data.definition.targetLengthMeters / 1000)
     })().catch(e => { if (active) setError(`Không đọc được segment set: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e.message}`) }).finally(() => { if (active) setLoading(false) })
     return () => { active = false; attempt.current++ }
   }, [key, reload])
   const freshScope = loadedKey === key
   const currentSnapshot = freshScope ? snapshot : null, currentPreview = freshScope ? preview : null
+  useEffect(() => {
+    if (!setId && params.get('roadSectionId') === roadSectionId && params.get('routeVersionId') === routeVersionId && routeMatches && freshScope && !loading && !error && newSetRoute.current !== routeKey && !held && !params.get('layoutId')) {
+      const published = publishedSetForRoute(sets, routeVersionId)
+      if (published) setParams(current => {
+        if (current.get('segmentSetId') || current.get('layoutId')) return current
+        const next = new URLSearchParams(current); next.set('segmentSetId', published.id); return next
+      }, { replace: true })
+    }
+  }, [key, routeMatches, freshScope, loading, error, sets, held, params])
   const editable = auth.user?.role === RoleCode.PROJECT_MANAGER && mainline && routeMatches && freshScope && !loading && !error && (!currentSnapshot || currentSnapshot.data.status === 'DRAFT') && !busy && !held
   const openSet = (id: string) => {
     if (busy || held) { refs.current.notify('Đối chiếu command đang chờ trước khi đổi segment set.'); return }
+    newSetRoute.current = id ? '' : routeKey
     const next = new URLSearchParams(params); if (id) next.set('segmentSetId', id); else next.delete('segmentSetId')
     next.delete('layoutId'); setPreview(null); setSnapshot(null); setParams(next)
   }

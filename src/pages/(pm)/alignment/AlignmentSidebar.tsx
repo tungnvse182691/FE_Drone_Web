@@ -12,6 +12,7 @@ import { SidebarFooterKpis } from './SidebarFooterKpis'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 
 export interface AlignmentSidebarProps {
+  draftContentSaved?: boolean
   segmentCount?: number | null
   segmentCountMessage?: string
   segmentPlanning?: boolean
@@ -64,13 +65,14 @@ export interface AlignmentSidebarProps {
   onClearMainline?: () => void
   onOpenImportModal?: () => void
   mainlineLengthKm?: number
-  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'CONFIRMED'
+  alignmentStatus?: 'DRAFT' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'REJECTED' | 'CONFIRMED'
   editingDisabled?: boolean
   isSupervisor?: boolean
 }
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
+  draftContentSaved = false,
   segmentCount = null, segmentCountMessage = 'Chưa chọn set',
   pavementWorkflow,
   segmentPlanning = false, segmentSetStatus,
@@ -172,6 +174,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {/* TAB CONTENT: SEGMENTS */}
         {rightTab === 'SEGMENTS' && (
           <SidebarSegmentsTab
+            draftContentSaved={draftContentSaved}
             segmentPlanning={segmentPlanning}
             segmentSetStatus={segmentSetStatus}
             segments={segments}
@@ -213,7 +216,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
             selectedSegmentId={selectedSegmentId}
             onUpdateSegmentWidth={onUpdateSegmentWidth}
             onUpdateAllWidths={onUpdateAllWidths}
-            isReadOnly={alignmentStatus !== 'DRAFT' || isSupervisor || editingDisabled}
+            isReadOnly={!['DRAFT','REJECTED'].includes(alignmentStatus || '') || isSupervisor || editingDisabled}
           />
         )}
 
@@ -244,6 +247,10 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           </fieldset>
         )}
         {rightTab === 'SLABS' && pavementWorkflow && <>
+          {pavementWorkflow.layoutDiscoveryMessage && <p role="status" className="text-xs text-slate-600">{pavementWorkflow.layoutDiscoveryMessage}</p>}
+          {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="text-xs border rounded-lg p-2">Thử lại danh sách layout</button>}
+          {pavementWorkflow.layouts?.length > 0 && <select aria-label="Layout tấm và khe máy chủ" value={pavementWorkflow.layoutId} disabled={pavementWorkflow.busy} onChange={event => pavementWorkflow.openLayout(event.target.value)} className="text-xs border rounded-lg p-2 max-w-full"><option value="">Chọn layout theo loại và thời gian lưu</option>{pavementWorkflow.layouts.map(row => <option key={row.layoutId} value={row.layoutId}>{row.kind} · {row.createdAt} · {row.layoutId}</option>)}</select>}
+
           {!isSupervisor && <button type="button" disabled={pavementWorkflow.busy || (!pavementWorkflow.pending && !!pavementWorkflow.disabledReason)} title={pavementWorkflow.disabledReason} onClick={() => { void pavementWorkflow.save() }} className="px-3 py-2 rounded-lg border border-brand-gold text-brand-dark text-xs font-semibold disabled:opacity-50">{pavementWorkflow.busy ? 'Đang lưu/đọc lại…' : pavementWorkflow.actionLabel}</button>}
           {(pavementWorkflow.message || pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage) && <p role="status" className="text-xs text-slate-600">{[pavementWorkflow.message, !isSupervisor && (pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage)].filter(Boolean).join(' ')}</p>}
         </>}

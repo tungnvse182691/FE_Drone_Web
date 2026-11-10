@@ -91,41 +91,6 @@ export const AlignmentAddModal: React.FC<AlignmentAddModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Số làn xe
-              </label>
-              <select
-                value={Number.isFinite(newSegForm.laneCount) ? newSegForm.laneCount : ''}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, laneCount: parseInt(e.target.value) })}
-                className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              >
-                <option value="">Chưa có thông tin</option>
-                <option value={2}>2 làn xe</option>
-                <option value={4}>4 làn xe (Tiêu chuẩn)</option>
-                <option value={6}>6 làn xe (Cao tốc)</option>
-                <option value={8}>8 làn xe</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                Vật liệu mặt đường
-              </label>
-              <select
-                value={newSegForm.surfaceMaterial}
-                onChange={(e) => onChangeNewSegForm({ ...newSegForm, surfaceMaterial: e.target.value })}
-                className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              >
-                <option value="">Chưa có thông tin</option>
-                <option value="Mặt BTN C12.5">Mặt BTN C12.5</option>
-                <option value="Mặt BTN C19">Mặt BTN C19</option>
-                <option value="Mặt BTN Polymer">Mặt BTN Polymer</option>
-                <option value="BTXM Dày 26cm">BTXM Dày 26cm</option>
-              </select>
-            </div>
-          </div>
-
           {/* Bề rộng mặt đường */}
           <div>
             <div className="flex items-center justify-between mb-1">
