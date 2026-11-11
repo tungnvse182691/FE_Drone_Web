@@ -287,11 +287,15 @@ export function useAlignmentState() {
     onSelectSegmentRef.current = handleSelectSegmentFromMap
   })
 
+  const pavementGeometry = geometryRead.geometry?.projectId === selectedProjectId &&
+    geometryRead.geometry.roadSectionId === geometryRead.roadReference && geometryRead.geometry.routeVersionId === geometryRead.versionReference &&
+    (!geometryRead.draftId || geometryRead.geometry.sourceDraftId === geometryRead.draftId) ? geometryRead.geometry : null
+  const pavementOrigin = pavementGeometry ? pavementGeometry.stationOriginMeters : fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters
   const pavementWorkflow = usePavementWorkflow(selectedProjectId, geometryRead.roadReference || geometryRead.draft?.data.roadSectionId || '',
     { stripWidthMeters, slabLengthM, slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm },
-    fileDraft && !localWidthsDirty ? fileDraft.widthProfile : [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
-      fromOffsetMeters: segment.startKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN),
-      toOffsetMeters: segment.endKm * 1000 - (fileDraft?.stationOriginMeters ?? geometryRead.draft?.data.stationOriginMeters ?? Number.NaN), widthMeters: segment.roadWidthM
+    !localWidthsDirty && pavementGeometry && Number.isFinite(pavementOrigin) ? pavementGeometry.widthProfile || [] : !pavementGeometry && fileDraft && !localWidthsDirty ? fileDraft.widthProfile : [...segmentsState.segments].sort((a, b) => a.startKm - b.startKm).map(segment => ({
+      fromOffsetMeters: Number.isFinite(pavementOrigin) ? segment.startKm * 1000 - pavementOrigin! : Number.NaN,
+      toOffsetMeters: Number.isFinite(pavementOrigin) ? segment.endKm * 1000 - pavementOrigin! : Number.NaN, widthMeters: segment.roadWidthM
     })), localWidthsDirty, selectedTargetType === 'MAINLINE',
     layout => {
       pendingConfirmedPavement.current = null
