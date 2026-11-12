@@ -1,3 +1,4 @@
+import { readEligibleTriageProjects } from '../../../api/services/triageProjectEligibility'
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
@@ -26,6 +27,17 @@ export function useCaseIntake(defaultProjectFilter = 'UNASSIGNED') {
   const [triageOpen,setTriageOpen] = useState(false), [projectId,setProjectId] = useState(''), [baseVersion,setBaseVersion] = useState('')
   const [held,setHeld] = useState<PendingTriage | null>(null), [busy,setBusy] = useState(false), [commandError,setCommandError] = useState(''), [message,setMessage] = useState('')
   const [reviewed,setReviewed] = useState<TriageCase | null>(null), [comparison,setComparison] = useState('')
+  const [targetProjects, setTargetProjects] = useState<{scope: string; items: CaseProjectOption[]} | null>(null)
+  const [targetLoading, setTargetLoading] = useState(false), [targetError, setTargetError] = useState(''), [targetReload, setTargetReload] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    setTargetProjects(null); setTargetError(''); setTargetLoading(triageOpen)
+    if (triageOpen) readEligibleTriageProjects(controller.signal).then(items => { if (!controller.signal.aborted) setTargetProjects({scope: detailScope, items}) })
+      .catch(error => { if (!controller.signal.aborted) setTargetError(caseIntakeError(error)) })
+      .finally(() => { if (!controller.signal.aborted) setTargetLoading(false) })
+    return () => controller.abort()
+  }, [triageOpen, detailScope, targetReload])
+  const eligibleProjects = targetProjects?.scope === detailScope ? targetProjects.items : []
   const running = useRef(false)
   const requestedTriage = useRef('')
   useEffect(()=>{
@@ -70,7 +82,7 @@ export function useCaseIntake(defaultProjectFilter = 'UNASSIGNED') {
       const old=triageService.pendingTriage(caseId)
       if(retry && !old)throw new Error('Không có lệnh triage đang chờ.')
       const input:CaseTriageInput=retry ? {...old!.body,version:old!.version} : {projectId,verificationMethod:method,reason,version:baseVersion}
-      if(!retry && !projects.some(p=>p.id===projectId))throw new Error('Chọn dự án từ danh sách server hiện tại.')
+      if(!retry && (targetLoading || targetError || !eligibleProjects.some(p=>p.id===projectId)))throw new Error('Chọn dự án từ danh sách server hiện tại.')
       const value=await triageService.triageCase(caseId,input)
       if(!current())return
       setSnapshot({scope:detailScope,value});setBaseVersion(value.etag || value.version || '');setHeld(null);setTriageOpen(false);setMessage('Đã điều phối hồ sơ vào dự án.');setReload(n=>n+1)
@@ -85,5 +97,5 @@ export function useCaseIntake(defaultProjectFilter = 'UNASSIGNED') {
   }
   const acceptReviewed=()=>{if(!reviewed || busy)return;triageService.reviseTriage(caseId);setHeld(null);setSnapshot({scope:detailScope,value:reviewed});setBaseVersion(reviewed.etag || reviewed.version || '');setReviewed(null);setCommandError('');setComparison('Đã dùng hồ sơ vừa đọc. Kiểm tra lựa chọn và tự xác nhận điều phối khi phù hợp.')}
   const setCases: Dispatch<SetStateAction<TriageCase[]>> = update => setList(old => old?.scope === listScope ? {...old,items:typeof update === 'function' ? update(old.items) : update} : old)
-  return {setCases,caseId,selected,cases,projects,isSupervisor,projectFilter,statusFilter,listLoading,listError,detailLoading,detailError,triageOpen,projectId,setProjectId,held,busy,commandError,message,comparison,reviewed,canTriage,openCase,filter,openTriage,closeTriage:()=>{if(!busy)setTriageOpen(false)},execute,review,acceptReviewed,retryDetail:()=>setDetailReload(n=>n+1),retry:()=>setReload(n=>n+1)}
+  return {eligibleProjects,targetLoading: targetLoading || triageOpen && !targetError && targetProjects?.scope !== detailScope,targetError,retryTargets:()=>setTargetReload(n=>n+1),setCases,caseId,selected,cases,projects,isSupervisor,projectFilter,statusFilter,listLoading,listError,detailLoading,detailError,triageOpen,projectId,setProjectId,held,busy,commandError,message,comparison,reviewed,canTriage,openCase,filter,openTriage,closeTriage:()=>{if(!busy)setTriageOpen(false)},execute,review,acceptReviewed,retryDetail:()=>setDetailReload(n=>n+1),retry:()=>setReload(n=>n+1)}
 }

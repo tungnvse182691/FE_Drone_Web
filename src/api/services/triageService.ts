@@ -1,3 +1,4 @@
+import { readEligibleTriageProjects } from './triageProjectEligibility'
 import { CanceledError, isCancel } from 'axios'
 import { apiClient } from '../client'
 import { TriageCase } from '../../types/domain'
@@ -437,10 +438,14 @@ export const triageService = {
       assertCaseReadActive(session); sessionStorage.setItem(journalKey,JSON.stringify(command))
       if (!previous) {
         const current=await apiClient.get<InternalCaseDto>(`/cases/${caseId}`);assertCaseReadActive(session)
-        const allowed=await this.getTriageProjects();assertCaseReadActive(session)
-        if (!allowed.some(p=>p.id===command.body.projectId)) throw Object.assign(new Error('Dự án đích không thuộc danh sách server được phép chọn.'),{triageGuard:true})
+        const allowed=await readEligibleTriageProjects(undefined, command.body.projectId);assertCaseReadActive(session)
+        if (!allowed.some(p=>p.id===command.body.projectId)) throw Object.assign(new Error('Dự án đích không còn đủ điều kiện điều phối (hoạt động, PM chính và tim tuyến).'),{triageGuard:true})
         if (current.data.id!==caseId || current.data.projectId || current.data.status!=='UNASSIGNED') throw Object.assign(new Error('Chỉ điều phối Case chưa phân công; hãy đọc lại hồ sơ.'),{triageGuard:true})
         if (normalizeETag(current.data.version || '')!==command.version || etagHeaderMismatch(current.headers?.etag,current.data.version!)) throw Object.assign(new Error('Phiên bản đã đổi; giữ form và đối chiếu trước ý định mới.'),{triageGuard:true})
+      }
+      if (previous && !command.receipt && !command.received) {
+        const allowed = await readEligibleTriageProjects(undefined, command.body.projectId); assertCaseReadActive(session)
+        if (!allowed.some(p => p.id === command.body.projectId)) throw new Error('Dự án không còn đủ điều kiện; giữ yêu cầu đang chờ để đối chiếu, chưa gửi lại.')
       }
       if (!command.receipt && !command.received) {
         const response = await apiClient.post<InternalCaseDto>(`/cases/${caseId}/triage`,command.body,{headers:{'Idempotency-Key':command.key,'If-Match':command.version},transformRequest:[(data:unknown)=>{assertCaseReadActive(session);return JSON.stringify(data)}]})

@@ -177,7 +177,10 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         isOpen={isTriageProjectModalOpen}
         onClose={() => setIsTriageProjectModalOpen(false)}
         targetTriageCase={targetTriageCase}
-        projects={projects}
+        projects={triagePending?.eligibleProjects || []}
+        projectsLoading={triagePending?.targetLoading}
+        projectsError={triagePending?.targetError}
+        onRetryProjects={triagePending?.retryTargets}
         selectedProjectId={selectedProjectId}
         setSelectedProjectId={setSelectedProjectId}
         onConfirmTriageProject={onConfirmTriageProject}

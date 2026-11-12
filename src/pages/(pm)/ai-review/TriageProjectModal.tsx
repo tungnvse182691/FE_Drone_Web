@@ -7,6 +7,9 @@ export interface TriageProjectModalProps {
   onClose: () => void
   targetTriageCase: TriageCase | null
   projects: { id: string; code: string; name: string; start_km?: number; end_km?: number }[]
+  projectsLoading?: boolean
+  projectsError?: string
+  onRetryProjects?: () => void
   busy?: boolean
   error?: string
   held?: boolean
@@ -25,6 +28,7 @@ export interface TriageProjectModalProps {
 }
 
 export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
+  projectsLoading = false, projectsError = '', onRetryProjects,
   busy = false, error = '', held = false, initialInput, retryLabel, onRetry, onReview, onAcceptReviewed, comparison = '',
   isOpen,
   onClose,
@@ -43,7 +47,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   const selectedProj = projects.find((p) => p.id === selectedProjectId)
 
   const handleConfirm = () => {
-    if (busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
+    if (projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
     onConfirmTriageProject(verificationMethod, reason)
   }
 
@@ -123,6 +127,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </label>
             <select
               value={selectedProjectId}
+              disabled={projectsLoading || !!projectsError}
               required
               onChange={(e) => setSelectedProjectId(e.target.value)}
               className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
@@ -141,6 +146,9 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
                 )
               })}
             </select>
+            {projectsLoading && <span role="status" className="text-xs text-slate-500">Đang kiểm tra dự án đủ điều kiện...</span>}
+            {projectsError && <span role="alert" className="text-xs text-rose-700">Không tải được dữ liệu để kiểm tra dự án: {projectsError} <button type="button" onClick={onRetryProjects} className="underline">Thử lại</button></span>}
+            {!projectsLoading && !projectsError && projects.length === 0 && <span role="status" className="text-xs text-slate-500">Không có dự án đủ điều kiện điều phối.</span>}
             {selectedProj && Number.isFinite(selectedProj.start_km) && Number.isFinite(selectedProj.end_km) && (
               <span className="text-[10px] text-slate-500 mt-1 pl-1">
                 Phạm vi bảo hành: Km {selectedProj.start_km} đến Km {selectedProj.end_km}
@@ -257,7 +265,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </button>
             <button
               type="button"
-              disabled={busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
+              disabled={projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
               onClick={handleConfirm}
               className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >
