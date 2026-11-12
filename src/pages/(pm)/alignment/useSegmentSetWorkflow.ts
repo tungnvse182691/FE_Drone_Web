@@ -39,6 +39,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
   const validRoute = !!projectId && !!roadSectionId && !!routeVersionId
   useEffect(() => { newSetRoute.current = '' }, [routeKey])
   const routeMatches = geometry?.projectId === projectId && geometry.roadSectionId === roadSectionId && geometry.routeVersionId === routeVersionId && geometry.metadataStatus === 'COMPLETE'
+  const confirmationRead = !!geometry?.approvedBy && Number.isFinite(Date.parse(geometry?.approvedAt || ''))
   useEffect(() => {
     let active = true; attempt.current++; running.current = false
     setBusy(false); setReasonOpen(false); setReason(''); setPreview(null); setSnapshot(null); setSets([]); setHeld(null); setMessage(''); setReviewed(false); setError(''); setLoading(validRoute); setLoadedKey('')
@@ -67,7 +68,10 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
       }, { replace: true })
     }
   }, [key, routeMatches, freshScope, loading, error, sets, held, params])
-  const editable = auth.user?.role === RoleCode.PROJECT_MANAGER && mainline && routeMatches && freshScope && !loading && !error && (!currentSnapshot || currentSnapshot.data.status === 'DRAFT') && !busy && !held
+  const publishedSet = freshScope ? publishedSetForRoute(sets, routeVersionId) : null
+  const selectionLabel = currentPreview ? 'Đang xem preview — chưa lưu, chưa áp dụng.' : currentSnapshot?.data.status === 'DRAFT' ? 'Đang xem bản nháp — chưa áp dụng.' : currentSnapshot?.data.status === 'PUBLISHED' ? 'Đang xem bộ phân đoạn đã công bố.' : currentSnapshot?.data.status === 'SUPERSEDED' ? 'Đang xem bộ phân đoạn lịch sử — đã thay thế.' : 'Chưa chọn bản phân đoạn.'
+  const publicationLabel = publishedSet ? `Bộ đang công bố: ${publishedSet.id}` : 'PM chưa công bố phân đoạn'
+  const editable = auth.user?.role === RoleCode.PROJECT_MANAGER && mainline && routeMatches && confirmationRead && freshScope && !loading && !error && (!currentSnapshot || currentSnapshot.data.status === 'DRAFT') && !busy && !held
   const openSet = (id: string) => {
     if (busy || held) { refs.current.notify('Đối chiếu command đang chờ trước khi đổi segment set.'); return }
     newSetRoute.current = id ? '' : routeKey
@@ -88,7 +92,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     setMessage(text); refs.current.notify(text)
   }
   const loadPreview = async (boundaries?: number[]) => {
-    if (!editable) { refs.current.notify('Cần PM, geometry COMPLETE và segment set DRAFT hoặc bản mới để preview.'); return }
+    if (!editable) { refs.current.notify('Cần PM, hình học đã xác nhận COMPLETE và segment set DRAFT hoặc bản mới để preview.'); return }
     const current = begin(); if (!current) return
     setPreview(null)
     try {
@@ -110,9 +114,9 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
       const heldSetId = pending?.receipt?.id || (pending?.intent.kind !== 'create' ? pending?.intent.setId : '')
       if (pending && setId && heldSetId !== setId) throw new Error(`Yêu cầu đang chờ thuộc set ${heldSetId || 'mới'}; mở đúng reference trước khi retry.`)
       if (!pending) {
-        if (!intent || !routeMatches || !freshScope || error || loading) throw new Error('Chưa có đúng route/segment set đã đọc.')
+        if (!intent || !routeMatches || !confirmationRead || !freshScope || error || loading) throw new Error('Chưa có đúng route/segment set đã đọc.')
         const route = await alignmentService.readConfirmedGeometry(projectId, roadSectionId, routeVersionId)
-        if (route.projectId !== projectId || route.roadSectionId !== roadSectionId || route.routeVersionId !== routeVersionId || route.lengthMeters !== geometry!.lengthMeters || route.metadataStatus !== 'COMPLETE') throw new Error('Route thay đổi; hãy đọc lại.')
+        if (route.projectId !== projectId || route.roadSectionId !== roadSectionId || route.routeVersionId !== routeVersionId || route.lengthMeters !== geometry!.lengthMeters || route.metadataStatus !== 'COMPLETE' || !route.approvedBy || !Number.isFinite(Date.parse(route.approvedAt || ''))) throw new Error('Route hoặc dữ liệu xác nhận thay đổi; hãy đọc lại.')
         if (intent.kind !== 'create') {
           const fresh = await segmentSetService.read(pins, intent.setId)
           if (fresh.etag !== intent.etag || fresh.data.status !== 'DRAFT') throw new Error('ETag/trạng thái set thay đổi; đọc hồ sơ và chủ động đối chiếu trước khi ghi.')
@@ -153,7 +157,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     try { reviseSegment(pins); setHeld(null); setPreview(null); setReasonOpen(false); setReviewed(false); setMessage('Đã chấp nhận hồ sơ vừa đọc; cần preview lại trước ý định ghi mới.') } catch (e) { setMessage((e as Error).message) }
   }
   const display = currentPreview ? segmentRows(currentPreview.value, 'PREVIEW MÁY CHỦ — CHƯA LƯU', geometry) : currentSnapshot ? segmentRows(currentSnapshot.data, `SEGMENT SET ${currentSnapshot.data.status}`, geometry) : null
-  return { enabled: validRoute, editable, loading, busy, error, message, setId, sets: freshScope ? sets : [], snapshot: currentSnapshot, preview: currentPreview, display, held: journalScope === key ? held : null, reviewed,
+  return { selectionLabel, publicationLabel, publishedSet, enabled: validRoute, editable, loading, busy, error, message, setId, sets: freshScope ? sets : [], snapshot: currentSnapshot, preview: currentPreview, display, held: journalScope === key ? held : null, reviewed,
     openSet, openHeldSet: () => { if (busy || !held) return; const id = held.receipt?.id || (held.intent.kind !== 'create' ? held.intent.setId : ''); const next = new URLSearchParams(params); if (id) next.set('segmentSetId', id); else next.delete('segmentSetId'); next.delete('layoutId'); setParams(next) }, loadPreview, save, publish, retry: () => execute(), reload: () => setReload(n => n + 1), review, revise,
     reasonOpen, reason, setReason, closeReason: () => { if (!busy) setReasonOpen(false) }, openPublish: () => { if (editable && currentSnapshot && !currentPreview) { setReason(''); setReasonOpen(true) } },
     split: (stationKm: number) => {
