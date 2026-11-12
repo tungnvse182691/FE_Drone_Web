@@ -7,6 +7,6 @@ export function validWarrantyDates(start?: string, end?: string): boolean {
 }
 
 export function hasWarrantyData(project: HubProject): boolean {
-  return !project.warranty_data_missing && validWarrantyDates(project.handover_date, project.warranty_end_date) &&
+  return !project.warranty_data_missing && validWarrantyDates(project.warranty_start_date || project.handover_date, project.warranty_end_date) &&
     Number.isFinite(project.days_remaining) && Number.isFinite(project.warranty_passed_percent)
 }

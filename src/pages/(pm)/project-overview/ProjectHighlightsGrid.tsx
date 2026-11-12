@@ -1,3 +1,4 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
 import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
@@ -12,9 +13,9 @@ interface ProjectHighlightsGridProps {
 
 export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
   project,
-  mainlineLengthKm = 0,
-  branchesLengthKm = 0,
-  branchesCount = 0
+  mainlineLengthKm,
+  branchesLengthKm,
+  branchesCount
 }) => {
   const warrantyReady = hasWarrantyData(project)
   const defectsReady = Number.isFinite(project.open_defects)
@@ -34,7 +35,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {warrantyReady ? `Còn ${project.days_remaining} ngày` : 'Chưa cập nhật'}
+                {warrantyReady ? `Còn ${project.days_remaining} ngày` : project.warranty_read_error ? 'Không tải được bảo hành' : project.warranty_message || 'Chưa có dữ liệu'}
               </span>
             </div>
           </div>
@@ -69,7 +70,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {(project.length_km || 0) > 0 ? `${project.length_km} km` : '0 km'}
+                {Number.isFinite(project.length_km) ? displayKm(project.length_km!) : project.geometry_read_error ? 'Không tải được tim tuyến' : 'Chưa có dữ liệu'}
               </span>
               <span className="text-[11px] font-bold text-[#1E40AF] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 {project.kml_status || 'Chưa duyệt tim'}
@@ -89,7 +90,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span>Trục chính:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
-              {mainlineLengthKm > 0 ? `${mainlineLengthKm} km` : ((project.length_km || 0) > 0 ? `${project.length_km} km` : '0 km')}
+              {typeof mainlineLengthKm === 'number' && Number.isFinite(mainlineLengthKm) ? displayKm(mainlineLengthKm!) : 'Chưa cập nhật'}
             </span>
           </div>
 
@@ -99,12 +100,12 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
               <span>Tuyến phụ:</span>
             </span>
             <span className="font-mono font-bold text-slate-900">
-              {branchesCount > 0 ? (
+              {Number.isFinite(branchesCount) && Number.isFinite(branchesLengthKm) ? (
                 <span className="text-amber-800 font-bold">
-                  {branchesLengthKm} km ({branchesCount} nhánh)
+                  {displayKm(branchesLengthKm!)} ({branchesCount} nhánh)
                 </span>
               ) : (
-                <span className="text-slate-400 font-normal italic">0 km (0 nhánh)</span>
+                <span className="text-slate-400 font-normal italic">Chưa cập nhật</span>
               )}
             </span>
           </div>

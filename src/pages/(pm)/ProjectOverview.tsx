@@ -15,7 +15,6 @@ import { ProjectTimelineStepper } from './project-overview/ProjectTimelineSteppe
 import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
-import { calculateCoordsLengthKm } from './alignment/alignmentGeometryHelpers'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 
 export type { Segment, ProjectMember }
@@ -64,9 +63,9 @@ export const ProjectOverview: React.FC = () => {
     branchesCount: number
     branches: any[]
   }>({
-    mainlineLengthKm: 0,
-    branchesLengthKm: 0,
-    branchesCount: 0,
+    mainlineLengthKm: Number.NaN,
+    branchesLengthKm: Number.NaN,
+    branchesCount: Number.NaN,
     branches: []
   })
 
@@ -100,44 +99,15 @@ export const ProjectOverview: React.FC = () => {
       if (data) {
         setProject(data)
 
-        // 1. Phân đoạn lý trình động & Bóc tách tuyến chính / tuyến phụ
-        const alignmentData = alignmentService.getAlignmentData(data.id)
-        const mainlineCoords = alignmentData.coords || []
-        const branchesList = alignmentData.branches || []
-
-        const mainLen = mainlineCoords.length >= 2
-          ? calculateCoordsLengthKm(mainlineCoords)
-          : (data.id === 'prj-ql1a-02' ? (data.length_km || 0) : 0)
-
-        const branchLen = branchesList.reduce((sum: number, b: any) => {
-          const len = (b.coords && b.coords.length >= 2 ? calculateCoordsLengthKm(b.coords) : b.lengthKm) || 0
-          return sum + len
-        }, 0)
-
+        const facts = data.server_facts
         setAlignmentDetail({
-          mainlineLengthKm: mainLen || 0,
-          branchesLengthKm: parseFloat(branchLen.toFixed(3)),
-          branchesCount: branchesList.length,
-          branches: branchesList
+          mainlineLengthKm: facts?.mainlineLengthKm ?? Number.NaN,
+          branchesLengthKm: facts?.branchesLengthKm ?? Number.NaN,
+          branchesCount: facts?.branchesCount ?? Number.NaN,
+          branches: facts?.routes.filter(route => route.routeKind === 'BRANCH').map(route => ({id: route.routeVersionId, name: route.name, lengthKm: route.lengthMeters / 1000})) || []
         })
-
-                const storedSegments = (alignmentData.segments as any[]) || []
-        const mappedSegments: Segment[] = storedSegments.map((s: any, idx: number) => {
-          const start = s.startKm !== undefined ? s.startKm : (s.start_km ?? 0)
-          const end = s.endKm !== undefined ? s.endKm : (s.end_km ?? 0)
-          const len = s.lengthKm !== undefined ? s.lengthKm : (s.length_km ?? parseFloat((end - start).toFixed(3)))
-          const stationText = s.stationing || `Km ${start.toFixed(3).replace('.', '+')} → Km ${end.toFixed(3).replace('.', '+')}`
-          return {
-            code: s.code || `Đoạn #${String(idx + 1).padStart(2, '0')}`,
-            stationing: stationText,
-            length_km: len,
-            status_label: s.statusText || s.status_label || 'Hợp lệ',
-            status_type: s.status === 'GAP_WARNING' ? 'WARNING' : 'GOOD',
-            open_defects: s.open_defects || '0 điểm',
-            defects_count: s.defects_count || 0
-          }
-        })
-        setSegments(mappedSegments)
+        // Width intervals and local edits are not persisted segment sets.
+        setSegments([])
 
         // Directory, effective members and primary designation are separate read models.
         const [memberResult, primaryResult] = await Promise.allSettled([
@@ -236,7 +206,7 @@ export const ProjectOverview: React.FC = () => {
         {/* LEFT COLUMN: 8 COLS */}
         <div className="lg:col-span-8 space-y-6">
           <ProjectTimelineStepper
-            geometryStatus={submission.data?.status ?? null}
+            geometryStatus={project.geometry_read_error ? null : project.server_facts?.geometryState === 'CONFIRMED' ? 'CONFIRMED' : submission.data?.status === 'CONFIRMED' ? null : submission.data?.status ?? null}
             project={project}
             basePath={basePath}
             isSupervisor={isSupervisor}
@@ -244,6 +214,7 @@ export const ProjectOverview: React.FC = () => {
           />
 
           <ProjectSegmentsTable
+            serverReadOnly={project.server_data_loaded}
             projectId={project.id}
             segments={segments}
             branches={alignmentDetail.branches}

@@ -1,3 +1,4 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
 import { hasWarrantyData } from '../../../utils/projectWarranty'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
@@ -100,7 +101,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
               <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-white/95">
                 <span className="font-mono text-xs flex items-center gap-1.5 truncate">
                   <Icon name="alt_route" size={14} className="text-brand-gold shrink-0" />
-                  <span className="truncate">{prj.stationing_text}</span>
+                  <span className="truncate">{prj.server_data_loaded ? prj.kml_status === prj.stationing_text ? prj.stationing_text : `${prj.kml_status} • ${prj.stationing_text}` : prj.stationing_text}</span>
                 </span>
               </div>
             </div>
@@ -151,8 +152,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <Icon name="warning" size={16} className="text-[#D97706] shrink-0" />
                       <div className="flex flex-col min-w-0">
-                        <span className="text-xs text-[#92400E] font-bold">Chưa phân công PM</span>
-                        <span className="text-[10px] text-[#B45309] truncate">Cần PM trước khi kích hoạt tuyến</span>
+                        <span className="text-xs text-[#92400E] font-bold">{prj.server_facts?.primaryError ? 'Không tải được PM chính' : 'Chưa phân công PM'}</span>
+                        <span className="text-[10px] text-[#B45309] truncate">{prj.server_facts?.primaryError ? 'Chưa xác minh được phân công hiện tại' : 'Cần PM trước khi kích hoạt tuyến'}</span>
                       </div>
                     </div>
                   </div>
@@ -175,7 +176,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.status === 'NEAR_EXPIRY' ? 'text-rose-600' : 'text-slate-800'
                       }`}
                     >
-                      {!hasWarrantyData(prj) ? 'Chưa cập nhật' : <>{prj.warranty_passed_percent}%{' '}
+                      {!hasWarrantyData(prj) ? prj.warranty_read_error ? 'Không tải được' : prj.warranty_message || 'Chưa có dữ liệu'  : <>{prj.warranty_passed_percent}%{' '}
                       <span className="font-normal text-slate-500 text-[11px]">(Còn {prj.days_remaining} ngày)</span></>}
                     </span>
                   </div>
@@ -197,7 +198,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Chiều dài</span>
-                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.length_km) ? prj.length_km : 'Chưa cập nhật'} km</span>
+                    <span className="font-mono text-xs font-bold text-slate-800">{Number.isFinite(prj.length_km) ? displayKm(prj.length_km!) : prj.geometry_read_error ? 'Không tải được' : 'Chưa có dữ liệu'}</span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <span className="text-[10px] text-slate-500 block">Lỗi mở</span>

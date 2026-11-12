@@ -12,13 +12,20 @@ export function useGeometryReadModel(projectId: string) {
   const scope = `${projectId}:${useAuthStore(s => s.authEpoch)}`
   const activeSubmission = submissionScope === scope ? submission : null
   const historicalLayout = !!params.get('layoutId') && !!params.get('roadSectionId') && !!params.get('routeVersionId') && activeSubmission?.status === 'CONFIRMED' && (params.get('roadSectionId') !== activeSubmission.roadSectionId || params.get('routeVersionId') !== activeSubmission.confirmedRouteVersionId)
-  const draftId = historicalLayout ? params.get('draftId') || '' : activeSubmission?.draftId || params.get('draftId') || ''
-  const roadReference = activeSubmission && !historicalLayout ? activeSubmission.status === 'CONFIRMED' ? activeSubmission.roadSectionId! : '' : params.get('roadSectionId') || ''
-  const versionReference = activeSubmission && !historicalLayout ? activeSubmission.status === 'CONFIRMED' ? activeSubmission.confirmedRouteVersionId! : '' : params.get('routeVersionId') || ''
+  const explicitRoad = params.get('roadSectionId') || '', explicitVersion = params.get('routeVersionId') || ''
+  const explicitGeometry = !!explicitRoad && !!explicitVersion
+  const explicitDraft = params.get('draftId') || ''
+  const submissionSelected = !!activeSubmission && !historicalLayout && (!explicitGeometry || explicitDraft === activeSubmission.draftId && explicitRoad === activeSubmission.roadSectionId && explicitVersion === activeSubmission.confirmedRouteVersionId)
+  const draftId = explicitDraft || (submissionSelected && activeSubmission?.status !== 'CONFIRMED' ? activeSubmission?.draftId || '' : '')
+  const roadReference = explicitGeometry ? explicitRoad : ''
+  const versionReference = explicitGeometry ? explicitVersion : ''
   const epoch = useAuthStore(state => state.authEpoch)
   const [projects, setProjects] = useState<Array<{projectId: string; name: string; projectCode: string}>>([])
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [reload, setReload] = useState(0)
   const [context, setContext] = useState<Awaited<ReturnType<typeof alignmentService.readProjectContext>> | null>(null)
+  const [contextLoading, setContextLoading] = useState(false), [contextError, setContextError] = useState(''), [contextScope, setContextScope] = useState('')
+  const activeContext = contextScope === scope ? context : null
+  const currentRoutes = activeContext?.roadSections.filter(section => !!section.currentVersionId) || []
   const [geometry, setGeometry] = useState<RoadGeometryVersionView | null>(null)
   const [geometryLoading, setGeometryLoading] = useState(false), [geometryError, setGeometryError] = useState('')
   const [profiles, setProfiles] = useState<Awaited<ReturnType<typeof alignmentService.fetchCrsProfiles>>>([])
@@ -47,7 +54,7 @@ export function useGeometryReadModel(projectId: string) {
       ;(async () => {
         const result = await alignmentService.getGeometryDraft(projectId, draftId)
         if (!active) return
-        if (activeSubmission && !historicalLayout && (result.data.status !== activeSubmission.status || result.data.roadSectionId !== activeSubmission.roadSectionId || result.etag !== `"${activeSubmission.version}"` || result.data.version !== activeSubmission.version)) throw new Error('GET draft không khớp lookup hồ sơ trình.')
+        if (submissionSelected && activeSubmission && (result.data.status !== activeSubmission.status || result.data.roadSectionId !== activeSubmission.roadSectionId || result.etag !== `"${activeSubmission.version}"` || result.data.version !== activeSubmission.version)) throw new Error('GET draft không khớp lookup hồ sơ trình.')
         setDraft(result)
         const value = await alignmentService.readDraftReadiness(projectId, draftId)
         if (active) setReadiness(value)
@@ -57,11 +64,10 @@ export function useGeometryReadModel(projectId: string) {
     return () => { active = false }
   }, [projectId, draftId, epoch, reload, activeSubmission, historicalLayout])
   useEffect(()=>{
-    if(!activeSubmission || historicalLayout)return
+    if(!activeSubmission || historicalLayout || activeSubmission.status === 'CONFIRMED' || explicitGeometry)return
     const next=new URLSearchParams(params);next.set('draftId',activeSubmission.draftId)
     if (params.get('draftId') !== activeSubmission.draftId || params.get('roadSectionId') !== roadReference || params.get('routeVersionId') !== versionReference) { next.delete('segmentSetId'); next.delete('layoutId') }
-    if(activeSubmission.status==='CONFIRMED'){next.set('roadSectionId',activeSubmission.roadSectionId!);next.set('routeVersionId',activeSubmission.confirmedRouteVersionId!)}
-    else { next.delete('roadSectionId'); next.delete('routeVersionId') }
+    next.delete('roadSectionId'); next.delete('routeVersionId')
     if(next.toString()!==params.toString())setParams(next,{replace:true})
   },[activeSubmission,params,historicalLayout])
   const attempt = useRef(0)
@@ -92,16 +98,27 @@ export function useGeometryReadModel(projectId: string) {
   }, [epoch, reload])
   useEffect(() => {
     let active = true
-    setContext(null)
+    setContext(null); setContextScope(''); setContextError(''); setContextLoading(!!projectId)
     if (projectId && projects.some(project => project.projectId === projectId)) {
       alignmentService.readProjectContext(projectId).then(value => {if (active) {
-        setContext(value)
+        setContext(value); setContextScope(scope)
         setGeometryError(error => error === 'Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.' ? '' : error)
       }})
-        .catch(() => {if (active) setGeometryError('Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.')})
+        .catch(() => {if (active) setContextError('Không thể tải phạm vi tuyến. Vui lòng kiểm tra quyền đọc.')})
+        .finally(() => { if (active) setContextLoading(false) })
     }
+    else if (!loading) { setContextLoading(false); if (projectId) setContextError('Dự án không thuộc danh sách server được phép đọc.') }
     return () => { active = false }
-  }, [projectId, epoch, projects])
+  }, [projectId, epoch, projects, loading, reload])
+  useEffect(() => {
+    if (!activeContext || contextLoading || contextError || submissionLoading || submissionError || explicitRoad || explicitVersion || explicitDraft) return
+    if (activeSubmission && activeSubmission.status !== 'CONFIRMED') return
+    if (currentRoutes.length !== 1) return
+    const route = currentRoutes[0], next = new URLSearchParams(params)
+    next.set('roadSectionId', route.roadSectionId); next.set('routeVersionId', route.currentVersionId)
+    if (activeSubmission?.status === 'CONFIRMED' && activeSubmission.roadSectionId === route.roadSectionId && activeSubmission.confirmedRouteVersionId === route.currentVersionId) next.set('draftId', activeSubmission.draftId)
+    setParams(next, {replace: true})
+  }, [activeContext, contextLoading, contextError, submissionLoading, submissionError, activeSubmission, explicitRoad, explicitVersion, explicitDraft])
   const invalidate = () => {attempt.current++;setGeometry(null);setGeometryError('');setGeometryLoading(false)}
   const read = async (roadId: string, versionId: string) => {
     const currentAttempt = ++attempt.current, actorEpoch = epoch, selectedProject = projectId, selectedDraft = draftId, selectedRoad = roadReference, selectedVersion = versionReference
@@ -111,15 +128,19 @@ export function useGeometryReadModel(projectId: string) {
       const value = await alignmentService.readConfirmedGeometry(selectedProject, roadId, versionId)
       if (!current()) return
       if (value.projectId !== selectedProject || value.routeVersionId !== versionId || value.roadSectionId !== roadId || selectedDraft && value.sourceDraftId !== selectedDraft) throw new Error('Sai reference')
+      const currentRef = activeContext?.roadSections.find(section => section.roadSectionId === roadId && section.currentVersionId === versionId)
+      if (currentRef && value.isCurrent !== true) throw new Error('Reference hiện hành trả geometry không hiện hành; dữ liệu không nhất quán.')
       setGeometry(value)
-    } catch {if (current()) setGeometryError('Không thể tải hình học đúng tuyến và phiên bản đã chọn.')}
+    } catch (e) {if (current()) setGeometryError((e as Error).message.includes('không nhất quán') ? (e as Error).message : 'Không thể tải hình học đúng tuyến và phiên bản đã chọn.')}
     finally {if (current()) setGeometryLoading(false)}
   }
   useEffect(() => {
+    if ((contextLoading || loading) && !historicalLayout || !activeContext && !explicitGeometry) { invalidate(); return }
+    if (!!explicitRoad !== !!explicitVersion) { invalidate(); setGeometryError('Cần đủ cặp tuyến và phiên bản; không tự chọn thay reference thiếu.'); return }
     if (projectId && roadReference && versionReference) void read(roadReference, versionReference)
     else invalidate()
     return () => { attempt.current++ }
-  }, [projectId, epoch, draftId, roadReference, versionReference, reload])
+  }, [projectId, epoch, draftId, roadReference, versionReference, reload, activeContext, contextLoading, loading])
   const openDraft = (id: string) => {
     invalidate()
     const next = new URLSearchParams(params)
@@ -129,6 +150,8 @@ export function useGeometryReadModel(projectId: string) {
   const openGeometry = (roadId: string, versionId: string) => {
     const next = new URLSearchParams(params)
     if (roadId !== roadReference || versionId !== versionReference) { next.delete('segmentSetId'); next.delete('layoutId') }
+    next.delete('draftId')
+    if (activeSubmission?.status === 'CONFIRMED' && activeSubmission.roadSectionId === roadId && activeSubmission.confirmedRouteVersionId === versionId) next.set('draftId', activeSubmission.draftId)
     next.set('roadSectionId', roadId); next.set('routeVersionId', versionId); setParams(next)
   }
   const openConfirmed = (id: string, geometry: RoadGeometryVersionView) => {
@@ -137,5 +160,5 @@ export function useGeometryReadModel(projectId: string) {
     next.set('draftId', id); next.set('roadSectionId', geometry.roadSectionId!); next.set('routeVersionId', geometry.routeVersionId)
     setParams(next)
   }
-  return {submission:activeSubmission,submissionError,submissionLoading,submissionReady:submissionScope===scope, draftId,roadReference,versionReference,openDraft,openGeometry,openConfirmed,setReadiness,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
+  return {submission:activeSubmission,submissionError,submissionLoading,submissionReady:submissionScope===scope, draftId,roadReference,versionReference,openDraft,openGeometry,openConfirmed,setReadiness,draft,readiness,draftLoading,draftError,profiles,profilesLoading,profileError,projects,loading,error,context:activeContext,currentRoutes,contextLoading,contextError,geometry,geometryLoading,geometryError,read,invalidate,retry:()=>setReload(value=>value+1)}
 }

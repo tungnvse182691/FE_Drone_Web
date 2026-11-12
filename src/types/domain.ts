@@ -637,6 +637,12 @@ export interface PasswordRules {
 }
 
 export interface HubProject {
+  server_data_loaded?: boolean
+  server_facts?: import('../api/services/projectServerFacts').ProjectServerFacts
+  geometry_read_error?: string
+  warranty_read_error?: string
+  warranty_message?: string
+  warranty_start_date?: string
   id: string
   code: string
   name: string

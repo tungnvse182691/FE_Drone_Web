@@ -1,3 +1,4 @@
+import { readProjectServerFacts, readProjectWorkPackage, type ProjectServerFacts } from './projectServerFacts'
 import { validWarrantyDates } from '../../utils/projectWarranty'
 import { personnelService } from './personnelService'
 import { apiClient } from '../client'
@@ -206,6 +207,7 @@ function calculateLineLengthKm(coords?: [number, number][]): number {
 }
 
 function enrichProjectWithAlignment(p: HubProject): HubProject {
+  if (p.server_data_loaded) return p
   // Nếu dự án đã đóng bảo hành, khóa cứng trạng thái và không ghi đè tim tuyến
   if (p.status === 'CLOSED') {
     return p
@@ -356,9 +358,8 @@ function readProjectDescription(projectId: string, epoch: number): Promise<strin
   }
   const request = (async () => {
     current()
-    const response = await apiClient.get(`/projects/${projectId}/work-package`)
+    const data = await readProjectWorkPackage(projectId)
     current()
-    const data = response.data
     if (typeof data?.projectId !== 'string' || data.projectId.toLowerCase() !== projectId.toLowerCase() ||
         !Object.prototype.hasOwnProperty.call(data, 'description') || data.description !== null && typeof data.description !== 'string') {
       throw new Error('Không xác minh được địa bàn từ đúng hồ sơ dự án.')
@@ -555,9 +556,17 @@ export const projectService = {
         const statsErrors = new Map<string, string>()
         const descriptions = new Map<string, string>()
         const descriptionErrors = new Map<string, string>()
+        const serverFacts = new Map<string, ProjectServerFacts>()
+        const factErrors = new Map<string, string>()
         await Promise.all([...new Set(rawItems.map(item => String(item.projectId || item.id)))].map(async id => {
-          try { descriptions.set(id.toLowerCase(), await readProjectDescription(id, epoch)) }
-          catch { descriptionErrors.set(id.toLowerCase(), 'Chưa tải được địa bàn dự án. Hãy thử lại.') }
+          try {
+            const facts = await readProjectServerFacts(id)
+            serverFacts.set(id.toLowerCase(), facts); descriptions.set(id.toLowerCase(), facts.description)
+            if (facts.descriptionError) descriptionErrors.set(id.toLowerCase(), facts.descriptionError)
+          } catch (error: any) {
+            const message = `Chưa tải được địa bàn/hồ sơ server: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`
+            factErrors.set(id.toLowerCase(), message); descriptionErrors.set(id.toLowerCase(), message)
+          }
         }))
         const statsMap = new Map<string, { openDefects: number; repairPackages: number }>()
         await Promise.all(
@@ -592,8 +601,20 @@ export const projectService = {
         const mapped = rawItems.map((item) => {
           const id = (item.projectId || item.id).toLowerCase()
           const project = mapBackendProjectToHub(item, usersMap, statsMap)
-          return { ...project, region: descriptionErrors.has(id) ? 'Chưa tải được địa bàn' : descriptions.get(id)!, location_detail: '',
-            stats_error: [directoryError, statsErrors.get(id), descriptionErrors.get(id)].filter(Boolean).join('; ') }
+          const facts = serverFacts.get(id), readError = factErrors.get(id)
+          return { ...project, server_data_loaded: true, server_facts: facts,
+            region: descriptionErrors.has(id) ? 'Chưa tải được địa bàn' : descriptions.get(id)!, location_detail: '',
+            length_km: facts?.lengthKm, stationing_text: readError ? 'Không tải được dữ liệu tim tuyến' : facts!.stationing,
+            kml_status: readError ? 'Không tải được dữ liệu tim tuyến' : facts!.geometryLabel,
+            geometry_read_error: readError || facts?.geometryError || facts?.submissionError,
+            warranty_read_error: readError || facts?.warrantyError, warranty_message: facts?.warrantyMessage,
+            handover_date: facts?.handoverDate, warranty_start_date: facts?.warrantyStartDate, warranty_end_date: facts?.warrantyEndDate,
+            warranty_data_missing: !facts?.warrantyStartDate || !facts?.warrantyEndDate,
+            warranty_passed_percent: facts?.warrantyPercent ?? Number.NaN, days_remaining: facts?.daysRemaining ?? Number.NaN,
+            is_assigned: !facts?.primaryError && !!facts?.primary,
+            pm_name: facts?.primaryError ? 'Không tải được PM chính' : facts?.primary?.displayName || (facts?.primary ? 'Chưa có tên PM chính' : 'Chưa phân công PM chính'),
+            pm_user_id: facts?.primary?.userId, pm_role_badge: facts?.primary ? 'PM Chính' : '',
+            stats_error: [directoryError, statsErrors.get(id), descriptionErrors.get(id), facts?.primaryError].filter(Boolean).join('; ') }
         })
         if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh sách dự án cũ.')
         projectStore = mapped

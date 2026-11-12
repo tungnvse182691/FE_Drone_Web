@@ -1,3 +1,4 @@
+import { displayKm } from '../../../utils/projectDistanceDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from '../projects/types'
@@ -32,6 +33,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
 }) => {
   const hasPendingProposals = project.repair_packages > 0
   const submissionManaged = submissionReady || submissionLoading || !!submissionError || !!submission
+  const dossierPath = `${basePath}/projects/${project.id}/alignment` + (submission?.status === 'CONFIRMED' ? `?${new URLSearchParams({draftId: submission.draftId, roadSectionId: submission.roadSectionId!, routeVersionId: submission.confirmedRouteVersionId!})}` : '')
 
   return (
     <div className="flex flex-col gap-3 font-body">
@@ -106,13 +108,13 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
 
             {/* Chi tiết Tuyến chính & Tuyến phụ Badge */}
             <div className="flex items-center gap-1 font-mono text-[11px] bg-amber-50/90 text-amber-950 border border-amber-200/90 px-2 py-0.5 rounded shadow-2xs">
-              <span className="font-semibold">Trục chính: {mainlineLengthKm > 0 ? `${mainlineLengthKm}km` : ((project.length_km || 0) > 0 ? `${project.length_km}km` : '0km')}</span>
-              {branchesCount > 0 ? (
+              <span className="font-semibold">Trục chính: {Number.isFinite(mainlineLengthKm) ? displayKm(mainlineLengthKm!) : 'Chưa có phân loại tuyến'}</span>
+              {Number.isFinite(branchesCount) && branchesCount > 0 ? (
                 <span className="text-amber-800 font-bold">
-                  • {branchesCount} tuyến phụ ({branchesLengthKm}km)
+                  • {branchesCount} tuyến phụ ({displayKm(branchesLengthKm!)})
                 </span>
               ) : (
-                <span className="text-slate-500 font-normal">• 0 tuyến phụ</span>
+                <span className="text-slate-500 font-normal">{Number.isFinite(branchesCount) ? '• 0 tuyến phụ' : '• Chưa có phân loại nhánh'}</span>
               )}
             </div>
 
@@ -249,7 +251,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <button
               onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)}
               type="button"
-              className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
+              className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-semibold transition-colors cursor-pointer shrink-0"
             >
               <Icon name="alt_route" size={16} />
               <span>Thiết lập tim tuyến</span>
@@ -278,7 +280,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
-                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {project.length_km} km) và trình duyệt sang Giám sát.
+                PM <strong className="text-slate-900">{project.pm_name}</strong> đã nạp tim tuyến (Tổng L = {displayKm(project.length_km!)}) và trình duyệt sang Giám sát.
               </p>
             </div>
           </div>
@@ -294,10 +296,10 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
         </div>
       ) : null}
       {submissionManaged && <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-        <p role="status">{submissionLoading ? 'Đang đọc hồ sơ tuyến từ máy chủ…' : submissionError || (submission?.status === 'CONFIRMED' ? 'Hình học đã xác nhận; phân đoạn do PM quản lý và công bố.' : submission?.status === 'REJECTED' ? `Đã từ chối — lượt ${submission.currentReview?.number}: ${submission.currentReview?.rejectionReason}` : submission?.status === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận hình học.' : 'Chưa có hồ sơ trình')}</p>
+        <p role="status">{submissionLoading ? 'Đang đọc hồ sơ tuyến từ máy chủ…' : submissionError || (submission?.status === 'CONFIRMED' ? 'Hình học đã xác nhận; phân đoạn do PM quản lý và công bố.' : submission?.status === 'REJECTED' ? `Đã từ chối — lượt ${submission.currentReview?.number}: ${submission.currentReview?.rejectionReason}` : submission?.status === 'SUBMITTED' ? 'Đã trình — chờ Giám sát xác nhận hình học.' : project.server_facts?.routes.length ? 'Chưa có hồ sơ trình; tim tuyến hiện hành vẫn được đọc từ server.' : 'Chưa có hồ sơ trình')}</p>
         {submissionError && <button type="button" onClick={onRetrySubmission} className="px-3 py-2 rounded-lg border border-slate-200">Thử lại hồ sơ tuyến</button>}
-        {submission && !submissionLoading && !submissionError && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-slate-200 font-semibold">Xem hồ sơ tuyến</button>}
-        {!submission && submissionReady && !isSupervisor && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-slate-200 font-semibold">Thiết lập tim tuyến</button>}
+        {submission && !submissionLoading && !submissionError && <button type="button" onClick={() => onNavigate(dossierPath)} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-bold transition shadow-2xs cursor-pointer">Xem hồ sơ tuyến</button>}
+        {!submission && submissionReady && !isSupervisor && <button type="button" onClick={() => onNavigate(`${basePath}/projects/${project.id}/alignment`)} className="px-3 py-2 rounded-lg border border-[#C9A227] bg-[#C9A227] hover:bg-[#B38E1E] text-white font-semibold">Thiết lập tim tuyến</button>}
       </div>}
     </div>
   )

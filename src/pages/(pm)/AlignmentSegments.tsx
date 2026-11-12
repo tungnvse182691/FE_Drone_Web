@@ -97,7 +97,7 @@ export const AlignmentSegments: React.FC = () => {
 
   const submissionWorkflow = useGeometrySubmission(selectedProjectId, geometryRead, draftContentSaved, showToast)
   const submitted = geometryRead.submission?.status === 'SUBMITTED' || geometryRead.draft?.data.status === 'SUBMITTED'
-  const contentLocked = submissionWorkflow.busy || !!submissionWorkflow.held || submitted || !!geometryRead.submission && geometryRead.submission.status !== 'REJECTED' || geometryRead.submissionLoading || !!geometryRead.submissionError || !geometryRead.submissionReady
+  const contentLocked = !!geometryRead.geometry || submissionWorkflow.busy || !!submissionWorkflow.held || submitted || !!geometryRead.submission && geometryRead.submission.status !== 'REJECTED' || geometryRead.submissionLoading || !!geometryRead.submissionError || !geometryRead.submissionReady
   const segmentWorkflow = useSegmentSetWorkflow(selectedProjectId, geometryRead.roadReference, geometryRead.versionReference,
     geometryRead.geometry, isMainline, activeSplitDistance, segmentsState.setSplitDistance, showToast)
   const segmentRows = isMainline && rightTab === 'SEGMENTS' ? segmentWorkflow.display : null
@@ -124,6 +124,11 @@ export const AlignmentSegments: React.FC = () => {
   ].filter(Boolean)
 
   const workflowActions = <>
+    {(geometryRead.currentRoutes || []).length > 0 && <select aria-label="Tuyến hiện hành từ máy chủ" value={(geometryRead.currentRoutes || []).some(route => route.roadSectionId === geometryRead.roadReference && route.currentVersionId === geometryRead.versionReference) ? `${geometryRead.roadReference}:${geometryRead.versionReference}` : ''} disabled={geometryRead.contextLoading || draftWorkflow.busy || segmentWorkflow.busy || !!segmentWorkflow.held} onChange={event => { const route = geometryRead.currentRoutes.find(route => `${route.roadSectionId}:${route.currentVersionId}` === event.target.value); if (route) geometryRead.openGeometry(route.roadSectionId, route.currentVersionId) }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">
+      <option value="">{geometryRead.roadReference ? geometryRead.geometry?.isCurrent === false ? 'Đang xem phiên bản tuyến lịch sử' : 'Đang xem phiên bản tuyến khác' : 'Chọn tuyến hiện hành để xem'}</option>
+      {geometryRead.currentRoutes.map(route => <option key={route.roadSectionId} value={`${route.roadSectionId}:${route.currentVersionId}`}>{route.code} — {route.name}</option>)}
+    </select>}
+
     {isSupervisor && geometryRead.submission?.status === 'SUBMITTED' && <button type="button" disabled={!submissionWorkflow.canReject || submissionWorkflow.busy || !!submissionWorkflow.held || draftWorkflow.busy || !!draftWorkflow.pending} onClick={submissionWorkflow.openReject} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Từ chối</button>}
 
     {!isSupervisor && <button type="button" disabled={submissionWorkflow.busy || !!submissionWorkflow.held || !!submissionWorkflow.reason || draftWorkflow.busy || !!draftWorkflow.pending} title={submissionWorkflow.reason} onClick={()=>{void submissionWorkflow.submit()}} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{geometryRead.submission?.status === 'REJECTED' ? 'Trình lại' : 'Trình Giám sát'}</button>}
