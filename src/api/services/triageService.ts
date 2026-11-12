@@ -120,7 +120,7 @@ function mapBackendCaseToDomain(
         status_label = 'Báo sai (Không có lỗi)'
         conclusion = 'NO_DEFECT'
       }
-    } else if (outcome === 'NEEDS_EVIDENCE') {
+    } else if (outcome === 'NEEDS_EVIDENCE' && item.status === 'AWAITING_EVIDENCE') {
       status = 'AWAITING_EVIDENCE'
       status_label = 'Chờ bổ sung bằng chứng'
       conclusion = 'NEEDS_EVIDENCE'

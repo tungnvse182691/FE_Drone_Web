@@ -1,9 +1,11 @@
+import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerDecisionFormProps {
+  evidenceRequest?: CaseEvidenceRequestState
   selectedCase: TriageCase
   currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
@@ -26,6 +28,7 @@ export interface DrawerDecisionFormProps {
 
 export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
   selectedCase,
+  evidenceRequest,
   currentSeverity,
   setCurrentSeverity,
   currentUrgency,
@@ -125,6 +128,13 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
         />
       </div>
 
+      {evidenceRequest && <>
+        {evidenceRequest.error && <p role="alert" className="text-xs text-rose-700">{evidenceRequest.error}</p>}
+        {(evidenceRequest.message || evidenceRequest.comparison) && <p role="status" className="text-xs text-slate-600">{evidenceRequest.message || evidenceRequest.comparison}</p>}
+        {evidenceRequest.retry && <button type="button" disabled={evidenceRequest.busy} onClick={evidenceRequest.retry} className="text-xs underline">{evidenceRequest.retryLabel}</button>}
+        {evidenceRequest.read && <button type="button" disabled={evidenceRequest.busy} onClick={evidenceRequest.read} className="text-xs underline">Đọc lại hồ sơ để đối chiếu</button>}
+        {evidenceRequest.accept && <button type="button" disabled={evidenceRequest.busy} onClick={evidenceRequest.accept} className="text-xs underline">Giữ lý do, tiếp tục với hồ sơ vừa đọc</button>}
+      </>}
       {/* Decision Action Buttons or Status Card for Supervisor */}
       {isSupervisor ? (
         <div className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
@@ -135,7 +145,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             {selectedCase.conclusion === 'NEEDS_EVIDENCE' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                 <Icon name="straighten" size={14} className="text-blue-600" />
-                Hợp lệ • Yêu cầu đo đạc hiện trường
+                Chờ bổ sung bằng chứng
               </span>
             )}
             {selectedCase.conclusion === 'DEFECT_FOUND' && (
@@ -196,7 +206,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               {selectedCase.conclusion === 'NEEDS_EVIDENCE' && (
                 <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 w-full">
                   <Icon name="straighten" size={16} className="text-blue-600" />
-                  <span>Hợp lệ • Yêu cầu đo đạc hiện trường</span>
+                  <span>Chờ bổ sung bằng chứng</span>
                 </div>
               )}
               {selectedCase.conclusion === 'DEFECT_FOUND' && (
@@ -247,10 +257,12 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
           <button
             type="button"
             onClick={() => onVerifyDefect(selectedCase)}
+            disabled={!evidenceRequest?.canRequest}
+            title={!currentNotes.trim() ? 'Nhập lý do yêu cầu bổ sung bằng chứng' : evidenceRequest?.busy ? 'Đang xử lý yêu cầu' : undefined}
             className="w-full py-3 px-4 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer bg-brand-gold hover:bg-[#B38E1F]"
           >
             <Icon name="straighten" size={16} />
-            <span>Xác nhận hợp lệ (Yêu cầu đo đạc hiện trường)</span>
+            <span>Yêu cầu bổ sung bằng chứng</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">

@@ -96,6 +96,11 @@ export function useCaseIntake(defaultProjectFilter = 'UNASSIGNED') {
     catch(e){if(selection.current===scope)setCommandError(caseIntakeError(e))}finally{if(selection.current===scope){setBusy(false);running.current=false}}
   }
   const acceptReviewed=()=>{if(!reviewed || busy)return;triageService.reviseTriage(caseId);setHeld(null);setSnapshot({scope:detailScope,value:reviewed});setBaseVersion(reviewed.etag || reviewed.version || '');setReviewed(null);setCommandError('');setComparison('Đã dùng hồ sơ vừa đọc. Kiểm tra lựa chọn và tự xác nhận điều phối khi phù hợp.')}
+  const applyReadback = (value: TriageCase) => {
+    if (selection.current !== detailScope || value.id !== caseId || snapshot?.scope !== detailScope || value.project_id !== snapshot.value.project_id) return
+    setSnapshot({scope: detailScope, value})
+    setList(old => old?.scope === listScope ? {...old, items: old.items.map(item => item.id === value.id ? {...value, project_name: item.project_name} : item)} : old)
+  }
   const setCases: Dispatch<SetStateAction<TriageCase[]>> = update => setList(old => old?.scope === listScope ? {...old,items:typeof update === 'function' ? update(old.items) : update} : old)
-  return {eligibleProjects,targetLoading: targetLoading || triageOpen && !targetError && targetProjects?.scope !== detailScope,targetError,retryTargets:()=>setTargetReload(n=>n+1),setCases,caseId,selected,cases,projects,isSupervisor,projectFilter,statusFilter,listLoading,listError,detailLoading,detailError,triageOpen,projectId,setProjectId,held,busy,commandError,message,comparison,reviewed,canTriage,openCase,filter,openTriage,closeTriage:()=>{if(!busy)setTriageOpen(false)},execute,review,acceptReviewed,retryDetail:()=>setDetailReload(n=>n+1),retry:()=>setReload(n=>n+1)}
+  return {eligibleProjects,targetLoading: targetLoading || triageOpen && !targetError && targetProjects?.scope !== detailScope,targetError,retryTargets:()=>setTargetReload(n=>n+1),applyReadback,setCases,caseId,selected,cases,projects,isSupervisor,projectFilter,statusFilter,listLoading,listError,detailLoading,detailError,triageOpen,projectId,setProjectId,held,busy,commandError,message,comparison,reviewed,canTriage,openCase,filter,openTriage,closeTriage:()=>{if(!busy)setTriageOpen(false)},execute,review,acceptReviewed,retryDetail:()=>setDetailReload(n=>n+1),retry:()=>setReload(n=>n+1)}
 }

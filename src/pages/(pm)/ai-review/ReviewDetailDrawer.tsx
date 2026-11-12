@@ -1,3 +1,4 @@
+import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { DrawerReportDetails } from './DrawerReportDetails'
 import type { TriageCase } from './types'
@@ -11,6 +12,7 @@ import { DrawerDecisionForm } from './DrawerDecisionForm'
 import { DrawerFooter } from './DrawerFooter'
 
 export interface ReviewDetailDrawerProps {
+  evidenceRequest?: CaseEvidenceRequestState
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
@@ -47,6 +49,7 @@ export interface ReviewDetailDrawerProps {
 
 export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   selectedCase,
+  evidenceRequest,
   setSelectedCaseId,
   cases,
   detailViewMode,
@@ -137,6 +140,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
           {/* RIGHT COLUMN: Biểu mẫu quyết định kỹ thuật & hành động thẩm định */}
           <div className="lg:col-span-5 space-y-4 bg-slate-50/80 p-5 rounded-2xl border border-slate-200/80">
             <DrawerDecisionForm
+              evidenceRequest={evidenceRequest}
               selectedCase={selectedCase}
               currentSeverity={currentSeverity}
               setCurrentSeverity={setCurrentSeverity}

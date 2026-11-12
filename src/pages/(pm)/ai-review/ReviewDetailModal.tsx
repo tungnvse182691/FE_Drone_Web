@@ -1,8 +1,10 @@
+import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { ReviewDetailDrawer } from './ReviewDetailDrawer'
 import { TriageCase } from './types'
 
 export interface ReviewDetailModalProps {
+  evidenceRequest?: CaseEvidenceRequestState
   loading?: boolean
   error?: string
   onRetry?: () => void

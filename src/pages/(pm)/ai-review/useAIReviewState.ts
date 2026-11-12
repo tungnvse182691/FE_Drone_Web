@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { TriageCase } from './types'
 import { useCaseIntake } from './useCaseIntake'
+import { useCaseEvidenceRequest } from './useCaseEvidenceRequest'
 import { useAIReviewFilters } from './useAIReviewFilters'
 import { useAIReviewDrawer } from './useAIReviewDrawer'
 import { useAIReviewActions } from './useAIReviewActions'
@@ -46,6 +47,7 @@ export const useAIReviewState = () => {
   const [currentArea, setCurrentArea] = useState<number>(selectedCase?.area_sqm ?? Number.NaN)
   const [currentDepth, setCurrentDepth] = useState<number>(selectedCase?.max_depth_cm ?? Number.NaN)
   const [currentNotes, setCurrentNotes] = useState<string>(selectedCase?.pm_notes || '')
+  const evidenceRequest = useCaseEvidenceRequest(intake.selected, currentNotes, intake.applyReadback)
 
   useEffect(() => {
     if (!intake.selected) return
@@ -119,6 +121,7 @@ export const useAIReviewState = () => {
 
   return {
     intake,
+    evidenceRequest,
     projects: intake.projects,
     loadError: intake.listError,
     retryLoad: intake.retry,
@@ -233,7 +236,7 @@ export const useAIReviewState = () => {
     setSurveyAssignedCrew: actions.setSurveyAssignedCrew,
     surveySlaHours: actions.surveySlaHours,
     setSurveySlaHours: actions.setSurveySlaHours,
-    handleVerifyDefect: actions.handleVerifyDefect,
+    handleVerifyDefect: evidenceRequest.execute,
     handleRejectDefect: actions.handleRejectDefect,
     handleOpenRequestSurveyModal: actions.handleOpenRequestSurveyModal,
     handleConfirmRequestSurvey: actions.handleConfirmRequestSurvey,

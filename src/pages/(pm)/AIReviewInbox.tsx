@@ -131,6 +131,7 @@ export const AIReviewInbox: React.FC = () => {
       {/* 4. MODAL HỒ SƠ THẨM ĐỊNH */}
       <ReviewDetailModal
         isOpen={isDetailModalOpen}
+        evidenceRequest={state.evidenceRequest}
         loading={state.intake.detailLoading}
         error={state.intake.detailError}
         onRetry={state.intake.retryDetail}
