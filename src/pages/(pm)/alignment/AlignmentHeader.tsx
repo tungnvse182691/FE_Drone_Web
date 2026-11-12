@@ -88,7 +88,7 @@ export const AlignmentHeader: React.FC<AlignmentHeaderProps> = ({
             <>
               {alignmentStatus === 'REJECTED' && <span className="text-xs font-semibold text-rose-700">Đã từ chối — PM cần sửa hồ sơ và trình lại</span>}
               {alignmentStatus === 'SUBMITTED' && <span className="text-xs font-semibold text-blue-700">Đã trình — chờ Giám sát xác nhận</span>}
-              {alignmentStatus === 'DRAFT' && (
+              {alignmentStatus === 'DRAFT' && serverDraftStatus === 'DRAFT' && (
                 <span className="inline-flex items-center gap-1.5 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 text-amber-800 font-semibold text-[11px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                   Bản nháp
