@@ -104,7 +104,7 @@ export function useAlignmentState() {
       (!geometryRead.versionReference || geometryRead.geometry.routeVersionId === geometryRead.versionReference) &&
       (!geometryRead.roadReference || geometryRead.geometry.roadSectionId === geometryRead.roadReference) ? geometryRead.geometry : null
     if (localDraftDirty && draftStatus !== 'CONFIRMED' && draftStatus !== 'SUBMITTED') return
-    setAlignmentStatus(draftStatus === 'REJECTED' ? 'REJECTED' : draftStatus === 'SUBMITTED' ? 'SUBMITTED' : draftStatus === 'CONFIRMED' || !['DRAFT','REJECTED'].includes(draftStatus || '') && geometry?.sourceDraftId && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
+    setAlignmentStatus(draftStatus === 'REJECTED' ? 'REJECTED' : draftStatus === 'SUBMITTED' ? 'SUBMITTED' : draftStatus === 'CONFIRMED' || !['DRAFT','REJECTED'].includes(draftStatus || '') && geometry?.sourceDraftId && geometry.approvedAt && geometry.approvedBy && geometry.metadataStatus === 'COMPLETE' ? 'CONFIRMED' : 'DRAFT')
     if (draftStatus === 'SUBMITTED') return // The draft preview owns the map until confirmed geometry exists.
     setCurrentCoords([]); setCurrentKmPoints([]); setImportedLengthKm(0)
     if (geometry) {
@@ -125,7 +125,7 @@ export function useAlignmentState() {
           startKm: (geometry.stationOriginMeters! + width.fromOffsetMeters) / 1000,
           endKm: (geometry.stationOriginMeters! + width.toOffsetMeters) / 1000,
           lengthKm: (width.toOffsetMeters - width.fromOffsetMeters) / 1000, roadWidthM: width.widthMeters,
-          laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'HÌNH HỌC ĐÃ XÁC NHẬN', color: '#C9A227'
+          laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: geometry.approvedAt && geometry.approvedBy ? 'HÌNH HỌC ĐÃ XÁC NHẬN' : 'HÌNH HỌC SERVER — CHƯA ĐỦ XÁC NHẬN', color: '#C9A227'
         })))
       }
       if (restored.warnings.length) showToast(restored.warnings.join(' '))
