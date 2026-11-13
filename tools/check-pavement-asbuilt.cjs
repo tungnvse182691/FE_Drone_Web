@@ -27,7 +27,7 @@ function env(){
 function hookView(e,role='PROJECT_MANAGER',initial='layout'){
  let slot=0,changed=false,view,revision=0,id=project,query=new URLSearchParams(`roadSectionId=road&routeVersionId=route&segmentSetId=set&layoutId=${initial}`),toasts=[];const values=[],effects=[]
  e.state.user.role=role
- e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
+ e.mocks.react={useMemo(fn,deps){const i=slot++,old=values[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))values[i]={deps,value:fn()};return values[i].value},useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
  e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=typeof next==='function'?next(query):next]}
  const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow
  function render(){for(let i=0;i<25;i++){changed=false;slot=0;view=hook(id,'road',editor,widths,false,true,()=>{},t=>toasts.push(t),revision);for(const f of effects)if(f?.pending){f.pending=false;f.cleanup?.();f.cleanup=f.fn()}if(!changed)return}throw Error('settle')}
@@ -114,6 +114,22 @@ await test('real PM hook starts empty, map selection supplies sequence only, act
  await h.view.asBuilt.save();h.render();await h.flush();assert.equal(h.query.get('layoutId'),'built-0');assert.equal(h.view.snapshot.kind,'AS_BUILT');assert.equal(h.toasts.filter(t=>t==='Đã lưu và đọc lại bản hoàn công').length,1)
  h.remount();await h.flush();assert.equal(h.view.snapshot.sourcePlanId,'layout');assert.equal(h.view.display.slabs.length,2);assert.ok(Number.isNaN(h.view.display.slabs[0].lengthM));assert.equal(h.view.display.preview.slabsGeoJSON.features[0].geometry.coordinates[0][0][0],.00012);assert.equal(e.calls.filter(c=>c.method==='POST').length,1);assert.ok(!h.view.message.includes('0 cell'))
  e.state.user.role='SUPERVISOR';e.state.authEpoch++;h.render();await h.flush();assert.equal(h.view.asBuilt.canStart,false);h.view.asBuilt.start();h.render();assert.equal(h.view.asBuilt.active,false);await h.view.asBuilt.save();assert.equal(e.calls.filter(c=>c.method==='POST').length,1)
+})
+await test('applied preview keeps references through cursor/reason/unapplied form renders; apply/remove/source/scope invalidate it',async()=>{
+ const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render()
+ for(const [k,v] of Object.entries({key:'A',source:'Sổ đo',footprint:'12 20\n16 20\n16 23\n12 20',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)
+ h.render();h.view.asBuilt.apply();h.render();const initial=h.view.asBuilt.preview
+ const unchanged=()=>{assert.strictEqual(h.view.asBuilt.preview,initial);assert.strictEqual(h.view.display.segments,initial.segments);assert.strictEqual(h.view.display.preview.slabsGeoJSON,initial.preview.slabsGeoJSON);assert.strictEqual(h.view.display.preview.slabLabelsGeoJSON,initial.preview.slabLabelsGeoJSON);assert.strictEqual(h.view.previewBase,initial)}
+ for(let i=0;i<10;i++){h.render();unchanged()}
+ h.view.asBuilt.setReason('Lý do thay đổi');h.render();unchanged();h.view.asBuilt.select(0);h.render();unchanged()
+ h.view.asBuilt.setField('footprint','12 20\n18 20\n18 23\n12 20');h.render();unchanged()
+ h.view.asBuilt.apply();h.render();const edited=h.view.asBuilt.preview;assert.notStrictEqual(edited,initial);assert.notStrictEqual(edited.preview.slabsGeoJSON,initial.preview.slabsGeoJSON);assert.equal(edited.preview.slabsGeoJSON.features[0].geometry.coordinates[0][1][0],.00018)
+ h.view.asBuilt.newSlab();h.render();for(const [k,v] of Object.entries({key:'B',source:'Sổ đo',footprint:'22 20\n26 20\n26 23\n22 20',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)
+ h.render();h.view.asBuilt.apply();h.render();const added=h.view.asBuilt.preview;assert.notStrictEqual(added,edited);assert.equal(added.slabs.length,2)
+ h.view.asBuilt.remove(1);h.render();const removed=h.view.asBuilt.preview;assert.notStrictEqual(removed,added);assert.equal(removed.slabs.length,1)
+ e.records.set('layout',{...e.source,contentHash:'c'.repeat(64)});h.view.retry();h.render();await h.flush();assert.notStrictEqual(h.view.asBuilt.preview,removed);assert.equal(h.view.asBuilt.preview.slabs.length,1)
+ h.view.asBuilt.setShowActual(false);h.render();assert.equal(h.view.asBuilt.preview,null);h.view.asBuilt.setShowActual(true);h.render();assert.ok(h.view.asBuilt.preview)
+ h.switchProject('other');await h.flush();assert.equal(h.view.asBuilt.preview,null);assert.equal(h.view.display,null);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
 })
 await test('scope change discards late hook success and toast; old command stays with original project',async()=>{
  const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render()

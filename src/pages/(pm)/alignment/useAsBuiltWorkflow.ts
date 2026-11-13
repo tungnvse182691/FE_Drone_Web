@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { pavementService, type AsBuiltSlabInput, type PavementLayoutView, type PavementPins } from '../../../api/services/pavementService'
@@ -63,12 +63,13 @@ export function useAsBuiltWorkflow(projectId: string, scope: string, source: Pav
   }
   let disabledReason = blocked ? 'Có lệnh hoặc dữ liệu pavement chưa đối chiếu.' : !canStart && !pending ? 'Cần PLANNED nguồn đã GET, đúng route và set PUBLISHED đang chọn.' : dirty ? 'Áp dụng tấm đang nhập trước khi lưu hoàn công.' : ''
   if (!disabledReason && source && !pending) try { validateAsBuilt({ sourcePlanId: source.id, slabs, reason }, source) } catch (e) { disabledReason = (e as Error).message }
-  let preview: ReturnType<typeof buildSavedPavement> | null = null
-  if (active && showActual && source?.kind === 'PLANNED' && sourceDisplay && sourceDisplay.route) {
-    preview = buildSavedPavement({ ...source, id: 'local-as-built', kind: 'AS_BUILT', sourcePlanId: source.id, layout: null, geometry: { displayToleranceMeters: source.geometry.displayToleranceMeters, plan: null, slabs } }, null, sourceDisplay.engineeringSrid, sourceDisplay.stationOriginMeters, sourceDisplay.route)
+  const preview = useMemo(() => {
+    if (!active || !showActual || source?.kind !== 'PLANNED' || !sourceDisplay?.route) return null
+    const preview = buildSavedPavement({ ...source, id: 'local-as-built', kind: 'AS_BUILT', sourcePlanId: source.id, layout: null, geometry: { displayToleranceMeters: source.geometry.displayToleranceMeters, plan: null, slabs } }, null, sourceDisplay.engineeringSrid, sourceDisplay.stationOriginMeters, sourceDisplay.route)
     preview.label = 'Tấm thực tế — bản nhập hoàn công chưa lưu'
     for (const group of [preview.preview.slabsGeoJSON, preview.preview.slabLabelsGeoJSON]) for (const f of group.features) { f.properties!.source = 'AS_BUILT_DRAFT'; f.properties!.layoutId = null }
-  }
+    return preview
+  }, [active, showActual, source, sourceDisplay, slabs, scope])
   const save = async () => {
     if (running.current || actor.user?.role !== RoleCode.PROJECT_MANAGER || !active && !pending || pending?.rejected) return
     const selected = scope, epoch = actor.authEpoch, current = () => currentScope.current === selected && useAuthStore.getState().authEpoch === epoch
