@@ -84,12 +84,20 @@ export async function savePavement(projectId: string, intent?: { pins: PavementP
     current()
     if (result.kind !== 'PLANNED' || result.routeVersionId !== held.pins.routeVersionId || result.segmentSetId !== held.pins.segmentSetId || result.contentHash !== held.receipt.contentHash || !result.layout || !sameLayout(result.layout, held.input.layout) || result.geometry.displayToleranceMeters !== held.input.displayToleranceMeters) throw new Error('Readback pavement không khớp command/receipt; giữ yêu cầu để đối chiếu.')
     verifyPavementGeometry(result)
-    sessionStorage.removeItem(key)
+    // Keep acceptance durable until the caller also resolves the route and renders the snapshot.
     return result
   } catch (error: any) {
     if (!held.receipt && [400, 422].includes(error?.response?.status)) { current(); held.rejected = true; sessionStorage.setItem(key, JSON.stringify(held)) }
     throw error
   } finally { busy.delete(key) }
+}
+
+export function completePavement(projectId: string, result: PavementLayoutView): void {
+  const key = journal(projectId), held = pendingPavement(projectId)
+  if (useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER || busy.has(key) ||
+    !held?.receipt || held.receipt.id !== result.id || held.receipt.contentHash !== result.contentHash ||
+    result.projectId !== projectId || result.routeVersionId !== held.pins.routeVersionId || result.segmentSetId !== held.pins.segmentSetId) throw new Error('Chưa đối chiếu đúng snapshot pavement; giữ receipt, không tạo lại.')
+  sessionStorage.removeItem(key)
 }
 
 export function verifyPavementGeometry(value: PavementLayoutView): void {

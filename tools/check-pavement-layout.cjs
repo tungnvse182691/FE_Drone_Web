@@ -70,7 +70,9 @@ await test('layout discovery hook auto-opens unique server reference and preserv
 await test('POST receipt then GET failure persists identity; retry only GETs and verifies server config/geometry',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));e.setReadError(true)
  await assert.rejects(e.commands.savePavement(project,{pins,input}),/GET failed/);assert.equal(e.commands.pendingPavement(project).receipt.id,'layout')
- e.setReadError(false);await e.commands.savePavement(project);assert.equal(e.calls.filter(x=>x.method==='POST').length,1);assert.equal(e.commands.pendingPavement(project),null)
+ e.setReadError(false);const result=await e.commands.savePavement(project);assert.equal(e.calls.filter(x=>x.method==='POST').length,1)
+ assert.equal(e.commands.pendingPavement(project).receipt.id,'layout');assert.throws(()=>e.commands.completePavement(project,{...result,id:'wrong'}),/Chưa đối chiếu/)
+ e.commands.completePavement(project,result);assert.equal(e.commands.pendingPavement(project),null)
 })
 await test('timeout retry keeps key and immutable payload; duplicate click cannot dispatch and new intent cannot replace pending',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setCreateError(true)
@@ -86,6 +88,18 @@ await test('explicit revised input after definitive rejection gets a new key; ti
  e.commands.revisePavement(project);e.client.post=post;const revised={...input,layout:{...input.layout,slabLengthMeters:4}};e.setResult(fixture(revised));await e.commands.savePavement(project,{pins,input:revised})
  const writes=e.calls.filter(x=>x.method==='POST');assert.notEqual(writes[0].key,writes[1].key);assert.equal(writes[0].body.layout.slabLengthMeters,5);assert.equal(writes[1].body.layout.slabLengthMeters,4)
  const uncertain=environment();uncertain.setCreateError(true);await assert.rejects(uncertain.commands.savePavement(project,{pins,input}));assert.throws(()=>uncertain.commands.revisePavement(project),/không được/)
+})
+await test('409 and 412 keep the same intent for explicit review without silent replay or new key',async()=>{
+ for(const status of [409,412]){
+  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1),post=e.client.post
+  e.client.post=async(...args)=>{await post(...args);throw Object.assign(Error('version conflict'),{response:{status,data:{code:status===409?'geometry_version_mismatch':'content_hash_mismatch'}}})}
+  await assert.rejects(e.commands.savePavement(project,{pins,input}),/version conflict/)
+  const held=plain(e.commands.pendingPavement(project));assert.equal(e.calls.filter(c=>c.method==='POST').length,1)
+  assert.throws(()=>e.commands.revisePavement(project),/không được/);assert.deepEqual(plain(e.commands.pendingPavement(project)),held)
+  e.client.post=post;e.setResult(fixture(input));const result=await e.commands.savePavement(project),writes=e.calls.filter(c=>c.method==='POST')
+  assert.equal(writes.length,2);assert.equal(writes[0].key,writes[1].key);assert.deepEqual(writes[0].body,writes[1].body)
+  e.commands.completePavement(project,result)
+ }
 })
 await test('readback mismatch and malformed server cells/codes/footprints never report success or POST twice',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1),result=fixture(input);result.layout.expansionJointGapMillimeters=2;e.setResult(result)
@@ -113,7 +127,7 @@ await test('F5 hook hydrates server fields/tolerance, Sup reads without writes a
  render();await flush();assert.equal(view.snapshot.id,'layout');assert.equal(restored.at(-1).slabThicknessCentimeters,undefined);assert.equal(restored.at(-1).expansionJointGapMillimeters,0);assert.match(view.disabledReason,/Chỉ PM/);assert.equal(e.calls.filter(x=>x.method==='POST').length,0)
  const oldRead=e.service.readConfiguration;e.service.readConfiguration=()=>new Promise(r=>deferred=r);query=new URLSearchParams('layoutId=late');render();const old=deferred;projectId='q';query=new URLSearchParams();render();old({snapshot:fixture(input),configuration:fixture(input)});await flush();assert.equal(view.snapshot,null);assert.equal(restored.length,1);assert.equal(e.calls.filter(x=>x.method==='POST').length,0)
 })
-await test('PM hook save keeps layoutId in scoped URL after verified readback without resetting the editor',async()=>{
+await test('PM hook keeps receipt after route readback failure, retries only GET and pins verified layout without resetting editor',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));e.storage.set('unused','not a tolerance default')
  let slot=0,changed=false,view,query=new URLSearchParams(),restored=[];const values=[],effects=[]
  e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
@@ -127,6 +141,12 @@ await test('PM hook save keeps layoutId in scoped URL after verified readback wi
  const journal='rg_pavement_command_pm_'+project,raw=JSON.stringify(oldCommand);e.storage.set(journal,raw)
  render();await flush();assert.equal(e.storage.get(journal),raw);assert.equal(view.pending.pins.segmentSetId,'old-published');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);e.storage.delete(journal);view.retry();render();await flush();assert.equal(query.get('segmentSetId'),'draft-on-screen');assert.match(view.scopeMessage,/segment set set đã PUBLISHED/);assert.equal(view.disabledReason,'');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);await view.save();render();await flush()
  assert.equal(query.get('layoutId'),'layout');assert.equal(query.get('routeVersionId'),'route');assert.equal(query.get('segmentSetId'),'set');assert.equal(e.calls.filter(x=>x.method==='POST').length,1);assert.equal(view.pending,null)
+ const layoutRoute=e.service.layoutRoute;e.service.layoutRoute=async()=>{throw Error('route GET failed')}
+ await view.save();render();await flush()
+ assert.equal(e.calls.filter(x=>x.method==='POST').length,2);assert.equal(view.pending?.receipt?.id,'layout');assert.match(view.actionLabel,/Đọc lại/)
+ assert.throws(()=>e.commands.revisePavement(project),/không được/)
+ e.service.layoutRoute=layoutRoute;await view.save();render();await flush()
+ assert.equal(e.calls.filter(x=>x.method==='POST').length,2);assert.equal(view.pending,null)
  assert.equal(restored.length,0);assert.equal(view.snapshot.id,'layout');assert.equal(view.disabledReason,'')
 })
 await test('saved snapshot uses server widths/codes/footprints for map list HUD; unsupported CRS fails without synthesis',()=>{
@@ -140,6 +160,19 @@ await test('saved snapshot uses server widths/codes/footprints for map list HUD;
  assert.deepEqual(plain(view.preview.slabsGeoJSON.features[0].geometry.coordinates[0][0]),[.00001,.00001])
  assert.equal(view.preview.slabsGeoJSON.features.length,view.slabs.length);assert.equal(view.preview.jointsGeoJSON.features.length,0);assert.match(view.label,/.37/)
  assert.throws(()=>build(snapshot,input.layout,32649,0),/adapter/);assert.equal(snapshot.geometry.slabs[0].footprint[0].x,1)
+})
+await test('snapshot without station origin keeps real offsets and footprints without inventing Km zero',()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1),snapshot=fixture(input),before=JSON.stringify(snapshot)
+ const build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement
+ for(const origin of [undefined,null,NaN]){
+  const view=build(snapshot,input.layout,32648,origin),p=view.preview.slabsGeoJSON.features[0].properties
+  assert.ok(Number.isNaN(view.segments[0].startKm));assert.ok(Number.isNaN(view.segments[0].endKm))
+  assert.equal(view.segments[0].lengthKm,.01);assert.equal(p.startKm,null);assert.equal(p.endKm,null)
+  assert.equal(p.fromOffsetMeters,0);assert.equal(p.toOffsetMeters,5);assert.equal(p.station,'Offset 0–5 m')
+  assert.equal(view.previewReady,false);assert.equal(view.slabs.length,1)
+ }
+ const zero=build(snapshot,input.layout,32648,0);assert.equal(zero.segments[0].startKm,0);assert.equal(zero.preview.slabsGeoJSON.features[0].properties.endKm,.005)
+ assert.equal(JSON.stringify(snapshot),before)
 })
 await test('layout retry reissues GET after error, preserves server tolerance and rejects late responses and newer PM edits',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input)

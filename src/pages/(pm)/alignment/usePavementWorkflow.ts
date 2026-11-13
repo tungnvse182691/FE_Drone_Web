@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { pavementService, type PavementLayoutInput, type PavementLayoutView, type PavementPins, type PavementLayoutSummary } from '../../../api/services/pavementService'
-import { pavementInput, pendingPavement, sameLayout, revisePavement, savePavement, type PavementEditor } from '../../../api/services/pavementCommands'
+import { pavementInput, pendingPavement, sameLayout, revisePavement, savePavement, completePavement, type PavementEditor } from '../../../api/services/pavementCommands'
 
 export function usePavementWorkflow(projectId: string, sectionId: string, editor: PavementEditor,
   widthProfile: PavementLayoutInput['widthProfile'], widthsDirty: boolean, mainline: boolean,
@@ -113,7 +113,9 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       if (!current()) return
       const route = await pavementService.layoutRoute(projectId, result, pins?.roadSectionId, result.routeVersionId, result.segmentSetId)
       if (!current()) return
-      setDisplay(buildSavedPavement(result, result.layout!, route.engineeringSrid, route.stationOriginMeters, route)); setSavedRevision(revision.current)
+      const rendered = buildSavedPavement(result, result.layout!, route.engineeringSrid, route.stationOriginMeters, route)
+      completePavement(projectId, result)
+      setDisplay(rendered); setSavedRevision(revision.current)
       setPending(null); setSnapshot(result); setSavedProfile(result.layout!.widthProfile); setSavedWidthRevision(widthRevision)
       const next = new URLSearchParams(params)
       next.set('layoutId', result.id); next.set('routeVersionId', result.routeVersionId); next.set('segmentSetId', result.segmentSetId)

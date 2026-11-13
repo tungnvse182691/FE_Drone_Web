@@ -13,7 +13,7 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   if (planned && !profile?.length) throw new Error('Snapshot chưa có widthProfile nguồn để hiển thị phạm vi pavement.')
   const station = Number.isFinite(origin) ? origin! : 0
   const segments: SegmentItem[] = (profile || []).map((w, i) => ({ id: `layout-${snapshot.id}-${i}`, code: `Layout ${snapshot.id} · ${i + 1}`,
-    startKm: (station + w.fromOffsetMeters) / 1000, endKm: (station + w.toOffsetMeters) / 1000, lengthKm: (w.toOffsetMeters - w.fromOffsetMeters) / 1000,
+    startKm: Number.isFinite(origin) ? (origin! + w.fromOffsetMeters) / 1000 : Number.NaN, endKm: Number.isFinite(origin) ? (origin! + w.toOffsetMeters) / 1000 : Number.NaN, lengthKm: (w.toOffsetMeters - w.fromOffsetMeters) / 1000,
     roadWidthM: w.widthMeters, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' }))
   if (!planned) segments.splice(0, segments.length, { id: `layout-${snapshot.id}-asbuilt`, code: 'AS_BUILT', startKm: Number.NaN, endKm: Number.NaN, lengthKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' })
   const empty = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] })
@@ -32,7 +32,7 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
     const properties = { id: slab.key, code: slab.key, station: stationText, lane: lateralText, edgeOffset: lateralText,
       fromOffsetMeters: cell?.fromOffsetMeters ?? null, toOffsetMeters: cell?.toOffsetMeters ?? null, fromLateralMeters: cell?.fromLateralMeters ?? null, toLateralMeters: cell?.toLateralMeters ?? null, segmentId: segment.id, segmentCode: segment.code,
       lengthM: slab.lengthMeters ?? Number.NaN, widthM: slab.widthMeters ?? Number.NaN, thicknessCm: planned ? layout?.slabThicknessCentimeters ?? Number.NaN : Number.NaN,
-      startKm: cell ? (station + cell.fromOffsetMeters) / 1000 : null, endKm: cell ? (station + cell.toOffsetMeters) / 1000 : null, source: 'SERVER_SNAPSHOT', layoutId: snapshot.id }
+      startKm: cell && Number.isFinite(origin) ? (origin! + cell.fromOffsetMeters) / 1000 : null, endKm: cell && Number.isFinite(origin) ? (origin! + cell.toOffsetMeters) / 1000 : null, source: 'SERVER_SNAPSHOT', layoutId: snapshot.id }
     preview.slabsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Polygon', coordinates: [ring] } })
     preview.slabLabelsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Point', coordinates: center } })
     slabs.push({ id: slab.key, segmentId: segment.id, segmentCode: segment.code,
