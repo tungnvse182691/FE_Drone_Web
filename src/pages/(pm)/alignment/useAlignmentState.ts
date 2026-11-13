@@ -236,6 +236,7 @@ export function useAlignmentState() {
   const onSelectSegmentRef = useRef<((id: string, branchId?: string, feature?: any) => void) | null>(null)
 
   const handleSelectSegmentFromMap = (segId: string, branchId?: string, _feature?: any) => {
+    pavementWorkflow.asBuilt.selectFeature(_feature)
     const allBranches = branchesRef.current || []
     const allSegs = segmentsRef.current || []
 

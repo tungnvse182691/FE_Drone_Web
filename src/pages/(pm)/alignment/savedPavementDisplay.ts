@@ -32,7 +32,8 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
     const properties = { id: slab.key, code: slab.key, station: stationText, lane: lateralText, edgeOffset: lateralText,
       fromOffsetMeters: cell?.fromOffsetMeters ?? null, toOffsetMeters: cell?.toOffsetMeters ?? null, fromLateralMeters: cell?.fromLateralMeters ?? null, toLateralMeters: cell?.toLateralMeters ?? null, segmentId: segment.id, segmentCode: segment.code,
       lengthM: slab.lengthMeters ?? Number.NaN, widthM: slab.widthMeters ?? Number.NaN, thicknessCm: planned ? layout?.slabThicknessCentimeters ?? Number.NaN : Number.NaN,
-      startKm: cell && Number.isFinite(origin) ? (origin! + cell.fromOffsetMeters) / 1000 : null, endKm: cell && Number.isFinite(origin) ? (origin! + cell.toOffsetMeters) / 1000 : null, source: 'SERVER_SNAPSHOT', layoutId: snapshot.id }
+      startKm: cell && Number.isFinite(origin) ? (origin! + cell.fromOffsetMeters) / 1000 : null, endKm: cell && Number.isFinite(origin) ? (origin! + cell.toOffsetMeters) / 1000 : null, source: 'SERVER_SNAPSHOT', layoutId: snapshot.id,
+      layoutKind: snapshot.kind, plannedSequence: slab.plannedSequence ?? null, slabSource: slab.source ?? null, provenanceStatus: slab.provenanceStatus ?? null, dimensionUnknownReason: slab.dimensionUnknownReason ?? null }
     preview.slabsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Polygon', coordinates: [ring] } })
     preview.slabLabelsGeoJSON.features.push({ type: 'Feature', properties, geometry: { type: 'Point', coordinates: center } })
     slabs.push({ id: slab.key, segmentId: segment.id, segmentCode: segment.code,
@@ -52,6 +53,6 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
     Number.isFinite(route?.lengthMeters) && Math.abs(offsets[offsets.length - 1] - route!.lengthMeters) <= 1e-12 * Math.max(1, route!.lengthMeters)
   const previewCoordinates = previewReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : []
   const kmPoints = previewReady ? offsets.map(offset => (origin! + offset) / 1000) : []
-  return { preview, segments, slabs, coordinates: previewReady ? previewCoordinates : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
-    previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: `Snapshot server ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m · chưa phải Sup duyệt` }
+  return { preview, segments, slabs, route, engineeringSrid: srid, stationOriginMeters: origin, coordinates: previewReady ? previewCoordinates : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
+    previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: planned ? `Snapshot server ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m · chưa phải Sup duyệt` : `Hoàn công máy chủ ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m` }
 }

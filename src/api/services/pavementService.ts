@@ -8,6 +8,12 @@ export interface PavementLayoutInput {
   expansionJointSpacingMeters?: number | null; expansionJointGapMillimeters?: number | null
 }
 export interface PavementPlanInput { layout: PavementLayoutInput; displayToleranceMeters: number }
+export interface AsBuiltSlabInput {
+  key: string; plannedSequence?: number | null; footprint: Array<{ x: number; y: number }>
+  lengthMeters?: number | null; widthMeters?: number | null; dimensionUnknownReason?: string | null
+  source: string; sourceFileId?: string | null
+}
+export interface AsBuiltLayoutInput { sourcePlanId: string; slabs: AsBuiltSlabInput[]; reason: string }
 export interface PavementLayoutView {
   id: string; projectId: string; routeVersionId: string; segmentSetId: string
   sourcePlanId?: string | null; crsProfileRevisionId?: string | null; kind: string; contentHash: string
@@ -15,7 +21,7 @@ export interface PavementLayoutView {
   geometry: {
     displayToleranceMeters: number
     plan?: { analyticLengthMeters: number; cells: Array<{ sequence: number; fromOffsetMeters: number; toOffsetMeters: number; fromLateralMeters: number; toLateralMeters: number }> } | null
-    slabs: Array<{ key: string; plannedSequence?: number | null; lengthMeters?: number | null; widthMeters?: number | null; footprint: Array<{ x: number; y: number }> }>
+    slabs: Array<Omit<AsBuiltSlabInput, 'source'> & { source?: string; provenanceStatus?: string }>
   }
 }
 export interface PavementPins { projectId: string; roadSectionId: string; routeVersionId: string; segmentSetId: string; lengthMeters: number }
@@ -78,6 +84,10 @@ export const pavementService = {
   },
   async create(pins: PavementPins, input: PavementPlanInput, key: string): Promise<PavementLayoutView> {
     return (await apiClient.post(`/projects/${pins.projectId}/route-versions/${pins.routeVersionId}/segment-sets/${pins.segmentSetId}/pavement-plans`, input, { headers: { 'Idempotency-Key': key } })).data
+  },
+  async createAsBuilt(projectId: string, input: AsBuiltLayoutInput, sourceHash: string, key: string): Promise<PavementLayoutView> {
+    if (!/^[a-f0-9]{64}$/i.test(sourceHash)) throw new Error('Thiếu contentHash PLANNED nguồn hợp lệ.')
+    return (await apiClient.post(`/projects/${projectId}/pavement-layouts/as-built`, input, { headers: { 'Idempotency-Key': key, 'If-Match': `"${sourceHash}"` } })).data
   },
   async read(projectId: string, layoutId: string): Promise<PavementLayoutView> {
     const value = (await apiClient.get(`/projects/${projectId}/pavement-layouts/${layoutId}`)).data

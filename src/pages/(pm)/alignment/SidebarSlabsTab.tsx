@@ -4,6 +4,8 @@ import { SlabItem, SegmentItem } from './types'
 import { pavementInputIssues, pavementNumber } from './alignmentPavementHelpers'
 
 export interface SidebarSlabsTabProps {
+  asBuiltDraft?: boolean
+  layoutKind?: string
   serverSnapshot?: boolean
   stripWidthMeters: number | string
   onSetStripWidthMeters: (val: number | string) => void
@@ -26,6 +28,8 @@ export interface SidebarSlabsTabProps {
 }
 
 export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
+  asBuiltDraft = false,
+  layoutKind,
   serverSnapshot = false,
   stripWidthMeters,
   onSetStripWidthMeters,
@@ -47,7 +51,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
   const scopedSegments = selectedSegmentId === 'ALL' || !selectedSegmentId ? segments : segments.filter(segment => segment.id === selectedSegmentId)
   const scopedSlabs = slabs.filter(slab => scopedSegments.some(segment => segment.id === slab.segmentId))
   const issues = serverSnapshot ? [] : pavementInputIssues(segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).filter(issue => !issue.segmentId || scopedSegments.some(segment => segment.id === issue.segmentId))
-  const notice = serverSnapshot ? 'Snapshot tấm đã lưu trên máy chủ; KC/KG chỉ là cấu hình, chưa phải geometry khe được xác nhận.' : !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
+  const notice = asBuiltDraft ? 'Tấm thực tế trong bản nhập hoàn công chưa lưu; footprint và số đo do PM nhập.' : serverSnapshot ? 'Snapshot tấm đã lưu trên máy chủ; KC/KG chỉ là cấu hình, chưa phải geometry khe được xác nhận.' : !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
     : issues.map(issue => issue.message).join('; ')
   const inputValue = (value: number | string) => typeof value === 'string' ? value : Number.isFinite(value) ? value : ''
   return (
@@ -56,7 +60,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
             <Grid className="w-3.5 h-3.5 text-brand-gold" />
-            <span>Cấu Hình Tấm & Khe Nối BTXM</span>
+            <span>Cấu Hình Tấm & Khe Nối BTXM{layoutKind === 'AS_BUILT' ? ' — thiết kế nguồn' : ''}</span>
           </span>
           <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
             PM Tự chỉnh sửa
@@ -208,7 +212,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs font-bold text-brand-dark flex items-center gap-1">
-            <span>Danh Sách Tấm BTXM ({scopedSlabs.length})</span>
+            <span>{layoutKind === 'AS_BUILT' ? 'Danh Sách Tấm Thực Tế' : 'Danh Sách Tấm BTXM'} ({scopedSlabs.length})</span>
           </span>
           <span className="text-[10px] text-slate-500 font-mono">
             {Number.isFinite(pavementNumber(slabLengthM)) && pavementNumber(slabLengthM) > 0 ? `L = ${slabLengthM}m` : 'Chưa có chiều dài tấm hợp lệ'}

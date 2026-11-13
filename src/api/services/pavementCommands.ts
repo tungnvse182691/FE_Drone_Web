@@ -1,6 +1,6 @@
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { pavementService, type PavementLayoutInput, type PavementLayoutView, type PavementPins, type PavementPlanInput } from './pavementService'
+import { pavementService, type AsBuiltLayoutInput, type PavementLayoutInput, type PavementLayoutView, type PavementPins, type PavementPlanInput } from './pavementService'
 
 export interface PavementEditor {
   stripWidthMeters: number | string; slabLengthM: number | string; slabThicknessCm: number | string
@@ -60,6 +60,7 @@ export function pendingPavement(projectId: string): Pending | null {
 export async function savePavement(projectId: string, intent?: { pins: PavementPins; input: PavementPlanInput }): Promise<PavementLayoutView> {
   const state = useAuthStore.getState(), key = journal(projectId), actor = state.user!.id, epoch = state.authEpoch
   if (state.user?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được lưu cấu hình tấm/khe.')
+  if (pendingAsBuilt(projectId)) throw new Error('Đang có lệnh hoàn công chờ đối chiếu; chưa tạo PLANNED mới.')
   const current = () => { const now = useAuthStore.getState(); if (now.authEpoch !== epoch || now.user?.id !== actor || !now.isAuthenticated) throw new Error('Phiên thay đổi; bỏ kết quả pavement cũ.') }
   if (busy.has(key)) throw new Error('Đang đối chiếu lệnh lưu tấm/khe.')
   let held = pendingPavement(projectId)
@@ -116,5 +117,92 @@ export function verifyPavementGeometry(value: PavementLayoutView): void {
 export function revisePavement(projectId: string): void {
   const key = journal(projectId), held = pendingPavement(projectId)
   if (busy.has(key) || !held?.rejected || held.receipt) throw new Error('Command chưa bị từ chối rõ ràng; không được đổi key/payload.')
+  sessionStorage.removeItem(key)
+}
+
+export function validateAsBuilt(input: AsBuiltLayoutInput, source: PavementLayoutView): void {
+  if (source.kind !== 'PLANNED' || input.sourcePlanId !== source.id || !/^[a-f0-9]{64}$/i.test(source.contentHash)) throw new Error('Phải chọn đúng PLANNED nguồn đã đọc từ máy chủ.')
+  if (!input.reason?.trim() || input.reason.trim().length > 2000) throw new Error('Lý do hoàn công: bắt buộc, tối đa 2000 ký tự.')
+  validateAsBuiltSlabs(input.slabs, source)
+}
+export function validateAsBuiltSlabs(slabs: AsBuiltLayoutInput['slabs'], source: PavementLayoutView): void {
+  if (!Array.isArray(slabs) || slabs.length < 1 || slabs.length > 10000) throw new Error('Cần từ 1 đến 10000 tấm thực tế.')
+  const keys = new Set<string>(); let vertices = 0
+  for (const [i, slab] of slabs.entries()) {
+    const fail = (field: string) => { throw new Error(`Tấm ${i + 1} (${slab?.key || 'chưa có mã'}): ${field}`) }
+    if (!slab || !slab.key?.trim() || !/^[!-~]{1,80}$/.test(slab.key) || keys.has(slab.key)) fail('mã bắt buộc, duy nhất, tối đa 80 ký tự ASCII hiển thị.')
+    keys.add(slab.key)
+    if (!slab.source?.trim() || slab.source.length > 80) fail('nguồn ghi nhận bắt buộc, tối đa 80 ký tự.')
+    if (slab.plannedSequence != null && (!Number.isInteger(slab.plannedSequence) || !source.geometry.slabs.some(s => s.plannedSequence === slab.plannedSequence))) fail('sequence không thuộc PLANNED nguồn.')
+    for (const n of [slab.lengthMeters, slab.widthMeters]) if (n != null && (!Number.isFinite(n) || n <= 0)) fail('kích thước đã nhập phải hữu hạn và lớn hơn 0.')
+    if ((slab.lengthMeters == null || slab.widthMeters == null) && (!slab.dimensionUnknownReason?.trim() || slab.dimensionUnknownReason.length > 500)) fail('cần lý do chưa biết kích thước, tối đa 500 ký tự.')
+    if (slab.sourceFileId != null && !/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(slab.sourceFileId)) fail('sourceFileId phải là ID tệp hợp lệ hoặc để trống.')
+    const ring = slab.footprint
+    if (!Array.isArray(ring) || ring.length < 4 || ring.length > 8195 || ring.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y))) fail('footprint cần 4–8195 điểm X/Y hữu hạn.')
+    if (ring[0].x !== ring[ring.length - 1].x || ring[0].y !== ring[ring.length - 1].y) fail('footprint phải khép kín; nhập lại điểm đầu ở cuối.')
+    let area = 0
+    for (let j = 1; j < ring.length; j++) area += (ring[j - 1].x - ring[0].x) * (ring[j].y - ring[0].y) - (ring[j].x - ring[0].x) * (ring[j - 1].y - ring[0].y)
+    if (!Number.isFinite(area) || area === 0) fail('footprint phải có diện tích dương; máy chủ kiểm polygon hợp lệ.')
+    vertices += ring.length
+  }
+  if (vertices > 1000000) throw new Error('Footprint vượt tổng 1000000 đỉnh.')
+}
+interface AsBuiltPending { key: string; pins: PavementPins; sourcePlanId: string; sourceHash: string; input: AsBuiltLayoutInput; receipt?: { id: string; contentHash: string }; rejected?: boolean }
+export function pendingAsBuilt(projectId: string): AsBuiltPending | null {
+  const raw = sessionStorage.getItem(`${journal(projectId)}_asbuilt`)
+  if (!raw) return null
+  const held = JSON.parse(raw) as AsBuiltPending
+  if (!held.key || held.pins?.projectId !== projectId || held.input?.sourcePlanId !== held.sourcePlanId || !Array.isArray(held.input?.slabs) || !/^[a-f0-9]{64}$/i.test(held.sourceHash)) throw new Error('Journal hoàn công không hợp lệ; cần đối chiếu trước khi ghi.')
+  return held
+}
+export async function saveAsBuilt(projectId: string, intent?: { pins: PavementPins; source: PavementLayoutView; input: AsBuiltLayoutInput }): Promise<PavementLayoutView> {
+  const state = useAuthStore.getState(), key = `${journal(projectId)}_asbuilt`, actor = state.user!.id, epoch = state.authEpoch
+  const current = () => { const now = useAuthStore.getState(); if (!now.isAuthenticated || now.user?.id !== actor || now.authEpoch !== epoch) throw new Error('Phiên thay đổi; bỏ kết quả hoàn công cũ.') }
+  if (state.user?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được ghi hoàn công.')
+  if (busy.has(key) || pendingPavement(projectId)) throw new Error('Có lệnh pavement đang chờ; cần đối chiếu trước.')
+  let held = pendingAsBuilt(projectId)
+  if (held?.rejected) throw new Error('Lệnh hoàn công đã bị từ chối; đọc nguồn và đối chiếu trước khi sửa lệnh.')
+  if (held && intent) throw new Error('Giữ nguyên key/body/hash của lệnh hoàn công đang chờ.')
+  if (!held) {
+    if (!intent || intent.pins.projectId !== projectId || intent.source.projectId !== projectId || intent.source.routeVersionId !== intent.pins.routeVersionId || intent.source.segmentSetId !== intent.pins.segmentSetId) throw new Error('PLANNED nguồn sai phạm vi dự án/tuyến/phân đoạn.')
+    validateAsBuilt(intent.input, intent.source)
+    held = JSON.parse(JSON.stringify({ key: crypto.randomUUID(), pins: intent.pins, sourcePlanId: intent.source.id, sourceHash: intent.source.contentHash, input: intent.input })) as AsBuiltPending
+    sessionStorage.setItem(key, JSON.stringify(held))
+  }
+  busy.add(key)
+  try {
+    if (!held.receipt) {
+      const source = await pavementService.read(projectId, held.sourcePlanId); current()
+      if (source.routeVersionId !== held.pins.routeVersionId || source.segmentSetId !== held.pins.segmentSetId || source.contentHash !== held.sourceHash) throw new Error('PLANNED nguồn thay đổi; đối chiếu lại, không tự thay hash.')
+      validateAsBuilt(held.input, source)
+      await pavementService.layoutRoute(projectId, source, held.pins.roadSectionId, held.pins.routeVersionId, held.pins.segmentSetId); current()
+      const receipt = await pavementService.createAsBuilt(projectId, held.input, held.sourceHash, held.key); current()
+      held.receipt = { id: receipt?.id, contentHash: receipt?.contentHash }
+      sessionStorage.setItem(key, JSON.stringify(held))
+    }
+    if (!held.receipt.id) throw new Error('Receipt thiếu layoutId; không POST lại, cần đối chiếu máy chủ.')
+    const result = await pavementService.read(projectId, held.receipt.id); current()
+    if (result.kind !== 'AS_BUILT' || result.sourcePlanId !== held.sourcePlanId || result.routeVersionId !== held.pins.routeVersionId || result.segmentSetId !== held.pins.segmentSetId || result.contentHash !== held.receipt.contentHash || !/^[a-f0-9]{64}$/i.test(result.contentHash) || result.geometry.plan != null || result.geometry.slabs.length !== held.input.slabs.length) throw new Error('Readback AS_BUILT sai loại/nguồn/pin/hash hoặc số tấm; giữ receipt.')
+    for (const slab of held.input.slabs) {
+      const matches = result.geometry.slabs.filter(s => s.key === slab.key), actual = matches[0]
+      if (matches.length !== 1 || ['plannedSequence','lengthMeters','widthMeters','dimensionUnknownReason','source','sourceFileId'].some(k => {
+        const a = (actual as any)[k] ?? null, b = (slab as any)[k] ?? null
+        return k === 'sourceFileId' && typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() !== b.toLowerCase() : a !== b
+      }) || !Array.isArray(actual.footprint) || actual.footprint.length !== slab.footprint.length || actual.footprint.some((p, i) => !p || p.x !== slab.footprint[i].x || p.y !== slab.footprint[i].y)) throw new Error(`Readback tấm ${slab.key} không khớp dữ liệu hoàn công; giữ receipt.`)
+    }
+    return result
+  } catch (error: any) {
+    if (!held.receipt && [400,403,404,409,412,422].includes(error?.response?.status)) { current(); held.rejected = true; sessionStorage.setItem(key, JSON.stringify(held)) }
+    throw error
+  } finally { busy.delete(key) }
+}
+export function completeAsBuilt(projectId: string, result: PavementLayoutView): void {
+  const key = `${journal(projectId)}_asbuilt`, held = pendingAsBuilt(projectId)
+  if (useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER || busy.has(key) || !held?.receipt || held.receipt.id !== result.id || held.receipt.contentHash !== result.contentHash || result.projectId !== projectId || result.sourcePlanId !== held.sourcePlanId || result.routeVersionId !== held.pins.routeVersionId || result.segmentSetId !== held.pins.segmentSetId) throw new Error('Chưa đối chiếu đúng hoàn công; giữ receipt.')
+  sessionStorage.removeItem(key)
+}
+export function reviseAsBuilt(projectId: string): void {
+  const key = `${journal(projectId)}_asbuilt`, held = pendingAsBuilt(projectId)
+  if (busy.has(key) || !held?.rejected || held.receipt) throw new Error('Chưa có từ chối rõ ràng; giữ key/body/receipt để đọc lại.')
   sessionStorage.removeItem(key)
 }

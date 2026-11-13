@@ -7,6 +7,7 @@ export function slabPopupValues(p: Record<string, unknown>) {
   return { code: escape(text(p.code)), station: escape(text(p.station)), lane: escape(text(p.lane)), edgeOffset: escape(text(p.edgeOffset)),
     dimensions: `${metric(p.lengthM, 'm')} × ${metric(p.widthM, 'm')} × ${metric(p.thicknessCm, 'cm')}`,
     contraction: metric(p.contractionSpacingM, 'm'),
+    captureSource: escape(text(p.slabSource)), provenance: escape(text(p.provenanceStatus)), dimensionReason: escape(text(p.dimensionUnknownReason)),
     lateralLabel: snapshot ? 'Vị trí dải ngang' : 'Cự ly mép đường',
-    status: snapshot ? `Đã lưu trên máy chủ · layoutId: ${escape(text(p.layoutId))}` : 'Preview — chưa lưu/chưa xác nhận' }
+    status: snapshot ? `Đã lưu trên máy chủ · layoutId: ${escape(text(p.layoutId))}${p.layoutKind === 'AS_BUILT' ? ' · Tấm thực tế' : p.layoutKind === 'PLANNED' ? ' · Tấm thiết kế' : ''}` : p.source === 'AS_BUILT_DRAFT' ? 'Tấm thực tế · bản nhập hoàn công chưa lưu' : 'Preview — chưa lưu/chưa xác nhận' }
 }

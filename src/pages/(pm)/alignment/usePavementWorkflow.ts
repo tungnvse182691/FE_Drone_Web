@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { pavementService, type PavementLayoutInput, type PavementLayoutView, type PavementPins, type PavementLayoutSummary } from '../../../api/services/pavementService'
 import { pavementInput, pendingPavement, sameLayout, revisePavement, savePavement, completePavement, type PavementEditor } from '../../../api/services/pavementCommands'
+import { useAsBuiltWorkflow } from './useAsBuiltWorkflow'
 
 export function usePavementWorkflow(projectId: string, sectionId: string, editor: PavementEditor,
   widthProfile: PavementLayoutInput['widthProfile'], widthsDirty: boolean, mainline: boolean,
@@ -31,7 +32,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
   if (discoveryRevision.current.scope !== discoveryScope) discoveryRevision.current = { scope: discoveryScope, revision: editRevision }
   const openLayout = (id: string) => {
     const row = layouts.find(item => item.layoutId === id)
-    if (!row || listScope !== discoveryScope || busy || pending) return
+    if (!row || listScope !== discoveryScope || busy || pending || asBuilt.active || asBuilt.pending) return
     setParams(current => { const next = new URLSearchParams(current); next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next })
   }
   useEffect(() => {
@@ -82,7 +83,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
           else refs.current.notify('Đã đọc layout; bản chỉnh mới hơn được giữ, chưa nạp đè form.')
         }
         setSavedProfile(configuration?.layout?.widthProfile || null); setSavedWidthRevision(initialWidthRevision)
-        setMessage(`Đã đọc layout ${value.id}: ${value.geometry.plan?.cells?.length ?? 0} cell, ${value.geometry.slabs.length} tấm từ geometry server. ${value.kind === 'AS_BUILT' ? configuration ? 'Form lấy từ sourcePlanId, geometry vẫn là AS_BUILT.' : 'layout=null, chưa có cấu hình PLANNED nguồn.' : configuration ? 'KC/KG chỉ là cấu hình, chưa phải hình học khe được server xác nhận.' : 'layout=null: máy chủ không có cấu hình gốc.'}`)
+        setMessage(`Đã đọc layout ${value.id}: ${value.kind === 'AS_BUILT' ? '' : `${value.geometry.plan?.cells?.length ?? 'chưa có'} cell, `}${value.geometry.slabs.length} tấm từ geometry server. ${value.kind === 'AS_BUILT' ? configuration ? 'Form lấy từ sourcePlanId, geometry vẫn là AS_BUILT.' : 'layout=null, chưa có cấu hình PLANNED nguồn.' : configuration ? 'KC/KG chỉ là cấu hình, chưa phải hình học khe được server xác nhận.' : 'layout=null: máy chủ không có cấu hình gốc.'}`)
       }).catch(error => { if (active) { setError(`Không đọc được layout: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`) } }).finally(() => { if (active) setLoading(false) })
     }
     return () => { active = false }
@@ -100,7 +101,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
   const save = async () => {
     if (running.current) return
     const selected = selection.current, current = () => selection.current === selected && useAuthStore.getState().authEpoch === epoch
-    if (actor.user?.role !== RoleCode.PROJECT_MANAGER) return
+    if (actor.user?.role !== RoleCode.PROJECT_MANAGER || asBuilt.active || asBuilt.pending) return
     running.current = true; setBusy(true)
     try {
       let held = pendingPavement(projectId)
@@ -137,5 +138,19 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       setMessage(text); refs.current.notify(text)
     } finally { if (current()) { running.current = false; setBusy(false) } }
   }
-  return { layouts: listScope === discoveryScope ? layouts : [], openLayout, listLoading, listError, layoutDiscoveryMessage: !layoutId && pins && (!pinnedSet || pins.segmentSetId !== pinnedSet) ? 'Giữ bản phân đoạn đang chọn. Để xem layout đã lưu, hãy chủ động chọn segment set PUBLISHED.' : listLoading ? 'Đang tìm layout…' : listError || (!layoutId && listScope === discoveryScope ? layouts.length > 1 ? 'Có nhiều layout; chọn theo loại và thời gian lưu.' : layouts.length === 1 ? 'Có layout đã lưu; chọn để đọc cấu hình.' : 'Chưa có layout' : ''), save, busy, loading, error, previewBase: hydrated.current === scope ? display : null, display: hydrated.current === scope && (savedRevision === editRevision || !display?.previewReady) ? display : null, savedProfile, pending, snapshot, layoutId, message: [message, loading ? 'Đang đọc layout server…' : error, display && savedRevision !== editRevision ? display.previewReady ? 'Preview PM mới chưa lưu; snapshot server được giữ riêng.' : display.previewBlocker : ''].filter(Boolean).join(' '), disabledReason, actionLabel, scopeMessage: pins ? `Lưu trên route ${pins.routeVersionId}, segment set ${pins.segmentSetId} đã PUBLISHED từ server; hình học khe preview chưa được xác nhận.` : '', retry: () => setReload(value => value + 1) }
+  const asBuilt = useAsBuiltWorkflow(projectId, scope, hydrated.current === scope ? snapshot : null, pins, hydrated.current === scope ? display : null,
+    busy || !!pending || loading || !!error || !!prerequisite || savedRevision !== editRevision, (value, rendered) => {
+      setSnapshot(value); setDisplay(rendered); setSavedRevision(revision.current)
+      const next = new URLSearchParams(params); next.set('layoutId', value.id); next.set('routeVersionId', value.routeVersionId); next.set('segmentSetId', value.segmentSetId)
+      const road = rendered.route!.roadSectionId!; next.set('roadSectionId', road)
+      hydrated.current = `${epoch}:${actor.user?.id}:${projectId}:${road}:${value.routeVersionId}:${value.segmentSetId}:${value.id}`
+      setParams(next); setMessage('Đã đọc hình học AS_BUILT từ máy chủ; cấu hình thiết kế nguồn không thay thế footprint hoàn công.')
+    }, notify)
+  const openAsBuiltSource = () => {
+    const held = asBuilt.pending
+    if (!held || asBuilt.busy) return
+    if (params.get('layoutId') === held.sourcePlanId && params.get('roadSectionId') === held.pins.roadSectionId && params.get('routeVersionId') === held.pins.routeVersionId && params.get('segmentSetId') === held.pins.segmentSetId) { setReload(value => value + 1); return }
+    setParams(current => { const next = new URLSearchParams(current); next.set('layoutId', held.sourcePlanId); next.set('roadSectionId', held.pins.roadSectionId); next.set('routeVersionId', held.pins.routeVersionId); next.set('segmentSetId', held.pins.segmentSetId); return next })
+  }
+  return { asBuilt, openAsBuiltSource, layouts: listScope === discoveryScope ? layouts : [], openLayout, listLoading, listError, layoutDiscoveryMessage: !layoutId && pins && (!pinnedSet || pins.segmentSetId !== pinnedSet) ? 'Giữ bản phân đoạn đang chọn. Để xem layout đã lưu, hãy chủ động chọn segment set PUBLISHED.' : listLoading ? 'Đang tìm layout…' : listError || (!layoutId && listScope === discoveryScope ? layouts.length > 1 ? 'Có nhiều layout; chọn theo loại và thời gian lưu.' : layouts.length === 1 ? 'Có layout đã lưu; chọn để đọc cấu hình.' : 'Chưa có layout' : ''), save, busy: busy || asBuilt.busy, loading, error, previewBase: asBuilt.preview || (hydrated.current === scope ? display : null), display: asBuilt.preview || (hydrated.current === scope && (savedRevision === editRevision || !display?.previewReady) ? display : null), savedProfile, pending, snapshot, layoutId, message: [asBuilt.preview ? `Bản nhập hoàn công: ${asBuilt.slabs.length} tấm thực tế chưa lưu; PLANNED nguồn giữ riêng.` : message, loading ? 'Đang đọc layout server…' : error, display && savedRevision !== editRevision ? display.previewReady ? 'Preview PM mới chưa lưu; snapshot server được giữ riêng.' : display.previewBlocker : ''].filter(Boolean).join(' '), disabledReason, actionLabel, scopeMessage: pins ? `Lưu trên route ${pins.routeVersionId}, segment set ${pins.segmentSetId} đã PUBLISHED từ server; hình học khe preview chưa được xác nhận.` : '', retry: () => setReload(value => value + 1) }
 }
