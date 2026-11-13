@@ -27,6 +27,8 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
   const [layouts, setLayouts] = useState<PavementLayoutSummary[]>([]), [listLoading, setListLoading] = useState(false), [listError, setListError] = useState(''), [listScope, setListScope] = useState('')
   const pinnedRoute = params.get('routeVersionId') || '', pinnedSet = params.get('segmentSetId') || ''
   const discoveryScope = `${epoch}:${actor.user?.id}:${projectId}:${sectionId}:${pinnedRoute}:${pinnedSet}`
+  const discoveryRevision = useRef({ scope: discoveryScope, revision: editRevision })
+  if (discoveryRevision.current.scope !== discoveryScope) discoveryRevision.current = { scope: discoveryScope, revision: editRevision }
   const openLayout = (id: string) => {
     const row = layouts.find(item => item.layoutId === id)
     if (!row || listScope !== discoveryScope || busy || pending) return
@@ -41,7 +43,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       if (!active || useAuthStore.getState().authEpoch !== epoch) return
       setLayouts(rows); setListScope(discoveryScope)
       if (!layoutId && rows.length === 1 && !pendingPavement(projectId)) setParams(current => {
-        if (current.get('layoutId') || current.get('segmentSetId') !== pins.segmentSetId || current.get('routeVersionId') !== pins.routeVersionId) return current
+        if (revision.current !== discoveryRevision.current.revision || current.get('layoutId') || current.get('segmentSetId') !== pins.segmentSetId || current.get('routeVersionId') !== pins.routeVersionId) return current
         const next = new URLSearchParams(current), row = rows[0]
         next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next
       }, {replace: true})
@@ -52,8 +54,9 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
     let active = true
     setPins(null); setPrerequisite('Đang đọc prerequisite tấm/khe.')
     if (!projectId) { setPrerequisite('Chưa chọn dự án.'); return }
-    // The segment editor may show a DRAFT. New pavement uses the route's unique server publication.
-    pavementService.discover(projectId, sectionId, pinnedRoute, layoutId ? pinnedSet : undefined).then(value => { if (active) { setPins(value); setPrerequisite('') } })
+    if (!pinnedRoute || !pinnedSet) { setPrerequisite('Chọn phiên bản tuyến và segment set PUBLISHED trước khi lưu layout mới.'); return }
+    // A DRAFT selection must never silently become a different publication for a new layout.
+    pavementService.discover(projectId, sectionId, pinnedRoute, pinnedSet).then(value => { if (active) { setPins(value); setPrerequisite('') } })
       .catch(error => { if (active) setPrerequisite(error?.response ? `Không đọc được prerequisite tấm/khe: HTTP ${error.response.status}, ${error.response.data?.code || 'unknown'}.` : error.message) })
     return () => { active = false }
   }, [projectId, sectionId, pinnedRoute, pinnedSet, layoutId, epoch, reload])

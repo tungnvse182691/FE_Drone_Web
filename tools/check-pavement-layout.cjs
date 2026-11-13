@@ -48,20 +48,23 @@ await test('layout list paginates exact pins; empty distinct from API/schema/sco
  e.client.get=async()=>{throw Object.assign(Error('403'),{response:{status:403}})};await assert.rejects(e.service.list(pins),/403/)
 })
 await test('layout discovery hook auto-opens unique server reference and preserves multi-choice explicit historical ID; late scope rejected',async()=>{
- for(const mode of ['one','many','empty','error','late','draft','new','late-selection']){
-  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));let slot=0,view,query=new URLSearchParams('routeVersionId=route&segmentSetId=set'),id=project,finish;const values=[],effects=[]
+ for(const mode of ['one','many','empty','error','late','draft','new','late-selection','late-edit','early-edit']){
+  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1);e.setResult(fixture(input));let slot=0,view,query=new URLSearchParams('routeVersionId=route&segmentSetId=set'),id=project,finish,revision=0;const values=[],effects=[]
   e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],n=>values[i]=typeof n==='function'?n(values[i]):n]},useRef(v){const i=slot++;return values[i]||(values[i]={current:v})},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
   e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=typeof next==='function'?next(query):next]}
   if(mode==='draft')query.set('segmentSetId','draft-on-screen');if(mode==='new')query.delete('segmentSetId')
   const row={layoutId:'layout',projectId:project,roadSectionId:'road',routeVersionId:'route',segmentSetId:'set',kind:'PLANNED',sourcePlanId:null,createdAt:'2026-11-10T01:00:00Z',contentHash:'a'.repeat(64)}
-  e.service.list=async()=>{if(mode==='late'||mode==='late-selection')return new Promise(r=>finish=r);if(mode==='error')throw Object.assign(Error('503'),{response:{status:503}});return mode==='empty'?[]:mode==='many'?[row,{...row,layoutId:'other'}]:[row]}
-  const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow,render=()=>{slot=0;view=hook(id,'road',editor,widths,false,true,()=>{},()=>{});for(const fx of effects)if(fx?.pending){fx.pending=false;fx.cleanup?.();fx.cleanup=fx.fn()}},flush=async()=>{for(let i=0;i<35;i++){await Promise.resolve();render()}}
+  let discoverFinish;if(mode==='early-edit'){const discover=e.service.discover;e.service.discover=async(...args)=>{await new Promise(r=>discoverFinish=r);return discover(...args)}}
+  e.service.list=async()=>{if(mode==='late'||mode==='late-selection'||mode==='late-edit')return new Promise(r=>finish=r);if(mode==='error')throw Object.assign(Error('503'),{response:{status:503}});return mode==='empty'?[]:mode==='many'?[row,{...row,layoutId:'other'}]:[row]}
+  const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow,render=()=>{slot=0;view=hook(id,'road',editor,widths,false,true,()=>{},()=>{},revision);for(const fx of effects)if(fx?.pending){fx.pending=false;fx.cleanup?.();fx.cleanup=fx.fn()}},flush=async()=>{for(let i=0;i<35;i++){await Promise.resolve();render()}}
   render();await flush()
   if(mode==='one'){assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout');assert.ok(view.display)}
   if(mode==='many'){assert.equal(query.get('layoutId'),null);assert.equal(view.layouts.length,2);view.openLayout('layout');render();await flush();assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout')}
   if(mode==='empty')assert.equal(view.layoutDiscoveryMessage,'Chưa có layout')
   if(mode==='error'){assert.match(view.listError,/503/);assert.notEqual(view.layoutDiscoveryMessage,'Chưa có layout')}
-  if(mode==='draft'||mode==='new'){assert.equal(query.get('segmentSetId'),mode==='draft'?'draft-on-screen':null);assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,0);query.set('segmentSetId','set');render();await flush();assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout')}
+  if(mode==='draft'||mode==='new'){assert.equal(query.get('segmentSetId'),mode==='draft'?'draft-on-screen':null);assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,0);assert.ok(view.disabledReason);await view.save();await flush();assert.equal(e.calls.filter(x=>x.method==='POST').length,0);query.set('segmentSetId','set');render();await flush();assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout')}
+  if(mode==='late-edit'){revision++;render();finish([row]);await flush();assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,1)}
+  if(mode==='early-edit'){revision++;render();discoverFinish();await flush();assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,1)}
   if(mode==='late-selection'){query.set('segmentSetId','draft-on-screen');render();finish([row]);await flush();assert.equal(query.get('segmentSetId'),'draft-on-screen');assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null)}
   if(mode==='late'){id='other-project';render();finish([row]);await flush();assert.equal(query.get('layoutId'),null);assert.equal(view.layouts.length,0)}
   assert.equal(e.calls.filter(x=>x.method==='POST').length,0);effects.forEach(f=>f?.cleanup?.())
@@ -139,7 +142,9 @@ await test('PM hook keeps receipt after route readback failure, retries only GET
  const oldCommand={key:'held-key',pins:{...pins,segmentSetId:'old-published'},input:heldInputPlaceholder(),rejected:true}
  function heldInputPlaceholder(){return e.commands.pavementInput(editor,widths,10,.1)}
  const journal='rg_pavement_command_pm_'+project,raw=JSON.stringify(oldCommand);e.storage.set(journal,raw)
- render();await flush();assert.equal(e.storage.get(journal),raw);assert.equal(view.pending.pins.segmentSetId,'old-published');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);e.storage.delete(journal);view.retry();render();await flush();assert.equal(query.get('segmentSetId'),'draft-on-screen');assert.match(view.scopeMessage,/segment set set đã PUBLISHED/);assert.equal(view.disabledReason,'');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);await view.save();render();await flush()
+ render();await flush();assert.equal(e.storage.get(journal),raw);assert.equal(view.pending.pins.segmentSetId,'old-published');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);e.storage.delete(journal);view.retry();render();await flush()
+ assert.equal(query.get('segmentSetId'),'draft-on-screen');assert.ok(view.disabledReason);await view.save();await flush();assert.equal(e.calls.filter(x=>x.method==='POST').length,0)
+ query.set('segmentSetId','set');render();await flush();assert.match(view.scopeMessage,/segment set set đã PUBLISHED/);assert.equal(view.disabledReason,'');await view.save();render();await flush()
  assert.equal(query.get('layoutId'),'layout');assert.equal(query.get('routeVersionId'),'route');assert.equal(query.get('segmentSetId'),'set');assert.equal(e.calls.filter(x=>x.method==='POST').length,1);assert.equal(view.pending,null)
  const layoutRoute=e.service.layoutRoute;e.service.layoutRoute=async()=>{throw Error('route GET failed')}
  await view.save();render();await flush()
@@ -148,6 +153,33 @@ await test('PM hook keeps receipt after route readback failure, retries only GET
  e.service.layoutRoute=layoutRoute;await view.save();render();await flush()
  assert.equal(e.calls.filter(x=>x.method==='POST').length,2);assert.equal(view.pending,null)
  assert.equal(restored.length,0);assert.equal(view.snapshot.id,'layout');assert.equal(view.disabledReason,'')
+})
+await test('editing saved PLANNED creates a new layout on the selected pins; old layout survives and F5 restores all fields',async()=>{
+ const e=environment(),input=e.commands.pavementInput(editor,widths,10,.1),old={...fixture(input),id:'old'},records=new Map([['old',plain(old)]]),draft={...editor}
+ let slot=0,changed=false,view,revision=0,query=new URLSearchParams('layoutId=old&routeVersionId=route&segmentSetId=set'),restores=0,activeSet='set'
+ const values=[],effects=[],get=e.client.get
+ e.client.get=async(url,options)=>url.includes('/pavement-layouts/')?{data:plain(records.get(url.split('/').at(-1)))}:url.endsWith('/geometry')?{data:{projectId:project,roadSectionId:'road',routeVersionId:'route',engineeringSrid:32648,stationOriginMeters:0,lengthMeters:10,metricCenterline:{type:'LineString',coordinates:[[500000,1000000],[500006,1000008]]}}}:url.endsWith('/segment-sets')?{data:{items:[{id:'set',routeVersionId:'route',status:activeSet==='set'?'PUBLISHED':'SUPERSEDED'},...(activeSet==='set'?[]:[{id:activeSet,routeVersionId:'route',status:'PUBLISHED'}])],nextCursor:null}}:url.endsWith('/segment-sets/new-set')?{data:{id:'new-set',routeVersionId:'route',status:'PUBLISHED'}}:get(url,options)
+ e.client.post=async(url,body,options)=>{e.calls.push({method:'POST',url,body:plain(body),key:options.headers['Idempotency-Key']});const result={...fixture(body),id:records.size===1?'new':'newer',segmentSetId:url.split('/segment-sets/')[1].split('/')[0]};records.set(result.id,plain(result));return{data:result}}
+ e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
+ e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=typeof next==='function'?next(query):next]}
+ const restore=layout=>{restores++;Object.assign(draft,{stripWidthMeters:layout.stripWidthMeters,slabLengthM:layout.slabLengthMeters,slabThicknessCm:layout.slabThicknessCentimeters,contractionSpacingM:layout.contractionJointSpacingMeters,expansionSpacingM:layout.expansionJointSpacingMeters,expansionGapMm:layout.expansionJointGapMillimeters})}
+ const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow
+ function render(){for(let i=0;i<20;i++){changed=false;slot=0;view=hook(project,'road',draft,widths,false,true,restore,()=>{},revision);for(const fx of effects)if(fx?.pending){fx.pending=false;fx.cleanup?.();fx.cleanup=fx.fn()}if(!changed)return}throw Error('settle')}
+ async function flush(){for(let i=0;i<35;i++){await Promise.resolve();render()}}
+ render();await flush();assert.equal(view.snapshot.id,'old');assert.equal(view.previewBase.previewReady,true)
+ Object.assign(draft,{stripWidthMeters:'1.75',slabLengthM:'4',slabThicknessCm:'6',contractionSpacingM:'8',expansionSpacingM:'24',expansionGapMm:'2'});revision++;render()
+ assert.equal(view.display,null);assert.ok(view.previewBase);assert.equal(view.disabledReason,'')
+ const expected=e.commands.pavementInput(draft,widths,10,.1);await view.save();render();await flush()
+ const write=e.calls.find(c=>c.method==='POST');assert.deepEqual(write.body,plain(expected));assert.match(write.url,/route-versions\/route\/segment-sets\/set\/pavement-plans$/)
+ assert.equal(query.get('layoutId'),'new');assert.equal(query.get('routeVersionId'),'route');assert.equal(query.get('segmentSetId'),'set');assert.equal(view.snapshot.id,'new')
+ assert.deepEqual(plain(await e.service.read(project,'old')),plain(old));assert.equal(records.size,2)
+ effects.forEach(f=>f?.cleanup?.());values.length=0;effects.length=0;Object.keys(draft).forEach(k=>draft[k]='');render();await flush()
+ assert.equal(view.snapshot.id,'new');assert.equal(restores,2);assert.deepEqual(plain(e.commands.pavementInput(draft,widths,10,.1)),plain(expected));assert.equal(view.display.slabs.length,records.get('new').geometry.slabs.length)
+ assert.equal(e.calls.filter(c=>c.method==='POST').length,1)
+ activeSet='new-set';query.set('segmentSetId','new-set');query.delete('layoutId');render();await flush()
+ assert.equal(query.get('segmentSetId'),'new-set');assert.equal(view.disabledReason,'');await view.save();render();await flush()
+ assert.equal(query.get('layoutId'),'newer');assert.equal(view.snapshot.segmentSetId,'new-set');assert.equal(records.get('new').segmentSetId,'set');assert.deepEqual(plain(await e.service.read(project,'old')),plain(old))
+ assert.match(e.calls.filter(c=>c.method==='POST')[1].url,/segment-sets\/new-set\/pavement-plans$/)
 })
 await test('saved snapshot uses server widths/codes/footprints for map list HUD; unsupported CRS fails without synthesis',()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input)
@@ -176,7 +208,7 @@ await test('snapshot without station origin keeps real offsets and footprints wi
 })
 await test('layout retry reissues GET after error, preserves server tolerance and rejects late responses and newer PM edits',async()=>{
  const e=environment(),input=e.commands.pavementInput(editor,widths,10,.37),snapshot=fixture(input)
- let slot=0,changed=false,view,id=project,revision=0,query=new URLSearchParams('layoutId=layout'),restored=[],fail=true,reads=0,resolve
+ let slot=0,changed=false,view,id=project,revision=0,query=new URLSearchParams('layoutId=layout&routeVersionId=route&segmentSetId=set'),restored=[],fail=true,reads=0,resolve
  e.service.readConfiguration=async()=>{reads++;if(fail)throw Error('network');return{snapshot,configuration:snapshot}}
  const values=[],effects=[];e.mocks.react={useState(v){const i=slot++;if(!(i in values))values[i]=v;return[values[i],next=>{const n=typeof next==='function'?next(values[i]):next;if(!Object.is(n,values[i])){values[i]=n;changed=true}}]},useRef(v){const i=slot++;if(!(i in values))values[i]={current:v};return values[i]},useEffect(fn,deps){const i=slot++,old=effects[i];if(!old||deps.some((d,j)=>d!==old.deps[j]))effects[i]={fn,deps,pending:true,cleanup:old?.cleanup}}}
  e.mocks['react-router-dom']={useSearchParams:()=>[query,next=>query=typeof next==='function'?next(query):next]};const hook=e.load('src/pages/(pm)/alignment/usePavementWorkflow.ts').usePavementWorkflow
