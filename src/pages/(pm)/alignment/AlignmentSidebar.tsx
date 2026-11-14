@@ -12,6 +12,7 @@ import { SidebarSlabsTab } from './SidebarSlabsTab'
 import { SidebarFooterKpis } from './SidebarFooterKpis'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 import { AsBuiltPanel } from './AsBuiltPanel'
+import { GeometryImpactPanel } from './GeometryImpactPanel'
 import { MapPublicationPanel } from './MapPublicationPanel'
 
 export interface AlignmentSidebarProps {
@@ -258,6 +259,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           </>
         )}
         {rightTab === 'SLABS' && pavementWorkflow && <>
+          <GeometryImpactPanel />
           <MapPublicationPanel workflow={pavementWorkflow} readOnly={!!isSupervisor} />
           {pavementWorkflow.layoutDiscoveryMessage && <p role="status" className="text-xs text-slate-600">{pavementWorkflow.layoutDiscoveryMessage}</p>}
           {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="text-xs border rounded-lg p-2">Thử lại danh sách cấu hình</button>}
