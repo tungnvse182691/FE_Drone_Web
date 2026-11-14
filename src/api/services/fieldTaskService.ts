@@ -134,10 +134,14 @@ export const fieldTaskService = {
     const tasksByProject = await Promise.all(
       targetProjectIds.map(async (pId) => {
         try {
-          const res = await apiClient.get<{ items: BackendFieldTaskViewFact[]; nextCursor: string | null }>(
-            `/projects/${pId}/field-inspection-tasks`
-          )
-          return res.data?.items || []
+          const rows:BackendFieldTaskViewFact[]=[],seen=new Set<string>();let afterId:string|undefined
+          do {
+            const res=await apiClient.get<{items:BackendFieldTaskViewFact[];nextCursor:string|null}>(`/projects/${pId}/field-inspection-tasks`,{params:{limit:100,afterId}})
+            if(!Array.isArray(res.data?.items)||res.data.nextCursor!=null&&(typeof res.data.nextCursor!=='string'||!res.data.nextCursor))throw new Error('Danh sách nhiệm vụ FIELD sai contract.')
+            for(const row of res.data.items){if(!row.id||row.projectId!==pId||rows.some(r=>r.id===row.id))throw new Error('Nhiệm vụ FIELD sai dự án hoặc trùng ID.');rows.push(row)}
+            afterId=res.data.nextCursor||undefined;if(afterId&&seen.has(afterId))throw new Error('Cursor FIELD lặp.');if(afterId)seen.add(afterId)
+          }while(afterId)
+          return rows
         } catch (err: any) {
           throw err // API failure is not an empty project.
         }
@@ -174,7 +178,7 @@ export const fieldTaskService = {
         id: item.id,
         code: `TSK-MEAS-${shortId.slice(0, 4)}`,
         project_id: item.projectId,
-        project_name: proj?.name || 'Dự án CSDL RoadGuard',
+        project_name: proj?.name || 'Chưa có tên dự án',
         defect_id: item.defectId,
         defect_code: `#DEF-${defectShort}`,
         defect_name: `Khiếm khuyết mặt đường [#DEF-${defectShort}]`,
@@ -184,8 +188,8 @@ export const fieldTaskService = {
         technician_name: item.assignedToUserId ? `Crew (${item.assignedToUserId})` : 'Chưa phân công',
         created_at: undefined,
         lane: parsedLane,
-        notes: item.instructions || item.purpose || 'Đo đạc kiểm tra hiện trường theo chỉ định PM',
-        source_origin: (item.sourceKind === 'REPORTER' || item.sourceKind === 'CITIZEN_REPORT') ? 'CITIZEN_REPORT' : 'DRONE',
+        notes: item.instructions || item.purpose || '',
+        source_origin: item.sourceKind === 'REPORTER' ? 'CITIZEN_REPORT' : item.sourceKind === 'SURVEY' ? 'DRONE' : undefined,
 
         version: item.version || null,
         defect_photo_url: undefined,
@@ -385,16 +389,7 @@ export const fieldTaskService = {
    * Thẩm định & Xác minh số liệu vào hồ sơ lỗi (POST /api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/reviews)
    */
   async verifyTask(projectId: string, taskId: string, rowVersion?: string, decision: 'ACCEPT' | 'SUPPLEMENT' = 'ACCEPT'): Promise<void> {
-    const root = `/projects/${projectId}/field-inspection-tasks/${taskId}`
-    const task = await apiClient.get<{ latestSubmissionId?: string; version?: string }>(root)
-    if (!task.data.latestSubmissionId) throw new Error('Chưa có submission hiện trường để review.')
-    const submission = await apiClient.get<{ readiness?: string; missingReasons?: string[] }>(`${root}/submissions/${task.data.latestSubmissionId}`)
-    if (decision === 'ACCEPT' && submission.data.readiness !== 'READY') throw new Error(`Submission chưa đủ điều kiện xác nhận: ${(submission.data.missingReasons || []).join(', ') || submission.data.readiness}. Cần Crew bổ sung; không tự xác nhận số đo UNKNOWN.`)
-    const version = rowVersion || task.headers?.etag || task.data.version
-    if (!version) throw new Error('Thiếu version task để review.')
-    await apiClient.post(`${root}/reviews`, {
-      submissionId: task.data.latestSubmissionId, decision, reason: decision === 'SUPPLEMENT' ? `PM yêu cầu Crew bổ sung hồ sơ: ${(submission.data.missingReasons || []).join(', ') || 'Cần kiểm tra lại bằng chứng'}` : 'PM đối chiếu submission và bằng chứng hiện trường đạt yêu cầu'
-    }, { headers: { 'Idempotency-Key': generateUuid(), 'If-Match': version.startsWith('"') ? version : `"${version}"` } })
+    throw new Error('Mở chi tiết phiếu đo, đọc submission và chọn CONFIRM/NO_DEFECT/SUPPLEMENT cùng lý do trước khi review FIELD.')
   },
 
   /**

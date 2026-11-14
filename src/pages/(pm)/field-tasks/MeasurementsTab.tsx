@@ -1,3 +1,4 @@
+import { FieldTaskReadDetails } from './FieldTaskReadDetails'
 import React, { useState, useMemo } from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
@@ -386,21 +387,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   }
 
   // Xác minh số liệu vào hồ sơ (chuyển sang VERIFIED)
-  const handleVerifyTask = async (taskId: string, code: string) => {
-    setActionLoadingId(taskId)
-    try {
-      const task = fieldTasks.find((t) => t.id === taskId)
-      const pId = task?.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
-      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
-      await fieldTaskService.verifyTask(pId, taskId)
-      await onRefreshTasks()
-      notify(`✅ Đã xác minh số liệu cho phiếu [${code}] và chốt vào hồ sơ sửa chữa CSDL!`, 'success')
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Không thể xác minh'
-      notify(`❌ Lỗi: ${errMsg}`, 'error')
-    } finally {
-      setActionLoadingId(null)
-    }
+  const handleVerifyTask = (taskId:string) => {
+    const task=fieldTasks.find(item=>item.id===taskId)
+    if(task){setSelectedDetailTask(old=>old?.id===task.id?old:task);setTimeout(()=>document.querySelector<HTMLSelectElement>('[aria-label="Quyết định review FIELD"]')?.focus(),0)}
+    else notify('Không tìm thấy nhiệm vụ trong danh sách hiện tại; hãy đọc lại.','error')
   }
 
   // Mở modal phê duyệt tái sử dụng ảnh phản ánh (API-084)
@@ -841,10 +831,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             <span>Chi tiết & Ảnh</span>
                           </button>
 
-                          {task.status === 'SUBMITTED' && (
+                          {!isSupervisor && task.status === 'SUBMITTED' && (
                             <button
                               type="button"
-                              onClick={() => handleVerifyTask(task.id, task.code)}
+                              onClick={() => setSelectedDetailTask(task)}
                               className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
                               title="Chỉ huy trưởng (PM) thẩm định ảnh đối chứng & xác minh số liệu"
                             >
@@ -1229,6 +1219,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 <Icon name="close" size={18} />
               </button>
             </div>
+
+            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status==='COMPLETED'?'VERIFIED':task.status==='SUPPLEMENT_REQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
 
             {/* Content: 2 cột */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1720,14 +1712,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 >
                   Đóng
                 </button>
-                {selectedDetailTask.status === 'SUBMITTED' && (
+                {!isSupervisor && selectedDetailTask.status === 'SUBMITTED' && (
                   <button
                     type="button"
                     onClick={() => {
                       const id = selectedDetailTask.id
-                      const code = selectedDetailTask.code
-                      setSelectedDetailTask(null)
-                      handleVerifyTask(id, code)
+                      handleVerifyTask(id)
                     }}
                     className="px-4 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
@@ -2007,12 +1997,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             )
           }
           onVerifyAction={
-            lightboxTask.status === 'SUBMITTED'
+            !isSupervisor && lightboxTask.status === 'SUBMITTED'
               ? () => {
                   const id = lightboxTask.id
-                  const code = lightboxTask.code
                   setLightboxTask(null)
-                  handleVerifyTask(id, code)
+                  handleVerifyTask(id)
                 }
               : undefined
           }
