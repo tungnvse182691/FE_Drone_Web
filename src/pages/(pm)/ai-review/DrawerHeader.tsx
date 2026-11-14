@@ -42,7 +42,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Gửi lúc {selectedCase.created_at} bởi {formattedSourceDetail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
+            Tạo hồ sơ lúc {selectedCase.created_at} bởi {formattedSourceDetail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
           </p>
         </div>
       </div>

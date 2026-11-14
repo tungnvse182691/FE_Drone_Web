@@ -9,8 +9,8 @@ export function reportError(error: any): string {
 }
 const evidenceKey = (reportId: string, evidence: CaseReportEvidence) => `${reportId}:${evidence.evidenceId}:${evidence.fileVersion}`
 
-export function useReportMediaState(caseId: string) {
-  const epoch = useAuthStore(state => state.authEpoch), scope = `${epoch}:${caseId}`
+export function useReportMediaState(caseId: string, caseVersion = '') {
+  const epoch = useAuthStore(state => state.authEpoch), scope = `${epoch}:${caseId}:${caseVersion}`
   const [snapshot, setSnapshot] = useState<{scope: string; reports: CaseReportDetail[]; error: string} | null>(null)
   const [reload, setReload] = useState(0), [choice, setChoice] = useState<{scope: string; key: string} | null>(null)
   const [image, setImage] = useState<{scope: string; key: string; url: string; error: string} | null>(null)
@@ -47,8 +47,8 @@ export function useReportMediaState(caseId: string) {
 export type CaseReportMedia = ReturnType<typeof useReportMediaState>
 const ReportMediaContext = createContext<CaseReportMedia | null>(null)
 export const useCaseReportMedia = () => useContext(ReportMediaContext)
-export function CaseReportMediaProvider({caseId, children}: {caseId: string; children: React.ReactNode}) {
-  const media = useReportMediaState(caseId)
+export function CaseReportMediaProvider({caseId, caseVersion, children}: {caseId: string; caseVersion?: string; children: React.ReactNode}) {
+  const media = useReportMediaState(caseId, caseVersion)
   return <ReportMediaContext.Provider value={media}>{children}</ReportMediaContext.Provider>
 }
 

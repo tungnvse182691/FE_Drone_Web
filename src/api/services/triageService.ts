@@ -130,7 +130,7 @@ function mapBackendCaseToDomain(
     status_label = 'Chờ bổ sung bằng chứng'
   } else if (item.status === 'LINKED') {
     status = 'MERGED'
-    status_label = 'Đã liên kết báo cáo'
+    status_label = 'Hồ sơ nguồn đã chuyển phản ánh'
   } else if (item.status === 'CONCLUDED') {
     status = 'VERIFIED'
     status_label = 'Đã kết luận'

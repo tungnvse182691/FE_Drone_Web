@@ -46,7 +46,7 @@ export const AIReviewInbox: React.FC = () => {
   } = state
 
   return (
-    <CaseReportMediaProvider caseId={state.intake.selected?.id || ''}>
+    <CaseReportMediaProvider caseId={state.intake.selected?.id || ''} caseVersion={state.intake.selected?.version}>
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (

@@ -13,53 +13,34 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
   onOpenTriageProject,
   isSupervisor = false,
 }) => {
-  const isCitizen = selectedCase.source === 'CITIZEN'
-  const isUnknown = selectedCase.source === 'UNKNOWN'
+  const verificationMethod = selectedCase.verification_method || 'Chưa chọn phương thức xác minh'
 
   return (
     <div className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-brand-dark flex items-center gap-1.5">
-          <Icon name={isCitizen ? 'person' : 'engineering'} size={16} className="text-brand-gold" />
-          <span>{isUnknown ? 'Thông Tin Người Gửi' : isCitizen ? 'Thông Tin Người Dân Phản Ánh' : 'Thông Tin Tổ Tuần Tra Hiện Trường'}</span>
+          <Icon name="description" size={16} className="text-brand-gold" />
+          <span>Thông Tin Hồ Sơ</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {selectedCase.reporter_channel || (isUnknown ? 'Chưa xác định nguồn' : isCitizen ? 'Ứng dụng người dân' : 'Tuần tra đường bộ')}
+          {selectedCase.source_label}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span className="text-[10px] text-slate-400 block">
-            {isUnknown || isCitizen ? 'Người phản ánh:' : 'Cán bộ / Tổ tuần tra:'}
-          </span>
-          <span className="font-semibold text-slate-800">
-            {selectedCase.reporter_name || 'Xem từng phản ánh'}
-          </span>
+          <span className="text-[10px] text-slate-400 block">Mã hồ sơ:</span>
+          <span className="font-semibold text-slate-800">{selectedCase.code}</span>
         </div>
         <div>
-          <span className="text-[10px] text-slate-400 block">Số điện thoại liên hệ:</span>
-          {selectedCase.reporter_phone ? (
-            <a
-              href={`tel:${selectedCase.reporter_phone}`}
-              className="text-blue-600 font-bold hover:underline flex items-center gap-1 font-mono"
-            >
-              <Icon name="call" size={13} />
-              <span>{selectedCase.reporter_phone}</span>
-            </a>
-          ) : (
-            <span className="text-slate-400 italic">Không cung cấp</span>
-          )}
+          <span className="text-[10px] text-slate-400 block">Trạng thái hồ sơ:</span>
+          <span className="font-semibold text-slate-800">{selectedCase.case_status || 'Chưa có trạng thái từ máy chủ'}</span>
         </div>
       </div>
 
       <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">
-          {isUnknown ? 'Nội dung hồ sơ:' : isCitizen ? 'Nội dung phản ánh từ người dân:' : 'Biên bản ghi nhận hiện trường tuần tra:'}
-        </span>
-        <p className="italic text-slate-800 leading-relaxed">
-          "{selectedCase.description || 'Xem nội dung và bằng chứng riêng của từng phản ánh ở trên.'}"
-        </p>
+        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Phương thức xác minh của Case:</span>
+        <p className="text-slate-800 leading-relaxed">{verificationMethod}</p>
       </div>
 
       {/* Triage Project Assignment Status (PA03) */}

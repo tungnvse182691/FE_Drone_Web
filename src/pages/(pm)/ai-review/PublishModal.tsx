@@ -88,7 +88,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               <input type="checkbox" checked={recipients.includes(report.reportId)} onChange={e => setRecipients(ids => e.target.checked ? [...ids, report.reportId] : ids.filter(id => id !== report.reportId))} />
               <span>{report.reporterDisplayName || 'Chưa có tên người gửi'} · {report.reporterPhoneNumber || 'Chưa có liên hệ'} · Report {report.reportId}</span>
             </label>)}
-            <p>Kết luận nội bộ chưa được công bố. Lần này chỉ công bố nội dung nhập bên dưới, không tự đính kèm ảnh hoặc Defect.</p>
+            <p>Kết luận nội bộ và công bố là hai thao tác riêng. Lần này chỉ công bố nội dung nhập bên dưới, không tự đính kèm ảnh hoặc Defect.</p>
           </fieldset>
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1">Nội dung thông báo công khai gửi người dân:</label>

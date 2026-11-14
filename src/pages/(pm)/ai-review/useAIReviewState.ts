@@ -93,6 +93,7 @@ export const useAIReviewState = () => {
     cases,
     setCases,
     selectedCaseId,
+    applyCaseReadback: intake.applyReadback,
     setSelectedCaseId,
     setExpandedMasterIds,
     showToast,

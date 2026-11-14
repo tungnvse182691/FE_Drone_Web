@@ -17,7 +17,7 @@ export function ReportEvidence({ reportId, evidence }: { caseId: string; reportI
   </section>
 }
 
-export function DrawerReportDetails({ caseId, onSplit }: { caseId: string; onSplit?: (reportId: string) => Promise<void> }) {
+export function DrawerReportDetails({ caseId, caseStatus, onSplit }: { caseId: string; caseStatus?: string; onSplit?: (reportId: string) => Promise<void> }) {
   const epoch = useAuthStore(state => state.authEpoch)
   const role = useAuthStore(state => state.user?.role)
   const media = useCaseReportMedia()
@@ -30,7 +30,7 @@ export function DrawerReportDetails({ caseId, onSplit }: { caseId: string; onSpl
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   const active = useRef({ caseId, epoch })
   active.current = { caseId, epoch }
-  const reports = media?.caseId === caseId ? media.reports : []
+  const reports = media?.caseId === caseId ? media.reports.filter(report => report.caseId === caseId) : []
   useEffect(() => { setError(''); setSelectedReport(''); setSplitting(false) }, [caseId, epoch])
   useEffect(() => {
     try { setRecoveryReport(triageService.pendingD2(caseId, 'report-splits')?.body.reportIds?.[0] || '') }
@@ -52,8 +52,9 @@ export function DrawerReportDetails({ caseId, onSplit }: { caseId: string; onSpl
     <p className="text-[11px] text-slate-500">Tên và số điện thoại là thông tin tài khoản hiện tại của người gửi.</p>
     {loading && <p role="status" className="text-xs">Đang tải chi tiết phản ánh...</p>}
     {(error || readError) && <p role="alert" className="text-xs text-rose-700">{error || readError}</p>}
-    {!loading && !error && !readError && reports.length === 0 && <p className="text-xs text-slate-500">Không có Report trong hồ sơ.</p>}
+    {!loading && !error && !readError && reports.length === 0 && <p className="text-xs text-slate-500">{caseStatus === 'LINKED' ? 'Hồ sơ nguồn đã chuyển hết phản ánh. LINKED lưu lịch sử chuyển; tách Report tạo Case mới, không khôi phục hồ sơ này.' : 'Không có Report trong hồ sơ.'}</p>}
     {reports.map(report => <article key={report.reportId} data-report-id={report.reportId} className="bg-white rounded-xl border border-slate-200 p-3 space-y-3 text-xs">
+      <p className="font-mono text-slate-500 break-all">Report {report.reportId}</p>
       <div className="grid grid-cols-2 gap-2"><div><p className="text-slate-400">Người phản ánh</p><p className="font-semibold">{report.reporterDisplayName || 'Chưa cập nhật'}</p></div><div><p className="text-slate-400">Liên hệ</p><p>{report.reporterPhoneNumber || 'Chưa có thông tin'} · {report.reporterPhoneNumberConfirmed === true ? 'Đã xác minh' : report.reporterPhoneNumberConfirmed === false ? 'Chưa xác minh' : 'Chưa có dữ liệu xác minh'}</p></div></div>
       <p className="text-slate-500">Tiếp nhận: {report.receivedAt || 'Chưa có thời gian tiếp nhận'}</p><p className="whitespace-pre-wrap">{report.description || 'Chưa có nội dung phản ánh trong response.'}</p>
       {!report.originalEvidence.length && <p className="text-slate-500">Chưa có bằng chứng gốc trong dữ liệu đã đọc.</p>}
