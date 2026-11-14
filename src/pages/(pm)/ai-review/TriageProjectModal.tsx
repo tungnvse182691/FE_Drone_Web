@@ -1,8 +1,12 @@
+import type { TriageGeometryPins } from '../../../api/services/triageGeometryService'
+import { useAuthStore } from '../../../store/authStore'
+import { TriageGeometryScope } from './TriageGeometryScope'
 import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface TriageProjectModalProps {
+  assignedCase?: boolean
   isOpen: boolean
   onClose: () => void
   targetTriageCase: TriageCase | null
@@ -23,11 +27,13 @@ export interface TriageProjectModalProps {
   setSelectedProjectId: (id: string) => void
   onConfirmTriageProject: (
     verificationMethod: 'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE',
-    reason: string
+    reason: string,
+    geometryPins?: TriageGeometryPins
   ) => void
 }
 
 export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
+  assignedCase = false,
   projectsLoading = false, projectsError = '', onRetryProjects,
   busy = false, error = '', held = false, initialInput, retryLabel, onRetry, onReview, onAcceptReviewed, comparison = '',
   isOpen,
@@ -40,6 +46,11 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
 }) => {
   const [verificationMethod, setVerificationMethod] = useState<'FIELD' | 'DRONE' | 'EXISTING_EVIDENCE' | ''>('')
   const [reason, setReason] = useState<string>('')
+  const geometryScope = `${useAuthStore(s => s.authEpoch)}:${targetTriageCase?.id}:${selectedProjectId}:${isOpen}`
+  const [geometrySelection, setGeometrySelection] = useState<{scope:string; required:boolean; pins?:TriageGeometryPins}>({scope:'',required:false})
+  const requiresDefectScope = assignedCase || geometrySelection.scope === geometryScope && geometrySelection.required
+  const geometryPins = geometrySelection.scope === geometryScope ? geometrySelection.pins : undefined
+  useEffect(() => { setGeometrySelection({scope:geometryScope,required:false}) }, [geometryScope])
 
   useEffect(()=>{if(isOpen){setVerificationMethod(initialInput?.verificationMethod as any || '');setReason(initialInput?.reason || '')}},[isOpen,targetTriageCase?.id])
   if (!isOpen || !targetTriageCase) return null
@@ -47,8 +58,8 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
   const selectedProj = projects.find((p) => p.id === selectedProjectId)
 
   const handleConfirm = () => {
-    if (projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
-    onConfirmTriageProject(verificationMethod, reason)
+    if (requiresDefectScope && !geometryPins || projectsLoading || projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000)return
+    onConfirmTriageProject(verificationMethod, reason, requiresDefectScope ? geometryPins : undefined)
   }
 
   return (
@@ -62,9 +73,9 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">Điều Phối Phản Ánh Vào Dự Án</h3>
+                <h3 className="text-base font-bold text-slate-900">{assignedCase ? 'Cập nhật phương thức và phạm vi Case' : 'Điều Phối Phản Ánh Vào Dự Án'}</h3>
               </div>
-              <p className="text-xs text-slate-500">Phân công tuyến đường bảo hành & định hướng xác minh cho Chỉ huy trưởng</p>
+              <p className="text-xs text-slate-500">{assignedCase ? 'Giữ nguyên dự án; chọn phương thức xác minh và phạm vi cho hồ sơ đang phụ trách.' : 'Phân công tuyến đường bảo hành & định hướng xác minh cho Chỉ huy trưởng'}</p>
             </div>
           </div>
           <button
@@ -127,9 +138,9 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </label>
             <select
               value={selectedProjectId}
-              disabled={projectsLoading || !!projectsError}
+              disabled={assignedCase || projectsLoading || !!projectsError}
               required
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => { if (!assignedCase) setSelectedProjectId(e.target.value) }}
               className="w-full bg-slate-50 text-slate-800 text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] font-semibold cursor-pointer truncate"
             >
               <option value="">Chọn dự án</option>
@@ -155,6 +166,8 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               </span>
             )}
           </div>
+
+          <TriageGeometryScope projectId={selectedProjectId} caseId={targetTriageCase.id} disabled={busy || held} onChange={(required,pins)=>setGeometrySelection(old=>old.scope===geometryScope && old.required===required && old.pins?.routeVersionId===pins?.routeVersionId && old.pins?.segmentSetId===pins?.segmentSetId && old.pins?.geometryVersion===pins?.geometryVersion ? old : {scope:geometryScope,required,pins})} />
 
           {/* 2. Định hướng phương thức xác minh (Spec 17_10 CaseTriageDto.verificationMethod) */}
           <div className="flex flex-col">
@@ -222,7 +235,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-slate-700">
-                3. Chỉ đạo / Căn cứ điều phối của Giám sát:
+                {assignedCase ? '3. Lý do cập nhật phương thức/phạm vi:' : '3. Chỉ đạo / Căn cứ điều phối của Giám sát:'}
               </label>
               <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
             </div>
@@ -231,19 +244,12 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
               rows={2}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Nhập ghi chú chỉ đạo gửi Chỉ huy trưởng (PM) phụ trách dự án..."
+              placeholder={assignedCase ? 'Nhập lý do cập nhật phương thức/phạm vi...' : 'Nhập ghi chú chỉ đạo gửi Chỉ huy trưởng (PM) phụ trách dự án...'}
               className="w-full bg-slate-50 text-slate-800 text-xs p-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#C9A227] focus:bg-white transition-colors"
             />
           </div>
 
-          <p className="text-[11px] text-slate-500">Điều phối xác định dự án phụ trách và phương thức xác minh; chưa phải kết luận phản ánh.</p>
-          {/* Hộp thông báo quyền hạn */}
-          <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-[11px] text-blue-900 flex items-start gap-2">
-            <Icon name="check_circle" size={15} className="text-blue-600 shrink-0 mt-0.5" />
-            <span>
-              Sau khi xác nhận điều phối, hồ sơ sẽ chuyển sang trạng thái <strong>đã phân công dự án</strong> và xuất hiện trong hộp thư tiếp nhận của Chỉ huy trưởng dự án.
-            </span>
-          </div>
+          <p className="text-[11px] text-slate-500">{assignedCase ? 'Cập nhật phạm vi không kết luận phản ánh hoặc tạo khiếm khuyết. Máy chủ kiểm lại nguồn sau khi cập nhật.' : 'Điều phối xác định dự án phụ trách và phương thức xác minh; chưa phải kết luận phản ánh.'}</p>
         </fieldset>
 
         {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
@@ -252,7 +258,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
         {/* Modal Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
           <span className="text-[11px] text-slate-500 font-medium truncate">
-            Người thực hiện: Giám sát / Chủ đầu tư
+            Người thực hiện: {assignedCase ? 'Chỉ huy trưởng (PM)' : 'Giám sát / Chủ đầu tư'}
           </span>
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -265,12 +271,12 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
             </button>
             <button
               type="button"
-              disabled={projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
+              disabled={requiresDefectScope && !geometryPins || projectsLoading || !!projectsError || busy || held || !selectedProj || !verificationMethod || !reason.trim() || reason.trim().length > 1000}
               onClick={handleConfirm}
               className="px-3.5 py-1.5 text-xs font-bold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap"
             >
               <Icon name="domain" size={15} />
-              <span>{busy ? 'Đang gửi/đọc lại…' : 'Xác nhận điều phối'}</span>
+              <span>{busy ? 'Đang gửi/đọc lại…' : assignedCase ? 'Xác nhận cập nhật phạm vi' : 'Xác nhận điều phối'}</span>
             </button>
           </div>
         </div>

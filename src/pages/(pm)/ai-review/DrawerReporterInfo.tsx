@@ -55,15 +55,15 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
               : 'Chờ Giám sát điều phối gán vào dự án'}
           </span>
         </div>
-        {isSupervisor && selectedCase.case_status === 'UNASSIGNED' && !selectedCase.project_id && (
+        {(isSupervisor && selectedCase.case_status === 'UNASSIGNED' && !selectedCase.project_id || !isSupervisor && !!selectedCase.project_id && ['OPEN','AWAITING_EVIDENCE'].includes(selectedCase.case_status || '')) && (
           <button
             type="button"
             onClick={() => onOpenTriageProject(selectedCase)}
             className="px-2.5 py-1 rounded-lg bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
-            title="Điều phối gán phản ánh vào dự án"
+            title={isSupervisor ? 'Điều phối gán phản ánh vào dự án' : 'Cập nhật phương thức và phạm vi Case'}
           >
             <Icon name="arrow_forward" size={13} />
-            <span>Điều phối</span>
+            <span>{isSupervisor ? 'Điều phối' : 'Cập nhật phạm vi'}</span>
           </button>
         )}
       </div>

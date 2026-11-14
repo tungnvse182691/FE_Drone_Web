@@ -1,3 +1,4 @@
+import { ReportDefectIntake } from './ReportDefectIntake'
 import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -254,6 +255,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       ) : (
         /* Khi hồ sơ chưa thẩm định: Hiển thị bộ nút thao tác thẩm định chuẩn nghiệp vụ */
         <div className="space-y-2.5 pt-1">
+          <ReportDefectIntake selectedCase={selectedCase} />
           <button
             type="button"
             onClick={() => onVerifyDefect(selectedCase)}

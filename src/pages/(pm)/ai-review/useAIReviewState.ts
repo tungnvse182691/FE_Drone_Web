@@ -64,7 +64,7 @@ export const useAIReviewState = () => {
   }
   const handleOpenTriageProject = (c: TriageCase, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    if (!intake.isSupervisor) return
+    if (!intake.isSupervisor && !intake.isProjectManager) return
     if (intake.selected?.id === c.id) intake.openTriage()
     else intake.openCase(c.id, true)
   }
