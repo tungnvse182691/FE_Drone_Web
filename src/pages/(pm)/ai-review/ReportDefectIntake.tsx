@@ -1,6 +1,6 @@
 import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
 import { triageGeometryService, type TriageRouteReference } from '../../../api/services/triageGeometryService'
-import { reportKeepNewCommands, type ReportKeepNewInput } from '../../../api/services/reportKeepNewCommands'
+import { reportKeepNewCommands, type KeepNewResult, type ReportKeepNewInput } from '../../../api/services/reportKeepNewCommands'
 import React, { useEffect, useRef, useState } from 'react'
 import { apiClient } from '../../../api/client'
 import { useAuthStore } from '../../../store/authStore'
@@ -58,15 +58,30 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const commandBusy=command.scope===scope&&command.busy
   let heldDecision:ReturnType<typeof reportKeepNewCommands.pending>=null, journalError=''
   try{if(selectedCase.project_id&&report)heldDecision=reportKeepNewCommands.pending(selectedCase.project_id,report.reportId)}catch(e){journalError=(e as Error).message}
-  const canSave=!heldDecision&&!journalError&&allowed&&!!report&&!currentPackage?.error&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&currentPackage?.version===read.geometryVersion&&!!road&&!!activeCatalog?.items.some(t=>t.code===defectTypeCode)&&!!severity&&!!decisionReason.trim()&&decisionReason.trim().length<=1000&&!commandBusy
+  const query=typeof window!=='undefined'?new URLSearchParams(window.location.search):null
+  const suppliedReference=query?.get('reportId')===reportId?query.get('decisionId')||'':''
+  let savedReference:ReturnType<typeof reportKeepNewCommands.reference>=null
+  try{if(selectedCase.project_id&&report)savedReference=reportKeepNewCommands.reference?.(selectedCase.project_id,report.reportId)||null}catch(e){journalError=(e as Error).message}
+  const referenceId=suppliedReference||savedReference?.decisionId||heldDecision?.receipt?.id||''
+  const [recorded,setRecorded]=useState<{scope:string;result?:KeepNewResult;error?:string;loading?:boolean}|null>(null)
+  useEffect(()=>{
+    const c=new AbortController();setRecorded(null)
+    if(!selectedCase.project_id||!report||!referenceId)return()=>c.abort()
+    setRecorded({scope,loading:true})
+    reportKeepNewCommands.read(selectedCase.project_id,report.reportId,referenceId,c.signal).then(result=>{if(!c.signal.aborted&&result)setRecorded({scope,result})})
+      .catch(e=>{if(!c.signal.aborted)setRecorded({scope,error:`Không đọc được kết quả: HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`})})
+    return()=>c.abort()
+  },[scope,referenceId,reload])
+  const currentRecorded=recorded?.scope===scope?recorded:null
+  const canSave=!referenceId&&!currentRecorded?.result&&!heldDecision&&!journalError&&allowed&&!!report&&!currentPackage?.error&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&currentPackage?.version===read.geometryVersion&&!!road&&!!activeCatalog?.items.some(t=>t.code===defectTypeCode)&&!!severity&&!!decisionReason.trim()&&decisionReason.trim().length<=1000&&!commandBusy
   const execute=async()=>{
-    if(!selectedCase.project_id||!report||commandBusy)return
+    if(!selectedCase.project_id||!report||commandBusy||referenceId||currentRecorded?.result)return
     const project=selectedCase.project_id,reportId=report.reportId,start=scope
     setCommand({scope:start,busy:true,error:''})
     try{const held=reportKeepNewCommands.pending(project,reportId);if(!held&&!canSave)throw new Error('Chưa đủ nguồn, phân loại hoặc tuyến.');
       const body:ReportKeepNewInput=held?.body||{sourceKind:'REPORT',sourceId:reportId,sourceVersion:read!.sourceVersion!,geometryVersion:read!.geometryVersion!,decision:'KEEP_NEW',classification:{defectTypeCode,severity,roadSectionVersionId:road!.currentVersionId},reason:decisionReason.trim()}
-      await reportKeepNewCommands.run(project,body)
-      if(canceled.current===start){setCommand({scope:start,busy:false,error:''});onRecorded?.('Đã ghi nhận khiếm khuyết')}
+      const result=await reportKeepNewCommands.run(project,body)
+      if(canceled.current===start){setRecorded({scope:start,result});setCommand({scope:start,busy:false,error:''});onRecorded?.('Đã ghi nhận khiếm khuyết')}
     }catch(e:any){if(canceled.current===start)setCommand({scope:start,busy:false,error:`HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`})}
   }
   const current = read?.scope === scope ? read : null
@@ -78,6 +93,19 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const missing = [
     !report?'Report nguồn':'',!current?.sourceVersion?'source.version':'',!current?.geometryVersion?'geometryVersion':'',!defectTypeCode?'loại lỗi hiệu lực':'',!road?'tuyến':'',road&&currentPackage?.version!==current?.geometryVersion?'package khớp geometryVersion nguồn':'',!severity?'mức độ':'',!decisionReason.trim()?'lý do':''
   ].filter(Boolean).join('; ')
+  if(referenceId||currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+    <p className="font-bold text-slate-800">Kết quả ghi nhận Report {reportId}</p>
+    {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
+    {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
+    {currentRecorded?.result&&<>
+      <p className="break-all">Decision {currentRecorded.result.decision.id} · {currentRecorded.result.decision.decision}</p>
+      <p className="break-all">Defect {currentRecorded.result.defect.id}</p>
+      <p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}</p>
+      <p>Nguồn đã ghi nhận; không tạo KEEP_NEW mới. Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
+    </>}
+    {heldDecision&&<p role="status" className="break-all">Giữ nguyên journal của yêu cầu {heldDecision.key}. Reference kết quả này không tự giải quyết một yêu cầu khác key/body.</p>}
+    <button type="button" disabled={!!currentRecorded?.loading} onClick={()=>setReload(n=>n+1)} className="text-xs underline">Đọc lại kết quả ghi nhận</button>
+  </div>
   return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
     <p className="font-bold text-slate-800">Ghi nhận khiếm khuyết</p>
     <div className="flex flex-wrap items-center gap-2">
