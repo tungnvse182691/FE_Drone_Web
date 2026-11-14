@@ -1,3 +1,4 @@
+import { segmentSetLabel } from './alignmentLabels'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
@@ -15,7 +16,7 @@ export function segmentDefinition(distanceKm: number, boundaries?: number[]): Se
   return { targetLengthMeters, remainderMode: 'KEEP', ...(boundaries ? { boundariesMeters: boundaries } : {}) }
 }
 export function segmentRows(value: { segments: SegmentPreview['segments'] }, label: string, geometry?: RoadGeometryVersionView | null): SegmentItem[] {
-  return value.segments.map(s => ({ id: s.id || `preview-${s.sequence}`, code: s.id ? `${s.sequence} · ${s.id}` : `Preview ${s.sequence}`,
+  return value.segments.map(s => ({ id: s.id || `preview-${s.sequence}`, code: `Phân đoạn ${s.sequence}`,
     startKm: s.startStationMeters / 1000, endKm: s.endStationMeters / 1000, lengthKm: s.lengthMeters / 1000,
     serverCoordinates: s.wgs84Geometry?.coordinates || (geometry?.engineeringSrid === 32648 ? previewCenterlineCoordinates(s.metricGeometry.coordinates, geometry.engineeringSrid) : []),
     roadWidthM: geometry?.widthProfile?.filter(w => w.fromOffsetMeters < s.toOffsetMeters && w.toOffsetMeters > s.fromOffsetMeters).every((w, _, all) => w.widthMeters === all[0]?.widthMeters) ? geometry.widthProfile.find(w => w.fromOffsetMeters <= s.fromOffsetMeters && w.toOffsetMeters > s.fromOffsetMeters)?.widthMeters ?? Number.NaN : Number.NaN, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: label, color: '#C9A227' }))
@@ -70,7 +71,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
   }, [key, routeMatches, freshScope, loading, error, sets, held, params])
   const publishedSet = freshScope ? publishedSetForRoute(sets, routeVersionId) : null
   const selectionLabel = currentPreview ? 'Đang xem preview — chưa lưu, chưa áp dụng.' : currentSnapshot?.data.status === 'DRAFT' ? 'Đang xem bản nháp — chưa áp dụng.' : currentSnapshot?.data.status === 'PUBLISHED' ? 'Đang xem bộ phân đoạn đã công bố.' : currentSnapshot?.data.status === 'SUPERSEDED' ? 'Đang xem bộ phân đoạn lịch sử — đã thay thế.' : 'Chưa chọn bản phân đoạn.'
-  const publicationLabel = publishedSet ? `Bộ đang công bố: ${publishedSet.id}` : 'PM chưa công bố phân đoạn'
+  const publicationLabel = publishedSet ? `Đang công bố: ${segmentSetLabel(publishedSet)}` : 'PM chưa công bố phân đoạn'
   const editable = auth.user?.role === RoleCode.PROJECT_MANAGER && mainline && routeMatches && confirmationRead && freshScope && !loading && !error && (!currentSnapshot || currentSnapshot.data.status === 'DRAFT') && !busy && !held
   const openSet = (id: string) => {
     if (busy || held) { refs.current.notify('Đối chiếu command đang chờ trước khi đổi segment set.'); return }

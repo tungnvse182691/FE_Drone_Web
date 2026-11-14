@@ -213,8 +213,8 @@ export function useAlignmentState() {
     roadWidthM,
     showToast: message => showToast(`${message} — bản chỉnh cục bộ, chưa lưu máy chủ.`),
     syncMap: (...args) => mapState.syncMap(...args),
-    mapRef: { current: null }, // updated dynamically below
-    popupRef: { current: null },
+    mapRef: { get current() { return mapState.mapRef.current } },
+    popupRef: { get current() { return mapState.popupRef.current } },
     handleFitBounds: () => mapState.handleFitBounds()
   })
   // Tự động tính toán lại danh sách tấm Slab khi thay đổi chiều dài L, chiều dày hoặc phân đoạn mặt đường
@@ -750,7 +750,7 @@ export function useAlignmentState() {
     setCurrentKmPoints,
     importedLengthKm,
     setImportedLengthKm,
-    segmentsState: { ...segmentsState, selectedSegmentId: pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : segmentsState.selectedSegmentId, slabs: isMainline ? pavementWorkflow.display?.slabs || (pavementWorkflow.previewBase ? planMainlinePavement(pavementWorkflow.previewBase.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).slabs : segmentsState.slabs) : [],
+    segmentsState: { ...segmentsState, selectedSegmentId: rightTab === 'SLABS' && pavementWorkflow.previewBase && !pavementWorkflow.previewBase.segments.some(segment => segment.id === segmentsState.selectedSegmentId) ? 'ALL' : segmentsState.selectedSegmentId, slabs: isMainline ? pavementWorkflow.display?.slabs || (pavementWorkflow.previewBase ? planMainlinePavement(pavementWorkflow.previewBase.segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).slabs : segmentsState.slabs) : [],
       splitSortOrder: isMainline ? segmentsState.splitSortOrder : currentBranch?.splitSortOrder || 'asc',
       setSplitSortOrder: (order: 'asc' | 'desc') => isMainline ? segmentsState.setSplitSortOrder(order) : commitBranches(branchEditor.current.branches.map(branch => branch.id === selectedTargetType ? { ...branch, splitSortOrder: order } : branch)),
       handleCreateNewSegment: handleCreateBranchSegment,

@@ -7,7 +7,7 @@ export interface PublicationLayer { key: string; status?: string | null; count: 
 export interface PublicationManifest { publicationId: string; projectId: string; routeVersionId: string; segmentSetId: string; layoutRevisionId: string; contentHash: string; sampleOnly: boolean; layers: PublicationLayer[] }
 export interface PublicationPage { publicationId: string; contentHash: string; layer: string; features: Array<{id?:string|null;layer?:string|null;geometry?:{type?:string|null;coordinates?:unknown};properties?:unknown}>; nextCursor?: string | null }
 type Pins = Pick<PublicationManifest, 'projectId' | 'routeVersionId' | 'segmentSetId' | 'layoutRevisionId'>
-interface Command { actor: string; pins: Pins; hash: string; key: string; body: { layoutRevisionId: string; publicationMode: 'SAMPLE'; reason: string }; receipt?: PublicationManifest }
+interface Command { actor: string; pins: Pins; hash: string; key: string; body: { layoutRevisionId: string; publicationMode: 'SAMPLE'; reason: string }; receipt?: PublicationManifest; rejected?: boolean }
 const hashValid = (hash: string) => /^[a-f0-9]{64}$/i.test(hash)
 const storageKey = (project: string) => `rg_map_publication_${useAuthStore.getState().user?.id}_${project}`
 function scope(project: string, write = false) {
@@ -28,13 +28,25 @@ export const mapPublicationService = {
     current(); verify(data, pins, id)
     const held = this.pending(pins.projectId)
     if (held?.receipt?.publicationId === id && held.receipt.contentHash !== data.contentHash) throw new Error('Readback không khớp hash receipt.')
+    if (held?.receipt?.publicationId === id) {
+      if (data.sampleOnly !== true) throw new Error('Readback không phải SAMPLE receipt.')
+      sessionStorage.removeItem(storageKey(pins.projectId))
+    }
     return data
+  },
+  async revise(project: string) {
+    const current = scope(project, true), held = this.pending(project)
+    if (!held?.rejected || held.receipt) throw new Error('Chỉ sửa ý định bị từ chối xác định; giữ lệnh chưa rõ kết quả.')
+    await pavementService.read(project, held.pins.layoutRevisionId); current()
+    if (this.pending(project)?.key !== held.key) throw new Error('Lệnh đã thay đổi.')
+    sessionStorage.removeItem(storageKey(project))
   },
   async publish(source: PavementLayoutView, section: string, reason: string, onReceipt: (id: string) => void) {
     const current = scope(source.projectId, true), key = storageKey(source.projectId)
     if (running.has(key)) throw new Error('Đang công bố hoặc đọc lại; không gửi trùng.')
     let held = this.pending(source.projectId)
     if (held && (held.actor !== useAuthStore.getState().user!.id || held.pins.layoutRevisionId !== source.id || held.pins.routeVersionId !== source.routeVersionId || held.pins.segmentSetId !== source.segmentSetId || held.hash !== source.contentHash)) throw new Error('Có lệnh công bố khác đang giữ; mở đúng nguồn để đối chiếu.')
+    if (held?.rejected) throw new Error('Lệnh bị từ chối; đọc nguồn đối chiếu rồi sửa ý định trước khi gửi mới.')
     if (!held) {
       if (!reason.trim() || !hashValid(source.contentHash)) throw new Error('Cần lý do và hash layout đã lưu.')
       held = { actor: useAuthStore.getState().user!.id, pins: {projectId:source.projectId,routeVersionId:source.routeVersionId,segmentSetId:source.segmentSetId,layoutRevisionId:source.id}, hash:source.contentHash, key:crypto.randomUUID(), body:{layoutRevisionId:source.id,publicationMode:'SAMPLE',reason:reason.trim()} }
@@ -57,6 +69,12 @@ export const mapPublicationService = {
       const result = await this.read(held.pins, receipt.publicationId); current()
       if (result.contentHash !== receipt.contentHash || result.sampleOnly !== true) throw new Error('Readback không khớp hash/SAMPLE receipt.')
       return result
+    } catch (e: any) {
+      current()
+      if (!held.receipt && [400,403,404,409,412,415,422,428].includes(e?.response?.status)) {
+        held.rejected = true; sessionStorage.setItem(key,JSON.stringify(held))
+      }
+      throw e
     } finally { running.delete(key) }
   },
   async page(manifest: PublicationManifest, layer: string, cursor?: string): Promise<PublicationPage> {

@@ -12,6 +12,7 @@ import { SegmentItem, BranchItem } from './types'
 import { SidebarSegmentCard } from './SidebarSegmentCard'
 
 export interface SidebarSegmentsTabProps {
+  routeLabel?: string
   draftContentSaved?: boolean
   segmentPlanning?: boolean
   segmentSetStatus?: string
@@ -49,6 +50,7 @@ export interface SidebarSegmentsTabProps {
 
 export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
   segments,
+  routeLabel,
   draftContentSaved = false,
   segmentPlanning = false, segmentSetStatus,
   selectedSegmentId,
@@ -151,7 +153,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           className="w-full h-8.5 px-2.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
         >
           <option value="MAINLINE">
-            Trục chính {currentCoords.length === 0 ? '(Chưa có tim tuyến)' : `(${mainlineLenText})`}
+            {routeLabel || 'Trục chính'} {currentCoords.length === 0 ? '(Chưa có tim tuyến)' : `(${mainlineLenText})`}
           </option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
@@ -266,7 +268,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
           const hasCoords = isMain ? currentCoords.length > 0 || segments.length > 0 || importedLengthKm > 0 : true
           const title = isMain
             ? hasCoords
-              ? `Toàn tuyến chính (${mainlineLenText})`
+              ? `Toàn tuyến chính: ${routeLabel || 'Chưa có tên tuyến'} (${mainlineLenText})`
               : `Toàn tuyến chính (Chưa có tim tuyến)`
             : `Toàn tuyến nhánh: ${curBranch?.name || 'Tuyến nhánh'}`
           const subTitle = isMain

@@ -12,7 +12,7 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   const profile = layout?.widthProfile
   if (planned && !profile?.length) throw new Error('Snapshot chưa có widthProfile nguồn để hiển thị phạm vi pavement.')
   const station = Number.isFinite(origin) ? origin! : 0
-  const segments: SegmentItem[] = (profile || []).map((w, i) => ({ id: `layout-${snapshot.id}-${i}`, code: `Layout ${snapshot.id} · ${i + 1}`,
+  const segments: SegmentItem[] = (profile || []).map((w, i) => ({ id: `layout-${snapshot.id}-${i}`, code: `Khoảng bề rộng ${i + 1}`,
     startKm: Number.isFinite(origin) ? (origin! + w.fromOffsetMeters) / 1000 : Number.NaN, endKm: Number.isFinite(origin) ? (origin! + w.toOffsetMeters) / 1000 : Number.NaN, lengthKm: (w.toOffsetMeters - w.fromOffsetMeters) / 1000,
     roadWidthM: w.widthMeters, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' }))
   const backgroundSegments = [...segments]

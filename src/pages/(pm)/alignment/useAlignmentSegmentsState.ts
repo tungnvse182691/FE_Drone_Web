@@ -1,8 +1,8 @@
+import { fitServerCoordinates } from './alignmentSelection'
 import React, { useState, useRef } from 'react'
 import { SegmentItem, SlabItem } from './types'
 import { SEGMENT_COLORS } from './data'
 import {
-  interpolateCoordAtKm,
   generateMockSlabs
 } from './alignmentGeometryHelpers'
 import {
@@ -253,29 +253,14 @@ export function useAlignmentSegmentsState({
 
   const handleSelectAllRoute = (coords: [number, number][]) => {
     setSelectedSegmentId('ALL')
-    if (popupRef.current) popupRef.current.remove()
-    if (mapRef.current) {
-      if (coords.length > 0) {
-        const bounds = new (window as any).maplibregl.LngLatBounds()
-        coords.forEach((c) => bounds.extend(c))
-        mapRef.current.fitBounds(bounds, { padding: 60, speed: 1.1 })
-      }
-      syncMap(segments, 'ALL')
-    }
-    showToast('Đang chọn Toàn Tuyến: Hiển thị đầy đủ các phân đoạn và tổng số tấm BTXM')
+    popupRef.current?.remove()
+    if (!fitServerCoordinates(mapRef.current, coords)) showToast('Chưa có geometry server hợp lệ của tuyến để định vị.')
   }
 
   const handleSelectSegment = (seg: SegmentItem) => {
     setSelectedSegmentId(seg.id)
-    if (mapRef.current && currentCoords.length >= 2 && currentKmPoints.length === currentCoords.length) {
-      const centerCoord = interpolateCoordAtKm((seg.startKm + seg.endKm) / 2, currentCoords, currentKmPoints)
-      mapRef.current.flyTo({
-        center: centerCoord,
-        zoom: 13.2,
-        speed: 1.2
-      })
-      syncMap(segments, seg.id)
-    }
+    popupRef.current?.remove()
+    if (!fitServerCoordinates(mapRef.current, seg.serverCoordinates)) showToast('Chưa có geometry server hợp lệ của phân đoạn để định vị.')
   }
 
   return {

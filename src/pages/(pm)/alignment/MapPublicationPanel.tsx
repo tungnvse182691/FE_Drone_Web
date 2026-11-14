@@ -5,10 +5,14 @@ import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 
+function pinsKey(params: URLSearchParams) { return ['layoutId','roadSectionId','routeVersionId','segmentSetId'].map(k=>params.get(k)||'').join(':') }
+
 export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnType<typeof usePavementWorkflow>; readOnly: boolean }) {
   const [params,setParams] = useSearchParams(), {projectId = ''} = useParams(), actor = useAuthStore()
   const id = params.get('publicationId') || '', source = workflow.snapshot
   const scope = `${actor.authEpoch}:${actor.user?.id}:${projectId}:${params.get('layoutId')}:${params.get('routeVersionId')}:${params.get('segmentSetId')}:${id}`
+  const reference = `${projectId}:${pinsKey(params)}`
+  const previousReference = useRef({ reference, id })
   const live = useRef(scope); live.current = scope
   const running = useRef(false)
   const [reason,setReason] = useState(''), [busy,setBusy] = useState(false), [error,setError] = useState('')
@@ -19,6 +23,12 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
   const report = (e: any) => setError(e?.response ? `HTTP ${e.response.status}: ${e.response.data?.code || e.response.data?.title || 'unknown'}${e.response.data?.correlationId ? ` — ${e.response.data.correlationId}` : ''}. Giữ lệnh/receipt; không tự gửi lại.` : e.message)
   useEffect(() => {
     let active = true
+    const previous = previousReference.current
+    previousReference.current = { reference, id }
+    if (previous.reference !== reference && id && previous.id === id) {
+      setParams(current=>{const next=new URLSearchParams(current);next.delete('publicationId');return next},{replace:true})
+      return
+    }
     setBusy(false);setManifest(null); setPage(null);setLayer('');setError('');seen.current.clear()
     if (!id) {
       try { const held = mapPublicationService.pending(projectId); if (held && held.pins.layoutRevisionId === pins.layoutRevisionId) {setReason(held.body.reason);if(held.receipt?.publicationId)setParams(current=>{const next=new URLSearchParams(current);next.set('publicationId',held.receipt!.publicationId);return next},{replace:true})} } catch(e) {report(e)}
@@ -53,6 +63,11 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
       setPage(value)
     }catch(e){if(live.current===selected)report(e)}finally{running.current=false;if(live.current===selected)setBusy(false)}
   }
+  const revise = async () => {
+    if (busy || readOnly) return
+    const selected=scope;setBusy(true);setError('')
+    try {await mapPublicationService.revise(projectId);if(live.current===selected)setReload(n=>n+1)}catch(e){if(live.current===selected)report(e)}finally{if(live.current===selected)setBusy(false)}
+  }
   const blocked = workflow.loading || workflow.busy || !!workflow.error || !!workflow.pending || !!workflow.asBuilt.active || !!workflow.asBuilt.pending || !source || source.id !== pins.layoutRevisionId || source.projectId !== projectId || source.routeVersionId !== pins.routeVersionId || source.segmentSetId !== pins.segmentSetId
   const metadata = manifest?.layers.find(l=>l.key===layer)
   return <section className="rounded-lg border p-3 space-y-2 text-xs" aria-label="Công bố bản đồ SAMPLE">
@@ -62,6 +77,7 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
       <button type="button" disabled={busy||blocked||!reason.trim()} onClick={()=>void publish()} className="border rounded p-2 disabled:opacity-50">Công bố bản đồ xem thử</button>
       {blocked&&<p>Chọn layout đã lưu, đúng tuyến và bộ phân đoạn; kết thúc bản nhập đang dở trước khi công bố.</p>}
     </>}
+    {!readOnly && !id && <button type="button" disabled={busy} onClick={()=>void revise()} className="border rounded p-2">Đối chiếu / sửa ý định bị từ chối</button>}
     {id&&<p className="break-all">Publication: {id}</p>}
     <button type="button" disabled={busy} onClick={()=>setReload(n=>n+1)} className="border rounded p-2">Đọc lại publication / receipt</button>
     {manifest&&<>

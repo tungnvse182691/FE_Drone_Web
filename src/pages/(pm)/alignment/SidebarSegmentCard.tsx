@@ -50,7 +50,7 @@ export const SidebarSegmentCard: React.FC<SidebarSegmentCardProps> = ({
             className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs border border-white"
           />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-brand-dark">{segment.code}</span>
+            <span title={segment.id} className="text-xs font-bold text-brand-dark">{segment.code}</span>
             <span className="font-mono text-xs font-bold text-[#8F7212]">
               Km {segment.startKm.toFixed(3)} - Km {segment.endKm.toFixed(3)}
             </span>

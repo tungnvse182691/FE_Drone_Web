@@ -9,6 +9,8 @@ import { Icon } from '../../components/ui/Icon'
 
 import { AlignmentHeader } from './alignment/AlignmentHeader'
 import { AlignmentMap } from './alignment/AlignmentMap'
+import { confirmedRouteCoordinates } from './alignment/alignmentSelection'
+import { segmentSetLabel } from './alignment/alignmentLabels'
 import { AlignmentSidebar } from './alignment/AlignmentSidebar'
 import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
@@ -147,7 +149,7 @@ export const AlignmentSegments: React.FC = () => {
     {segmentWorkflow.enabled && <>
       <select aria-label="Segment set máy chủ" value={segmentWorkflow.setId} disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onChange={event => segmentWorkflow.openSet(event.target.value)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">
         <option value="">{segmentWorkflow.sets.length ? 'Chọn segment set / bản mới' : 'Chưa có segment set trong CSDL'}</option>
-        {segmentWorkflow.sets.map(set => <option key={set.id} value={set.id}>{set.id} · {set.status === 'DRAFT' ? 'DRAFT — chưa áp dụng' : set.status === 'PUBLISHED' ? 'PUBLISHED — đang công bố' : 'SUPERSEDED — lịch sử'}</option>)}
+        {segmentWorkflow.sets.map(set => <option key={set.id} value={set.id} title={set.id}>{segmentSetLabel(set)}</option>)}
       </select>
       {!isSupervisor && <>
         <button type="button" disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onClick={() => segmentWorkflow.openSet('')} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Bản phân đoạn mới</button>
@@ -171,7 +173,7 @@ export const AlignmentSegments: React.FC = () => {
 
   const handleSelectAllRoute = () => {
     if (isMainline) {
-      segmentsState.handleSelectAllRoute(currentCoords)
+      segmentsState.handleSelectAllRoute(confirmedRouteCoordinates(geometryRead.geometry))
     } else if (currentBranch) {
       segmentsState.setSelectedSegmentId('ALL')
       if (currentBranch.coords && currentBranch.coords.length > 0) {
@@ -368,6 +370,7 @@ export const AlignmentSegments: React.FC = () => {
         />
 
         <AlignmentSidebar
+          routeLabel={geometryRead.context?.roadSections.filter(r=>r.roadSectionId===geometryRead.roadReference).map(r=>[r.code,r.name].filter(Boolean).join(" — "))[0]}
           segmentCount={segmentCount}
           segmentCountMessage={segmentCountMessage}
           stripWidthMeters={stripWidthMeters}

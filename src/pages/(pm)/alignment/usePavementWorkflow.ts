@@ -33,7 +33,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
   const openLayout = (id: string) => {
     const row = layouts.find(item => item.layoutId === id)
     if (!row || listScope !== discoveryScope || busy || pending || asBuilt.active || asBuilt.pending) return
-    setParams(current => { const next = new URLSearchParams(current); next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next })
+    setParams(current => { const next = new URLSearchParams(current); next.delete('publicationId'); next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next })
   }
   useEffect(() => {
     let active = true
@@ -46,7 +46,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       if (!layoutId && rows.length === 1 && !pendingPavement(projectId)) setParams(current => {
         if (revision.current !== discoveryRevision.current.revision || current.get('layoutId') || current.get('segmentSetId') !== pins.segmentSetId || current.get('routeVersionId') !== pins.routeVersionId) return current
         const next = new URLSearchParams(current), row = rows[0]
-        next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next
+        next.delete('publicationId'); next.set('layoutId', row.layoutId); next.set('roadSectionId', row.roadSectionId); next.set('routeVersionId', row.routeVersionId); next.set('segmentSetId', row.segmentSetId); return next
       }, {replace: true})
     }).catch(e => { if (active) setListError(`Không đọc được danh sách layout: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e.message}`) }).finally(() => { if (active) setListLoading(false) })
     return () => { active = false }

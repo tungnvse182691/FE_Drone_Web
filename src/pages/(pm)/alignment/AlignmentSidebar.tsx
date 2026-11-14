@@ -14,6 +14,7 @@ import { AsBuiltPanel } from './AsBuiltPanel'
 import { MapPublicationPanel } from './MapPublicationPanel'
 
 export interface AlignmentSidebarProps {
+  routeLabel?: string
   draftContentSaved?: boolean
   segmentCount?: number | null
   segmentCountMessage?: string
@@ -74,6 +75,7 @@ export interface AlignmentSidebarProps {
 
 export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
   rightTab,
+  routeLabel,
   draftContentSaved = false,
   segmentCount = null, segmentCountMessage = 'Chưa chọn set',
   pavementWorkflow,
@@ -176,6 +178,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {/* TAB CONTENT: SEGMENTS */}
         {rightTab === 'SEGMENTS' && (
           <SidebarSegmentsTab
+            routeLabel={routeLabel}
             draftContentSaved={draftContentSaved}
             segmentPlanning={segmentPlanning}
             segmentSetStatus={segmentSetStatus}
