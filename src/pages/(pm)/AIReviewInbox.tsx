@@ -1,3 +1,5 @@
+// @refresh reset
+// Custom hooks in .ts are not signature-instrumented; remount this boundary after edits.
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
