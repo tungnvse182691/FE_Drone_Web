@@ -118,8 +118,8 @@ await test('real PM hook starts empty, design selection stays unconfirmed, actua
 await test('applied preview keeps references through cursor/reason/unapplied form renders; apply/remove/source/scope invalidate it',async()=>{
  const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render()
  for(const [k,v] of Object.entries({key:'A',source:'Sổ đo',footprint:'12 20\n16 20\n16 23\n12 20',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)
- h.render();h.view.asBuilt.apply();h.render();const initial=h.view.asBuilt.preview
- const unchanged=()=>{assert.strictEqual(h.view.asBuilt.preview,initial);assert.strictEqual(h.view.display.segments,initial.segments);assert.strictEqual(h.view.display.preview.slabsGeoJSON,initial.preview.slabsGeoJSON);assert.strictEqual(h.view.display.preview.slabLabelsGeoJSON,initial.preview.slabLabelsGeoJSON);assert.strictEqual(h.view.previewBase,initial)}
+ h.render();const routeBase=h.view.previewBase;h.view.asBuilt.apply();h.render();const initial=h.view.asBuilt.preview
+ const unchanged=()=>{assert.strictEqual(h.view.asBuilt.preview,initial);assert.strictEqual(h.view.display.segments,initial.segments);assert.strictEqual(h.view.display.preview.slabsGeoJSON,initial.preview.slabsGeoJSON);assert.strictEqual(h.view.display.preview.slabLabelsGeoJSON,initial.preview.slabLabelsGeoJSON);assert.strictEqual(h.view.previewBase,routeBase)}
  for(let i=0;i<10;i++){h.render();unchanged()}
  h.view.asBuilt.setReason('Lý do thay đổi');h.render();unchanged();h.view.asBuilt.select(0);h.render();unchanged()
  h.view.asBuilt.setField('footprint','12 20\n18 20\n18 23\n12 20');h.render();unchanged()
@@ -130,6 +130,14 @@ await test('applied preview keeps references through cursor/reason/unapplied for
  e.records.set('layout',{...e.source,contentHash:'c'.repeat(64)});h.view.retry();h.render();await h.flush();assert.notStrictEqual(h.view.asBuilt.preview,removed);assert.equal(h.view.asBuilt.preview.slabs.length,1)
  h.view.asBuilt.setShowActual(false);h.render();assert.equal(h.view.asBuilt.preview,null);h.view.asBuilt.setShowActual(true);h.render();assert.ok(h.view.asBuilt.preview)
  h.switchProject('other');await h.flush();assert.equal(h.view.asBuilt.preview,null);assert.equal(h.view.display,null);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
+})
+await test('PLANNED to local AS_BUILT toggles slabs only; route bindings survive subset, edits and removal without writes',async()=>{
+ const e=env(),h=hookView(e);h.render();await h.flush();const base=h.view.previewBase,source=JSON.stringify(e.source)
+ h.view.asBuilt.start();h.render();h.view.asBuilt.toggleDesign('1');h.render();h.view.asBuilt.setCaptureSource('PM xác nhận');h.render();h.view.asBuilt.confirmSelected();h.render()
+ const slabs=h.view.asBuilt.slabs;assert.equal(slabs.length,1)
+ for(const show of [true,false,true,false,true]){h.view.asBuilt.setShowActual(show);h.render();assert.strictEqual(h.view.previewBase,base);assert.strictEqual(h.view.previewBase.route,base.route);assert.strictEqual(h.view.previewBase.segments,base.segments);assert.strictEqual(h.view.previewBase.coordinates,base.coordinates);assert.strictEqual(h.view.previewBase.kmPoints,base.kmPoints);assert.strictEqual(h.view.asBuilt.slabs,slabs);assert.equal(h.view.display.preview.slabsGeoJSON.features[0].properties.layoutKind,show?'AS_BUILT':'PLANNED')}
+ h.view.asBuilt.select(0);h.render();h.view.asBuilt.setField('widthMeters','3');h.render();h.view.asBuilt.apply();h.render();assert.strictEqual(h.view.previewBase,base);assert.equal(h.view.display.slabs[0].widthM,3)
+ h.view.asBuilt.remove(0);h.render();assert.strictEqual(h.view.previewBase,base);assert.equal(h.view.display.slabs.length,0);assert.equal(JSON.stringify(e.source),source);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
 })
 await test('scope change discards late hook success and toast; old command stays with original project',async()=>{
  const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render()
