@@ -195,6 +195,18 @@ await test('editing and drawing are unconfirmed map candidates; native payload c
  h.render();h.view.asBuilt.apply();h.render();assert.equal(h.view.asBuilt.slabs.length,2);assert.ok(h.view.asBuilt.slabs[1].footprint[0].x>100000);assert.equal(h.view.asBuilt.slabs[1].plannedSequence,undefined);assert.equal(JSON.stringify(e.source),original)
  h.view.asBuilt.remove(0);h.render();assert.equal(h.view.asBuilt.slabs.length,1);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
 })
+await test('invalid width 3. never drops footprint during vertex drag; correction to 3.5 applies and invalid input still blocks Apply',async()=>{
+ const e=env(),a=realAdapters();e.mocks['../../../api/services/alignmentService']=a
+ e.source.geometry.slabs[0].footprint=[{x:500000,y:1105412.491},{x:500004,y:1105412.491},{x:500004,y:1105415.491},{x:500000,y:1105412.491}]
+ const before=JSON.stringify(e.source),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render();h.view.asBuilt.setCaptureSource('PM nhập trong test cô lập');h.render();h.view.asBuilt.chooseAll();h.render();h.view.asBuilt.confirmSelected();h.render();h.view.asBuilt.select(0);h.render();h.view.asBuilt.beginVertices();h.render()
+ const original=h.view.asBuilt.candidatePoints,preview=h.view.asBuilt.preview;h.view.asBuilt.setField('widthMeters','3.');h.render();assert.strictEqual(h.view.asBuilt.candidatePoints,original)
+ h.view.asBuilt.moveVertex(0,105.00001,10.00001);h.render();const moved=h.view.asBuilt.candidatePoints
+ assert.equal(moved.length,4);assert.notEqual(moved[0].x,original[0].x);assert.deepEqual(plain(moved[0]),plain(moved.at(-1)));assert.equal(h.view.asBuilt.vertexEditing,true);assert.strictEqual(h.view.asBuilt.preview,preview)
+ h.view.asBuilt.apply();h.render();assert.match(h.view.asBuilt.error,/Tấm 1: Chiều rộng/);assert.ok(!h.view.asBuilt.error.includes('thiếu đường bao'));assert.strictEqual(h.view.asBuilt.candidatePoints,moved);assert.strictEqual(h.view.asBuilt.preview,preview)
+ h.view.asBuilt.setField('widthMeters','3.5');h.render();assert.strictEqual(h.view.asBuilt.candidatePoints,moved);h.view.asBuilt.apply();h.render()
+ assert.equal(h.view.asBuilt.slabs.length,1);assert.equal(h.view.asBuilt.slabs[0].widthMeters,3.5);assert.deepEqual(plain(h.view.asBuilt.slabs[0].footprint),plain(moved));assert.notStrictEqual(h.view.asBuilt.preview,preview);assert.equal(JSON.stringify(e.source),before);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
+ h.view.asBuilt.select(0);h.render();h.view.asBuilt.setField('lengthMeters','bad');h.render();assert.equal(h.view.asBuilt.candidatePoints.length,4);h.view.asBuilt.apply();h.render();assert.match(h.view.asBuilt.error,/Chiều dài/)
+})
 await test('map overlay drag/draw callbacks clean up listeners/markers and never touch PLANNED layers',()=>{
  const e=env(),a=realAdapters();e.mocks['../../../api/services/alignmentService']=a;const g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts'),m={exports:{}},allMarkers=[],events={},canvas={style:{cursor:''},addEventListener(k,fn){events[k]=fn},removeEventListener(k){delete events[k]},getBoundingClientRect:()=>({left:10,top:20})}
  class Marker{constructor(o){this.o=o;this.handlers={};allMarkers.push(this)}setLngLat(p){this.p=p;return this}addTo(){return this}on(k,f){this.handlers[k]=f;return this}getLngLat(){return{lng:105.00001,lat:10.00001}}remove(){this.removed=true}}

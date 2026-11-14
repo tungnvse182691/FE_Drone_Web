@@ -8,16 +8,19 @@ import { closeFootprint, confirmDesignSelection, designKeysInSegment, engineerin
 
 export const emptyAsBuiltForm = () => ({ key: '', plannedSequence: '', footprint: '', lengthMeters: '', widthMeters: '', dimensionUnknownReason: '', source: '', sourceFileId: '' })
 export type AsBuiltForm = ReturnType<typeof emptyAsBuiltForm>
-export function asBuiltSlabFromForm(form: AsBuiltForm): AsBuiltSlabInput {
-  const numeric = (text: string, field: string) => {
-    if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text.trim()) || !Number.isFinite(Number(text))) throw new Error(`${field}: cần số hữu hạn.`)
-    return Number(text)
-  }
-  const slab: AsBuiltSlabInput = { key: form.key, source: form.source, footprint: form.footprint.trim().split(/\r?\n/).map((line, i) => {
+function numeric(text: string, field: string): number {
+  if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text.trim()) || !Number.isFinite(Number(text))) throw new Error(`${field}: cần số hữu hạn.`)
+  return Number(text)
+}
+function footprintFromText(text: string): FootprintPoint[] {
+  return text.trim().split(/\r?\n/).map((line, i) => {
     const pair = line.trim().split(/[\s,;]+/)
     if (pair.length !== 2) throw new Error(`Footprint dòng ${i + 1}: nhập đúng X Y.`)
     return { x: numeric(pair[0], `X dòng ${i + 1}`), y: numeric(pair[1], `Y dòng ${i + 1}`) }
-  }) }
+  })
+}
+export function asBuiltSlabFromForm(form: AsBuiltForm): AsBuiltSlabInput {
+  const slab: AsBuiltSlabInput = { key: form.key, source: form.source, footprint: footprintFromText(form.footprint) }
   if (form.plannedSequence.trim()) slab.plannedSequence = numeric(form.plannedSequence, 'Sequence thiết kế')
   if (form.lengthMeters.trim()) slab.lengthMeters = numeric(form.lengthMeters, 'Chiều dài')
   if (form.widthMeters.trim()) slab.widthMeters = numeric(form.widthMeters, 'Chiều rộng')
@@ -40,7 +43,7 @@ export function useAsBuiltWorkflow(projectId: string, scope: string, source: Pav
   const [mapEditSession,setMapEditSession]=useState(0)
   const [activeVertex,setActiveVertex]=useState(0)
   const mapCrs = sourceDisplay?.engineeringSrid, mapSupported = mapCrs === 32648
-  const candidatePoints = useMemo(() => { if (drawing) return drawPoints; if (!form.footprint.trim()) return []; try { return asBuiltSlabFromForm(form).footprint } catch { return [] } }, [drawing,drawPoints,form.footprint])
+  const candidatePoints = useMemo(() => { if (drawing) return drawPoints; if (!form.footprint.trim()) return []; try { return footprintFromText(form.footprint) } catch { return [] } }, [drawing,drawPoints,form.footprint])
   const plannedSlabs = source?.kind === 'PLANNED' ? source.geometry.slabs : []
   const running = useRef(false)
   useEffect(() => {
