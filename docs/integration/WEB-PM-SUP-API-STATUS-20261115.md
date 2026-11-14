@@ -1,0 +1,324 @@
+# Bảng tích hợp Web PM/Sup — đợt 15/11/2026
+
+Baseline `1c348da`; tiếp tục trên nhánh `hoang`, giữ local ngoài các luồng đang nối. Không tạo worktree/bản giải nén, không sửa BE/SQL, không POST/PUT/PATCH/DELETE thật. Không dùng tài liệu bàn giao để thay quyết định nghiệp vụ.
+
+Nguồn đối chiếu: AGENTS.md; Spec17_10 PM/Sup matrix, business workflows, full API catalog; docs/contracts/openapi.json và FE-API-CATALOG.json; Candidate3 deploy/fe-handoff README-FOR-FE, FE-W01-W10-RECIPES, FE-API-FUNCTIONAL-GUIDE; source đúng image runtime b89a52fe11ed tại thư mục source đã có. Các hướng dẫn discovery lịch sử mâu thuẫn recipes mới được đối chiếu bằng OpenAPI/source; không suy chức năng từ tên route.
+
+## Kết quả đợt này
+
+- `39c2c8a`: dropdown Report có mặt cả trước/sau KEEP_NEW, đổi nguồn không lẫn kết quả; không mở lại POST khi nguồn đã ghi nhận.
+- `70e7909`: API039–042 list/detail/scope/mark-read thông báo PM/Sup qua cookie/CSRF. Phân trang đầy đủ, receipt/GET/version/key, actor fence. Không đoán người gửi/ưu tiên/SLA hoặc điều hướng từ resourceId đơn lẻ. Bố cục feed/widgets/modal âm thanh giữ nguyên; bỏ claim độ trễ realtime giả.
+- `73204f8`: API080/088/096 task detail/history/latest submission, API085/086 metadata/ảnh riêng tư và API092 review trong modal FIELD có sẵn. API078 sửa phân trang afterId. Không điền số đo AI/UNKNOWN, không đổi Defect thành VERIFIED. Review PM chọn CONFIRM/NO_DEFECT/SUPPLEMENT và lý do2000 ký tự; nguồn runtime FieldInspectionReview.cs mới là căn cứ enum. Caller cũ ACCEPT + lý do tự tạo đã được thay bằng thao tác review rõ ràng trong chi tiết; Sup chỉ đọc.
+- `67ff2f8`: API079 nhánh REPORTER/PRE_MEASUREMENT trong form tạo FIELD hiện có. Bỏ fixture Defect/Crew/geometry/ngày hẹn và fallback danh mục; PM tự chọn toàn bộ input. Đọc lại Defect/version, nguồn KEEP_NEW, thành viên ACTIVE và package trước POST; chưa đủ preflight không có pending. Giữ journal sau timeout, receipt chỉ GET; chống phản hồi cũ theo dự án/actor. Sửa guard status PascalCase của FIELD theo source runtime.
+
+## Mâu thuẫn và phần bị chặn
+
+1. Catalog hiện264 operations, OpenAPI local266, Swagger runtime274. Hai path local chưa có mã catalog: POST projects/{projectId}/members và GET projects/{projectId}/members/eligible. Chín path runtime bổ sung gồm catalog defect-types, geometry submission/submit/reject, pavement-layout collection, eligible-drones, phone PATCH, upload cancel. /ready chỉ có trong local contract. Bảng lấy hợp method/path local+runtime (275 dòng), giữ nguyên mã catalog; không sáng tác API267…
+2. AuditTrail/auditService đang là mock; không có endpoint audit canonical tương ứng trong OpenAPI runtime. Không invent /audit hoặc coi local export giả là job thật.
+3. Dashboard /dashboard/pm không có endpoint trong contract. Màn hiện có còn số liệu mock; chưa đánh dấu gắn API hoặc tổng hợp KPI khi chưa xác lập định nghĩa/dimensions. Các số đo/metrics không được suy từ confidence/bbox.
+4. ResearchValidation UI là kiểm định đo đạc thực nghiệm; không có endpoint cho đúng bộ metric này. Không thay bằng training-label API hoặc bịa số liệu.
+5. RepairProposals UI còn gom nhiều Defect theo tuyến/đợt, nhưng RepairPackageCreateInput canonical gắn một defectId+defectVersion+obligations+reason. Các aggregate status/technical BOQ trong mock chưa trỏ được vào item/obligation/version thật. Cần nối theo mô hình obligation/item và xác minh binding, không gọi một POST giả “gộp batch”. Đây là phần chưa hoàn tất, không kết luận BE cần bổ sung.
+6. Retention UI toggle theo project/deletion requests không khớp canonical retention file-basis/evaluation/hold reference. Không bịa project-level toggle, không xóa orphan, không mở command purge ngoài contract.
+7. API039–042 không có sender/priority/SLA/category trong NotificationDto. Scope đọc riêng có source/event/classification; chưa có mapping category theo loại ưu tiên. UI chỉ trình bày trường server thực có, không suy nhóm/khẩn cấp/SLA.
+8. PM review FIELD phải dùng CONFIRM/NO_DEFECT/SUPPLEMENT. OpenAPI FieldReviewInput chỉ khai báo string; source b89a52f xác nhận enum và reason<=2000. Một số hướng dẫn/caller cũ dùng ACCEPT là sai. Source trả201 review trong khi catalog success200; FE đối chiếu receipt DTO + GET, không suy từ status đơn lẻ.
+
+9. FIELD source ViewAsync trả status PascalCase (Submitted/Completed/SupplementRequired), không phải toàn uppercase. Guard review và readback đã đối chiếu source, chuẩn hóa riêng để không khóa nhầm Submitted hoặc báo sai kết quả. Hoàn tất FIELD không đổi trạng thái Defect thành VERIFIED.
+10. Tạo FIELD từ REPORTER hiện cần reference decision/Defect đã đọc qua KEEP_NEW; DefectDto không cung cấp đầy đủ nguồn/Survey provenance và không có API list candidate-decisions để tự tìm lịch sử. Không có reference thì hướng dẫn mở lại kết quả ghi nhận, không tự chọn Survey/sourceId. Đây là giới hạn nối hiện tại, không kết luận thiếu endpoint tạo FIELD.
+
+## Kiểm thử và nghiệm thu
+
+Tự động: 93 nhóm PASS gồm dropdown/KEEP_NEW10; notifications6; FIELD read/UI8; FIELD review4; REPORT→FIELD create6; FIELD list actor/project fence1; API02411; geometry scope8; D225; Refresh2; intake12. Typecheck `tsc -b` PASS; `npm run build` PASS (2080 modules; còn cảnh báo Tailwind duration-[250ms] và bundle lớn). `git diff --check` và staged diff-check PASS. Tests dùng HTTP/hooks/storage mô phỏng, không chứng nhận database mutation/SMTP/GIS/worker. Build dùng toàn bộ working tree hiện có, bao gồm local giữ nguyên ngoài commit.
+
+Runtime chỉ đọc: GET notifications200 items[]; GET FIELD list200 items[] trên7 dự án PM hiện được cấp. Không tạo fixture để làm đầy. Do chưa có notification/task/submission thích hợp, mark-read/review/evidence-content runtime còn NOT_RUN.
+
+Theo dõi riêng: lỗi retry D1 đã biết vẫn chưa xử lý/nghiệm thu lại; không gộp vào kết quả PASS D2/API024/FIELD của đợt này.
+
+Nghiệm thu tay ngắn:
+- Report: chọn từng nguồn trước/sau KEEP_NEW, F5 phải đọc reference/Defect OPEN; journal409 khác key vẫn giữ; không thêm POST.
+- Thông báo: PM/Sup mở chuông → inbox. Có bản ghi thì bấm đọc chi tiết/phạm vi (GET); tự đánh dấu đọc một lần rồi đối chiếu POST key/If-Match → GET read=true. F5 và đổi actor không lẫn inbox. List rỗng/error phải khác nhau. Inbox có bản ghi không chứng minh đã giao thông báo ra ngoài.
+- Tạo FIELD: PM chọn dự án cụ thể → mở lại Report đã KEEP_NEW để GET đối chiếu → mở tạo phiếu, tự chọn Defect OPEN, Crew ACTIVE, phương pháp, loại đo, hạn và tuyến/set PUBLISHED. Tự bấm một lần, đối chiếu receipt TaskID → GET/list; đổi dự án/actor không nhận phản hồi cũ. Thiếu nguồn hoặc stale version/hash phải chặn trước POST, không tạo pending. Sau timeout/F5 giữ nguyên journal; receipt chỉ GET. Nhánh Survey chưa hoàn tất.
+- FIELD: mở phiếu đo → task/history/submission → chọn ảnh → GET metadata VERIFIED/checksum → content. Zero/UNKNOWN giữ nguyên. PM chọn quyết định/lý do rồi tự xác nhận một lần; receipt/GET phải COMPLETED hoặc SUPPLEMENT_REQUIRED, Defect không tự VERIFIED. Sup không có form review. Timeout/F5 giữ key/body/version; có receipt chỉ GET;403/412 báo rõ, không thay key để thử.
+
+## Toàn bộ method/path đã đối chiếu danh mục
+
+“đã có” là có code/caller đã xác định, không đồng nghĩa full runtime PASS. “vừa nối” chỉ phần đợt này. “bị chặn” kèm predicate/role/source; không đồng nghĩa yêu cầu BE mới. “chưa làm” là chưa rà đủ hoặc chưa triển khai trong đợt, không phải kết luận không có bất kỳ code nào. Bảng bao gồm local chưa commit; không gom local đó vào các commit mới.
+
+Tổng dòng: 275; đã có: 70, chưa làm: 180, bị chặn: 14, vừa nối: 11.
+
+| Mã catalog | Method | Endpoint | Trạng thái | Bằng chứng / phạm vi |
+|---|---|---|---|---|
+| ADD-01 | GET | `/api/v1/projects/{projectId}/ai-mock-runs` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:496 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| ADD-02 | GET | `/api/v1/projects/{projectId}/repair-packages` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-03 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-04 | GET | `/api/v1/projects/{projectId}/exports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-05 | GET | `/api/v1/projects/{projectId}/survey-plans` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:467 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| ADD-06 | GET | `/api/v1/projects/{projectId}/survey-tasks` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:482 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| ADD-07 | GET | `/api/v1/projects/{projectId}/processing-jobs` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-08 | GET | `/api/v1/projects/{projectId}/offline/devices` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-09 | GET | `/api/v1/projects/{projectId}/offline/packages` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-10 | GET | `/api/v1/projects/{projectId}/offline/grants` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-11 | GET | `/api/v1/projects/{projectId}/retention/evaluations` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-12 | GET | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| ADD-13 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/notification-supervisor` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-14 | PUT | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/notification-supervisor` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-15 | DELETE | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/notification-supervisor` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-16 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/publications` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-17 | POST | `/api/v1/projects/{projectId}/publications/{publicId}/withdraw` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-18 | GET | `/api/v1/public/publications/{publicId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-19 | GET | `/ready` | **đã có** | Operational health; không tính là nghiệp vụ PM/Sup. Không nằm trong Swagger runtime. |
+| API-001 | POST | `/api/v1/admin/users/{userId}/password-reset` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-002 | POST | `/api/v1/auth/android/login` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-003 | POST | `/api/v1/auth/android/refresh` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-004 | POST | `/api/v1/auth/change-password` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-005 | POST | `/api/v1/auth/forced-password-change` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-006 | POST | `/api/v1/auth/login` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-007 | POST | `/api/v1/auth/logout` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-008 | POST | `/api/v1/auth/password-recovery-requests` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-009 | POST | `/api/v1/auth/refresh` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-010 | POST | `/api/v1/auth/reporter-registrations` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-011 | POST | `/api/v1/auth/reporter-registrations/resend` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-012 | POST | `/api/v1/auth/reporter-registrations/verify` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-013 | GET | `/api/v1/auth/web/csrf` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-014 | POST | `/api/v1/auth/web/login` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-015 | POST | `/api/v1/auth/web/logout` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-016 | POST | `/api/v1/auth/web/renew` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-017 | GET | `/api/v1/auth/web/session` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-018 | GET | `/api/v1/cases` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-019 | GET | `/api/v1/cases/{caseId}` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-020 | POST | `/api/v1/cases/{caseId}/conclusions` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-021 | POST | `/api/v1/cases/{caseId}/publications` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-022 | POST | `/api/v1/cases/{caseId}/report-links` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-023 | POST | `/api/v1/cases/{caseId}/report-splits` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-024 | POST | `/api/v1/cases/{caseId}/triage` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-025 | GET | `/api/v1/datasets/{datasetId}/coverage` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-026 | GET | `/api/v1/datasets/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-027 | POST | `/api/v1/datasets/{id}/assessments` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-028 | GET | `/api/v1/datasets/{id}/assessments/{assessmentId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-029 | GET | `/api/v1/files/{fileId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-030 | GET | `/api/v1/files/{fileId}/content` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1681 (surveyService.getFileContentUrl); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-031 | POST | `/api/v1/internal/processing-jobs/{jobId}/results` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-032 | POST | `/api/v1/invitations` | **đã có** | Callsite + caller hiện hữu: src/api/services/personnelService.ts:351 (personnelService.createInvitation); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-033 | POST | `/api/v1/invitations/accept` | **đã có** | Callsite + caller hiện hữu: src/api/services/invitationAcceptService.ts:16 (invitationAcceptService.accept); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-034 | POST | `/api/v1/labels/{labelId}/review` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-035 | GET | `/api/v1/me` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-036 | PATCH | `/api/v1/me` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-037 | GET | `/api/v1/me/inspection-tasks` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-038 | GET | `/api/v1/me/survey-tasks` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-039 | GET | `/api/v1/notifications` | **vừa nối** | notificationService + NotificationsHandoffHub (API039–042) |
+| API-040 | GET | `/api/v1/notifications/{notificationId}` | **vừa nối** | notificationService + NotificationsHandoffHub (API039–042) |
+| API-041 | POST | `/api/v1/notifications/{notificationId}/read` | **vừa nối** | notificationService + NotificationsHandoffHub (API039–042) |
+| API-042 | GET | `/api/v1/notifications/{notificationId}/scope` | **vừa nối** | notificationService + NotificationsHandoffHub (API039–042) |
+| API-043 | POST | `/api/v1/offline/uploads` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-044 | POST | `/api/v1/processing-jobs` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-045 | GET | `/api/v1/processing-jobs/{jobId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-046 | POST | `/api/v1/processing-jobs/{jobId}/retry` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-047 | GET | `/api/v1/profile` | **đã có** | Callsite + caller hiện hữu: src/api/services/profileService.ts:45 (profileService.getProfile); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-048 | PUT | `/api/v1/profile` | **đã có** | Callsite + caller hiện hữu: src/api/services/profileService.ts:113 (profileService.updateProfile); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-049 | GET | `/api/v1/projects` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| API-050 | POST | `/api/v1/projects` | **đã có** | Callsite + caller hiện hữu: src/api/services/projectService.ts:741 (projectService.createProject); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-051 | PUT | `/api/v1/projects/{projectId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/projectUpdateService.ts:51 (projectUpdateService.run); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-052 | GET | `/api/v1/projects/{projectId}/ai-candidates/{detectionId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-053 | POST | `/api/v1/projects/{projectId}/ai-mock-runs` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:853 (surveyService.simulateDroneFlightCompletion); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-054 | GET | `/api/v1/projects/{projectId}/ai-mock-runs/{runId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-055 | GET | `/api/v1/projects/{projectId}/ai-mock-runs/{runId}/result` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:529 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-056 | GET | `/api/v1/projects/{projectId}/baseline-selections` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:510 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-057 | POST | `/api/v1/projects/{projectId}/baseline-selections` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:2082 (surveyService.lockBaseline); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-058 | GET | `/api/v1/projects/{projectId}/baseline-selections/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-059 | POST | `/api/v1/projects/{projectId}/candidate-decisions` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-060 | GET | `/api/v1/projects/{projectId}/candidate-decisions/{decisionId}` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-061 | GET | `/api/v1/projects/{projectId}/candidates` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-062 | GET | `/api/v1/projects/{projectId}/clocks` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-063 | POST | `/api/v1/projects/{projectId}/clocks/{clockId}/appointments` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-064 | POST | `/api/v1/projects/{projectId}/clocks/{clockId}/extensions` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-065 | GET | `/api/v1/projects/{projectId}/crs-profiles` | **đã có** | Callsite + caller hiện hữu: src/api/services/alignmentService.ts:337 (alignmentService.fetchCrsProfiles); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-066 | POST | `/api/v1/projects/{projectId}/crs-profiles` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-067 | GET | `/api/v1/projects/{projectId}/crs-profiles/{profileId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/alignmentService.ts:350 (alignmentService.readCrsProfile); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-068 | GET | `/api/v1/projects/{projectId}/defect-statistics` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-069 | POST | `/api/v1/projects/{projectId}/defect-statistics` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-070 | GET | `/api/v1/projects/{projectId}/defects` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:388 (fastTrackService.getDefects); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-071 | GET | `/api/v1/projects/{projectId}/defects/{defectId}` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
+| API-072 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/assessments` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1573 (surveyService.assessDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-073 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/verification-decisions` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1617 (surveyService.verifyDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-074 | POST | `/api/v1/projects/{projectId}/exports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-075 | GET | `/api/v1/projects/{projectId}/exports/{exportId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-076 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/content` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-077 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/manifest` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-078 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks` | **đã có** | Đã gọi DB từ trước; đợt này sửa đi hết afterId/nextCursor, kiểm project/ID và không suy nguồn DRONE. |
+| API-079 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks` | **vừa nối** | fieldCreateCommands.ts + MeasurementsTab: REPORTER/PRE_MEASUREMENT từ KEEP_NEW đã GET xác nhận. PM chọn Crew ACTIVE, Defect/version, type1–4, hạn xử lý, tuyến/set PUBLISHED; preflight/hash, journal key/body, receipt→GET. Survey và thiếu reference bị chặn rõ; mutation runtime NOT_RUN. |
+| API-080 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-081 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/accept` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-082 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/assign` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-083 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/cancel` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-084 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence-reuse` | **đã có** | Callsite + caller hiện hữu: src/api/services/fieldTaskService.ts:420 (fieldTaskService.reuseEvidence); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-085 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence/{fileId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-086 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence/{fileId}/content` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-087 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/geometry` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-088 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/history` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-089 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/location-impact-decisions` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-090 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/reassign` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-091 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/reject` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-092 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/reviews` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-093 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/start` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-094 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/start-origin` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-095 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/submissions` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
+| API-096 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/submissions/{submissionId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
+| API-097 | GET | `/api/v1/projects/{projectId}/geometry-location-impacts` | **đã có** | Callsite + caller hiện hữu: src/api/services/geometryImpactService.ts:46 (geometryImpactService.list); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-098 | POST | `/api/v1/projects/{projectId}/geometry-location-impacts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-099 | GET | `/api/v1/projects/{projectId}/geometry-location-impacts/{impactId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/geometryImpactService.ts:55 (geometryImpactService.readImpact); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-100 | POST | `/api/v1/projects/{projectId}/geometry-location-impacts/{impactId}/decisions` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-101 | POST | `/api/v1/projects/{projectId}/geometry-map-publications` | **đã có** | Callsite + caller hiện hữu: src/api/services/mapPublicationService.ts:61 (mapPublicationService.publish); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-102 | GET | `/api/v1/projects/{projectId}/geometry-map-publications/{publicationId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/mapPublicationService.ts:27 (mapPublicationService.read); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-103 | GET | `/api/v1/projects/{projectId}/geometry-map-publications/{publicationId}/layers/{layer}` | **đã có** | Callsite + caller hiện hữu: src/api/services/mapPublicationService.ts:84 (mapPublicationService.page); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-104 | GET | `/api/v1/projects/{projectId}/geometry-package` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| API-105 | GET | `/api/v1/projects/{projectId}/labels` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-106 | POST | `/api/v1/projects/{projectId}/labels` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-107 | GET | `/api/v1/projects/{projectId}/labels/{labelId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-108 | POST | `/api/v1/projects/{projectId}/labels/{labelId}/revisions` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-109 | GET | `/api/v1/projects/{projectId}/lifecycle` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-110 | POST | `/api/v1/projects/{projectId}/lifecycle/{command}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-111 | POST | `/api/v1/projects/{projectId}/lifecycle/renewed-handling-scope` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-112 | GET | `/api/v1/projects/{projectId}/members` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:436 (fastTrackService.getCrews); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-113 | POST | `/api/v1/projects/{projectId}/offline/artifacts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-114 | GET | `/api/v1/projects/{projectId}/offline/artifacts/{artifactId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-115 | GET | `/api/v1/projects/{projectId}/offline/batches/{batchId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-116 | POST | `/api/v1/projects/{projectId}/offline/devices` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-117 | GET | `/api/v1/projects/{projectId}/offline/devices/{registrationId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-118 | POST | `/api/v1/projects/{projectId}/offline/devices/{registrationId}/revoke` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-119 | POST | `/api/v1/projects/{projectId}/offline/grants` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-120 | GET | `/api/v1/projects/{projectId}/offline/grants/{grantId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-121 | POST | `/api/v1/projects/{projectId}/offline/grants/{grantId}/revoke` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-122 | POST | `/api/v1/projects/{projectId}/offline/import` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-123 | GET | `/api/v1/projects/{projectId}/offline/origins/{originId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-124 | GET | `/api/v1/projects/{projectId}/offline/packages/{packageId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-125 | POST | `/api/v1/projects/{projectId}/offline/packages/export` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-126 | POST | `/api/v1/projects/{projectId}/offline/packages/prepare` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-127 | POST | `/api/v1/projects/{projectId}/offline/snapshots` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-128 | GET | `/api/v1/projects/{projectId}/offline/snapshots/{snapshotId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-129 | POST | `/api/v1/projects/{projectId}/offline/starts/reconcile` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-130 | POST | `/api/v1/projects/{projectId}/offline/sync` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-131 | GET | `/api/v1/projects/{projectId}/pavement-layouts/{layoutId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/pavementService.ts:96 (pavementService.read); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-132 | POST | `/api/v1/projects/{projectId}/pavement-layouts/as-built` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-133 | GET | `/api/v1/projects/{projectId}/primary-project-manager` | **đã có** | Callsite + caller hiện hữu: src/api/services/personnelService.ts:377 (personnelService.getPrimaryProjectManager); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-134 | PUT | `/api/v1/projects/{projectId}/primary-project-manager` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-135 | GET | `/api/v1/projects/{projectId}/receiving-requests` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-136 | GET | `/api/v1/projects/{projectId}/receiving-requests/{requestId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-137 | POST | `/api/v1/projects/{projectId}/receiving-requests/{requestId}/ack` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-138 | POST | `/api/v1/projects/{projectId}/receiving-requests/{requestId}/appointment` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-139 | POST | `/api/v1/projects/{projectId}/repair-packages` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-140 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-141 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-142 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/approve` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-143 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/assign` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-144 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/cancellations` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-145 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/corrections` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-146 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/eligibility` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-147 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/final-confirmation` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-148 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/history` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-149 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/normal-successors` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-150 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/review-requests` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-151 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/safety-measures` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-152 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/safety-measures/{measureId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-153 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/safety-measures/{measureId}/checks` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-154 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/safety-measures/{measureId}/installation` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-155 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/safety-measures/{measureId}/warnings/{warningId}/acknowledgement` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-156 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/assessment` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-157 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/attempts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-158 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/attempts/reviews` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-159 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/attempts/supplements` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-160 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/execution-finish` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-161 | POST | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/tasks/{taskId}/execution-start` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-162 | POST | `/api/v1/projects/{projectId}/repair-policies/drafts` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:307 (fastTrackService.createPolicyDraft); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-163 | GET | `/api/v1/projects/{projectId}/repair-policies/drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-164 | PUT | `/api/v1/projects/{projectId}/repair-policies/drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-165 | POST | `/api/v1/projects/{projectId}/repair-policies/drafts/{draftId}/publish` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:329 (fastTrackService.publishPolicy); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-166 | GET | `/api/v1/projects/{projectId}/repair-policies/revisions/{revisionId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-167 | POST | `/api/v1/projects/{projectId}/repair-policies/revisions/{revisionId}/revoke` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-168 | GET | `/api/v1/projects/{projectId}/reports/items` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-169 | GET | `/api/v1/projects/{projectId}/reports/summary` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-170 | GET | `/api/v1/projects/{projectId}/reports/timeline` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-171 | POST | `/api/v1/projects/{projectId}/retention/evaluations` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-172 | GET | `/api/v1/projects/{projectId}/retention/evaluations/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-173 | GET | `/api/v1/projects/{projectId}/retention/files/{fileId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-174 | PUT | `/api/v1/projects/{projectId}/retention/files/{fileId}/basis` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-175 | GET | `/api/v1/projects/{projectId}/road-coverage` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:166 (fastTrackService.getRoadCoverage); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-176 | POST | `/api/v1/projects/{projectId}/road-coverage` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:227 (fastTrackService.confirmRoadCoverage); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-177 | POST | `/api/v1/projects/{projectId}/road-geometry-drafts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-178 | GET | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-179 | PUT | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-180 | POST | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/confirm` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-181 | POST | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/preview` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-182 | GET | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/readiness` | **đã có** | Callsite + caller hiện hữu: src/api/services/alignmentService.ts:322 (alignmentService.readDraftReadiness); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-183 | POST | `/api/v1/projects/{projectId}/road-sections` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-184 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/geometry-drafts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-185 | GET | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/geometry-drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-186 | PUT | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/geometry-drafts/{draftId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-187 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/geometry-drafts/{draftId}/confirm` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-188 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/geometry-drafts/{draftId}/preview` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-189 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/survey-plans` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-190 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/survey-requests` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-191 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-192 | GET | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/geometry` | **đã có** | Callsite + caller hiện hữu: src/api/services/alignmentService.ts:329 (alignmentService.readConfirmedGeometry); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-193 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-194 | GET | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets/{setId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/pavementService.ts:71 (pavementService.discover); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-195 | PUT | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets/{setId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-196 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets/{setId}/publish` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-197 | POST | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets/preview` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-198 | GET | `/api/v1/projects/{projectId}/route-systems` | **đã có** | Callsite + caller hiện hữu: src/api/services/alignmentService.ts:343 (alignmentService.fetchRouteSystems); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-199 | POST | `/api/v1/projects/{projectId}/route-systems` | **đã có** | Callsite + caller hiện hữu: src/api/services/routeSystemCommands.ts:24 (routeSystemCommands.run); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-200 | POST | `/api/v1/projects/{projectId}/route-versions/{routeVersionId}/segment-sets/{segmentSetId}/pavement-plans` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-201 | POST | `/api/v1/projects/{projectId}/survey-plans` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyCreateCommands.ts:35 (surveyCreateCommands.run); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-202 | POST | `/api/v1/projects/{projectId}/survey-plans/{surveyPlanId}/postpone` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-203 | POST | `/api/v1/projects/{projectId}/survey-tasks` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyCreateCommands.ts:38 (surveyCreateCommands.run); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-204 | POST | `/api/v1/projects/{projectId}/validation-runs` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-205 | POST | `/api/v1/projects/{projectId}/warranties` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-206 | GET | `/api/v1/projects/{projectId}/weekly-digests/{digestId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-207 | GET | `/api/v1/projects/{projectId}/work-package` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| API-208 | GET | `/api/v1/reporter-evidence/files/{fileId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-209 | GET | `/api/v1/reporter-evidence/files/{fileId}/content` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-210 | GET | `/api/v1/reporter-evidence/publications/{publicationId}/reports/{reportId}/evidence/{evidenceId}/content` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-211 | POST | `/api/v1/reporter-evidence/uploads` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-212 | GET | `/api/v1/reporter-evidence/uploads/{uploadId}` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-213 | POST | `/api/v1/reporter-evidence/uploads/{uploadId}/complete` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-214 | POST | `/api/v1/reporter-evidence/uploads/{uploadId}/part-urls` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-215 | GET | `/api/v1/reports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-216 | POST | `/api/v1/reports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-217 | GET | `/api/v1/reports/{reportId}` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-218 | GET | `/api/v1/reports/{reportId}/evidence/{evidenceId}/download` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-219 | POST | `/api/v1/reports/{reportId}/supplements` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| API-220 | POST | `/api/v1/retention/holds` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-221 | GET | `/api/v1/retention/holds/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-222 | POST | `/api/v1/retention/holds/{id}/release` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-223 | GET | `/api/v1/survey-plans/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-224 | POST | `/api/v1/survey-plans/{planId}/postpone` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-225 | GET | `/api/v1/survey-tasks/{id}/work-package` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| API-226 | GET | `/api/v1/survey-tasks/{taskId}` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1890 (surveyService.requestReFlight); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-227 | POST | `/api/v1/survey-tasks/{taskId}/accept` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-228 | POST | `/api/v1/survey-tasks/{taskId}/cancel` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-229 | POST | `/api/v1/survey-tasks/{taskId}/datasets` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-230 | POST | `/api/v1/survey-tasks/{taskId}/decline` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-231 | POST | `/api/v1/survey-tasks/{taskId}/reassign` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-232 | POST | `/api/v1/survey-tasks/{taskId}/supplements` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1925 (surveyService.requestReFlight); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-233 | POST | `/api/v1/uploads` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-234 | GET | `/api/v1/uploads/{uploadId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-235 | POST | `/api/v1/uploads/{uploadId}/complete` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-236 | POST | `/api/v1/uploads/{uploadId}/part-urls` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-237 | GET | `/api/v1/users` | **đã có** | Callsite + caller hiện hữu: src/api/services/personnelService.ts:173 (personnelService.fetchStaffDirectory); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-238 | GET | `/api/v1/users/{userId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-239 | PATCH | `/api/v1/users/{userId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-240 | POST | `/api/v1/users/{userId}/password-reset` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-241 | GET | `/api/v1/validation-runs/{runId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| CaseReportDetailsController.Download | GET | `/api/v1/cases/{caseId}/reports/{reportId}/evidence/{evidenceId}/content` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| CaseReportDetailsController.List | GET | `/api/v1/cases/{caseId}/reports` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| MeController.GetPhoneNumber | GET | `/api/v1/me/phone-number` | **đã có** | Callsite + caller hiện hữu: src/api/services/profileService.ts:170 (selfPhoneService.read); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| MeController.UpdatePhoneNumber | PATCH | `/api/v1/me/phone-number` | **đã có** | Callsite + caller hiện hữu: src/api/services/profileService.ts:198 (selfPhoneService.save); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| Chưa có mã trong catalog | GET | `/api/v1/catalog/defect-types` | **đã có** | Caller đang có: projectService / triageService / caseReportService / triageGeometryService / defectTypeCatalog; giữ nguyên. |
+| Chưa có mã trong catalog | GET | `/api/v1/projects/{projectId}/members/eligible` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | GET | `/api/v1/projects/{projectId}/road-geometry-submission` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | GET | `/api/v1/projects/{projectId}/road-sections/{roadSectionId}/versions/{routeVersionId}/segment-sets/{segmentSetId}/pavement-layouts` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | GET | `/api/v1/survey-tasks/{taskId}/eligible-drones` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | PATCH | `/api/v1/users/{userId}/phone-number` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | POST | `/api/v1/projects/{projectId}/members` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | POST | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/reject` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | POST | `/api/v1/projects/{projectId}/road-geometry-drafts/{draftId}/submit` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| Chưa có mã trong catalog | POST | `/api/v1/reporter-evidence/uploads/{uploadId}/cancel` | **bị chặn** | Producer/quyền Reporter riêng; PM đọc nguồn qua Case reports, không giả tài khoản Reporter. |
+| Chưa có mã trong catalog | POST | `/api/v1/uploads/{uploadId}/cancel` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
