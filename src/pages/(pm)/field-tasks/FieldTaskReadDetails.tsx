@@ -29,6 +29,7 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed}:{projectId:st
    <p className="break-all">Defect: {current.task.defectId} · Tuyến: {current.task.routeVersionId}</p>
    <p>Hạn xử lý: {current.task.dueAt||'Chưa có thời hạn'} · Người được giao: {current.task.assignedToUserId||'Chưa phân công'}</p>
    <p>{current.task.instructions||'Chưa có chỉ dẫn từ máy chủ.'}</p>
+   <p>Phạm vi/phương pháp: {current.task.measurementScope||'Chưa có phạm vi đo trong response'}</p>
    <details><summary>Lịch sử phân công và xử lý ({current.history.events.length} sự kiện)</summary>
     {current.history.assignments.map(a=><p key={a.id} className="break-all">{a.assignedAt} · {a.assignedToUserId} · {a.reason||'Chưa có lý do'}</p>)}
     {current.history.events.map(e=><p key={e.id}>{e.occurredAt} · {e.kind} · {e.reason}</p>)}
@@ -45,7 +46,7 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed}:{projectId:st
     <p>Bằng chứng: {current.submission.evidence?.map(e=>e.fileId||'Chưa có fileId').join(', ')||'Chưa có bằng chứng trong response'}</p>
    </>}
   </>}
-  {role==='PROJECT_MANAGER'&&current&&(current.task.status==='SUBMITTED'||held)&&<div className="border-t pt-3 space-y-2">
+  {role==='PROJECT_MANAGER'&&current&&(current.task.status?.toUpperCase()==='SUBMITTED'||held)&&<div className="border-t pt-3 space-y-2">
    <p className="font-semibold">PM thẩm định lần nộp hiện tại</p>
    <select aria-label="Quyết định review FIELD" disabled={reviewing||!!held} value={held?.body.decision||decision} onChange={e=>setDecision(e.target.value as FieldReviewInput['decision'])} className="w-full border rounded-lg p-2"><option value="">Chọn quyết định</option><option value="CONFIRM">Xác nhận kết quả đo</option><option value="NO_DEFECT">Kết quả FIELD không có lỗi</option><option value="SUPPLEMENT">Yêu cầu bổ sung</option></select>
    <textarea aria-label="Lý do review FIELD" rows={2} maxLength={2000} disabled={reviewing||!!held} value={held?.body.reason||reason} onChange={e=>setReason(e.target.value)} className="w-full border rounded-lg p-2" />

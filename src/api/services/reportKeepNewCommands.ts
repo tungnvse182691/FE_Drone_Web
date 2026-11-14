@@ -9,6 +9,11 @@ interface Reference {projectId:string;sourceId:string;decisionId:string;defectId
 const referenceKey=(project:string,report:string)=>`rg_keep_reference_${useAuthStore.getState().user?.id}_${project}_${report}`
 const running=new Set<string>(),key=(project:string,report:string)=>`rg_keep_report_${useAuthStore.getState().user?.id}_${project}_${report}`
 export const reportKeepNewCommands={
+  references(project:string):Reference[]{
+    const prefix=`rg_keep_reference_${useAuthStore.getState().user?.id}_${project}_`,rows:Reference[]=[]
+    for(let i=0;i<sessionStorage.length;i++){const k=sessionStorage.key(i);if(k?.startsWith(prefix)){const r=JSON.parse(sessionStorage.getItem(k)!);if(r.projectId!==project||!r.sourceId||!r.decisionId)throw new Error('Reference ghi nhận sai dự án.');rows.push(r)}}
+    return rows
+  },
   reference(project:string,report:string):Reference|null {
     const raw=sessionStorage.getItem(referenceKey(project,report));if(!raw)return null
     const r=JSON.parse(raw) as Reference

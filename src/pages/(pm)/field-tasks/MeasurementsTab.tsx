@@ -1,13 +1,14 @@
+import {fieldCreateCommands,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
+import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
+import type {TriageGeometryPins} from '../../../api/services/triageGeometryService'
 import { FieldTaskReadDetails } from './FieldTaskReadDetails'
 import React, { useState, useMemo } from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
-import { FieldTask, Defect, Project, HubProject } from '../../../types/domain'
-import { surveyService } from '../../../api/services/surveyService'
+import { FieldTask, Project, HubProject } from '../../../types/domain'
 import { SafeImage } from '../../../components/common/SafeImage'
 import {
   fieldTaskService,
-  CreateFieldTaskPayload,
   FieldEvidenceReuseInput
 } from '../../../api/services/fieldTaskService'
 import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModal'
@@ -34,6 +35,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   selectedProjectId = 'ALL',
   projects = []
 }) => {
+  const createContext = React.useRef({project:selectedProjectId,active:true})
+  if(createContext.current.project!==selectedProjectId)createContext.current={project:selectedProjectId,active:true}
+  React.useEffect(()=>{const context=createContext.current;context.active=true;return()=>{context.active=false}},[selectedProjectId])
   // Bộ lọc trạng thái & từ khóa
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [searchTerm, setSearchTerm] = useState<string>('')
@@ -48,63 +52,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
   // Danh mục khiếm khuyết trong dự án để PM chọn khi tạo lệnh đo đạc
   // Danh mục khiếm khuyết trong dự án từ CSDL Backend để PM chọn khi tạo lệnh đo đạc
-  const [availableDefects, setAvailableDefects] = useState<Defect[]>([])
+  const [availableDefects, setAvailableDefects] = useState<FieldDefectOption[]>([])
 
-  React.useEffect(() => {
-    let isMounted = true
-    const loadDefects = async () => {
-      try {
-        const pId = selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id
-        if (!pId) {
-          setAvailableDefects([])
-          return
-        }
-        const rawDfs = await surveyService.getProjectDefects(pId).catch(() => [])
-        if (!isMounted) return
-        const mapped: Defect[] = rawDfs.map((d: any, index: number) => {
-          const shortCode = `#DEF-${d.id.slice(0, 8).toUpperCase()}`
-          return {
-            id: d.id,
-            code: shortCode,
-            project_id: d.projectId || pId,
-            project_name: 'Dự án CSDL',
-            survey_id: d.surveyId || '',
-            gps_lat: 16.2405,
-            gps_lng: 108.131,
-            defect_type: d.defectTypeCode as any,
-            severity: d.severity as any,
-            status: d.status as any,
-            chainage_km: 1025.4 + index * 0.1,
-            confidence_score: 95,
-            image_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80',
-            bounding_box: { x: 0.1, y: 0.1, width: 0.2, height: 0.2 },
-            created_at: new Date().toISOString(),
-            version: d.version,
-            route_version_id: d.roadSectionVersionId
-          }
-        })
-        setAvailableDefects(mapped)
-        if (mapped.length > 0 && !selectedDefectId) {
-          setSelectedDefectId(mapped[0].id)
-          setNewDefectCode(mapped[0].code)
-        }
-      } catch (e) {
-        console.warn('Lỗi tải khiếm khuyết từ CSDL:', e)
-      }
-    }
-    loadDefects()
-    return () => {
-      isMounted = false
-    }
-  }, [selectedProjectId, projects])
-
-  // Danh mục Tổ đo đạc hiện trường từ CSDL Backend
-  const crewMembers = useMemo(() => [
-    { id: '72f84201-a001-4000-8000-000000000008', name: 'Synthetic crew-a (Đội đo đạc số 1)' },
-    { id: '72f84201-a001-4000-8000-000000000009', name: 'Synthetic crew-b (Đội đo đạc số 2)' }
-  ], [])
-
-  const [selectedCrewId, setSelectedCrewId] = useState<string>('72f84201-a001-4000-8000-000000000008')
+  const [catalogError,setCatalogError]=useState('')
+  const [crewMembers,setCrewMembers]=useState<{id:string;name:string}[]>([])
+  const [selectedCrewId,setSelectedCrewId]=useState('')
+  React.useEffect(()=>{const c=new AbortController();setAvailableDefects([]);setCrewMembers([]);setCatalogError('');setSelectedCrewId('')
+    if(!isSupervisor&&selectedProjectId!=='ALL')Promise.all([fieldCreateCommands.defects(selectedProjectId,c.signal),fieldCreateCommands.crews(selectedProjectId)]).then(([defects,crews])=>{if(!c.signal.aborted){setAvailableDefects(defects);setCrewMembers(crews)}}).catch(e=>{if(!c.signal.aborted)setCatalogError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)})
+    return()=>c.abort()
+  },[selectedProjectId,isSupervisor])
 
   // Modal Tạo nhiệm vụ mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -113,116 +69,25 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
 
   const [selectedDefectId, setSelectedDefectId] = useState<string>('')
-  const [newDefectCode, setNewDefectCode] = useState('DEF-2026-0842')
-  const [newDefectName, setNewDefectName] = useState('Vỡ góc bản / Ổ gà góc tấm BTXM')
-  const [newDefectPhoto, setNewDefectPhoto] = useState<string | undefined>(undefined)
-  const [newChainage, setNewChainage] = useState(1025.4)
-  const [newLane, setNewLane] = useState('Làn cơ giới 1')
-  const [newMethod, setNewMethod] = useState('Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách')
+  const [newDefectCode, setNewDefectCode] = useState('')
+  const [newDefectName, setNewDefectName] = useState('')
+  const [newMethod, setNewMethod] = useState('')
   const [isCustomMethod, setIsCustomMethod] = useState(false)
   const [customMethodText, setCustomMethodText] = useState('')
-  const [newTechnician, setNewTechnician] = useState('Kỹ sư Phạm Văn Hùng (Tổ cơ động 02)')
-  const [newNotes, setNewNotes] = useState('Kiểm tra đo đạc chi tiết theo yêu cầu PM')
+  const [newNotes, setNewNotes] = useState('')
 
-  // Kiểm tra khiếm khuyết được chọn có hợp lệ để lập nhiệm vụ hay không
-  const isSelectedDefectEligible = useMemo(() => {
-    if (!selectedDefectId || selectedDefectId === 'CUSTOM') return false
-    const isLinked = selectedDefectId.toLowerCase() === '475cc6d2-2a01-48c0-8104-10d1209ea5af'
-    const activeTask = fieldTasks.find(
-      (t) =>
-        (t.defect_id?.toLowerCase() === selectedDefectId.toLowerCase() || t.defect_code === newDefectCode) &&
-        (t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS')
-    )
-    return !isLinked && !activeTask
-  }, [selectedDefectId, fieldTasks, newDefectCode])
-
-  const selectedDefectStatusReason = useMemo(() => {
-    if (!selectedDefectId || selectedDefectId === 'CUSTOM') return null
-    if (selectedDefectId.toLowerCase() === '475cc6d2-2a01-48c0-8104-10d1209ea5af') {
-      return 'Hồ sơ phụ trong ca gộp / liên kết trùng (LinkExisting). Không thể tạo nhiệm vụ đo đạc độc lập mà cần xử lý trên hồ sơ chính.'
-    }
-    const activeTask = fieldTasks.find(
-      (t) =>
-        (t.defect_id?.toLowerCase() === selectedDefectId.toLowerCase() || t.defect_code === newDefectCode) &&
-        (t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS')
-    )
-    if (activeTask) {
-      return `Khiếm khuyết này đang có phiếu đo đạc chưa hoàn tất [${activeTask.code} - ${activeTask.status === 'ASSIGNED' ? 'Cần thực hiện' : 'Đang đo đạc'}]. Vui lòng hoàn tất hoặc hủy phiếu trước đó.`
-    }
-    return null
-  }, [selectedDefectId, fieldTasks, newDefectCode])
-
-  // Chọn khiếm khuyết từ danh sách Drone/khảo sát
-  const handleSelectDefect = (defectId: string) => {
-    setSelectedDefectId(defectId)
-    const def = availableDefects.find((d) => d.id === defectId)
-    if (def) {
-      setNewDefectCode(def.code)
-      setNewChainage(def.chainage_km)
-      setNewDefectPhoto(def.image_url)
-
-      if (def.bounding_box) {
-        if (def.bounding_box.x < 0.35) {
-          setNewLane('Làn cơ giới 1')
-        } else if (def.bounding_box.x < 0.65) {
-          setNewLane('Làn cơ giới 2')
-        } else {
-          setNewLane('Làn dừng khẩn cấp')
-        }
-      } else {
-        setNewLane('Làn cơ giới 1')
-      }
-
-      let typeLabel = 'Hư hỏng mặt đường BTXM'
-      let suggestedMethod = 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách'
-      const dt = String(def.defect_type || '').toUpperCase()
-      if (dt.includes('POTHOLE') || dt.includes('SPALLING')) {
-        typeLabel = 'Ổ gà mặt đường BTXM'
-        suggestedMethod = 'Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách'
-      } else if (dt.includes('CRACK') || dt.includes('CORNER')) {
-        typeLabel = 'Vết nứt mặt đường BTXM'
-        suggestedMethod = 'Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM'
-      } else if (dt.includes('RUTTING')) {
-        typeLabel = 'Lún vệt bánh xe'
-        suggestedMethod = 'Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe'
-      }
-      setNewDefectName(typeLabel)
-      setNewMethod(suggestedMethod)
-      setIsCustomMethod(false)
-      setCustomMethodText('')
-      setNewNotes(`Yêu cầu đo đạc kiểm tra thực địa cho khiếm khuyết ${def.code} tại Km ${def.chainage_km}`)
-    }
-  }
-
-  // Mở modal tạo nhiệm vụ với khiếm khuyết hợp lệ đầu tiên
-  const handleOpenCreateModal = () => {
-    setCreateModalError(null)
-    setIsCustomMethod(false)
-    setCustomMethodText('')
-    // Ưu tiên chọn khiếm khuyết hợp lệ đầu tiên (không bị gộp/liên kết trùng và chưa có phiếu dở dang)
-    const eligibleDefect = availableDefects.find((d) => {
-      const isLinked = d.id.toLowerCase() === '475cc6d2-2a01-48c0-8104-10d1209ea5af'
-      const activeTask = fieldTasks.find(
-        (t) =>
-          (t.defect_id?.toLowerCase() === d.id.toLowerCase() || t.defect_code === d.code) &&
-          (t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS')
-      )
-      return !isLinked && !activeTask
-    })
-
-    if (eligibleDefect) {
-      handleSelectDefect(eligibleDefect.id)
-    } else if (availableDefects.length > 0) {
-      handleSelectDefect(availableDefects[0].id)
-    } else {
-      setSelectedDefectId('CUSTOM')
-      setNewDefectCode('DEF-2026-0842')
-      setNewChainage(1025.4)
-      setNewDefectName('Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường')
-      setNewDefectPhoto(undefined)
-      setNewLane('Làn cơ giới 1')
-    }
-    setIsCreateModalOpen(true)
+  const [newMeasurementType,setNewMeasurementType]=useState(0),[newDueAt,setNewDueAt]=useState('')
+  const [createScope,setCreateScope]=useState<{project:string;pins?:TriageGeometryPins}>({project:''})
+  let heldCreate:ReturnType<typeof fieldCreateCommands.pending>=null,createJournalError=''
+  try{if(!isSupervisor&&selectedProjectId!=='ALL')heldCreate=fieldCreateCommands.pending(selectedProjectId)}catch(e){createJournalError=(e as Error).message}
+  const selectedDefect=availableDefects.find(d=>d.id===selectedDefectId)
+  const isSelectedDefectEligible=!!selectedDefect&&selectedDefect.status.toUpperCase()==='OPEN'
+  const selectedDefectStatusReason=selectedDefect&&!isSelectedDefectEligible?'Chỉ Defect OPEN được tạo phiếu FIELD.':null
+  const handleSelectDefect=(id:string)=>{setCreateScope({project:selectedProjectId});setNewMeasurementType(0);setSelectedDefectId(id);const d=availableDefects.find(r=>r.id===id);setNewDefectCode(d?.code||'');setNewDefectName(d?.defect_type||'')}
+  const handleOpenCreateModal=()=>{
+    if(isSupervisor||selectedProjectId==='ALL'){notify('Chọn một dự án thật trước khi tạo FIELD.','error');return}
+    setCreateModalError(null);setIsCustomMethod(false);setCustomMethodText('');setCreateScope({project:selectedProjectId})
+    setSelectedDefectId(heldCreate?.input.defectId||'');setNewDefectCode(heldCreate?.input.defectId||'');setNewDefectName('');setNewMethod(heldCreate?.input.measurementScope||'');setNewNotes(heldCreate?.input.instructions||'');setSelectedCrewId(heldCreate?.input.assignedToUserId||'');setNewMeasurementType(heldCreate?.input.requiredMeasurementType||0);setNewDueAt(heldCreate?.input.dueAt||'');setIsCreateModalOpen(true)
   }
 
   // Modal Ghi nhận số đo
@@ -282,54 +147,19 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   }, [fieldTasks, statusFilter, searchTerm])
 
   // Xử lý tạo nhiệm vụ mới qua API
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setCreateModalError(null)
-    setIsSubmittingCreate(true)
-    try {
-      const finalMethod = isCustomMethod
-        ? (customMethodText.trim() || 'Phương pháp đo chuyên dụng theo chỉ định PM')
-        : newMethod
-
-      const targetDefect = availableDefects.find((d) => d.id === selectedDefectId)
-      const effectiveProjectId =
-        selectedProjectId !== 'ALL'
-          ? selectedProjectId
-          : targetDefect?.project_id || projects[0]?.id
-
-      if (!effectiveProjectId) {
-        throw new Error('Chưa có dự án nào được chọn hoặc tài khoản chưa được phân công dự án.')
-      }
-
-      const isReportDefect = (selectedDefectId || '').toLowerCase() === 'a3e894a5-2d58-4912-949f-889794739b29'
-      const payload: CreateFieldTaskPayload = {
-        project_id: effectiveProjectId,
-        defect_id: selectedDefectId && selectedDefectId !== 'CUSTOM' ? selectedDefectId : availableDefects[0]?.id || '475cc6d2-2a01-48c0-8104-10d1209ea5af',
-        defect_version: targetDefect?.version || (isReportDefect ? 'AAAAAAAAKxM=' : 'AAAAAAAAKys='),
-        route_version_id: targetDefect?.route_version_id || '5baf3408-6489-432f-89ed-127a89e905a5',
-        survey_id: isReportDefect ? undefined : (targetDefect?.survey_id || 'db73e898-8e30-439c-96a8-09e263c06104'),
-        source_kind: isReportDefect ? 'REPORTER' : 'SURVEY',
-        defect_code: newDefectCode.trim().toUpperCase(),
-        defect_name: newDefectName || 'Hư hỏng mặt đường BTXM yêu cầu kiểm tra hiện trường',
-        defect_photo_url: newDefectPhoto,
-        chainage_km: Number(newChainage) || 1025.4,
-        lane: newLane,
-        measurement_type: finalMethod,
-        technician_name: newTechnician,
-        assigned_to_user_id: selectedCrewId,
-        notes: newNotes
-      }
-      const created = await fieldTaskService.createTask(payload)
-      setIsCreateModalOpen(false)
-      await onRefreshTasks()
-      notify(`✅ Đã khởi tạo thành công phiếu đo đạc [${created.code}] trên CSDL Backend!`, 'success')
-    } catch (err: any) {
-      const errMsg = err?.message || 'Lỗi khi tạo nhiệm vụ trên CSDL Backend'
-      setCreateModalError(errMsg)
-      notify(`❌ ${errMsg}`, 'error')
-    } finally {
-      setIsSubmittingCreate(false)
-    }
+  const handleCreateTask = async (e:React.FormEvent)=>{
+    e.preventDefault();if(isSubmittingCreate||isSupervisor)return
+    const context=createContext.current,current=()=>context.active&&createContext.current===context
+    setCreateModalError(null);setIsSubmittingCreate(true)
+    try{
+      if(selectedProjectId==='ALL')throw new Error('Chọn dự án cụ thể; không tự lấy dự án đầu tiên.')
+      const target=availableDefects.find(d=>d.id===selectedDefectId),method=isCustomMethod?customMethodText.trim():newMethod
+      if(!heldCreate&&(!target||!isSelectedDefectEligible||!method||createScope.project!==selectedProjectId||!createScope.pins))throw new Error('Chọn Defect OPEN, phương pháp và phạm vi PUBLISHED thật.')
+      const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,measurementScope:method,instructions:newNotes,dueAt:newDueAt,pins:createScope.pins!}
+      const created=await fieldCreateCommands.request(selectedProjectId,choice)
+      if(!current())return
+      setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã GET xác nhận tạo phiếu FIELD ${created.id}.`,'success')
+    }catch(e:any){if(!current())return;const message=e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message;setCreateModalError(message);notify(message,'error')}finally{if(current())setIsSubmittingCreate(false)}
   }
 
   // Xử lý chuyển sang trạng thái Đang đo đạc (IN_PROGRESS)
@@ -776,7 +606,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : (
                         <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
-                          ĐÃ XÁC MINH
+                          {task.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':task.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
                         </span>
                       )}
                     </td>
@@ -884,6 +714,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             </div>
 
             <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
+              {heldCreate&&<p role="status" className="break-all">Giữ yêu cầu tạo FIELD {heldCreate.key} cho Defect {heldCreate.input.defectId}; dùng đúng body/key đã lưu để đối chiếu.</p>}
+              {(catalogError||createJournalError)&&<p role="alert" className="text-rose-700">{catalogError||createJournalError}</p>}
+              <fieldset disabled={isSubmittingCreate||!!heldCreate} className="border-0 p-0 m-0 space-y-3.5 min-w-0">
               {/* Chọn khiếm khuyết nguồn từ đợt bay Drone / khảo sát */}
               <div className="flex flex-col bg-slate-50/80 p-3.5 rounded-xl border border-slate-200">
                 <div className="flex items-center justify-between mb-1.5">
@@ -900,11 +733,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   onChange={(e) => handleSelectDefect(e.target.value)}
                   className="w-full bg-white border border-slate-300 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer font-medium"
                 >
+                  <option value="">Chọn Defect nguồn</option>
                   {availableDefects.length === 0 ? (
                     <option value="">Không có khiếm khuyết nào trong tuyến cần đo đạc</option>
                   ) : (
                     availableDefects.map((d) => {
-                      const isLinked = d.id.toLowerCase() === '475cc6d2-2a01-48c0-8104-10d1209ea5af'
+                      const notOpen = d.status.toUpperCase()!=='OPEN'
                       const activeTask = fieldTasks.find(
                         (t) =>
                           (t.defect_id?.toLowerCase() === d.id.toLowerCase() || t.defect_code === d.code) &&
@@ -916,19 +750,18 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           t.status === 'VERIFIED'
                       )
 
-                      let label = `${d.code} • Km ${d.chainage_km} • ${d.defect_type}`
+                      let label = `${d.code} • ${d.defect_type} • ${d.status}`
                       let isDisabled = false
 
-                      if (isLinked) {
-                        label += ' [Chưa sẵn sàng - Đang liên kết trùng]'
+                      if (notOpen) {
+                        label += ' [Không phải Defect OPEN]'
                         isDisabled = true
                       } else if (activeTask) {
-                        label += ` [Đang có phiếu đo dở dang: ${activeTask.code}]`
-                        isDisabled = true
+                        label += ` [Có phiếu FIELD đang chạy: ${activeTask.code}]`
                       } else if (isCompleted) {
-                        label += ' (Đã đo xong - Cho phép đo kiểm tra lại)'
+                        label += ' (Đã có FIELD hoàn tất; máy chủ kiểm điều kiện mới)'
                       } else {
-                        label += ' (Sẵn sàng tạo phiếu)'
+                        label += ' (Chọn để kiểm tra điều kiện nguồn)'
                       }
 
                       return (
@@ -959,7 +792,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </div>
                     <div className="text-right shrink-0">
                       <div className="font-mono text-slate-900 font-bold text-xs">
-                        Km {newChainage}
+                        Chưa có thông tin lý trình
                       </div>
                       <div className="text-[10px] text-slate-500">Lý trình thực địa</div>
                     </div>
@@ -997,6 +830,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     }}
                     className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
                   >
+                    <option value="">Chọn phương pháp / thiết bị</option>
                     <option value="Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách">
                       Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách
                     </option>
@@ -1023,7 +857,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       required
                     />
                     <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <span>PM được phép chỉ định thiết bị đo đặc thù theo yêu cầu dự toán</span>
+                      <span>PM được phép chỉ định thiết bị đo đặc thù theo yêu cầu kiểm tra kỹ thuật</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1045,11 +879,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   value={selectedCrewId}
                   onChange={(e) => {
                     setSelectedCrewId(e.target.value)
-                    const m = crewMembers.find((c) => c.id === e.target.value)
-                    if (m) setNewTechnician(m.name)
                   }}
                   className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
                 >
+                  <option value="">Chọn Crew đang ACTIVE trong dự án</option>
                   {crewMembers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -1068,6 +901,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 />
               </div>
 
+              <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="w-full border rounded-lg p-2"><option value="">Chọn loại đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Phạm vi xói vai đường</option><option value={4}>Diện tích</option></select></label>
+              <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="w-full border rounded-lg p-2" /></label>
+              <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,pins:enabled?pins:undefined})} />
+              <p>Chỉ tạo phiếu từ phản ánh đã ghi nhận và đối chiếu được nguồn. Nguồn khảo sát chưa có đủ thông tin đối chiếu sẽ bị chặn.</p>
+              </fieldset>
               {/* Thông báo lỗi trực tiếp bên trong Modal nếu Backend trả về lỗi */}
               {createModalError && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
@@ -1096,11 +934,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={!selectedDefectId || availableDefects.length === 0 || !isSelectedDefectEligible || isSubmittingCreate}
+                  disabled={isSubmittingCreate||!!createJournalError||!heldCreate&&(!selectedDefectId||!isSelectedDefectEligible||!newMeasurementType||!newDueAt||!selectedCrewId||!createScope.pins)}
                   className="px-3.5 py-1.5 text-xs font-medium bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Icon name="check" size={15} />
-                  <span>Khởi tạo phiếu</span>
+                  <span>{heldCreate?.received?'Đọc lại phiếu đã tạo':heldCreate?'Đối chiếu đúng yêu cầu đang chờ':'Khởi tạo phiếu'}</span>
                 </button>
               </div>
             </form>
@@ -1220,7 +1058,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </button>
             </div>
 
-            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status==='COMPLETED'?'VERIFIED':task.status==='SUPPLEMENT_REQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
+            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status?.toUpperCase()==='COMPLETED'?'VERIFIED':task.status?.replace(/_/g,'').toUpperCase()==='SUPPLEMENTREQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
 
             {/* Content: 2 cột */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1567,7 +1405,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        ĐÃ XÁC MINH
+                        {selectedDetailTask.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':selectedDetailTask.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
                       </span>
                     )}
                   </div>
@@ -1992,7 +1830,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-900/80 text-emerald-200">
-                ĐÃ XÁC MINH
+                {lightboxTask.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':lightboxTask.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
               </span>
             )
           }

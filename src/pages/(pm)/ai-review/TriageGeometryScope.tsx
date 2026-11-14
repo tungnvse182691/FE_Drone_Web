@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { triageGeometryService, type TriageRouteReference, type TriageGeometryPins, type TriagePublishedSet } from '../../../api/services/triageGeometryService'
 import { useAuthStore } from '../../../store/authStore'
-export function TriageGeometryScope({projectId, caseId, disabled, onChange}: {projectId: string; caseId: string; disabled?: boolean; onChange: (requiresScope: boolean, pins?: TriageGeometryPins) => void}) {
+export function TriageGeometryScope({projectId, caseId, disabled, onChange, forField = false}: {forField?: boolean; projectId: string; caseId: string; disabled?: boolean; onChange: (requiresScope: boolean, pins?: TriageGeometryPins) => void}) {
   const epoch = useAuthStore(s => s.authEpoch), scope = `${epoch}:${caseId}:${projectId}`
   const [choice, setChoice] = useState({scope:'', roadId:'', setId:'', enabled:false})
   const current = choice.scope === scope ? choice : {scope, roadId:'', setId:'', enabled:false}
@@ -27,10 +27,10 @@ export function TriageGeometryScope({projectId, caseId, disabled, onChange}: {pr
   },[selection,road?.currentVersionId])
   useEffect(() => { onChange(current.enabled, current.enabled && state.scope === selection ? state.pins : undefined) }, [scope, current.enabled, selection, state])
   return <div className="space-y-2 min-w-0 rounded-lg border border-slate-200 p-2">
-    <label className="flex gap-2"><input type="checkbox" checked={current.enabled} disabled={disabled||!projectId} onChange={e=>{setChoice({...current,enabled:e.target.checked});onChange(e.target.checked, e.target.checked && state.scope === selection ? state.pins : undefined)}} />Gắn phạm vi để đi tiếp ghi nhận khiếm khuyết</label>
+    <label className="flex gap-2"><input type="checkbox" checked={current.enabled} disabled={disabled||!projectId} onChange={e=>{setChoice({...current,enabled:e.target.checked});onChange(e.target.checked, e.target.checked && state.scope === selection ? state.pins : undefined)}} />{forField?'Gắn phạm vi tác nghiệp FIELD':'Gắn phạm vi để đi tiếp ghi nhận khiếm khuyết'}</label>
     <select aria-label="Tuyến hiện hành điều phối" value={current.roadId} disabled={disabled||!projectId||routes?.scope!==scope} onChange={e=>{onChange(current.enabled);setChoice({...current,roadId:e.target.value,setId:''})}} className="w-full min-w-0 rounded border p-2"><option value="">Chọn tuyến hiện hành</option>{routes?.scope===scope&&routes.rows.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select>
     <select aria-label="Bộ phân đoạn công bố điều phối" value={current.setId} disabled={disabled||!road||sets?.scope!==`${scope}:${current.roadId}`} onChange={e=>{onChange(current.enabled);setChoice({...current,setId:e.target.value})}} className="w-full min-w-0 rounded border p-2"><option value="">Chọn bộ PUBLISHED</option>{sets?.scope===`${scope}:${current.roadId}`&&sets.rows.map(s=><option key={s.id} value={s.id}>{s.id} · PUBLISHED</option>)}</select>
     <p role={state.error?'alert':'status'} className="break-words text-slate-600">{state.scope===selection?state.text:'Chưa đọc phạm vi đang chọn.'}</p>
-    <p className="text-slate-500">Contract chưa bắt buộc các pin hình học cho mọi phương thức. Điều phối không kèm phạm vi không bảo đảm đi tiếp tạo Defect; không tự tạo nhiệm vụ FIELD/DRONE.</p>
+    <p className="text-slate-500">{forField?'Phạm vi FIELD phải khớp tuyến của Defect. Tạo nhiệm vụ không tạo hoặc tự xác minh Defect.':'Contract chưa bắt buộc các pin hình học cho mọi phương thức. Điều phối không kèm phạm vi không bảo đảm đi tiếp tạo Defect; không tự tạo nhiệm vụ FIELD/DRONE.'}</p>
   </div>
 }

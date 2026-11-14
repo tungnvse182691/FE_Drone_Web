@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -14,7 +14,11 @@ export const FieldTasks: React.FC = () => {
   const tabParam = searchParams.get('tab')
   const highlightCode = searchParams.get('highlightCode')
 
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
+  const actorScope = `${authEpoch}:${user?.id}:${user?.role}`
+  const currentActor = useRef(actorScope)
+  currentActor.current = actorScope
+  const taskRequest = useRef(0)
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
@@ -47,35 +51,42 @@ export const FieldTasks: React.FC = () => {
   }
 
   const loadProjects = useCallback(async () => {
+    setAvailableProjects([])
     try {
       const hubProjects = await projectService.fetchProjects()
+      if (currentActor.current !== actorScope) return
       setAvailableProjects(hubProjects)
     } catch (err: any) {
+      if (currentActor.current !== actorScope) return
       console.error('Lỗi tải danh mục dự án từ CSDL:', err)
       setApiError(err?.message || 'Không thể tải danh sách dự án từ CSDL')
     }
-  }, [])
+  }, [actorScope])
 
   const loadTasks = useCallback(async (projId: string = selectedProjectId) => {
+    const request = ++taskRequest.current
+    const current = () => request === taskRequest.current && currentActor.current === actorScope
+    setFieldTasks([])
     setIsLoadingTasks(true)
     setApiError(null)
     try {
       const data = await fieldTaskService.getTasks({
         projectId: projId
       })
+      if (!current()) return
       setFieldTasks(data)
     } catch (err: any) {
+      if (!current()) return
       const errMsg = err?.response?.data?.message || err?.message || 'Lỗi khi tải danh sách nhiệm vụ từ CSDL Backend'
       setApiError(errMsg)
       showToast(`❌ Lỗi CSDL: ${errMsg}`, 'error')
     } finally {
-      setIsLoadingTasks(false)
+      if (current()) setIsLoadingTasks(false)
     }
-  }, [selectedProjectId])
+  }, [selectedProjectId, actorScope])
 
   const handleSelectProject = (projId: string) => {
     setSelectedProjectId(projId)
-    loadTasks(projId)
     const p = availableProjects.find((x) => x.id === projId)
     if (p) {
       showToast(`Đã lọc tuyến đường: ${p.code} - ${p.name}`, 'info')
@@ -141,6 +152,7 @@ export const FieldTasks: React.FC = () => {
 
       {/* Bảng Nhật Ký Nhiệm Vụ Đo Đạc Hiện Trường */}
       <MeasurementsTab
+        key={`${actorScope}:${selectedProjectId}`}
         fieldTasks={fieldTasks}
         onRefreshTasks={() => loadTasks(selectedProjectId)}
         highlightCode={highlightCode}
