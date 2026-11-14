@@ -106,7 +106,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
               isSupervisor={isSupervisor}
             />
 
-            <DrawerReportDetails key={selectedCase.id} caseId={selectedCase.id} />
+            <DrawerReportDetails key={selectedCase.id} caseId={selectedCase.id} onSplit={isSupervisor ? undefined : async reportId => { await onUnlinkReport(reportId) }} />
             <DrawerMediaViewer
               selectedCase={selectedCase}
               detailViewMode={detailViewMode}

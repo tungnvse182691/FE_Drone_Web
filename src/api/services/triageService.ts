@@ -231,7 +231,48 @@ export class CaseListReadError extends Error {
 export const isCaseReadCanceled = isCancel
 const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
 
+// D2 preserves intent/key/version across F5. Repeating the same confirmation explicitly replays it.
+const d2Busy = new Set<string>()
+async function caseD2Command(caseId: string, action: string, intent: unknown, prepare: () => Promise<{ body: any; version: string }>) {
+  const actor = useAuthStore.getState().user
+  if (actor?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM thuộc dự án được thực hiện lệnh Case.')
+  const session = getCaseSessionKey(), journal = `rg_case_d2_${actor.id}_${caseId}_${action}`
+  const active = () => assertCaseReadActive(session)
+  if (d2Busy.has(journal)) throw new Error('Đang xử lý lệnh Case.')
+  d2Busy.add(journal)
+  try {
+    const raw = sessionStorage.getItem(journal), held = raw ? JSON.parse(raw) : null
+    if (held && held.intent !== JSON.stringify(intent)) throw new Error('Lệnh trước chưa rõ kết quả; giữ nguyên lựa chọn/lý do, không tạo key mới.')
+    const command = held || { ...await prepare(), intent: JSON.stringify(intent), key: crypto.randomUUID() }
+    active()
+    if (!/^"[A-Za-z0-9+/]{11}="$/.test(command.version) || !command.key || !command.body) throw new Error('Journal/version Case sai contract; chưa gửi lệnh.')
+    sessionStorage.setItem(journal, JSON.stringify(command))
+    if (!command.received) {
+      try {
+        const response = await apiClient.post(`/cases/${caseId}/${action}`, command.body, {
+          headers: { 'Idempotency-Key': command.key, 'If-Match': command.version },
+          transformRequest: [(body: unknown) => { active(); return JSON.stringify(body) }]
+        })
+        active(); command.received = true; command.data = response.data; command.etag = response.headers?.etag
+        sessionStorage.setItem(journal, JSON.stringify(command))
+      } catch (error: any) {
+        active()
+        if (error.response?.status >= 400 && error.response.status < 500) sessionStorage.removeItem(journal)
+        throw error
+      }
+    }
+    active()
+    return { data: command.data, etag: command.etag, body: command.body, complete: () => { active(); sessionStorage.removeItem(journal) } }
+  } finally { d2Busy.delete(journal) }
+}
+
 export const triageService = {
+  pendingD2(caseId: string, action: 'publications' | 'report-links' | 'report-splits') {
+    const actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.PROJECT_MANAGER) return null
+    const raw = sessionStorage.getItem(`rg_case_d2_${actor.id}_${caseId}_${action}`)
+    return raw ? JSON.parse(raw) as { body: any; version: string; received?: boolean } : null
+  },
   /**
    * API-018: GET /api/v1/cases
    * Lấy danh sách hồ sơ ca phản ánh từ Backend Candidate3 Docker
@@ -499,6 +540,7 @@ export const triageService = {
    */
   async concludeCase(caseId: string, payload: CaseConclusionInput): Promise<TriageCase> {
     const actor = useAuthStore.getState().user
+    if (actor?.role !== RoleCode.PROJECT_MANAGER) throw new Error('Chỉ PM được kết luận Case.')
     const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
     if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; chưa gửi lệnh.')
     const server = mapBackendCaseToDomain(detail.data, {})
@@ -557,31 +599,21 @@ export const triageService = {
   },
 
   async publishCase(caseId: string, payload: CasePublicationInput): Promise<TriageCase> {
-    const actor = useAuthStore.getState().user
-    const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
-    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; chưa gửi publication.')
-    const reportIds = [...new Set(payload.reportIds || [])]
-    if (!reportIds.length || reportIds.some(id => !detail.data.reportIds?.includes(id))) {
-      throw new Error('Thiếu hoặc sai recipient report thuộc Case; chưa gửi publication.')
-    }
-    // Never expand selected evidence to all evidence in a Case. Server validates each recipient/source.
-    const body = { summary: payload.summary, reportIds, evidenceIds: [...new Set(payload.evidenceIds || [])], defectIds: [...new Set(payload.defectIds || [])] }
-    const version = normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined)
-    const pendingKey = `${actor?.id}:publish:${caseId}`
-    if (pendingCaseCommands.has(pendingKey)) throw new Error('Publication trước chưa rõ kết quả; hãy đối chiếu trước khi gửi lệnh mới.')
-    const key = crypto.randomUUID()
-    pendingCaseCommands.set(pendingKey, { key, body, version })
-    try {
-      const response = await apiClient.post<{ version?: string }>(`/cases/${caseId}/publications`, body, {
-        headers: { 'Idempotency-Key': key, 'If-Match': version }
-      })
-      pendingCaseCommands.delete(pendingKey)
-      if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ kết quả publication cũ.')
-      return { ...mapBackendCaseToDomain(detail.data, {}), is_published: true, public_notice: payload.summary || '', version: response.data.version || detail.data.version || undefined }
-    } catch (error: any) {
-      if (error.response && error.response.status < 500) pendingCaseCommands.delete(pendingKey)
-      throw error
-    }
+    const session = getCaseSessionKey()
+    const receipt = await caseD2Command(caseId, 'publications', { summary: payload.summary?.trim(), reportIds: [...(payload.reportIds || [])].sort(), evidenceIds: [...(payload.evidenceIds || [])].sort(), defectIds: [...(payload.defectIds || [])].sort() }, async () => {
+      const detail = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      const reportIds = [...new Set(payload.reportIds || [])]
+      if (!reportIds.length || reportIds.some(id => !detail.data.reportIds?.includes(id))) throw new Error('Thiếu hoặc sai recipient report thuộc Case; chưa gửi publication.')
+      if (!payload.summary?.trim() || payload.summary.trim().length > 1000) throw new Error('Nội dung công bố cần từ 1 đến 1.000 ký tự.')
+      return { body: { summary: payload.summary.trim(), reportIds, evidenceIds: [...new Set(payload.evidenceIds || [])], defectIds: [...new Set(payload.defectIds || [])] }, version: normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined) }
+    })
+    const data = receipt.data
+    if (!data?.id || data.caseId !== caseId || data.status !== 'PUBLISHED' || !data.version || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(data.version)) || receipt.etag && receipt.etag !== normalizeETag(data.version)) throw new Error('Receipt công bố sai Case/status/version; giữ identity, chưa xác nhận thành công.')
+    const current = await this.getCaseById(caseId)
+    assertCaseReadActive(session)
+    if (!current) throw new Error('Đã nhận công bố nhưng chưa đọc lại được Case; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
+    return { ...current, is_published: true, public_notice: receipt.body.summary }
   },
 
   /**
@@ -600,28 +632,20 @@ export const triageService = {
     auditNotes: string
   ): Promise<{ success: boolean; master: TriageCase }> {
     const session = getCaseSessionKey()
-    const master = await apiClient.get<InternalCaseDto>(`/cases/${masterId}`)
-    const sources = await Promise.all(secondaryIds.map(id => apiClient.get<InternalCaseDto>(`/cases/${id}`)))
-    const reportIds = sources.flatMap(response => response.data.reportIds || [])
-    if (!reportIds.length || sources.some(response => !response.data.version)) throw new Error('Thiếu report ID/version nguồn; chưa liên kết.')
+    const receipt = await caseD2Command(masterId, 'report-links', { secondaryIds: [...secondaryIds].sort(), auditNotes: auditNotes.trim() }, async () => {
+      if (!secondaryIds.length || secondaryIds.includes(masterId) || new Set(secondaryIds).size !== secondaryIds.length || !auditNotes.trim() || auditNotes.trim().length > 1000) throw new Error('Chọn Case chính/nguồn khác nhau và lý do liên kết hợp lệ.')
+      const master = await apiClient.get<InternalCaseDto>(`/cases/${masterId}`)
+      const sources = await Promise.all(secondaryIds.map(id => apiClient.get<InternalCaseDto>(`/cases/${id}`)))
+      const reportIds = sources.flatMap(response => response.data.reportIds || [])
+      if (!master.data.projectId || sources.some((response, i) => response.data.id !== secondaryIds[i] || response.data.projectId !== master.data.projectId || !response.data.version || !response.data.reportIds?.length) || !reportIds.length) throw new Error('Thiếu Report/version nguồn hoặc các Case khác dự án; chưa liên kết.')
+      return { body: { reportIds: [...new Set(reportIds)], sourceCaseVersions: Object.fromEntries(sources.map(source => [source.data.id, source.data.version])), reason: auditNotes.trim() }, version: normalizeETag(master.headers?.etag || master.data.version || undefined) }
+    })
+    if (receipt.data?.id !== masterId || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(receipt.data.version)) || receipt.etag && receipt.etag !== normalizeETag(receipt.data.version)) throw new Error('Receipt liên kết sai Case; giữ identity để đối chiếu.')
+    const current = await this.getCaseById(masterId)
     assertCaseReadActive(session)
-    const pendingKey = `${useAuthStore.getState().user?.id}:link:${masterId}`
-    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả; cần tải lại và đối chiếu trước lệnh mới.')
-    const key = crypto.randomUUID()
-    const body = { reportIds: [...new Set(reportIds)], sourceCaseVersions: Object.fromEntries(sources.map(source => [source.data.id, source.data.version])), reason: auditNotes }
-    const version = normalizeETag(master.data.version || undefined)
-    pendingCaseCommands.set(pendingKey, { key, body, version })
-    try {
-      const response = await apiClient.post<InternalCaseDto>(`/cases/${masterId}/report-links`, body, {
-        headers: { 'Idempotency-Key': key, 'If-Match': version }
-      })
-      pendingCaseCommands.delete(pendingKey)
-      assertCaseReadActive(session)
-      return { success: true, master: mapBackendCaseToDomain(response.data, {}) }
-    } catch (error: any) {
-      if (error.response?.status < 500) pendingCaseCommands.delete(pendingKey)
-      throw error
-    }
+    if (!current || receipt.body.reportIds.some((id: string) => !current.report_ids?.includes(id))) throw new Error('Chưa GET xác nhận liên kết; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
+    return { success: true, master: current }
   },
 
   /**
@@ -631,26 +655,19 @@ export const triageService = {
    */
   async splitReport(caseId: string, reportId: string, reason = 'Tách báo cáo không trùng lặp'): Promise<void> {
     const session = getCaseSessionKey()
-    const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
-    if (!current.data.reportIds?.includes(reportId)) throw new Error('Report không thuộc Case hiện tại; chưa gửi lệnh tách.')
-    if (current.data.reportIds.length < 2) throw new Error('Case phải có nhiều Report trước khi tách.')
-    assertCaseReadActive(session)
-    const pendingKey = `${useAuthStore.getState().user?.id}:split:${caseId}`
-    if (pendingCaseCommands.has(pendingKey)) throw new Error('Lệnh trước chưa rõ kết quả; cần tải lại và đối chiếu trước lệnh mới.')
-    const key = crypto.randomUUID()
-    const body = { reportIds: [reportId], reason }
-    const version = current.headers?.etag || normalizeETag(current.data.version || undefined)
-    pendingCaseCommands.set(pendingKey, { key, body, version })
-    try {
-    await apiClient.post(`/cases/${caseId}/report-splits`, body, {
-      headers: { 'Idempotency-Key': key, 'If-Match': version }
+    const receipt = await caseD2Command(caseId, 'report-splits', { reportId, reason: reason.trim() }, async () => {
+      const current = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`)
+      if (!current.data.reportIds?.includes(reportId)) throw new Error('Report không thuộc Case hiện tại; chưa gửi lệnh tách.')
+      if (current.data.reportIds.length < 2) throw new Error('Case phải có nhiều Report trước khi tách.')
+      if (!reason.trim() || reason.trim().length > 1000) throw new Error('Cần lý do tách từ 1 đến 1.000 ký tự.')
+      return { body: { reportIds: [reportId], reason: reason.trim() }, version: current.headers?.etag || normalizeETag(current.data.version || undefined) }
     })
+    if (!receipt.data?.id || receipt.data.id === caseId || !receipt.data.reportIds?.includes(reportId) || !/^"[A-Za-z0-9+/]{11}="$/.test(normalizeETag(receipt.data.version)) || receipt.etag && receipt.etag !== normalizeETag(receipt.data.version)) throw new Error('Receipt tách thiếu Case mới/Report; giữ identity để đối chiếu.')
+    const current = await this.getCaseById(caseId)
+    const created = await this.getCaseById(receipt.data.id)
     assertCaseReadActive(session)
-    pendingCaseCommands.delete(pendingKey)
-    } catch (error: any) {
-      if (error.response?.status < 500) pendingCaseCommands.delete(pendingKey)
-      throw error
-    }
+    if (!current || !created || created.project_id !== current.project_id || current.report_ids?.includes(reportId) || !created.report_ids?.includes(reportId)) throw new Error('Chưa GET xác nhận Case nguồn/Case mới; thử lại để chỉ đọc kết quả.')
+    receipt.complete()
   },
 
   async unlinkReport(reportIdentifier: string, masterCaseId?: string): Promise<{ success: boolean }> {

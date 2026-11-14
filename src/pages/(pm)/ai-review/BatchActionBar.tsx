@@ -62,9 +62,9 @@ export const BatchActionBar: React.FC<BatchActionBarProps> = ({
           <button
             type="button"
             onClick={onOpenLinkReportsModal}
-            disabled
+            disabled={selectedReportIds.length < 2}
             className="px-3 py-1.5 rounded-lg bg-slate-950 text-white hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
-            title="Chưa tích hợp thao tác này"
+            title="Liên kết các Case cùng dự án"
           >
             <Icon name="link" size={14} className="text-brand-gold" />
             <span>Liên kết báo trùng</span>

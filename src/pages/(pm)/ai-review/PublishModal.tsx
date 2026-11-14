@@ -1,4 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { caseReportService, type CaseReportDetail } from '../../../api/services/caseReportService'
+import { useAuthStore } from '../../../store/authStore'
+import { triageService } from '../../../api/services/triageService'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
@@ -8,7 +11,7 @@ export interface PublishModalProps {
   targetTriageCase: TriageCase | null
   publishPublicNote: string
   setPublishPublicNote: (note: string) => void
-  onConfirmPublishResult: () => void
+  onConfirmPublishResult: (reportIds: string[]) => void
 }
 
 export const PublishModal: React.FC<PublishModalProps> = ({
@@ -19,7 +22,28 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   setPublishPublicNote,
   onConfirmPublishResult,
 }) => {
+  const epoch = useAuthStore(state => state.authEpoch)
+  const [reports, setReports] = useState<CaseReportDetail[]>([])
+  const [recipients, setRecipients] = useState<string[]>([])
+  const [error, setError] = useState(''), [loading, setLoading] = useState(false), [reload, setReload] = useState(0)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    const controller = new AbortController()
+    setReports([]); setRecipients([]); setError(''); setBusy(false)
+    if (!isOpen || !targetTriageCase) return () => controller.abort()
+    setLoading(true)
+    caseReportService.read(targetTriageCase.id, controller.signal).then(rows => {
+      if (!controller.signal.aborted) { setReports(rows); setRecipients(triageService.pendingD2(targetTriageCase.id, 'publications')?.body.reportIds || []) }
+    }).catch(e => { if (!controller.signal.aborted) setError(e.message || 'Không đọc được người nhận.') })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [isOpen, targetTriageCase?.id, epoch, reload])
   if (!isOpen || !targetTriageCase) return null
+  const confirm = async () => {
+    if (busy || loading || error || !recipients.length) return
+    setBusy(true)
+    try { await onConfirmPublishResult(recipients) } finally { setBusy(false) }
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
@@ -55,10 +79,23 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </span>
           </div>
 
+          <fieldset className="space-y-2" disabled={busy || loading}>
+            <legend className="font-bold">Người nhận theo Report (chỉ gửi cho các mục đã chọn)</legend>
+            {loading && <p role="status">Đang đọc người nhận...</p>}
+            {error && <p role="alert">{error} <button type="button" onClick={() => setReload(n => n + 1)}>Thử đọc lại</button></p>}
+            {!loading && !error && !reports.length && <p>Không có Report trong CSDL.</p>}
+            {reports.map(report => <label key={report.reportId} className="flex gap-2 items-start">
+              <input type="checkbox" checked={recipients.includes(report.reportId)} onChange={e => setRecipients(ids => e.target.checked ? [...ids, report.reportId] : ids.filter(id => id !== report.reportId))} />
+              <span>{report.reporterDisplayName || 'Chưa có tên người gửi'} · {report.reporterPhoneNumber || 'Chưa có liên hệ'} · Report {report.reportId}</span>
+            </label>)}
+            <p>Kết luận nội bộ chưa được công bố. Lần này chỉ công bố nội dung nhập bên dưới, không tự đính kèm ảnh hoặc Defect.</p>
+          </fieldset>
           <div className="flex flex-col">
             <label className="font-bold text-slate-700 mb-1">Nội dung thông báo công khai gửi người dân:</label>
             <textarea
               rows={3}
+              maxLength={1000}
+              disabled={busy}
               value={publishPublicNote}
               onChange={(e) => setPublishPublicNote(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold"
@@ -76,7 +113,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={onConfirmPublishResult}
+            onClick={confirm}
+            disabled={busy || loading || !!error || !recipients.length || !publishPublicNote.trim()}
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="send" size={16} />

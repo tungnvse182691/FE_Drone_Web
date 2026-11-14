@@ -65,7 +65,7 @@ export interface ReviewModalsProps {
   setIsPublishModalOpen: (open: boolean) => void
   publishPublicNote: string
   setPublishPublicNote: (note: string) => void
-  onConfirmPublishResult: () => void
+  onConfirmPublishResult: (reportIds: string[]) => void
 
   // Modal 8: Request Survey
   isRequestSurveyModalOpen: boolean

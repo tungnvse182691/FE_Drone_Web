@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
@@ -250,35 +250,35 @@ export const useAIReviewActions = ({
   // Publish Public Result 
   const handleOpenPublishModal = (c?: TriageCase) => {
     const target = c || selectedCase
+    if (useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER || !target.project_id) { showToast('Chỉ PM được công bố kết quả Case đã phân công.'); return }
     setTargetTriageCase(target)
-    setPublishPublicNote(
-      'Đơn vị bảo hành Hoàng Hải đã tiếp nhận và đưa vị trí này vào kế hoạch kiểm tra / sửa chữa. Cảm ơn thông tin phản ánh của Quý công dân.'
-    )
+    setPublishPublicNote(triageService.pendingD2(target.id, 'publications')?.body.summary || '')
     setIsPublishModalOpen(true)
   }
 
-  const handleConfirmPublishResult = async () => {
+  const publishing = useRef(false)
+  const handleConfirmPublishResult = async (reportIds: string[] = []) => {
+    if (publishing.current || useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER) return
     const target = targetTriageCase || selectedCase
-    const nowTime =
-      new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
-      ', ' +
-      new Date().toLocaleDateString('vi-VN')
+    if (!publishPublicNote.trim()) { showToast('Vui lòng nhập nội dung công bố.'); return }
 
+    const publicationEpoch = useAuthStore.getState().authEpoch
+    publishing.current = true
     try {
-      await triageService.publishCase(target.id, {
+      const result = await triageService.publishCase(target.id, {
         summary: publishPublicNote,
         version: target.version,
-        reportIds: target.report_ids && target.report_ids.length > 0 ? target.report_ids : undefined
+        reportIds
       })
 
+      if (useAuthStore.getState().authEpoch !== publicationEpoch) return
       setCases((prev) =>
         prev.map((c) =>
           c.id === target.id
             ? {
                 ...c,
-                is_published: true,
-                published_at: nowTime,
-                public_notice: publishPublicNote
+                ...result,
+                project_name: c.project_name
               }
             : c
         )
@@ -290,9 +290,10 @@ export const useAIReviewActions = ({
       setIsPublishModalOpen(false)
     } catch (e: any) {
       console.error('❌ Lỗi khi xuất bản kết quả tới backend:', e)
+      if (useAuthStore.getState().authEpoch !== publicationEpoch) return
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi xuất bản kết quả tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
-    }
+    } finally { publishing.current = false }
   }
 
   const handleExecuteMerge = () => {

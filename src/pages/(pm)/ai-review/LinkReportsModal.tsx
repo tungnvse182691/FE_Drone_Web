@@ -107,7 +107,7 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <Icon name="warning" size={16} className="text-amber-600 shrink-0 mt-0.5" />
             <span>
-              Chưa tích hợp thao tác này
+              Liên kết các Report thuộc Case nguồn vào Case chính; không công bố kết quả.
             </span>
           </div>
         </div>
@@ -123,8 +123,8 @@ export const LinkReportsModal: React.FC<LinkReportsModalProps> = ({
           <button
             type="button"
             onClick={onConfirmLinkReports}
-            disabled
-            title="Chưa tích hợp thao tác này"
+            disabled={!linkMasterCaseId || !linkAuditNotes.trim() || selectedReportIds.length < 2}
+            title="Liên kết các Report thuộc Case nguồn vào Case chính; không công bố kết quả."
             className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-[#B38E1F] text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="link" size={16} />

@@ -237,7 +237,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             )}
 
             {/* Nút công bố cho người dân nếu là ca phản ánh người dân */}
-            {selectedCase.source === 'CITIZEN' && (
+            {(selectedCase.source === 'CITIZEN' || !!selectedCase.report_ids?.length) && !isSupervisor && (
               <div className="pt-2 border-t border-slate-200 flex justify-end">
                 <button
                   type="button"

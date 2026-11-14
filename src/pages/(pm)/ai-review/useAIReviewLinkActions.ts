@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
+import { useAuthStore } from '../../../store/authStore'
+import { RoleCode } from '../../../types/enums'
 import { TriageCase } from './types'
-import { triageService } from '../../../api/services/triageService'
+import { triageService, getCaseSessionKey } from '../../../api/services/triageService'
 
 export interface UseAIReviewLinkActionsProps {
   cases: TriageCase[]
@@ -44,28 +46,44 @@ export const useAIReviewLinkActions = ({
     }
   }
 
-  // Giữ entry point cũ nhưng không tạo kết quả liên kết cục bộ.
-  const handleOpenLinkReportsModal = () => {}
-  const handleConfirmLinkReports = () => {}
+  const linking = useRef(false)
+  const canLink = () => useAuthStore.getState().user?.role === RoleCode.PROJECT_MANAGER
+  const handleOpenLinkReportsModal = () => {
+    if (!canLink()) return
+    if (selectedReportIds.length < 2) { showToast('Chọn ít nhất hai Case để liên kết.'); return }
+    setLinkMasterCaseId(selectedReportIds[0]); setLinkAuditNotes(triageService.pendingD2(selectedReportIds[0], 'report-links')?.body.reason || ''); setIsLinkReportsModalOpen(true)
+  }
+  const handleConfirmLinkReports = async () => {
+    if (!canLink() || linking.current) return
+    if (!selectedReportIds.includes(linkMasterCaseId) || selectedReportIds.length < 2 || !linkAuditNotes.trim()) { showToast('Chọn Case chính và nhập lý do liên kết.'); return }
+    const selected = cases.filter(c => selectedReportIds.includes(c.id))
+    if (selected.length !== selectedReportIds.length || !selected[0]?.project_id || selected.some(c => c.project_id !== selected[0].project_id)) { showToast('Chỉ liên kết Case cùng dự án đã phân công.'); return }
+    const session = getCaseSessionKey()
+    linking.current = true
+    try {
+      await triageService.linkDuplicateReports(linkMasterCaseId, selectedReportIds.filter(id => id !== linkMasterCaseId), linkAuditNotes)
+      const refreshed = await triageService.getCases()
+      if (session !== getCaseSessionKey()) return
+      setCases(refreshed); setSelectedReportIds([]); setIsLinkReportsModalOpen(false)
+      showToast('Đã đọc lại danh sách sau liên kết Report. Chưa công bố kết quả.')
+    } catch (error: any) {
+      if (session === getCaseSessionKey()) showToast(error.response?.data?.detail || error.message)
+    } finally { linking.current = false }
+  }
 
   // Tách hồ sơ con khỏi hồ sơ Master (Unlink - Tuân thủ BR-30, BR-31, API-023)
   const handleUnlinkReport = async (secondaryIdentifier: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    const target = cases.find((c) => c.id === secondaryIdentifier || c.code === secondaryIdentifier)
-    const targetCode = target ? target.code : secondaryIdentifier
-    const targetId = target ? target.id : secondaryIdentifier
-    const masterId = target?.master_case_id || selectedCaseId
+    const session = getCaseSessionKey()
+    const masterId = selectedCaseId
+    if (!masterId) throw new Error('Chưa xác định được Case để tách Report.')
+    await triageService.splitReport(masterId, secondaryIdentifier, 'PM yêu cầu tách Report đã chọn khỏi Case')
+    const updated = await triageService.getCaseById(masterId)
+    if (!updated) throw new Error('Đã gửi lệnh tách nhưng chưa đọc lại được Case nguồn.')
+    const refreshed = await triageService.getCases()
+    if (session !== getCaseSessionKey()) throw new Error('Phiên đã thay đổi; bỏ phản hồi tách cũ.')
+    setCases(refreshed)
 
-    try {
-      await triageService.unlinkReport(targetId, masterId)
-      // Tải lại 100% dữ liệu từ Backend CSDL
-      const refreshed = await triageService.getCases()
-      setCases(refreshed)
-      showToast(`Đã tách phản ánh [${targetCode.slice(0, 8)}] thành hồ sơ độc lập trong CSDL thành công!`)
-    } catch (err: any) {
-      console.error('❌ Lỗi khi tách hồ sơ qua API:', err)
-      showToast(`❌ Lỗi tách hồ sơ: ${err?.message || 'Không thể tách báo cáo khỏi hồ sơ'}`)
-    }
   }
 
   return {
