@@ -93,8 +93,17 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const missing = [
     !report?'Report nguồn':'',!current?.sourceVersion?'source.version':'',!current?.geometryVersion?'geometryVersion':'',!defectTypeCode?'loại lỗi hiệu lực':'',!road?'tuyến':'',road&&currentPackage?.version!==current?.geometryVersion?'package khớp geometryVersion nguồn':'',!severity?'mức độ':'',!decisionReason.trim()?'lý do':''
   ].filter(Boolean).join('; ')
+  const reportSelector=<label className="grid min-w-0 gap-1">
+    Phản ánh nguồn
+    <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
+      {reports.length!==1&&<option value="">Chọn phản ánh nguồn</option>}
+      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'} · {r.reportId}</option>)}
+    </select>
+    <span className="text-slate-600 break-words">Phản ánh nguồn không đổi khi chuyển ảnh đang xem.</span>
+  </label>
   if(referenceId||currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-    <p className="font-bold text-slate-800">Kết quả ghi nhận Report {reportId}</p>
+    <p className="font-bold text-slate-800">Kết quả ghi nhận phản ánh</p>
+    {reportSelector}
     {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
     {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
     {currentRecorded?.result&&<>
@@ -112,17 +121,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{reason}</p>
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
-    {reports.length === 1 ? <div className="grid min-w-0 gap-1">
-      <span>Phản ánh dùng để ghi nhận</span>
-      <p className="text-slate-600 break-words">Phản ánh 1 · {reports[0].receivedAt || 'Chưa có ngày tiếp nhận'}</p>
-    </div> : reports.length > 1 && <label className="grid min-w-0 gap-1">
-      Report nguồn
-      <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={!allowed || !!media?.reportsLoading || !!media?.reportsError} onChange={event => setSourceChoice({scope: caseScope, reportId: event.target.value})} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
-        <option value="">Chọn Report nguồn</option>
-        {reports.map((r, i) => <option key={r.reportId} value={r.reportId}>Phản ánh {i + 1} · {r.receivedAt || 'Chưa có ngày tiếp nhận'} · {r.reportId}</option>)}
-      </select>
-      <span className="text-slate-600 break-words">Report nguồn không đổi khi chuyển ảnh đang xem.</span>
-    </label>}
+    {reportSelector}
     <div className="grid min-w-0 grid-cols-1 gap-2">
       <label className="grid min-w-0 gap-1">
         Loại lỗi
