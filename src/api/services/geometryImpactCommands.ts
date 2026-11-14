@@ -7,7 +7,7 @@ import { RoleCode } from '../../types/enums'
 export type ImpactAction = 'VERIFY' | 'CONTINUE' | 'STOP' | 'REASSIGN'
 export interface ImpactDecision { id:string;impactId:string;taskId:string;action:ImpactAction;reason:string;occurredAt:string;executionStatus?:string|null }
 type Intent = {kind:'create';sectionId:string;body:{previousRouteVersionId:string;newRouteVersionId:string;reason:string}} | {kind:'decision';impactId:string;body:{taskId:string;action:ImpactAction;reason:string}}
-interface Held {actor:string;key:string;intent:Intent;receipt?:GeometryImpactView|ImpactDecision;rejected?:boolean}
+interface Held {actor:string;key:string;intent:Intent;receipt?:GeometryImpactView|ImpactDecision;rejected?:boolean;phase?:'not_sent'|'post_unknown'|'rejected'|'receipt'}
 const keyFor=(p:string)=>`rg_impact_${useAuthStore.getState().user?.id}_${p}`
 const busy=new Set<string>()
 function writer(project:string) {
@@ -35,15 +35,17 @@ export const geometryImpactCommands={
     const current=writer(project),storage=keyFor(project)
     if(busy.has(storage))throw new Error('Đang xử lý; không gửi trùng.')
     let held=this.pending(project)
+    if(held?.phase==='not_sent'){sessionStorage.removeItem(storage);held=null}
     if(held&&intent&&JSON.stringify(held.intent)!==JSON.stringify(intent))throw new Error('Giữ nguyên ý định/key của lệnh đang chờ.')
     if(held?.rejected)throw new Error('Đối chiếu lệnh bị từ chối trước khi sửa ý định.')
     if(!held){
       if(!intent||!intent.body.reason.trim())throw new Error('Cần lý do.')
       if(intent.kind==='create'&&(!intent.sectionId||!intent.body.previousRouteVersionId||!intent.body.newRouteVersionId||intent.body.previousRouteVersionId===intent.body.newRouteVersionId))throw new Error('Chọn hai phiên bản tuyến khác nhau trong cùng đoạn đường.')
       if(intent.kind==='decision'&&(!intent.impactId||!intent.body.taskId||!['VERIFY','CONTINUE','STOP','REASSIGN'].includes(intent.body.action)))throw new Error('Quyết định hoặc nhiệm vụ chưa hợp lệ.')
-      held={actor:useAuthStore.getState().user!.id,key:crypto.randomUUID(),intent:JSON.parse(JSON.stringify(intent))};sessionStorage.setItem(storage,JSON.stringify(held))
+      held={actor:useAuthStore.getState().user!.id,key:crypto.randomUUID(),phase:'not_sent',intent:JSON.parse(JSON.stringify(intent))};sessionStorage.setItem(storage,JSON.stringify(held))
     }
     busy.add(storage)
+    let postAttempted=false
     try {
       const i=held.intent
       if(!held.receipt){
@@ -55,8 +57,10 @@ export const geometryImpactCommands={
           if(!impact.references?.some(r=>r.id===i.body.taskId&&['FIELD_TASK','SURVEY_TASK'].includes(r.kind||'')))throw new Error('Nhiệm vụ không thuộc danh sách bị ảnh hưởng.')
         }
         const path=`/projects/${project}/geometry-location-impacts${i.kind==='decision'?`/${i.impactId}/decisions`:''}`
+        held.phase='post_unknown';sessionStorage.setItem(storage,JSON.stringify(held))
+        postAttempted=true
         const response=await apiClient.post(path,i.body,{headers:{'Idempotency-Key':held.key}});current()
-        held.receipt=response.data;sessionStorage.setItem(storage,JSON.stringify(held))
+        held.receipt=response.data;held.phase='receipt';sessionStorage.setItem(storage,JSON.stringify(held))
         if(![200,201].includes(response.status))throw new Error(`HTTP ${response.status}: giữ kết quả để đối chiếu.`)
       }
       let impact:GeometryImpactView,decision:ImpactDecision|undefined
@@ -74,7 +78,12 @@ export const geometryImpactCommands={
       sessionStorage.setItem(storage+'_result',JSON.stringify({impact,decision}))
       sessionStorage.removeItem(storage)
       return {impact,decision}
-    }catch(e:any){current();if(!held.receipt&&[400,403,404,409,412,415,422,428].includes(e?.response?.status)){held.rejected=true;sessionStorage.setItem(storage,JSON.stringify(held))}throw e}
+    }catch(e:any){
+      if(held.phase==='not_sent'&&this.pending(project)?.key===held.key)sessionStorage.removeItem(storage)
+      current()
+      if(postAttempted&&!held.receipt&&held.phase==='post_unknown'&&[400,403,404,409,412,415,422,428].includes(e?.response?.status)){held.rejected=true;held.phase='rejected';sessionStorage.setItem(storage,JSON.stringify(held))}
+      throw e
+    }
     finally{busy.delete(storage)}
   }
 }

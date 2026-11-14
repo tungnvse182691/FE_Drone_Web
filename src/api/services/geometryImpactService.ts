@@ -1,3 +1,4 @@
+import { alignmentService, type RoadGeometryVersionView } from './alignmentService'
 import {apiClient} from '../client'
 import {useAuthStore} from '../../store/authStore'
 import {RoleCode} from '../../types/enums'
@@ -17,6 +18,25 @@ function readScope(projectId:string){
 }
 /** Read-only C6 services. No mutation or inferred impact/publication creation. */
 export const geometryImpactService={
+  async versions(projectId:string,sectionId:string,selectedVersion:string,impacts:GeometryImpactView[]):Promise<{versions:RoadGeometryVersionView[];missing:string[]}> {
+    const current=readScope(projectId)
+    if(!sectionId)return {versions:[],missing:[]}
+    if(impacts.some(i=>i.projectId!==projectId))throw new Error('Reference đánh giá sai dự án.')
+    const context=await alignmentService.readProjectContext(projectId);current()
+    if(context.projectId!==projectId)throw new Error('Phạm vi tuyến trả sai dự án.')
+    const road=context.roadSections.find(r=>r.roadSectionId===sectionId)
+    if(!road)throw new Error('Đoạn đường không thuộc dự án đã đọc.')
+    const ids=[...new Set([road.currentVersionId,selectedVersion,...impacts.flatMap(i=>[i.previousRouteVersionId,i.newRouteVersionId])].filter(Boolean))]
+    const versions:RoadGeometryVersionView[]=[],missing:string[]=[]
+    for(const id of ids){
+      try{
+        const version=await alignmentService.readConfirmedGeometry(projectId,sectionId,id);current()
+        if(version.projectId!==projectId||version.roadSectionId!==sectionId||version.routeVersionId!==id)throw new Error('Phiên bản trả sai dự án/đoạn đường/reference.')
+        versions.push(version)
+      }catch(e:any){current();if(e?.response?.status===404)missing.push(id);else throw e}
+    }
+    return {versions,missing}
+  },
   async list(projectId:string,filters:GeometryImpactFilters={}):Promise<GeometryImpactView[]>{
     const actor=useAuthStore.getState()
     if(!actor.isAuthenticated||!actor.user||![RoleCode.PROJECT_MANAGER,RoleCode.SUPERVISOR].includes(actor.user.role))throw new Error('Cần phiên PM hoặc Giám sát để đọc ảnh hưởng hình học.')
