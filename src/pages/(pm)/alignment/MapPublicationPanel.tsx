@@ -8,7 +8,7 @@ import type { usePavementWorkflow } from './usePavementWorkflow'
 function pinsKey(params: URLSearchParams) { return ['layoutId','roadSectionId','routeVersionId','segmentSetId'].map(k=>params.get(k)||'').join(':') }
 
 export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnType<typeof usePavementWorkflow>; readOnly: boolean }) {
-  const [params,setParams] = useSearchParams(), {projectId = ''} = useParams(), actor = useAuthStore()
+  const [params,setParams] = useSearchParams(), {id: projectId = ''} = useParams<{id?: string}>(), actor = useAuthStore()
   const id = params.get('publicationId') || '', source = workflow.snapshot
   const scope = `${actor.authEpoch}:${actor.user?.id}:${projectId}:${params.get('layoutId')}:${params.get('routeVersionId')}:${params.get('segmentSetId')}:${id}`
   const reference = `${projectId}:${pinsKey(params)}`
