@@ -1,4 +1,4 @@
-import { segmentSetLabel } from './alignmentLabels'
+import { displayStatus, segmentSetLabel } from './alignmentLabels'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
@@ -70,7 +70,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     }
   }, [key, routeMatches, freshScope, loading, error, sets, held, params])
   const publishedSet = freshScope ? publishedSetForRoute(sets, routeVersionId) : null
-  const selectionLabel = currentPreview ? 'Đang xem preview — chưa lưu, chưa áp dụng.' : currentSnapshot?.data.status === 'DRAFT' ? 'Đang xem bản nháp — chưa áp dụng.' : currentSnapshot?.data.status === 'PUBLISHED' ? 'Đang xem bộ phân đoạn đã công bố.' : currentSnapshot?.data.status === 'SUPERSEDED' ? 'Đang xem bộ phân đoạn lịch sử — đã thay thế.' : 'Chưa chọn bản phân đoạn.'
+  const selectionLabel = currentPreview ? 'Đang xem trước — chưa lưu, chưa áp dụng.' : currentSnapshot?.data.status === 'DRAFT' ? 'Đang xem bản nháp — chưa áp dụng.' : currentSnapshot?.data.status === 'PUBLISHED' ? 'Đang xem bộ phân đoạn đã công bố.' : currentSnapshot?.data.status === 'SUPERSEDED' ? 'Đang xem bộ phân đoạn lịch sử — đã thay thế.' : 'Chưa chọn bản phân đoạn.'
   const publicationLabel = publishedSet ? `Đang công bố: ${segmentSetLabel(publishedSet)}` : 'PM chưa công bố phân đoạn'
   const editable = auth.user?.role === RoleCode.PROJECT_MANAGER && mainline && routeMatches && confirmationRead && freshScope && !loading && !error && (!currentSnapshot || currentSnapshot.data.status === 'DRAFT') && !busy && !held
   const openSet = (id: string) => {
@@ -157,7 +157,7 @@ export function useSegmentSetWorkflow(projectId: string, roadSectionId: string, 
     if (!reviewed) return
     try { reviseSegment(pins); setHeld(null); setPreview(null); setReasonOpen(false); setReviewed(false); setMessage('Đã chấp nhận hồ sơ vừa đọc; cần preview lại trước ý định ghi mới.') } catch (e) { setMessage((e as Error).message) }
   }
-  const display = currentPreview ? segmentRows(currentPreview.value, 'PREVIEW MÁY CHỦ — CHƯA LƯU', geometry) : currentSnapshot ? segmentRows(currentSnapshot.data, `SEGMENT SET ${currentSnapshot.data.status}`, geometry) : null
+  const display = currentPreview ? segmentRows(currentPreview.value, 'XEM TRƯỚC — CHƯA LƯU', geometry) : currentSnapshot ? segmentRows(currentSnapshot.data, `Bộ phân đoạn ${displayStatus(currentSnapshot.data.status)}`, geometry) : null
   return { selectionLabel, publicationLabel, publishedSet, enabled: validRoute, editable, loading, busy, error, message, setId, sets: freshScope ? sets : [], snapshot: currentSnapshot, preview: currentPreview, display, held: journalScope === key ? held : null, reviewed,
     openSet, openHeldSet: () => { if (busy || !held) return; const id = held.receipt?.id || (held.intent.kind !== 'create' ? held.intent.setId : ''); const next = new URLSearchParams(params); if (id) next.set('segmentSetId', id); else next.delete('segmentSetId'); next.delete('layoutId'); setParams(next) }, loadPreview, save, publish, retry: () => execute(), reload: () => setReload(n => n + 1), review, revise,
     reasonOpen, reason, setReason, closeReason: () => { if (!busy) setReasonOpen(false) }, openPublish: () => { if (editable && currentSnapshot && !currentPreview) { setReason(''); setReasonOpen(true) } },

@@ -51,7 +51,7 @@ export const SidebarSlabsTab: React.FC<SidebarSlabsTabProps> = ({
   const scopedSegments = selectedSegmentId === 'ALL' || !selectedSegmentId ? segments : segments.filter(segment => segment.id === selectedSegmentId)
   const scopedSlabs = slabs.filter(slab => scopedSegments.some(segment => segment.id === slab.segmentId))
   const issues = serverSnapshot ? [] : pavementInputIssues(segments, { stripWidthMeters, slabLenM: slabLengthM, thicknessCm: slabThicknessCm, contractionSpacingM, expansionSpacingM, expansionGapMm }).filter(issue => !issue.segmentId || scopedSegments.some(segment => segment.id === issue.segmentId))
-  const notice = asBuiltDraft ? 'Tấm thực tế trong bản nhập hoàn công chưa lưu; footprint và số đo do PM nhập.' : serverSnapshot ? 'Snapshot tấm đã lưu trên máy chủ; KC/KG chỉ là cấu hình, chưa phải geometry khe được xác nhận.' : !segments.length ? 'Chưa có phạm vi lý trình engineering để preview.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem preview.'
+  const notice = asBuiltDraft ? 'Tấm thực tế trong bản nhập hoàn công chưa lưu; đường bao và số đo do Chỉ huy trưởng nhập.' : serverSnapshot ? 'Tấm đã lưu trên máy chủ; khe co, khe giãn chưa được xác nhận hình học.' : !segments.length ? 'Chưa có phạm vi lý trình kỹ thuật để xem trước.' : !scopedSegments.length ? 'Chưa chọn đoạn hoặc toàn tuyến để xem trước.'
     : issues.map(issue => issue.message).join('; ')
   const inputValue = (value: number | string) => typeof value === 'string' ? value : Number.isFinite(value) ? value : ''
   return (

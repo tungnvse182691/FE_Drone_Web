@@ -147,14 +147,15 @@ export const AlignmentSegments: React.FC = () => {
       <button type="button" disabled={!draftWorkflow.freshVersion || draftWorkflow.busy || geometryRead.draftLoading || !geometryRead.context || draftWorkflow.pending?.duplicate} onClick={draftWorkflow.acceptVersion} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Giữ bản nhập, dùng phiên bản vừa đọc</button>
     </>}
     {segmentWorkflow.enabled && <>
-      <select aria-label="Segment set máy chủ" value={segmentWorkflow.setId} disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onChange={event => segmentWorkflow.openSet(event.target.value)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">
-        <option value="">{segmentWorkflow.sets.length ? 'Chọn segment set / bản mới' : 'Chưa có segment set trong CSDL'}</option>
-        {segmentWorkflow.sets.map(set => <option key={set.id} value={set.id} title={set.id}>{segmentSetLabel(set)}</option>)}
+      <select aria-label="Bộ phân đoạn đã lưu" value={segmentWorkflow.setId} disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onChange={event => segmentWorkflow.openSet(event.target.value)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">
+        <option value="">{segmentWorkflow.sets.length ? 'Chọn bộ phân đoạn / bản mới' : 'Chưa có bộ phân đoạn trong cơ sở dữ liệu'}</option>
+        {segmentWorkflow.sets.map((set, index) => <option key={set.id} value={set.id} >{segmentSetLabel(set, index)}</option>)}
       </select>
+      <details><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({segmentSetId:segmentWorkflow.setId,sets:segmentWorkflow.sets},null,2)}</pre></details>
       {!isSupervisor && <>
         <button type="button" disabled={segmentWorkflow.busy || !!segmentWorkflow.held} onClick={() => segmentWorkflow.openSet('')} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Bản phân đoạn mới</button>
-        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.preview} onClick={() => { void segmentWorkflow.save() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.snapshot ? 'Lưu sửa segment set DRAFT' : 'Lưu segment set DRAFT'}</button>
-        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.snapshot || !!segmentWorkflow.preview} onClick={segmentWorkflow.openPublish} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Publish segment set</button>
+        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.preview} onClick={() => { void segmentWorkflow.save() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.snapshot ? 'Lưu bản nháp phân đoạn' : 'Lưu bản nháp phân đoạn'}</button>
+        <button type="button" disabled={!segmentWorkflow.editable || !segmentWorkflow.snapshot || !!segmentWorkflow.preview} onClick={segmentWorkflow.openPublish} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Công bố bộ phân đoạn</button>
         {segmentWorkflow.held && <button type="button" disabled={segmentWorkflow.busy} onClick={segmentWorkflow.openHeldSet} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">Mở set của yêu cầu đang chờ</button>}
         {segmentWorkflow.held && <button type="button" disabled={segmentWorkflow.busy || segmentWorkflow.held.conflict || segmentWorkflow.held.rejected} onClick={() => { void segmentWorkflow.retry() }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs">{segmentWorkflow.held.receipt ? 'GET lại segment set đã lưu' : 'Gửi lại đúng yêu cầu phân đoạn'}</button>}
         {(segmentWorkflow.held?.conflict || segmentWorkflow.held?.rejected) && <>
@@ -238,7 +239,7 @@ export const AlignmentSegments: React.FC = () => {
       {segmentWorkflow.reasonOpen && !isSupervisor && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
           <form role="dialog" aria-modal="true" aria-labelledby="publish-segments-title" onSubmit={event => { event.preventDefault(); void segmentWorkflow.publish() }} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col gap-4">
-            <h3 id="publish-segments-title" className="font-bold text-slate-900 text-base">Publish segment set {segmentWorkflow.setId}</h3>
+            <h3 id="publish-segments-title" className="font-bold text-slate-900 text-base">Công bố bộ phân đoạn {segmentWorkflow.setId}</h3>
             <label className="text-sm text-slate-700 flex flex-col gap-2">Lý do publish
               <textarea autoFocus rows={3} disabled={segmentWorkflow.busy} value={segmentWorkflow.reason} onChange={event => segmentWorkflow.setReason(event.target.value)} className="w-full border border-slate-200 rounded-lg p-3 outline-none focus:border-brand-gold" />
             </label>

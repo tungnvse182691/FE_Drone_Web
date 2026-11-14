@@ -1,3 +1,4 @@
+import { displayStatus, layerLabel, reasonLabel } from './alignmentLabels'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { mapPublicationService, type PublicationManifest, type PublicationPage } from '../../../api/services/mapPublicationService'
@@ -20,7 +21,7 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
   const seen = useRef(new Set<string>())
   const [reload,setReload] = useState(0)
   const pins = {projectId,routeVersionId:params.get('routeVersionId') || '',segmentSetId:params.get('segmentSetId') || '',layoutRevisionId:params.get('layoutId') || ''}
-  const report = (e: any) => setError(e?.response ? `HTTP ${e.response.status}: ${e.response.data?.code || e.response.data?.title || 'unknown'}${e.response.data?.correlationId ? ` — ${e.response.data.correlationId}` : ''}. Giữ lệnh/receipt; không tự gửi lại.` : e.message)
+  const report = (e: any) => setError(e?.response ? `HTTP ${e.response.status}: ${e.response.data?.code || e.response.data?.title || 'unknown'}${e.response.data?.correlationId ? ` — ${e.response.data.correlationId}` : ''}. Giữ yêu cầu/kết quả; không tự gửi lại.` : e.message)
   useEffect(() => {
     let active = true
     const previous = previousReference.current
@@ -58,7 +59,7 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
       if(!next)seen.current.clear()
       const value=await mapPublicationService.page(manifest,selectedLayer,cursor)
       if(live.current!==selected)return
-      if(value.nextCursor&&seen.current.has(value.nextCursor))throw new Error('Cursor layer lặp; dừng phân trang.')
+      if(value.nextCursor&&seen.current.has(value.nextCursor))throw new Error('Mốc phân trang lớp bản đồ bị lặp; dừng phân trang.')
       if(cursor)seen.current.add(cursor)
       setPage(value)
     }catch(e){if(live.current===selected)report(e)}finally{running.current=false;if(live.current===selected)setBusy(false)}
@@ -70,24 +71,25 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
   }
   const blocked = workflow.loading || workflow.busy || !!workflow.error || !!workflow.pending || !!workflow.asBuilt.active || !!workflow.asBuilt.pending || !source || source.id !== pins.layoutRevisionId || source.projectId !== projectId || source.routeVersionId !== pins.routeVersionId || source.segmentSetId !== pins.segmentSetId
   const metadata = manifest?.layers.find(l=>l.key===layer)
-  return <section className="rounded-lg border p-3 space-y-2 text-xs" aria-label="Công bố bản đồ SAMPLE">
-    <h4 className="font-semibold">Bản đồ xem thử · SAMPLE</h4>
+  return <section className="rounded-lg border p-3 space-y-2 text-xs" aria-label="Công bố bản đồ xem thử">
+    <h4 className="font-semibold">Bản đồ xem thử</h4>
     {!readOnly && actor.user?.role === RoleCode.PROJECT_MANAGER && !id && <>
       <label className="block">Lý do công bố<input aria-label="Lý do công bố bản đồ" value={reason} onChange={e=>setReason(e.target.value)} disabled={busy} className="block border rounded p-2 w-full" /></label>
       <button type="button" disabled={busy||blocked||!reason.trim()} onClick={()=>void publish()} className="border rounded p-2 disabled:opacity-50">Công bố bản đồ xem thử</button>
-      {blocked&&<p>Chọn layout đã lưu, đúng tuyến và bộ phân đoạn; kết thúc bản nhập đang dở trước khi công bố.</p>}
+      {blocked&&<p>Chọn cấu hình đã lưu, đúng tuyến và bộ phân đoạn; kết thúc bản nhập đang dở trước khi công bố.</p>}
     </>}
     {!readOnly && !id && <button type="button" disabled={busy} onClick={()=>void revise()} className="border rounded p-2">Đối chiếu / sửa ý định bị từ chối</button>}
-    {id&&<p className="break-all">Publication: {id}</p>}
-    <button type="button" disabled={busy} onClick={()=>setReload(n=>n+1)} className="border rounded p-2">Đọc lại publication / receipt</button>
+    {id&&<p>Đã có bản công bố</p>}
+    <button type="button" disabled={busy} onClick={()=>setReload(n=>n+1)} className="border rounded p-2">Đọc lại kết quả công bố</button>
     {manifest&&<>
-      <p>SAMPLE: {String(manifest.sampleOnly)} · Hash: <span className="break-all">{manifest.contentHash}</span></p>
-      <select aria-label="Layer publication" value={layer} disabled={busy} onChange={e=>{setLayer(e.target.value);setPage(null);setError('');seen.current.clear()}} className="border rounded p-2 w-full"><option value="">Chọn layer</option>{manifest.layers.map(l=><option key={l.key} value={l.key}>{l.key} · {l.status || 'Chưa có trạng thái'} · {l.count}</option>)}</select>
-      {metadata&&<p role="status">{metadata.status || 'Chưa có trạng thái'} · {(metadata.reasonCodes||[]).join(', ')}</p>}
-      <button type="button" disabled={busy||!layer} onClick={()=>void readPage()} className="border rounded p-2">Đọc layer</button>
-      {page&&<><p role="status">{page.features.length ? `${page.features.length} đối tượng trong trang từ máy chủ` : 'Không có dữ liệu trong trang layer.'}</p><details><summary>Dữ liệu layer · CRS {metadata?.spatialSrid ?? 'chưa có'}</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(page.features,null,2)}</pre></details>{page.nextCursor&&<button type="button" disabled={busy} onClick={()=>void readPage(true)} className="border rounded p-2">Trang tiếp</button>}</>}
+      <p>{manifest.sampleOnly ? 'Bản đồ xem thử' : 'Bản đồ chính thức'}</p>
+      <select aria-label="Lớp bản đồ" value={layer} disabled={busy} onChange={e=>{setLayer(e.target.value);setPage(null);setError('');seen.current.clear()}} className="border rounded p-2 w-full"><option value="">Chọn lớp bản đồ</option>{manifest.layers.map(l=><option key={l.key} value={l.key}>{layerLabel(l.key)} · {displayStatus(l.status)} · {l.count}</option>)}</select>
+      {metadata&&<p role="status">{displayStatus(metadata.status)} · {(metadata.reasonCodes||[]).map(reasonLabel).join(' ')}</p>}
+      <button type="button" disabled={busy||!layer} onClick={()=>void readPage()} className="border rounded p-2">Đọc lớp bản đồ</button>
+      {page&&<><p role="status">{page.features.length ? `${page.features.length} đối tượng trong trang từ máy chủ` : 'Không có dữ liệu trong trang lớp bản đồ.'}</p>{page.nextCursor&&<button type="button" disabled={busy} onClick={()=>void readPage(true)} className="border rounded p-2">Trang tiếp</button>}</>}
     </>}
+    {(id || manifest || page) && <details><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({publicationId:id,manifest,page},null,2)}</pre></details>}
     {busy&&<p role="status">Đang gửi/đọc kết quả…</p>}
-    {error&&<p role="alert">{error}</p>}
+    {error&&<><p role="alert">Không thể hoàn tất yêu cầu. Kết quả được giữ để đối chiếu; xem chi tiết kỹ thuật.</p><details><summary>Chi tiết kỹ thuật</summary><p>{error}</p></details></>}
   </section>
 }

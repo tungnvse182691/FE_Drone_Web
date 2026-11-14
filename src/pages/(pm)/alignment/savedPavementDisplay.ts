@@ -14,9 +14,9 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   const station = Number.isFinite(origin) ? origin! : 0
   const segments: SegmentItem[] = (profile || []).map((w, i) => ({ id: `layout-${snapshot.id}-${i}`, code: `Khoảng bề rộng ${i + 1}`,
     startKm: Number.isFinite(origin) ? (origin! + w.fromOffsetMeters) / 1000 : Number.NaN, endKm: Number.isFinite(origin) ? (origin! + w.toOffsetMeters) / 1000 : Number.NaN, lengthKm: (w.toOffsetMeters - w.fromOffsetMeters) / 1000,
-    roadWidthM: w.widthMeters, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' }))
+    roadWidthM: w.widthMeters, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'ĐÃ LƯU TRÊN MÁY CHỦ', color: '#C9A227' }))
   const backgroundSegments = [...segments]
-  if (!planned) segments.splice(0, segments.length, { id: `layout-${snapshot.id}-asbuilt`, code: 'AS_BUILT', startKm: Number.NaN, endKm: Number.NaN, lengthKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' })
+  if (!planned) segments.splice(0, segments.length, { id: `layout-${snapshot.id}-asbuilt`, code: 'Hoàn công', startKm: Number.NaN, endKm: Number.NaN, lengthKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'ĐÃ LƯU TRÊN MÁY CHỦ', color: '#C9A227' })
   const empty = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] })
   const preview: PavementPreview = { slabsGeoJSON: empty(), slabLabelsGeoJSON: empty(), jointsGeoJSON: empty(), jointLabelsGeoJSON: empty(), edgesGeoJSON: empty(), missing: [],
     issues: [{ kind: 'contraction', message: 'Server chưa xác nhận geometry khe vật lý.' }, { kind: 'expansion', message: 'Server chưa xác nhận geometry khe vật lý.' }] }
@@ -57,5 +57,5 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   const previewCoordinates = previewReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : []
   const kmPoints = previewReady ? offsets.map(offset => (origin! + offset) / 1000) : []
   return { preview, segments, backgroundSegments: routeReady ? backgroundSegments : [], backgroundKmPoints, slabs, route, segmentRanges: route?.pavementSegmentRanges || null, engineeringSrid: srid, stationOriginMeters: origin, coordinates: routeReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
-    previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: planned ? `Snapshot server ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m · chưa phải Sup duyệt` : `Hoàn công máy chủ ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m` }
+    previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: planned ? `Tấm thiết kế đã lưu · Dung sai ${snapshot.geometry.displayToleranceMeters} m · Chưa được Giám sát duyệt` : `Tấm hoàn công đã lưu · Dung sai ${snapshot.geometry.displayToleranceMeters} m` }
 }

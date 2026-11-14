@@ -1,3 +1,4 @@
+import { displayStatus } from './alignmentLabels'
 import React from 'react'
 import {
   SplitSquareVertical,
@@ -275,7 +276,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
             ? !hasCoords
               ? `Chưa có dữ liệu tim đường • Bấm "Nhập Tuyến / Tọa độ" để nạp`
               : segmentSetStatus
-              ? segmentSetStatus === 'PREVIEW' ? 'Preview BE • Chưa lưu ID phân đoạn' : `Segment set ${segmentSetStatus} • ID, thứ tự và phạm vi từ máy chủ`
+              ? segmentSetStatus === 'PREVIEW' ? 'Xem trước • Chưa lưu phân đoạn' : `Bộ phân đoạn ${displayStatus(segmentSetStatus)} • Thứ tự và phạm vi từ máy chủ`
               : isConfirmed
               ? 'Hình học đã xác nhận • Các khoảng bề rộng chỉ là dữ liệu kỹ thuật'
               : alignmentStatus === 'SUBMITTED'
@@ -314,7 +315,7 @@ export const SidebarSegmentsTab: React.FC<SidebarSegmentsTabProps> = ({
                     </span>
                   ) : isMain && isConfirmed ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {segmentSetStatus ? `SEGMENT SET ${segmentSetStatus}` : 'HÌNH HỌC ĐÃ XÁC NHẬN'}
+                      {segmentSetStatus ? `Bộ phân đoạn ${displayStatus(segmentSetStatus)}` : 'HÌNH HỌC ĐÃ XÁC NHẬN'}
                     </span>
                   ) : segments.length > 0 ? (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">

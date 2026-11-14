@@ -55,7 +55,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
     let active = true
     setPins(null); setPrerequisite('Đang đọc prerequisite tấm/khe.')
     if (!projectId) { setPrerequisite('Chưa chọn dự án.'); return }
-    if (!pinnedRoute || !pinnedSet) { setPrerequisite('Chọn phiên bản tuyến và segment set PUBLISHED trước khi lưu layout mới.'); return }
+    if (!pinnedRoute || !pinnedSet) { setPrerequisite('Chọn phiên bản tuyến và bộ phân đoạn đã công bố trước khi lưu layout mới.'); return }
     // A DRAFT selection must never silently become a different publication for a new layout.
     pavementService.discover(projectId, sectionId, pinnedRoute, pinnedSet).then(value => { if (active) { setPins(value); setPrerequisite('') } })
       .catch(error => { if (active) setPrerequisite(error?.response ? `Không đọc được prerequisite tấm/khe: HTTP ${error.response.status}, ${error.response.data?.code || 'unknown'}.` : error.message) })
@@ -83,14 +83,14 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
           else refs.current.notify('Đã đọc layout; bản chỉnh mới hơn được giữ, chưa nạp đè form.')
         }
         setSavedProfile(configuration?.layout?.widthProfile || null); setSavedWidthRevision(initialWidthRevision)
-        setMessage(`Đã đọc layout ${value.id}: ${value.kind === 'AS_BUILT' ? '' : `${value.geometry.plan?.cells?.length ?? 'chưa có'} cell, `}${value.geometry.slabs.length} tấm từ geometry server. ${value.kind === 'AS_BUILT' ? configuration ? 'Form lấy từ sourcePlanId, geometry vẫn là AS_BUILT.' : 'layout=null, chưa có cấu hình PLANNED nguồn.' : configuration ? 'KC/KG chỉ là cấu hình, chưa phải hình học khe được server xác nhận.' : 'layout=null: máy chủ không có cấu hình gốc.'}`)
+        setMessage(`Đã đọc ${value.geometry.slabs.length} tấm ${value.kind === 'AS_BUILT' ? 'hoàn công' : 'thiết kế'} từ máy chủ. Khe co, khe giãn chưa được xác nhận hình học.`)
       }).catch(error => { if (active) { setError(`Không đọc được layout: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`) } }).finally(() => { if (active) setLoading(false) })
     }
     return () => { active = false }
   }, [projectId, layoutId, epoch, sectionId, pinnedRoute, pinnedSet, reload])
 
   let disabledReason = actor.user?.role !== RoleCode.PROJECT_MANAGER ? 'Chỉ PM được lưu cấu hình tấm/khe.'
-    : listLoading ? 'Đang tìm layout server.' : listError ? listError : !layoutId && listScope === discoveryScope && layouts.length > 0 ? 'Chọn layout đã lưu để xem; không tự ghi đè cấu hình hiện hữu.' : loading ? 'Đang đọc layout server.' : error ? error : !mainline ? 'Chưa hỗ trợ lưu cấu hình tuyến nhánh.' : prerequisite
+    : listLoading ? 'Đang tìm cấu hình server.' : listError ? listError : !layoutId && listScope === discoveryScope && layouts.length > 0 ? 'Chọn cấu hình đã lưu để xem; không tự ghi đè cấu hình hiện hữu.' : loading ? 'Đang đọc cấu hình từ máy chủ.' : error ? error : !mainline ? 'Chưa hỗ trợ lưu cấu hình tuyến nhánh.' : prerequisite
   let input: ReturnType<typeof pavementInput> | null = null
   if (!disabledReason && pins) {
     try { input = pavementInput(editor, savedProfile && savedWidthRevision === widthRevision ? savedProfile : widthProfile, pins.lengthMeters, PAVEMENT_RENDER_TOLERANCE_METERS) }
@@ -126,7 +126,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       if (pins) next.set('roadSectionId', pins.roadSectionId)
       hydrated.current = `${epoch}:${actor.user?.id}:${projectId}:${pins?.roadSectionId || sectionId}:${result.routeVersionId}:${result.segmentSetId}:${result.id}`
       setParams(next)
-      const text = `Đã lưu và đọc lại cấu hình tấm/khe ${result.id}: ${result.geometry.plan!.cells.length} cell/${result.geometry.slabs.length} tấm server. Chưa duyệt/publish; KC/KG chưa được server xác nhận hình học.`
+      const text = `Đã lưu và đọc lại ${result.geometry.slabs.length} tấm thiết kế. Khe co, khe giãn chưa được xác nhận hình học.`
       setMessage(text); refs.current.notify(text)
     } catch (error: any) {
       if (!current()) return
@@ -144,7 +144,7 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
       const next = new URLSearchParams(params); next.set('layoutId', value.id); next.set('routeVersionId', value.routeVersionId); next.set('segmentSetId', value.segmentSetId)
       const road = rendered.route!.roadSectionId!; next.set('roadSectionId', road)
       hydrated.current = `${epoch}:${actor.user?.id}:${projectId}:${road}:${value.routeVersionId}:${value.segmentSetId}:${value.id}`
-      setParams(next); setMessage('Đã đọc hình học AS_BUILT từ máy chủ; cấu hình thiết kế nguồn không thay thế footprint hoàn công.')
+      setParams(next); setMessage('Đã đọc tấm hoàn công từ máy chủ; giữ nguyên đường bao thực tế.')
     }, notify)
   const openAsBuiltSource = () => {
     const held = asBuilt.pending
@@ -153,5 +153,5 @@ export function usePavementWorkflow(projectId: string, sectionId: string, editor
     setParams(current => { const next = new URLSearchParams(current); next.set('layoutId', held.sourcePlanId); next.set('roadSectionId', held.pins.roadSectionId); next.set('routeVersionId', held.pins.routeVersionId); next.set('segmentSetId', held.pins.segmentSetId); return next })
   }
   const routeBase = useMemo(() => display?.route && snapshot?.kind === 'AS_BUILT' ? { ...display, segments: display.backgroundSegments, kmPoints: display.backgroundKmPoints } : display, [display, snapshot])
-  return { asBuilt, openAsBuiltSource, layouts: listScope === discoveryScope ? layouts : [], openLayout, listLoading, listError, layoutDiscoveryMessage: !layoutId && pins && (!pinnedSet || pins.segmentSetId !== pinnedSet) ? 'Giữ bản phân đoạn đang chọn. Để xem layout đã lưu, hãy chủ động chọn segment set PUBLISHED.' : listLoading ? 'Đang tìm layout…' : listError || (!layoutId && listScope === discoveryScope ? layouts.length > 1 ? 'Có nhiều layout; chọn theo loại và thời gian lưu.' : layouts.length === 1 ? 'Có layout đã lưu; chọn để đọc cấu hình.' : 'Chưa có layout' : ''), save, busy: busy || asBuilt.busy, loading, error, previewBase: hydrated.current === scope ? routeBase : null, display: asBuilt.preview || (hydrated.current === scope && (savedRevision === editRevision || !display?.previewReady) ? display : null), savedProfile, pending, snapshot, layoutId, message: [asBuilt.preview ? `Bản nhập hoàn công: ${asBuilt.slabs.length} tấm thực tế chưa lưu; PLANNED nguồn giữ riêng.` : message, loading ? 'Đang đọc layout server…' : error, display && savedRevision !== editRevision ? display.previewReady ? 'Preview PM mới chưa lưu; snapshot server được giữ riêng.' : display.previewBlocker : ''].filter(Boolean).join(' '), disabledReason, actionLabel, scopeMessage: pins ? `Lưu trên route ${pins.routeVersionId}, segment set ${pins.segmentSetId} đã PUBLISHED từ server; hình học khe preview chưa được xác nhận.` : '', retry: () => setReload(value => value + 1) }
+  return { asBuilt, openAsBuiltSource, layouts: listScope === discoveryScope ? layouts : [], openLayout, listLoading, listError, layoutDiscoveryMessage: !layoutId && pins && (!pinnedSet || pins.segmentSetId !== pinnedSet) ? 'Giữ bản phân đoạn đang chọn. Để xem cấu hình đã lưu, hãy chủ động chọn bộ phân đoạn đã công bố.' : listLoading ? 'Đang tìm cấu hình…' : listError || (!layoutId && listScope === discoveryScope ? layouts.length > 1 ? 'Có nhiều cấu hình; chọn theo loại và thời gian lưu.' : layouts.length === 1 ? 'Có cấu hình đã lưu; chọn để đọc cấu hình.' : 'Chưa có cấu hình' : ''), save, busy: busy || asBuilt.busy, loading, error, previewBase: hydrated.current === scope ? routeBase : null, display: asBuilt.preview || (hydrated.current === scope && (savedRevision === editRevision || !display?.previewReady) ? display : null), savedProfile, pending, snapshot, layoutId, message: [asBuilt.preview ? `Bản nhập hoàn công: ${asBuilt.slabs.length} tấm thực tế chưa lưu; Thiết kế nguồn giữ riêng.` : message, loading ? 'Đang đọc cấu hình từ máy chủ…' : error, display && savedRevision !== editRevision ? display.previewReady ? 'Preview PM mới chưa lưu; snapshot server được giữ riêng.' : display.previewBlocker : ''].filter(Boolean).join(' '), disabledReason, actionLabel, scopeMessage: pins ? 'Dùng tuyến và bộ phân đoạn đã công bố; hình học khe chưa được xác nhận.' : '', retry: () => setReload(value => value + 1) }
 }

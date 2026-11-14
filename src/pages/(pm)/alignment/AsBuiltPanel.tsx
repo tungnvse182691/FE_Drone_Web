@@ -10,10 +10,10 @@ export function AsBuiltPanel({ workflow, readOnly }: { workflow: ReturnType<type
     <h4 className="text-xs font-bold text-brand-dark">Hoàn công tấm thực tế</h4>
     {!w.active ? <>
       <button type="button" disabled={!w.canStart} onClick={w.start} className="rounded-lg border border-brand-gold p-2 text-xs font-semibold disabled:opacity-50">Tạo bản hoàn công</button>
-      {!w.canStart && <p className="text-xs text-slate-600">Chọn PLANNED nguồn đã lưu, đúng tuyến và bộ PUBLISHED; hoàn tất các lệnh đang chờ trước.</p>}
+      {!w.canStart && <p className="text-xs text-slate-600">Chọn thiết kế nguồn đã lưu, đúng tuyến và bộ phân đoạn đã công bố; hoàn tất các lệnh đang chờ trước.</p>}
     </> : <>
       <p className="text-xs text-slate-600">Chọn để đối chiếu chưa thêm vào hoàn công. Chỉ sau khi PM xác nhận mới ghi nhận trong bản nhập; thao tác này không tự đo GPS hoặc kiểm chứng thực tế.</p>
-      <p className="break-all text-[10px] text-slate-500">PLANNED nguồn chỉ đọc: {w.pending?.sourcePlanId || workflow.snapshot?.id}</p>
+      <details><summary>Chi tiết kỹ thuật</summary><p className="break-all text-[10px] text-slate-500">Mã thiết kế nguồn: {w.pending?.sourcePlanId || workflow.snapshot?.id}</p></details>
       <div className="flex gap-2 text-xs">
         <button type="button" aria-pressed={!w.showActual} onClick={() => w.setShowActual(false)} className="rounded-lg border bg-white p-2">Thiết kế nguồn</button>
         <button type="button" aria-pressed={w.showActual} onClick={() => w.setShowActual(true)} className="rounded-lg border bg-white p-2">Hoàn công đang nhập ({w.slabs.length})</button>
@@ -47,7 +47,7 @@ export function AsBuiltPanel({ workflow, readOnly }: { workflow: ReturnType<type
       <p className="text-[10px] text-slate-500">Kiểm lại từng tấm và footprint trên bản đồ trước khi lưu. Đây là bản nhập cục bộ, chưa phải dữ liệu máy chủ.</p>
       <button type="button" disabled={w.busy || (!w.pending && !!w.disabledReason) || !!w.pending?.rejected} onClick={() => { void w.save() }} className="rounded-lg border border-brand-gold p-2 text-xs font-semibold disabled:opacity-50">{w.busy ? 'Đang lưu/đọc lại hoàn công…' : w.pending?.receipt ? 'Đọc lại bản hoàn công' : w.pending ? 'Gửi lại đúng lệnh hoàn công' : 'Lưu bản hoàn công'}</button>
       {w.pending?.rejected && <button type="button" disabled={w.busy} onClick={() => { void w.review() }} className="rounded-lg border p-2 text-xs">Đối chiếu và sửa bản nhập</button>}
-      {w.pending && <button type="button" disabled={w.busy} onClick={workflow.openAsBuiltSource} className="rounded-lg border p-2 text-xs">Mở PLANNED nguồn của lệnh chờ</button>}
+      {w.pending && <button type="button" disabled={w.busy} onClick={workflow.openAsBuiltSource} className="rounded-lg border p-2 text-xs">Mở thiết kế nguồn của yêu cầu đang chờ</button>}
       <button type="button" disabled={w.busy || !!w.pending} onClick={w.cancel} className="rounded-lg border bg-white p-2 text-xs disabled:opacity-50">Đóng bản nhập hoàn công</button>
     </>}
     {(w.error || w.active && !w.pending && w.disabledReason) && <p role="status" className="break-words text-xs text-amber-800">{w.error || w.disabledReason}</p>}

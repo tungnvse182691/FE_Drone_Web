@@ -1,3 +1,4 @@
+import { displayStatus, readableTime } from './alignmentLabels'
 import React from 'react'
 import {
   SplitSquareVertical,
@@ -259,9 +260,10 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
         {rightTab === 'SLABS' && pavementWorkflow && <>
           <MapPublicationPanel workflow={pavementWorkflow} readOnly={!!isSupervisor} />
           {pavementWorkflow.layoutDiscoveryMessage && <p role="status" className="text-xs text-slate-600">{pavementWorkflow.layoutDiscoveryMessage}</p>}
-          {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="text-xs border rounded-lg p-2">Thử lại danh sách layout</button>}
-          {pavementWorkflow.layouts?.length > 0 && <select aria-label="Layout tấm và khe máy chủ" value={pavementWorkflow.layoutId} disabled={pavementWorkflow.busy || pavementWorkflow.asBuilt.active || !!pavementWorkflow.asBuilt.pending} onChange={event => pavementWorkflow.openLayout(event.target.value)} className="text-xs border rounded-lg p-2 max-w-full"><option value="">Chọn layout theo loại và thời gian lưu</option>{pavementWorkflow.layouts.map(row => <option key={row.layoutId} value={row.layoutId}>{row.kind} · {row.createdAt} · {row.layoutId}</option>)}</select>}
+          {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="text-xs border rounded-lg p-2">Thử lại danh sách cấu hình</button>}
+          {pavementWorkflow.layouts?.length > 0 && <select aria-label="Cấu hình tấm và khe đã lưu" value={pavementWorkflow.layoutId} disabled={pavementWorkflow.busy || pavementWorkflow.asBuilt.active || !!pavementWorkflow.asBuilt.pending} onChange={event => pavementWorkflow.openLayout(event.target.value)} className="text-xs border rounded-lg p-2 max-w-full"><option value="">Chọn cấu hình theo loại và thời gian lưu</option>{pavementWorkflow.layouts.map((row, index) => <option key={row.layoutId} value={row.layoutId}>{displayStatus(row.kind)} {index + 1} · {readableTime(row.createdAt)}</option>)}</select>}
 
+          <details><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({layoutId:pavementWorkflow.layoutId,layouts:pavementWorkflow.layouts},null,2)}</pre></details>
           {!isSupervisor && !pavementWorkflow.asBuilt.active && !pavementWorkflow.asBuilt.pending && pavementWorkflow.snapshot?.kind !== 'AS_BUILT' && <button type="button" disabled={pavementWorkflow.busy || (!pavementWorkflow.pending && !!pavementWorkflow.disabledReason)} title={pavementWorkflow.disabledReason} onClick={() => { void pavementWorkflow.save() }} className="px-3 py-2 rounded-lg border border-brand-gold text-brand-dark text-xs font-semibold disabled:opacity-50">{pavementWorkflow.busy ? 'Đang lưu/đọc lại…' : pavementWorkflow.actionLabel}</button>}
           {(pavementWorkflow.message || pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage) && <p role="status" className="text-xs text-slate-600">{[pavementWorkflow.message, !isSupervisor && (pavementWorkflow.disabledReason || pavementWorkflow.scopeMessage)].filter(Boolean).join(' ')}</p>}
         </>}
