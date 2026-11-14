@@ -2,24 +2,26 @@ import { RoleCode } from '../../../types/enums'
 
 export interface NotificationItem {
   id: string
-  category: 'ACTION_REQUIRED' | 'HANDOVER' | 'AI_SYSTEM' | 'FIELD_CREW'
+  category: 'UNKNOWN' | 'ACTION_REQUIRED' | 'HANDOVER' | 'AI_SYSTEM' | 'FIELD_CREW'
   categoryLabel: string
   title: string
   message: string
-  resourceType: 'REPAIR_PROPOSAL' | 'FIELD_TASK' | 'DEFECT' | 'SURVEY_MISSION' | 'ACCEPTANCE_DOSSIER'
+  resourceType: 'UNKNOWN' | 'REPAIR_PROPOSAL' | 'FIELD_TASK' | 'DEFECT' | 'SURVEY_MISSION' | 'ACCEPTANCE_DOSSIER'
   resourceId: string
   routeCode: string
   stationing: string
   sender: string
   senderRole: string
   recipientRole: RoleCode | 'ALL'
-  priority: 'EMERGENCY' | 'HIGH' | 'NORMAL'
+  priority: 'UNKNOWN' | 'EMERGENCY' | 'HIGH' | 'NORMAL'
   slaHoursRemaining?: number // Số giờ còn lại trước khi vi phạm SLA
   slaType?: 'SLA-EMERG-2h' | 'SLA-FT-24h' | 'SLA-APPR-48h' | 'SLA-ACCEPT-72h'
   read: boolean
   occurredAt: string
   timeAgo: string
   actionUrl: string
+  scope?: {projectId?:string|null;sourceKind?:string|null;sourceId:string;eventType?:string|null}
+  version?: string
   actionLabel: string
 }
 

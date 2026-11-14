@@ -7,12 +7,14 @@ import {
 import { NotificationItem } from './types'
 
 interface NotificationsFeedProps {
+  loading?: boolean
+  error?: string
   filteredNotifications: NotificationItem[]
   onMarkAsRead: (id: string, e?: React.MouseEvent) => void
   onNavigateAction: (item: NotificationItem) => void
 }
 
-const renderPriorityDot = (priority: 'EMERGENCY' | 'HIGH' | 'NORMAL') => {
+const renderPriorityDot = (priority: NotificationItem['priority']) => {
   if (priority === 'EMERGENCY') {
     return (
       <span
@@ -38,18 +40,19 @@ const renderPriorityDot = (priority: 'EMERGENCY' | 'HIGH' | 'NORMAL') => {
 }
 
 export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
+  loading=false, error='',
   filteredNotifications,
   onMarkAsRead,
   onNavigateAction
 }) => {
   return (
     <div className="lg:col-span-8 space-y-3.5">
-      {filteredNotifications.length === 0 ? (
+      {loading||error ? <div className="bg-white rounded-2xl border border-brand-border p-8 text-sm" role={error?'alert':'status'}>{error||'Đang đọc thông báo từ máy chủ…'}</div> : filteredNotifications.length === 0 ? (
         <div className="bg-white rounded-2xl border border-brand-border p-12 text-center space-y-3">
           <Inbox className="w-12 h-12 text-slate-300 mx-auto" />
           <div className="text-base font-bold text-slate-700">Không có thông báo phù hợp</div>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Hiện tại không có mục bàn giao hoặc cảnh báo nào trong bộ lọc này. Tất cả công việc đang trong tầm kiểm soát.
+            Chưa có thông báo từ CSDL phù hợp bộ lọc.
           </p>
         </div>
       ) : (
@@ -83,7 +86,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
-                        THÔNG THƯỜNG
+                        {item.priority==='UNKNOWN'?'CHƯA CÓ ƯU TIÊN':'THÔNG THƯỜNG'}
                       </span>
                     )}
 
@@ -119,6 +122,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                   </p>
                 </div>
 
+                {item.scope&&<dl className="text-xs text-slate-600 space-y-1 break-all"><div>Dự án: {item.scope.projectId||'Chưa có dữ liệu'}</div><div>Nguồn: {item.scope.sourceKind||'Chưa có dữ liệu'} · {item.scope.sourceId}</div><div>Sự kiện: {item.scope.eventType||'Chưa có dữ liệu'}</div></dl>}
                 {/* Row 3: Sender info & Quick Action Button */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
                   <div className="flex items-center gap-2 text-slate-500">

@@ -36,6 +36,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
         </div>
 
         <div className="space-y-3">
+          {!criticalSlaItems.length&&<p className="text-xs text-slate-500">Chưa có thời hạn SLA trong dữ liệu thông báo đã đọc.</p>}
           {criticalSlaItems.slice(0, 3).map((item) => {
             const isUrgent = (item.slaHoursRemaining ?? 99) < 4
             const maxHours = item.slaType?.includes('2h')
@@ -95,7 +96,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             <RefreshCw className="w-4 h-4 text-brand-gold" />
             <h3 className="font-bold text-sm text-brand-dark">Dòng Chảy Bàn Giao</h3>
           </div>
-          <span className="text-[10px] text-slate-400 font-semibold">Quy chuẩn v2.2</span>
+          <span className="text-[10px] text-slate-400 font-semibold">Spec17_10</span>
         </div>
 
         <div className="space-y-3 text-xs">
@@ -106,7 +107,7 @@ export const NotificationsSlaWidgets: React.FC<NotificationsSlaWidgetsProps> = (
             </div>
             <div>
               <div className="font-bold text-emerald-950">Thiết bị bay quét &amp; Phát hiện</div>
-              <div className="text-[11px] text-emerald-800">Mô hình AI Road-YOLOv9 đo đạc và gắn cờ khiếm khuyết</div>
+              <div className="text-[11px] text-emerald-800">Phát hiện AI cần PM thẩm định; không thay thế số đo thực địa.</div>
             </div>
           </div>
 

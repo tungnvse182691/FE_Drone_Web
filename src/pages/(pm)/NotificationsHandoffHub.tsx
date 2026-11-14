@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, X } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
@@ -9,7 +9,7 @@ import {
   NotificationPriorityFilter,
   AudioModeConfig
 } from './notifications/types'
-import { initialNotifications } from './notifications/mockData'
+import { notificationService, notificationError, type NotificationDto } from '../../api/services/notificationService'
 import { AudioConfigModal } from './notifications/AudioConfigModal'
 import { NotificationsHeader } from './notifications/NotificationsHeader'
 import { NotificationsFilterBar } from './notifications/NotificationsFilterBar'
@@ -104,8 +104,15 @@ export const NotificationsHandoffHub: React.FC = () => {
     }
   }
 
-  // --- DỮ LIỆU THÔNG BÁO VÀ BÀN GIAO CHUẨN BACKEND V2.2 ---
-  const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications)
+  // Danh sách thông báo theo người nhận hiện tại từ API039–042.
+  const epoch=useAuthStore(s=>s.authEpoch),sessionScope=`${epoch}:${user?.id}:${user?.role}`
+  const latest=useRef(sessionScope);latest.current=sessionScope
+  const [snapshot,setSnapshot]=useState<{scope:string;items:NotificationItem[]}|null>(null)
+  const [loading,setLoading]=useState(true),[apiError,setApiError]=useState(''),[reload,setReload]=useState(0)
+  const mapNotification=(n:NotificationDto):NotificationItem=>({id:n.id,category:'UNKNOWN',categoryLabel:'Thông báo',title:'Thông báo',message:n.message||'Chưa có nội dung trong dữ liệu máy chủ.',resourceType:'UNKNOWN',resourceId:n.resourceId||'',routeCode:'',stationing:'Chưa có dữ liệu lý trình',sender:'Chưa có thông tin người gửi',senderRole:'',recipientRole:user!.role,priority:'UNKNOWN',read:n.read,occurredAt:n.occurredAt,timeAgo:new Date(n.occurredAt).toLocaleString('vi-VN'),actionUrl:'',actionLabel:'Xem chi tiết và phạm vi',version:n.version||undefined})
+  useEffect(()=>{const c=new AbortController();setSnapshot(null);setLoading(true);setApiError('');notificationService.list(c.signal).then(items=>{if(!c.signal.aborted)setSnapshot({scope:sessionScope,items:items.map(mapNotification)})}).catch(e=>{if(!c.signal.aborted)setApiError(notificationError(e))}).finally(()=>{if(!c.signal.aborted)setLoading(false)});return()=>c.abort()},[sessionScope,reload])
+  const notifications=snapshot?.scope===sessionScope?snapshot.items:[]
+  const updateNotification=(item:NotificationItem)=>setSnapshot(old=>old?.scope===sessionScope?{...old,items:old.items.map(n=>n.id===item.id?item:n)}:old)
 
   // Lọc thông báo
   const [activeTab, setActiveTab] = useState<NotificationCategoryTab>('ALL')
@@ -124,17 +131,15 @@ export const NotificationsHandoffHub: React.FC = () => {
   }
 
   // Đánh dấu 1 thông báo là đã đọc
-  const handleMarkAsRead = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation()
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    )
+  const handleMarkAsRead = async (id:string,e?:React.MouseEvent)=>{
+    e?.stopPropagation();const target=notifications.find(n=>n.id===id),start=sessionScope
+    if(!target)return
+    try{const result=await notificationService.markRead(id,target.version||'');if(latest.current===start)updateNotification({...target,...mapNotification(result)})}catch(e:any){if(latest.current===start)setApiError(notificationError(e))}
   }
-
-  // Đánh dấu tất cả là đã đọc
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
-    showToast('Đã đánh dấu tất cả thông báo là đã đọc!')
+  const markingAll=useRef(false)
+  const handleMarkAllAsRead = async ()=>{
+    if(markingAll.current)return;markingAll.current=true;const start=sessionScope
+    try{for(const item of notifications.filter(n=>!n.read)){if(latest.current!==start)return;const result=await notificationService.markRead(item.id,item.version||'');if(latest.current!==start)return;updateNotification({...item,...mapNotification(result)})}if(latest.current===start)showToast('Đã GET xác nhận các thông báo trong danh sách đã đọc.')}catch(e:any){if(latest.current===start)setApiError(notificationError(e))}finally{markingAll.current=false}
   }
 
   // 1. Phân lập thông báo theo vai trò tài khoản hiện tại (RBAC Notification Isolation)
@@ -188,30 +193,9 @@ export const NotificationsHandoffHub: React.FC = () => {
       .sort((a, b) => (a.slaHoursRemaining || 0) - (b.slaHoursRemaining || 0))
   }, [roleFilteredNotifications])
 
-  // Giải quyết đường dẫn điều hướng tương thích đúng vai trò hiện tại
-  const resolveActionUrl = (item: NotificationItem) => {
-    if (item.actionUrl) {
-      return item.actionUrl
-    }
-    switch (item.resourceType) {
-      case 'REPAIR_PROPOSAL':
-        return `${basePath}/proposals`
-      case 'DEFECT':
-        return `${basePath}/fast-track`
-      case 'ACCEPTANCE_DOSSIER':
-        return `${basePath}/acceptance`
-      case 'SURVEY_MISSION':
-        return `${basePath}/drone-mission`
-      case 'FIELD_TASK':
-        return isSupervisor ? '/sup/surveys' : '/pm/field-tasks'
-      default:
-        return `${basePath}/dashboard`
-    }
-  }
-
-  const handleNavigateAction = (item: NotificationItem) => {
-    handleMarkAsRead(item.id)
-    navigate(resolveActionUrl(item))
+  const handleNavigateAction = async (item:NotificationItem)=>{
+    const start=sessionScope
+    try{const detail=await notificationService.detail(item.id);const scope=await notificationService.scope(item.id);if(latest.current!==start)return;updateNotification({...mapNotification(detail),scope,categoryLabel:scope.classification||'Thông báo'})}catch(e:any){if(latest.current===start)setApiError(notificationError(e))}
   }
 
   return (
@@ -271,9 +255,13 @@ export const NotificationsHandoffHub: React.FC = () => {
         onToggleUnreadOnly={() => setUnreadOnly(!unreadOnly)}
       />
 
+      <div className="flex flex-wrap gap-2 text-xs"><button type="button" disabled={loading} onClick={()=>setReload(n=>n+1)} className="border rounded-lg px-3 py-2">Tải lại thông báo</button>{loading&&<p role="status">Đang đọc thông báo…</p>}{apiError&&<p role="alert" className="text-rose-700">{apiError}</p>}</div>
+      <p className="text-xs text-slate-500">Danh sách thuộc người nhận hiện tại. Máy chủ chưa cung cấp mức ưu tiên, người gửi và thời hạn SLA trong dữ liệu thông báo; các trường này không được suy diễn. Danh sách rỗng nghĩa là chưa có thông báo phù hợp trong CSDL.</p>
       {/* MAIN TWO-COLUMN WORKSPACE: 70% Feed / 30% Delivery SLA Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <NotificationsFeed
+          loading={loading}
+          error={apiError}
           filteredNotifications={filteredNotifications}
           onMarkAsRead={handleMarkAsRead}
           onNavigateAction={handleNavigateAction}
