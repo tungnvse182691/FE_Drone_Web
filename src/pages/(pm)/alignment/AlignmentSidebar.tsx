@@ -11,6 +11,7 @@ import { SidebarSlabsTab } from './SidebarSlabsTab'
 import { SidebarFooterKpis } from './SidebarFooterKpis'
 import type { usePavementWorkflow } from './usePavementWorkflow'
 import { AsBuiltPanel } from './AsBuiltPanel'
+import { MapPublicationPanel } from './MapPublicationPanel'
 
 export interface AlignmentSidebarProps {
   draftContentSaved?: boolean
@@ -253,6 +254,7 @@ export const AlignmentSidebar: React.FC<AlignmentSidebarProps> = ({
           </>
         )}
         {rightTab === 'SLABS' && pavementWorkflow && <>
+          <MapPublicationPanel workflow={pavementWorkflow} readOnly={!!isSupervisor} />
           {pavementWorkflow.layoutDiscoveryMessage && <p role="status" className="text-xs text-slate-600">{pavementWorkflow.layoutDiscoveryMessage}</p>}
           {pavementWorkflow.listError && <button type="button" onClick={pavementWorkflow.retry} className="text-xs border rounded-lg p-2">Thử lại danh sách layout</button>}
           {pavementWorkflow.layouts?.length > 0 && <select aria-label="Layout tấm và khe máy chủ" value={pavementWorkflow.layoutId} disabled={pavementWorkflow.busy || pavementWorkflow.asBuilt.active || !!pavementWorkflow.asBuilt.pending} onChange={event => pavementWorkflow.openLayout(event.target.value)} className="text-xs border rounded-lg p-2 max-w-full"><option value="">Chọn layout theo loại và thời gian lưu</option>{pavementWorkflow.layouts.map(row => <option key={row.layoutId} value={row.layoutId}>{row.kind} · {row.createdAt} · {row.layoutId}</option>)}</select>}
