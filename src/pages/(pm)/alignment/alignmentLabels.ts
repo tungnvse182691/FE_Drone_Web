@@ -3,3 +3,11 @@ export const layerLabel = (key: string) => ({route:'Tim tuyến',segments:'Phân
 export const reasonLabel = (code: string) => ({OFFICIAL_CRS_ACCEPTANCE_PENDING:'Chưa nghiệm thu hệ tọa độ chính thức.',AS_BUILT_NOT_CAPTURED:'Chưa ghi nhận tấm hoàn công.',WGS84_TRANSFORM_NOT_CONFIGURED:'Chưa cấu hình chuyển đổi tọa độ địa lý.'}[code] || 'Xem nguyên nhân trong chi tiết kỹ thuật.')
 export function readableTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Chưa có thời gian' : date.toLocaleString('vi-VN') }
 export function segmentSetLabel(set: {status:string;version:string}, index?: number) { return `Bộ phân đoạn${index == null ? '' : ` ${index + 1}`} · ${displayStatus(set.status)}` }
+
+export function pavementSizeLabel(value: import('../../../api/services/pavementService').PavementLayoutView) {
+  if (value.kind === 'PLANNED' && value.layout) return `Dài ${value.layout.slabLengthMeters.toLocaleString('vi-VN')} m × rộng ${value.layout.stripWidthMeters.toLocaleString('vi-VN')} m${value.layout.slabThicknessCentimeters != null ? ` × dày ${value.layout.slabThicknessCentimeters.toLocaleString('vi-VN')} cm` : ''}`
+  const slabs=value.geometry.slabs
+  if(!slabs.length)return 'Chưa có tấm'
+  const sizes=new Set(slabs.map(s=>s.lengthMeters != null && s.widthMeters != null ? `${s.lengthMeters.toLocaleString('vi-VN')} × ${s.widthMeters.toLocaleString('vi-VN')} m` : 'Chưa đủ số đo'))
+  return sizes.size===1?[...sizes][0]:`${slabs.length} tấm · Nhiều kích thước thực tế`
+}

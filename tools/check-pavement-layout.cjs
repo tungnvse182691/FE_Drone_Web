@@ -60,8 +60,8 @@ await test('layout discovery hook auto-opens unique server reference and preserv
   render();await flush()
   if(mode==='one'){assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout');assert.ok(view.display)}
   if(mode==='many'){assert.equal(query.get('layoutId'),null);assert.equal(view.layouts.length,2);view.openLayout('layout');render();await flush();assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout')}
-  if(mode==='empty')assert.equal(view.layoutDiscoveryMessage,'Chưa có layout')
-  if(mode==='error'){assert.match(view.listError,/503/);assert.notEqual(view.layoutDiscoveryMessage,'Chưa có layout')}
+  if(mode==='empty')assert.equal(view.layoutDiscoveryMessage,'Chưa có cấu hình')
+  if(mode==='error'){assert.match(view.listError,/503/);assert.notEqual(view.layoutDiscoveryMessage,'Chưa có cấu hình')}
   if(mode==='draft'||mode==='new'){assert.equal(query.get('segmentSetId'),mode==='draft'?'draft-on-screen':null);assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,0);assert.ok(view.disabledReason);await view.save();await flush();assert.equal(e.calls.filter(x=>x.method==='POST').length,0);query.set('segmentSetId','set');render();await flush();assert.equal(query.get('layoutId'),'layout');assert.equal(view.snapshot.id,'layout')}
   if(mode==='late-edit'){revision++;render();finish([row]);await flush();assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,1)}
   if(mode==='early-edit'){revision++;render();discoverFinish();await flush();assert.equal(query.get('layoutId'),null);assert.equal(view.snapshot,null);assert.equal(view.layouts.length,1)}
@@ -144,7 +144,7 @@ await test('PM hook keeps receipt after route readback failure, retries only GET
  const journal='rg_pavement_command_pm_'+project,raw=JSON.stringify(oldCommand);e.storage.set(journal,raw)
  render();await flush();assert.equal(e.storage.get(journal),raw);assert.equal(view.pending.pins.segmentSetId,'old-published');assert.equal(e.calls.filter(x=>x.method==='POST').length,0);e.storage.delete(journal);view.retry();render();await flush()
  assert.equal(query.get('segmentSetId'),'draft-on-screen');assert.ok(view.disabledReason);await view.save();await flush();assert.equal(e.calls.filter(x=>x.method==='POST').length,0)
- query.set('segmentSetId','set');render();await flush();assert.match(view.scopeMessage,/segment set set đã PUBLISHED/);assert.equal(view.disabledReason,'');await view.save();render();await flush()
+ query.set('segmentSetId','set');render();await flush();assert.match(view.scopeMessage,/bộ phân đoạn đã công bố/);assert.equal(view.disabledReason,'');await view.save();render();await flush()
  assert.equal(query.get('layoutId'),'layout');assert.equal(query.get('routeVersionId'),'route');assert.equal(query.get('segmentSetId'),'set');assert.equal(e.calls.filter(x=>x.method==='POST').length,1);assert.equal(view.pending,null)
  const layoutRoute=e.service.layoutRoute;e.service.layoutRoute=async()=>{throw Error('route GET failed')}
  await view.save();render();await flush()

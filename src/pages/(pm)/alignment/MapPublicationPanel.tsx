@@ -1,4 +1,4 @@
-import { displayStatus, layerLabel, reasonLabel } from './alignmentLabels'
+import { displayStatus, layerLabel, reasonLabel, pavementSizeLabel, readableTime } from './alignmentLabels'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { mapPublicationService, type PublicationManifest, type PublicationPage } from '../../../api/services/mapPublicationService'
@@ -73,6 +73,7 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
   const metadata = manifest?.layers.find(l=>l.key===layer)
   return <section className="rounded-lg border p-3 space-y-2 text-xs" aria-label="Công bố bản đồ xem thử">
     <h4 className="font-semibold">Bản đồ xem thử</h4>
+    {source && !blocked && (!manifest || manifest.layoutRevisionId === source.id) && <p>Cấu hình nguồn: {displayStatus(source.kind)} · {pavementSizeLabel(source)}{workflow.layouts.find(row=>row.layoutId===source.id)?.createdAt ? ` · ${readableTime(workflow.layouts.find(row=>row.layoutId===source.id)!.createdAt)}` : ''}</p>}
     {!readOnly && actor.user?.role === RoleCode.PROJECT_MANAGER && !id && <>
       <label className="block">Lý do công bố<input aria-label="Lý do công bố bản đồ" value={reason} onChange={e=>setReason(e.target.value)} disabled={busy} className="block border rounded p-2 w-full" /></label>
       <button type="button" disabled={busy||blocked||!reason.trim()} onClick={()=>void publish()} className="border rounded p-2 disabled:opacity-50">Công bố bản đồ xem thử</button>
@@ -88,7 +89,6 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
       <button type="button" disabled={busy||!layer} onClick={()=>void readPage()} className="border rounded p-2">Đọc lớp bản đồ</button>
       {page&&<><p role="status">{page.features.length ? `${page.features.length} đối tượng trong trang từ máy chủ` : 'Không có dữ liệu trong trang lớp bản đồ.'}</p>{page.nextCursor&&<button type="button" disabled={busy} onClick={()=>void readPage(true)} className="border rounded p-2">Trang tiếp</button>}</>}
     </>}
-    {(id || manifest || page) && <details><summary>Chi tiết kỹ thuật</summary><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify({publicationId:id,manifest,page},null,2)}</pre></details>}
     {busy&&<p role="status">Đang gửi/đọc kết quả…</p>}
     {error&&<><p role="alert">Không thể hoàn tất yêu cầu. Kết quả được giữ để đối chiếu; xem chi tiết kỹ thuật.</p><details><summary>Chi tiết kỹ thuật</summary><p>{error}</p></details></>}
   </section>
