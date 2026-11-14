@@ -14,6 +14,7 @@ export interface AsBuiltSlabInput {
   source: string; sourceFileId?: string | null
 }
 export interface AsBuiltLayoutInput { sourcePlanId: string; slabs: AsBuiltSlabInput[]; reason: string }
+export interface PavementSegmentRange { id: string; sequence: number; fromOffsetMeters: number; toOffsetMeters: number }
 export interface PavementLayoutView {
   id: string; projectId: string; routeVersionId: string; segmentSetId: string
   sourcePlanId?: string | null; crsProfileRevisionId?: string | null; kind: string; contentHash: string
@@ -80,7 +81,9 @@ export const pavementService = {
     if (route.projectId !== projectId || route.roadSectionId !== roads[0].roadSectionId || route.routeVersionId !== layout.routeVersionId) throw new Error('Geometry route của layout sai scope.')
     const set = (await apiClient.get(`/projects/${projectId}/road-sections/${roads[0].roadSectionId}/versions/${layout.routeVersionId}/segment-sets/${layout.segmentSetId}`)).data
     if (set.id !== layout.segmentSetId || set.routeVersionId !== layout.routeVersionId) throw new Error('Layout segment set không thuộc route server.')
-    return route
+    const ranges: PavementSegmentRange[] | null = Array.isArray(set.segments) && new Set(set.segments.map((s:PavementSegmentRange)=>s.id)).size===set.segments.length && set.segments.every((s: PavementSegmentRange) => s.id && Number.isInteger(s.sequence) && s.sequence>0 && [s.fromOffsetMeters,s.toOffsetMeters].every(Number.isFinite) && s.toOffsetMeters > s.fromOffsetMeters)
+      ? set.segments.map((s: PavementSegmentRange) => ({id:s.id,sequence:s.sequence,fromOffsetMeters:s.fromOffsetMeters,toOffsetMeters:s.toOffsetMeters})) : null
+    return { ...route, pavementSegmentRanges: ranges }
   },
   async create(pins: PavementPins, input: PavementPlanInput, key: string): Promise<PavementLayoutView> {
     return (await apiClient.post(`/projects/${pins.projectId}/route-versions/${pins.routeVersionId}/segment-sets/${pins.segmentSetId}/pavement-plans`, input, { headers: { 'Idempotency-Key': key } })).data

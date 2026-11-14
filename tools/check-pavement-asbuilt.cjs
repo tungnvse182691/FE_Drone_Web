@@ -96,7 +96,7 @@ await test('PM/Sup rights, actor epoch and competing PLANNED commands are fenced
  const d=env();d.setTimeout(true);await assert.rejects(d.commands.saveAsBuilt(project,d.intent));await assert.rejects(d.commands.savePavement(project,{pins,input:d.commands.pavementInput(editor,widths,10,.1)}),/hoàn công/)
  const a=env();let release;a.setPostDelay(new Promise(r=>release=r));const call=a.commands.saveAsBuilt(project,a.intent);for(let i=0;i<20;i++)await Promise.resolve();a.state.authEpoch++;release();await assert.rejects(call,/Phiên/)
 })
-await test('real PM hook starts empty, map selection supplies sequence only, actual editor/preview and server F5 use same data',async()=>{
+await test('real PM hook starts empty, design selection stays unconfirmed, actual editor/preview and server F5 use same data',async()=>{
  const e=env(),h=hookView(e);h.render();await h.flush();assert.equal(h.view.asBuilt.canStart,true);h.view.asBuilt.start();h.render();assert.equal(h.view.asBuilt.slabs.length,0);assert.equal(h.view.asBuilt.form.footprint,'')
  const design=h.view.display.preview.slabsGeoJSON.features[0],handlers={};let popup=''
  class Marker{setLngLat(){return this}addTo(){return this}remove(){}}
@@ -104,7 +104,7 @@ await test('real PM hook starts empty, map selection supplies sequence only, act
  e.mocks['maplibre-gl']={Marker,Popup}
  const map={on(event,layer,fn){if(typeof layer==='string')handlers[event+layer]=fn},getZoom:()=>19,flyTo(){}}
  e.load('src/pages/(pm)/alignment/alignmentMapInteractions.ts').setupAlignmentMapInteractions(map,{current:null},()=>{},undefined,{current:(id,branch,feature)=>h.view.asBuilt.selectFeature(feature)})
- handlers['clickslabs-fill-layer']({features:[design],originalEvent:{},lngLat:{lng:1,lat:1}});h.render();assert.equal(h.view.asBuilt.form.plannedSequence,'1');assert.equal(h.view.asBuilt.form.footprint,'');assert.equal(h.view.asBuilt.form.key,'')
+ handlers['clickslabs-fill-layer']({features:[design],originalEvent:{},lngLat:{lng:1,lat:1}});h.render();assert.deepEqual(plain(h.view.asBuilt.selectedKeys),['1']);assert.equal(h.view.asBuilt.slabs.length,0);assert.equal(h.view.asBuilt.form.plannedSequence,'');assert.equal(h.view.asBuilt.form.footprint,'');assert.equal(h.view.asBuilt.form.key,'')
  for(const [k,v] of Object.entries({key:'REAL',source:'Nguồn PM',footprint:'12 20\n16 20\n16 23\n12 20',dimensionUnknownReason:'Chưa đo kích thước'}))h.view.asBuilt.setField(k,v)
  h.render();h.view.asBuilt.apply();h.render();assert.equal(h.view.asBuilt.slabs.length,1);assert.equal(h.view.display.preview.slabsGeoJSON.features.length,1);assert.equal(h.view.display.preview.slabsGeoJSON.features[0].properties.source,'AS_BUILT_DRAFT');assert.ok(Number.isNaN(h.view.display.slabs[0].lengthM))
  handlers['clickslabs-fill-layer']({features:[h.view.display.preview.slabsGeoJSON.features[0]],originalEvent:{},lngLat:{lng:1,lat:1}});h.render();assert.equal(h.view.asBuilt.form.key,'REAL');assert.match(popup,/bản nhập hoàn công chưa lưu/);assert.ok(!popup.includes('Đã lưu trên máy chủ'))
@@ -136,10 +136,79 @@ await test('scope change discards late hook success and toast; old command stays
  for(const [k,v] of Object.entries({key:'A',source:'Sổ đo',footprint:'12 20\n16 20\n16 23\n12 20',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)
  h.render();h.view.asBuilt.apply();h.render();h.view.asBuilt.setReason('Test');h.render();let release;e.setPostDelay(new Promise(r=>release=r));const request=h.view.asBuilt.save();for(let i=0;i<20;i++)await Promise.resolve();h.switchProject('other');release();await request;await h.flush();assert.equal(h.view.snapshot,null);assert.equal(h.toasts.includes('Đã lưu và đọc lại bản hoàn công'),false);assert.ok(e.commands.pendingAsBuilt(project))
 })
+await test('bulk confirmation copies only selected server slabs after explicit PM action, is idempotent and never overwrites exceptions',()=>{
+ const e=env(),g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts'),source=plain(e.source)
+ source.geometry.slabs.push({...plain(source.geometry.slabs[0]),key:'2',plannedSequence:2,footprint:[{x:3,y:1},{x:4,y:1},{x:4,y:2},{x:3,y:1}]})
+ const before=JSON.stringify(source);assert.throws(()=>g.confirmDesignSelection(source,['1'],[],''),/nguồn/)
+ const result=g.confirmDesignSelection(source,['2'],[],'PM xác nhận theo thiết kế');assert.equal(result.slabs.length,1);assert.equal(result.slabs[0].key,'2');assert.deepEqual(plain(result.slabs[0].footprint),source.geometry.slabs[1].footprint);assert.equal(result.slabs[0].plannedSequence,2);assert.equal(result.slabs[0].lengthMeters,5);assert.ok(!('sourceFileId'in result.slabs[0]))
+ result.slabs[0].key='EXCEPTION';result.slabs[0].footprint[1].x=4.5
+ const repeat=g.confirmDesignSelection(source,['2'],result.slabs,'Nguồn khác');assert.equal(repeat.added,0);assert.strictEqual(repeat.slabs,result.slabs);assert.equal(repeat.slabs[0].footprint[1].x,4.5)
+ const all=g.confirmDesignSelection(source,['1','2'],result.slabs,'PM xác nhận');assert.equal(all.slabs.length,2);assert.equal(all.skipped,1);assert.equal(JSON.stringify(source),before)
+ assert.throws(()=>g.confirmDesignSelection(source,['1','1'],[],'PM'),/trùng/);assert.throws(()=>g.confirmDesignSelection(source,['absent'],[],'PM'),/snapshot/)
+})
+await test('bulk limits are checked before cloning with no silent truncation',()=>{
+ const e=env(),g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts'),source=plain(e.source)
+ source.geometry.slabs=Array.from({length:10001},(_,i)=>({...e.source.geometry.slabs[0],key:String(i),plannedSequence:i}))
+ assert.throws(()=>g.confirmDesignSelection(source,source.geometry.slabs.map(s=>s.key),[],'PM'),/10000/)
+ source.geometry.slabs=[{...e.source.geometry.slabs[0],footprint:Array(8196).fill({x:1,y:1})}];assert.throws(()=>g.confirmDesignSelection(source,['1'],[],'PM'),/8195/)
+ const many=Array.from({length:200},(_,i)=>({...e.source.geometry.slabs[0],key:String(i),plannedSequence:i,footprint:Array(6000).fill({x:1,y:1})}));source.geometry.slabs=many;assert.throws(()=>g.confirmDesignSelection(source,many.map(s=>s.key),[],'PM'),/1000000/)
+})
+await test('segment selection uses exact server offsets and sequence relation; crossing and missing relations are explicit',()=>{
+ const e=env(),g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts'),source=plain(e.source)
+ source.geometry.plan.cells=[{sequence:1,fromOffsetMeters:0,toOffsetMeters:4},{sequence:2,fromOffsetMeters:4,toOffsetMeters:8},{sequence:3,fromOffsetMeters:8,toOffsetMeters:12}]
+ source.geometry.slabs=source.geometry.plan.cells.map(c=>({...e.source.geometry.slabs[0],key:String(c.sequence),plannedSequence:c.sequence}))
+ assert.deepEqual(plain(g.designKeysInSegment(source,{id:'segment',sequence:1,fromOffsetMeters:0,toOffsetMeters:6})),{keys:['1'],crossing:1})
+ assert.throws(()=>g.designKeysInSegment({...source,geometry:{...source.geometry,plan:null}},{id:'segment',fromOffsetMeters:0,toOffsetMeters:6}),/server/)
+ source.geometry.slabs[1].plannedSequence=999;assert.throws(()=>g.designKeysInSegment(source,{id:'segment',fromOffsetMeters:0,toOffsetMeters:6}),/sequence/)
+})
+function realAdapters(){
+ const m={exports:{}},code=ts.transpileModule(fs.readFileSync('src/api/services/alignmentService.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
+ vm.runInNewContext(code,{module:m,exports:m.exports,require:n=>n.includes('authStore')?{useAuthStore:{subscribe(){},getState:()=>({})}}:{},console});return m.exports
+}
+await test('CRS adapter matches EPSG32648 reference and moves only one native vertex while preserving closure/source',()=>{
+ const e=env(),a=realAdapters();e.mocks['../../../api/services/alignmentService']=a;const g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts')
+ const native=g.engineeringPoint(107.7,11.47,32648);assert.ok(Math.abs(native.x-794582.329225095)<.002);assert.ok(Math.abs(native.y-1269329.3616659523)<.002)
+ const ring=[{x:500000,y:1105412.491},{x:500004,y:1105412.491},{x:500004,y:1105415.491},{x:500000,y:1105412.491}],before=JSON.stringify(ring)
+ assert.deepEqual(plain(g.displayPoint(ring[0],32648)),[105,10]);const moved=g.moveFootprintVertex(ring,0,105.00001,10.00001,32648)
+ assert.equal(JSON.stringify(ring),before);assert.deepEqual(plain(moved[0]),plain(moved.at(-1)));assert.deepEqual(plain(moved[1]),ring[1]);assert.ok(moved[0].x>500000);assert.ok(moved[0].y>1105412)
+ assert.throws(()=>g.engineeringPoint(105,10,32649),/Chưa hỗ trợ/);assert.throws(()=>g.engineeringPoint(10,10,32648),/adapter/);assert.throws(()=>g.closeFootprint(ring.slice(0,2)),/3–8194/)
+})
+await test('PM bulk selection starts empty; view/select does not add; confirmation payload/readback uses the selected snapshot only',async()=>{
+ const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render();assert.equal(h.view.asBuilt.selectedKeys.length,0);assert.equal(h.view.asBuilt.slabs.length,0)
+ h.view.asBuilt.focusDesign('1');h.render();assert.equal(h.view.asBuilt.selectedKeys.length,0);h.view.asBuilt.toggleDesign('1');h.render();assert.equal(h.view.asBuilt.slabs.length,0)
+ h.view.asBuilt.confirmSelected();h.render();assert.equal(h.view.asBuilt.slabs.length,0);h.view.asBuilt.setCaptureSource('PM tự xác nhận');h.render();h.view.asBuilt.confirmSelected();h.render()
+ assert.equal(h.view.asBuilt.slabs.length,1);assert.deepEqual(plain(h.view.asBuilt.slabs[0].footprint),plain(e.source.geometry.slabs[0].footprint));assert.equal(h.view.asBuilt.slabs[0].source,'PM tự xác nhận');const saved=h.view.asBuilt.slabs
+ h.view.asBuilt.chooseAll();h.render();h.view.asBuilt.confirmSelected();h.render();assert.strictEqual(h.view.asBuilt.slabs,saved)
+ h.view.asBuilt.focusDesign('1');h.render();h.view.asBuilt.editDesign();h.render();h.view.asBuilt.setField('widthMeters','3');h.render();h.view.asBuilt.apply();h.render();assert.equal(h.view.asBuilt.slabs.length,1);assert.equal(h.view.asBuilt.slabs[0].widthMeters,3);assert.equal(e.source.geometry.slabs[0].widthMeters,3.5)
+ h.view.asBuilt.setReason('Ca kiểm thử cô lập');h.render();await h.view.asBuilt.save();h.render();await h.flush();const write=e.calls.find(c=>c.method==='POST');assert.deepEqual(write.body.slabs[0].footprint,plain(e.source.geometry.slabs[0].footprint));h.remount();await h.flush();assert.equal(h.view.snapshot.kind,'AS_BUILT');assert.equal(e.calls.filter(c=>c.method==='POST').length,1)
+})
+await test('editing and drawing are unconfirmed map candidates; native payload changes only on Apply and PLANNED stays immutable',async()=>{
+ const e=env(),a=realAdapters();e.mocks['../../../api/services/alignmentService']=a
+ e.source.geometry.slabs[0].footprint=[{x:500000,y:1105412.491},{x:500004,y:1105412.491},{x:500004,y:1105415.491},{x:500000,y:1105412.491}]
+ const original=JSON.stringify(e.source),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render();h.view.asBuilt.focusDesign('1');h.render();h.view.asBuilt.editDesign();h.render();assert.equal(h.view.asBuilt.slabs.length,0)
+ h.view.asBuilt.beginVertices();h.render();h.view.asBuilt.moveVertex(0,105.00001,10.00001);h.render();assert.equal(h.view.asBuilt.slabs.length,0);assert.deepEqual(plain(h.view.asBuilt.candidatePoints[0]),plain(h.view.asBuilt.candidatePoints.at(-1)))
+ const candidate=h.view.asBuilt.candidatePoints;for(const [k,v] of Object.entries({source:'Số đo PM',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)
+ h.render();assert.strictEqual(h.view.asBuilt.candidatePoints,candidate);h.view.asBuilt.apply();h.render();assert.equal(h.view.asBuilt.slabs.length,1);const applied=h.view.asBuilt.preview
+ h.view.asBuilt.beginDraw();h.render();for(const p of [[105,10],[105.00004,10],[105.00004,10.00003]]){h.view.asBuilt.addMapPoint(...p);h.render()}
+ assert.strictEqual(h.view.asBuilt.preview,applied);assert.equal(h.view.asBuilt.slabs.length,1);h.view.asBuilt.finishDraw();h.render();assert.equal(h.view.asBuilt.candidatePoints.length,4)
+ for(const [k,v] of Object.entries({key:'EXTRA',source:'PM ghi nhận phát sinh',dimensionUnknownReason:'Chưa đủ số đo'}))h.view.asBuilt.setField(k,v)
+ h.render();h.view.asBuilt.apply();h.render();assert.equal(h.view.asBuilt.slabs.length,2);assert.ok(h.view.asBuilt.slabs[1].footprint[0].x>100000);assert.equal(h.view.asBuilt.slabs[1].plannedSequence,undefined);assert.equal(JSON.stringify(e.source),original)
+ h.view.asBuilt.remove(0);h.render();assert.equal(h.view.asBuilt.slabs.length,1);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
+})
+await test('map overlay drag/draw callbacks clean up listeners/markers and never touch PLANNED layers',()=>{
+ const e=env(),a=realAdapters();e.mocks['../../../api/services/alignmentService']=a;const g=e.load('src/pages/(pm)/alignment/asBuiltMapGeometry.ts'),m={exports:{}},allMarkers=[],events={},canvas={style:{cursor:''},addEventListener(k,fn){events[k]=fn},removeEventListener(k){delete events[k]},getBoundingClientRect:()=>({left:10,top:20})}
+ class Marker{constructor(o){this.o=o;this.handlers={};allMarkers.push(this)}setLngLat(p){this.p=p;return this}addTo(){return this}on(k,f){this.handlers[k]=f;return this}getLngLat(){return{lng:105.00001,lat:10.00001}}remove(){this.removed=true}}
+ const sources=new Map([['slabs-source',{original:true}]]),layers=new Map(),map={getCanvas:()=>canvas,addSource:(id,s)=>sources.set(id,s),addLayer:l=>layers.set(l.id,l),getLayer:id=>layers.get(id),getSource:id=>sources.get(id),removeLayer:id=>layers.delete(id),removeSource:id=>sources.delete(id),unproject:()=>({lng:105.00001,lat:10.00001}),doubleClickZoom:{isEnabled:()=>true,disable(){},enable(){}}}
+ const code=ts.transpileModule(fs.readFileSync('src/pages/(pm)/alignment/useAsBuiltMapEditing.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText
+ vm.runInNewContext(code,{module:m,exports:m.exports,require:n=>n==='maplibre-gl'?{Marker}:n==='./asBuiltMapGeometry'?g:{},document:{createElement:()=>({style:{},setAttribute(){},addEventListener(){}})}})
+ const points=[{x:500000,y:1105412.491},{x:500004,y:1105412.491},{x:500004,y:1105415.491},{x:500000,y:1105412.491}],moves=[],clicks=[]
+ let cleanup=m.exports.mountAsBuiltMapEditor(map,points,false,32648,()=>{},(...x)=>moves.push(x));assert.equal(allMarkers.length,3);allMarkers[0].handlers.dragend();assert.deepEqual(moves[0],[0,105.00001,10.00001]);cleanup();assert.ok(allMarkers.every(m=>m.removed));assert.equal(sources.size,1)
+ cleanup=m.exports.mountAsBuiltMapEditor(map,[],true,32648,(...x)=>clicks.push(x),()=>{});events.click({clientX:40,clientY:60,stopImmediatePropagation(){}});assert.deepEqual(clicks[0],[105.00001,10.00001]);cleanup();assert.equal(events.click,undefined);assert.equal(sources.get('slabs-source').original,true)
+})
 await test('actual caller form has no mandatory file, Sup read-only and common Web client supplies cookie/CSRF without mutation replay',()=>{
  const m={exports:{}},code=ts.transpileModule(fs.readFileSync('src/pages/(pm)/alignment/AsBuiltPanel.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{module:m,exports:m.exports,require})
- const noop=()=>{},w={active:true,showActual:false,slabs:[],form:{key:'',source:'',footprint:'',plannedSequence:'',lengthMeters:'',widthMeters:'',dimensionUnknownReason:'',sourceFileId:''},reason:'',pending:null,error:'',busy:false,canStart:true,setField:noop,setShowActual:noop,setReason:noop,apply:noop,newSlab:noop,save:noop,cancel:noop},workflow={asBuilt:w,snapshot:{kind:'AS_BUILT'},previewBase:{engineeringSrid:32648}}
- const pm=renderToStaticMarkup(React.createElement(m.exports.AsBuiltPanel,{workflow,readOnly:false}));assert.match(pm,/Footprint thực tế X Y/);assert.match(pm,/ID tệp nguồn đã VERIFIED \(tùy chọn\)/);assert.ok(!pm.includes('type="file"'))
+ const noop=()=>{},w={plannedSlabs:[],selectedKeys:[],focusedPlanKey:'',captureSource:'',ranges:null,candidatePoints:[],mapCrs:32648,mapSupported:true,active:true,showActual:false,slabs:[],form:{key:'',source:'',footprint:'',plannedSequence:'',lengthMeters:'',widthMeters:'',dimensionUnknownReason:'',sourceFileId:''},reason:'',pending:null,error:'',busy:false,canStart:true,setField:noop,setShowActual:noop,setReason:noop,apply:noop,newSlab:noop,save:noop,cancel:noop},workflow={asBuilt:w,snapshot:{kind:'AS_BUILT'},previewBase:{engineeringSrid:32648}}
+ const pm=renderToStaticMarkup(React.createElement(m.exports.AsBuiltPanel,{workflow,readOnly:false}));assert.match(pm,/Chỉnh đỉnh trên bản đồ/);assert.match(pm,/Xác nhận các tấm đã chọn phù hợp thực tế/);assert.ok(!pm.includes('aria-label="Footprint thực tế X Y"'));assert.match(pm,/ID tệp nguồn đã VERIFIED \(tùy chọn\)/);assert.ok(!pm.includes('type="file"'))
  const sup=renderToStaticMarkup(React.createElement(m.exports.AsBuiltPanel,{workflow,readOnly:true}));assert.match(sup,/chỉ đọc/);assert.ok(!sup.includes('<button'));assert.ok(!sup.includes('<input'))
  const client=fs.readFileSync('src/api/client.ts','utf8');assert.match(client,/withCredentials: true/);assert.match(client,/X-CSRF-TOKEN.*await state.ensureCsrfToken/);assert.match(client,/Only reads replay once/)
 })

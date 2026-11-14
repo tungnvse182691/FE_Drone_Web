@@ -1,10 +1,10 @@
-import type { PavementLayoutInput, PavementLayoutView } from '../../../api/services/pavementService'
+import type { PavementLayoutInput, PavementLayoutView, PavementSegmentRange } from '../../../api/services/pavementService'
 import type { RoadGeometryVersionView } from '../../../api/services/alignmentService'
 import { utm48NToWgs84 } from '../../../api/services/alignmentService'
 import type { PavementPreview } from './alignmentPavementDisplay'
 import type { SegmentItem, SlabItem } from './types'
 
-export function buildSavedPavement(snapshot: PavementLayoutView, layout: PavementLayoutInput | null, srid: number, origin?: number | null, route?: RoadGeometryVersionView & { crsProfileRevisionId?: string | null; routeSystemId?: string | null }) {
+export function buildSavedPavement(snapshot: PavementLayoutView, layout: PavementLayoutInput | null, srid: number, origin?: number | null, route?: RoadGeometryVersionView & { crsProfileRevisionId?: string | null; routeSystemId?: string | null; pavementSegmentRanges?: PavementSegmentRange[] | null }) {
   if (srid !== 32648) throw new Error(`engineeringSrid ${srid}: chưa có adapter footprint được hỗ trợ; không tự đoán CRS.`)
   const planned = snapshot.kind === 'PLANNED'
   const cells = snapshot.geometry.plan?.cells
@@ -53,6 +53,6 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
     Number.isFinite(route?.lengthMeters) && Math.abs(offsets[offsets.length - 1] - route!.lengthMeters) <= 1e-12 * Math.max(1, route!.lengthMeters)
   const previewCoordinates = previewReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : []
   const kmPoints = previewReady ? offsets.map(offset => (origin! + offset) / 1000) : []
-  return { preview, segments, slabs, route, engineeringSrid: srid, stationOriginMeters: origin, coordinates: previewReady ? previewCoordinates : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
+  return { preview, segments, slabs, route, segmentRanges: route?.pavementSegmentRanges || null, engineeringSrid: srid, stationOriginMeters: origin, coordinates: previewReady ? previewCoordinates : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
     previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: planned ? `Snapshot server ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m · chưa phải Sup duyệt` : `Hoàn công máy chủ ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m` }
 }

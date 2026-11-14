@@ -19,6 +19,7 @@ import { previewCenterlineCoordinates } from './alignmentImportHelpers'
 import { planMainlinePavement } from './alignmentPavementHelpers'
 import { confirmedGeometryDisplay } from './confirmedGeometryDisplay'
 import { usePavementWorkflow } from './usePavementWorkflow'
+import { useAsBuiltMapEditing } from './useAsBuiltMapEditing'
 
 export function useAlignmentState() {
   const { user, authEpoch } = useAuthStore()
@@ -331,6 +332,8 @@ export function useAlignmentState() {
     branches,
     onSelectSegmentRef
   })
+
+  useAsBuiltMapEditing(mapState.mapRef, pavementWorkflow.asBuilt)
 
   // Hook 3: Import State
   const importState = useAlignmentImportState({

@@ -236,7 +236,7 @@ export function setupAlignmentMapInteractions(
           <div class="space-y-1.5 text-slate-300">
             <div>📍 <strong>Lý trình:</strong> <span class="font-mono text-amber-400">${content.station}</span> (${content.lane})</div>
             <div>📐 <strong>Kích thước tấm:</strong> <span class="font-mono font-bold text-white">${content.dimensions}</span></div>
-            ${p.layoutKind === 'AS_BUILT' ? `<div><strong>Nguồn ghi nhận:</strong> ${content.captureSource}</div><div><strong>Thông tin kiểm chứng:</strong> ${content.provenance}</div>` : ''}
+            ${p.layoutKind === 'AS_BUILT' ? `<div><strong>Nguồn ghi nhận:</strong> ${content.captureSource}</div><div><strong>Trạng thái nguồn từ máy chủ:</strong> ${content.provenance}</div>` : ''}
             ${p.layoutKind === 'AS_BUILT' && p.dimensionUnknownReason ? `<div><strong>Lý do chưa biết kích thước:</strong> ${content.dimensionReason}</div>` : ''}
             <div>🛣️ <strong>${content.lateralLabel}:</strong> <span class="font-mono text-sky-400 font-semibold">${content.edgeOffset}</span></div>
             <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800">⚡ <strong>Khe co kề bên:</strong> Cự ly ${content.contraction}</div>
