@@ -257,7 +257,8 @@ async function caseD2Command(caseId: string, action: string, intent: unknown, pr
         sessionStorage.setItem(journal, JSON.stringify(command))
       } catch (error: any) {
         active()
-        if (error.response?.status >= 400 && error.response.status < 500) sessionStorage.removeItem(journal)
+        // A rejection of a replay does not resolve the outcome of its earlier attempt.
+        if (!held && error.response?.status >= 400 && error.response.status < 500) sessionStorage.removeItem(journal)
         throw error
       }
     }

@@ -104,6 +104,7 @@ export const useAIReviewState = () => {
     cases,
     setCases,
     selectedCase,
+    applyCaseReadback: intake.applyReadback,
     setExpandedMasterIds,
     showToast,
     setIsMergeModalOpen: drawer.setIsMergeModalOpen,

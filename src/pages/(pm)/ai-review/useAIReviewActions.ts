@@ -10,6 +10,7 @@ export interface UseAIReviewActionsProps {
   cases: TriageCase[]
   setCases: React.Dispatch<React.SetStateAction<TriageCase[]>>
   selectedCase: TriageCase
+  applyCaseReadback: (value: TriageCase) => void
   setExpandedMasterIds: React.Dispatch<React.SetStateAction<string[]>>
   showToast: (msg: string) => void
   setIsMergeModalOpen: (open: boolean) => void
@@ -25,6 +26,7 @@ export const useAIReviewActions = ({
   cases,
   setCases,
   selectedCase,
+  applyCaseReadback,
   setExpandedMasterIds,
   showToast,
   setIsMergeModalOpen,
@@ -256,12 +258,17 @@ export const useAIReviewActions = ({
     setIsPublishModalOpen(true)
   }
 
+  const publicationScope = `${useAuthStore.getState().authEpoch}:${user?.id}:${user?.role}:${selectedCase.id}:${selectedCase.project_id}`
+  const latestPublication = useRef({ scope: publicationScope })
+  if (latestPublication.current.scope !== publicationScope) latestPublication.current = { scope: publicationScope }
   const publishing = useRef(false)
   const handleConfirmPublishResult = async (reportIds: string[] = []) => {
     if (publishing.current || useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER) return
     const target = targetTriageCase || selectedCase
     if (!publishPublicNote.trim()) { showToast('Vui lòng nhập nội dung công bố.'); return }
 
+    if (target.id !== selectedCase.id || target.project_id !== selectedCase.project_id || latestPublication.current.scope !== publicationScope) { showToast('Hồ sơ đang mở đã thay đổi; mở lại công bố cho đúng Case.'); return }
+    const publicationContext = latestPublication.current
     const publicationEpoch = useAuthStore.getState().authEpoch
     publishing.current = true
     try {
@@ -271,18 +278,9 @@ export const useAIReviewActions = ({
         reportIds
       })
 
-      if (useAuthStore.getState().authEpoch !== publicationEpoch) return
-      setCases((prev) =>
-        prev.map((c) =>
-          c.id === target.id
-            ? {
-                ...c,
-                ...result,
-                project_name: c.project_name
-              }
-            : c
-        )
-      )
+      if (useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
+      applyCaseReadback(result)
+      setTargetTriageCase(result)
 
       showToast(
         `Đã công bố kết quả tiếp nhận & tiến độ xử lý hồ sơ [${target.code}] cho người dân thành công!`
@@ -290,7 +288,7 @@ export const useAIReviewActions = ({
       setIsPublishModalOpen(false)
     } catch (e: any) {
       console.error('❌ Lỗi khi xuất bản kết quả tới backend:', e)
-      if (useAuthStore.getState().authEpoch !== publicationEpoch) return
+      if (useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi xuất bản kết quả tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     } finally { publishing.current = false }
