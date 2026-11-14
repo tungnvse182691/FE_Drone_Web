@@ -15,6 +15,7 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   const segments: SegmentItem[] = (profile || []).map((w, i) => ({ id: `layout-${snapshot.id}-${i}`, code: `Layout ${snapshot.id} · ${i + 1}`,
     startKm: Number.isFinite(origin) ? (origin! + w.fromOffsetMeters) / 1000 : Number.NaN, endKm: Number.isFinite(origin) ? (origin! + w.toOffsetMeters) / 1000 : Number.NaN, lengthKm: (w.toOffsetMeters - w.fromOffsetMeters) / 1000,
     roadWidthM: w.widthMeters, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' }))
+  const backgroundSegments = [...segments]
   if (!planned) segments.splice(0, segments.length, { id: `layout-${snapshot.id}-asbuilt`, code: 'AS_BUILT', startKm: Number.NaN, endKm: Number.NaN, lengthKm: Number.NaN, roadWidthM: Number.NaN, laneCount: Number.NaN, surfaceMaterial: '', status: 'VALID', statusText: 'SNAPSHOT MÁY CHỦ', color: '#C9A227' })
   const empty = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] })
   const preview: PavementPreview = { slabsGeoJSON: empty(), slabLabelsGeoJSON: empty(), jointsGeoJSON: empty(), jointLabelsGeoJSON: empty(), edgesGeoJSON: empty(), missing: [],
@@ -49,10 +50,12 @@ export function buildSavedPavement(snapshot: PavementLayoutView, layout: Pavemen
   if (metric?.length && metric.every(p => p.length === 2 && p.every(Number.isFinite))) {
     for (let i = 1; i < metric.length; i++) offsets.push(offsets[i - 1] + Math.hypot(metric[i][0] - metric[i - 1][0], metric[i][1] - metric[i - 1][1]))
   }
-  const previewReady = planned && !route?.crsProfileRevisionId && !route?.routeSystemId && Number.isFinite(origin) && metric && metric.length >= 2 && offsets.length === metric.length &&
+  const routeReady = !route?.crsProfileRevisionId && !route?.routeSystemId && Number.isFinite(origin) && metric && metric.length >= 2 && offsets.length === metric.length &&
     Number.isFinite(route?.lengthMeters) && Math.abs(offsets[offsets.length - 1] - route!.lengthMeters) <= 1e-12 * Math.max(1, route!.lengthMeters)
+  const previewReady = planned && routeReady
+  const backgroundKmPoints = routeReady ? offsets.map(offset => (origin! + offset) / 1000) : []
   const previewCoordinates = previewReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : []
   const kmPoints = previewReady ? offsets.map(offset => (origin! + offset) / 1000) : []
-  return { preview, segments, slabs, route, segmentRanges: route?.pavementSegmentRanges || null, engineeringSrid: srid, stationOriginMeters: origin, coordinates: previewReady ? previewCoordinates : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
+  return { preview, segments, backgroundSegments: routeReady ? backgroundSegments : [], backgroundKmPoints, slabs, route, segmentRanges: route?.pavementSegmentRanges || null, engineeringSrid: srid, stationOriginMeters: origin, coordinates: routeReady ? metric!.map(([x, y]) => utm48NToWgs84(x, y)) : coordinates, previewCoordinates, kmPoints, previewReady: !!previewReady,
     previewBlocker: previewReady ? '' : 'Chưa đủ quan hệ tọa độ/lý trình engineering từ route server để dựng preview mới; giữ snapshot đã lưu, chưa áp dụng cấu hình PM mới.', label: planned ? `Snapshot server ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m · chưa phải Sup duyệt` : `Hoàn công máy chủ ${snapshot.id} · dung sai hiển thị ${snapshot.geometry.displayToleranceMeters} m` }
 }

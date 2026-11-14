@@ -139,6 +139,17 @@ await test('PLANNED to local AS_BUILT toggles slabs only; route bindings survive
  h.view.asBuilt.select(0);h.render();h.view.asBuilt.setField('widthMeters','3');h.render();h.view.asBuilt.apply();h.render();assert.strictEqual(h.view.previewBase,base);assert.equal(h.view.display.slabs[0].widthM,3)
  h.view.asBuilt.remove(0);h.render();assert.strictEqual(h.view.previewBase,base);assert.equal(h.view.display.slabs.length,0);assert.equal(JSON.stringify(e.source),source);assert.equal(e.calls.filter(c=>c.method==='POST').length,0)
 })
+await test('confirmed subset saves then GET/remount keeps source route bindings separate from edited AS_BUILT footprints',async()=>{
+ const e=env(),h=hookView(e);h.render();await h.flush();const base=plain(h.view.previewBase),source=JSON.stringify(e.source)
+ h.view.asBuilt.start();h.render();h.view.asBuilt.toggleDesign('1');h.render();h.view.asBuilt.setCaptureSource('PM xác nhận');h.render();h.view.asBuilt.confirmSelected();h.render()
+ h.view.asBuilt.select(0);h.render();h.view.asBuilt.setField('footprint','12 20\n16 20\n16 23\n12 20');h.view.asBuilt.setReason('Đường bao thực tế khác thiết kế');h.render();h.view.asBuilt.apply();h.render();const actual=plain(h.view.asBuilt.slabs)
+ await h.view.asBuilt.save();h.render();await h.flush()
+ const check=()=>{assert.equal(h.view.snapshot.kind,'AS_BUILT');assert.deepEqual(plain(h.view.previewBase.coordinates),base.coordinates);assert.deepEqual(plain(h.view.previewBase.kmPoints),base.kmPoints);assert.ok(h.view.previewBase.segments.length);assert.ok(h.view.previewBase.segments.every(s=>[s.startKm,s.endKm,s.roadWidthM].every(Number.isFinite)));assert.deepEqual(plain(h.view.previewBase.segments.map(s=>[s.startKm,s.endKm,s.roadWidthM])),base.segments.map(s=>[s.startKm,s.endKm,s.roadWidthM]));assert.equal(h.view.display.preview.slabsGeoJSON.features[0].properties.layoutKind,'AS_BUILT');assert.equal(h.view.display.preview.slabsGeoJSON.features[0].geometry.coordinates[0][0][0],.00012);assert.deepEqual(plain(h.view.snapshot.geometry.slabs[0].footprint),actual[0].footprint)}
+ check();h.remount();await h.flush();check();assert.equal(JSON.stringify(e.source),source);assert.equal(e.calls.filter(c=>c.method==='POST').length,1)
+ const build=e.load('src/pages/(pm)/alignment/savedPavementDisplay.ts').buildSavedPavement,route={...h.view.previewBase.route,stationOriginMeters:undefined}
+ const unknown=build(h.view.snapshot,e.source.layout,32648,undefined,route);assert.equal(unknown.backgroundSegments.length,0);assert.equal(unknown.backgroundKmPoints.length,0);assert.equal(unknown.preview.slabsGeoJSON.features.length,1)
+ const absent=build(h.view.snapshot,null,32648,0,h.view.previewBase.route);assert.equal(absent.backgroundSegments.length,0);assert.equal(absent.preview.slabsGeoJSON.features.length,1)
+})
 await test('scope change discards late hook success and toast; old command stays with original project',async()=>{
  const e=env(),h=hookView(e);h.render();await h.flush();h.view.asBuilt.start();h.render()
  for(const [k,v] of Object.entries({key:'A',source:'Sổ đo',footprint:'12 20\n16 20\n16 23\n12 20',lengthMeters:'4',widthMeters:'3'}))h.view.asBuilt.setField(k,v)

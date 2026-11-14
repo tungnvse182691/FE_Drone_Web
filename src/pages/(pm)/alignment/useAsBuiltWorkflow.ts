@@ -142,7 +142,9 @@ export function useAsBuiltWorkflow(projectId: string, scope: string, source: Pav
       if (!current()) return
       const route = await pavementService.layoutRoute(projectId, value, (held?.pins || pins)!.roadSectionId, value.routeVersionId, value.segmentSetId)
       if (!current()) return
-      const rendered = buildSavedPavement(value, null, route.engineeringSrid, route.stationOriginMeters, route)
+      const { configuration } = await pavementService.readConfiguration(projectId, value.id)
+      if (!current()) return
+      const rendered = buildSavedPavement(value, configuration?.layout || null, route.engineeringSrid, route.stationOriginMeters, route)
       completeAsBuilt(projectId, value); setPending(null); setActive(false); onSaved(value, rendered); notify('Đã lưu và đọc lại bản hoàn công')
     } catch (e: any) {
       if (!current()) return
