@@ -93,12 +93,12 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
                 {filteredEvents.length} bản ghi
               </span>
             </div>
-            <p className="text-[11px] text-slate-500">Chuỗi sự kiện được ghi nhận theo thời gian thực trên trục dòng thời gian</p>
+            <p className="text-[11px] text-slate-500">Các sự kiện từ nguồn báo cáo, sắp theo thời điểm ghi nhận</p>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
           <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-          <span>Dòng sự kiện bất biến, không thể chỉnh sửa hay xóa</span>
+          <span>Nguồn lịch sử chỉ đọc; có thể chưa đầy đủ</span>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
               <th className="py-3 px-3">HÀNH ĐỘNG</th>
               <th className="py-3 px-3">ĐỐI TƯỢNG &amp; LÝ TRÌNH</th>
               <th className="py-3 px-3">CHUYỂN TRẠNG THÁI</th>
-              <th className="py-3 px-3">MÃ SỰ KIỆN</th>
+              <th className="py-3 px-3">THAM CHIẾU</th>
               <th className="py-3 px-3 text-center">CHI TIẾT</th>
             </tr>
           </thead>
@@ -225,7 +225,7 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
                     {/* 6. Event ID */}
                     <td className="py-3 px-3 whitespace-nowrap">
                       <span className="font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-[6px] border border-slate-200">
-                        {ev.event_id}
+                        Sự kiện đã ghi nhận
                       </span>
                     </td>
 

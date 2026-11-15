@@ -17,7 +17,7 @@ export const AuditTrailMetrics: React.FC<AuditTrailMetricsProps> = ({
         <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
           <span className="font-semibold text-slate-700">Tổng sự kiện ghi nhận</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200">
-            Bản ghi chính thức
+            Nguồn báo cáo
           </span>
         </div>
         <div className="flex items-baseline gap-2 mt-1">
@@ -27,8 +27,8 @@ export const AuditTrailMetrics: React.FC<AuditTrailMetricsProps> = ({
           <span className="text-xs text-slate-500 font-medium">sự kiện</span>
         </div>
         <div className="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
-          <span>Mã định danh duy nhất</span>
-          <span className="text-slate-600 font-medium">Hồ sơ bất biến</span>
+          <span>Trong phạm vi hiển thị</span>
+          <span className="text-slate-600 font-medium">Sự kiện từ nguồn</span>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export const AuditTrailMetrics: React.FC<AuditTrailMetricsProps> = ({
         </div>
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-2xl font-bold text-slate-900 font-sansation">
-            {calculatedStats.state_transitions}
+            {'—'}
           </span>
           <span className="text-xs text-slate-500 font-medium">lần thay đổi</span>
         </div>
@@ -64,13 +64,13 @@ export const AuditTrailMetrics: React.FC<AuditTrailMetricsProps> = ({
         </div>
         <div className="flex items-baseline gap-2 mt-1">
           <span className="text-2xl font-bold text-slate-900 font-sansation">
-            {calculatedStats.approval_decisions}
+            {'—'}
           </span>
           <span className="text-xs text-slate-500 font-medium">quyết định chính thức</span>
         </div>
         <div className="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
           <span>Kiểm soát chéo 4 mắt</span>
-          <span className="text-emerald-700 font-medium">Hợp lệ</span>
+          <span className="text-emerald-700 font-medium">Chưa có nguồn</span>
         </div>
       </div>
     </div>

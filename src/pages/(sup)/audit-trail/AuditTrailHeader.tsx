@@ -8,6 +8,7 @@ interface AuditTrailHeaderProps {
   isRefreshing: boolean
   onRefresh: () => void
   onOpenExportModal: () => void
+  projects?: { id: string; code: string; name: string }[]
 }
 
 export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
@@ -17,7 +18,8 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
   onSelectProject,
   isRefreshing,
   onRefresh,
-  onOpenExportModal
+  onOpenExportModal,
+  projects = [],
 }) => {
   return (
     <div className="space-y-4">
@@ -57,7 +59,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
             Nhật Ký Hoạt Động &amp; Truy Vết Hệ Thống
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Dòng sự kiện bất biến ghi nhận mọi thao tác kỹ thuật, trình duyệt hồ sơ đợt sửa chữa và nghiệm thu hiện trường theo thời gian thực.
+            Theo dõi các sự kiện mà nguồn báo cáo hiện cung cấp trong phạm vi dự án được phép đọc.
           </p>
         </div>
 
@@ -73,8 +75,13 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
               className="bg-transparent font-semibold text-slate-800 focus:outline-none text-xs cursor-pointer"
             >
               <option value="all">Tất cả dự án phụ trách</option>
-              <option value="proj-01">QL1A - Giai đoạn 2 (Km 1020 - Km 1045)</option>
-              <option value="proj-02">Cao tốc Bắc - Nam XL-03 (Km 14 - Km 22)</option>
+              {projects && projects.length > 0 ? (
+                projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} — {p.name}
+                  </option>
+                ))
+              ) : null}
             </select>
           </div>
 
@@ -95,7 +102,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
           {/* Nút Xuất nhật ký (1 CTA duy nhất màu vàng đồng) */}
           <button
             type="button"
-            onClick={onOpenExportModal}
+            disabled title="Chưa có API xuất riêng nhật ký; dùng Xuất hồ sơ tại Báo cáo KPI" onClick={onOpenExportModal}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-semibold text-xs transition cursor-pointer shadow-2xs"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>

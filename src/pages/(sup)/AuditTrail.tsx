@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { AuditEvent } from '../../types/domain'
-import { auditService, AUDIT_PROJECT_OPTIONS } from '../../api/services'
+import { auditService, AUDIT_PROJECT_OPTIONS, projectService } from '../../api/services'
 import { TimeFilter, ExportFormat, ImageModalData } from './audit-trail/types'
 import { AuditTrailHeader } from './audit-trail/AuditTrailHeader'
 import { AuditTrailMetrics } from './audit-trail/AuditTrailMetrics'
@@ -16,7 +16,7 @@ const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
   if (filter === 'all') return true
   const eventTime = new Date(occurredAtStr).getTime()
   // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
-  const now = new Date('2026-10-10T12:00:00Z').getTime()
+  const now = Date.now()
   const diffHours = (now - eventTime) / (1000 * 60 * 60)
   if (filter === '24h') return diffHours <= 24 && diffHours >= 0
   if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
@@ -25,11 +25,14 @@ const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
 }
 
 export const AuditTrail: React.FC = () => {
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
+  const [revision, setRevision] = useState(0)
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   // Dữ liệu dòng sự kiện hoạt động bất đồng bộ từ auditService (In-Memory Mock API, zero localStorage)
+  const [error, setError] = useState('')
+  const [partial, setPartial] = useState(false)
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedEventId, setSelectedEventId] = useState<string>('')
@@ -37,6 +40,13 @@ export const AuditTrail: React.FC = () => {
 
   // Phân định phạm vi dự án (Mặc định: Tất cả dự án phụ trách)
   const [selectedProject, setSelectedProject] = useState<string>('all')
+  const [projects, setProjects] = useState<any[]>(() => projectService.getProjects())
+
+  useEffect(() => {
+    let active = true
+    projectService.fetchProjects().then(rows => {if (active) setProjects(rows)}).catch(e => {if (active) setError(e.message)})
+    return () => {active = false}
+  }, [authEpoch])
 
   // Bộ lọc tiêu chí nghiệp vụ
   const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
@@ -75,27 +85,34 @@ export const AuditTrail: React.FC = () => {
   // Tải dữ liệu bất đồng bộ từ auditService
   useEffect(() => {
     let mounted = true
+    const controller = new AbortController()
     const loadEvents = async () => {
       try {
         setLoading(true)
-        const data = await auditService.getAuditEvents({
+        setEvents([])
+        const snapshot = await auditService.getAuditSnapshot({
           projectId: selectedProject
-        })
+        }, controller.signal)
         if (mounted) {
-          setEvents(data)
-          if (data.length > 0) {
-            setSelectedEventId((prev) => prev || data[0].id)
+          setEvents(snapshot.events)
+          setPartial(snapshot.partial)
+          setError('')
+          if (snapshot.events.length > 0) {
+            setSelectedEventId((prev) => prev || snapshot.events[0].id)
           }
         }
+      } catch (e: any) {
+        if (mounted) { setEvents([]); setError(e.message) }
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) {setLoading(false); setIsRefreshing(false)}
       }
     }
     loadEvents()
     return () => {
       mounted = false
+      controller.abort()
     }
-  }, [selectedProject])
+  }, [selectedProject, authEpoch, revision])
 
   // Lọc dữ liệu theo vai trò, dự án, mốc thời gian và từ khóa
   const filteredEvents = useMemo(() => {
@@ -155,7 +172,7 @@ export const AuditTrail: React.FC = () => {
 
   // Sự kiện đang được chọn để soi chi tiết
   const selectedEvent = useMemo(() => {
-    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
+    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0]
   }, [filteredEvents, selectedEventId, events])
 
   // Thống kê số liệu tính toán động theo danh sách đang hiển thị
@@ -185,16 +202,9 @@ export const AuditTrail: React.FC = () => {
   }
 
   // Làm mới dữ liệu
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true)
-    try {
-      const data = await auditService.getAuditEvents({
-        projectId: selectedProject
-      })
-      setEvents(data)
-    } finally {
-      setIsRefreshing(false)
-    }
+    setRevision(n => n + 1)
   }
 
   // Xuất báo cáo nhật ký
@@ -238,9 +248,14 @@ export const AuditTrail: React.FC = () => {
         onSelectProject={setSelectedProject}
         isRefreshing={isRefreshing}
         onRefresh={handleRefresh}
-        onOpenExportModal={() => setShowExportModal(true)}
+        onOpenExportModal={() => setError('Backend chưa có API xuất riêng nhật ký. Xuất hồ sơ PDF tại Báo cáo KPI.')}
+        projects={projects}
       />
 
+      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
+      <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+        {partial ? 'Lịch sử có dữ liệu một phần. ' : ''}Chỉ hiển thị sự kiện được nguồn báo cáo cung cấp; chưa có dữ liệu vai trò, trạng thái trước/sau hoặc ảnh để đối chiếu. Số đếm chỉ thuộc danh sách đang hiển thị.
+      </p>
       <AuditTrailMetrics
         calculatedStats={calculatedStats}
         isSupervisor={isSupervisor}
