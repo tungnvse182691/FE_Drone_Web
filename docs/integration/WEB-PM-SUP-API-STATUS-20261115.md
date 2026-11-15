@@ -44,6 +44,33 @@ Nghiệm thu tay ngắn:
 - Tạo FIELD: PM chọn dự án cụ thể → mở lại Report đã KEEP_NEW để GET đối chiếu → mở tạo phiếu, tự chọn Defect OPEN, Crew ACTIVE, phương pháp, loại đo, hạn; tuyến lấy từ Defect, chỉ chọn set PUBLISHED nếu cần pin thêm phạm vi. Tự bấm một lần, đối chiếu receipt TaskID → GET/list; đổi dự án/actor không nhận phản hồi cũ. Thiếu nguồn hoặc stale version/hash phải chặn trước POST, không tạo pending. Sau timeout/F5 giữ nguyên journal; receipt chỉ GET. Nhánh Survey chưa hoàn tất.
 - FIELD: mở phiếu đo → task/history/submission → chọn ảnh → GET metadata VERIFIED/checksum → content. Zero/UNKNOWN giữ nguyên. PM chọn quyết định/lý do rồi tự xác nhận một lần; receipt/GET phải COMPLETED hoặc SUPPLEMENT_REQUIRED, Defect không tự VERIFIED. Sup không có form review. Timeout/F5 giữ key/body/version; có receipt chỉ GET;403/412 báo rõ, không thay key để thử.
 
+- `ca18c16`: API168–170 KPI theo metric/dimensions/availability thật; bộ lọc riêng cho báo cáo; bảng phân đoạn server và MapLibre WGS84 có kiểm phạm vi; giữ export đã PASS.
+
+## Báo cáo KPI API168–170 — giới hạn và mapping
+
+Nguồn đúng runtime b89a52fe11ed: ReportingDefinitions.cs:9–78; CaseDefectCaptureConsumer.cs; DefectStatisticsCaptureConsumer.cs:10–34; CurrentRepairCaptureConsumer.cs; ReportingService.cs:65–121; RoadGeometryVersionView/SegmentGeometry DTO. API168 items, API169 summary, API170 timeline; UI có trên PM/Sup, không mở quyền Crew.
+
+| Metric thật | Đơn vị / dimensions | Quy tắc hiển thị |
+|---|---|---|
+| reportsReceived | count; toàn phạm vi; periodApplicable=true | Số phản ánh trong kỳ, không phải SLA |
+| casesByStatus / defectsByStatus / surveyTasksByStatus / repairItemsByStatus | count; status | Giữ từng trạng thái riêng, không cộng thành tỷ lệ |
+| legacyUnclassified | count | Nhiệm vụ cũ chưa phân loại, không phải lỗi dữ liệu mới |
+| baselineCoverageByBand | percent; band + routeVersionId + segmentSetId; numerator/denominator từ BE | Theo từng dải/phiên bản/bộ; null + EMPTY_DENOMINATOR không là0; không suy tốc độ suy thoái |
+| verifiedSourceBytes | bytes | Dung lượng nguồn được xác minh, không phải % toàn vẹn |
+| repairAcceptanceRate | percent; periodApplicable=true | Tỷ lệ nghiệm thu sửa chữa, không thay SLA; nếu UNAVAILABLE không hiện số |
+| validationMetrics | per-run | Bias/MAE/RMSE/used/excluded/unit/measurementType từ API168, không tự gộp trung bình |
+| projectDistinctDefects / matchedDistinctDefects / explicitSharedParts | count | Giữ availability/reasons, PARTIAL có thể kèm số0/1 nhưng không được gắn đầy đủ |
+| segmentRelatedDefects | count; dimensions.status chứa segmentId theo DefectStatisticsCaptureConsumer | Gắn nhãn phân đoạn, không coi GUID là trạng thái Case; null không thành0 hư hỏng |
+| sourcedAllocatedQuantity / sourcedUnallocatedQuantity | đơn vị số đo nguồn thực trả | Hiển thị theo đơn vị nguồn, không tự đổi thành diện tích/khối lượng giả |
+
+- KPI SLA, thời gian duyệt, tái phát, phần trăm toàn vẹn không có metric tương ứng: giữ các khối UI, hiện thiếu nguồn; bỏ claim PDF chuẩn TCVN. Không dùng repairAcceptanceRate/verifiedSourceBytes/baselineCoverage thay thế.
+- Bộ lọc báo cáo riêng: chọn kỳ Từ–Đến UTC ([From,To)), tuyến, bộ PUBLISHED, đoạn; route đổi xóa set/segment phụ thuộc. Array segmentIds dùng repeated query key (không segmentIds[]). Summary xác minh project/filter; response offset+00:00 tương đươngZ được chấp nhận. Timeline chỉ hỗ trợ kỳ + Project aggregate; không giả vờ lọc tuyến/đoạn, UI ghi rõ.
+- RPT06: không có API risk score/ngưỡng/epoch comparison trong contract/source reporting. Hình học đọc từ work-package→route geometry và bộ PUBLISHED. Dự án321 GET200 có1 tuyến/4 đoạn, metricGeometry EPSG32648 nhưng không có Wgs84Centerline/Wgs84Geometry; UI vẫn có bảng lý trình thật, đánh giá UNKNOWN, không vẽ metric thành lon/lat hoặc đặt marker giả. Nếu nguồn khác trả WGS84 hợp lệ, vẽ MultiLineString server, chọn đoạn fitBounds toàn bộ geometry, đổi project xóa source/marker cũ. Thiếu WGS84 thì khóa định vị và hiện giới hạn; không kết luận0 đoạn nguy cơ.
+- Trạng thái riêng: loading, HTTP error, danh sách nguồn rỗng, AVAILABLE/PARTIAL/UNAVAILABLE, value null và actual0. Không coi lỗi geometry là0 đoạn. Bảng KPI, chi tiết và timeline dùng nhãn/trường trực tiếp; không đưa JSON/DTO thô ra UI. Modal manifest export giữ chức năng đọc/tải nhưng đổi raw JSON thành danh sách tệp/phần nguồn dễ đọc.
+- Runtime GET service mới trên321: summary20021 metric rows; items reportsReceived2003 Report; timeline2001 sự kiện với PARTIAL + MAPPED_ANH01_AUDITS_ONLY/HUY_TIMELINE_READER_UNAVAILABLE; geometry2001 tuyến/4 đoạn/0 geometry WGS84. Không mutation; chưa nghiệm thu tương tác filter/map với dữ liệu WGS84 bằng browser thật.
+- Review tay: chọn321 trên reports → xem KPI có reportsReceived3, Case theo trạng thái, Defect OPEN1, baseline0% của4 đoạn theo từng dải; các số này là quan sát hiện thời, không fixture. Chọn metric và kỳ/tuyến/set/đoạn → Áp dụng; đối chiếu request/availability. Đổi dự án nhanh không lẫn dữ liệu. Bảng có4 đoạn nhưng Chưa có dữ liệu đánh giá; không thể zoom321 khi BE chưa trả WGS84. Khi có dự án WGS84, chọn từng đoạn phải zoom cả đoạn chính xác. Export cũ20ba537b… vẫn mở manifest/tải PDF như trước; không tạo export mới để thử.
+- Regression reporting10 nhóm (mapping/unit/dimensions/null0, filterUTC/arrays, pagination/availability, timeline, geometryscope, actual panel trạng thái, actual hook late response, actual MapLibre binding/fitBounds/source clear) và export12 nhóm đều PASS. Typecheck/build/diff-check PASS2083 modules (còn cảnh báo Tailwind/bundle lớn); không coi mock geometry là runtime GIS PASS.
+
 ## Lỗi POST074422 đã xác minh và sửa
 
 - Runtime b89a52fe11ed: POST9190 trên project321 trả422 ProblemDetails `title/code:validation_error`, correlation `6fc6a0d5-d22a-4d85-89d4-80046f9b1774`. Body thực: `{"kind":"DOSSIER","format":"PDF","includeOriginalFiles":false,"to":"2026-11-15T07:37:00.000Z"}`. Chỉ có một POST quan sát được, không timeout và chưa có receipt.
@@ -51,13 +78,13 @@ Nghiệm thu tay ngắn:
 - Múi giờ đúng: tab Asia/Saigon, input `2026-11-15T14:37`→`2026-11-15T07:37:00.000Z`; response timestamp07:37:52Z. Không kết luận lỗi do tương lai hay đổi múi giờ. Filter [From,To), không gồm To.
 - Form bổ sung Từ, yêu cầu cả cặp hoặc bỏ cả hai; kiểm hợp lệ và thứ tự trước POST. Chuỗi local datetime chuyển UTC một lần bằng Date.toISOString. Không tự đặt From hoặc dùng ngày giả.
 - First-attempt422 với code validation_error/export_invalid được ghi rejected để form sửa được; giữ body/key phản hồi gốc cho đối chiếu. Journal từng timeout/restored hoặc có receipt không được đổi/xóa theo422. Riêng journal của POST9190 đã được đánh dấu rejected bằng chứng request/key/body/correlation chính xác trên tab, không POST lại. Mở lại form để tự chọn khoảng mới hoặc bỏ cả hai.
-- Regression export12 nhóm PASS gồm đúng payload9190, UTC conversion, first422→edit/corrected submit mô phỏng, timeout→422 giữ identity, receipt GET-only. Runtime sửa xong chưa POST lại; API074 chưa runtime PASS.
+- Regression export12 nhóm PASS gồm đúng payload9190, UTC conversion, first422→edit/corrected submit mô phỏng, timeout→422 giữ identity, receipt GET-only. Sau sửa người dùng đã POST lại một lần202 và GET khớp, xem mục nghiệm thu export; request9190 vẫn là ca422, không đổi thành PASS.
 
 ## Nghiệm thu Web export API074–077
 
 - Quyền: PM hoặc Sup có tài khoản ACTIVE và membership ACTIVE trên cùng dự án; form khóa khi chưa chọn dự án cụ thể. Dữ liệu tạo chỉ `kind:DOSSIER`, `format:PDF|ZIP`; PDF không kèm file gốc theo validator BE. Không có lệnh hủy/xóa trong contract hiện tại, nên các nút tương ứng bị khóa/báo rõ.
 - Dòng test: vào `/sup/reports` hoặc `/sup/risk-analytics`, chọn dự án thật → **Xuất báo cáo tổng hợp** → chọn PDF/ZIP, nhập đủ Từ–Đến nếu cần (hoặc bỏ cả hai) → bấm một lần. Đối chiếu POST074 `202`, receipt job/version/snapshot → GET075. Nếu `SUCCEEDED`, mở chi tiết để GET077 manifest rồi tải GET076; FE kiểm mediaType, expiry, SHA256 content với ETag. Job `QUEUED/RUNNING` không hiển thị phần trăm giả và không tự retry.
-- Runtime hiện đã đọc GET `/projects/15d119fe-0c03-4e25-aa5d-95e97ddd881d/exports?limit=100` trả `200 items:[]`; chưa gửi POST074, nên runtime mutation vẫn NOT_RUN.
+- Runtime người dùng đã POST074202, export `20ba537b-7757-4cc5-bdd8-f1ec36a54145`; GET075/list200 từ QUEUED→SUCCEEDED, versionAAAAAAABUWk=. Sau restart/F5 list/detail/manifest vẫn200 cùng snapshotdd2c84f5…/hash678b3c94…; không POST mới. GET076200 PDF35993 byte, %PDF-1.7, SHA256 e0fa8ddcf6108219e454405d9e6768d6d8c64907d8908a7e63956182a8697731 khớp ETag. Bản PDF lưu cũ chưa tìm thấy trên máy; không coi nội dung trên server là đã xác minh file cũ. Completeness PARTIAL giữ nguyên.
 - Lưu ý điều kiện runtime: Sup có quyền reporting toàn cục vẫn có thể bị403 export nếu thiếu membership ACTIVE của project, đúng ExportService.AuthorizeAsync:35–40. Chưa có endpoint cancel/delete/retry, nút retry hiện chỉ đọc chi tiết lỗi. Form hiện nối DOSSIER toàn dự án; TRAINING và chọn subset segment/Defect chưa có caller phù hợp, không gửi option giả. Summary KPI/mapping rủi ro chưa nối, giữ bố cục và hiện thiếu nguồn; không dùng mock để điền số liệu.
 - Bằng chứng source: ExportsController.cs:17–48 hỗ trợ WebCookie/Idempotency-Key/ETag; ExportService.cs:61–68 giới hạn kind/format/PDF originals/filters; ExportRecords.cs:12–42 trạng thái QUEUED/RUNNING/SUCCEEDED/FAILED. API075 GET có version/ETag mới; worker có thể đổi version sau receipt, FE đối chiếu snapshot/kind/format giữ nguyên thay vì ép rowVersion không được đổi.
 
@@ -86,7 +113,7 @@ Nghiệm thu tay ngắn:
 
 “đã có” là có code/caller đã xác định, không đồng nghĩa full runtime PASS. “vừa nối” chỉ phần đợt này. “bị chặn” kèm predicate/role/source; không đồng nghĩa yêu cầu BE mới. “chưa làm” là chưa rà đủ hoặc chưa triển khai trong đợt, không phải kết luận không có bất kỳ code nào. Bảng bao gồm local chưa commit; không gom local đó vào các commit mới.
 
-Tổng dòng: 275; đã có: 69, chưa làm: 175, bị chặn: 14, vừa nối: 17.
+Tổng dòng: 275; đã có: 69, chưa làm: 172, bị chặn: 14, vừa nối: 20.
 
 | Mã catalog | Method | Endpoint | Trạng thái | Bằng chứng / phạm vi |
 |---|---|---|---|---|
@@ -182,7 +209,7 @@ Tổng dòng: 275; đã có: 69, chưa làm: 175, bị chặn: 14, vừa nối: 
 | API-071 | GET | `/api/v1/projects/{projectId}/defects/{defectId}` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
 | API-072 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/assessments` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1573 (surveyService.assessDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | API-073 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/verification-decisions` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1617 (surveyService.verifyDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
-| API-074 | POST | `/api/v1/projects/{projectId}/exports` | **vừa nối** | projectExportService + modal: PM/Sup chọn dự án cụ thể, DOSSIER PDF/ZIP, exact body + Idempotency-Key; journal receipt→GET. Runtime mutation NOT_RUN. |
+| API-074 | POST | `/api/v1/projects/{projectId}/exports` | **vừa nối** | projectExportService + modal: PM/Sup chọn dự án cụ thể, DOSSIER PDF/ZIP, exact body + Idempotency-Key; journal receipt→GET. Runtime POST202→GET200 PASS export20ba537b…; chi tiết ở mục nghiệm thu. |
 | API-075 | GET | `/api/v1/projects/{projectId}/exports/{exportId}` | **vừa nối** | detail validates project/status/snapshot/hash/version/ETag; đổi actor/project fence. |
 | API-076 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/content` | **vừa nối** | chỉ tải SUCCEEDED chưa hết hạn; manifest/readiness, mediaType và SHA256 content ETag; binary lỗi không nuốt. |
 | API-077 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/manifest` | **vừa nối** | manifest khớp schemaVersion, project/snapshot/hash/kind/format/ETag, files/sections/sourceRevisions. |
@@ -276,9 +303,9 @@ Tổng dòng: 275; đã có: 69, chưa làm: 175, bị chặn: 14, vừa nối: 
 | API-165 | POST | `/api/v1/projects/{projectId}/repair-policies/drafts/{draftId}/publish` | **đã có** | Callsite + caller hiện hữu: src/api/services/fastTrackService.ts:329 (fastTrackService.publishPolicy); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | API-166 | GET | `/api/v1/projects/{projectId}/repair-policies/revisions/{revisionId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-167 | POST | `/api/v1/projects/{projectId}/repair-policies/revisions/{revisionId}/revoke` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-168 | GET | `/api/v1/projects/{projectId}/reports/items` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-169 | GET | `/api/v1/projects/{projectId}/reports/summary` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-170 | GET | `/api/v1/projects/{projectId}/reports/timeline` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-168 | GET | `/api/v1/projects/{projectId}/reports/items` | **vừa nối** | projectReportingService + ReportingMetricsPanel: Chi tiết metric, pagination cursor/pageSize100, đúng metric/version/reference; availability tổng hợp mức thiếu dữ liệu qua các trang; không trả JSON thô. |
+| API-169 | GET | `/api/v1/projects/{projectId}/reports/summary` | **vừa nối** | projectReportingService + ReportingMetricsPanel: Summary giữ code/unit/dimensions/periodApplicable/value/numerator/denominator/availability/reasonCodes/sourceRefs; null/UNAVAILABLE không thành0; không thay thế SLA/tái phát/toàn vẹn. |
+| API-170 | GET | `/api/v1/projects/{projectId}/reports/timeline` | **vừa nối** | projectReportingService + ReportingMetricsPanel: Project timeline theo kỳ; pagination cursor, PARTIAL/reasonCodes thật. Không gửi geometry filter mà BE chưa hỗ trợ; ghi rõ lịch sử toàn dự án. |
 | API-171 | POST | `/api/v1/projects/{projectId}/retention/evaluations` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-172 | GET | `/api/v1/projects/{projectId}/retention/evaluations/{id}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-173 | GET | `/api/v1/projects/{projectId}/retention/files/{fileId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
