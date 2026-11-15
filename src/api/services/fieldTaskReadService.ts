@@ -1,7 +1,7 @@
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-export interface FieldTaskDetail {id:string;projectId:string;defectId:string;routeVersionId:string;segmentSetId?:string|null;status?:string|null;version?:string|null;assignedToUserId?:string|null;latestSubmissionId?:string|null;instructions?:string|null;measurementScope?:string|null;requiredMeasurementType:number;dueAt?:string|null}
+export interface FieldTaskDetail {id:string;projectId:string;defectId:string;routeVersionId:string;segmentSetId?:string|null;crsProfileRevisionId?:string|null;status?:string|null;version?:string|null;assignedToUserId?:string|null;latestSubmissionId?:string|null;instructions?:string|null;measurementScope?:string|null;requiredMeasurementType:number;dueAt?:string|null}
 export interface FieldMeasurement {sampleId?:string|null;type?:string|null;value?:number|null;state?:string|null;unknownReason?:string|null;dimension?:string|null;unit?:string|null;instrument?:string|null;method?:string|null;notes?:string|null}
 export interface FieldSubmission {id:string;taskId:string;revision:number;serverReceivedAt:string;readiness?:string|null;missingReasons?:string[]|null;contentHash?:string|null;measurements?:FieldMeasurement[]|null;evidence?:Array<{fileId?:string|null;captureOriginId:string;purpose?:string|null;checksumSha256?:string|null}>|null}
 export interface FieldHistory {assignments:Array<{id:string;assignedToUserId:string;assignedAt:string;endedAt:string|null;status:number;reason:string|null}>;events:Array<{id:string;kind:string;actorId:string;reason:string;occurredAt:string;factsJson:string}>}

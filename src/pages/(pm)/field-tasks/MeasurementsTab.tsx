@@ -84,7 +84,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const [newNotes, setNewNotes] = useState('')
 
   const [newMeasurementType,setNewMeasurementType]=useState(0),[newDueAt,setNewDueAt]=useState('')
-  const [createScope,setCreateScope]=useState<{project:string;pins?:TriageGeometryPins}>({project:''})
+  const [createScope,setCreateScope]=useState<{project:string;enabled?:boolean;pins?:TriageGeometryPins}>({project:''})
   let heldCreate:ReturnType<typeof fieldCreateCommands.pending>=null,createJournalError=''
   try{if(!isSupervisor&&selectedProjectId!=='ALL')heldCreate=fieldCreateCommands.pending(selectedProjectId)}catch(e){createJournalError=(e as Error).message}
   const selectedDefect=availableDefects.find(d=>d.id===selectedDefectId)
@@ -161,8 +161,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     try{
       if(selectedProjectId==='ALL')throw new Error('Chọn dự án cụ thể; không tự lấy dự án đầu tiên.')
       const target=availableDefects.find(d=>d.id===selectedDefectId),method=isCustomMethod?customMethodText.trim():newMethod
-      if(!heldCreate&&(!target||!isSelectedDefectEligible||!method||createScope.project!==selectedProjectId||!createScope.pins))throw new Error('Chọn Defect OPEN, phương pháp và phạm vi PUBLISHED thật.')
-      const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,measurementScope:method,instructions:newNotes,dueAt:newDueAt,pins:createScope.pins!}
+      if(!heldCreate&&(!target||!isSelectedDefectEligible||!method||createScope.project!==selectedProjectId||createScope.enabled&&!createScope.pins))throw new Error('Chọn Defect OPEN, phương pháp và phạm vi PUBLISHED thật.')
+      const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,routeVersionId:target!.route_version_id,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,measurementScope:method,instructions:newNotes,dueAt:newDueAt,...(createScope.pins?{pins:createScope.pins}:{})}
       const created=await fieldCreateCommands.request(selectedProjectId,choice)
       if(!current())return
       setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã GET xác nhận tạo phiếu FIELD ${created.id}.`,'success')
@@ -911,7 +911,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
               <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="w-full border rounded-lg p-2"><option value="">Chọn loại đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Phạm vi xói vai đường</option><option value={4}>Diện tích</option></select></label>
               <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="w-full border rounded-lg p-2" /></label>
-              <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,pins:enabled?pins:undefined})} />
+              <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.enabled===enabled&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,enabled,pins:enabled?pins:undefined})} />
               <p>Chỉ tạo phiếu từ phản ánh đã ghi nhận và đối chiếu được nguồn. Nguồn khảo sát chưa có đủ thông tin đối chiếu sẽ bị chặn.</p>
               </fieldset>
               {/* Thông báo lỗi trực tiếp bên trong Modal nếu Backend trả về lỗi */}
@@ -942,7 +942,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingCreate||!!createJournalError||!heldCreate&&(!selectedDefectId||!isSelectedDefectEligible||!newMeasurementType||!newDueAt||!selectedCrewId||!createScope.pins)}
+                  disabled={isSubmittingCreate||!!createJournalError||!heldCreate&&(!selectedDefectId||!isSelectedDefectEligible||!newMeasurementType||!newDueAt||!selectedCrewId||createScope.enabled&&!createScope.pins)}
                   className="px-3.5 py-1.5 text-xs font-medium bg-[#C9A227] hover:bg-[#B38E1F] text-white rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Icon name="check" size={15} />
