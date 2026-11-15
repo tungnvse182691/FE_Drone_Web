@@ -1,3 +1,4 @@
+import { SystemControlHeader } from './system-control/SystemControlHeader'
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { projectService } from '../../api/services/projectService'
@@ -6,6 +7,8 @@ import { exportError } from '../../api/services/projectExportService'
 
 const status: Record<string, string> = { QUEUED: 'Chờ đánh giá', RUNNING: 'Đang đánh giá', SUCCEEDED: 'Đánh giá thành công', COMPLETED: 'Hoàn thành', COMPLETE: 'Hoàn thành', FAILED: 'Đánh giá thất bại' }
 export const SystemControl: React.FC = () => {
+  const isSupervisor = useAuthStore(s => s.user?.role === 'SUPERVISOR')
+  const [actionNotice, setActionNotice] = useState('')
   const epoch = useAuthStore(s => s.authEpoch)
   const [projects, setProjects] = useState<Awaited<ReturnType<typeof projectService.fetchProjects>>>([])
   const [project, setProject] = useState(''), [revision, setRevision] = useState(0)
@@ -31,10 +34,10 @@ export const SystemControl: React.FC = () => {
     return () => c.abort()
   }, [selected, project, revision, epoch])
   return <div className="space-y-6 max-w-7xl mx-auto pb-16">
-    <section className="bg-white border border-slate-200 rounded-[20px] p-6 space-y-4"><div className="flex flex-wrap justify-between gap-4"><div><h1 className="text-2xl font-bold text-slate-900">Lưu trữ hồ sơ và phong tỏa pháp lý</h1><p className="text-xs text-slate-500 mt-2">Theo dõi các đánh giá đã lưu trên hệ thống. Điều kiện lưu trữ do Backend xác định theo từng tệp.</p></div><button onClick={() => setRevision(n => n + 1)} className="px-4 py-2 border rounded-xl text-sm">Đọc lại</button></div>
-      <label className="text-sm">Dự án <select aria-label="Dự án lưu trữ" value={project} onChange={e => setProject(e.target.value)} className="ml-3 border rounded-xl p-2"><option value="">Chọn dự án</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-    </section>
-    <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">Backend hiện hỗ trợ đọc danh mục bằng phiên Web. Tạo/đọc chi tiết đánh giá và thiết lập/gỡ phong tỏa chưa hỗ trợ cookie Web ở revision đang chạy. Chưa có API phê duyệt xóa hoặc purge hồ sơ; không thể thực hiện các thao tác này trên Web.</p>
+    <SystemControlHeader isSupervisor={isSupervisor} onOpenCreateDeletion={()=>setActionNotice('Chưa hỗ trợ lập yêu cầu xóa hồ sơ tại đây.')} />
+    {actionNotice && <p role="status" className="text-sm text-amber-800">{actionNotice}</p>}
+    <section className="flex flex-wrap gap-3 items-center bg-white border rounded-[20px] p-4"><label className="text-sm">Dự án <select aria-label="Dự án lưu trữ" value={project} onChange={e=>setProject(e.target.value)} className="ml-2 border rounded-xl p-2"><option value="">Chọn dự án</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button onClick={()=>setRevision(n=>n+1)} className="ml-auto px-4 py-2 border rounded-xl text-sm">Làm mới</button></section>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start"><aside className="lg:col-span-5 bg-white border rounded-[20px] overflow-hidden"><div className="p-5 border-b bg-slate-50"><h2 className="font-bold">Phong tỏa pháp lý</h2><p className="text-xs text-slate-500 mt-2">Bảo vệ hồ sơ phục vụ đối chiếu và thanh tra</p></div><div className="p-5 space-y-4"><h3 className="font-bold">{projects.find(p=>p.id===project)?.name || 'Chọn dự án'}</h3><p className="text-sm text-slate-500">Chưa có thông tin phong tỏa trong kết quả đánh giá. Kiểm tra hồ sơ trước khi thay đổi trạng thái lưu trữ.</p>{isSupervisor && <button onClick={()=>setActionNotice('Chưa hỗ trợ thiết lập hoặc gỡ phong tỏa tại đây.')} className="border rounded-xl px-4 py-2 text-sm">Thiết lập / Gỡ phong tỏa</button>}</div></aside><div className="lg:col-span-7">
     <section className="bg-white border border-slate-200 rounded-[20px] p-5 space-y-4"><h2 className="font-bold text-slate-900">Lịch sử đánh giá lưu trữ</h2>
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {loading ? <p>Đang tải đánh giá…</p> : !rows.length && !error ? <p className="text-sm text-slate-500">{project ? 'Chưa có đánh giá lưu trữ trong CSDL.' : 'Chọn dự án để đọc dữ liệu.'}</p> : null}
@@ -42,5 +45,6 @@ export const SystemControl: React.FC = () => {
       {detailError && <p role="alert" className="text-red-700">{detailError}</p>}
       {detail && <div className="space-y-3"><h3 className="font-bold">Kết quả theo tệp</h3>{detail.items.length ? detail.items.map((item, i) => <div key={item.fileId} className="border rounded-xl p-3 text-sm"><b>Tệp {i + 1}</b> · {item.eligibility || 'Chưa đủ thông tin'}<p>{item.reasonCodes?.join(', ') || 'Nguồn chưa cung cấp lý do riêng.'}</p><p>{item.isCurrent ? 'Kết quả hiện hành' : 'Kết quả cần đánh giá lại'}{item.eligibleAfter && ` · Mốc đủ điều kiện: ${new Date(item.eligibleAfter).toLocaleDateString('vi-VN')}`}</p></div>) : <p>Chưa có tệp trong đợt đánh giá này.</p>}{detail.nextCursor && <p className="text-amber-800">Kết quả còn trang tiếp theo; chưa thể coi trang này là toàn bộ hồ sơ.</p>}</div>}
     </section>
+    </div></div>
   </div>
 }

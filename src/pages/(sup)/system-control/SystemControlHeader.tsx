@@ -49,7 +49,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
           <p className="text-xs text-slate-500 leading-relaxed">
             {isSupervisor
               ? 'Giám sát thời hạn lưu trữ hồ sơ công trình, kiểm soát mô hình AI và kích hoạt chế độ phong tỏa hồ sơ phục vụ thanh tra theo quy chuẩn BR-45.'
-              : 'Theo dõi tình trạng lưu trữ chứng cứ kỹ thuật công trình (hết bảo hành + 5 năm) và lập đề xuất giải phóng dữ liệu khi đủ điều kiện.'}
+              : 'Theo dõi đánh giá lưu trữ chứng cứ kỹ thuật công trình và đối chiếu điều kiện giải phóng dữ liệu.'}
           </p>
         </div>
 
