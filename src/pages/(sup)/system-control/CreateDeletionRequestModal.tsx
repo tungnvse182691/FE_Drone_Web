@@ -87,11 +87,7 @@ export const CreateDeletionRequestModal: React.FC<CreateDeletionRequestModalProp
                   )
                 })
               ) : (
-                <>
-                  <option value="proj-04">Sửa chữa bảo trì Km 990 - 1000 (Đủ điều kiện &gt; 5 năm)</option>
-                  <option value="proj-02">QL1A - Giai đoạn 1 (Đang phong tỏa - Bị chặn)</option>
-                  <option value="proj-01">QL1A - Giai đoạn 2 (Chưa đủ 5 năm - Bị chặn)</option>
-                </>
+                <option value="" disabled>Chưa có dự án nào trong CSDL</option>
               )}
             </select>
           </div>
