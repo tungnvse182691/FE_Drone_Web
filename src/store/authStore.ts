@@ -97,7 +97,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         assertEpoch(epoch)
         const token = await get().ensureCsrfToken()
         assertEpoch(epoch)
-        await loginApi({ email, password }, token)
+        try { await loginApi({ email, password }, token) }
+        catch(error:any) {
+          if(error?.response?.status!==403 || error.response.data?.code!=='csrf_failed')throw error
+          // Bootstrap can bind to a still-valid cookie after local invalidation/HMR. End that Web session
+          // through its guarded logout, then get an anonymous CSRF token; never weaken the BE check.
+          await getSessionApi();assertEpoch(epoch)
+          set({csrfToken:null});const previousSubjectToken=await get().ensureCsrfToken();assertEpoch(epoch)
+          await logoutApi(previousSubjectToken);assertEpoch(epoch)
+          set({csrfToken:null});const anonymousToken=await get().ensureCsrfToken();assertEpoch(epoch)
+          await loginApi({email,password},anonymousToken)
+        }
         assertEpoch(epoch)
         readingSession = true
         const session = await getSessionApi()

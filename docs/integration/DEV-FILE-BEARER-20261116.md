@@ -24,6 +24,7 @@ Nguồn: `UploadsController.cs` và `WebCookieConfiguration.cs` tại revision *
 - Người dùng đăng nhập bằng form hiện có: Web login + GET session vẫn chạy như trước. Chỉ khi opt-in và không must-change-password, dùng **chính email/password vừa nhập** để POST `/auth/login`; không đọc tài khoản mẫu để cấp token thay người dùng.
 - Chỉ giữ accessToken sau khi response user ID/role khớp Web và Bearer GET `/me` xác nhận cùng ID/role. Hai endpoint auth này chỉ phục vụ cấp/xác minh credential, không chuyển các caller `/me` bình thường sang Bearer.
 - Token chỉ trong biến module RAM, không Zustand token field, storage, journal, Git hoặc log. Không giữ password/refreshToken. Logout, expire, đổi account/role/epoch và invalidation từ tab khác xóa token. Phản hồi cấp token cũ đến muộn bị loại.
+- Nếu CSRF bootstrap đang gắn vào cookie cũ còn hợp lệ nhưng login trả `403 csrf_failed`, FE kiểm GET session, logout cookie bằng CSRF đúng subject, lấy CSRF anonymous mới rồi thử Web login đúng một lần. Không bỏ guard hoặc chuyển Web login sang Bearer; không retry lỗi credential/403 khác. Nhánh này được phát hiện và kiểm runtime khi đăng nhập lại sau local invalidation.
 - Cấp credential tạm có timeout 15 giây và bị abort khi đổi phiên/logout; không giữ màn đăng nhập chờ vô hạn vì endpoint phụ.
 - Cookie login vẫn dùng được nếu credential tạm không cấp được. Request tệp sẽ báo cần đăng nhập lại; không mượn token khác, không thử cookie sau Bearer 401/403, không tự refresh/retry mutation. Authorization bị xóa khỏi response/error config trước khi trả cho caller để tránh bị log qua AxiosError.
 - **F5 làm mất token RAM**. Phiên cookie vẫn đọc được các API chuẩn; để dùng tệp tạm, đăng nhập lại bằng form. Chưa có WebSession→Bearer exchange trên runtime nên không tự tạo credential sau reload.
@@ -40,7 +41,7 @@ Tệp VERIFIED chỉ chứng minh lưu trữ/byte đúng, chưa phải hồ sơ 
 
 ## Kiểm đã chạy
 
-- **7 nhóm transport/auth PASS**: DEV opt-in/host/production, allowlist exact method/path, đúng ID/role qua GET me, hết hạn/token cũ, actual authStore login/logout/đổi account, cookie CSRF không đổi, file 401/403 không retry/fallback, không serialize Authorization trong error.
+- **8 nhóm transport/auth PASS**: DEV opt-in/host/production, allowlist exact method/path, đúng ID/role qua GET me, hết hạn/token cũ, actual authStore login/logout/đổi account, cookie CSRF không đổi, file 401/403 không retry/fallback, không serialize Authorization trong error.
 - **5 nhóm uploader/component PASS**, transport mô phỏng: input file → payload/part/eTag đúng DTO → receipt/GET; VERIFYING không thành công giả; create/complete timeout giữ identity; receipt chỉ GET; file/role sai chặn trước POST; journal không chứa credential/capability.
 - Fast Track: **23 nhóm form, 15 service/journal, 16 validator/domain BE thực PASS**; thêm **8 nhóm FIELD read, 12 nhóm export PASS**, không mutation runtime. Build/typecheck/diff-check chạy sau sửa.
 - Browser: PM/Sup GET metadata tệp 200 bằng transport tạm; Sup GET road-coverage 200 bằng cookie (`devFileBearer=false`). Token PM cũ không được lấy sau chuyển Sup. Form Sup chọn TXT báo lỗi đúng trước API, **không có POST uploads**. Ảnh: `artifacts/fasttrack-dev-bearer/sup-upload.png`.
