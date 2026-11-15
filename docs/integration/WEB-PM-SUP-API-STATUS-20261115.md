@@ -1,6 +1,6 @@
 # Bảng tích hợp Web PM/Sup — đợt 15/11/2026
 
-Baseline `1c348da`; tiếp tục trên nhánh `hoang`, giữ local ngoài các luồng đang nối. Không tạo worktree/bản giải nén, không sửa BE/SQL, không POST/PUT/PATCH/DELETE thật. Không dùng tài liệu bàn giao để thay quyết định nghiệp vụ.
+Baseline `1c348da`; tiếp tục trên nhánh `hoang`, giữ local ngoài các luồng đang nối. Không tạo worktree/bản giải nén, không sửa BE/SQL, agent không POST/PUT/PATCH/DELETE thật; mutation nghiệm thu do người dùng tự bấm. Không dùng tài liệu bàn giao để thay quyết định nghiệp vụ.
 
 Nguồn đối chiếu: AGENTS.md; Spec17_10 PM/Sup matrix, business workflows, full API catalog; docs/contracts/openapi.json và FE-API-CATALOG.json; Candidate3 deploy/fe-handoff README-FOR-FE, FE-W01-W10-RECIPES, FE-API-FUNCTIONAL-GUIDE; source đúng image runtime b89a52fe11ed tại thư mục source đã có. Các hướng dẫn discovery lịch sử mâu thuẫn recipes mới được đối chiếu bằng OpenAPI/source; không suy chức năng từ tên route.
 
@@ -10,6 +10,10 @@ Nguồn đối chiếu: AGENTS.md; Spec17_10 PM/Sup matrix, business workflows, 
 - `70e7909`: API039–042 list/detail/scope/mark-read thông báo PM/Sup qua cookie/CSRF. Phân trang đầy đủ, receipt/GET/version/key, actor fence. Không đoán người gửi/ưu tiên/SLA hoặc điều hướng từ resourceId đơn lẻ. Bố cục feed/widgets/modal âm thanh giữ nguyên; bỏ claim độ trễ realtime giả.
 - `73204f8`: API080/088/096 task detail/history/latest submission, API085/086 metadata/ảnh riêng tư và API092 review trong modal FIELD có sẵn. API078 sửa phân trang afterId. Không điền số đo AI/UNKNOWN, không đổi Defect thành VERIFIED. Review PM chọn CONFIRM/NO_DEFECT/SUPPLEMENT và lý do2000 ký tự; nguồn runtime FieldInspectionReview.cs mới là căn cứ enum. Caller cũ ACCEPT + lý do tự tạo đã được thay bằng thao tác review rõ ràng trong chi tiết; Sup chỉ đọc.
 - `67ff2f8`: API079 nhánh REPORTER/PRE_MEASUREMENT trong form tạo FIELD hiện có. Bỏ fixture Defect/Crew/geometry/ngày hẹn và fallback danh mục; PM tự chọn toàn bộ input. Đọc lại Defect/version, nguồn KEEP_NEW, thành viên ACTIVE và package trước POST; chưa đủ preflight không có pending. Giữ journal sau timeout, receipt chỉ GET; chống phản hồi cũ theo dự án/actor. Sửa guard status PascalCase của FIELD theo source runtime.
+
+- `633d5ea`: tải danh mục Defect/Crew độc lập, lỗi GET không giả làm empty.
+- `908481e`: API079 scope JSON object đúng validator, CRS từ GET tuyến, pin set tùy chọn; journal cũ giữ nguyên.
+- `003f502`: API084 nguồn Report thật, PM chọn bằng chứng/lý do; journal và receipt/GET; bỏ caller IDs/metadata/ảnh mẫu.
 
 ## Mâu thuẫn và phần bị chặn
 
@@ -36,14 +40,26 @@ Theo dõi riêng: lỗi retry D1 đã biết vẫn chưa xử lý/nghiệm thu l
 Nghiệm thu tay ngắn:
 - Report: chọn từng nguồn trước/sau KEEP_NEW, F5 phải đọc reference/Defect OPEN; journal409 khác key vẫn giữ; không thêm POST.
 - Thông báo: PM/Sup mở chuông → inbox. Có bản ghi thì bấm đọc chi tiết/phạm vi (GET); tự đánh dấu đọc một lần rồi đối chiếu POST key/If-Match → GET read=true. F5 và đổi actor không lẫn inbox. List rỗng/error phải khác nhau. Inbox có bản ghi không chứng minh đã giao thông báo ra ngoài.
-- Tạo FIELD: PM chọn dự án cụ thể → mở lại Report đã KEEP_NEW để GET đối chiếu → mở tạo phiếu, tự chọn Defect OPEN, Crew ACTIVE, phương pháp, loại đo, hạn và tuyến/set PUBLISHED. Tự bấm một lần, đối chiếu receipt TaskID → GET/list; đổi dự án/actor không nhận phản hồi cũ. Thiếu nguồn hoặc stale version/hash phải chặn trước POST, không tạo pending. Sau timeout/F5 giữ nguyên journal; receipt chỉ GET. Nhánh Survey chưa hoàn tất.
+- Tạo FIELD: PM chọn dự án cụ thể → mở lại Report đã KEEP_NEW để GET đối chiếu → mở tạo phiếu, tự chọn Defect OPEN, Crew ACTIVE, phương pháp, loại đo, hạn; tuyến lấy từ Defect, chỉ chọn set PUBLISHED nếu cần pin thêm phạm vi. Tự bấm một lần, đối chiếu receipt TaskID → GET/list; đổi dự án/actor không nhận phản hồi cũ. Thiếu nguồn hoặc stale version/hash phải chặn trước POST, không tạo pending. Sau timeout/F5 giữ nguyên journal; receipt chỉ GET. Nhánh Survey chưa hoàn tất.
 - FIELD: mở phiếu đo → task/history/submission → chọn ảnh → GET metadata VERIFIED/checksum → content. Zero/UNKNOWN giữ nguyên. PM chọn quyết định/lý do rồi tự xác nhận một lần; receipt/GET phải COMPLETED hoặc SUPPLEMENT_REQUIRED, Defect không tự VERIFIED. Sup không có form review. Timeout/F5 giữ key/body/version; có receipt chỉ GET;403/412 báo rõ, không thay key để thử.
+
+## Nghiệm thu runtime API079 và bước tiếp theo
+
+- Người dùng tự tạo phiếu `574b3f4c-0778-4564-baea-35398b298ce2` trên project321 `15d119fe-0c03-4e25-aa5d-95e97ddd881d`, Defect `44d56026-2d43-4022-8f89-536862bab349`, Crew `72f84201-a001-4000-8000-000000000008` (crew-a), loại đo1 DepressionDepth. Hạn 15/11/2026 13:30 Asia/Saigon, instructions giữ phương pháp PM chọn + ghi chú test.
+- POST079 req5525 trả201, key `ee8978cb-004b-4f2d-bac5-d51ce7712626`, correlation `3bf6210a-59fe-4cab-a267-2dcae9752de9`. Receipt + GET task5526/list5527 cùng task/project/Defect/Crew/type/dueAt và version `AAAAAAABR88=`. Status NewAssigned, MEASURE_ONLY; scope {}, CRS/set/layout/slab/map null. Không có submission.
+- Người dùng F5: navigation reload, GET list6167 trả200 cùng phiếu/version; UI còn hàng TSK-MEAS-574B; tổng POST079 vẫn1, không tạo journal mới. Bộ lọc trở về ALL. API079 runtime PASS, không suy readiness/review/notification delivered.
+- Đã kiểm private account metadata qua đọc cục bộ, chỉ in key/role: có crew-a và crew-b; không lưu/in mật khẩu. Web chỉ có route PM/Sup và source BE yêu cầu actor Crew được giao cho accept/start/submission. Không đăng nhập hoặc làm lệnh Crew thay PM.
+- Client Mobile hiện hữu tại FE_Drone_Mobile: auth/index.tsx nhập api/mock/auth; app/(crew)/tasks.tsx có CREW_TASKS hardcode; complete.tsx chỉ toast hoàn tất WO-118. Chưa tìm thấy caller canonical FIELD accept/start/submissions. Nghiệm thu Crew BLOCKED: cần client nối API thật, người dùng tự đăng nhập crew-a, accept task→start origin/version thật→submission số đo/evidence/proof thật. Không dựng submission để vượt bước.
+- Runtime b89a52f: CreateCaptured hỗ trợ type1/2/3/4; type4 Area dùng AREA/m², type1–3 LENGTH với mm/cm/m. Readiness so enum byte của submission với RequiredMeasurementType, còn kiểm UNKNOWN, vị trí và bằng chứng; giữ nguyên 1–4. Nhận xét 5/6 đã được người dùng hủy.
+- API084: bỏ IDs/checksum/GPS/EXIF/Reporter/ảnh mẫu ở modal và caller cũ. Case/Report GET200 và ảnh gốc JPEG 4114576 bytes của evidence cbc6ca2a… đã đọc được bằng service mới; checksum SHA256 được tính từ nội dung ảnh và ETag đối chiếu fileVersion. Chưa POST084. Chỉ source REPORTER được nối, DRONE chưa đủ caller nguồn.
+- Kiểm tra đợt tiếp: 78 nhóm tự động PASS (API0847, create9, read8, review4, list1, KEEP_NEW10, intake12, notification6, API02411); typecheck PASS; build PASS2081 modules khi chạy tuần tự với V8 pool1. Lượt build trước bị thiếu bộ nhớ native trong lúc chạy thêm test; không sửa config/build script của repo để né lỗi. Còn cảnh báo Tailwind và bundle lớn; diff-check PASS. Test API084 gồm component modal thực chạy hooks, không chỉ kiểm service.
+- Nghiệm thu API084: mở Tái sử dụng ảnh của phiếu trên → tự chọn bằng chứng Report, đọc ảnh/metadata thực → nhập căn cứ → tự xác nhận một lần. Đối chiếu DTO/If-Match/key, receipt→GET task + file VERIFIED/checksum; F5 mở lại modal đọc reference/GET, không POST mới. Đây là quyền dùng ảnh BEFORE, không phải xác nhận GPS nằm trong phạm vi hay kết quả đo READY. GET metadata không có decisionId; FE đối chiếu receipt đã lưu cùng file/state/checksum, không bịa GET decision.
 
 ## Toàn bộ method/path đã đối chiếu danh mục
 
 “đã có” là có code/caller đã xác định, không đồng nghĩa full runtime PASS. “vừa nối” chỉ phần đợt này. “bị chặn” kèm predicate/role/source; không đồng nghĩa yêu cầu BE mới. “chưa làm” là chưa rà đủ hoặc chưa triển khai trong đợt, không phải kết luận không có bất kỳ code nào. Bảng bao gồm local chưa commit; không gom local đó vào các commit mới.
 
-Tổng dòng: 275; đã có: 70, chưa làm: 180, bị chặn: 14, vừa nối: 11.
+Tổng dòng: 275; đã có: 69, chưa làm: 180, bị chặn: 14, vừa nối: 12.
 
 | Mã catalog | Method | Endpoint | Trạng thái | Bằng chứng / phạm vi |
 |---|---|---|---|---|
@@ -144,12 +160,12 @@ Tổng dòng: 275; đã có: 70, chưa làm: 180, bị chặn: 14, vừa nối: 
 | API-076 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/content` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-077 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/manifest` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-078 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks` | **đã có** | Đã gọi DB từ trước; đợt này sửa đi hết afterId/nextCursor, kiểm project/ID và không suy nguồn DRONE. |
-| API-079 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks` | **vừa nối** | fieldCreateCommands.ts + MeasurementsTab: REPORTER/PRE_MEASUREMENT từ KEEP_NEW đã GET xác nhận. PM chọn Crew ACTIVE, Defect/version, type1–4, hạn xử lý, tuyến/set PUBLISHED; preflight/hash, journal key/body, receipt→GET. Survey và thiếu reference bị chặn rõ; mutation runtime NOT_RUN. |
+| API-079 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks` | **vừa nối** | fieldCreateCommands.ts + MeasurementsTab: REPORTER/PRE_MEASUREMENT từ KEEP_NEW đã GET xác nhận. PM chọn Crew ACTIVE, Defect/version, type1–4, hạn xử lý. Tuyến bắt buộc từ Defect, CRS từ GET geometry; set/layout/slab/map tùy chọn. Scope JSON object {}; phương pháp giữ trong instructions. Runtime PASS task 574b3f4c-0778-4564-baea-35398b298ce2: 1 POST201→GET task/list200→F5 GET200, không POST mới; submission/readiness NOT_RUN. Survey và thiếu reference bị chặn rõ. |
 | API-080 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
 | API-081 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/accept` | **bị chặn** | Ngoài tác vụ Web PM/Sup: xác thực Android hoặc command Crew được giao; không cấp quyền bằng UI Web. |
 | API-082 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/assign` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | API-083 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/cancel` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-084 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence-reuse` | **đã có** | Callsite + caller hiện hữu: src/api/services/fieldTaskService.ts:420 (fieldTaskService.reuseEvidence); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
+| API-084 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence-reuse` | **vừa nối** | fieldEvidenceReuseCommands + modal hiện có: nguồn Report từ KEEP_NEW reference→GET Case/Report/evidence; ảnh gốc→SHA256; PM chọn ảnh/lý do; preflight task/version/source/hash→POST receipt→GET task/file metadata. Journal timeout/F5 giữ key/body/version; có receipt chỉ GET. DRONE/chưa có Report reference bị chặn rõ. Runtime nguồn/ảnh GET PASS; mutation NOT_RUN. |
 | API-085 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence/{fileId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
 | API-086 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/evidence/{fileId}/content` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
 | API-087 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}/geometry` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
