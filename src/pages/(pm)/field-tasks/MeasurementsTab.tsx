@@ -55,10 +55,17 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const [availableDefects, setAvailableDefects] = useState<FieldDefectOption[]>([])
 
   const [catalogError,setCatalogError]=useState('')
+  const [crewError,setCrewError]=useState('')
+  const [defectsLoading,setDefectsLoading]=useState(false)
   const [crewMembers,setCrewMembers]=useState<{id:string;name:string}[]>([])
   const [selectedCrewId,setSelectedCrewId]=useState('')
-  React.useEffect(()=>{const c=new AbortController();setAvailableDefects([]);setCrewMembers([]);setCatalogError('');setSelectedCrewId('')
-    if(!isSupervisor&&selectedProjectId!=='ALL')Promise.all([fieldCreateCommands.defects(selectedProjectId,c.signal),fieldCreateCommands.crews(selectedProjectId)]).then(([defects,crews])=>{if(!c.signal.aborted){setAvailableDefects(defects);setCrewMembers(crews)}}).catch(e=>{if(!c.signal.aborted)setCatalogError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)})
+  React.useEffect(()=>{const c=new AbortController();setAvailableDefects([]);setCrewMembers([]);setCatalogError('');setCrewError('');setSelectedCrewId('');setDefectsLoading(false)
+    const error=(e:any)=>e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message
+    if(!isSupervisor&&selectedProjectId!=='ALL'){
+      setDefectsLoading(true)
+      fieldCreateCommands.defects(selectedProjectId,c.signal).then(defects=>{if(!c.signal.aborted)setAvailableDefects(defects)}).catch(e=>{if(!c.signal.aborted)setCatalogError(`Không tải được Defect: ${error(e)}`)}).finally(()=>{if(!c.signal.aborted)setDefectsLoading(false)})
+      fieldCreateCommands.crews(selectedProjectId).then(crews=>{if(!c.signal.aborted)setCrewMembers(crews)}).catch(e=>{if(!c.signal.aborted)setCrewError(`Không tải được Crew: ${error(e)}`)})
+    }
     return()=>c.abort()
   },[selectedProjectId,isSupervisor])
 
@@ -716,6 +723,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
               {heldCreate&&<p role="status" className="break-all">Giữ yêu cầu tạo FIELD {heldCreate.key} cho Defect {heldCreate.input.defectId}; dùng đúng body/key đã lưu để đối chiếu.</p>}
               {(catalogError||createJournalError)&&<p role="alert" className="text-rose-700">{catalogError||createJournalError}</p>}
+              {crewError&&<p role="alert" className="text-rose-700">{crewError}</p>}
               <fieldset disabled={isSubmittingCreate||!!heldCreate} className="border-0 p-0 m-0 space-y-3.5 min-w-0">
               {/* Chọn khiếm khuyết nguồn từ đợt bay Drone / khảo sát */}
               <div className="flex flex-col bg-slate-50/80 p-3.5 rounded-xl border border-slate-200">
@@ -725,7 +733,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     <span>Chọn khiếm khuyết cần đo đạc</span>
                   </label>
                   <span className="text-[11px] font-medium text-slate-500">
-                    {availableDefects.length} hồ sơ trong tuyến
+                    {defectsLoading?'Đang tải Defect…':catalogError?'Lỗi tải Defect':`${availableDefects.length} hồ sơ trong tuyến`}
                   </span>
                 </div>
                 <select
@@ -735,7 +743,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 >
                   <option value="">Chọn Defect nguồn</option>
                   {availableDefects.length === 0 ? (
-                    <option value="">Không có khiếm khuyết nào trong tuyến cần đo đạc</option>
+                    <option value="">{defectsLoading?'Đang tải Defect…':catalogError?'Không tải được danh sách Defect':'Không có khiếm khuyết nào trong tuyến cần đo đạc'}</option>
                   ) : (
                     availableDefects.map((d) => {
                       const notOpen = d.status.toUpperCase()!=='OPEN'
