@@ -25,7 +25,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px] text-emerald-600">verified</span>
             <h3 className="font-sansation text-base font-bold text-slate-900">
-              Chi tiết hồ sơ kết xuất: {record.code}
+              Chi tiết hồ sơ kết xuất: {`Hồ sơ ${record.format_display}`}
             </h3>
           </div>
           <button
@@ -53,7 +53,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
             </div>
             <div>
               <span className="text-slate-500 block text-[11px]">Phạm vi dự án:</span>
-              <span className="font-mono font-medium text-slate-800">{record.scope_display}</span>
+              <span className="font-mono font-medium text-slate-800">{/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(record.scope_display) ? 'Phạm vi theo dự án đã chọn' : record.scope_display}</span>
             </div>
             <div>
               <span className="text-slate-500 block text-[11px]">Thời gian tạo yêu cầu:</span>

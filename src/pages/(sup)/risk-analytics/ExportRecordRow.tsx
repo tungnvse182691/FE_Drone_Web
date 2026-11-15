@@ -19,7 +19,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
   return (
     <tr className="hover:bg-slate-50 transition-colors">
       <td className="py-3 px-4 font-mono font-semibold text-[#8C6D1F]">
-        {record.code}
+        {`Hồ sơ ${record.format_display}`}
       </td>
 
       <td className="py-3 px-4">
@@ -34,7 +34,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
       </td>
 
       <td className="py-3 px-4 font-mono text-xs text-slate-800">
-        {record.scope_display}
+        {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(record.scope_display) ? 'Phạm vi theo dự án đã chọn' : record.scope_display}
       </td>
 
       <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">

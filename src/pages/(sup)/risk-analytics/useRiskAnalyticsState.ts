@@ -185,11 +185,12 @@ export function useRiskAnalyticsState() {
     // 2. Các phân đoạn suy thoái mặt đường rủi ro cao (RPT-06)
     const validSegments = rpt06Segments.filter((s) => s.coordinates && s.coordinates.length > 1)
     if (validSegments.length > 0) {
-      const features: GeoJSON.Feature[] = validSegments.map((s) => ({
+      const colors = ['#2563EB', '#0D9488', '#7C3AED', '#EA580C', '#0284C7', '#16A34A']
+      const features: GeoJSON.Feature[] = validSegments.map((s, idx) => ({
         type: 'Feature',
         properties: {
           id: s.id,
-          color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#64748B',
+          color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : colors[idx % colors.length],
           chainage: s.chainage_display
         },
         geometry: {
@@ -265,7 +266,7 @@ export function useRiskAnalyticsState() {
         })
       }
 
-      // Viền đứt nét màu trắng cho phân đoạn đang chọn
+      // Viền phát quang vàng đồng Hoàng Hải cho phân đoạn đang chọn
       if (!map.getLayer('risk-segments-selected')) {
         map.addLayer({
           id: 'risk-segments-selected',
@@ -277,10 +278,9 @@ export function useRiskAnalyticsState() {
           },
           filter: ['==', ['get', 'id'], activeSegmentId],
           paint: {
-            'line-color': '#FFFFFF',
+            'line-color': '#C9A227',
             'line-width': 8.5,
-            'line-opacity': 0.95,
-            'line-dasharray': [2, 1]
+            'line-opacity': 0.95
           }
         })
       } else {
@@ -301,10 +301,8 @@ export function useRiskAnalyticsState() {
       zoom: 1,
       minZoom: 0,
       maxZoom: 18,
-      pitch: 25
+      pitch: 0
     })
-
-    // Đã xóa NavigationControl top-right bị trùng với nút zoom custom ở góc dưới phải (bottom-right)
 
     map.on('load', () => {
       syncMapGeometry()
@@ -345,7 +343,7 @@ export function useRiskAnalyticsState() {
     }
   }, [syncMapGeometry])
 
-  // Render Markers on Map
+  // Render Markers on Map - Neo chính xác bằng anchor bottom, màu chuẩn Hoàng Hải
   useEffect(() => {
     const map = mapInstanceRef.current
     if (!map) return
@@ -353,42 +351,38 @@ export function useRiskAnalyticsState() {
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    rpt06Segments.filter(item=>item.coordinates.length>1).forEach((item) => {
+    rpt06Segments.filter(item=>item.coordinates.length>1 && !isNaN(item.gps_lng) && !isNaN(item.gps_lat)).forEach((item) => {
       const isSelected = item.id === activeSegmentId
       const el = document.createElement('div')
-      el.className = 'cursor-pointer transition-transform duration-200'
-      el.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)'
-
-      const badgeColor =
-        item.risk_level === 'CRITICAL'
-          ? 'bg-rose-600 border-rose-200 text-white'
-          : item.risk_level === 'WATCH'
-          ? 'bg-amber-600 border-amber-200 text-white'
-          : 'bg-blue-600 border-blue-200 text-white'
+      el.className = 'cursor-pointer select-none pointer-events-auto'
 
       el.innerHTML = `
-        <div class="flex flex-col items-center">
-          <div class="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md border ${badgeColor} whitespace-nowrap mb-1">
+        <div class="flex flex-col items-center transition-transform duration-200 ${isSelected ? 'scale-110' : 'scale-100'}">
+          <div class="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-md border ${
+            isSelected
+              ? 'bg-[#C9A227] border-white text-slate-900 ring-2 ring-[#C9A227]/40'
+              : 'bg-[#1E40AF] border-blue-300 text-white'
+          } whitespace-nowrap mb-0.5 transition-colors duration-200">
             ${item.chainage_start}
           </div>
-          <div class="w-4 h-4 rounded-full ${
-            item.risk_level === 'CRITICAL' ? 'bg-rose-500' : item.risk_level === 'WATCH' ? 'bg-amber-500' : 'bg-slate-500'
-          } border-2 border-white shadow-lg animate-pulse"></div>
+          <div class="w-3.5 h-3.5 rounded-full ${
+            isSelected ? 'bg-[#C9A227] ring-4 ring-[#C9A227]/30' : 'bg-[#1E40AF]'
+          } border-2 border-white shadow-md transition-colors duration-200"></div>
         </div>
       `
 
-      el.addEventListener('click', () => {
+      el.addEventListener?.('click', (e: any) => {
+        e?.stopPropagation?.()
         setActiveSegmentId(item.id)
       })
 
-      const marker = new maplibregl.Marker({ element: el })
+      const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([item.gps_lng, item.gps_lat])
         .addTo(map)
 
       markersRef.current.push(marker)
     })
-
-  }, [rpt06Segments, activeSegmentId, activeSegment])
+  }, [rpt06Segments, activeSegmentId])
 
   const fitCoordinates=useCallback((coordinates:[number,number][],maxZoom=16)=>{
     if(!mapInstanceRef.current||coordinates.length<2)return
