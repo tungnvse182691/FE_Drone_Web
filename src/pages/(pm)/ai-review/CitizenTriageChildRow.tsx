@@ -82,7 +82,7 @@ export const CitizenTriageChildRow: React.FC<CitizenTriageChildRowProps> = ({
       </td>
       <td className="py-2 px-2 text-center whitespace-nowrap">
         <span className="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-          {child.severity === 'CRITICAL'
+          {child.severity === 'UNKNOWN' ? 'Chưa xác định' : child.severity === 'CRITICAL'
             ? 'Khẩn cấp'
             : child.severity === 'HIGH'
             ? 'Cao'

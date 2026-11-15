@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { AccountsTab } from './system-control/AccountsTab'
@@ -28,9 +29,9 @@ export const PersonnelManagement: React.FC = () => {
   return (
     <div className="flex flex-col gap-5 max-w-[1720px] mx-auto w-full pb-16 bg-slate-50/50">
       {/* Toast thông báo - z-[9999] để luôn nổi trên tất cả modal */}
-      {notice && (
+      {notice && createPortal(
         <div className="fixed top-6 right-6 z-[9999] max-w-md bg-slate-900/95 backdrop-blur-md text-white px-5 py-4 rounded-2xl shadow-2xl flex items-start gap-3 text-xs font-semibold animate-in fade-in slide-in-from-top-4 border border-slate-700/80">
-          <div className="flex-1 leading-relaxed break-words" role={notice.kind === 'error' ? 'alert' : 'status'}><strong>{notice.kind === 'error' ? 'Không thể hoàn tất' : notice.kind === 'success' ? 'Đã hoàn tất' : notice.kind === 'warning' ? 'Cần kiểm tra' : 'Thông tin'}: </strong>{notice.message}</div>
+          <div className="flex-1 leading-relaxed break-words" role={notice.kind === 'error' ? 'alert' : 'status'}>{notice.kind!=='success'&&<strong>{notice.kind === 'error' ? 'Không thể hoàn tất' : notice.kind === 'warning' ? 'Cần kiểm tra' : 'Thông tin'}: </strong>}{notice.message}</div>
           <button
             type="button"
             onClick={() => setNotice(null)}
@@ -38,7 +39,7 @@ export const PersonnelManagement: React.FC = () => {
           >
             Đóng
           </button>
-        </div>
+        </div>,document.body
       )}
 
       {/* Header trang Quản lý nhân sự */}
@@ -212,6 +213,11 @@ export const PersonnelManagement: React.FC = () => {
         invitationBusy={p.invitationBusy}
         blockedReason=""
         assignmentBusy={p.primaryBusy}
+        assignmentBlockedReason={p.primaryBlockedReason}
+        assignmentDateError={p.primaryDateError}
+        assignmentReasonError={p.primaryReasonError}
+        currentPrimaryPmId={p.primarySnapshot?.current.userId}
+        currentPrimaryPmName={p.primarySnapshot?.current.displayName||undefined}
         assignmentMessage={p.primaryMessage}
         assignmentLabel={p.primaryPending?.conflict || p.primaryPending?.rejected ? p.primaryComparison ? 'Dùng snapshot mới' : 'Đọc lại để đối chiếu' : p.primaryPending?.receipt ? 'Đọc lại kết quả' : p.primaryPending ? 'Gửi lại đúng yêu cầu' : 'Xác nhận điều chuyển'}
         assignmentPending={!!p.primaryPending}

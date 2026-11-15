@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { apiClient } from '../../api/client'
+import { invitationAcceptService } from '../../api/services/invitationAcceptService'
 import { RoleCode } from '../../types/enums'
 import { ShieldCheck } from 'lucide-react'
 import { InvitationDemoState } from './accept-invitation/types'
@@ -18,20 +18,10 @@ export const AcceptInvitation: React.FC = () => {
   const [demoState, setDemoState] = useState<InvitationDemoState>('valid')
 
   // Form state
-  const [fullName, setFullName] = useState<string>(() => {
-    try {
-      return localStorage.getItem('pending_invite_name') || ''
-    } catch {
-      return ''
-    }
-  })
-  const [projectName] = useState(() => {
-    try {
-      return localStorage.getItem('pending_invite_project') || ''
-    } catch {
-      return ''
-    }
-  })
+  const [fullName, setFullName] = useState('')
+  const projectName = '' // No public invitation read endpoint has supplied this metadata.
+  const currentToken=useRef(activeToken);currentToken.current=activeToken
+  useEffect(()=>{setFullName('');setPassword('');setConfirmPassword('');setStatusMessage(null);setIsSubmitting(false)},[activeToken])
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -75,56 +65,34 @@ export const AcceptInvitation: React.FC = () => {
   const isFormValid = Boolean(fullName.trim()) && rules.length && rules.case && rules.special && isMatched && agreementChecked
 
   const handleFillStrongPassword = () => {
-    const strongPass = 'RoadGuard@2026Secure'
-    setPassword(strongPass)
-    setConfirmPassword(strongPass)
+    setStatusMessage('Người nhận tự nhập mật khẩu riêng; không dùng mật khẩu mẫu dùng chung.')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isFormValid) return
+    if (!isFormValid || isSubmitting) return
 
     if (!activeToken) {
       alert('Không tìm thấy token kích hoạt trong đường dẫn thư mời.')
       return
     }
 
+    const startedToken=activeToken
     setIsSubmitting(true)
     setStatusMessage(null)
 
     try {
-      // Gọi API SWG-087: POST /api/v1/invitations/accept
-      await apiClient.post(
-        '/invitations/accept',
-        {
-          invitationToken: activeToken,
-          displayName: fullName.trim(),
-          password: password,
-        },
-        {
-          headers: {
-            'Idempotency-Key': crypto.randomUUID(),
-          },
-        }
-      )
-
-      alert(`🎉 Kích hoạt tài khoản thành công cho [${fullName}]! Vui lòng đăng nhập với mật khẩu vừa tạo.`)
+      await invitationAcceptService.accept({invitationToken:activeToken,displayName:fullName,password})
+      if(currentToken.current!==startedToken)return
+      setPassword('');setConfirmPassword('')
+      alert('Đã chấp nhận lời mời. Vui lòng đăng nhập bằng tài khoản được mời để xác minh vai trò và phân công.')
       navigate('/login')
     } catch (err: any) {
-      const data = err?.response?.data
-      let errMsg = data?.detail || data?.title || err?.message || 'Không thể kích hoạt tài khoản'
-      if (data?.errors) {
-        const details = Object.entries(data.errors)
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
-          .join(' | ')
-        errMsg = `${errMsg} (${details})`
-      }
-      setStatusMessage(`❌ ${errMsg}`)
-      if (err?.response?.status === 404 || err?.response?.status === 410) {
-        setDemoState('expired')
-      }
+      if(currentToken.current!==startedToken)return
+      const code=err?.response?.data?.code
+      setStatusMessage(code==='identity_email_conflict'?'Email đã có tài khoản hoặc xung đột với lời mời. Hãy đối chiếu trước khi thử lại.':code==='not_found'?'Không tìm thấy lời mời hợp lệ. Kiểm tra lại đường dẫn từ email.':err?.response ? `Không chấp nhận được lời mời: HTTP ${err.response.status} ${code||''}. Chưa xác nhận kích hoạt tài khoản.` : err?.message||'Chưa rõ kết quả chấp nhận lời mời. Giữ nguyên nội dung, không bấm lại bằng yêu cầu mới.')
     } finally {
-      setIsSubmitting(false)
+      if(currentToken.current===startedToken)setIsSubmitting(false)
     }
   }
 
@@ -229,7 +197,7 @@ export const AcceptInvitation: React.FC = () => {
                     {statusMessage}
                   </div>
                 )}
-                <InvitationCard token={activeToken} projectName={projectName} />
+                <InvitationCard projectName={projectName} />
                 <AcceptForm
                   fullName={fullName}
                   setFullName={setFullName}

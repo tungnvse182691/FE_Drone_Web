@@ -4,6 +4,7 @@ import type { TriageCase } from './types'
 import { CaseReportImage } from './useCaseReportMedia'
 
 export interface DrawerMediaViewerProps {
+  sourceLabel?: string
   selectedCase: TriageCase
   detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
   setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
@@ -14,6 +15,7 @@ export interface DrawerMediaViewerProps {
 
 export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
   selectedCase,
+  sourceLabel = selectedCase.source_label,
   detailViewMode,
   setDetailViewMode,
   drawerMapContainerRef,
@@ -125,7 +127,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           ) : (
             <div className="absolute bottom-2.5 left-2.5 bg-slate-900/90 text-white px-3 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 shadow-md border border-white/20">
               <Icon name="engineering" size={13} className="text-amber-400" />
-              <span>{selectedCase.source === 'PATROL' ? 'Ghi nhận hiện trường Đội tuần tra' : selectedCase.source === 'CITIZEN' ? 'Phản ánh từ người dân' : 'Chưa xác định nguồn tiếp nhận'}</span>
+              <span>{sourceLabel}</span>
             </div>
           )}
         </div>

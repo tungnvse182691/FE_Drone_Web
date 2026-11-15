@@ -113,10 +113,10 @@ export interface ChangePasswordRequest {
 export async function changePasswordApi(
   payload: ChangePasswordRequest,
   csrfToken: string,
-  assertCurrent: () => void
-): Promise<void> {
-  const idempotencyKey = crypto.randomUUID()
-  await apiClient.post(
+  assertCurrent: () => void,
+  idempotencyKey: string = crypto.randomUUID()
+): Promise<number> {
+  const response = await apiClient.post(
     '/auth/change-password',
     payload,
     {
@@ -130,5 +130,6 @@ export async function changePasswordApi(
       },
     }
   )
+  return response.status
 }
 

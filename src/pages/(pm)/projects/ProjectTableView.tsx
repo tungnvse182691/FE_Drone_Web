@@ -9,6 +9,7 @@ interface ProjectTableViewProps {
   isSupervisor?: boolean
   onNavigateDetail: (projectId: string) => void
   onOpenCloseModal?: (prj: HubProject) => void
+  onOpenEditModal?: (prj: HubProject) => void
 }
 
 export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
@@ -16,7 +17,8 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
   totalProjectsCount,
   isSupervisor,
   onNavigateDetail,
-  onOpenCloseModal
+  onOpenCloseModal,
+  onOpenEditModal
 }) => {
   return (
     <>
@@ -93,6 +95,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
+                      {isSupervisor&&onOpenEditModal&&<button type="button" onClick={()=>onOpenEditModal(prj)} className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 font-semibold transition cursor-pointer text-xs">Sửa dự án</button>}
                       {prj.status === 'CLOSED' ? (
                         <button
                           type="button"

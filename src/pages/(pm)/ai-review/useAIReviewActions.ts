@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react'
+import { caseNoDefectService } from '../../../api/services/caseNoDefectService'
+import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { TriageCase } from './types'
 import { useAIReviewSurveyActions } from './useAIReviewSurveyActions'
@@ -39,6 +40,10 @@ export const useAIReviewActions = ({
 }: UseAIReviewActionsProps) => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const epoch = useAuthStore.getState().authEpoch
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const isCurrent = () => mounted.current && useAuthStore.getState().authEpoch === epoch
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
 
@@ -64,64 +69,27 @@ export const useAIReviewActions = ({
   })
 
   // Handlers for Triage Decision Actions
-  const handleVerifyDefect = async (c?: TriageCase) => {
-    const target = c || selectedCase
-    const isFieldIntake = target.source === 'CITIZEN' || target.source === 'PATROL'
-    const outcome = isFieldIntake ? 'NEEDS_EVIDENCE' : 'CONFIRMED'
-
-    const updates: Partial<TriageCase> = {
-      status: outcome === 'NEEDS_EVIDENCE' ? 'AWAITING_EVIDENCE' : 'VERIFIED',
-      status_label: outcome === 'NEEDS_EVIDENCE' ? 'Chờ đo đạc hiện trường' : 'Đã xác minh (Verified)',
-      conclusion: outcome === 'NEEDS_EVIDENCE' ? 'NEEDS_EVIDENCE' : 'DEFECT_FOUND',
-      conclusion_reason: currentNotes || (outcome === 'NEEDS_EVIDENCE'
-        ? 'Phản ánh hiện trường hợp lệ. Đã duyệt yêu cầu đo đạc thực tế (Dài x Rộng x Sâu) để lập hồ sơ kỹ thuật.'
-        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.'),
-      pm_notes: currentNotes || (outcome === 'NEEDS_EVIDENCE'
-        ? 'Đã duyệt yêu cầu đo đạc hiện trường.'
-        : 'Đã xác minh hư hỏng đạt tiêu chí kích hoạt sửa chữa.')
-    }
-
-    try {
-      const res = await triageService.concludeCase(target.id, {
-        outcome,
-        reason: updates.conclusion_reason,
-        version: target.version
-      })
-
-      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
-      setCases((prev) =>
-        prev.map((item) =>
-          item.id === target.id || item.code === target.code
-            ? {
-                ...item,
-                ...updates,
-                version: res.version || item.version
-              }
-            : item
-        )
-      )
-
-      showToast(
-        outcome === 'NEEDS_EVIDENCE'
-          ? `Đã duyệt hợp lệ hồ sơ [${target.code}]! Đã chuyển sang phân hệ Nhiệm vụ đo đạc hiện trường.`
-          : `Đã xác minh hợp lệ hồ sơ [${target.code}]! Đã tạo khiếm khuyết OPEN sẵn sàng đưa vào phương án sửa chữa.`
-      )
-    } catch (e: any) {
-      console.error('❌ Lỗi khi gửi xác minh tới backend:', e)
-      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi xác minh tới backend'
-      showToast(`❌ Lỗi Backend: ${errorMsg}`)
-    }
+  const handleVerifyDefect = async (_c?: TriageCase) => {
+    showToast('Chưa đủ nguồn Defect đã xác minh và bằng chứng để kết luận có lỗi. Chưa gửi lệnh CONFIRMED.')
   }
 
   const handleOpenNoDefectModal = (c?: TriageCase) => {
     const target = c || selectedCase
+    if (isSupervisor || !target.project_id || target.case_status !== 'OPEN' && !caseNoDefectService.pending(target.id)) { showToast('Chỉ PM được kết luận Case OPEN đã phân công.'); return }
     setTargetTriageCase(target)
-    setNoDefectReason(
-      target.conclusion_reason ||
-        'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
-    )
+    setNoDefectReason(caseNoDefectService.pending(target.id)?.body.reason || '')
     setIsNoDefectModalOpen(true)
   }
+
+  useEffect(() => {
+    if (isSupervisor || !selectedCase.id || !selectedCase.project_id) return
+    try {
+      const held = caseNoDefectService.pending(selectedCase.id)
+      if (held?.projectId === selectedCase.project_id) {
+        setTargetTriageCase(selectedCase); setNoDefectReason(held.body.reason); setIsNoDefectModalOpen(true)
+      }
+    } catch (e) { showToast((e as Error).message) }
+  }, [selectedCase.id, epoch])
 
   const handleRejectDefect = () => {
     handleOpenNoDefectModal(selectedCase)
@@ -138,115 +106,35 @@ export const useAIReviewActions = ({
     )
   }
 
-  const handleConfirmNoDefect = async () => {
-    const finalReason =
-      noDefectReason.trim() ||
-      'Hình ảnh phản ánh bóng râm/vết nước mặt đường, không phải khiếm khuyết kết cấu.'
-    const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
-    const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
+  const selectedRef = useRef(selectedCase.id); selectedRef.current = selectedCase.id
+  const handleConfirmNoDefect = async (evidenceId?: string) => {
+    const target = targetTriageCase || selectedCase, currentId = selectedCase.id
+    if (target.id !== currentId) throw new Error('Hồ sơ đang chọn đã thay đổi; mở lại đúng Case trước khi kết luận.')
+    const pending = caseNoDefectService.pending(target.id)
+    const result = await caseNoDefectService.request(target.id, pending?.projectId || target.project_id || '', pending?.body.reason || noDefectReason, pending?.version || target.etag || target.version || '', pending?.body.evidenceIds[0] || evidenceId || '')
+    if (!isCurrent() || selectedRef.current !== currentId) return
+    setCases(prev => prev.map(c => c.id === result.record.id ? {...result.record, project_name: c.project_name} : c))
+    setIsNoDefectModalOpen(false)
+    setIsDetailModalOpen?.(false)
+    showToast(result.verified ? 'Đã GET xác nhận kết luận Không có lỗi. Chưa công bố cho người phản ánh.' : 'Đã đọc trạng thái mới nhất; không gửi lại kết luận cũ.')
+  }
 
-    const updates: Partial<TriageCase> = {
-      status: 'REJECTED',
-      status_label: 'Báo sai (No Defect)',
-      conclusion: 'NO_DEFECT',
-      conclusion_reason: finalReason,
-      pm_notes: `[NO_DEFECT - BR-39] ${finalReason}`
-    }
-
-    try {
-      const res = await triageService.concludeCase(targetId, {
-        outcome: 'NO_DEFECT',
-        reason: finalReason,
-        version: targetTriageCase?.version || selectedCase.version
-      })
-
-      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
-      setCases((prev) =>
-        prev.map((c) =>
-          c.id === targetId || c.code === targetCode
-            ? {
-                ...c,
-                ...updates,
-                version: res.version || c.version
-              }
-            : c
-        )
-      )
-
-      // Đóng modal lý do từ chối và đóng luôn modal/drawer thẩm định để trả về danh sách
-      setIsNoDefectModalOpen(false)
-      setIsDetailModalOpen?.(false)
-
-      showToast(
-        `Đã ghi nhận kết luận Từ chối (Không có khiếm khuyết) cho hồ sơ [${targetCode}]!`
-      )
-    } catch (e: any) {
-      console.error('❌ Lỗi khi gửi kết luận tới backend:', e)
-      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
-      showToast(`❌ Lỗi Backend: ${errorMsg}`)
-    }
+  const handleReviewNoDefect = async () => {
+    const target = targetTriageCase || selectedCase, id = selectedCase.id
+    if (target.id !== id) throw new Error('Hồ sơ đang chọn đã thay đổi; chưa đối chiếu lệnh khác Case.')
+    const fresh = await caseNoDefectService.reviewRejected(target.id, target.project_id || '')
+    if (!isCurrent() || selectedRef.current !== id) return
+    setTargetTriageCase(fresh)
+    setCases(prev => prev.map(c => c.id === fresh.id ? {...fresh, project_name: c.project_name} : c))
   }
 
   // OUT_OF_SCOPE Conclusion
   const handleConclusionOutOfScope = async (c?: TriageCase) => {
-    const target = c || selectedCase
-    const updates: Partial<TriageCase> = {
-      status: 'REJECTED',
-      status_label: 'Ngoài phạm vi',
-      conclusion: 'OUT_OF_SCOPE',
-      conclusion_reason: 'Vị trí nằm ngoài phạm vi đoạn đường thuộc hợp đồng bảo hành của Hoàng Hải.',
-      pm_notes:
-        '[OUT_OF_SCOPE] Vị trí nằm ngoài phạm vi bảo hành. Đã chuyển hồ sơ sang cơ quan quản lý đường bộ địa phương.'
-    }
-
-    try {
-      const res = await triageService.concludeCase(target.id, {
-        outcome: 'NO_DEFECT',
-        reason: updates.conclusion_reason,
-        version: target.version
-      })
-
-      // Cập nhật state sau khi Backend CSDL thật đã ghi nhận thành công
-      setCases((prev) =>
-        prev.map((item) =>
-          item.id === target.id || item.code === target.code
-            ? {
-                ...item,
-                ...updates,
-                version: res.version || item.version
-              }
-            : item
-        )
-      )
-
-      // Đóng modal/drawer thẩm định và trả về danh sách
-      setIsDetailModalOpen?.(false)
-
-      showToast(`Đã phân loại hồ sơ [${target.code}] là NGOÀI PHẠM VI BẢO HÀNH (OUT_OF_SCOPE).`)
-    } catch (e: any) {
-      console.error('❌ Lỗi khi gửi kết luận ngoài phạm vi tới backend:', e)
-      const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi gửi kết luận tới backend'
-      showToast(`❌ Lỗi Backend: ${errorMsg}`)
-    }
+    showToast('Chưa có contract kết luận OUT_OF_SCOPE hoặc chuyển cơ quan khác. Chưa gửi lệnh; không thay bằng NO_DEFECT.')
   }
 
-  // Reset conclusion to PENDING for re-evaluating
-  const handleResetConclusion = (c?: TriageCase) => {
-    const target = c || selectedCase
-    setCases((prev) =>
-      prev.map((item) =>
-        item.id === target.id
-          ? {
-              ...item,
-              status: 'PENDING',
-              status_label: 'Chờ thẩm định',
-              conclusion: null,
-              conclusion_reason: undefined
-            }
-          : item
-      )
-    )
-    showToast(`Đã mở lại trạng thái chờ thẩm định cho hồ sơ [${target.code}].`)
+  const handleResetConclusion = () => {
+    showToast('Chưa có command mở lại kết luận Case trong contract. Không thay đổi trạng thái server; hãy bổ sung bằng chứng theo quy trình được phép.')
   }
 
   // Publish Public Result 
@@ -278,7 +166,7 @@ export const useAIReviewActions = ({
         reportIds
       })
 
-      if (useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
+      if (!isCurrent() || useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
       applyCaseReadback(result)
       setTargetTriageCase(result)
 
@@ -288,49 +176,14 @@ export const useAIReviewActions = ({
       setIsPublishModalOpen(false)
     } catch (e: any) {
       console.error('❌ Lỗi khi xuất bản kết quả tới backend:', e)
-      if (useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
+      if (!isCurrent() || useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return
       const errorMsg = e?.response?.data?.message || e?.message || 'Lỗi khi xuất bản kết quả tới backend'
       showToast(`❌ Lỗi Backend: ${errorMsg}`)
     } finally { publishing.current = false }
   }
 
   const handleExecuteMerge = () => {
-    const selectedDups = selectedCase.cluster_duplicates?.filter((d) => d.selected) || []
-    if (selectedDups.length === 0) {
-      showToast('Vui lòng chọn ít nhất 1 hồ sơ trùng lặp để gộp!')
-      return
-    }
-
-    const dupCodes = selectedDups.map((d) => d.code)
-    setCases((prev) =>
-      prev.map((c) => {
-        if (dupCodes.includes(c.code)) {
-          return {
-            ...c,
-            status: 'MERGED',
-            status_label: 'Đã gộp trùng',
-            master_case_id: selectedCase.id,
-            pm_notes: `Đã tự động gộp dữ liệu vào hồ sơ chính ${selectedCase.code}`
-          }
-        }
-        if (c.id === selectedCase.id) {
-          const updatedDups = (c.cluster_duplicates || []).map((dup) =>
-            dupCodes.includes(dup.code) ? { ...dup, selected: false, is_merged: true } : dup
-          )
-          const updatedLinked = Array.from(new Set([...(c.linked_report_ids || []), ...dupCodes]))
-          return {
-            ...c,
-            linked_report_ids: updatedLinked,
-            cluster_duplicates: updatedDups,
-            pm_notes: `${c.pm_notes ? c.pm_notes + '\n' : ''}[GỘP CỤM SPATIAL] Đã tích hợp bằng chứng từ ${dupCodes.join(', ')}`
-          }
-        }
-        return c
-      })
-    )
-    setExpandedMasterIds((prev) => Array.from(new Set([...prev, selectedCase.id])))
-    setIsMergeModalOpen(false)
-    showToast(`Gộp thành công ${selectedDups.length} phản ánh lân cận vào hồ sơ gốc [${selectedCase.code}]!`)
+    showToast('Gợi ý trùng không tự gộp hồ sơ. Hãy chọn các Case và dùng Liên kết báo cáo để gửi command có version hợp lệ.')
   }
 
   return {
@@ -361,6 +214,7 @@ export const useAIReviewActions = ({
     handleNavigateFastTrack,
     handleOpenNoDefectModal,
     handleConfirmNoDefect,
+    handleReviewNoDefect,
     handleConclusionOutOfScope,
     handleResetConclusion,
     handleOpenPublishModal,

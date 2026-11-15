@@ -60,7 +60,7 @@ export function useAlignmentState() {
 
   // Hàm nạp gói tim tuyến chính thức trực tiếp từ CSDL Backend Candidate3 (API-104)
   const geometryRead = useGeometryReadModel(selectedProjectId)
-  const scopeKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}`
+  const scopeKey = `${authEpoch}@${user?.id || ''}:${selectedProjectId}:${geometryRead.draftId}:${geometryRead.roadReference}:${geometryRead.versionReference}${geometryRead.newSectionDraft?':new:'+geometryRead.newSectionDraft:''}`
   const [editorScope, setEditorScope] = useState(scopeKey)
   const currentScope = useRef(scopeKey); currentScope.current = scopeKey
   const branchGeneration = useRef(0), branchVersion = branchGeneration.current
@@ -458,9 +458,9 @@ export function useAlignmentState() {
   useEffect(() => {
     const context = geometryRead.context
     if (context?.projectId !== selectedProjectId) return
-    const section = geometryRead.draftId ? geometryRead.draft?.data.roadSectionId : (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
+    const section = geometryRead.draftId ? geometryRead.draft?.data.roadSectionId : geometryRead.newSectionDraft || (context.roadSections.length === 1 ? context.roadSections[0].roadSectionId : '')
     if (section) draftWorkflow.setForm(old => old.sectionId ? old : { ...old, sectionId: section })
-  }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, selectedProjectId])
+  }, [geometryRead.context, geometryRead.draft?.data.roadSectionId, geometryRead.newSectionDraft, selectedProjectId])
   useEffect(() => {
     const draft = geometryRead.draft?.data
     if (!draft || draft.id !== geometryRead.draftId || draft.projectId !== selectedProjectId || editorDraft.current === `${draft.id}:${draft.status}` || localDraftDirty && draft.status !== 'SUBMITTED' || draftWorkflow.busy || draftWorkflow.conflict) return

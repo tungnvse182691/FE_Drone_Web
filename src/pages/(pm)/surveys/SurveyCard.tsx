@@ -18,9 +18,9 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false)
 
-  const isCompleted = survey.status === 'BASELINE_LOCKED'
+  const isCompleted = survey.serverRecordKind ? survey.serverStatus === 'COMPLETED' : survey.status === 'BASELINE_LOCKED'
   const isNeedReview = survey.status === 'PENDING_AI_REVIEW'
-  const isScheduled = survey.status === 'SCHEDULED'
+  const isScheduled = survey.serverRecordKind ? survey.serverRecordKind === 'PLAN' : survey.status === 'SCHEDULED'
 
   // Bảng màu viền / thanh gradient / chấm / nền tint theo spec đã duyệt
   const styleConfig = (() => {
@@ -131,28 +131,31 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
               color: styleConfig.badgeText
             }}
           >
-            {styleConfig.badgeLabel}
+            {survey.serverRecordKind ? survey.status_label : styleConfig.badgeLabel}
           </span>
         </div>
 
         {/* Hàng 2: Meta (Tuyến • Phi công phụ trách • Ngày bay) — Không icon thừa */}
         <div className="text-xs text-slate-500 font-medium flex items-center flex-wrap gap-x-2 gap-y-1">
           <span className="text-slate-800 font-semibold">{survey.project_name}</span>
-          <span>•</span>
+          {survey.serverRecordKind ? <>
+            {survey.pilot_name && <span>Operator: {pilotClean}</span>}
+            {survey.flight_date && <span>Lịch dự kiến: {survey.flight_date}</span>}
+          </> : <><span>•</span>
           <span className="font-mono text-slate-700">{survey.start_km} → {survey.end_km}</span>
           <span>•</span>
           <span>Phi công thiết bị bay: {pilotClean}</span>
           <span>•</span>
-          <span>{survey.flight_date}</span>
+          <span>{survey.flight_date}</span></>}
         </div>
 
         {/* Hàng 3: Mô tả ngắn (độ phủ ảnh %, số khiếm khuyết, số ảnh) */}
-        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-          Nhiệm vụ bay khảo sát trắc địa mặt đường • Ghi nhận {survey.ai_defects_count} khiếm khuyết AI • Thiết bị: {survey.drone_model}.
+        <p role={survey.read_error ? 'alert' : undefined} className="text-xs text-slate-600 leading-relaxed break-words">
+          {survey.serverRecordKind ? survey.read_error || survey.scope_summary : <>Nhiệm vụ bay khảo sát trắc địa mặt đường • {Number.isFinite(survey.ai_defects_count) ? `Ghi nhận ${survey.ai_defects_count} khiếm khuyết AI` : 'Chưa đọc được số khiếm khuyết AI'} • Thiết bị: {survey.drone_model}.</>}
         </p>
 
         {/* Khối chỉ số nghiệp vụ thực tế */}
-        <div className="flex items-center gap-2 flex-wrap pt-0.5">
+        {!survey.serverRecordKind && <div className="flex items-center gap-2 flex-wrap pt-0.5">
           <span
             className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
               survey.status === 'BASELINE_LOCKED'
@@ -170,7 +173,7 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
               ? 'Đã thẩm định 100%'
               : survey.status === 'PENDING_AI_REVIEW'
               ? 'Chờ thẩm định AI'
-              : 'Chờ thực hiện bay'}
+              : 'Chưa cập nhật trạng thái bay'}
           </span>
 
           {(survey.approved_count || 0) > 0 ? (
@@ -183,20 +186,20 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
             </span>
           ) : (
             <span className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
-              0 phát hiện AI
+              {Number.isFinite(survey.ai_defects_count) ? `${survey.ai_defects_count} phát hiện AI` : 'Chưa cập nhật phát hiện AI'}
             </span>
           )}
-        </div>
+        </div>}
 
         {/* 3. Đường kẻ phân cách */}
         <div className="border-t border-slate-100 pt-3 flex items-center justify-between gap-3 mt-auto">
           {/* Mã đợt bay monospace */}
           <span className="font-mono font-bold text-xs text-slate-800 tracking-wider">
-            {survey.code}
+            {survey.serverRecordKind ? survey.serverRecordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát' : survey.code}
           </span>
 
           {/* Nút hành động */}
-          {isScheduled ? (
+          {survey.serverRecordKind ? <button type="button" onClick={e=>{e.stopPropagation();onOpenSimulator(survey)}} className="px-4 py-2 rounded-xl bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95">Xem chi tiết</button> : isScheduled ? (
             <button
               type="button"
               onClick={(e) => {

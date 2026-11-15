@@ -28,11 +28,16 @@ export async function readPrimaryPmSnapshot(projectId: string, targetId: string,
   if (!recovery && current.userId === targetId) throw new PersonnelUiError('Người được chọn đã là PM chính hiện tại.')
   return { projectId, targetId, current, target }
 }
+export function primaryPmInputIssue(snapshot: PrimarySnapshot | null, date: string, reason: string, now = new Date()): string {
+  if (!snapshot || !uuid(snapshot.projectId) || !uuid(snapshot.targetId) || snapshot.target.account.id !== snapshot.targetId || !/^\d{4}-\d{2}-\d{2}$/.test(snapshot.current?.validFrom || '') || !snapshot.current.membershipId || snapshot.current.userId === snapshot.targetId || !version(snapshot.current?.membershipVersion) || snapshot.target?.wireRole !== 'PM' || snapshot.target.account.status !== 'ACTIVE') return 'Chưa đọc được snapshot PM ACTIVE và phiên bản phân công hợp lệ.'
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== now.toISOString().slice(0, 10)) return 'Lệnh mới chỉ nhận ngày UTC hiện tại; không hỗ trợ đặt lịch tương lai.'
+  if (date <= snapshot.current.validFrom) return 'Ngày bàn giao phải sau ngày bắt đầu của PM chính hiện tại; không tự đổi ngày.'
+  if (!reason.trim() || reason.trim().length > 1000) return 'Cần lý do Sup nhập, từ 1 đến 1000 ký tự.'
+  return ''
+}
 export function primaryPmBody(snapshot: PrimarySnapshot, date: string, reason: string, now = new Date()): Body {
-  if (!snapshot || !uuid(snapshot.projectId) || !uuid(snapshot.targetId) || snapshot.target.account.id !== snapshot.targetId || !/^\d{4}-\d{2}-\d{2}$/.test(snapshot.current?.validFrom || '') || !snapshot.current.membershipId || snapshot.current.userId === snapshot.targetId || !version(snapshot.current?.membershipVersion) || snapshot.target?.wireRole !== 'PM' || snapshot.target.account.status !== 'ACTIVE') throw new PersonnelUiError('Thiếu snapshot PM/membershipVersion hợp lệ.')
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== now.toISOString().slice(0, 10)) throw new PersonnelUiError('Lệnh mới chỉ nhận ngày UTC hiện tại; không hỗ trợ đặt lịch tương lai.')
-  if (date <= snapshot.current.validFrom) throw new PersonnelUiError('Ngày bàn giao phải sau validFrom của PM chính hiện tại; không tự đổi ngày.')
-  if (!reason.trim() || reason.trim().length > 1000) throw new PersonnelUiError('Cần lý do Sup nhập, từ 1 đến 1000 ký tự.')
+  const issue=primaryPmInputIssue(snapshot,date,reason,now)
+  if(issue)throw new PersonnelUiError(issue)
   return { primaryProjectManagerUserId: snapshot.targetId, effectiveFrom: date, reason: reason.trim(), expectedCurrentMembershipRowVersion: snapshot.current.membershipVersion!, operationId: crypto.randomUUID() }
 }
 export async function savePrimaryPm(snapshot?: PrimarySnapshot, date = '', reason = '') {

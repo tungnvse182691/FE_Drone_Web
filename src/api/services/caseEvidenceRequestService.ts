@@ -19,6 +19,10 @@ const journalKey = (caseId: string) => `rg_case_evidence_${useAuthStore.getState
 const etag = (value: string) => value.startsWith('"') ? value : `"${value}"`
 
 export const caseEvidenceRequestService = {
+  pendingConclusionReason(caseId: string): string {
+    return sessionStorage.getItem(`rg_case_conclusion_${useAuthStore.getState().user?.id}_${caseId}`)
+      ? 'Còn lệnh kết luận trước chưa đối chiếu. Mở Báo sai (Không có lỗi) để đọc lại kết quả; chưa tạo yêu cầu bổ sung mới.' : ''
+  },
   pending(caseId: string): EvidenceIntent | null {
     const saved = sessionStorage.getItem(journalKey(caseId))
     if (!saved) return null
@@ -32,7 +36,8 @@ export const caseEvidenceRequestService = {
     const key = journalKey(caseId), session = getCaseSessionKey()
     const active = () => { if (session !== getCaseSessionKey()) throw new Error('Phiên đã thay đổi; bỏ kết quả yêu cầu cũ.') }
     const previous = this.pending(caseId)
-    if (!previous && sessionStorage.getItem(`rg_case_conclusion_${useAuthStore.getState().user?.id}_${caseId}`)) throw new Error('Còn lệnh kết luận trước chưa đối chiếu; giữ nguyên lệnh đó, chưa tạo yêu cầu bổ sung mới.')
+    const conclusionBlock = this.pendingConclusionReason(caseId)
+    if (!previous && conclusionBlock) throw new Error(conclusionBlock)
     const command: EvidenceIntent = previous || { key: crypto.randomUUID(), projectId, version: etag(version), body: { outcome: 'NEEDS_EVIDENCE', reason: reason.trim(), evidenceIds: [], defectIds: [] } }
     if (command.projectId !== projectId || command.version !== etag(version) || command.body.reason !== reason.trim()) throw new Error('Yêu cầu trước chưa đối chiếu xong; giữ nguyên key, lý do và phiên bản.')
     if (command.rejected) throw new Error('Yêu cầu đã bị từ chối; đọc lại và chủ động đối chiếu trước khi gửi yêu cầu mới.')

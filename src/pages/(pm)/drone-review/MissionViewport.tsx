@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import { useAuthStore } from '../../../store/authStore'
+import { apiClient } from '../../../api/client'
+import React, { useState, useEffect } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AIDetectionItem } from './types'
 
@@ -40,6 +42,24 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
     setImageErrorMap((prev) => ({ ...prev, [id]: true }))
   }
 
+  const epoch = useAuthStore(state => state.authEpoch)
+  const fileId = activeItem?.frameFileId
+  const fileVersion = activeItem?.frameFileVersion
+  const imageKey = `${epoch}:${fileId}:${fileVersion}`
+  const [frame, setFrame] = useState<{ key: string; url: string } | null>(null)
+  const [frameError, setFrameError] = useState('')
+  useEffect(() => {
+    const controller = new AbortController(); let objectUrl = ''
+    setFrame(null); setFrameError('')
+    if (!fileId || !fileVersion) return () => controller.abort()
+    apiClient.get<Blob>(`/files/${encodeURIComponent(fileId)}/content`, {responseType:'blob',signal:controller.signal}).then(response => {
+      if (controller.signal.aborted) return
+      if (!['image/jpeg','image/png'].includes(response.data.type.split(';')[0])) throw new Error('Không phải ảnh')
+      objectUrl = URL.createObjectURL(response.data); setFrame({key:imageKey,url:objectUrl})
+    }).catch(() => { if (!controller.signal.aborted) setFrameError('Không thể tải ảnh nguồn trong phiên và quyền hiện tại.') })
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl) }
+  }, [epoch, fileId, fileVersion])
+  const frameUrl = frame?.key === imageKey ? frame.url : ''
   const isCurrentImgError = activeItem ? imageErrorMap[activeItem.id] : false
 
   return (
@@ -59,58 +79,14 @@ export const MissionViewport: React.FC<MissionViewportProps> = ({
         </div>
       ) : activeItem ? (
         <>
-          {/* Lớp nền bề mặt thảm bê tông nhựa (Asphalt Road Surface Fallback) - Không bao giờ bị đen kịt */}
-          <div className="absolute inset-0 bg-[#2b2e35] overflow-hidden pointer-events-none">
-            {/* Vân hạt cốt liệu đá bê tông nhựa C19 */}
-            <div
-              className="absolute inset-0 opacity-40"
-              style={{
-                backgroundImage:
-                  'radial-gradient(#475569 1px, transparent 1px), radial-gradient(#1e293b 1px, transparent 1px)',
-                backgroundSize: '16px 16px',
-                backgroundPosition: '0 0, 8px 8px'
-              }}
-            ></div>
-
-            {/* Vạch sơn tim đường phản quang trắc địa màu vàng */}
-            <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-3 border-r-4 border-dashed border-amber-400/50"></div>
-
-            {/* Vạch sơn mép lề đường màu trắng */}
-            <div className="absolute top-0 bottom-0 left-12 w-1.5 bg-white/40"></div>
-            <div className="absolute top-0 bottom-0 right-12 w-1.5 bg-white/40"></div>
-
-            {/* Mô phỏng hình học khiếm khuyết bên trong Bounding Box khi ảnh chưa tải */}
-            {isCurrentImgError && activeItem.bbox && (
-              <div
-                style={{
-                  top: activeItem.bbox?.top || '30%',
-                  left: activeItem.bbox?.left || '30%',
-                  width: activeItem.bbox?.width || '30%',
-                  height: activeItem.bbox?.height || '30%'
-                }}
-                className="absolute bg-slate-950/60 rounded flex items-center justify-center border border-white/15"
-              >
-                <div className="text-center p-2">
-                  <div className="w-8 h-8 mx-auto mb-1 rounded-full bg-slate-800/80 border border-slate-600 flex items-center justify-center text-amber-400">
-                    <Icon name="road" size={18} />
-                  </div>
-                  <span className="text-[10px] text-slate-300 block font-mono">Bề mặt hư hỏng {activeItem.type}</span>
-                  <span className="text-[9px] text-slate-400">{activeItem.metrics?.area || activeItem.metrics?.length || ''}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
+          {(!frameUrl || isCurrentImgError) && <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 text-slate-400 gap-2"><Icon name="image_not_supported" size={32} /><p className="text-xs">{frameError || 'Chưa có bằng chứng hình ảnh được phép đọc.'}</p></div>}
           {/* Ảnh trích xuất không ảnh Drone thực tế (Nếu load thành công sẽ phủ lên nền) */}
-          {!isCurrentImgError && (
+          {!isCurrentImgError && frameUrl && (
             <img
               key={activeItem.id}
               alt={`Khung hình trích xuất mặt đường ${activeItem.code}`}
               className="w-full h-full object-cover transition-opacity duration-300 animate-in fade-in"
-              src={
-                DEFECT_IMAGE_MAP[activeItem.id] ||
-                'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80'
-              }
+              src={frameUrl}
               onError={() => handleImageError(activeItem.id)}
             />
           )}

@@ -245,7 +245,9 @@ export const DroneSimulatorModal: React.FC<DroneSimulatorModalProps> = ({
             {simStep === 'IDLE' && (
               <button
                 type="button"
-                onClick={onRunSimulation}
+                disabled
+              title="Tiến độ chuyến bay phải được xác nhận bởi dữ liệu máy chủ; chưa tích hợp nhận tiến độ tại đây."
+              onClick={onRunSimulation}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer active:scale-95"
               >
                 <Icon name="play_arrow" size={16} className="text-white" />

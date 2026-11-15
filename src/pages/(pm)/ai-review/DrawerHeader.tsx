@@ -3,6 +3,7 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerHeaderProps {
+  sourceLabel?: string
   selectedCase: TriageCase
   onOpenPhotoZoomModal: () => void
   handleClose?: () => void
@@ -10,6 +11,7 @@ export interface DrawerHeaderProps {
 
 export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   selectedCase,
+  sourceLabel = selectedCase.source_label,
   onOpenPhotoZoomModal,
   handleClose,
 }) => {
@@ -42,7 +44,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tạo hồ sơ lúc {selectedCase.created_at} bởi {formattedSourceDetail} • Thẩm định thông số kỹ thuật và ra quyết định xử lý
+            Tạo hồ sơ lúc {selectedCase.created_at} • {sourceLabel} • {formattedSourceDetail}
           </p>
         </div>
       </div>

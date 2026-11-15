@@ -29,6 +29,10 @@ export interface CrsProfileInput {
   sourcedToleranceMeters?: number | null
   toleranceSource?: string | null
   sampleOnly?: boolean
+  operation?: { method?:string|null; convention?:string|null; direction?:string|null; parameters?:number[]|null; sourceReference?:string|null; areaOfUse?:string|null; publishedAccuracyMeters?:number|null; accuracySource?:string|null }
+  independentControls?: { native:GeometryPoint; wgs84:GeometryPoint; independentSource?:string|null }[]|null
+  ellipsoid?: { semiMajorAxisMeters:number; inverseFlattening:number; sourceReference?:string|null }
+  projectionDefinition?: { parameters?:Record<string,number>|null; sourceReference?:string|null }
 }
 
 export interface CrsProfileView {
@@ -41,8 +45,23 @@ export interface CrsProfileView {
   createdBy: string
   createdAt: string
 }
+export interface RouteSystemView { id:string; projectId:string; code?:string|null; name?:string|null }
+// Native metadata is preserved separately; COORDINATES callers never synthesize it.
+export interface NativeAlignmentInput {
+  crsProfileRevisionId:string; spatialSrid:number
+  primitives?:Array<{kind?:'LINE'|'ARC'|null;start:GeometryPoint;end:GeometryPoint;center?:GeometryPoint;radius?:number|null;startAngleRadians?:number|null;sweepRadians?:number|null}>|null
+}
+export interface ChainageCalibrationInput {
+  sourceReference?:string|null;sourceChecksum?:string|null;selectedReason?:string|null
+  controls?:Array<{geometricOffsetMeters:number;stationMeters:number}>|null
+}
+export interface NativeDraftMetadata {
+  nativeAlignment?:NativeAlignmentInput|null;routeSystemId?:string|null;routeKind?:'MAIN'|'BRANCH'|null
+  parentRouteVersionId?:string|null;junctionOffsetMeters?:number|null;declaredLengthMeters?:number|null
+  chainageCalibration?:ChainageCalibrationInput|null;tessellationToleranceMeters?:number|null
+}
 
-export interface GeometryDraftInput {
+export interface GeometryDraftInput extends NativeDraftMetadata {
   sourceKind: 'COORDINATES' | 'NATIVE_ALIGNMENT'
   sourceCrs: number
   stationOriginMeters: number
@@ -54,7 +73,7 @@ export interface GeometryDraftInput {
   roadName?: string | null
 }
 
-export interface GeometryDraftView {
+export interface GeometryDraftView extends NativeDraftMetadata {
   id: string
   projectId: string
   roadSectionId?: string | null
@@ -289,7 +308,7 @@ const activeDraftCache = new Map<string, { draftId: string; etag: string }>()
 
 export const alignmentService = {
   async readProjectContext(projectId: string): Promise<{
-    projectId: string; engineeringUtmSrid: number | null;
+    projectId: string; engineeringUtmSrid: number | null; accessRole?:string; status?:string;
     roadSections: Array<{ roadSectionId: string; code: string; name: string; currentVersionId: string; versionNo: number }>
   }> {
     const response = await apiClient.get(`/projects/${projectId}/work-package`)
@@ -319,16 +338,30 @@ export const alignmentService = {
     if (!Array.isArray(response.data) || response.data.some(profile => profile.projectId !== projectId)) throw new Error('Danh sách CRS trả sai contract hoặc dự án.')
     return response.data
   },
+  /** API-198: Route systems are separate from work-package road sections. */
+  async fetchRouteSystems(projectId:string):Promise<RouteSystemView[]> {
+    const {data}=await apiClient.get<RouteSystemView[]>(`/projects/${projectId}/route-systems`)
+    if(!Array.isArray(data)||data.some(item=>!item.id||item.projectId!==projectId)||new Set(data.map(item=>item.id)).size!==data.length)throw new Error('Danh sách hệ tuyến sai dự án hoặc contract.')
+    return data
+  },
+
+  /** API-067: Read only the profile reference selected from API-065. */
+  async readCrsProfile(projectId: string, profileId: string): Promise<CrsProfileView> {
+    const {data} = await apiClient.get<CrsProfileView>(`/projects/${projectId}/crs-profiles/${profileId}`)
+    if (data?.projectId !== projectId || data.id !== profileId || !Number.isInteger(data.revision)) throw new Error('Chi tiết CRS trả sai dự án, hồ sơ hoặc phiên bản.')
+    return data
+  },
 
   /**
    * Tạo hồ sơ hệ tọa độ CRS mới cho dự án
    */
-  async createCrsProfile(projectId: string, input: CrsProfileInput): Promise<CrsProfileView> {
+  async createCrsProfile(projectId: string, input: CrsProfileInput, idempotencyKey = generateUuid()): Promise<CrsProfileView> {
     const response = await apiClient.post<CrsProfileView>(`/projects/${projectId}/crs-profiles`, input, {
       headers: {
-        'Idempotency-Key': generateUuid()
+        'Idempotency-Key': idempotencyKey
       }
     })
+    if (response.status !== 201) throw Object.assign(new Error('Phản hồi tạo CRS chưa đúng contract 201; không gửi lại POST.'), { received:true, receipt:response.data })
     return response.data
   },
 
@@ -390,14 +423,16 @@ export const alignmentService = {
    */
   async getGeometryDraft(
     projectId: string,
-    draftId: string
+    draftId: string,
+    roadSectionId?: string | null
   ): Promise<{ data: GeometryDraftView; etag: string }> {
     const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.get<GeometryDraftView>(
-      `/projects/${projectId}/road-geometry-drafts/${draftId}`
+      roadSectionId ? `/projects/${projectId}/road-sections/${roadSectionId}/geometry-drafts/${draftId}` : `/projects/${projectId}/road-geometry-drafts/${draftId}`
     )
     if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ bản nháp cũ.')
     if (response.data?.projectId !== projectId || response.data?.id !== draftId) throw new Error('Bản nháp trả sai dự án hoặc ID.')
+    if (roadSectionId && response.data.roadSectionId !== roadSectionId) throw new Error('Bản nháp trả sai đoạn đường đã chọn.')
     const etag = response.headers['etag'] || (response.data.version ? `"${response.data.version}"` : '')
     activeDraftCache.set(projectId, { draftId, etag })
     return { data: response.data, etag }
@@ -411,11 +446,12 @@ export const alignmentService = {
     draftId: string,
     input: GeometryDraftInput,
     etag: string,
-    idempotencyKey = generateUuid()
+    idempotencyKey = generateUuid(),
+    roadSectionId?: string | null
   ): Promise<{ data: GeometryDraftView; etag: string }> {
     const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.put<GeometryDraftView>(
-      `/projects/${projectId}/road-geometry-drafts/${draftId}`,
+      roadSectionId ? `/projects/${projectId}/road-sections/${roadSectionId}/geometry-drafts/${draftId}` : `/projects/${projectId}/road-geometry-drafts/${draftId}`,
       input,
       {
         headers: {
@@ -425,6 +461,7 @@ export const alignmentService = {
       }
     )
     if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả sửa bản nháp cũ.')
+    if (roadSectionId && response.data?.roadSectionId !== roadSectionId) throw new Error('Receipt sửa bản nháp trả sai đoạn đường.')
     const newEtag = response.headers['etag'] || etag
     activeDraftCache.set(projectId, { draftId, etag: newEtag })
     return { data: response.data, etag: newEtag }
@@ -433,9 +470,9 @@ export const alignmentService = {
   /**
    * API-181: Xem trước tim tuyến bản thảo (Preview)
    */
-  async previewGeometryDraft(projectId: string, draftId: string, etag?: string): Promise<GeometryPreview> {
+  async previewGeometryDraft(projectId: string, draftId: string, etag?: string, roadSectionId?: string | null): Promise<GeometryPreview> {
     const response = await apiClient.post<GeometryPreview>(
-      `/projects/${projectId}/road-geometry-drafts/${draftId}/preview`,
+      roadSectionId ? `/projects/${projectId}/road-sections/${roadSectionId}/geometry-drafts/${draftId}/preview` : `/projects/${projectId}/road-geometry-drafts/${draftId}/preview`,
       undefined,
       etag ? { headers: { 'If-Match': etag } } : undefined
     )
@@ -451,11 +488,12 @@ export const alignmentService = {
     draftId: string,
     input: GeometryConfirmInput,
     etag: string,
-    idempotencyKey = generateUuid()
+    idempotencyKey = generateUuid(),
+    roadSectionId?: string | null
   ): Promise<RoadGeometryVersionView> {
     const epoch = useAuthStore.getState().authEpoch
     const response = await apiClient.post<RoadGeometryVersionView>(
-      `/projects/${projectId}/road-geometry-drafts/${draftId}/confirm`,
+      roadSectionId ? `/projects/${projectId}/road-sections/${roadSectionId}/geometry-drafts/${draftId}/confirm` : `/projects/${projectId}/road-geometry-drafts/${draftId}/confirm`,
       input,
       {
         headers: {
@@ -465,6 +503,7 @@ export const alignmentService = {
       }
     )
     if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả xác nhận cũ.')
+    if (roadSectionId && response.data?.roadSectionId !== roadSectionId) throw new Error('Receipt xác nhận trả sai đoạn đường.')
     activeDraftCache.delete(projectId)
     return response.data
   },

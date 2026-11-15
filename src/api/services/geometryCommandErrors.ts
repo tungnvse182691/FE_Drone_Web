@@ -26,6 +26,7 @@ function problemMessage(error: any, sessionActive: boolean): string {
     branch_junction_mismatch: 'Điểm nối nhánh không khớp tuyến cha.',
     duplicate_request: 'Khóa yêu cầu đã dùng cho nội dung khác. Cần đối chiếu yêu cầu cũ.',
     project_closed: 'Dự án đã đóng; không thể thay đổi hồ sơ tuyến.',
+    road_geometry_submission_locked: 'Dự án đã có hồ sơ trình; máy chủ khóa tạo/sửa bản nháp. Bản nhập được giữ để đọc lại và đối chiếu.',
     road_geometry_invalid_state: 'Trạng thái bản nháp không cho phép thao tác này.',
     road_section_code_conflict: 'Mã tuyến đã tồn tại. Hãy đối chiếu hồ sơ tuyến.',
     concurrency_conflict: 'Phiên bản đã thay đổi. Bản nhập được giữ để đối chiếu.',

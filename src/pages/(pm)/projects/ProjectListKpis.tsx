@@ -17,18 +17,19 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Tổng chiều dài</span>
           <span className="text-lg font-bold text-slate-900 font-mono">
-            {kpiStats.totalLength} <span className="text-xs font-normal text-slate-500">km</span>
+            {kpiStats.totalLength}
+            {!!kpiStats.missingLength&&<span className="block text-[10px] font-normal text-slate-500">{kpiStats.missingLength} dự án chưa có số liệu</span>}
           </span>
         </div>
       </div>
 
-      {/* KPI 2: Đang bảo hành */}
+      {/* KPI 2: Đang hoạt động */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3.5">
         <div className="w-10 h-10 rounded-lg bg-[#EDF7ED] flex items-center justify-center text-[#1B5E20] shrink-0">
           <Icon name="check_circle" size={20} />
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-xs text-slate-500 truncate">Đang bảo hành</span>
+          <span className="text-xs text-slate-500 truncate">Đang hoạt động</span>
           <span className="text-lg font-bold text-slate-900 font-mono">
             {kpiStats.activeCount} <span className="text-xs font-normal text-slate-500">dự án</span>
           </span>
@@ -43,7 +44,7 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Sắp hết hạn (&lt;30d)</span>
           <span className="text-lg font-bold text-rose-600 font-mono">
-            {kpiStats.nearExpiryCount} <span className="text-xs font-normal text-slate-500">dự án</span>
+            {kpiStats.nearExpiryCount}{!!kpiStats.missingWarranty&&<small className="block font-normal">{kpiStats.missingWarranty} dự án thiếu dữ liệu bảo hành</small>} <span className="text-xs font-normal text-slate-500">dự án</span>
           </span>
         </div>
       </div>
@@ -56,7 +57,7 @@ export const ProjectListKpis: React.FC<ProjectListKpisProps> = ({ kpiStats }) =>
         <div className="flex flex-col min-w-0">
           <span className="text-xs text-slate-500 truncate">Chờ duyệt tuyến</span>
           <span className="text-lg font-bold text-[#D97706] font-mono">
-            {kpiStats.pendingAlignmentCount} <span className="text-xs font-normal text-slate-500">dự án</span>
+            {kpiStats.pendingAlignmentCount}{!!kpiStats.missingSubmission&&<small className="block font-normal">{kpiStats.missingSubmission} dự án chưa đọc được hồ sơ</small>} <span className="text-xs font-normal text-slate-500">dự án</span>
           </span>
         </div>
       </div>

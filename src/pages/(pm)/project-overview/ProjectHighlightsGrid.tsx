@@ -147,7 +147,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
           <div className="flex justify-between items-center text-xs font-medium">
             <span className="text-slate-500">
               {defectsReady ? (
-                <>Đang mở: <strong className="text-rose-600 font-bold">{project.open_defects} điểm</strong></>
+                <>Số liệu theo phạm vi dự án</>
               ) : 'Chưa tải được thống kê khiếm khuyết'}
             </span>
             <span className="font-mono font-bold text-slate-700">

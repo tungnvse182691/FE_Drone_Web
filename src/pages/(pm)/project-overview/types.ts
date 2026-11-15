@@ -1,4 +1,5 @@
 export interface Segment {
+  label?:string;roadSectionId?:string;routeVersionId?:string;segmentSetId?:string;routeKind?:string|null
   code: string
   stationing: string
   length_km: number
@@ -9,6 +10,7 @@ export interface Segment {
 }
 
 export interface ProjectMember {
+  user_id?:string
   id: string
   name: string
   role_code: 'SUPERVISOR' | 'PM' | 'CREW_LEAD' | 'DRONE_PILOT'

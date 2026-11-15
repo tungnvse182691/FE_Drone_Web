@@ -9,13 +9,18 @@ const page = (items, nextCursor = null) => ({ data: { items, nextCursor } })
 const fail = (status, code) => Object.assign(Error(code), { response: { status, data: { code } } })
 function load(file, client, extra = {}) {
   const module = { exports: {} }, saved = new Map()
+  if (file.endsWith('projectDistanceDisplay.ts')) { const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText; vm.runInNewContext(code,{module,exports:module.exports}); return module.exports }
   const mocks = {
+    '../../utils/projectDistanceDisplay': file.endsWith('projectDistanceDisplay.ts') ? {} : load('src/utils/projectDistanceDisplay.ts', {}),
+    '../../../utils/projectDistanceDisplay': file.endsWith('projectDistanceDisplay.ts') ? {} : load('src/utils/projectDistanceDisplay.ts', {}),
     '../../utils/projectWarranty': file.endsWith('projectWarranty.ts') ? {} : load('src/utils/projectWarranty.ts', {}),
     '../../../utils/projectWarranty': file.endsWith('projectWarranty.ts') ? {} : load('src/utils/projectWarranty.ts', {}),
     '../client': { apiClient: client }, '../../store/authStore': { useAuthStore: store },
     '../../../store/authStore': { useAuthStore: store }, '../../types/enums': { RoleCode: roles },
     './userDirectory': { userDirectory: { registerUsers() {} } },
     './personnelService': { personnelService: { fetchStaffDirectory: async () => [] } },
+    './geometrySubmissionService': { geometrySubmissionService: { read: async () => null } },
+    './projectServerFacts': file.endsWith('projectService.ts') ? load('src/api/services/projectServerFacts.ts', client) : {},
     './projectService': { projectService: {} }, './storageHelper': { STORAGE_KEYS: { PROJECTS: 'projects' }, saveToStorage() {}, getFromStorage: (_, fallback) => fallback },
     react: { __esModule: true, default: React, ...React, useMemo: fn => fn() },
     '../../../components/ui/Icon': { Icon: () => null },
@@ -27,7 +32,9 @@ function load(file, client, extra = {}) {
 }
 const input = { engineeringUtmSrid:32648, code: 'RG-STEP2', name: 'Step 2', primaryPmId: '72f84201-a001-4000-8000-000000000002', handoverDate: '2026-11-06', warrantyEndDate: '2027-11-06', handoverFileIds: [] }
 const created = { id: 'created', code: input.code, name: input.name, primaryProjectManagerUserId: input.primaryPmId }
-const project = (client, extra) => load('src/api/services/projectService.ts', { ...client, get: (url, config) => url.endsWith('/work-package')
+const project = (client, extra) => load('src/api/services/projectService.ts', { ...client, get: (url, config) => url.endsWith('/primary-project-manager')
+  ? Promise.resolve({data:{primaryProjectManager:{userId:input.primaryPmId,membershipId:'test-membership',validFrom:'2026-11-06',membershipVersion:'AAAAAAAAAAE='}}})
+  : url.endsWith('/work-package')
   ? client.workPackage ? client.workPackage(url, config) : Promise.resolve({data:{projectId:url.split('/')[2],description:null,engineeringUtmSrid:32648}})
   : client.get(url, config) }, extra).projectService
 const staff = client => load('src/api/services/personnelService.ts', client).personnelService
@@ -185,21 +192,27 @@ async function test(name, fn) { reset(); await fn(); passed++; console.log('PASS
   await test('mapper and all warranty surfaces reject absent/invalid/reversed dates and CLOSED inference; valid dates remain visible', async () => {
     const components=[['project-overview/ProjectHighlightsGrid.tsx','ProjectHighlightsGrid'],['projects/ProjectGridView.tsx','ProjectGridView'],['projects/ProjectTableView.tsx','ProjectTableView']]
     for(const dates of [{},{handoverDate:'bad',warrantyEndDate:'2099-01-01'},{handoverDate:'2026-02-30',warrantyEndDate:'2099-01-01'},{handoverDate:'2099-01-01',warrantyEndDate:'2026-01-01'},{handoverDate:'2020-01-01',warrantyEndDate:'2099-01-01'}]) {
-      const s=project({get:async url=>url==='/projects'?page([{...created,...dates,status:'CLOSED'}]):url.endsWith('/defect-statistics')?{data:{statistics:{openDefectsCount:0}}}:page([])})
+      const s=project({get:async url=>url==='/projects'?page([{...created,...dates,status:'CLOSED'}]):url.endsWith('/defect-statistics')?{data:{statistics:{openDefectsCount:0}}}:page([]),workPackage:async()=>({data:{projectId:'created',description:null,roadSections:[],warranties:[{warrantyId:'w',scope:'PROJECT',roadSectionId:null,handoverDate:dates.handoverDate,warrantyStartDate:dates.handoverDate,warrantyEndDate:dates.warrantyEndDate}]}})})
       const [mapped]=await s.fetchProjects();const valid=dates.handoverDate==='2020-01-01'
       assert.equal(mapped.warranty_data_missing,!valid)
       if(valid){assert.ok(mapped.days_remaining>0);assert.ok(mapped.warranty_passed_percent<100)}else{assert.ok(Number.isNaN(mapped.days_remaining));assert.ok(Number.isNaN(mapped.warranty_passed_percent))}
       for(const [file,name] of components){const C=load('src/pages/(pm)/'+file,{} )[name];const render=p=>renderToStaticMarkup(React.createElement(C,{project:p,filteredProjects:[p],totalProjectsCount:1,isSupervisor:false}));const html=render(mapped)
         if(valid){assert.ok(html.includes(`Còn ${mapped.days_remaining} ngày`));assert.ok(html.includes(`${mapped.warranty_passed_percent}%`))}
-        else{for(const text of ['NaN','Còn 0 ngày','0%','3 năm từ bàn giao','width:100%'])assert.ok(!html.includes(text),file+' '+text);assert.ok(html.includes('Chưa cập nhật'))}
+        else{for(const text of ['NaN','Còn 0 ngày','0%','3 năm từ bàn giao','width:100%'])assert.ok(!html.includes(text),file+' '+text);assert.ok(html.includes(file==='projects/ProjectGridView.tsx' ? 'Không tải được' : 'Chưa cập nhật'))}
         const invalid=render({...mapped,warranty_data_missing:false,handover_date:'bad',warranty_end_date:'bad',days_remaining:0,warranty_passed_percent:0});assert.ok(!invalid.includes('Còn 0 ngày'));assert.ok(!invalid.includes('0%'))
       }
     }
   })
-  await test('Web reassignment stays blocked without dispatch despite valid membership version', async () => {
-    let writes=0
-    await assert.rejects(staff({put:async()=>{writes++}}).reassignPrimaryProjectManager('p',{primaryProjectManagerUserId:input.primaryPmId,effectiveFrom:'2026-11-06',reason:'test',expectedCurrentMembershipRowVersion:'AAAAAAAAAAE='}),e=>e.code==='web_cookie_unsupported')
-    assert.equal(writes,0)
+  await test('Web reassignment command sends exactly one PUT then verifies GET; PM denied and stale version remains an error', async () => {
+    state.isAuthenticated=true
+    const writes=[],reads=[],date=new Date().toISOString().slice(0,10),receipt={previousMembershipId:'old',currentMembershipId:'new',currentMembershipRowVersion:'AAAAAAAAAAI='}
+    const personnel=staff({put:async(url,body)=>{writes.push({url,body});return{data:receipt}},get:async url=>{reads.push(url);return{data:{primaryProjectManager:{userId:input.primaryPmId,membershipId:'new',membershipVersion:'AAAAAAAAAAI=',validFrom:date}}}}})
+    const command=load('src/api/services/primaryPmCommands.ts',{}, {'./personnelService':{personnelService:personnel},'./personnelScreen':{PersonnelUiError:class extends Error{}}})
+    const snapshot={projectId:'72f84201-c001-4000-8000-000000000001',targetId:input.primaryPmId,current:{userId:'previous-pm',membershipId:'old',validFrom:'2000-01-01',membershipVersion:'AAAAAAAAAAE='},target:{account:{id:input.primaryPmId,status:'ACTIVE'},wireRole:'PM'}}
+    const result=await command.savePrimaryPm(snapshot,date,'Sup test')
+    assert.equal(writes.length,1);assert.equal(writes[0].url,`/projects/${snapshot.projectId}/primary-project-manager`);assert.equal(writes[0].body.primaryProjectManagerUserId,input.primaryPmId);assert.equal(writes[0].body.expectedCurrentMembershipRowVersion,'AAAAAAAAAAE=');assert.ok(writes[0].body.operationId);assert.equal(result.assignment.membershipId,receipt.currentMembershipId);assert.equal(result.assignment.membershipVersion,receipt.currentMembershipRowVersion);assert.equal(result.assignment.userId,input.primaryPmId);assert.equal(reads.length,1)
+    state.user.role=roles.PROJECT_MANAGER;await assert.rejects(personnel.reassignPrimaryProjectManager(snapshot.projectId,writes[0].body),/Giám sát/);assert.equal(writes.length,1)
+    state.user.role=roles.SUPERVISOR;await assert.rejects(staff({put:async()=>{throw fail(409,'concurrency_conflict')}}).reassignPrimaryProjectManager(snapshot.projectId,writes[0].body),e=>e.response.status===409&&e.response.data.code==='concurrency_conflict')
   })
   console.log(`${passed} Step 2 regression scenarios PASS (mock HTTP/SSR; NOT runtime E2E).`)
 })().catch(e=>{console.error(e);process.exitCode=1})

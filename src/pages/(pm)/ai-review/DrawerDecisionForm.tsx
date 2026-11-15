@@ -6,6 +6,8 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerDecisionFormProps {
+  onDefectRecorded?: (message: string) => void
+  sourceLabel?: string
   evidenceRequest?: CaseEvidenceRequestState
   selectedCase: TriageCase
   currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
@@ -28,7 +30,9 @@ export interface DrawerDecisionFormProps {
 }
 
 export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
+  onDefectRecorded,
   selectedCase,
+  sourceLabel = selectedCase.source_label,
   evidenceRequest,
   currentSeverity,
   setCurrentSeverity,
@@ -66,20 +70,11 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
         </div>
       )}
 
-      {/* Thông báo nghiệp vụ chuẩn Spec 17_10 cho phản ánh hiện trường */}
-      <div className="bg-blue-50/70 border border-blue-200/90 rounded-xl p-3 flex items-start gap-2.5 text-xs text-blue-900 shadow-2xs">
-        <Icon name="info" size={17} className="text-blue-600 shrink-0 mt-0.5" />
-        <div className="leading-relaxed text-[11.5px]">
-          <span className="font-bold block text-blue-950 mb-0.5">Quy trình kỹ thuật Spec 17_10:</span>
-          Phản ánh ban đầu chưa có số đo thực địa. Sau khi Chỉ huy trưởng duyệt yêu cầu đo đạc, Đội tuần tra sẽ đo đạc kích thước thực tế (Dài x Rộng x Sâu) để hệ thống xác định mức độ nghiêm trọng và phân luồng Fast Track / Đợt sửa chữa.
-        </div>
-      </div>
-
       {/* Thông số kỹ thuật từ CSDL Candidate3 */}
       <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 grid grid-cols-2 gap-3 text-xs shadow-xs">
         <div>
           <span className="text-slate-400 text-[11px] block font-medium">Nguồn tiếp nhận:</span>
-          <span className="font-semibold text-slate-800 text-xs mt-0.5 block">{selectedCase.source_label}</span>
+          <span className="font-semibold text-slate-800 text-xs mt-0.5 block">{sourceLabel}</span>
         </div>
         <div>
           <span className="text-slate-400 text-[11px] block font-medium">
@@ -109,27 +104,8 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
         )}
       </div>
 
-      {/* PM Notes */}
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-xs font-bold text-slate-800">Ghi chú thẩm định PM</label>
-          <span className="text-[11px] text-slate-400 font-normal">Lưu nhật ký công trình</span>
-        </div>
-        <textarea
-          rows={3}
-          disabled={isSupervisor || !selectedCase.project_id}
-          value={currentNotes}
-          onChange={(e) => setCurrentNotes(e.target.value)}
-          placeholder={
-            !selectedCase.project_id
-              ? 'Hồ sơ chưa được gán vào dự án • Đang chờ Giám sát điều phối tuyến...'
-              : 'Nhập ghi chú kỹ thuật, chỉ đạo đo đạc thực địa hoặc đề xuất cắm biển cảnh báo tạm...'
-          }
-          className="w-full bg-white border border-slate-300 text-slate-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C9A227]/30 focus:border-[#C9A227] disabled:bg-slate-100 disabled:text-slate-500 shadow-xs"
-        />
-      </div>
-
       {evidenceRequest && <>
+        {evidenceRequest.blockedReason && <p role="status" className="text-xs text-slate-600">{evidenceRequest.blockedReason}</p>}
         {evidenceRequest.error && <p role="alert" className="text-xs text-rose-700">{evidenceRequest.error}</p>}
         {(evidenceRequest.message || evidenceRequest.comparison) && <p role="status" className="text-xs text-slate-600">{evidenceRequest.message || evidenceRequest.comparison}</p>}
         {evidenceRequest.retry && <button type="button" disabled={evidenceRequest.busy} onClick={evidenceRequest.retry} className="text-xs underline">{evidenceRequest.retryLabel}</button>}
@@ -170,7 +146,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             {!selectedCase.conclusion && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 <Icon name="hourglass_empty" size={14} className="text-slate-500" />
-                Đang chờ PM thẩm định
+                {selectedCase.case_status === 'UNASSIGNED' ? 'Chờ Giám sát điều phối' : 'Đang chờ PM thẩm định'}
               </span>
             )}
           </div>
@@ -255,22 +231,30 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       ) : (
         /* Khi hồ sơ chưa thẩm định: Hiển thị bộ nút thao tác thẩm định chuẩn nghiệp vụ */
         <div className="space-y-2.5 pt-1">
-          <ReportDefectIntake selectedCase={selectedCase} />
+          <ReportDefectIntake selectedCase={selectedCase} onRecorded={onDefectRecorded} />
+          <details className="rounded-xl border border-slate-200 p-3 space-y-2">
+            <summary className="cursor-pointer text-xs font-bold text-slate-800">Yêu cầu bổ sung bằng chứng</summary>
+            <label className="block text-xs font-semibold text-slate-700">
+              Lý do yêu cầu bổ sung bằng chứng
+              <textarea aria-label="Lý do yêu cầu bổ sung bằng chứng" rows={3} value={currentNotes} disabled={!!evidenceRequest?.busy || !!evidenceRequest?.pending} onChange={e => setCurrentNotes(e.target.value)} placeholder="Nhập lý do yêu cầu người phản ánh bổ sung bằng chứng…" className="mt-1 w-full bg-white border border-slate-300 text-slate-800 text-xs p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C9A227]/30 focus:border-[#C9A227] disabled:bg-slate-100" />
+            </label>
           <button
             type="button"
             onClick={() => onVerifyDefect(selectedCase)}
             disabled={!evidenceRequest?.canRequest}
-            title={!currentNotes.trim() ? 'Nhập lý do yêu cầu bổ sung bằng chứng' : evidenceRequest?.busy ? 'Đang xử lý yêu cầu' : undefined}
+            title={evidenceRequest?.blockedReason || (!currentNotes.trim() ? 'Nhập lý do yêu cầu bổ sung bằng chứng' : evidenceRequest?.busy ? 'Đang xử lý yêu cầu' : undefined)}
             className="w-full py-3 px-4 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer bg-brand-gold hover:bg-[#B38E1F]"
           >
             <Icon name="straighten" size={16} />
             <span>Yêu cầu bổ sung bằng chứng</span>
           </button>
+          </details>
 
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => onOpenNoDefectModal(selectedCase)}
+              disabled={selectedCase.case_status !== 'OPEN' || !selectedCase.project_id || !!evidenceRequest?.busy || !!evidenceRequest?.pending}
               className="border px-3 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer bg-white border-slate-300 hover:bg-rose-50 text-rose-600"
               title="Không có khiếm khuyết (Báo sai)"
             >
@@ -278,15 +262,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
               <span>Báo sai (Không có lỗi)</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => onConclusionOutOfScope(selectedCase)}
-              className="border px-3 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer bg-white border-slate-300 hover:bg-amber-50 text-amber-700"
-              title="Ngoài phạm vi bảo hành Hoàng Hải"
-            >
-              <Icon name="warning" size={15} />
-              <span>Ngoài phạm vi</span>
-            </button>
+
           </div>
         </div>
       )}

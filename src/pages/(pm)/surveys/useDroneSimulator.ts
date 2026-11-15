@@ -34,74 +34,11 @@ export function useDroneSimulator(onMissionUpdated: () => void) {
   }
 
   const handleRunSimulation = () => {
-    if (!selectedMissionForSim) return
+    // Live business progress is server-owned. Keep the viewer, never run the legacy timer/writer.
     clearCurrentTimer()
-    setSimStep('FLYING')
-    setSimFlightProgress(5)
-
-    const targetMissionId = selectedMissionForSim.id
-    let p = 5
-
-    const flyInterval = setInterval(() => {
-      p += 15
-      if (p >= 100) {
-        clearInterval(flyInterval)
-        setSimFlightProgress(100)
-        setSimStep('INGESTING')
-
-        let ph = 0
-        const ingestInterval = setInterval(() => {
-          ph += 25
-          if (ph >= 100) {
-            ph = 100
-            clearInterval(ingestInterval)
-            setSimPhotosCount(100)
-            setSimStep('AI_SCANNING')
-
-            let scanStep = 0
-            const aiInterval = setInterval(() => {
-              scanStep += 1
-              if (scanStep >= 2) {
-                clearInterval(aiInterval)
-                timerRef.current = null
-                setSimDefectCount(1)
-                setSimStep('COMPLETED')
-
-                surveyService
-                  .simulateDroneFlightCompletion(targetMissionId)
-                  .then((updated) => {
-                    if (updated) {
-                      setSelectedMissionForSim(updated)
-                      setSimDefectCount(updated.ai_defects_count || 1)
-                    }
-                    onMissionUpdated()
-                  })
-                  .catch((err) => {
-                    console.error('Lỗi khi hoàn tất mô phỏng bay:', err)
-                  })
-              } else {
-                setSimDefectCount(1)
-              }
-            }, 300)
-            timerRef.current = aiInterval
-          } else {
-            setSimPhotosCount(ph)
-          }
-        }, 150)
-        timerRef.current = ingestInterval
-      } else {
-        setSimFlightProgress(p)
-        setSimBattery((prev) => Math.max(82, prev - 1))
-      }
-    }, 200)
-
-    timerRef.current = flyInterval
   }
 
-  const handleCloseSimulator = () => {
-    clearCurrentTimer()
-    setIsSimulatorOpen(false)
-  }
+  const handleCloseSimulator = () => { clearCurrentTimer(); setIsSimulatorOpen(false); setSelectedMissionForSim(null) }
 
   return {
     isSimulatorOpen,

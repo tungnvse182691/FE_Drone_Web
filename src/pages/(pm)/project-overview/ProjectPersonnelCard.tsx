@@ -28,6 +28,11 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
   showToast = () => {}
 }) => {
   const isSupervisor = useAuthStore(state => state.user?.role === RoleCode.SUPERVISOR)
+  const canAdd = useAuthStore(state => state.user?.role === RoleCode.PROJECT_MANAGER)
+  const today=new Date().toISOString().slice(0,10)
+  const currentMembers=members.filter(m=>m.membership_status==='ACTIVE'&&!!m.valid_from&&m.valid_from<=today&&(!m.valid_to||m.valid_to>=today))
+  const count=new Set(currentMembers.map(m=>m.user_id||m.id)).size
+  const primaryListed=!!primaryPm&&members.some(m=>m.user_id===primaryPm.userId)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   return (
@@ -50,9 +55,9 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-              {memberError ? 'Chưa tải đầy đủ' : `${members.length} nhân sự`}
+              {memberError || currentMembers.some(m=>!m.user_id) ? 'Chưa tải đầy đủ số nhân sự' : `Số nhân sự: ${count}`}
             </span>
-            <button
+            {canAdd && <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C9A227] hover:bg-[#B38E1E] text-white text-xs font-bold transition shadow-2xs cursor-pointer"
@@ -60,15 +65,15 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Thêm nhân sự</span>
-            </button>
+            </button>}
           </div>
         </div>
 
         <div className="text-xs text-slate-700 space-y-2">
-          {primaryError ? <p role="alert" className="text-rose-700">{primaryError}</p> : <p>PM chính: {primaryPm ? primaryPm.displayName || 'Chưa cập nhật tên' : 'Chưa có phân công PM chính'}</p>}
+          {primaryError ? <p role="alert" className="text-rose-700">{primaryError}</p> : primaryListed ? null : <p>PM chính: {primaryPm ? primaryPm.displayName || 'Chưa cập nhật tên' : 'Chưa có phân công PM chính'}</p>}
           {primaryPm && !primaryError && <p>Hiệu lực từ {primaryPm.validFrom}{primaryPm.validTo ? ` đến ${primaryPm.validTo}` : ''}</p>}
           {isSupervisor && <label className="flex gap-2"><input type="checkbox" checked={includeHistory} onChange={e => onChangeHistory?.(e.target.checked)} />Xem lịch sử thành viên</label>}
-          {isSupervisor && <p>Chuyển PM chính chưa khả dụng trên phiên Web. Chưa gửi lệnh chuyển phân công.</p>}
+          {isSupervisor && <a href="/sup/personnel" className="inline-block underline text-brand-goldMuted">Đổi PM chính: Nhân sự → Điều chuyển &amp; Bàn giao dự án</a>}
           {memberError && <p role="alert" className="text-rose-700">{memberError}</p>}
           {(memberError || primaryError) && <button type="button" className="underline" onClick={() => { void onReloadMembers?.() }}>Thử lại phân công</button>}
         </div>
@@ -82,14 +87,14 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
             <p className="text-[11px] text-slate-400 max-w-xs">
               Chỉ huy trưởng dự án có thể phân công Drone Operator và Repair Crew vào dự án ngay.
             </p>
-            <button
+            {canAdd && <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
               className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C9A227] text-white text-xs font-bold hover:bg-[#B38E1E] transition cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Phân công nhân sự ngay</span>
-            </button>
+            </button>}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -119,7 +124,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                     </div>
                   </div>
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white text-slate-700 border border-slate-200 uppercase">
-                    {mem.role_badge}
+                    {primaryPm?.userId===mem.user_id?'PM CHÍNH':mem.role_code}
                   </span>
                 </div>
 
@@ -140,7 +145,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
       </div>
 
       {/* Modal Thêm Nhân Sự Vào Dự Án */}
-      <AddProjectMemberModal
+      {canAdd && <AddProjectMemberModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         projectId={project.id}
@@ -151,7 +156,7 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
           }
         }}
         showToast={showToast}
-      />
+      />}
     </>
   )
 }

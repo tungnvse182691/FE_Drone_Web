@@ -1,3 +1,4 @@
+import {projectListMetrics,nearWarrantyEnd,pendingRouteReview} from '../../utils/projectListMetrics'
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -17,6 +18,7 @@ import { ProjectGridView } from './projects/ProjectGridView'
 import { ProjectTableView } from './projects/ProjectTableView'
 import { CreateProjectModal, PmOption } from './projects/CreateProjectModal'
 import { CloseProjectModal } from './projects/CloseProjectModal'
+import { EditProjectModal } from './projects/EditProjectModal'
 
 export type { HubProject }
 
@@ -208,6 +210,7 @@ export const ProjectList: React.FC = () => {
 
   // Modal Đóng dự án khi hết hạn bảo hành
   const [closingProject, setClosingProject] = useState<HubProject | null>(null)
+  const [editingProjectId,setEditingProjectId]=useState('')
 
   const handleCloseProjectSubmit = async (reason: string) => {
     if (!closingProject) return
@@ -231,8 +234,8 @@ export const ProjectList: React.FC = () => {
     return scopedProjects.filter((prj) => {
       // Filter tab
       if (filterTab === 'ACTIVE' && prj.status !== 'ACTIVE') return false
-      if (filterTab === 'NEAR_EXPIRY' && prj.status !== 'NEAR_EXPIRY') return false
-      if (filterTab === 'PENDING_ALIGNMENT' && prj.status !== 'PENDING_ALIGNMENT') return false
+      if (filterTab === 'NEAR_EXPIRY' && nearWarrantyEnd(prj)!==true) return false
+      if (filterTab === 'PENDING_ALIGNMENT' && pendingRouteReview(prj)!==true) return false
       if (filterTab === 'CLOSED' && prj.status !== 'CLOSED') return false
 
       // Search query
@@ -250,19 +253,8 @@ export const ProjectList: React.FC = () => {
   }, [scopedProjects, filterTab, searchQuery])
 
   // KPI Metrics Calculation
-  const totalLength = useMemo(() => scopedProjects.length > 0 && scopedProjects.every(p => Number.isFinite(p.length_km)) ? scopedProjects.reduce((acc, p) => acc + p.length_km!, 0).toFixed(1) : 'Chưa cập nhật', [scopedProjects])
-  const activeCount = useMemo(() => scopedProjects.filter((p) => p.status === 'ACTIVE').length, [scopedProjects])
-  const nearExpiryCount = useMemo(() => scopedProjects.filter((p) => p.status === 'NEAR_EXPIRY').length, [scopedProjects])
-  const pendingAlignmentCount = useMemo(() => scopedProjects.filter((p) => p.status === 'PENDING_ALIGNMENT').length, [scopedProjects])
-  const closedCount = useMemo(() => scopedProjects.filter((p) => p.status === 'CLOSED').length, [scopedProjects])
-
-  const kpiStats: ProjectKpiStats = {
-    totalLength,
-    activeCount,
-    nearExpiryCount,
-    pendingAlignmentCount,
-    closedCount
-  }
+  const kpiStats=useMemo(()=>projectListMetrics(scopedProjects),[scopedProjects])
+  const {activeCount,nearExpiryCount,pendingAlignmentCount,closedCount}=kpiStats
 
   const handleNavigateHome = () => {
     navigate(`${basePath}/dashboard`)
@@ -344,6 +336,7 @@ export const ProjectList: React.FC = () => {
           onNavigateAlignment={handleNavigateAlignment}
           onNavigateDetail={handleNavigateDetail}
           onOpenCloseModal={(prj) => setClosingProject(prj)}
+          onOpenEditModal={prj=>setEditingProjectId(prj.id)}
         />
       ) : (
         <ProjectTableView
@@ -352,10 +345,12 @@ export const ProjectList: React.FC = () => {
           isSupervisor={isSupervisor}
           onNavigateDetail={handleNavigateDetail}
           onOpenCloseModal={(prj) => setClosingProject(prj)}
+          onOpenEditModal={prj=>setEditingProjectId(prj.id)}
         />
       )}
 
       {/* MODAL KHỞI TẠO DỰ ÁN (BƯỚC SUP-01: DA01, BR-01, FR-04) */}
+      {isSupervisor&&editingProjectId&&<EditProjectModal key={`${authEpoch}:${editingProjectId}`} projectId={editingProjectId} onClose={()=>setEditingProjectId('')} onSaved={read=>{setProjects(rows=>rows.map(p=>p.id===read.projectId?{...p,name:read.name,region:read.description??'',location_detail:''}:p));setEditingProjectId('');showToast('Đã cập nhật dự án');void loadProjects()}} />}
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => {

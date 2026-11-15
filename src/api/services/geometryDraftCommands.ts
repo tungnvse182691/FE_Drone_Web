@@ -6,7 +6,7 @@ import { alignmentService, type GeometryDraftInput, type GeometryConfirmInput, t
 export type DraftCommand =
   | { kind: 'create'; sectionId?: string; input: GeometryDraftInput }
   | { kind: 'update'; sectionId?: string | null; draftId: string; etag: string; input: GeometryDraftInput }
-  | { kind: 'confirm'; draftId: string; etag: string; input: GeometryConfirmInput }
+  | { kind: 'confirm'; sectionId?: string | null; draftId: string; etag: string; input: GeometryConfirmInput }
 type Pending = { command: DraftCommand; key: string; receipt?: GeometryDraftView | RoadGeometryVersionView; conflict?: boolean; duplicate?: boolean; rejected?: boolean }
 const busy = new Set<string>()
 function scope(projectId: string) {
@@ -70,8 +70,8 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     if (!held.receipt) {
       let result: GeometryDraftView | RoadGeometryVersionView
       if (intent.kind === 'create') result = (await alignmentService.createGeometryDraft(projectId, intent.input, held.key, intent.sectionId)).data
-      else if (intent.kind === 'update') result = (await alignmentService.updateGeometryDraft(projectId, intent.draftId, intent.input, intent.etag, held.key)).data
-      else result = await alignmentService.confirmGeometryDraft(projectId, intent.draftId, intent.input, intent.etag, held.key)
+      else if (intent.kind === 'update') result = (await alignmentService.updateGeometryDraft(projectId, intent.draftId, intent.input, intent.etag, held.key, intent.sectionId)).data
+      else result = await alignmentService.confirmGeometryDraft(projectId, intent.draftId, intent.input, intent.etag, held.key, intent.sectionId)
       current()
       held.receipt = result
       save(journal, held)
@@ -82,6 +82,7 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     if (intent.kind === 'confirm') {
       const route = receipt as RoadGeometryVersionView
       if (!route.roadSectionId || !route.routeVersionId || route.sourceDraftId !== intent.draftId) throw new Error('Receipt xác nhận thiếu reference hợp lệ.')
+      if (intent.sectionId && route.roadSectionId !== intent.sectionId) throw new Error('Receipt xác nhận sai đoạn đường đã pin.')
       const lookup = await geometrySubmissionService.read(projectId)
       current()
       if (!lookup || lookup.status !== 'CONFIRMED' || lookup.draftId !== intent.draftId || lookup.roadSectionId !== route.roadSectionId || lookup.confirmedRouteVersionId !== route.routeVersionId) throw new Error('Lookup sau confirm không khớp receipt.')
@@ -96,7 +97,7 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
     const sectionId = intent.kind === 'create' ? intent.sectionId : intent.sectionId === undefined ? draft.roadSectionId : intent.sectionId
     const receiptEtag = `"${draft.version || ''}"`
     if (draft.roadSectionId !== (sectionId || null) || !/^"[A-Za-z0-9+/]+={0,2}"$/.test(receiptEtag)) throw new Error('Receipt bản nháp thiếu tuyến hoặc phiên bản hợp lệ.')
-    const readback = await alignmentService.getGeometryDraft(projectId, draft.id)
+    const readback = await alignmentService.getGeometryDraft(projectId, draft.id, sectionId)
     current()
     if (!/^"[A-Za-z0-9+/]+={0,2}"$/.test(readback.etag)) throw new Error('Readback chưa có phiên bản hợp lệ.')
     if (readback.data.projectId !== projectId || readback.data.id !== draft.id || readback.data.roadSectionId !== (sectionId || null) || readback.etag !== receiptEtag || readback.etag !== `"${readback.data.version}"`) throw new Error('Readback không khớp draft/tuyến/phiên bản của receipt; cần đối chiếu trước khi gửi lệnh mới.')

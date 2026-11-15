@@ -21,9 +21,13 @@ export function useCaseEvidenceRequest(selected: TriageCase | null, reason: stri
     try { setPending(selected?.id ? caseEvidenceRequestService.pending(selected.id) : null) }
     catch (e) { setPending(null); setError(caseIntakeError(e)) }
   }, [scope])
-  const canRequest = auth.user?.role === RoleCode.PROJECT_MANAGER && selected?.case_status === 'OPEN' && !!selected.project_id && !!reason.trim() && !busy && !pending
+  const blockedReason = selected?.id ? caseEvidenceRequestService.pendingConclusionReason?.(selected.id) || '' : ''
+  const canRequest = !blockedReason && auth.user?.role === RoleCode.PROJECT_MANAGER && selected?.case_status === 'OPEN' && !!selected.project_id && !!reason.trim() && !busy && !pending
   const execute = async (retry = false) => {
-    if (running.current || !selected || auth.user?.role !== RoleCode.PROJECT_MANAGER || !retry && !canRequest) return
+    if (running.current || !selected || auth.user?.role !== RoleCode.PROJECT_MANAGER) return
+    const blocker = caseEvidenceRequestService.pendingConclusionReason?.(selected.id)
+    if (!retry && blocker) { setError(blocker); return }
+    if (!retry && !canRequest) return
     const start = scope, current = () => mounted.current && latest.current === start && useAuthStore.getState().authEpoch === auth.authEpoch
     running.current = true; setBusy(true); setError(''); setMessage('')
     try {
@@ -54,7 +58,7 @@ export function useCaseEvidenceRequest(selected: TriageCase | null, reason: stri
     if (!selected || busy || !reviewed || reviewed.id !== selected.id || reviewed.project_id !== selected.project_id || reviewed.case_status !== 'OPEN') return
     caseEvidenceRequestService.revise(selected.id); setVersion(reviewed.etag || reviewed.version || ''); setPending(null); setReviewed(null); setError(''); setComparison('Đã đối chiếu. Lý do được giữ; bạn tự bấm yêu cầu bổ sung khi phù hợp.')
   }
-  return { busy, error, message, comparison, canRequest, pending: !!pending, retry: pending && !pending.rejected ? () => execute(true) : undefined,
+  return { busy, error, message, comparison, blockedReason, canRequest, pending: !!pending, retry: pending && !pending.rejected ? () => execute(true) : undefined,
     retryLabel: pending?.received ? 'Đọc lại kết quả yêu cầu' : 'Thử lại yêu cầu đang chờ', read: pending?.rejected ? read : undefined,
     accept: reviewed?.case_status === 'OPEN' && pending?.rejected ? accept : undefined, execute: () => execute() }
 }

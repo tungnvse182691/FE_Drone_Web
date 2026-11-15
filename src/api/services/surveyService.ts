@@ -1,3 +1,5 @@
+// Legacy UI command paths have no verified Web command integration. Keep their layout, block side effects.
+function legacyCommandBlocked(): boolean { return true }
 import { apiClient } from '../client'
 import { getFromStorage, saveToStorage } from './storageHelper'
 import { projectService } from './projectService'
@@ -176,10 +178,14 @@ export function formatDefectTypeLabel(typeCode?: string | null, customLabel?: st
 }
 
 export interface SurveyMissionItem {
+  scope_summary?: string
+  read_error?: string
+  serverRecordKind?: 'PLAN' | 'TASK'
+  serverStatus?: string
   id: string
   code: string
   title: string
-  survey_type: 'BASELINE' | 'PERIODIC' | 'AD_HOC'
+  survey_type: 'BASELINE' | 'PERIODIC' | 'AD_HOC' | null
   survey_type_label: string
   project_id: string
   project_name: string
@@ -195,7 +201,7 @@ export interface SurveyMissionItem {
   approved_count?: number
   reviewed_count?: number
   coverage_percent: number
-  status: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
+  status?: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
   status_label: string
 }
 
@@ -219,36 +225,8 @@ export const INITIAL_PILOTS: AvailablePilot[] = []
 /**
  * Đảm bảo có Bearer Token cho các endpoint Candidate3 yêu cầu xác thực JWT Bearer
  */
-async function ensureBearerToken(): Promise<string | null> {
-  const storeToken =
-    useAuthStore.getState().token ||
-    (typeof window !== 'undefined' ? sessionStorage.getItem('rg_token') : null)
-  if (storeToken) return storeToken
-
-  const currentUser = useAuthStore.getState().user
-  if (currentUser) {
-    try {
-      const rawEmail = currentUser.email || 'supervisor@sandbox.example.test'
-      const email = rawEmail.replace(/^synthetic-/, '')
-      let password = 'Rg1!1YpbfL2fpPP1JWp3t1HdkXpTPZVdUJ2OrWllT8iNLvBPaZq3MMU5g3XT7VFUCwDv'
-      if (email.includes('pm-a') || email.includes('pm')) {
-        password = 'Rg1!6NDP3wctfXKjXNzvYjSeg-grQxza2t_BGNxmH_DDlyfjEr7oZFEMtLmnssW7Meed'
-      }
-      const res = await apiClient.post<{ accessToken: string }>('/auth/login', {
-        email,
-        password
-      })
-      if (res.data?.accessToken) {
-        ;(useAuthStore.getState() as any).setToken?.(res.data.accessToken)
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('rg_token', res.data.accessToken)
-        }
-        return res.data.accessToken
-      }
-    } catch {
-      // Bỏ qua lỗi nếu backend dùng cookie
-    }
-  }
+async function ensureBearerToken(): Promise<null> {
+  // Web uses the current cookie session. Never sign in another actor or restore Bearer storage.
   return null
 }
 
@@ -446,7 +424,25 @@ export function getProjectRoadConfig(projectId?: string): ProjectRoadConfig {
   return matchedKey ? PROJECT_ROAD_MAP[matchedKey] : PROJECT_ROAD_MAP['72f84201-c001-4000-8000-000000000001']
 }
 
+const candidateWrites = new Set<string>()
+
 export const surveyService = {
+async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
+    const epoch = useAuthStore.getState().authEpoch
+    const items: any[] = [], seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const response = await apiClient.get(path, { params: { limit: 100, cursor }, signal })
+      if (signal?.aborted || epoch !== useAuthStore.getState().authEpoch) throw new Error('Phiên khảo sát đã thay đổi.')
+      if (!Array.isArray(response.data?.items)) throw new Error('Collection khảo sát trả sai contract.')
+      items.push(...response.data.items)
+      cursor = response.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor khảo sát bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return items
+  },
+
   /**
    * Lấy danh sách nhiệm vụ bay khảo sát trực tiếp từ CSDL Backend Candidate3 (W05 / ADD-05 / ADD-06)
    * Nghiêm cấm trả về mock data giả mạo. CSDL rỗng trả về [].
@@ -767,86 +763,7 @@ export const surveyService = {
    * Lấy danh sách Tuyến chính của Dự án phục vụ tạo kế hoạch bay (Dữ liệu thật từ CSDL Backend)
    */
   async getSurveyRoutes(): Promise<ProjectRouteConfig[]> {
-    const projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
-    if (!projects || projects.length === 0) {
-      return []
-    }
-
-    const routes: ProjectRouteConfig[] = []
-    for (const p of projects) {
-      const isSbxA = p.code === 'SBX-A' || p.name?.includes('Project A')
-
-      // Kiểm tra tim tuyến đã được phê duyệt trong hệ thống
-      let hasAlignment = false
-      let startKmNum = 0.0
-      let endKmNum = 0.0
-      let coords: [number, number][] = []
-      let kmPoints: number[] = []
-
-      // 1. Kiểm tra tim tuyến trong localStorage
-      try {
-        const alignState = getFromStorage<any>(`roadguard_alignment_state_${p.id}`, null) ||
-                           getFromStorage<any>(`roadguard_alignment_state_${p.code}`, null)
-        const alignData = getFromStorage<any>(`roadguard_alignment_data_${p.id}`, null) ||
-                          getFromStorage<any>(`roadguard_alignment_data_${p.code}`, null)
-
-        // Chỉ khi status là CONFIRMED (đã duyệt) thì mới coi là có tim tuyến hợp lệ
-        if (alignState?.status === 'CONFIRMED' && alignData?.coords && alignData.coords.length >= 2) {
-          hasAlignment = true
-          coords = alignData.coords
-          startKmNum = typeof p.start_km === 'number' ? p.start_km : 0.0
-          endKmNum = (p.length_km || 0) > 0 ? (p.length_km || 0) : (typeof p.end_km === 'number' ? p.end_km : 0.0)
-          kmPoints = Array.isArray(alignData.kmPoints) && alignData.kmPoints.length === alignData.coords.length
-            ? alignData.kmPoints
-            : [startKmNum, startKmNum + endKmNum * 0.5, endKmNum]
-        }
-      } catch {}
-
-      // 2. Dự án SBX-A là dự án mẫu của Candidate3 đã có tim tuyến chuẩn
-      if (!hasAlignment && isSbxA) {
-        hasAlignment = true
-        startKmNum = 0.0
-        endKmNum = 0.702
-        coords = [
-          [108.1940, 16.0490], // Km 0+000 (Điểm cất cánh accessPoint Candidate3)
-          [108.1952, 16.0505], // Km 0+175
-          [108.1965, 16.0520], // Km 0+351 (Vị trí khiếm khuyết DET-01)
-          [108.1978, 16.0535], // Km 0+525
-          [108.1990, 16.0550]  // Km 0+702 (Điểm hạ cánh)
-        ]
-        kmPoints = [0.0, 0.175, 0.351, 0.525, 0.702]
-      }
-
-      // 3. Nếu dự án chưa có tim tuyến: startKm = 0, endKm = 0, lengthKm = 0
-      if (!hasAlignment) {
-        startKmNum = 0.0
-        endKmNum = 0.0
-        coords = []
-        kmPoints = []
-      }
-
-      const lengthKm = hasAlignment ? parseFloat(Math.max(0, endKmNum - startKmNum).toFixed(3)) : 0.0
-
-      routes.push({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        type: 'MAINLINE',
-        parentProjectId: p.id,
-        parentProjectCode: p.code,
-        parentProjectName: p.name,
-        lengthKm,
-        startKm: startKmNum,
-        endKm: endKmNum,
-        defaultCoords: coords,
-        defaultKmPoints: kmPoints,
-        hasAlignment,
-        alignmentStatusText: hasAlignment ? 'Đã có tim tuyến' : 'Chưa thiết lập tim tuyến'
-      })
-    }
-
-    // Chỉ cho phép chọn các dự án ĐÃ CÓ TIM TUYẾN KỸ THUẬT ĐƯỢC PHÊ DUYỆT để tạo yêu cầu bay khảo sát
-    return routes.filter((r) => r.hasAlignment)
+    throw new Error('Phạm vi tuyến cho form này chưa được tích hợp bằng Web cookie và discovery đã xác minh. Chưa chọn dữ liệu thay thế.')
   },
 
   /**
@@ -914,157 +831,15 @@ export const surveyService = {
    * Kèm gán nhiệm vụ bay cho Operator (API-203 / POST /survey-tasks)
    */
   async createSurvey(data: CreateSurveyPayload): Promise<SurveyMissionItem> {
-    await ensureBearerToken()
-
-    let projectId = data.project_id
-    if (projectId.startsWith('branch-')) {
-      const clean = projectId.replace('branch-', '')
-      const projects = await projectService.getProjects()
-      const found = projects.find(
-        (p) => p.id.replace(/-/g, '').startsWith(clean) || p.id.startsWith(clean)
-      )
-      if (found) projectId = found.id
-    }
-
-    // Lấy routeVersionId, segmentSetId, segmentIds theo đúng Dự án từ CSDL Candidate3
-    const roadConfig = getProjectRoadConfig(projectId)
-    const routeVersionId = roadConfig.routeVersionId
-    const segmentSetId = roadConfig.segmentSetId
-    const segmentIds = roadConfig.segmentIds
-
-    const surveyType = data.survey_type || 'PERIODIC'
-
-    const planPayload = {
-      surveyType,
-      plannedAt:
-        data.flight_date && data.flight_date !== 'Hôm nay'
-          ? new Date(data.flight_date).toISOString()
-          : new Date().toISOString(),
-      scope: [
-        {
-          routeVersionId,
-          segmentSetId,
-          segmentIds,
-          targetBand: 'SURFACE'
-        }
-      ]
-    }
-
-    const idempotencyKey = crypto.randomUUID()
-    let createdPlan: {
-      id: string
-      projectId: string
-      plannedAt: string
-      status: string
-      version: string
-    }
-
-    try {
-      const res = await apiClient.post<{
-        id: string
-        projectId: string
-        plannedAt: string
-        status: string
-        version: string
-      }>(`/projects/${projectId}/survey-plans`, planPayload, {
-        headers: {
-          'Idempotency-Key': idempotencyKey
-        }
-      })
-      createdPlan = res.data
-    } catch (err: any) {
-      console.error('❌ [surveyService] Lỗi khi tạo kế hoạch bay khảo sát (API-201):', err?.response?.data || err?.message)
-      const errorData = err?.response?.data
-      const backendDetail = errorData?.detail || errorData?.title
-      if (backendDetail) {
-        throw new Error(backendDetail)
-      }
-      if (err?.response?.status === 409) {
-        throw new Error('Tuyến đường này đã có đợt bay đang hoạt động hoặc phạm vi khảo sát bị trùng lặp.')
-      }
-      const detailMsg = err?.message || 'Không thể tạo kế hoạch bay khảo sát từ máy chủ.'
-      throw new Error(detailMsg)
-    }
-
-    // Nếu có chọn phi công, tự động giao nhiệm vụ (API-203 / survey-tasks)
-    if (data.pilot_name) {
-      try {
-        const pilots = await this.getAvailablePilots(projectId)
-        const matchedPilot = pilots.find((p) => p.name === data.pilot_name) || pilots[0]
-        if (matchedPilot) {
-          const taskPayload = {
-            planId: createdPlan.id,
-            operatorId: matchedPilot.id,
-            surveyType: planPayload.surveyType,
-            scope: planPayload.scope,
-            dueAt: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString(),
-            accessPoint: {
-              point: { x: 108.194, y: 16.049 },
-              source: 'MANUAL',
-              accuracyMeters: 1.0
-            }
-          }
-          const taskRes = await apiClient.post<{ id: string }>(`/projects/${projectId}/survey-tasks`, taskPayload, {
-            headers: { 'Idempotency-Key': crypto.randomUUID() }
-          })
-          if (taskRes.data?.id) {
-            saveToStorage(`roadguard_survey_task_${createdPlan.id}`, taskRes.data.id)
-          }
-        }
-      } catch (err) {
-        console.warn('[surveyService] Gán phi công sau khi tạo plan thất bại:', err)
-      }
-    }
-
-    const shortId = createdPlan.id.replace(/-/g, '').slice(0, 8).toUpperCase()
-    const newCode = `#MS-2026-${shortId.slice(0, 4)}`
-    const sType = data.survey_type || 'PERIODIC'
-    saveToStorage(`roadguard_survey_type_${createdPlan.id}`, sType)
-    saveToStorage(`roadguard_survey_type_${newCode}`, sType)
-    saveToStorage(`roadguard_survey_project_id_${createdPlan.id}`, projectId)
-    saveToStorage(`roadguard_survey_project_id_${newCode}`, projectId)
-    saveToStorage(`roadguard_survey_project_name_${createdPlan.id}`, data.project_name)
-    saveToStorage(`roadguard_survey_project_name_${newCode}`, data.project_name)
-    saveToStorage(`roadguard_survey_start_km_${createdPlan.id}`, data.start_km)
-    saveToStorage(`roadguard_survey_start_km_${newCode}`, data.start_km)
-    saveToStorage(`roadguard_survey_end_km_${createdPlan.id}`, data.end_km)
-    saveToStorage(`roadguard_survey_end_km_${newCode}`, data.end_km)
-    const sTypeLabel =
-      sType === 'BASELINE'
-        ? 'Khảo sát cơ sở (Baseline)'
-        : sType === 'AD_HOC'
-        ? 'Khảo sát đột xuất'
-        : 'Khảo sát định kỳ'
-
-    return {
-      id: createdPlan.id,
-      code: newCode,
-      title: `Bay khảo sát trắc địa đoạn ${data.start_km} - ${data.end_km}`,
-      survey_type: sType,
-      survey_type_label: sTypeLabel,
-      project_id: projectId,
-      project_name: data.project_name,
-      start_km: data.start_km,
-      end_km: data.end_km,
-      flight_date: createdPlan.plannedAt
-        ? new Date(createdPlan.plannedAt).toLocaleDateString('vi-VN')
-        : 'Hôm nay',
-      pilot_name: data.pilot_name || 'Synthetic operator-a',
-      drone_model: data.drone_model || 'DJI Matrice 350 RTK',
-      total_photos: 0,
-      gsd_resolution: '~1.15 cm/pixel',
-      ai_defects_count: 0,
-      ai_pending_count: 0,
-      coverage_percent: 0,
-      status: 'SCHEDULED',
-      status_label: 'Kế hoạch lên lịch (Sẵn sàng cất cánh)'
-    }
+    throw new Error('BLOCKED: Form hiện tại chỉ có lý trình và tên phi công; chưa có scope/version và Operator ID đã xác minh để gửi command tạo kế hoạch/giao nhiệm vụ. Chưa tạo dữ liệu.')
   },
 
   /**
    * Kích hoạt tiến trình chạy nhận diện Road-YOLOv9 (API-053 / POST /ai-mock-runs)
    */
   async simulateDroneFlightCompletion(surveyId: string): Promise<SurveyMissionItem | null> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     await ensureBearerToken()
 
     const missions = await this.getSurveys()
@@ -1409,6 +1184,8 @@ export const surveyService = {
     detectionId: string,
     updates: Partial<AIDetectionItem>
   ): Promise<AIDetectionItem | null> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     await ensureBearerToken()
 
     const missions = await this.getSurveys()
@@ -1532,6 +1309,8 @@ export const surveyService = {
    * Đặt lại trạng thái ứng viên AI về Chờ duyệt (Hủy gom / Tách ra)
    */
   async resetSurveyDetection(detectionId: string): Promise<void> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     markAiCandidateReset(detectionId)
     clearCandidateDecisionOverride(detectionId)
     await fetch(`/__dev/reset-ai-candidate?id=${encodeURIComponent(detectionId)}`).catch(() => null)
@@ -1625,6 +1404,8 @@ export const surveyService = {
     detectionId: string,
     override: AiCandidateOverride
   ): Promise<void> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     const store = getAiCandidateOverrides()
     const current = store[detectionId] || store[detectionId.toLowerCase()] || {}
     const merged: AiCandidateOverride = {
@@ -1664,217 +1445,54 @@ export const surveyService = {
    * [SWG-019] POST /api/v1/projects/{projectId}/candidate-decisions
    * Ra quyết định thẩm định ứng viên (KEEP_NEW | LINK_EXISTING | REJECT) chuẩn Candidate3
    */
-  async decideCandidate(
-    projectId: string,
-    payload: {
-      sourceKind: 'AI_DETECTION' | 'REPORT'
-      sourceId: string
-      decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
-      targetDefectId?: string | null
-      targetVersion?: string | null
-      defectTypeCode?: string
-      customTypeLabel?: string
-      severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-      roadSectionVersionId?: string
-      segmentId?: string | null
-      reason: string
-    }
-  ): Promise<CandidateDecisionDto> {
-    await ensureBearerToken()
-
-    if (payload.decision === 'KEEP_NEW' && payload.defectTypeCode) {
-      await this.saveAiCandidateOverride(payload.sourceId, {
-        rawTypeCode: payload.defectTypeCode,
-        customTypeLabel: payload.customTypeLabel
-      })
-    }
-
-    const isProjectA = projectId.toLowerCase() === '72f84201-c001-4000-8000-000000000001'
-    const isRealCandidateUuid = isProjectA && /^[0-9a-fA-F-]{36}$/.test(payload.sourceId)
-
-    // Đối với các ứng viên trắc địa từ đợt bay của các dự án ngoài Project A (như Project E, D, C...):
-    // Lưu thẳng vào bảng dbo.Defects trong Docker SQL Server và ghi nhận quyết định thẩm định
-    if (payload.sourceKind === 'AI_DETECTION' && !isRealCandidateUuid) {
-      const roadConfig = getProjectRoadConfig(projectId)
-      let defectId: string | null = null
-      if (payload.decision === 'KEEP_NEW') {
-        const typeVal = payload.defectTypeCode || 'CRACK'
-        const sevVal = payload.severity || 'MEDIUM'
-        try {
-          const syncRes = await fetch(
-            `/__dev/save-defect?projectId=${encodeURIComponent(projectId)}&roadSectionVersionId=${encodeURIComponent(roadConfig.routeVersionId)}&type=${encodeURIComponent(typeVal)}&severity=${encodeURIComponent(sevVal)}`
-          )
-          const syncData = await syncRes.json()
-          if (syncData?.defectId) {
-            defectId = syncData.defectId
-          }
-        } catch {}
-        if (!defectId) {
-          defectId = crypto.randomUUID()
-        }
-      } else if (payload.decision === 'LINK_EXISTING') {
-        defectId = payload.targetDefectId || null
-      }
-
-      const mockDecision: CandidateDecisionDto = {
-        id: crypto.randomUUID(),
-        sourceKind: payload.sourceKind,
-        sourceId: payload.sourceId,
-        decision: payload.decision,
-        defectId,
-        version: '1',
-        supersedesDecisionId: null
-      }
-
-      saveCandidateDecisionOverride(payload.sourceId, mockDecision)
-      clearAiCandidateReset(payload.sourceId)
-      return mockDecision
-    }
-
-    let sourceVersion = ''
-    let geometryVersion = ''
-    let routeVersionId = payload.roadSectionVersionId || getProjectRoadConfig(projectId).routeVersionId
-    let segmentId: string | null = payload.segmentId ?? null
-    let defaultTypeCode: string = payload.defectTypeCode || 'CRACK'
-    let currentDisposition: { decisionId: string; version: string } | null = null
-
-    if (payload.sourceKind === 'AI_DETECTION') {
-      const cand = await this.getAiCandidateFacts(projectId, payload.sourceId)
-      sourceVersion = cand.sourceVersion
-      geometryVersion = cand.geometryVersion
-      routeVersionId = payload.roadSectionVersionId || cand.routeVersionId
-      segmentId = payload.segmentId !== undefined ? payload.segmentId : cand.segmentId
-      defaultTypeCode = payload.defectTypeCode || cand.typeCode || 'CRACK'
-      currentDisposition = cand.disposition
-    } else {
-      const matchPage = await this.getCandidateMatches(projectId, 'REPORT', payload.sourceId)
-      sourceVersion = matchPage.source.version
-      geometryVersion = matchPage.geometryVersion
-    }
-
-    // Nếu ứng viên đã có quyết định trước đó trong CSDL
-    let supersedesDecisionId: string | null = null
-    let previousDecisionVersion: string | null = null
-
-    if (currentDisposition?.decisionId) {
-      const existingDec = await this.getCandidateDecision(
-        projectId,
-        currentDisposition.decisionId
-      ).catch(() => null)
-      if (existingDec) {
-        // 1. Nếu trong CSDL Backend quyết định hiện tại ĐÃ LÀ quyết định này rồi:
-        // (ví dụ: đã là LINK_EXISTING với cùng targetDefectId hoặc cùng quyết định)
-        const isSameDecision =
-          existingDec.decision === payload.decision &&
-          (payload.decision !== 'LINK_EXISTING' ||
-            !payload.targetDefectId ||
-            (existingDec.defectId &&
-              existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
-
-        if (isSameDecision) {
-          clearAiCandidateReset(payload.sourceId)
-          return existingDec
-        }
-
-        // 2. Nếu thay đổi quyết định, gửi supersedesDecisionId và previousDecisionVersion theo chuẩn OpenAPI (API-059)
-        supersedesDecisionId = currentDisposition.decisionId
-        previousDecisionVersion = currentDisposition.version
-      }
-    }
-
-    let resolvedTargetVersion = payload.targetVersion || null
-    if (payload.decision === 'LINK_EXISTING' && payload.targetDefectId && !resolvedTargetVersion) {
-      const targetDef = await this.getDefectById(projectId, payload.targetDefectId)
-      resolvedTargetVersion = targetDef.defect.version
-    }
-
-    const requestBody = {
-      sourceKind: payload.sourceKind,
-      sourceId: payload.sourceId,
-      sourceVersion,
-      geometryVersion,
-      decision: payload.decision,
-      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId || null : null,
-      targetVersion: payload.decision === 'LINK_EXISTING' ? resolvedTargetVersion : null,
-      classification:
-        payload.decision === 'KEEP_NEW'
-          ? {
-              defectTypeCode: defaultTypeCode,
-              causeCategoryCode: null,
-              severity: payload.severity || 'MEDIUM',
-              roadSectionVersionId: routeVersionId,
-              segmentId: null
-            }
-          : null,
-      reason: payload.reason.trim() || 'Thẩm định ứng viên khiếm khuyết trên hệ thống',
-      supersedesDecisionId,
-      previousDecisionVersion,
-      recurrence: null
-    }
-
+  async decideCandidate(projectId: string, payload: {
+    sourceKind: 'AI_DETECTION' | 'REPORT'; sourceId: string;
+    decision: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'; reason: string;
+    sourceVersion?: string; geometryVersion?: string;
+    supersedesDecisionId?: string | null; previousDecisionVersion?: string | null;
+    targetDefectId?: string | null; targetVersion?: string | null;
+    defectTypeCode?: string; customTypeLabel?: string; severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    roadSectionVersionId?: string; segmentId?: string | null;
+  }): Promise<CandidateDecisionDto> {
+    const actor = useAuthStore.getState().user
+    const epoch = useAuthStore.getState().authEpoch
+    if (!actor || actor.role !== 'PROJECT_MANAGER') throw new Error('Chỉ PM được quyết định Candidate.')
+    if (!payload.sourceVersion || !payload.geometryVersion || !payload.reason.trim()) throw new Error('Thiếu snapshot sourceVersion/geometryVersion hoặc lý do; phải đọc lại từ server.')
+    if (payload.decision === 'KEEP_NEW' && (!payload.defectTypeCode || !payload.severity || !payload.roadSectionVersionId)) throw new Error('Thiếu classification có căn cứ cho KEEP_NEW.')
+    if (payload.decision === 'LINK_EXISTING' && (!payload.targetDefectId || !payload.targetVersion)) throw new Error('Thiếu Defect ID/version đích đã đọc.')
+    const body = { sourceKind: payload.sourceKind, sourceId: payload.sourceId, sourceVersion: payload.sourceVersion,
+      geometryVersion: payload.geometryVersion, decision: payload.decision, reason: payload.reason.trim(),
+      targetDefectId: payload.decision === 'LINK_EXISTING' ? payload.targetDefectId : null,
+      targetVersion: payload.decision === 'LINK_EXISTING' ? payload.targetVersion : null,
+      classification: payload.decision === 'KEEP_NEW' ? { defectTypeCode: payload.defectTypeCode, severity: payload.severity,
+        roadSectionVersionId: payload.roadSectionVersionId, segmentId: payload.segmentId ?? null, causeCategoryCode: null } : null,
+      supersedesDecisionId: payload.supersedesDecisionId ?? null, previousDecisionVersion: payload.previousDecisionVersion ?? null, recurrence: null }
+    const fingerprint = JSON.stringify(body)
+    const journalKey = `rg_candidate_command_${actor.id}_${projectId}_${payload.sourceId}`
+    const saved = sessionStorage.getItem(journalKey)
+    const command = saved ? JSON.parse(saved) : { key: crypto.randomUUID(), body, fingerprint }
+    if (command.fingerprint !== fingerprint) throw new Error('Ý định trước chưa đối chiếu xong; không đổi key/body/version để ghi đè.')
+    const current = () => { if (useAuthStore.getState().authEpoch !== epoch || useAuthStore.getState().user?.id !== actor.id) throw new Error('Phiên Candidate đã thay đổi.') }
+    if (candidateWrites.has(journalKey)) throw new Error('Đang gửi quyết định này.')
+    candidateWrites.add(journalKey)
     try {
-      const res = await apiClient.post<CandidateDecisionDto>(
-        `/projects/${projectId}/candidate-decisions`,
-        requestBody,
-        {
-          headers: {
-            'Idempotency-Key': crypto.randomUUID()
-          }
-        }
-      )
-      if (payload.sourceId) {
-        clearAiCandidateReset(payload.sourceId)
+      current(); sessionStorage.setItem(journalKey, JSON.stringify(command))
+      if (!command.receipt) {
+        const response = await apiClient.post<CandidateDecisionDto>(`/projects/${projectId}/candidate-decisions`, command.body, {
+          headers: { 'Idempotency-Key': command.key }, transformRequest: [(data: unknown) => { current(); return JSON.stringify(data) }] })
+        current(); command.receipt = response.data; sessionStorage.setItem(journalKey, JSON.stringify(command))
       }
-      return res.data
-    } catch (err: any) {
-      if (err?.response?.status === 409) {
-        const errCode = err?.response?.data?.code || ''
-        const errDetail = err?.response?.data?.detail || ''
-        if (errCode === 'invalid_state_transition' || errDetail.includes('completed')) {
-          if (currentDisposition?.decisionId) {
-            const existingDec = await this.getCandidateDecision(
-              projectId,
-              currentDisposition.decisionId
-            ).catch(() => null)
-            if (
-              existingDec &&
-              existingDec.decision === payload.decision &&
-              (payload.decision !== 'LINK_EXISTING' ||
-                !payload.targetDefectId ||
-                (existingDec.defectId &&
-                  existingDec.defectId.toLowerCase() === payload.targetDefectId.toLowerCase()))
-            ) {
-              clearAiCandidateReset(payload.sourceId)
-              clearCandidateDecisionOverride(payload.sourceId)
-              return existingDec
-            }
-          }
-
-          // Khi PM đã bấm tách ra và ra quyết định mới (Báo sai hoặc Chấp nhận tạo mới):
-          // Ghi nhận quyết định thẩm định của PM để giao diện phản hồi chính xác, không bị chặn bởi lỗi 409
-          clearAiCandidateReset(payload.sourceId)
-          const fallbackDefectId =
-            payload.decision === 'LINK_EXISTING'
-              ? payload.targetDefectId || null
-              : payload.decision === 'KEEP_NEW'
-              ? crypto.randomUUID()
-              : null
-
-          const overrideDecision: CandidateDecisionDto = {
-            id: crypto.randomUUID(),
-            sourceKind: 'AI_DETECTION',
-            sourceId: payload.sourceId,
-            decision: payload.decision,
-            defectId: fallbackDefectId,
-            version: 'OVERRIDE_V1',
-            supersedesDecisionId: currentDisposition?.decisionId || null
-          }
-          saveCandidateDecisionOverride(payload.sourceId, overrideDecision)
-          return overrideDecision
-        }
+      const decision = await this.getCandidateDecision(projectId, command.receipt.id)
+      current()
+      if (decision.sourceId !== payload.sourceId || decision.decision !== payload.decision) throw new Error('Quyết định đọc lại không khớp yêu cầu.')
+      if (payload.sourceKind === 'AI_DETECTION') {
+        const candidate = await this.getAiCandidateFacts(projectId, payload.sourceId)
+        current()
+        if (candidate.disposition?.decisionId !== decision.id) throw new Error('Current head chưa khớp biên nhận; cần đối chiếu, không POST thêm.')
       }
-      throw err
-    }
+      sessionStorage.removeItem(journalKey)
+      return decision
+    } finally { candidateWrites.delete(journalKey) }
   },
 
   /**
@@ -2081,9 +1699,9 @@ export const surveyService = {
    * Phục vụ Hộp thư tiếp nhận lỗi (/pm/ai-inbox) và Thẩm định chi tiết (/pm/defects/:id/verify-a)
    */
   async getAllProjectAiDetections(targetProjectId?: string): Promise<AIDetectionItem[]> {
-    await ensureBearerToken()
+    const actor = useAuthStore.getState().user
 
-    let projects = await projectService.fetchProjects().catch(() => projectService.getProjects())
+    let projects = await projectService.fetchProjects()
     if (targetProjectId) {
       projects = projects.filter((p) => p.id === targetProjectId || p.code === targetProjectId)
     }
@@ -2096,7 +1714,7 @@ export const surveyService = {
 
     for (const proj of projects) {
       try {
-        const projectDefects = await this.getProjectDefects(proj.id).catch(() => [] as BackendDefectDto[])
+        const projectDefects = await this.getProjectDefects(proj.id)
         const defectMap = new Map<string, BackendDefectDto>()
         for (const df of projectDefects) {
           defectMap.set(df.id.toLowerCase(), df)
@@ -2108,23 +1726,9 @@ export const surveyService = {
           LOW: 'Nhẹ'
         }
 
-        const runsRes = await apiClient.get<{
-          items: Array<{ id: string; status: string; fixtureVersion?: string }>
-        }>(`/projects/${proj.id}/ai-mock-runs`)
-        const succeededRuns = (runsRes.data?.items || []).filter((r) => r.status === 'SUCCEEDED')
+        const runs = await this.readSurveyPage(`/projects/${proj.id}/ai-mock-runs`)
+        const succeededRuns = runs.filter(r => r.status === 'SUCCEEDED')
 
-        if (succeededRuns.length === 0) {
-          // Các dự án lưu trữ đợt bay drone trong bảng Survey (như Dự án E)
-          const projectSurveys = await this.getSurveys(proj.id).catch(() => [] as SurveyMissionItem[])
-          for (const srv of projectSurveys) {
-            const srvDets = await this.getSurveyDetections(srv.id, srv, proj.id).catch(() => [])
-            for (const sd of srvDets) {
-              if (!allItems.some((existing) => existing.id.toLowerCase() === sd.id.toLowerCase())) {
-                allItems.push(sd)
-              }
-            }
-          }
-        } else {
           for (const run of succeededRuns) {
           const resultRes = await apiClient
             .get<{
@@ -2137,73 +1741,47 @@ export const surveyService = {
                 timestampMs: number
               }>
             }>(`/projects/${proj.id}/ai-mock-runs/${run.id}/result`)
-            .catch(() => ({ data: { detections: [] } }))
+
 
           const detections = resultRes.data?.detections || []
           let runDetIdx = 0
           for (const d of detections) {
             globalIdx += 1
             runDetIdx += 1
-            let decisionDto: CandidateDecisionDto | null = null
-
-            const isReset = getAiCandidateResets().has(d.detectionId.toLowerCase())
-            const decOverride = getCandidateDecisionOverrides()[d.detectionId.toLowerCase()]
-            if (decOverride) {
-              decisionDto = decOverride
-            }
-
-            let status: AIDetectionItem['status'] = 'PENDING'
-            let defectId: string | null = null
-            let decisionKind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null = null
-
-            if (isReset && !decOverride) {
-              decisionDto = null
-              status = 'PENDING'
-              defectId = null
-              decisionKind = null
-            } else if (decisionDto) {
-              decisionKind = decisionDto.decision
-              defectId = decisionDto.defectId
-              if (decisionDto.decision === 'KEEP_NEW' || decisionDto.decision === 'LINK_EXISTING') {
-                status = 'APPROVED'
-              } else if (decisionDto.decision === 'REJECT') {
-                status = 'REJECTED'
-              }
-            }
-
+            const candFacts = await this.getAiCandidateFacts(proj.id, d.detectionId)
+            const decisionDto = candFacts.disposition?.decisionId
+              ? await this.getCandidateDecision(proj.id, candFacts.disposition.decisionId) : null
+            const decisionKind = decisionDto?.decision || null
+            const defectId = decisionDto?.defectId || null
+            const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
+              : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
             const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
-            const overridesMap = getAiCandidateOverrides()
-            const candOverride =
-              overridesMap[d.detectionId] ||
-              overridesMap[d.detectionId.toLowerCase()] ||
-              (linkedDbDefect ? overridesMap[linkedDbDefect.id] || overridesMap[linkedDbDefect.id.toLowerCase()] : undefined)
-
-            const bboxX = candOverride?.bbox?.x ?? d.bbox[0]
-            const bboxY = candOverride?.bbox?.y ?? d.bbox[1]
-            const bboxW = candOverride?.bbox?.width ?? d.bbox[2]
-            const bboxH = candOverride?.bbox?.height ?? d.bbox[3]
+            const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
+            const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
+            const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
+            const bboxH = candFacts.boundingBox?.height ?? d.bbox[3]
 
             const topPct = (bboxY * 100).toFixed(1) + '%'
             const leftPct = (bboxX * 100).toFixed(1) + '%'
             const widthPct = (bboxW * 100).toFixed(1) + '%'
             const heightPct = (bboxH * 100).toFixed(1) + '%'
             const typeCode =
-              candOverride?.rawTypeCode || linkedDbDefect?.defectTypeCode || d.typeCode
-            const typeLabel = formatDefectTypeLabel(typeCode, candOverride?.customTypeLabel)
-            const confVal = d.confidence
+              linkedDbDefect?.defectTypeCode || candFacts.typeCode || d.typeCode
+            const typeLabel = formatDefectTypeLabel(typeCode)
+            const confVal = candFacts.confidence ?? d.confidence
             const confPct = confVal > 1 ? Math.round(confVal) : Math.round(confVal * 100)
-            const tsMs = d.timestampMs
-            const km = parseFloat((0.351 + (runDetIdx - 1) * 0.12).toFixed(3))
+            const tsMs = candFacts.timestampMs ?? d.timestampMs
+            const km = Number.NaN
             const severityLabel =
               (linkedDbDefect?.severity && sevViMap[linkedDbDefect.severity]) ||
-              (confPct >= 85 ? 'Nghiêm trọng' : 'Trung bình')
+              'Chưa được PM phân loại'
 
             allItems.push({
               id: d.detectionId,
               code: `DET-${String(globalIdx).padStart(2, '0')}`,
               defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
               defectId,
-              stationing: `Km 0+${String(Math.round(km * 1000)).padStart(3, '0')}`,
+              stationing: 'Chưa có lý trình từ server',
               lane: '',
               type: typeLabel,
               severityLevel: severityLabel,
@@ -2225,36 +1803,36 @@ export const surveyService = {
               },
               projectId: proj.id,
               runId: run.id,
-              datasetVersionId: undefined,
-              modelVersionId: undefined,
-              fixtureVersion: run.fixtureVersion || 'Road-YOLOv9',
-              sourceVideoFileId: undefined,
-              frameFileId: d.frameFileId,
-              frameFileVersion: undefined,
-              frameSha256: undefined,
-              frameSizeBytes: undefined,
-              frameMediaType: undefined,
+              datasetVersionId: candFacts.datasetVersionId,
+              modelVersionId: candFacts.modelVersionId,
+              fixtureVersion: candFacts.fixtureVersion,
+              sourceVideoFileId: candFacts.sourceVideoFileId,
+              frameFileId: candFacts.frameFileId,
+              frameFileVersion: candFacts.frameFileVersion,
+              frameSha256: candFacts.frameSha256,
+              frameSizeBytes: candFacts.frameSizeBytes,
+              frameMediaType: candFacts.frameMediaType,
               timestampMs: tsMs,
               rawTypeCode: typeCode,
               rawBbox: { x: bboxX, y: bboxY, width: bboxW, height: bboxH },
-              routeVersionId: undefined,
-              segmentSetId: undefined,
-              segmentId: null,
-              geometryVersion: undefined,
-              positionStatus: undefined,
-              sourceVersion: undefined,
-              disposition: null,
-              decisionKind: isReset && !decOverride ? null : decisionKind
+              routeVersionId: candFacts.routeVersionId,
+              segmentSetId: candFacts.segmentSetId,
+              segmentId: candFacts.segmentId,
+              geometryVersion: candFacts.geometryVersion,
+              positionStatus: candFacts.positionStatus,
+              sourceVersion: candFacts.sourceVersion,
+              disposition: candFacts.disposition,
+              decisionKind
             })
           }
         }
-      }
       } catch (err) {
-        if (targetProjectId) throw err
+        throw err
       }
     }
 
-    return allItems
+    if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách AI cũ.')
+    return Array.from(new Map(allItems.map(item => [`${item.projectId}:${item.id}`.toLowerCase(), item])).values())
   },
 
   /**
@@ -2271,6 +1849,8 @@ export const surveyService = {
       projectId?: string
     }
   ): Promise<{ success: boolean; taskId: string }> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     await ensureBearerToken()
 
     const missions = await this.getSurveys()
@@ -2373,6 +1953,8 @@ export const surveyService = {
    * Khóa Baseline đoạn đường sau khi thẩm định 100% (API-057 / POST /baseline-selections)
    */
   async lockBaseline(surveyId: string, projectId?: string): Promise<boolean> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     await ensureBearerToken()
 
     let targetProjectId = projectId
@@ -2533,6 +2115,8 @@ export const surveyService = {
    * Đặt lại mock data ban đầu
    */
   async resetSurveys(): Promise<void> {
+    if (legacyCommandBlocked()) throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
+
     // Không thao tác mock
   }
 }

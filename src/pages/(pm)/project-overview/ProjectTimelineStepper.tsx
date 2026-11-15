@@ -19,7 +19,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
   onNavigate
 }) => {
   const warrantyReady = hasWarrantyData(project)
-  const isAlignmentDone = geometryStatus === undefined ? (project.length_km || 0) > 0 : geometryStatus === 'CONFIRMED'
+  const isAlignmentDone = geometryStatus === 'CONFIRMED' || geometryStatus === undefined && project.server_facts?.geometryState === 'CONFIRMED'
   const isClosed = project.status === 'CLOSED'
   const isSuspended = project.status === 'RESTRICTED'
   const isOperating = isAlignmentDone && !isClosed && !isSuspended
@@ -77,7 +77,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
               Giám sát trưởng đã lập hồ sơ quản lý công trình và bàn giao quyền điều phối tuyến cho Chỉ huy trưởng{' '}
-              <strong className="text-slate-900">{project.pm_name}</strong> ({project.pm_email}).
+              <strong className="text-slate-900">{project.pm_name}</strong> {project.pm_email ? ` (${project.pm_email})` : ''}.
             </p>
           </div>
         </div>
@@ -116,7 +116,7 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
                   : 'text-[#8C6D1F]'
               }`}>
                 {isAlignmentDone
-                  ? 'Đã duyệt & khóa SHA-256'
+                  ? 'Hình học đã xác nhận từ server'
                   : isClosed
                   ? 'Đã đóng trước khi thiết lập tuyến'
                   : 'Đang chờ PM nạp tuyến'}
@@ -227,33 +227,6 @@ export const ProjectTimelineStepper: React.FC<ProjectTimelineStepperProps> = ({
               )}
             </p>
 
-            {/* Các thẻ chỉ số hoạt động lặp lại của dự án */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200/70">
-              <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
-                <span className="text-[10px] text-slate-500 font-medium">Gói sửa chữa</span>
-                <span className="text-xs font-mono font-bold text-slate-800">
-                  {project.repair_packages} gói kỹ thuật
-                </span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
-                <span className="text-[10px] text-slate-500 font-medium">Khiếm khuyết mở</span>
-                <span className={`text-xs font-mono font-bold ${project.open_defects > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {project.open_defects} điểm tồn đọng
-                </span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
-                <span className="text-[10px] text-slate-500 font-medium">Thời hạn đã qua</span>
-                <span className="text-xs font-mono font-bold text-amber-900">
-                  {warrantyReady ? `${project.warranty_passed_percent}% thời gian` : 'Chưa cập nhật'}
-                </span>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col">
-                <span className="text-[10px] text-slate-500 font-medium">Hết hạn bảo hành</span>
-                <span className="text-xs font-mono font-bold text-slate-800">
-                  {warrantyReady ? project.warranty_end_date : 'Chưa cập nhật'}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 

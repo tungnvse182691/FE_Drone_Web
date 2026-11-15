@@ -3,6 +3,7 @@ import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
 
 export interface DrawerReporterInfoProps {
+  sourceLabel?: string
   selectedCase: TriageCase
   onOpenTriageProject: (c: TriageCase) => void
   isSupervisor?: boolean
@@ -10,6 +11,7 @@ export interface DrawerReporterInfoProps {
 
 export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
   selectedCase,
+  sourceLabel = selectedCase.source_label,
   onOpenTriageProject,
   isSupervisor = false,
 }) => {
@@ -23,7 +25,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
           <span>Thông Tin Hồ Sơ</span>
         </span>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          {selectedCase.source_label}
+          {sourceLabel}
         </span>
       </div>
 

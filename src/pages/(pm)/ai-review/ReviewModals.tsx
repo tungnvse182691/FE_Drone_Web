@@ -58,7 +58,8 @@ export interface ReviewModalsProps {
   setIsNoDefectModalOpen: (open: boolean) => void
   noDefectReason: string
   setNoDefectReason: (r: string) => void
-  onConfirmNoDefect: () => void
+  onReviewNoDefect?: () => Promise<void>
+  onConfirmNoDefect: (evidenceId?: string) => Promise<void> | void
 
   // Modal 7: Publish Result
   isPublishModalOpen: boolean
@@ -115,6 +116,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   noDefectReason,
   setNoDefectReason,
   onConfirmNoDefect,
+  onReviewNoDefect,
   isPublishModalOpen,
   setIsPublishModalOpen,
   publishPublicNote,
@@ -204,6 +206,7 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         noDefectReason={noDefectReason}
         setNoDefectReason={setNoDefectReason}
         onConfirmNoDefect={onConfirmNoDefect}
+        onReviewNoDefect={onReviewNoDefect}
       />
 
       {/* MODAL 7: CÔNG BỐ TIẾN ĐỘ CHO NGƯỜI DÂN (PA07) */}

@@ -1,3 +1,4 @@
+import { ProfilePasswordRecovery, useProfilePasswordState } from './ProfilePasswordRecovery'
 import React, { useState, useEffect } from 'react'
 import { RoleCode } from '../../types/enums'
 import { User } from '../../types/domain'
@@ -19,6 +20,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onUpdateCurrentUser
 }) => {
   const { updateUser } = useAuthStore()
+  const passwordState = useProfilePasswordState()
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
   const [loading, setLoading] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
@@ -60,26 +62,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       .catch((err) => {
         if (!isMounted) return
         console.error('Lỗi khi tải profile từ Backend:', err)
-        const fallbackName =
-          currentUser?.full_name ||
-          (currentUser as any)?.displayName ||
-          currentUser?.email?.split('@')[0] ||
-          'Nhân sự Hoàng Hải'
-        setFullName(fallbackName)
-        setProfile({
-          userId: currentUser?.id || '',
-          username: currentUser?.username || currentUser?.email || '',
-          displayName: fallbackName,
-          email: currentUser?.email || '',
-          roleCode: currentUser?.role || RoleCode.PROJECT_MANAGER,
-          roleTitle:
-            currentUser?.role === RoleCode.SUPERVISOR
-              ? 'Kỹ sư Giám sát / Đại diện Chủ đầu tư (Supervisor)'
-              : 'Chỉ huy trưởng dự án (Project Manager)',
-          status: 'ACTIVE',
-          rowVersion: '',
-          assignedProjects: []
-        })
+        setProfile(null)
+        triggerNotice('error','Không tải được hồ sơ từ máy chủ. Hãy tải lại trước khi sửa.')
       })
       .finally(() => {
         if (isMounted) setLoading(false)
@@ -95,10 +79,10 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   // Xử lý lưu thông tin cá nhân lên CSDL Backend (API-048)
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return
+    if (!profile || saving) return
 
     const trimmedName = fullName.trim()
-    if (!trimmedName) {
+    if (!trimmedName || trimmedName.length>200) {
       triggerNotice('error', 'Họ và tên không được để trống.')
       return
     }
@@ -141,7 +125,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   // Xử lý đổi mật khẩu qua Backend (API-004)
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return
+    if (!profile || saving || passwordState.locked) return
 
     if (!currentPassword) {
       triggerNotice('error', 'Vui lòng nhập mật khẩu hiện tại.')
@@ -159,12 +143,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
     try {
       setSaving(true)
       const res = await profileService.changePassword(currentPassword, newPassword)
-      triggerNotice('success', res.message)
+      triggerNotice(res.success ? 'success' : 'error', res.message)
+      if (!res.success) return
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch (err: any) {
-      console.error('Lỗi khi đổi mật khẩu:', err)
+      console.warn('[Profile password]', { status: err?.response?.status, code: err?.response?.data?.code })
       triggerNotice('error', err?.message || 'Lỗi khi đổi mật khẩu trên hệ thống bảo mật.')
     } finally {
       setSaving(false)
@@ -406,6 +391,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               </div>
 
               {/* Footer nút hành động */}
+              <ProfilePasswordRecovery onResult={(success,message)=>{triggerNotice(success?'success':'error',message);if(success){setCurrentPassword('');setNewPassword('');setConfirmPassword('')}}} />
               <div className="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
                 <button
                   type="button"
@@ -512,7 +498,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || passwordState.locked}
                   className="px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-60"
                 >
                   <span className="material-symbols-outlined text-[16px]">key</span>

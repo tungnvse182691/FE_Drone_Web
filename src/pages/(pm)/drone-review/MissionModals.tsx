@@ -37,9 +37,9 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
   setPilotNote,
   onSubmitReFlight,
   selectedItem: _selectedItem,
-  currentSurveyCode = '#MS-2026-0924',
+  currentSurveyCode = 'Chưa cập nhật',
   currentSurveyRange = 'Toàn tuyến',
-  coveragePercentage = 100,
+  coveragePercentage = Number.NaN,
   isBaselineModalOpen = false,
   setIsBaselineModalOpen,
   onConfirmBaseline,
@@ -50,7 +50,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
     const [customRange, setCustomRange] = useState<string>(currentSurveyRange)
     
   
-  const [selectedPilot, setSelectedPilot] = useState<string>('Synthetic operator-a (Phi công UAV)')
+  const [selectedPilot, setSelectedPilot] = useState<string>('')
   const [dueDate, setDueDate] = useState<string>(() => {
     const d = new Date()
     d.setDate(d.getDate() + 2)
@@ -128,13 +128,11 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           <label className="text-xs font-semibold text-slate-700 block">
             Phi công thiết bị bay phụ trách:
           </label>
-          <select
-            value={selectedPilot}
+          <select disabled
+            value=""
             onChange={(e) => setSelectedPilot(e.target.value)}
             className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-          >
-            <option value="Synthetic operator-a (Phi công UAV)">Synthetic operator-a (Phi công UAV)</option>
-          </select>
+          ><option value="">Chưa cập nhật Operator</option></select>
         </div>
 
         {/* Chỉ dẫn kỹ thuật cho Phi công */}
@@ -166,6 +164,8 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
             </button>
             <button
               type="button"
+              disabled
+              title="Chưa có scope và Operator được xác minh để gửi lệnh tại đây"
               onClick={() => onSubmitReFlight({ pilot: selectedPilot, surveyType: 'AD_HOC', dueDate, note: pilotNote, range: customRange })}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-gold hover:bg-[#B38E1F] text-white shadow-xs transition-all active:scale-98 cursor-pointer flex items-center gap-1.5"
             >
@@ -220,7 +220,7 @@ export const MissionModals: React.FC<MissionModalsProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-slate-600">Độ phủ trùm ảnh trắc địa:</span>
             <span className="font-bold font-mono text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-              {coveragePercentage}% (Ngưỡng toàn tuyến: ≥ 95%)
+              {Number.isFinite(coveragePercentage) ? `${coveragePercentage}%` : 'Chưa cập nhật'} (Ngưỡng toàn tuyến: ≥ 95%)
             </span>
           </div>
           <div className="flex items-center justify-between text-slate-500 text-[11px] pt-1 border-t border-slate-200">

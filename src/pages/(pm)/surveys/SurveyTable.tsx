@@ -4,6 +4,7 @@ import { type SurveyMissionItem as SurveyMission, type HubProject } from '../../
 import { SurveyCard } from './SurveyCard'
 
 interface SurveyTableProps {
+  serverReadOnly?: boolean
   projects?: HubProject[]
   missions: SurveyMission[]
   filteredMissions: SurveyMission[]
@@ -20,6 +21,7 @@ interface SurveyTableProps {
 }
 
 export const SurveyTable: React.FC<SurveyTableProps> = ({
+  serverReadOnly = false,
   projects = [],
   missions,
   filteredMissions,
@@ -77,7 +79,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
               }`}
             >
-              Tất cả đợt bay ({missions.length})
+              {serverReadOnly ? 'Tất cả bản ghi' : 'Tất cả đợt bay'} ({missions.length})
             </button>
             <button
               type="button"
@@ -88,7 +90,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
               }`}
             >
-              <span>Chờ Thẩm Định AI</span>
+              <span>{serverReadOnly ? 'Nhiệm vụ khảo sát' : 'Chờ Thẩm Định AI'}</span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                   activeTab === 'PENDING'
@@ -96,7 +98,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                     : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                {pendingCount}
+                {serverReadOnly ? missions.filter(m=>m.serverRecordKind==='TASK').length : pendingCount}
               </span>
             </button>
             <button
@@ -108,10 +110,11 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
               }`}
             >
-              Kế hoạch lên lịch ({scheduledCount})
+              {serverReadOnly ? 'Kế hoạch khảo sát' : 'Kế hoạch lên lịch'} ({serverReadOnly ? missions.filter(m=>m.serverRecordKind==='PLAN').length : scheduledCount})
             </button>
-            <button
+            {!serverReadOnly && <button
               type="button"
+              disabled={serverReadOnly}
               onClick={() => setActiveTab('COMPLETED')}
               className={`px-[18px] py-[10px] rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap border ${
                 activeTab === 'COMPLETED'
@@ -119,8 +122,8 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
                   : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
               }`}
             >
-              Đã khóa Baseline ({completedCount})
-            </button>
+              {serverReadOnly ? 'Chưa đọc trạng thái Baseline' : `Đã khóa Baseline (${completedCount})`}
+            </button>}
           </div>
 
           {/* 2. Filter Controls: Route Select Dropdown & Search Input */}
@@ -154,7 +157,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
               </div>
               <input
                 type="text"
-                placeholder="Tìm mã #MS-, tên tuyến, lý trình..."
+                placeholder="Tìm dự án, tên tuyến, lý trình..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 text-xs bg-[#F8F9FA] border border-[#E2E5E9] rounded-xl text-[#1A1D20] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C9A227] focus:border-[#C9A227] transition-all"
@@ -190,14 +193,14 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
 
       {/* Footer Info Note */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 pt-2 px-1 gap-2">
-        <div className="flex items-center gap-1.5">
+        {!serverReadOnly && <div className="flex items-center gap-1.5">
           <Icon name="info" size={15} className="text-slate-400" />
           <span>
-            Mỗi đợt bay sau khi nạp ảnh sẽ tự động chạy pipeline Road-YOLOv9. Sau khi thẩm định xong 100% hộp bao và độ phủ ≥ 95%, PM có thể ký số khóa Baseline đoạn đường.
+            {serverReadOnly ? 'Trạng thái và chi tiết đọc từ server; không ghép task với plan chỉ vì cùng project. Không mở simulator hoặc AI trong luồng này.' : 'Mỗi đợt bay sau khi nạp ảnh sẽ tự động chạy pipeline Road-YOLOv9. Sau khi thẩm định xong 100% hộp bao và độ phủ ≥ 95%, PM có thể ký số khóa Baseline đoạn đường.'}
           </span>
-        </div>
+        </div>}
         <span className="font-mono text-slate-500 shrink-0 font-medium">
-          Hiển thị {filteredMissions.length} / {missions.length} nhiệm vụ
+          Hiển thị {filteredMissions.length} / {missions.length} {serverReadOnly ? 'hồ sơ khảo sát' : 'nhiệm vụ'}
         </span>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { projectService, personnelService } from '../../api/services'
+import {readProjectPublishedSegments} from '../../api/services/projectPublishedSegments'
 import { alignmentService } from '../../api/services/alignmentService'
 import { geometrySubmissionService, type GeometrySubmission } from '../../api/services/geometrySubmissionService'
 import { Icon } from '../../components/ui/Icon'
@@ -14,7 +15,7 @@ import { ProjectHighlightsGrid } from './project-overview/ProjectHighlightsGrid'
 import { ProjectTimelineStepper } from './project-overview/ProjectTimelineStepper'
 import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
-import { ProjectMapPreviewCard } from './project-overview/ProjectMapPreviewCard'
+import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 
 export type { Segment, ProjectMember }
@@ -45,6 +46,7 @@ export const ProjectOverview: React.FC = () => {
   const [project, setProject] = useState<HubProject | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [segments, setSegments] = useState<Segment[]>([])
+  const [segmentError,setSegmentError]=useState('')
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [projectError, setProjectError] = useState<string | null>(null)
   const [memberError, setMemberError] = useState<string | null>(null)
@@ -107,7 +109,10 @@ export const ProjectOverview: React.FC = () => {
           branches: facts?.routes.filter(route => route.routeKind === 'BRANCH').map(route => ({id: route.routeVersionId, name: route.name, lengthKm: route.lengthMeters / 1000})) || []
         })
         // Width intervals and local edits are not persisted segment sets.
-        setSegments([])
+        setSegments([]);setSegmentError('')
+        if(facts?.geometryError)setSegmentError(facts.geometryError)
+        else try{const rows=await readProjectPublishedSegments(data.id,facts?.routes||[]);if(current())setSegments(rows)}catch{if(current())setSegmentError('Không tải được phân đoạn đã công bố. Vui lòng tải lại.')}
+        if(!current())return
 
         // Directory, effective members and primary designation are separate read models.
         const [memberResult, primaryResult] = await Promise.allSettled([
@@ -119,9 +124,9 @@ export const ProjectOverview: React.FC = () => {
         setPrimaryError(primaryResult.status === 'rejected' ? 'Chưa tải được phân công PM chính. Vui lòng thử lại.' : null)
         if (primaryResult.status === 'fulfilled') setPrimaryPm(primaryResult.value)
         if (memberResult.status === 'fulfilled') setMembers(memberResult.value.map((m: any) => ({
-          id: m.membershipId, name: m.displayName || 'Chưa cập nhật tên', role_code: m.role,
+          id: m.membershipId, user_id:m.userId, name: m.displayName || 'Chưa cập nhật tên', role_code: m.role,
           role_title: m.role === 'PM' ? 'Chỉ huy trưởng dự án' : m.role === 'OPERATOR' ? 'Phi công Drone' : m.role === 'CREW' ? 'Đội thi công' : m.role || 'Chưa cập nhật vai trò',
-          role_badge: m.isPrimary ? 'PM CHÍNH' : m.role || 'Chưa cập nhật',
+          role_badge: primaryResult.status==='fulfilled'&&primaryResult.value?.userId===m.userId ? 'PM CHÍNH' : m.role || 'Chưa cập nhật',
           avatar: '', authority: '', contact: '', unit: '',
           valid_from: m.validFrom, valid_to: m.validTo, membership_status: m.status
         })))
@@ -215,6 +220,9 @@ export const ProjectOverview: React.FC = () => {
 
           <ProjectSegmentsTable
             serverReadOnly={project.server_data_loaded}
+            hasRoutes={!!project.server_facts?.routes.length}
+            readError={segmentError}
+            canSetup={!isSupervisor && project.status!=='CLOSED'}
             projectId={project.id}
             segments={segments}
             branches={alignmentDetail.branches}
@@ -222,7 +230,7 @@ export const ProjectOverview: React.FC = () => {
             branchesLengthKm={alignmentDetail.branchesLengthKm}
             basePath={basePath}
             onNavigate={navigate}
-            onViewSegment={(code) => showToast(`Xem chi tiết phân đoạn ${code}`)}
+            onViewSegment={(code) => {const row=segments.find(s=>s.code===code);if(row)navigate(`${basePath}/projects/${project.id}/alignment?roadSectionId=${row.roadSectionId}&routeVersionId=${row.routeVersionId}&segmentSetId=${row.segmentSetId}`)}}
             activeTab={activeAlignmentTab}
             onTabChange={setActiveAlignmentTab}
           />
@@ -242,13 +250,7 @@ export const ProjectOverview: React.FC = () => {
             showToast={showToast}
           />
 
-          <ProjectMapPreviewCard
-            project={project}
-            basePath={basePath}
-            isSupervisor={isSupervisor}
-            onNavigate={navigate}
-            activeTab={activeAlignmentTab}
-          />
+          <ProjectCrsProfileCard key={projectId} projectId={projectId} />
         </div>
       </div>
 

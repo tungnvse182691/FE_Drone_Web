@@ -4,6 +4,7 @@ import { Icon } from '../../../components/ui/Icon'
 import { Segment } from './types'
 
 interface ProjectSegmentsTableProps {
+  hasRoutes?:boolean;readError?:string;canSetup?:boolean
   serverReadOnly?: boolean
   projectId: string
   segments: Segment[]
@@ -18,6 +19,7 @@ interface ProjectSegmentsTableProps {
 }
 
 export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
+  hasRoutes=false,readError='',canSetup=false,
   serverReadOnly = false,
   projectId,
   segments,
@@ -67,6 +69,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
         </button>
       </div>
 
+      {serverReadOnly ? <>
+        {readError ? <p role="alert" className="text-xs text-rose-700">{readError}</p> : !segments.length ? <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500">{hasRoutes?'PM chưa công bố phân đoạn.':'Chưa có tim tuyến hiện hành.'}{!hasRoutes&&canSetup&&<button onClick={()=>onNavigate(`${basePath}/projects/${projectId}/alignment`)} className="block mx-auto mt-3 text-brand-gold font-semibold">Thiết lập tim tuyến</button>}</div> : <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-50 border-y"><tr><th className="p-3">Tuyến / Phân đoạn đã công bố ({segments.length})</th><th>Phạm vi lý trình</th><th>Chiều dài</th><th>Loại tuyến</th><th/></tr></thead><tbody>{segments.map(row=><tr key={row.code} className="border-b"><td className="p-3">{row.label}</td><td>{row.stationing}</td><td>{displayKm(row.length_km)}</td><td>{row.routeKind==='MAIN'?'Tuyến chính':row.routeKind==='BRANCH'?'Tuyến phụ':'Chưa phân loại'}</td><td><button className="px-3 py-1 rounded-lg bg-slate-100" onClick={()=>onViewSegment(row.code)}>Xem</button></td></tr>)}</tbody></table></div>}
+      </> : <>
       {/* Tab Switcher dạng Pill */}
       <div className="flex items-center gap-2 border-b border-[#EDEFF2] pb-3">
         <button
@@ -202,8 +207,9 @@ export const ProjectSegmentsTable: React.FC<ProjectSegmentsTableProps> = ({
         </>
       )}
 
+      </>}
       {/* CONTENT TAB 2: TUYẾN PHỤ (BRANCHES) */}
-      {currentTab === 'BRANCHES' && (
+      {!serverReadOnly && currentTab === 'BRANCHES' && (
         <>
           {branches.length === 0 ? (
             <div className="p-8 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center flex flex-col items-center justify-center gap-2.5">

@@ -8,6 +8,7 @@ import { alignmentService } from '../../api/services'
 import { Icon } from '../../components/ui/Icon'
 
 import { AlignmentHeader } from './alignment/AlignmentHeader'
+import { RouteSystemsRead } from './alignment/RouteSystemsRead'
 import { AlignmentMap } from './alignment/AlignmentMap'
 import { confirmedRouteCoordinates } from './alignment/alignmentSelection'
 import { segmentSetLabel } from './alignment/alignmentLabels'
@@ -325,6 +326,10 @@ export const AlignmentSegments: React.FC = () => {
         saveDisabledReason={(submissionWorkflow.held ? 'Yêu cầu trước đang chờ đối chiếu. Nếu máy chủ đã từ chối rõ ràng, hãy chủ động đọc lại/sửa yêu cầu trước khi sửa tiếp.' : contentLocked ? 'Hồ sơ đã khóa hoặc chưa đọc được lookup; không được sửa.' : '') || draftWorkflow.saveDisabledReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
         confirmDisabledReason={draftWorkflow.confirmReason || (draftWorkflow.pending || draftWorkflow.conflict ? 'Cần đối chiếu yêu cầu/phiên bản cũ.' : '')}
       />
+      {geometryRead.newDraftAllowed && geometryRead.geometry?.isCurrent && !draftWorkflow.pending && !submissionWorkflow.held && <button type="button" disabled={geometryRead.newDraftBusy||draftWorkflow.busy} onClick={()=>{void geometryRead.openNewSectionDraft(geometryRead.roadReference)}} className="px-3 py-2 border border-brand-gold rounded-lg text-xs font-semibold">Lập bản nháp mới</button>}
+      {geometryRead.newDraftError&&<p role="alert" className="text-xs text-rose-700">{geometryRead.newDraftError}</p>}
+      {geometryRead.newSectionDraft&&<p role="status" className="text-xs text-slate-600">Bản nhập riêng cho đoạn đường {geometryRead.context?.roadSections.find(r=>r.roadSectionId===geometryRead.newSectionDraft)?.code||'đang kiểm tra'}. Tuyến hiện hành vẫn chỉ đọc, chưa thay đổi. Nhập dữ liệu nguồn rồi bấm Lưu bản nháp.{!geometryRead.newDraftTargetValid?' Reference tuyến đã thay đổi; hãy đọc lại trước khi lưu.':''}</p>}
+      <RouteSystemsRead projectId={selectedProjectId} />
 
       {/* WORKSPACE GRID: MAP + SIDEBAR */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
-import { CaseReportImage } from './useCaseReportMedia'
+import { CaseReportImage, useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMedia'
 
 export interface PhotoZoomModalProps {
   isOpen: boolean
@@ -17,6 +17,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
   // Chế độ xem trong Modal: 'SINGLE' (Ảnh đơn) hoặc 'SIDE_BY_SIDE' (So sánh song song)
   const [viewMode, setViewMode] = useState<'SINGLE' | 'SIDE_BY_SIDE'>('SINGLE')
 
+  const media = useCaseReportMedia()
+  const sourceLabel = reportSourceLabelForCase(selectedCase.id, media, selectedCase.source_label)
   if (!isOpen) return null
 
   const severityText =
@@ -43,7 +45,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-xs font-bold text-brand-gold">{selectedCase.code}</span>
             <span className="text-xs text-slate-300">
-              • {selectedCase.defect_title} ({selectedCase.stationing})
+              • {selectedCase.defect_title} ({selectedCase.stationing}) · {sourceLabel}
             </span>
           </div>
 

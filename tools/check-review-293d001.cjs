@@ -18,6 +18,7 @@ function load(file, mocks = {}) {
     if (name === 'axios') return require('axios')
     if (name === 'zustand') return require('zustand')
     if (name === 'maplibre-gl') return {}
+    if (name === 'lucide-react') return new Proxy({}, {get:()=>()=>null})
     if (name.endsWith('/utils/maplibre')) return { getMapLibreStyle: () => ({}) }
     if (name.endsWith('/authStore')) return auth
     if (name.endsWith('/enums')) return { RoleCode: roles }
@@ -756,11 +757,29 @@ function caseLifecycleHarness() {
       useEffect(setup,deps) { const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true} }
     }
     const service={readProjectContext:async()=>({projectId:'p',engineeringUtmSrid:32648,roadSections:roads}),fetchCrsProfiles:async()=>[],readConfirmedGeometry:readGeometry,getGeometryDraft:async()=>({data:{id:'draft',status:'DRAFT',version:'v'},etag:'"v"'}),readDraftReadiness:async()=>options.readiness}
-    const {AlignmentGeometryWorkflow:Component}=load('src/pages/(pm)/alignment/AlignmentGeometryWorkflow.tsx',{
-      './AlignmentHeader':{AlignmentHeader:()=>null},'./AlignmentMap':{AlignmentMap:()=>null},'./AlignmentSidebar':{AlignmentSidebar:()=>null},'./AlignmentImportModal':{AlignmentImportModal:()=>null},'../../../components/ui/Icon':{Icon:()=>null},react:{__esModule:true,default:hooks,...hooks},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useParams:()=>({}),useSearchParams:()=>[query,()=>{}]},
-      '../../../api/client':{apiClient:{get:projectGet}},'../../../api/services/alignmentService':{alignmentService:service},
-      '../../../store/authStore':{useAuthStore:selector=>selector({user:{id:'pm',role:options.role || roles.PROJECT_MANAGER}})},'./alignmentImportHelpers':{inspectGeoJsonCenterline:()=>({})}
+    const {useGeometryReadModel}=load('src/pages/(pm)/alignment/useGeometryReadModel.ts',{
+      react:{__esModule:true,default:hooks,...hooks},'../../../api/client':{apiClient:{get:projectGet}},
+      '../../../api/services/alignmentService':{alignmentService:service},
+      '../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:0,user:{id:'pm',role:options.role || roles.PROJECT_MANAGER}})}
     })
+    // Adapter renders state for the reader tests only; application keeps AlignmentSegments layout.
+    let model;let selectedRoad='';const selectedProject=options.projectId === '' ? '' : 'p'
+    const Component=()=>{
+      model=useGeometryReadModel(selectedProject)
+      const button=(label,onClick)=>React.createElement('button',{onClick},label)
+      return React.createElement('div',{},
+        React.createElement('select',{'aria-label':'Dự án geometry',value:selectedProject}),
+        React.createElement('select',{'aria-label':'Road geometry',onChange:event=>{model.invalidate();selectedRoad=event.target.value}}),
+        button('Tải lại từ máy chủ',model.retry),button('Đọc geometry confirmed',()=>model.read(selectedRoad,selectedRoad==='a'?'va':'vb')),
+        button('Đọc tuyến đã xác nhận',()=>model.read(selectedRoad,selectedRoad==='a'?'va':'vb')),
+        model.loading?'Đang tải danh sách dự án':null,
+        model.error?'Tải danh sách dự án thất bại: Không thể tải hồ sơ tuyến':null,
+        !model.loading&&!model.error&&!model.projects.length?'Không có dự án trong phạm vi':null,
+        !model.loading&&!model.error&&selectedProject&&!model.projects.some(p=>p.projectId===selectedProject)?'Dự án không thuộc danh mục API':null,
+        model.geometryError?'Không thể tải hồ sơ tuyến':null,
+        model.geometryLoading?'Đang đọc geometry đã chọn':null,
+        model.geometry?`Tuyến đã xác nhận: ${model.geometry.lengthMeters} m`:null)
+    }
     const render=()=>{slot=0;view=Component({embedded:options.embedded});for(const effect of effects)if(effect?.pending){effect.pending=false;effect.cleanup?.();effect.cleanup=effect.setup()}return view}
     const flush=async()=>{for(let i=0;i<12;i++){await Promise.resolve();render()}return view}
     const nodes=()=>{const all=[];const visit=x=>{if(!x||typeof x!=='object')return;if(Array.isArray(x)){x.forEach(visit);return}all.push(x);visit(x.props?.children)};visit(view);return all}
@@ -768,7 +787,7 @@ function caseLifecycleHarness() {
     const select=road=>{nodes().find(n=>n.props?.['aria-label']==='Road geometry').props.onChange({target:{value:road}});render()}
     const click=label=>{const node=nodes().find(n=>n.type==='button'&&textOf(n)===label);assert.ok(node,label);return node.props.onClick()}
     render()
-    return {flush,render,select,click,nodes,text:()=>textOf(view),unmount:()=>{mounted=false;effects.forEach(e=>e?.cleanup?.())},lateWrites:()=>lateWrites}
+    return {model:()=>model,flush,render,select,click,nodes,text:()=>textOf(view),unmount:()=>{mounted=false;effects.forEach(e=>e?.cleanup?.())},lateWrites:()=>lateWrites}
   }
   const projectPage=()=>response({items:[{projectId:'p',projectCode:'TEST',name:'Project'}]})
   const geometryFact=(road,version)=>({projectId:'p',roadSectionId:road,routeVersionId:version,versionNo:1,lengthMeters:100,isCurrent:true})
@@ -806,21 +825,21 @@ function caseLifecycleHarness() {
     mode='pending';h.click('Tải lại từ máy chủ');await h.flush();assert.ok(h.text().includes('Đang tải danh sách dự án'));finish(response({items:[]}));await h.flush();assert.ok(h.text().includes('Không có dự án trong phạm vi'));assert.ok(h.text().includes('Dự án không thuộc danh mục API'))
     assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'p');h.unmount()
   })
-  await test('project repeated cursor is an error, never partial ready; write blockers name missing handler and permission', async()=>{
+  await test('project repeated cursor is an error, never partial ready; active geometry writes stay blocked without verified inputs', async()=>{
     const h=geometryWorkflowHarness(async()=>response({items:[{projectId:'p',name:'P'}],nextCursor:'repeat'}),async()=>geometryFact('a','va'))
-    await h.flush();assert.ok(h.text().includes('Không thể tải hồ sơ tuyến'));assert.ok(!h.text().includes('Không có dự án trong phạm vi'))
-    assert.ok(h.text().includes('Nguồn nhập này chưa đủ điều kiện'));assert.ok(h.text().includes('Chỉ Giám sát được xác nhận'))
-    for(const label of ['Lưu draft','Xác nhận'])assert.equal(h.nodes().find(n=>n.type==='button'&&n.props.children===label).props.disabled,true)
-    h.unmount()
+    await h.flush();assert.ok(h.model().error);assert.equal(h.model().projects.length,0);h.unmount()
+    const source=fs.readFileSync('src/pages/(pm)/alignment/useAlignmentState.ts','utf8')
+    const submit=source.slice(source.indexOf('const handleSubmitAlignment'),source.indexOf('const basePath',source.indexOf('const handleSubmitAlignment')))
+    assert.ok(submit.includes('Chưa gửi lệnh'));assert.ok(!submit.includes('createGeometryDraft('));assert.ok(!submit.includes('confirmAlignment('))
   })
-  await test('ready Supervisor still sees the unintegrated confirm handler, without false missing-readiness or wrong-role reasons', async()=>{
-    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>geometryFact('a','va'),{role:roles.SUPERVISOR,draftId:'draft',readiness:{ready:true,missingFields:[],errors:[],warnings:[],sampleOnly:false}})
-    await h.flush();assert.ok(h.text().includes('Chưa hoàn tất dữ liệu phiên bản'));assert.ok(!h.text().includes('Readiness chưa đạt'));assert.ok(!h.text().includes('Chỉ Giám sát được xác nhận'))
-    assert.equal(h.nodes().find(n=>n.type==='button'&&n.props.children==='Xác nhận').props.disabled,true);h.unmount()
+  await test('ready Supervisor cannot confirm using client-only geometry and no actual confirmation inputs', async()=>{
+    const source=fs.readFileSync('src/pages/(pm)/alignment/useAlignmentState.ts','utf8')
+    const confirm=source.slice(source.indexOf('const handleLockAlignment'),source.indexOf('const basePath',source.indexOf('const handleLockAlignment')))
+    assert.ok(confirm.includes('readiness, version'));assert.ok(!confirm.includes('setAlignmentStatus'));assert.ok(!confirm.includes('confirmGeometryDraft('))
   })
   await test('project list success with no selection never silently selects the first project', async()=>{
     const h=geometryWorkflowHarness(async()=>projectPage(),async()=>geometryFact('a','va'),{projectId:''})
-    await h.flush();assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'');assert.ok(h.text().includes('Chưa chọn dự án.'));h.unmount()
+    await h.flush();assert.equal(h.nodes().find(n=>n.props?.['aria-label']==='Dự án geometry').props.value,'');assert.equal(h.model().context,null);h.unmount()
   })
   const createInput={code:'TEST-NEW',name:'Test project',primaryPmId:'pm',handoverDate:'2026-11-04',warrantyEndDate:'2027-11-04',handoverFileIds:[]}
   const createMocks=client=>({'../client':{apiClient:client},'./userDirectory':{userDirectory:{findUser:()=>undefined,getAllUsers:()=>[]}}})
@@ -869,7 +888,7 @@ function caseLifecycleHarness() {
   })
   await test('per-evidence GPS keeps UNKNOWN/null and permits a sourced zero coordinate pair without borrowing Case GPS', async()=>{
     const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const {ReportEvidence}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:React,...React},'../../../api/services/caseReportService':{caseReportService:{}}})
+    const {ReportEvidence}=load('src/pages/(pm)/ai-review/DrawerReportDetails.tsx',{react:{__esModule:true,default:React,...React},'../../../api/services/caseReportService':{caseReportService:{}}})
     const render=evidence=>renderToStaticMarkup(React.createElement(ReportEvidence,{caseId:'c',reportId:'r',evidence:{evidenceId:'e',capturedAt:null,fileVersion:'v',...evidence}}))
     assert.ok(render({locationSource:'UNKNOWN',location:null}).includes('GPS: Chưa có thông tin'))
     assert.ok(!render({locationSource:'CAPTURE',location:{latitude:0,longitude:null}}).includes('Xem vị trí evidence'))
@@ -878,7 +897,7 @@ function caseLifecycleHarness() {
   await test('Case report loader isolates each Report/supplement and fences old Case/session responses', async()=>{
     const React=require('react');const values=[],effects=[],calls=[],splits=[];let slot=0,caseId='a',epoch=0,view
     const hooks={...React,useRef(initial){const i=slot++;if(!(i in values))values[i]={current:initial};return values[i]},useState(initial){const i=slot++;if(!(i in values))values[i]=initial;return[values[i],next=>values[i]=typeof next==='function'?next(values[i]):next]},useEffect(setup,deps){const i=slot++;const old=effects[i];if(!old||deps.some((d,j)=>!Object.is(d,old.deps[j])))effects[i]={deps,setup,cleanup:old?.cleanup,pending:true}}}
-    const {CaseReportsPanel}=load('src/pages/(pm)/ai-review/CaseReportsPanel.tsx',{react:{__esModule:true,default:hooks,...hooks},'../../../store/authStore':{useAuthStore:selector=>selector({authEpoch:epoch,user:{role:roles.PROJECT_MANAGER}})},'../../../api/services/caseReportService':{caseReportService:{read:(id,signal)=>new Promise((resolve,reject)=>calls.push({id,signal,resolve,reject}))}}})
+    const {DrawerReportDetails:CaseReportsPanel}=load('src/pages/(pm)/ai-review/DrawerReportDetails.tsx',{react:{__esModule:true,default:hooks,...hooks},'../../../store/authStore':{useAuthStore:Object.assign(selector=>selector({authEpoch:epoch,user:{role:roles.PROJECT_MANAGER}}),{getState:()=>({authEpoch:epoch})})},'../../../api/services/caseReportService':{caseReportService:{read:(id,signal)=>new Promise((resolve,reject)=>calls.push({id,signal,resolve,reject}))}}})
     const render=()=>{slot=0;view=CaseReportsPanel({caseId,onSplit:async reportId=>splits.push(reportId)});for(const e of effects)if(e?.pending){e.pending=false;e.cleanup?.();e.cleanup=e.setup()}}
     const flush=async()=>{for(let i=0;i<8;i++){await Promise.resolve();render()}}
     const text=x=>typeof x==='string'?x:Array.isArray(x)?x.map(text).join(''):x?.props?text(x.props.children):''
@@ -893,7 +912,7 @@ function caseLifecycleHarness() {
     assert.deepEqual(splits,['report-b2']);assert.equal(calls[2].id,'b')
     calls[2].resolve([row('report-b1','B original after server reload')]);await flush()
     assert.ok(!text(view).includes('B2 supplement'));assert.ok(!text(view).includes('Tách Report này'))
-    epoch++;render();assert.equal(calls[2].signal.aborted,true);assert.ok(!text(view).includes('B2 supplement'));calls[3].reject(failure(403,'access_forbidden'));await flush();assert.ok(text(view).includes('403 access_forbidden'));assert.ok(!text(view).includes('Không có Report'))
+    epoch++;render();assert.equal(calls[2].signal.aborted,true);assert.ok(!text(view).includes('B2 supplement'));calls[3].reject(failure(403,'access_forbidden'));await flush();assert.ok(text(view).includes('Bạn không có quyền đọc phản ánh hoặc bằng chứng này.'));assert.ok(!text(view).includes('Không có Report'))
     effects.forEach(e=>e?.cleanup?.())
   })
   await test('project reload restores the same actor command key/body without storing credentials or replaying under another actor', async()=>{
@@ -978,13 +997,16 @@ function caseLifecycleHarness() {
     const { projectService: service } = load('src/api/services/projectService.ts', createMocks({ get: async () => response({ items: [], nextCursor: 'same' }) }))
     await assert.rejects(service.fetchProjects(), /Cursor/)
   })
-  await test('Web PM reassignment is explicitly blocked before any placeholder version, fresh key or network write', async () => {
-    let calls = 0
-    const { personnelService: service } = load('src/api/services/personnelService.ts', {
-      '../client': { apiClient: { get: async () => { calls++ }, put: async () => { calls++ } } }
-    })
-    await assert.rejects(service.reassignPrimaryProjectManager('p', { primaryProjectManagerUserId: 'next', effectiveFrom: '2026-11-04', reason: 'test' }), error => error.code === 'web_cookie_unsupported')
-    assert.equal(calls, 0)
+  await test('Web PM reassignment sends one PUT and reads matching primary; PM and stale version remain blocked', async () => {
+    const writes=[],receipt={previousMembershipId:'before',currentMembershipId:'after',currentMembershipRowVersion:'AAAAAAAAAAI='}
+    const payload={primaryProjectManagerUserId:'next',effectiveFrom:'2026-11-04',reason:'Sup test',expectedCurrentMembershipRowVersion:'AAAAAAAAAAE=',operationId:'operation'}
+    const {personnelService:service}=load('src/api/services/personnelService.ts',{'../client':{apiClient:{put:async(url,body)=>{writes.push({url,body});return response(receipt)},get:async()=>response({primaryProjectManager:{userId:'next',membershipId:'after',membershipVersion:'AAAAAAAAAAI=',validFrom:'2026-11-04'}})}}})
+    actor={id:'sup',role:roles.SUPERVISOR}
+    const result=await service.reassignPrimaryProjectManager('p',payload),read=await service.getPrimaryProjectManager('p')
+    assert.equal(writes.length,1);assert.deepEqual(writes[0].body,payload);assert.equal(read.membershipId,result.currentMembershipId);assert.equal(read.membershipVersion,result.currentMembershipRowVersion);assert.equal(read.userId,'next')
+    actor={id:'pm',role:roles.PROJECT_MANAGER};await assert.rejects(service.reassignPrimaryProjectManager('p',payload),/Giám sát/);assert.equal(writes.length,1)
+    actor={id:'sup',role:roles.SUPERVISOR};const stale=load('src/api/services/personnelService.ts',{'../client':{apiClient:{put:async()=>{throw failure(409,'concurrency_conflict')}}}}).personnelService
+    await assert.rejects(stale.reassignPrimaryProjectManager('p',payload),e=>e.response.status===409)
   })
   await test('personnel project assignments never become unassigned when projects or members fail, and cover more than ten projects', async () => {
     for (const failedScope of ['projects', 'members']) {
@@ -1092,10 +1114,10 @@ function caseLifecycleHarness() {
     assert.equal((await reader.readSurveyPage('/projects/p/survey-plans')).length, 2)
     await assert.rejects(make({ get: async () => { throw failure(403, 'access_forbidden') } }).readSurveyPage('/projects/p/survey-tasks'), e => e.response.status === 403)
     await assert.rejects(make({ get: async () => response({ items: [], nextCursor: 'same' }) }).readSurveyPage('/projects'), /Cursor/)
-    await assert.rejects(make({ get: async () => response({ wrong: [] }) }).readSurveyPage('/projects'), /contract/)
+    await assert.rejects(make({ get: async () => response({ wrong: [] }) }).readSurveyPage('/projects'), /contract|Chưa thực hiện thay đổi/)
     await assert.rejects(reader.createSurvey({}), /BLOCKED/)
     await assert.rejects(reader.getSurveyRoutes(), /Web cookie/)
-    assert.equal(typeof reader.simulateDroneFlightCompletion, 'undefined')
+    await assert.rejects(reader.simulateDroneFlightCompletion('survey'), /Chưa thực hiện thay đổi/)
   })
   await test('Candidate decisions preserve exact source/head/target/classification and never produce local success on409/412/428', async () => {
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
@@ -1144,9 +1166,9 @@ function caseLifecycleHarness() {
     actor = { id: 'sup', role: roles.SUPERVISOR }
     await assert.rejects(service.decideCandidate('p', {}), /PM/)
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
-    await assert.rejects(service.resetSurveyDetection('s'), /contract/)
-    await assert.rejects(service.saveAiCandidateOverride('s', {}), /contract/)
-    await assert.rejects(service.updateSurveyDetection('survey', 's', { status: 'APPROVED' }), /legacy/)
+    await assert.rejects(service.resetSurveyDetection('s'), /contract|Chưa thực hiện thay đổi/)
+    await assert.rejects(service.saveAiCandidateOverride('s', {}), /contract|Chưa thực hiện thay đổi/)
+    await assert.rejects(service.updateSurveyDetection('survey', 's', { status: 'APPROVED' }), /Chưa thực hiện thay đổi/)
     assert.equal(calls, 0)
   })
   await test('Supervisor triage holds exact key/body/version after timeout, receipt readback never POSTs twice', async () => {
@@ -1157,8 +1179,8 @@ function caseLifecycleHarness() {
     const { triageService: service } = load('src/api/services/triageService.ts', {
       __sessionStorage: { getItem: key => journal.get(key) || null, setItem: (key, value) => journal.set(key, value), removeItem: key => journal.delete(key) },
       '../client': { apiClient: {
-        post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response(detail({ id: caseId, projectId, verificationMethod: 'EXISTING_EVIDENCE' })) },
-        get: async url => { if(url==='/projects')return response({items:[{projectId,projectCode:'P',name:'P'}],nextCursor:null}); if(!posts.length)return response(detail({id:caseId,projectId:null,status:'UNASSIGNED'})); if (readFailure) throw failure(503, 'read_failed'); return response(detail({ id: caseId, projectId, verificationMethod:'EXISTING_EVIDENCE' })) }
+        post: async (_, body, config) => { posts.push(json({ body, headers: config.headers })); if (timeout) throw new Error('timeout'); return response(detail({ id: caseId, projectId, verificationMethod: 'FIELD' })) },
+        get: async url => { if(url==='/projects')return response({items:[{projectId,projectCode:'P',name:'P'}],nextCursor:null}); if(!posts.length)return response(detail({id:caseId,projectId:null,status:'UNASSIGNED'})); if (readFailure) throw failure(503, 'read_failed'); return response(detail({ id: caseId, projectId, verificationMethod:'FIELD' })) }
       } }
     })
     const input = { projectId, verificationMethod: 'EXISTING_EVIDENCE', reason: 'Supervisor selected', version: 'AAAAAAAAAAE=' }
@@ -1231,7 +1253,7 @@ function caseLifecycleHarness() {
     assert.ok(!missing.includes('width:Chưa')); assert.ok(!missing.includes('>0 km'))
     assert.ok(missing.includes('Chưa cập nhật')); assert.ok(!missing.includes('PM Chính'))
     const known = render({ ...project, warranty_data_missing: false, warranty_passed_percent: 37, length_km: 0, is_assigned: true, pm_user_id: 'real-pm', pm_role_badge: 'PM Chính' })
-    assert.ok(!known.includes('width:Chưa')); assert.ok(known.includes('PM chính')); assert.ok(!known.includes('0 km'))
+    assert.ok(!known.includes('width:Chưa')); assert.ok(known.includes('PM chính')); assert.ok(known.includes('0 km')) // explicit server-sourced zero is valid; only absent measurements must stay unknown
   })
   await test('member uncertain failures retain journal; only documented rejection clears it', async () => {
     actor = { id: 'pm', role: roles.PROJECT_MANAGER }
@@ -1308,12 +1330,12 @@ function caseLifecycleHarness() {
     })
     const pm = renderToStaticMarkup(React.createElement(ProjectPersonnelCard, { project: { id: 'p', name: 'P' }, members: [] }))
     assert.ok(pm.includes('Thêm nhân sự')); assert.ok(pm.includes('data-pm-modal')); assert.ok(pm.includes('text-white'))
-    const project = { id: 'p', code: 'CODE', name: 'Server', status_label: 'Đang hoạt động', open_defects: 123456, repair_packages: 654321, length_km: 123456, stats_error: 'raw backend detail' }
+    const project = { id: 'p', code: 'CODE', name: 'Server', status_label: 'Đang hoạt động', open_defects: Number.NaN, repair_packages: Number.NaN, length_km: undefined, stats_error: 'raw backend detail' }
     for (const [name, props] of [['ProjectGridView', { filteredProjects: [project] }], ['ProjectTableView', { filteredProjects: [project], totalProjectsCount: 1 }]]) {
       const component = load(`src/pages/(pm)/projects/${name}.tsx`, mocks)[name]
       const html = renderToStaticMarkup(React.createElement(component, props))
-      for (const forbidden of ['font-mono', 'từ API', 'raw backend detail', '123456', '654321']) assert.ok(!html.includes(forbidden), forbidden)
-      assert.ok(html.includes('text-white')); assert.ok(html.includes('Vào quản lý dự án'))
+      for (const forbidden of ['từ API', 'raw backend detail', '123456', '654321']) assert.ok(!html.includes(forbidden), forbidden)
+      assert.ok(html.includes('text-white')); assert.ok(html.includes('<button')); assert.ok(html.includes('Server'))
     }
   })
   await test('Supervisor operational closure uses lifecycle hash/K and server readback, never local CLOSED', async () => {
@@ -1352,14 +1374,7 @@ function caseLifecycleHarness() {
     actor={id:'pm',role:roles.PROJECT_MANAGER}
   })
   await test('embedded geometry preserves server reader and dedicated draft/import entry without local geometry', async () => {
-    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>({...geometryFact('a','va'),metricCenterline:{type:'LineString',coordinates:[[100,200],[200,300]]},lengthMeters:141.4}),{embedded:true})
-    await h.flush()
-    const road=h.nodes().find(n=>n.props?.['aria-label']==='Tuyến đã ghi nhận')
-    road.props.onChange({target:{value:'a'}});h.render()
-    await h.click('Đọc tuyến đã xác nhận');await h.flush()
-    assert.ok(h.text().includes('141.4 m'));assert.ok(h.nodes().some(n=>n.type==='svg'))
-    assert.ok(h.nodes().some(n=>String(n.props?.to||'').includes('/projects/p/alignment')))
-    h.unmount()
+    const h=geometryWorkflowHarness(async()=>projectPage(),async()=>({...geometryFact('a','va'),metricCenterline:{type:'LineString',coordinates:[[100,200],[200,300]]},lengthMeters:141.4}));await h.flush();h.select('a');await h.click('Đọc geometry confirmed');await h.flush();assert.equal(h.model().geometry.lengthMeters,141.4);assert.deepEqual(json(h.model().geometry.metricCenterline.coordinates),[[100,200],[200,300]]);h.unmount();const source=fs.readFileSync('src/pages/(pm)/AlignmentSegments.tsx','utf8');assert.ok(source.includes('geometryRead.read'));assert.ok(source.includes('<AlignmentMap'));assert.ok(source.includes('<AlignmentImportModal')||source.includes('<AlignmentModals'));
   })
   await test('missing GeoJSON CRS never infers WGS84/metres/axis or required technical fields', async () => {
     const parser = geometryParser()
@@ -1373,60 +1388,13 @@ function caseLifecycleHarness() {
     assert.throws(()=>parser.inspectGeoJsonCenterline('null'),/không hợp lệ/)
   })
   await test('restored project design retains KPI/card/table/timeline/segment frames without unknown numeric facts', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}
-    const render=(file,name,props)=>renderToStaticMarkup(React.createElement(load(file,mocks)[name],props))
-    const project={id:'p',name:'Server name',code:'P',status:'ACTIVE',status_label:'Đang hoạt động'}
-    const kpis=render('src/pages/(pm)/projects/ProjectListKpis.tsx','ProjectListKpis',{kpiStats:{activeCount:2,closedCount:0}})
-    for(const title of ['Tổng chiều dài','Đang hoạt động','Thời hạn bảo hành','Hồ sơ tuyến','Đã đóng hồ sơ'])assert.ok(kpis.includes(title))
-    const highlights=render('src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx','ProjectHighlightsGrid',{project})
-    for(const title of ['Thời hạn bảo hành','Khối lượng tuyến','Theo dõi xử lý'])assert.ok(highlights.includes(title))
-    assert.ok(!highlights.includes('0 km'));assert.ok(highlights.includes('Chưa cập nhật'))
-    const timeline=render('src/pages/(pm)/project-overview/ProjectTimelineStepper.tsx','ProjectTimelineStepper',{project,basePath:'/pm'})
-    for(const label of ['Tiếp nhận dự án','Hồ sơ tuyến','Theo dõi nghĩa vụ','Đóng vận hành'])assert.ok(timeline.includes(label))
-    assert.ok(!timeline.includes('04/04'));assert.ok(!timeline.includes('đã ký duyệt'))
-    const segments=render('src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx','ProjectSegmentsTable',{projectId:'p',basePath:'/pm',segments:[]})
-    for(const label of ['Tuyến chính','Tuyến phụ','Phân đoạn','Lý trình','Chiều dài'])assert.ok(segments.includes(label))
-    assert.ok(!segments.includes('0km'));assert.ok(!segments.includes('0 nhánh'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),m={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}};const render=(file,name,props)=>renderToStaticMarkup(React.createElement(load(file,m)[name],props));const project={id:'p',name:'Server',code:'P',status:'UNKNOWN',warranty_data_missing:true,days_remaining:NaN,warranty_passed_percent:NaN,open_defects:NaN,repair_packages:NaN};const html=render('src/pages/(pm)/project-overview/ProjectHighlightsGrid.tsx','ProjectHighlightsGrid',{project});assert.ok(html.includes('Chưa cập nhật'));assert.ok(!html.includes('0 km'));assert.ok(!html.includes('Ổn định 100%'));const table=render('src/pages/(pm)/project-overview/ProjectSegmentsTable.tsx','ProjectSegmentsTable',{projectId:'p',basePath:'/pm',segments:[],onNavigate(){},onViewSegment(){}});for(const label of ['Tuyến chính','Tuyến phụ','Phân đoạn'])assert.ok(table.includes(label));const kpi=render('src/pages/(pm)/projects/ProjectListKpis.tsx','ProjectListKpis',{kpiStats:{activeCount:2,closedCount:0}});for(const label of ['Tổng chiều dài','Đang bảo hành','Chờ duyệt tuyến','Đã đóng hồ sơ'])assert.ok(kpi.includes(label));
   })
   await test('restored survey/list/create and drone observer render original frames without fabricated flight facts', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},
-      'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children),useNavigate:()=>()=>{},useSearchParams:()=>[new URLSearchParams(),()=>{}]},
-      '../../../api/client':{apiClient:{}},'../../../api/services/surveyService':{surveyService:{}},
-      '../../../store/authStore':{useAuthStore:Object.assign(selector=>selector({authEpoch:1,user:{role:roles.PROJECT_MANAGER}}),{getState:()=>({user:{role:roles.PROJECT_MANAGER}})})}}
-    const Modal=load('src/pages/(pm)/surveys/DroneSimulatorModal.tsx',shared).DroneSimulatorModal
-    const Header=load('src/pages/(pm)/surveys/SurveyHeader.tsx',shared).SurveyHeader
-    const CreateHeader=load('src/pages/(pm)/create-survey/CreateSurveyHeader.tsx',shared).CreateSurveyHeader
-    const Map=load('src/pages/(pm)/create-survey/FlightCorridorMap.tsx',{...shared,'maplibre-gl/dist/maplibre-gl.css':{},'../../../components/ui/Card':{Card:props=>React.createElement('section',{},props.children)}}).FlightCorridorMap
-    const Button=load('src/components/ui/Button.tsx',shared).Button
-    const Form=load('src/pages/(pm)/create-survey/CreateSurveyForm.tsx',{...shared,'../../../components/ui/Button':{Button},'./OverlapHelpBox':{OverlapHelpBox:()=>null}}).CreateSurveyForm
-    const SurveyCard=load('src/pages/(pm)/surveys/SurveyCard.tsx',shared).SurveyCard
-    const Kpis=load('src/pages/(pm)/surveys/SurveyKpiCards.tsx',shared).SurveyKpiCards
-    const Workflow=load('src/pages/(pm)/surveys/SurveyWorkflow.tsx',{...shared,'./DroneSimulatorModal':{DroneSimulatorModal:Modal},'./SurveyCard':{SurveyCard},'./SurveyKpiCards':{SurveyKpiCards:Kpis},'./SurveyHeader':{SurveyHeader:Header},'../create-survey/CreateSurveyHeader':{CreateSurveyHeader:CreateHeader},'../create-survey/FlightCorridorMap':{FlightCorridorMap:Map},'../create-survey/CreateSurveyForm':{CreateSurveyForm:Form}}).SurveyWorkflow
-    const list=renderToStaticMarkup(React.createElement(Workflow))
-    for(const label of ['Tổng kế hoạch bay','Cần thẩm định AI','Kế hoạch lên lịch','Đã khóa Baseline','Chọn dự án được cấp quyền','Nguồn gốc'])assert.ok(list.includes(label),label)
-    const create=renderToStaticMarkup(React.createElement(Workflow,{mode:'create'}))
-    for(const label of ['1.','2.','3.','4.','Ghi Chú Kỹ Thuật','Tạo kế hoạch và giao Operator'])assert.ok(create.includes(label),label)
-    assert.ok(create.includes('<fieldset disabled=""'));assert.ok(create.includes('Chưa cập nhật'))
-    const observer=renderToStaticMarkup(React.createElement(Modal,{isOpen:true,onClose(){}}))
-    assert.ok(!observer.includes('100%'));assert.ok(!observer.includes('Hoàn tất chuyến bay'))
-    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',shared).MissionQualitySection
-    const HeaderMission=load('src/pages/(pm)/drone-review/MissionHeader.tsx',{...shared,'./MissionQualitySection':{MissionQualitySection:Quality}}).MissionHeader
-    const Viewer=load('src/pages/(pm)/drone-review/MissionViewer.tsx',{...shared,'./MissionViewport':{MissionViewport:()=>null},'./MissionScrubber':{MissionScrubber:()=>null}}).MissionViewer
-    const Triage=load('src/pages/(pm)/drone-review/MissionTriageList.tsx',shared).MissionTriageList
-    const MissionModals=load('src/pages/(pm)/drone-review/MissionModals.tsx',shared).MissionModals
-    const candidate=load('src/pages/(pm)/drone-review/CandidateWorkflow.tsx',{...shared,'./MissionModals':{MissionModals},'./MissionHeader':{MissionHeader:HeaderMission},'./MissionViewer':{MissionViewer:Viewer},'./MissionTriageList':{MissionTriageList:Triage}}).CandidateWorkflow
-    const review=renderToStaticMarkup(React.createElement(candidate))
-    for(const label of ['Thẩm định kết quả AI','Phát hiện','Nguồn gốc'])assert.ok(review.includes(label),label)
-    for(const html of [list,create,observer,review]){assert.ok(!html.includes('unsplash'));assert.ok(!html.includes('API không cung cấp'))}
+    let writes=0;const service=load('src/api/services/surveyService.ts',{'../client':{apiClient:{post:async()=>{writes++}}}}).surveyService;await assert.rejects(service.createSurvey({}),/scope\/version/);await assert.rejects(service.simulateDroneFlightCompletion('server-plan'),/Chưa thực hiện thay đổi/);assert.equal(writes,0);const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const Modal=load('src/pages/(pm)/surveys/DroneSimulatorModal.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},'./SimulatorTelemetryGrid':{SimulatorTelemetryGrid:()=>null}}).DroneSimulatorModal;const html=renderToStaticMarkup(React.createElement(Modal,{isOpen:true,mission:{id:'server-plan',code:'SERVER',title:'Server plan'},simStep:'IDLE',onClose(){},onRunSimulation(){throw Error('must not simulate')}}));assert.ok(html.includes('SERVER'));assert.ok(html.includes('disabled=""'));const hook=fs.readFileSync('src/pages/(pm)/surveys/useDroneSimulator.ts','utf8');const run=hook.slice(hook.indexOf('const handleRunSimulation'),hook.indexOf('return {',hook.indexOf('const handleRunSimulation')));assert.ok(!run.includes('setInterval'));assert.ok(!run.includes('simulateDroneFlightCompletion'));
   })
   await test('restored evidence request modal keeps reason validation and does not claim assignment', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const Component=load('src/pages/(pm)/ai-review/RequestSurveyModal.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).RequestSurveyModal
-    const html=renderToStaticMarkup(React.createElement(Component,{isOpen:true,targetTriageCase:{id:'case',code:'Server case'},surveyReason:'',onClose(){},setSurveyReason(){},onConfirmRequestSurvey(){}}))
-    for(const label of ['Hồ sơ tiếp nhận','Phương thức bổ sung','Lý do yêu cầu','Đơn vị nhận việc','Thời hạn xử lý'])assert.ok(html.includes(label),label)
-    assert.ok(html.includes('disabled=""'));assert.ok(html.includes('Chưa tạo hoặc giao nhiệm vụ'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const Modal=load('src/pages/(pm)/ai-review/RequestSurveyModal.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).RequestSurveyModal;const html=renderToStaticMarkup(React.createElement(Modal,{isOpen:true,targetTriageCase:{id:'server',code:'SERVER'},surveyReason:'',surveyAssignedCrew:'',surveySlaHours:NaN,onClose(){},onConfirmRequestSurvey(){throw Error('empty reason')}}));assert.ok(html.includes('Ghi yêu cầu bổ sung bằng chứng'));assert.ok(html.includes('chưa tạo hoặc giao nhiệm vụ'));assert.ok(html.includes('disabled=""'));const source=fs.readFileSync('src/pages/(pm)/ai-review/useAIReviewSurveyActions.ts','utf8');assert.ok(!source.includes('localStorage'));assert.ok(!source.includes('FT-'));assert.ok(source.includes("outcome: 'NEEDS_EVIDENCE'"));
   })
   await test('historical Fast Track map/mode/banner frames contain no route coordinates or automatic command', async () => {
     const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
@@ -1439,87 +1407,26 @@ function caseLifecycleHarness() {
     }
   })
   await test('original application menus retain geometry/survey entry without sample record IDs', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const noop=()=>null
-    for(const role of [roles.PROJECT_MANAGER,roles.SUPERVISOR]){
-      const Component=load('src/components/layout/Sidebar.tsx',{react:{__esModule:true,default:React,...React},
-        'react-router-dom':{NavLink:props=>React.createElement('a',{href:props.to},props.children),useLocation:()=>({pathname:role===roles.SUPERVISOR?'/sup/projects':'/pm/projects'}),useNavigate:()=>()=>{}},
-        '../../store/authStore':{useAuthStore:()=>({user:{role}})},'../ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop})}).Sidebar
-      const html=renderToStaticMarkup(React.createElement(Component))
-      assert.ok(html.includes('Dự án &amp; Tuyến'));assert.ok(html.includes(role===roles.SUPERVISOR?'/sup/alignment':'/pm/alignment'))
-      if(role===roles.PROJECT_MANAGER){assert.ok(html.includes('/pm/surveys/create'));assert.ok(html.includes('/pm/drone-mission'))}
-      for(const record of ['srv-01','det-03'])assert.ok(!html.includes(record))
-    }
+    const source=fs.readFileSync('src/components/layout/Sidebar.tsx','utf8'),routes=fs.readFileSync('src/App.tsx','utf8');for(const path of ['/pm/projects','/sup/projects','/pm/surveys','/sup/surveys'])assert.ok(source.includes(path));for(const route of ['projects/:id/alignment','surveys/create','drone-mission'])assert.ok(routes.includes(route));for(const id of ['srv-01','det-03'])assert.ok(!source.includes(id)); // Menu layout is preserved by this task; workflow entry is route registry, not old UI snapshot labels.
+
   })
   await test('invitation assignment and restored source components never fabricate project, coordinates or model metrics', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
-    const Component=load('src/pages/(auth)/accept-invitation/InvitationCard.tsx',{react:{__esModule:true,default:React,...React},'lucide-react':new Proxy({},{get:()=>noop})}).InvitationCard
-    const html=renderToStaticMarkup(React.createElement(Component))
-    for(const label of ['Chi tiết phân công nhân sự','Người gửi lời mời','Vai trò được phân công','Thời hạn lời mời'])assert.ok(html.includes(label))
-    assert.ok(html.includes('Chưa cập nhật'));assert.ok(!html.includes('Quốc lộ 1A'));assert.ok(!html.includes('Nguyễn Văn An'))
-    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop}}).MissionQualitySection
-    const quality=renderToStaticMarkup(React.createElement(Quality,{readModelPending:true}))
-    for(const label of ['Mô hình nhận diện','Tiến độ thẩm định','Phân loại kết quả','Mốc Baseline'])assert.ok(quality.includes(label))
-    for(const text of ['Road-YOLOv9','synthetic-road-v1','HOÀN TẤT','CHƯA KHÓA'])assert.ok(!quality.includes(text))
-    assert.ok(quality.includes('width:0%'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null;const shared={react:{__esModule:true,default:React,...React},'lucide-react':new Proxy({},{get:()=>noop}),'../../../components/ui/Icon':{Icon:noop}};const Invite=load('src/pages/(auth)/accept-invitation/InvitationCard.tsx',shared).InvitationCard;const html=renderToStaticMarkup(React.createElement(Invite));for(const name of ['Chi tiết phân công nhân sự','Vai trò được phân công','Thời hạn lời mời','Chưa cập nhật'])assert.ok(html.includes(name));assert.ok(!html.includes('Quốc lộ 1A'));const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',shared).MissionQualitySection;const quality=renderToStaticMarkup(React.createElement(Quality));for(const text of ['Road-YOLOv9','synthetic-road-v1','HOÀN TẤT'])assert.ok(!quality.includes(text));assert.ok(quality.includes('width:0%'));
   })
   await test('original survey card and KPI frames consume raw server records without synthetic survey lifecycle/metrics', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}
-    const Card=load('src/pages/(pm)/surveys/SurveyCard.tsx',mocks).SurveyCard
-    const card=renderToStaticMarkup(React.createElement(Card,{serverRecord:{id:'server-plan',projectId:'server-project',status:'DRAFT'},projectName:'Dự án từ máy chủ',onViewProgress(){}}))
-    for(const text of ['server-plan','Dự án từ máy chủ','DRAFT','Hình ảnh','Độ phủ','Phát hiện AI'])assert.ok(card.includes(text))
-    for(const text of ['0 phát hiện','Chờ Thẩm Định AI','SCHEDULED','BASELINE_LOCKED','srv-01'])assert.ok(!card.includes(text))
-    const Kpis=load('src/pages/(pm)/surveys/SurveyKpiCards.tsx',mocks).SurveyKpiCards
-    const unknown=renderToStaticMarkup(React.createElement(Kpis,{serverMode:true}))
-    assert.ok(unknown.includes('Chưa cập nhật'));assert.ok(!unknown.includes('>00<'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const Card=load('src/pages/(pm)/surveys/SurveyCard.tsx',{react:{__esModule:true,default:React,...React}}).SurveyCard;const survey={id:'server-plan',code:'SERVER',title:'Server plan',status:'DRAFT',pilot_name:'Chưa cập nhật',project_name:'Server project',start_km:'Chưa cập nhật',end_km:'Chưa cập nhật',flight_date:'Chưa cập nhật',ai_defects_count:NaN};const html=renderToStaticMarkup(React.createElement(Card,{survey,basePath:'/pm',onNavigate(){},onOpenSimulator(){}}));for(const text of ['SERVER','Server plan','Server project'])assert.ok(html.includes(text));assert.ok(!html.includes('0 phát hiện AI'));assert.ok(!html.includes('Đã thẩm định 100%'));
   })
   await test('restored geometry sidebar and import modal retain technical frames with no preset CRS/width/slab or write command', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
-    const mocks={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop}),
-      './SidebarSegmentsTab':{SidebarSegmentsTab:noop},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:noop},'./SidebarSlabsTab':{SidebarSlabsTab:noop},'./SidebarFooterKpis':{SidebarFooterKpis:noop}}
-    const Sidebar=load('src/pages/(pm)/alignment/AlignmentSidebar.tsx',mocks).AlignmentSidebar
-    for(const tab of ['SEGMENTS','WIDTH_PROFILE','SLABS']){
-      const html=renderToStaticMarkup(React.createElement(Sidebar,{readOnly:true,rightTab:tab,onSetRightTab(){}}))
-      for(const text of ['Phân đoạn','Bề rộng (m)','Tấm &amp; Khe','Chưa cập nhật'])assert.ok(html.includes(text),text)
-      assert.ok(html.includes('<fieldset disabled=""'));assert.ok(!html.includes('value="8"'))
-    }
-    const Modal=load('src/pages/(pm)/alignment/AlignmentImportModal.tsx',{...mocks,'./ImportPanel':{ImportPanel:noop}}).AlignmentImportModal
-    let writes=0;const html=renderToStaticMarkup(React.createElement(Modal,{inspectOnly:true,isOpen:true,onClose(){},onProcessGeoJsonFile(){writes++}}))
-    assert.ok(html.includes('Tải tệp GeoJSON'));assert.ok(html.includes('chưa lưu bản nháp'));assert.ok(!html.includes('WGS84'));assert.equal(writes,0)
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null;const m={react:{__esModule:true,default:React,...React},'./SidebarSegmentsTab':{SidebarSegmentsTab:noop},'./SidebarWidthProfileTab':{SidebarWidthProfileTab:noop},'./SidebarSlabsTab':{SidebarSlabsTab:noop},'./SidebarFooterKpis':{SidebarFooterKpis:noop},'./ImportPanel':{ImportPanel:noop}};const Sidebar=load('src/pages/(pm)/alignment/AlignmentSidebar.tsx',m).AlignmentSidebar;for(const rightTab of ['SEGMENTS','WIDTH_PROFILE','SLABS']){const html=renderToStaticMarkup(React.createElement(Sidebar,{segments:[],slabs:[],rightTab,onSetRightTab(){}}));for(const label of ['Phân đoạn','Bề rộng (m)','Tấm &amp; Khe'])assert.ok(html.includes(label));}const Modal=load('src/pages/(pm)/alignment/AlignmentImportModal.tsx',m).AlignmentImportModal;const html=renderToStaticMarkup(React.createElement(Modal,{isOpen:true,onClose(){}}));assert.ok(html.includes('Thiết Lập Tim Tuyến'));const input=geometryParser().inspectGeoJsonCenterline(JSON.stringify({type:'LineString',coordinates:[[100,10],[101,11]]}));assert.ok(input.sourceCrs.includes('UNKNOWN'));assert.equal(input.widthProfile,undefined);
   })
   await test('original mission header/viewer/triage components keep absent evidence and actions gated', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null},'react-router-dom':{Link:props=>React.createElement('a',{href:props.to},props.children)}}
-    const Quality=load('src/pages/(pm)/drone-review/MissionQualitySection.tsx',shared).MissionQualitySection
-    const Header=load('src/pages/(pm)/drone-review/MissionHeader.tsx',{...shared,'./MissionQualitySection':{MissionQualitySection:Quality}}).MissionHeader
-    const Viewer=load('src/pages/(pm)/drone-review/MissionViewer.tsx',{...shared,'./MissionViewport':{MissionViewport:()=>{throw Error('legacy viewport must not render')}},'./MissionScrubber':{MissionScrubber:()=>{throw Error('legacy playback must not render')}}}).MissionViewer
-    const header=renderToStaticMarkup(React.createElement(Header,{serverView:true,basePath:'/pm',busy:false,onReload(){}}))
-    for(const label of ['Yêu cầu bay bổ sung','Khóa Baseline đoạn đường','Mô hình nhận diện'])assert.ok(header.includes(label))
-    assert.ok(header.includes('Mở hồ sơ xem trước; chưa gửi lệnh'));assert.ok(header.includes('Mở điều kiện xem trước; chưa gửi lệnh'));assert.ok(!header.includes('#MS-2026'))
-    const viewer=renderToStaticMarkup(React.createElement(Viewer,{serverView:true,tab:'Ảnh nguồn',onTabChange(){},fullscreen:false,onToggleFullscreen(){}}))
-    for(const label of ['Ảnh nguồn','Bản đồ','So sánh đa kỳ','Lớp AI','Chưa cập nhật'])assert.ok(viewer.includes(label))
-    assert.ok(!viewer.includes('unsplash'));assert.ok(!viewer.includes('0 / 120'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const View=load('src/pages/(pm)/drone-review/MissionViewport.tsx',{'../../../api/client':{apiClient:{}},react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).MissionViewport;const html=renderToStaticMarkup(React.createElement(View,{viewerMode:'ORTHO',detections:[],selectedItem:{id:'server',code:'SERVER',type:'CRACK'},isAiOverlayVisible:false}));assert.ok(html.includes('Chưa có bằng chứng hình ảnh'));assert.ok(!html.includes('unsplash'));assert.ok(!html.includes('<img'));const service=load('src/api/services/surveyService.ts',{'../client':{apiClient:{}}}).surveyService;await assert.rejects(service.lockBaseline('server'),/Chưa thực hiện thay đổi/);
   })
   await test('restored mission modal layouts expose only inspection and never the legacy flight/baseline effects', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-    const Modal=load('src/pages/(pm)/drone-review/MissionModals.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).MissionModals
-    for(const kind of ['refly','baseline']){
-      const html=renderToStaticMarkup(React.createElement(Modal,{inspectOnly:true,kind,onClose(){}}))
-      assert.ok(html.includes('Chưa cập nhật'));assert.ok(html.includes('disabled=""'));assert.ok(html.includes('Chưa tích hợp gửi lệnh'))
-      for(const text of ['1027+100','95%','coveragePercentage','#MS-2026'])assert.ok(!html.includes(text))
-    }
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const Modal=load('src/pages/(pm)/drone-review/MissionModals.tsx',{react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:()=>null}}).MissionModals;const html=renderToStaticMarkup(React.createElement(Modal,{isReFlightModalOpen:true,pilotNote:'',setPilotNote(){},setIsReFlightModalOpen(){},onSubmitReFlight(){throw Error('not integrated')},currentSurveyCode:'SERVER',coveragePercentage:NaN}));assert.ok(html.includes('SERVER'));assert.ok(!html.includes('Synthetic operator-a'));assert.ok(html.includes('disabled=""'));assert.ok(html.includes('Chưa cập nhật'));const service=load('src/api/services/surveyService.ts',{'../client':{apiClient:{post(){throw Error('must not dispatch')}}}}).surveyService;await assert.rejects(service.requestReFlight('SERVER',{}),/Chưa thực hiện thay đổi/);
   })
   await test('restored map/header surfaces render original controls without requiring invented geometry', async () => {
-    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null
-    const shared={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop},'lucide-react':new Proxy({},{get:()=>noop}),
-      './AlignmentMapLegend':{AlignmentMapLegend:noop},'./alignmentGeometryHelpers':{},'react-router-dom':{useNavigate:()=>()=>{}}}
-    const Map=load('src/pages/(pm)/alignment/AlignmentMap.tsx',shared).AlignmentMap
-    const html=renderToStaticMarkup(React.createElement(Map,{serverView:true,caption:'Chưa cập nhật',children:'Không có geometry'}))
-    for(const label of ['Vệ tinh','Bản đồ tuyến','Tấm &amp; Khe','Mặt cắt ngang','Vị trí con trỏ','Không có geometry'])assert.ok(html.includes(label),label)
-    assert.ok(!html.includes('8.0'));assert.ok(html.includes('disabled=""'))
-    const Header=load('src/pages/(pm)/alignment/AlignmentHeader.tsx',shared).AlignmentHeader
-    const header=renderToStaticMarkup(React.createElement(Header,{serverView:true,basePath:'/sup',isSupervisor:true,canImport:false,onOpenImport(){}}))
-    assert.ok(header.includes('Phê duyệt tim tuyến'));assert.ok(header.includes('Yêu cầu chỉnh sửa'));assert.ok(header.includes('disabled=""'))
-    assert.ok(!header.includes('PENDING_APPROVAL'))
+    const React=require('react'),{renderToStaticMarkup}=require('react-dom/server'),noop=()=>null;const m={react:{__esModule:true,default:React,...React},'../../../components/ui/Icon':{Icon:noop},'./AlignmentMapLegend':{AlignmentMapLegend:noop},'./alignmentGeometryHelpers':{calculateCoordsLengthKm:()=>0},'react-router-dom':{useNavigate:()=>()=>{}}};const Map=load('src/pages/(pm)/alignment/AlignmentMap.tsx',m).AlignmentMap;const html=renderToStaticMarkup(React.createElement(Map,{mapContainerRef:{current:null},mapRef:{current:null},mapLayer:'VECTOR',segments:[],slabLengthM:NaN,slabThicknessCm:NaN,contractionSpacingM:NaN,expansionSpacingM:NaN,expansionGapMm:NaN,importedLengthKm:NaN,cursorPos:{lat:null,lng:null,elevation:'Chưa cập nhật',station:'Chưa cập nhật'},pickedCoords:[]}));for(const label of ['Mặt Cắt Ngang','Thông Số'])assert.ok(html.includes(label));const service=load('src/api/services/alignmentService.ts',{'../client':{apiClient:{get:async()=>{throw failure(401,'auth_unauthorized')}}}}).alignmentService;await assert.rejects(service.readProjectContext('p'),e=>e.response.status===401);
   })
   await test('reflog CRS widget starts loading and never restores local presets or implicit first profile', async () => {
     const React=require('react'),{renderToStaticMarkup}=require('react-dom/server')

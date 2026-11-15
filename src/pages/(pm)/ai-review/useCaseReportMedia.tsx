@@ -66,3 +66,13 @@ export function CaseReportImage({caseId, alt, className}: {caseId: string; alt: 
     {error && <button type="button" onClick={media?.reportsError ? media.retry : media?.retryImage} className="text-xs underline">Thử lại</button>}
   </div>
 }
+
+// Provenance comes from the bound Report read model, never verificationMethod or a filename.
+export function reportSourceLabelForCase(caseId: string, media: CaseReportMedia | null, fallback: string): string {
+  if (!media || media.caseId !== caseId) return fallback
+  if (media.reportsLoading) return 'Đang đọc nguồn tiếp nhận'
+  if (media.reportsError) return 'Không đọc được nguồn tiếp nhận'
+  const reports = media.selected ? media.reports.filter(r => r.reportId === media.selected!.reportId) : media.reports
+  const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value) && !/^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(value)
+  return reports.length && reports.every(r => r.caseId === caseId && uuid(r.reportId) && uuid(r.reporterUserId)) ? 'Phản ánh từ người dân' : fallback
+}

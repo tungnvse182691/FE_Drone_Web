@@ -245,6 +245,7 @@ export const useAIReviewState = () => {
     handleNavigateFastTrack: actions.handleNavigateFastTrack,
     handleOpenNoDefectModal: actions.handleOpenNoDefectModal,
     handleConfirmNoDefect: actions.handleConfirmNoDefect,
+    handleReviewNoDefect: actions.handleReviewNoDefect,
     handleConclusionOutOfScope: actions.handleConclusionOutOfScope,
     handleResetConclusion: actions.handleResetConclusion,
     handleOpenPublishModal: actions.handleOpenPublishModal,

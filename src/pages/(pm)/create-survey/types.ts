@@ -1,4 +1,9 @@
 export interface ProjectRouteConfig {
+  serverGeometry?: import('../../../api/services/alignmentService').RoadGeometryVersionView
+  engineeringSrid?: number
+  roadSectionId?: string
+  routeVersionId?: string
+  serverSet?: import('../../../api/services/segmentSetService').ServerSegmentSet
   id: string
   code: string
   name: string

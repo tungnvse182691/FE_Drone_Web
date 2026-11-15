@@ -187,6 +187,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if (sourceUnverified && !fileDraft) throw new GeometryCommandUiError('Đã đọc tệp, chưa lưu: chưa có mapping hệ tọa độ, trục và đơn vị được xác minh cho tệp này.')
     if (model.context?.projectId !== projectId) throw new GeometryCommandUiError('Chưa tải đúng context dự án từ máy chủ.')
     if (draft && (form.sectionId !== (draft.roadSectionId || ''))) throw new GeometryCommandUiError('Tuyến đích phải khớp road section của bản nháp đang sửa.')
+    if(model.newSectionDraft && (!model.newDraftAllowed||!model.newDraftTargetValid||form.sectionId!==model.newSectionDraft))throw new GeometryCommandUiError('Đoạn đường, quyền hoặc hồ sơ trình của bản nháp mới chưa hợp lệ. Hãy đọc lại.')
     input = coordinateDraftInput(form, coordinatesText, model, fileDraft, false)
   } catch (error) { saveReason = error instanceof GeometryCommandUiError ? error.message : 'Không kiểm tra được bản nhập. Hãy kiểm tra lại thông tin nguồn.' }
   const saveDisabledReason = saveReason
@@ -221,7 +222,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     if ([409, 412, 428].includes(status)) {
       setConflict(true); setFreshVersion(false); setPreview(null); setPreviewVersion('')
       try {
-        if (model.draftId) await alignmentService.getGeometryDraft(projectId, model.draftId)
+        if (model.draftId) await alignmentService.getGeometryDraft(projectId, model.draftId, model.draft?.data.roadSectionId)
         await alignmentService.readProjectContext(projectId)
         if (current()) { setFreshVersion(true); model.retry() }
       } catch { /* The draft input remains untouched; explicit retry stays available. */ }
@@ -247,7 +248,9 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       return
     }
     const current = begin(); if (!current) return
-    try { await complete(await runDraftCommand(projectId, draft ? { kind: 'update', sectionId: draft.roadSectionId ?? null, draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
+    try {
+      if(model.newSectionDraft){const [context,lookup]=await Promise.all([alignmentService.readProjectContext(projectId),geometrySubmissionService.read(projectId)]);if(!current())return;if(context.projectId!==projectId||context.accessRole!=='PM'||context.status==='CLOSED'||lookup||!context.roadSections.some(r=>r.roadSectionId===model.newSectionDraft&&r.currentVersionId===model.newDraftVersion)||form.sectionId!==model.newSectionDraft)throw new GeometryCommandUiError('Điều kiện lập nháp đã thay đổi; bản nhập được giữ, cần đọc lại trước khi lưu.')}
+      await complete(await runDraftCommand(projectId, draft ? { kind: 'update', sectionId: draft.roadSectionId ?? null, draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
     catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
@@ -263,7 +266,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     const current = begin(); if (!current) return
     setPreviewError(''); setPreview(null); setPreviewVersion(''); setPreviewRouteVersion(undefined); setPreviewSectionId(undefined)
     try {
-      const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag)
+      const value = await alignmentService.previewGeometryDraft(projectId, draft.id, model.draft.etag, draft.roadSectionId)
       if (!Number.isFinite(value?.lengthMeters) || !(value.lengthMeters > 0)) throw new GeometryCommandUiError('Preview chưa có chiều dài hợp lệ từ máy chủ.')
       const ready = await alignmentService.readDraftReadiness(projectId, draft.id)
       const context = await alignmentService.readProjectContext(projectId)
@@ -289,7 +292,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       const lookup = await geometrySubmissionService.read(projectId)
       if (!current()) return
       if (!lookup || lookup.draftId !== draft!.id || lookup.status !== 'SUBMITTED') throw new GeometryCommandUiError('Hồ sơ trình đã thay đổi; đọc lại trước khi xác nhận.')
-      const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])
+      const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id, draft!.roadSectionId), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])
       if (!current()) return
       const routeVersion = confirmationVersion(projectId, fresh.data, context)
       if (fresh.etag !== previewVersion || selection.current.version !== previewVersion || fresh.data.roadSectionId !== previewSectionId || routeVersion !== previewRouteVersion) {
@@ -297,7 +300,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
       }
       if (fresh.data.projectId !== projectId || fresh.data.id !== draft!.id || fresh.data.roadSectionId !== draft!.roadSectionId || fresh.data.status !== 'SUBMITTED') throw new GeometryCommandUiError('Hồ sơ không còn đúng project/tuyến/trạng thái SUBMITTED.')
       if (readinessBlocker(ready)) { model.setReadiness(ready); throw new GeometryCommandUiError(readinessBlocker(ready)) }
-      await complete(await runDraftCommand(projectId, { kind: 'confirm', draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: routeVersion, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
+      await complete(await runDraftCommand(projectId, { kind: 'confirm', sectionId: draft!.roadSectionId ?? null, draftId: draft!.id, etag: fresh.etag, input: { expectedCurrentVersionId: routeVersion, effectiveFrom: effectiveIso, reason: confirmReason.trim() } }), current)
     } catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
   }
@@ -311,7 +314,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     const current = begin(); if (!current) return
     setFreshVersion(false)
     try {
-      if (model.draftId) await alignmentService.getGeometryDraft(projectId, model.draftId)
+      if (model.draftId) await alignmentService.getGeometryDraft(projectId, model.draftId, model.draft?.data.roadSectionId)
       await alignmentService.readProjectContext(projectId)
       if (current()) { setFreshVersion(true); model.retry() }
     } catch { if (current()) notify('Chưa đọc được phiên bản mới. Bản nhập vẫn được giữ.') }

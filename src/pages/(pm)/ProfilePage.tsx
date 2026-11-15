@@ -1,3 +1,4 @@
+import { ProfilePasswordRecovery, useProfilePasswordState } from '../../components/common/ProfilePasswordRecovery'
 import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -8,6 +9,7 @@ export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
 
+  const passwordState = useProfilePasswordState()
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile')
   const [loading, setLoading] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
@@ -45,26 +47,8 @@ export const ProfilePage: React.FC = () => {
       .catch((err) => {
         if (!isMounted) return
         console.error('Lỗi khi tải thông tin profile từ Backend:', err)
-        const fallbackName =
-          user?.full_name ||
-          (user as any)?.displayName ||
-          user?.email?.split('@')[0] ||
-          'Nhân sự Hoàng Hải'
-        setFullName(fallbackName)
-        setProfile({
-          userId: user?.id || '',
-          username: user?.username || user?.email || '',
-          displayName: fallbackName,
-          email: user?.email || '',
-          roleCode: user?.role || RoleCode.PROJECT_MANAGER,
-          roleTitle:
-            user?.role === RoleCode.SUPERVISOR
-              ? 'Kỹ sư Giám sát / Đại diện Chủ đầu tư (Supervisor)'
-              : 'Chỉ huy trưởng dự án (Project Manager)',
-          status: 'ACTIVE',
-          rowVersion: '',
-          assignedProjects: []
-        })
+        setProfile(null)
+        triggerNotice('error','Không tải được hồ sơ từ máy chủ. Hãy tải lại trước khi sửa.')
       })
       .finally(() => {
         if (isMounted) setLoading(false)
@@ -78,10 +62,10 @@ export const ProfilePage: React.FC = () => {
   // Lưu thông tin cá nhân lên CSDL Backend (API-048)
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return
+    if (!profile || saving) return
 
     const trimmed = fullName.trim()
-    if (!trimmed) {
+    if (!trimmed || trimmed.length>200) {
       triggerNotice('error', 'Họ và tên không được để trống.')
       return
     }
@@ -115,7 +99,7 @@ export const ProfilePage: React.FC = () => {
   // Đổi mật khẩu qua Backend (API-004)
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return
+    if (!profile || saving || passwordState.locked) return
 
     if (!currentPassword) {
       triggerNotice('error', 'Vui lòng nhập mật khẩu hiện tại.')
@@ -133,12 +117,13 @@ export const ProfilePage: React.FC = () => {
     try {
       setSaving(true)
       const res = await profileService.changePassword(currentPassword, newPassword)
-      triggerNotice('success', res.message)
+      triggerNotice(res.success ? 'success' : 'error', res.message)
+      if (!res.success) return
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch (err: any) {
-      console.error('Lỗi khi đổi mật khẩu:', err)
+      console.warn('[Profile password]', { status: err?.response?.status, code: err?.response?.data?.code })
       triggerNotice('error', err?.message || 'Lỗi khi đổi mật khẩu.')
     } finally {
       setSaving(false)
@@ -445,10 +430,11 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
 
+              <ProfilePasswordRecovery onResult={(success,message)=>{triggerNotice(success?'success':'error',message);if(success){setCurrentPassword('');setNewPassword('');setConfirmPassword('')}}} />
             <div className="pt-3">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || passwordState.locked}
                 className="px-5 py-2.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold flex items-center gap-2 shadow-xs transition cursor-pointer disabled:opacity-60"
               >
                 <span className="material-symbols-outlined text-[18px]">key</span>

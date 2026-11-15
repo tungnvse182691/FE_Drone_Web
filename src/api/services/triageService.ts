@@ -100,7 +100,7 @@ function mapBackendCaseToDomain(
   const isAssigned = !!projId && item.status !== 'UNASSIGNED'
 
   let status: TriageCase['status'] = 'PENDING'
-  let status_label = isAssigned ? 'Chờ thẩm định' : 'Chờ tiếp nhận sau điều phối'
+  let status_label = isAssigned ? 'Chờ thẩm định' : 'Chờ Giám sát điều phối'
   let conclusion: TriageCase['conclusion'] = null
 
   // Xử lý Candidate3 conclusion (safe navigation vì conclusion có thể bị omit theo AGENTS.md)
@@ -138,6 +138,8 @@ function mapBackendCaseToDomain(
     status = 'REJECTED'
     status_label = 'Báo sai (Không có lỗi)'
   }
+
+  if (item.status === 'UNASSIGNED') { status = 'PENDING'; status_label = 'Chờ Giám sát điều phối'; conclusion = null }
 
   const version = item.version || undefined
   const etag = version ? normalizeETag(version) : undefined
@@ -466,7 +468,8 @@ export const triageService = {
     if (!payload.version || !payload.reason?.trim() || payload.reason.trim().length > 1000 || !['FIELD','DRONE','EXISTING_EVIDENCE'].includes(payload.verificationMethod || '')) throw new Error('Thiếu version, lý do (tối đa 1.000 ký tự) hoặc phương thức hợp lệ; chưa điều phối.')
     const version = normalizeETag(payload.version)
     if (!/^"[A-Za-z0-9+/]{11}="$/.test(version)) throw new Error('If-Match phải là version Case 8 byte đã đọc.')
-    if (!!payload.routeVersionId !== !!payload.segmentSetId || payload.routeVersionId && !payload.geometryVersion?.trim()) throw new Error('Geometry cần đủ routeVersionId/segmentSetId/geometryVersion; không tự tạo pin.')
+    if (!!payload.routeVersionId !== !!payload.segmentSetId || !!payload.routeVersionId !== !!payload.geometryVersion?.trim()) throw new Error('Geometry cần đủ routeVersionId/segmentSetId/geometryVersion; không tự tạo pin.')
+    if (payload.routeVersionId && (!/^[0-9a-f]{64}$/i.test(payload.geometryVersion || '') || !/^[0-9a-f-]{36}$/i.test(payload.routeVersionId) || !/^[0-9a-f-]{36}$/i.test(payload.segmentSetId || ''))) throw new Error('Pin hình học cần UUID tuyến/set và hash package 64 hex không ngoặc kép.')
     const body = {projectId:payload.projectId,verificationMethod:payload.verificationMethod,reason:payload.reason.trim(),...(payload.routeVersionId ? {routeVersionId:payload.routeVersionId,segmentSetId:payload.segmentSetId,geometryVersion:payload.geometryVersion} : {})}
     const fingerprint = JSON.stringify({body,version}), journalKey = triageJournal(caseId)
     const previous = this.pendingTriage(caseId)

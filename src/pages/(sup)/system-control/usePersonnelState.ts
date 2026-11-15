@@ -1,4 +1,4 @@
-import { comparePrimaryPm, pendingPrimaryPm, readPrimaryPmSnapshot, resolvePrimaryPm, savePrimaryPm } from '../../../api/services/primaryPmCommands'
+import { comparePrimaryPm, pendingPrimaryPm, primaryPmInputIssue, readPrimaryPmSnapshot, resolvePrimaryPm, savePrimaryPm } from '../../../api/services/primaryPmCommands'
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
@@ -105,7 +105,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     setPrimaryBusy(true)
     readPrimaryPmSnapshot(assignExistingProjectIds[0], assignExistingUserId).then(value => {
       if (!active || attempt !== primaryAttempt.current) return
-      setPrimarySnapshot(value); setPrimaryMessage(`PM chính server: ${value.current.displayName || value.current.userId}; membership ${value.current.membershipId}, validFrom ${value.current.validFrom}, version ${value.current.membershipVersion}. Lệnh mới chỉ nhận ngày UTC hiện tại, phải sau validFrom.`)
+      setPrimarySnapshot(value); setPrimaryMessage('')
     }).catch(error => { if (active) setPrimaryMessage(personnelMessage(error)) }).finally(() => { if (active) setPrimaryBusy(false) })
     return () => { active = false; primaryAttempt.current++ }
   }, [primaryScope])
@@ -122,18 +122,17 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
         if (!primaryComparison) {
           const comparison = await comparePrimaryPm()
           if (!current()) return
-          setPrimaryComparison(comparison); setPrimaryMessage(`Đối chiếu: PM ${comparison.snapshot.current.displayName || comparison.snapshot.current.userId}, validFrom ${comparison.snapshot.current.validFrom}, version ${comparison.snapshot.current.membershipVersion}. Bấm dùng snapshot mới hoặc bỏ ý định cũ; chưa PUT.`)
+          setPrimaryComparison(comparison); setPrimaryMessage(`PM chính hiện tại: ${comparison.snapshot.current.displayName || 'Chưa có tên'}. Chọn dùng dữ liệu mới hoặc bỏ yêu cầu cũ; chưa lưu thay đổi.`)
         } else { resolvePrimaryPm(primaryComparison); setPrimaryPending(null); setPrimarySnapshot(primaryComparison.snapshot); setPrimaryComparison(null); setPrimaryMessage('Đã chọn snapshot mới và giữ lý do. Kiểm lại rồi bấm xác nhận để tạo ý định mới.') }
         return
       }
       if (!held && (!primarySnapshot || primarySnapshot.projectId !== assignExistingProjectIds[0] || primarySnapshot.targetId !== assignExistingUserId)) throw new PersonnelUiError('Chưa đọc snapshot đúng dự án/PM.')
       const result = await savePrimaryPm(held ? undefined : primarySnapshot!, assignEffectiveFrom, assignReason)
       if (!current()) return
-      setPrimaryPending(null); setPrimaryMessage('Đã lưu và đọc lại PM chính; đang tải lại phân công.')
-      const refreshed = await loadUsers()
-      if (!current()) return
-      setShowAddPersonnelModal(false)
-      triggerNoticeRef.current(refreshed ? `Đã chuyển PM chính và đọc lại membership ${result.assignment.membershipId}. Quyền khác của PM cũ phụ thuộc membership còn hiệu lực.` : 'Đã chuyển và đọc lại PM chính; danh sách/phân công chưa tải đầy đủ. Hãy tải lại.', refreshed ? 'success' : 'warning')
+      console.info('[Primary PM verified]',{projectId:result.projectId,membershipId:result.assignment.membershipId,version:result.assignment.membershipVersion})
+      setPrimaryPending(null); setPrimaryMessage(''); setShowAddPersonnelModal(false)
+      triggerNoticeRef.current('Đã chuyển PM chính thành công', 'success')
+      await loadUsers()
     } catch (error: any) {
       if (!current()) return
       try { setPrimaryPending(pendingPrimaryPm()) } catch { /* Keep the original error visible. */ }
@@ -498,6 +497,9 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
     showAddPersonnelModal,
     setShowAddPersonnelModal: closeAdd,
     primarySnapshot, primaryPending, primaryBusy, primaryMessage, primaryComparison, cancelAdd,
+    primaryBlockedReason:primaryPending?'':primaryPmInputIssue(primarySnapshot,assignEffectiveFrom,assignReason),
+    primaryDateError:primaryPending||!primarySnapshot?'':primaryPmInputIssue(primarySnapshot,assignEffectiveFrom,'Kiểm tra ngày'),
+    primaryReasonError:primaryPending?'':!assignReason.trim()?'Nhập lý do điều chuyển.':assignReason.trim().length>1000?'Lý do không quá 1000 ký tự.':'',
     addPersonnelTab,
     setAddPersonnelTab,
     newPersonnelName,

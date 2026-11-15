@@ -1,10 +1,15 @@
 import React, { useState } from 'react'
-import { UserPlus, X, Mail, UserCheck, Send, CheckSquare, Square, FolderKanban, AlertCircle, Lock } from 'lucide-react'
+import { UserPlus, X, Mail, UserCheck, Send, CheckSquare, Square, FolderKanban, Lock } from 'lucide-react'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 
 export interface AddPersonnelModalProps {
   assignmentBusy?: boolean
+  assignmentBlockedReason?: string
+  assignmentDateError?: string
+  assignmentReasonError?: string
+  currentPrimaryPmName?: string
+  currentPrimaryPmId?: string
   assignmentMessage?: string
   assignmentLabel?: string
   assignmentPending?: boolean
@@ -47,6 +52,7 @@ export interface AddPersonnelModalProps {
 export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   showAddPersonnelModal,
   assignmentBusy = false, assignmentMessage = '', assignmentLabel = 'Xác nhận điều chuyển', assignmentPending = false, assignmentCompared = false, onCancel,
+  assignmentBlockedReason = '', currentPrimaryPmId = '', currentPrimaryPmName = '', assignmentDateError = '', assignmentReasonError = '',
   invitationBusy = false,
   blockedReason = '',
   setShowAddPersonnelModal,
@@ -68,7 +74,6 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
   setAssignExistingUserId,
   assignExistingProjectIds,
   toggleAssignExistingProject,
-  selectAllAssignExistingProjects,
   clearAllAssignExistingProjects,
   usersList,
   projectsList,
@@ -103,11 +108,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
   // Tìm dự án được chọn trong tab Điều chuyển PM
   const selectedTargetProject = projectsList.find((p) => p.id === assignExistingProjectIds[0])
-  const targetProjectHasPm = Boolean(
-    selectedTargetProject?.pm_user_id &&
-    selectedTargetProject?.pm_name &&
-    !selectedTargetProject.pm_name.toLowerCase().includes('chưa')
-  )
+
 
   return (
     <div className="fixed inset-0 z-50 bg-[#151C27]/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -121,12 +122,12 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
               <h3 className="text-base font-bold text-slate-900 leading-tight">
                 {addPersonnelTab === 'NEW'
                   ? 'Gửi Thư Mời Kích Hoạt Nhân Sự Mới (API-032)'
-                  : 'Điều Chuyển / Bàn Giao Dự Án (API-113)'}
+                  : 'Đổi PM chính'}
               </h3>
               <p className="text-xs text-slate-500">
                 {addPersonnelTab === 'NEW'
                   ? 'Cấp quyền truy cập hệ thống bảo hành & sửa chữa đường bộ'
-                  : 'Gán tuyến quản lý phụ trách cho nhân sự đang làm việc'}
+                  : 'Cập nhật phân công PM chính của dự án'}
               </p>
             </div>
           </div>
@@ -171,7 +172,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleAddPersonnelSubmit} className="p-6 overflow-y-auto space-y-3.5 text-xs">
-          <p role="status" className="text-rose-700">{blockedReason || assignmentMessage}</p>
+          {(blockedReason || assignmentMessage)&&<p role={blockedReason?'alert':'status'} className="text-slate-600">{blockedReason || assignmentMessage}</p>}
           <fieldset disabled={addPersonnelTab === 'NEW' ? invitationBusy : !!blockedReason || assignmentBusy || assignmentPending} className="border-0 p-0 m-0 min-w-0 space-y-3.5">
           {addPersonnelTab === 'NEW' ? (
             <>
@@ -338,38 +339,31 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             <>
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">
-                  Chọn nhân sự TIẾP QUẢN / NHẬN DỰ ÁN MỚI: <span className="text-rose-600">*</span>
+                  PM tiếp quản: <span className="text-rose-600">*</span>
                 </label>
                 <select
                   value={assignExistingUserId}
                   onChange={(e) => setAssignExistingUserId(e.target.value)}
                   className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                 >
-                  <option value="">-- Chọn Chỉ huy trưởng (PM) cần điều chuyển --</option>
+                  <option value="">Chọn PM tiếp quản</option>
                   {usersList
-                    .filter((u) => u.role === RoleCode.PROJECT_MANAGER)
+                    .filter((u) => u.role === RoleCode.PROJECT_MANAGER && u.status === 'ACTIVE' && u.id !== (currentPrimaryPmId || selectedTargetProject?.pm_user_id))
                     .map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.full_name} (PM) — Hiện tại: {u.project_scope}
+                        {u.full_name} (PM)
                       </option>
                     ))}
                 </select>
-                <p className="text-[11px] text-slate-500 italic mt-1.5">
-                  <strong>Gợi ý nghiệp vụ:</strong> Dự án luôn phải có 1 PM phụ trách. Để rút dự án khỏi một PM hiện tại (quyền khác vẫn theo membership còn hiệu lực), hãy chọn một PM khác tại đây để tiếp quản dự án đó.
-                </p>
               </div>
 
               {/* Nếu nhân sự là PM: Điều chuyển tiếp quản làm PM chính (API-113) */}
               {isAssigningPm ? (
-                <div className="space-y-3 p-3 bg-amber-50/60 rounded-xl border border-amber-200">
-                  <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
-                    <AlertCircle className="w-4 h-4 text-[#C9A227]" />
-                    <span>Quy trình điều chuyển &amp; bàn giao Chỉ huy trưởng chính (API-113)</span>
-                  </div>
+                <div className="space-y-3">
 
                   <div className="space-y-1">
                     <label className="font-semibold text-slate-700">
-                      Dự án tiếp quản làm PM chính: <span className="text-rose-600">*</span>
+                      Dự án: <span className="text-rose-600">*</span>
                     </label>
                     <select
                       required
@@ -385,139 +379,66 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
                       className="w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer"
                     >
                       <option value="" disabled>
-                        -- Chọn dự án cần bàn giao cho PM này tiếp quản * --
+                        Chọn dự án
                       </option>
                       {projectsList.map((p) => {
                         const isAlreadyPmOfThisProject = p.pm_user_id === selectedExistingUser?.id
                         if (isAlreadyPmOfThisProject) {
                           return (
                             <option key={p.id} value={p.id} disabled className="text-slate-400 bg-slate-100 font-normal">
-                              {p.code ? `${p.code} — ` : ''}{p.name} (Đang do nhân sự này phụ trách — Đã là PM chính)
+                              {p.code ? `${p.code} — ` : ''}{p.name} (Đã là PM chính)
                             </option>
                           )
                         }
 
-                        const hasPm = Boolean(
-                          p.pm_user_id && p.pm_name && !p.pm_name.toLowerCase().includes('chưa')
-                        )
                         return (
                           <option key={p.id} value={p.id}>
                             {p.code ? `${p.code} — ` : ''}{p.name}{' '}
-                            {hasPm ? `(Đang do: ${p.pm_name} phụ trách ➔ Sẽ bàn giao thay thế)` : '(Trống PM)'}
                           </option>
                         )
                       })}
                     </select>
                   </div>
 
-                  {targetProjectHasPm && (
-                    <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed flex items-start gap-2">
-                      <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <span>
-                        <strong>Cảnh báo bàn giao thay thế:</strong> Dự án này hiện đang do PM <strong>{selectedTargetProject?.pm_name}</strong> phụ trách. Khi xác nhận điều chuyển, hệ thống sẽ <strong>kết thúc phân công PM chính của {selectedTargetProject?.pm_name}</strong> và chuyển giao quyền Chỉ huy trưởng chính duy nhất cho PM <strong>{selectedExistingUser?.full_name}</strong>. Quyền khác của PM cũ còn phụ thuộc membership hiệu lực.
-                      </span>
-                    </div>
-                  )}
+                  <p className="text-xs text-slate-700">PM chính hiện tại: {currentPrimaryPmName||selectedTargetProject?.pm_name||'Chưa đọc được'} → PM tiếp quản: {selectedExistingUser?.full_name||'Chưa chọn'}</p>
+                  <p className="text-[11px] text-slate-500">Quyền khác của PM cũ còn phụ thuộc vào phân công hiệu lực.</p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
-                      <label className="font-semibold text-slate-700">Ngày hiệu lực bàn giao (ngày UTC hiện tại):</label>
+                      <label className="font-semibold text-slate-700">Ngày hiệu lực (UTC):</label>
                       <input
                         type="date"
+                        aria-label="Ngày hiệu lực"
+                        aria-invalid={!!assignmentDateError}
                         value={assignEffectiveFrom || ''}
                         onChange={(e) => setAssignEffectiveFrom?.(e.target.value)}
                         className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                       />
+                      {assignmentDateError&&<p role="alert" className="text-rose-700">{assignmentDateError}</p>}
                     </div>
                     <div className="space-y-1">
-                      <label className="font-semibold text-slate-700">Lý do điều chuyển PM:</label>
+                      <label className="font-semibold text-slate-700">Lý do điều chuyển:</label>
                       <input
                         type="text"
+                        aria-label="Lý do điều chuyển"
+                        aria-invalid={!!assignmentReasonError}
                         value={assignReason || ''}
                         onChange={(e) => setAssignReason?.(e.target.value)}
                         placeholder="VD: Quyết định điều chuyển tuyến của Ban giám đốc"
                         className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#C9A227]"
                       />
+                      {assignmentReasonError&&<p role="alert" className="text-rose-700">{assignmentReasonError}</p>}
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Nếu nhân sự là Drone Operator / Repair Crew: Cho phép tích chọn nhiều dự án */
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <FolderKanban className="w-3.5 h-3.5 text-[#C9A227]" />
-                      <label className="font-semibold text-slate-800">
-                        Dự án điều chuyển sang phụ trách:
-                      </label>
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold border border-slate-200">
-                        Đã chọn: {assignExistingProjectIds.length} / {projectsList.length} dự án
-                      </span>
-                    </div>
-
-                    {projectsList.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={selectAllAssignExistingProjects}
-                          className="text-[11px] text-[#8C6D15] hover:text-[#5F490E] font-bold hover:underline cursor-pointer"
-                        >
-                          Chọn tất cả
-                        </button>
-                        <span className="text-slate-300">|</span>
-                        <button
-                          type="button"
-                          onClick={clearAllAssignExistingProjects}
-                          className="text-[11px] text-slate-500 hover:text-slate-700 font-semibold hover:underline cursor-pointer"
-                        >
-                          Bỏ chọn
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 space-y-1.5 divide-y divide-slate-100">
-                    {projectsList.map((p) => {
-                      const isChecked = assignExistingProjectIds.includes(p.id)
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => toggleAssignExistingProject(p.id)}
-                          className={`flex items-start gap-2.5 p-2 rounded-lg cursor-pointer transition ${
-                            isChecked
-                              ? 'bg-amber-50/80 border border-amber-200'
-                              : 'bg-white hover:bg-slate-100 border border-transparent'
-                          }`}
-                        >
-                          <div className="pt-0.5 text-[#C9A227]">
-                            {isChecked ? (
-                              <CheckSquare className="w-4 h-4 text-[#C9A227]" />
-                            ) : (
-                              <Square className="w-4 h-4 text-slate-400" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              {p.code && (
-                                <span className="font-mono font-bold text-slate-900 text-[11px]">
-                                  {p.code}
-                                </span>
-                              )}
-                              <span className="text-slate-700 font-medium truncate">
-                                {p.name}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                <p className="text-slate-500">Chọn PM tiếp quản để đọc phân công hiện tại và chọn dự án.</p>
               )}
             </>
           )}
 
           </fieldset>
+          {addPersonnelTab==='ASSIGN'&&assignmentBlockedReason&&!assignmentDateError&&!assignmentReasonError&&<p role="alert" className="text-xs text-rose-700">{assignmentBlockedReason}</p>}
           <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
             <button
               type="button"
@@ -528,7 +449,7 @@ export const AddPersonnelModal: React.FC<AddPersonnelModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!!blockedReason || assignmentBusy || addPersonnelTab === 'NEW' && invitationBusy ||
+              disabled={!!blockedReason || assignmentBusy || addPersonnelTab === 'ASSIGN' && !!assignmentBlockedReason || addPersonnelTab === 'NEW' && invitationBusy ||
                 addPersonnelTab === 'ASSIGN' &&
                 (!assignExistingUserId ||
                   (selectedExistingUser?.role === RoleCode.PROJECT_MANAGER &&

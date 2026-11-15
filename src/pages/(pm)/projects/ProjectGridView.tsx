@@ -11,6 +11,7 @@ interface ProjectGridViewProps {
   onNavigateAlignment: (projectId: string) => void
   onNavigateDetail: (projectId: string) => void
   onOpenCloseModal?: (prj: HubProject) => void
+  onOpenEditModal?: (prj: HubProject) => void
 }
 
 export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
@@ -19,7 +20,8 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
   onOpenCreateModal,
   onNavigateAlignment,
   onNavigateDetail,
-  onOpenCloseModal
+  onOpenCloseModal,
+  onOpenEditModal
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 font-body">
@@ -112,6 +114,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                 <h3 className="font-bold text-sm text-slate-900 group-hover:text-brand-gold transition-colors leading-snug font-headline">
                   {prj.name}
                 </h3>
+                {isSupervisor&&onOpenEditModal&&<button type="button" onClick={()=>onOpenEditModal(prj)} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-gold"><Icon name="edit" size={14} />Sửa dự án</button>}
 
                 <div className="flex items-center gap-1 text-xs text-slate-600">
                   <Icon name="location_on" size={14} className="text-brand-gold shrink-0" />

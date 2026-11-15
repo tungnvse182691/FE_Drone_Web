@@ -394,6 +394,7 @@ export const personnelService = {
       operationId: string
     }
   ): Promise<{ previousMembershipId: string; currentMembershipId: string; currentMembershipRowVersion: string }> {
+    if(useAuthStore.getState().user?.role!==RoleCode.SUPERVISOR)throw new Error('Chỉ Giám sát được chuyển PM chính.')
     return (await apiClient.put(`/projects/${projectId}/primary-project-manager`, payload)).data
   },
 

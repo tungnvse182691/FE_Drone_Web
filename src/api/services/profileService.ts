@@ -2,6 +2,7 @@ import { apiClient } from '../client'
 import { RoleCode } from '../../types/enums'
 import { projectService } from './projectService'
 import { useAuthStore } from '../../store/authStore'
+import { profilePasswordChange } from './profilePasswordChange'
 
 /**
  * ============================================================================
@@ -33,6 +34,8 @@ export interface UpdateProfilePayload {
   expectedRowVersion: string
 }
 
+let profileIntent: {actor:string;epoch:number;body:UpdateProfilePayload & {operationId:string};received:boolean}|null=null
+let profileBusy=false
 export const profileService = {
   /**
    * Lấy thông tin hồ sơ người dùng đang đăng nhập từ Backend thật (API-047)
@@ -50,7 +53,9 @@ export const profileService = {
     }>('/profile')
 
     const data = res.data
-    const normalizedRole = (data.roleCode || 'PM').toUpperCase()
+    const auth=useAuthStore.getState()
+    if(data.userId!==auth.user?.id||!data.rowVersion||!['PM','SUPERVISOR'].includes(data.roleCode||'')||!data.status)throw new Error('Hồ sơ trả sai tài khoản hoặc thiếu phiên bản/trạng thái.')
+    const normalizedRole = data.roleCode!.toUpperCase()
     const role: RoleCode = normalizedRole.includes('SUPERVISOR')
       ? RoleCode.SUPERVISOR
       : normalizedRole.includes('DRONE') || normalizedRole.includes('OPERATOR')
@@ -69,7 +74,7 @@ export const profileService = {
         : 'Đội trưởng thi công & Sửa chữa (Repair Crew)'
 
     // Lấy danh sách dự án thật mà tài khoản đang được phân công (API-006)
-    const projects = await projectService.fetchProjects().catch(() => [])
+    const projects = await projectService.fetchProjects()
 
     return {
       userId: data.userId,
@@ -93,99 +98,31 @@ export const profileService = {
    * Yêu cầu Backend Candidate3: { displayName, email, expectedRowVersion, operationId }
    */
   async updateProfile(payload: UpdateProfilePayload): Promise<UserProfileFact> {
-    console.log('🚀 [CANDIDATE3 BE] Gửi PUT /api/v1/profile...', payload)
-
-    const currentUser = useAuthStore.getState().user
-    const email = payload.email?.trim() || currentUser?.email || ''
-
-    const requestBody = {
-      displayName: payload.displayName.trim(),
-      email: email,
-      expectedRowVersion: payload.expectedRowVersion,
-      operationId: crypto.randomUUID()
-    }
-
-    const res = await apiClient.put<{
-      userId: string
-      username?: string | null
-      displayName?: string | null
-      email?: string | null
-      roleCode?: string | null
-      status?: string | null
-      rowVersion?: string | null
-    }>('/profile', requestBody)
-
-    const updated = res.data
-    const normalizedRole = (updated.roleCode || 'PM').toUpperCase()
-    const role: RoleCode = normalizedRole.includes('SUPERVISOR')
-      ? RoleCode.SUPERVISOR
-      : normalizedRole.includes('DRONE') || normalizedRole.includes('OPERATOR')
-      ? RoleCode.DRONE_OPERATOR
-      : normalizedRole.includes('CREW')
-      ? RoleCode.REPAIR_CREW
-      : RoleCode.PROJECT_MANAGER
-
-    const projects = await projectService.fetchProjects().catch(() => [])
-
-    return {
-      userId: updated.userId,
-      username: updated.username || updated.email || '',
-      displayName: updated.displayName || payload.displayName,
-      email: updated.email || email,
-      roleCode: role,
-      roleTitle:
-        role === RoleCode.SUPERVISOR
-          ? 'Kỹ sư Giám sát / Đại diện Chủ đầu tư (Supervisor)'
-          : 'Chỉ huy trưởng dự án (Project Manager)',
-      status: updated.status || 'ACTIVE',
-      rowVersion: updated.rowVersion || payload.expectedRowVersion,
-      assignedProjects: projects.map((p) => ({
-        id: p.id,
-        name: p.name,
-        code: p.code
-      }))
-    }
+    const state=useAuthStore.getState(),actor=state.user?.id,epoch=state.authEpoch
+    if(!actor||!state.isAuthenticated||![RoleCode.SUPERVISOR,RoleCode.PROJECT_MANAGER].includes(state.user!.role))throw new Error('Cần phiên Sup/PM hợp lệ.')
+    const current=()=>{const s=useAuthStore.getState();if(s.authEpoch!==epoch||s.user?.id!==actor)throw new Error('Phiên đã thay đổi; bỏ kết quả hồ sơ cũ.')}
+    if(profileBusy)throw new Error('Đang lưu hoặc đọc lại hồ sơ.')
+    if(!payload.displayName.trim()||payload.displayName.trim().length>200||!payload.expectedRowVersion)throw new Error('Họ tên cần 1–200 ký tự và phiên bản đã đọc.')
+    const body={displayName:payload.displayName.trim(),email:payload.email,expectedRowVersion:payload.expectedRowVersion}
+    if(profileIntent&&(profileIntent.actor!==actor||profileIntent.epoch!==epoch))profileIntent=null
+    if(profileIntent&&JSON.stringify({...profileIntent.body,operationId:undefined})!==JSON.stringify(body))throw new Error('Yêu cầu trước chưa rõ kết quả. Giữ nguyên nội dung để đối chiếu, chưa lưu yêu cầu mới.')
+    const command=profileIntent||{actor,epoch,body:{...body,operationId:crypto.randomUUID()},received:false}
+    profileBusy=true
+    try{
+      profileIntent=command
+      if(!command.received){const response=await apiClient.put('/profile',command.body);current();command.received=true;if(response.status!==200)throw new Error('Phản hồi lưu chưa đúng contract; chỉ đọc lại.')}
+      const read=await this.getProfile();current()
+      if(read.userId!==actor||read.displayName!==command.body.displayName||read.email!==command.body.email)throw new Error('Đã nhận lưu nhưng GET hồ sơ chưa khớp. Giữ nguyên bản nhập, thử lại chỉ đọc kết quả.')
+      profileIntent=null;return read
+    }catch(e:any){current();if(!command.received&&e?.response?.status>=400&&e.response.status<500)profileIntent=null;if(e?.response?.status===409)throw new Error('Hồ sơ đã thay đổi hoặc yêu cầu xung đột. Tải lại trang và đối chiếu trước khi lưu tiếp.');throw e}
+    finally{profileBusy=false}
   },
 
   /**
    * Đổi mật khẩu người dùng (API-004: POST /api/v1/auth/change-password)
    */
-  async changePassword(currentPass: string, newPass: string): Promise<{ success: boolean; message: string }> {
-    console.log('🚀 [CANDIDATE3 BE] Đổi mật khẩu cá nhân POST /api/v1/auth/change-password...')
-
-    try {
-      await apiClient.post(
-        '/auth/change-password',
-        {
-          currentPassword: currentPass,
-          newPassword: newPass
-        },
-        {
-          headers: {
-            'Idempotency-Key': crypto.randomUUID()
-          }
-        }
-      )
-
-      return {
-        success: true,
-        message: 'Mật khẩu đã được thay đổi thành công qua hệ thống bảo mật Backend.'
-      }
-    } catch (err: any) {
-      const data = err?.response?.data
-      const code = data?.code || ''
-      const detail = data?.detail || ''
-
-      if (code === 'auth_invalid_credentials' || detail.includes('authentication request could not be completed')) {
-        throw new Error('Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại mật khẩu đang sử dụng.')
-      }
-
-      if (code === 'validation_error') {
-        throw new Error('Mật khẩu mới không đạt yêu cầu bảo mật (tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt).')
-      }
-
-      throw new Error(detail || data?.title || err?.message || 'Không thể đổi mật khẩu trên hệ thống bảo mật.')
-    }
+  async changePassword(currentPass: string, newPass: string) {
+    return profilePasswordChange.run(currentPass,newPass)
   }
 }
 
