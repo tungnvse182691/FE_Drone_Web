@@ -18,6 +18,7 @@ export const FastTrackDispatch: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const {
+    projectError, policyError, dispatchError, dispatchLoading,
     projects,
     selectedProjectId,
     handleProjectChange,
@@ -108,6 +109,7 @@ export const FastTrackDispatch: React.FC = () => {
         }}
       />
 
+      {(projectError || policyError || coverageError || dispatchError) && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3">{[projectError,policyError,coverageError,dispatchError].filter(Boolean).join(' · ')}</p>}
       {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection
         currentPolicy={currentPolicy}
@@ -122,6 +124,8 @@ export const FastTrackDispatch: React.FC = () => {
 
       {/* 3. SECTION B: ĐIỀU PHỐI & THEO DÕI KHIẾM KHUYẾT THỰC TẾ TRONG CSDL */}
       <DispatchSection
+        loading={dispatchLoading}
+        readError={dispatchError}
         projects={projects}
         selectedProjectId={selectedProjectId}
         onProjectChange={handleProjectChange}
@@ -153,6 +157,9 @@ export const FastTrackDispatch: React.FC = () => {
 
       {/* MODALS */}
       <FastTrackModals
+        key={selectedProjectId}
+        projectId={selectedProjectId}
+        actionError={policyError || dispatchError}
         isPolicyModalOpen={isPolicyModalOpen}
         setIsPolicyModalOpen={setIsPolicyModalOpen}
         currentPolicy={currentPolicy}

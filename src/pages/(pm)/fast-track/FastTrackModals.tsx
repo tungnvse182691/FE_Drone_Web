@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  FastTrackTaskInput,
   PolicyThresholdConfig,
   DefectItem,
   CrewTeam,
@@ -11,6 +12,8 @@ import { DefectDetailModal } from './DefectDetailModal'
 import { FastTrackDispatchModal } from './FastTrackDispatchModal'
 
 interface FastTrackModalsProps {
+  projectId: string
+  actionError: string
   isPolicyModalOpen: boolean
   setIsPolicyModalOpen: (open: boolean) => void
   currentPolicy: PolicyThresholdConfig | null
@@ -37,10 +40,11 @@ interface FastTrackModalsProps {
   crewTeams: CrewTeam[]
   dispatchNotes: string
   setDispatchNotes: (notes: string) => void
-  handleExecuteDispatch: () => void
+  handleExecuteDispatch: (task: FastTrackTaskInput) => void
 }
 
 export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
+  projectId, actionError,
   isPolicyModalOpen,
   setIsPolicyModalOpen,
   currentPolicy,
@@ -71,8 +75,10 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
 }) => {
   return (
     <>
-      {currentPolicy && (
+      {(
         <PolicyModal
+          projectId={projectId}
+          actionError={actionError}
           isOpen={isPolicyModalOpen}
           onClose={() => setIsPolicyModalOpen(false)}
           currentPolicy={currentPolicy}
@@ -95,11 +101,14 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
       />
 
       <DefectDetailModal
+        key={detailDefect?.id || 'none'}
         detailDefect={detailDefect}
         onClose={() => setDetailDefect(null)}
       />
 
       <FastTrackDispatchModal
+        projectId={projectId}
+        actionError={actionError}
         isOpen={isDispatchModalOpen}
         onClose={() => setIsDispatchModalOpen(false)}
         selectedDefectIds={selectedDefectIds}

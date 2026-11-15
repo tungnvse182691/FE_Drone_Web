@@ -1,14 +1,20 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
   DefectItem as DispatchDefectItem,
-  CrewTeam
+  CrewTeam, FastTrackTaskInput
 } from './types'
+import { useAuthStore } from '../../../store/authStore'
+import { exportError } from '../../../api/services/projectExportService'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export function useFastTrackDispatch(
   selectedProjectId: string,
   showToast: (msg: string) => void
 ) {
+  const epoch=useAuthStore(s=>s.authEpoch)
+  const [revision,setRevision]=useState(0)
+  const [dispatchLoading,setDispatchLoading]=useState(false)
+  const [dispatchError,setDispatchError]=useState('')
   const [crewTeams, setCrewTeams] = useState<CrewTeam[]>([])
   const [defects, setDefects] = useState<DispatchDefectItem[]>([])
   const [selectedDefectIds, setSelectedDefectIds] = useState<string[]>([])
@@ -23,10 +29,12 @@ export function useFastTrackDispatch(
   )
   const [detailDefect, setDetailDefect] = useState<DispatchDefectItem | null>(null)
 
+  useEffect(()=>{const reload=()=>setRevision(n=>n+1);window.addEventListener('fasttrack-refresh',reload);return()=>window.removeEventListener('fasttrack-refresh',reload)},[])
   // Tải dữ liệu thật từ CSDL Backend khi đổi dự án
   useEffect(() => {
-    if (!selectedProjectId) return
     let isMounted = true
+    setDefects([]);setCrewTeams([]);setSelectedDefectIds([]);setSelectedDispatchCrew('');setDispatchError('');setDetailDefect(null);setDispatchLoading(!!selectedProjectId)
+    if (!selectedProjectId) return
 
     const loadDispatchData = async () => {
       try {
@@ -36,34 +44,30 @@ export function useFastTrackDispatch(
         ])
         if (isMounted) {
           if (loadedDefects) {
-            setDefects(loadedDefects)
-            const eligible = loadedDefects.filter((d) => d.isFastTrackEligible).map((d) => d.id)
-            setSelectedDefectIds(eligible)
+            setDefects(loadedDefects.map(d=>({...d,assignedCrew:loadedCrews.find(c=>c.id===d.assignedCrewId)?.name})))
+            setSelectedDefectIds([])
           }
           if (loadedCrews) {
             setCrewTeams(loadedCrews)
-            if (loadedCrews.length > 0) {
-              setSelectedDispatchCrew(loadedCrews[0].name)
-            }
+
           }
         }
       } catch (err: any) {
-        console.error('Lỗi tải dữ liệu điều phối từ CSDL Backend:', err)
-        showToast('Lỗi khi tải dữ liệu từ CSDL Backend')
-      }
+        if(isMounted)setDispatchError(exportError(err))
+      } finally {if(isMounted)setDispatchLoading(false)}
     }
 
     loadDispatchData()
     return () => {
       isMounted = false
     }
-  }, [selectedProjectId, showToast])
+  }, [selectedProjectId, showToast, epoch, revision])
 
   const filteredDefects = useMemo(() => {
     return defects.filter((d) => {
-      if (crewFilter !== 'ALL' && d.assignedCrew && !d.assignedCrew.includes(crewFilter)) return false
+      if (crewFilter !== 'ALL' && d.assignedCrew !== crewFilter) return false
       if (statusFilter === 'ELIGIBLE' && !d.isFastTrackEligible) return false
-      if (statusFilter === 'VIOLATION' && d.isFastTrackEligible) return false
+      if (statusFilter === 'VIOLATION' && d.canAssign) return false
       return true
     })
   }, [defects, crewFilter, statusFilter])
@@ -73,7 +77,7 @@ export function useFastTrackDispatch(
   }, [defects, selectedDefectIds])
 
   const hasViolationItem = useMemo(() => {
-    return selectedItems.some((d) => !d.isFastTrackEligible)
+    return selectedItems.some((d) => !d.canAssign)
   }, [selectedItems])
 
   const handleToggleSelect = (id: string) => {
@@ -91,45 +95,25 @@ export function useFastTrackDispatch(
   }
 
   const handleRemoveViolationItems = () => {
-    const validIds = selectedItems.filter((d) => d.isFastTrackEligible).map((d) => d.id)
+    const validIds = selectedItems.filter((d) => d.canAssign).map((d) => d.id)
     setSelectedDefectIds(validIds)
-    showToast('Đã loại bỏ các khiếm khuyết vi phạm ngưỡng khỏi danh sách chọn!')
+    showToast('Đã bỏ các mục chưa sẵn sàng giao việc khỏi lựa chọn.')
   }
 
-  const handleAssignCrew = (defectId: string, crew: string) => {
-    setDefects((prev) =>
-      prev.map((d) => (d.id === defectId ? { ...d, assignedCrew: crew } : d))
-    )
-    showToast(`Đã phân công ${crew} cho khiếm khuyết!`)
+  const handleAssignCrew = (_defectId:string, crew:string) => {
+    setSelectedDispatchCrew(crew)
+    showToast('Đã chọn Crew cho biểu mẫu. Chưa gửi lệnh giao việc.')
   }
-
-  const handleExecuteDispatch = async () => {
-    if (selectedDefectIds.length === 0) {
-      showToast('Vui lòng chọn ít nhất 1 khiếm khuyết')
-      return
-    }
-
+  const handleExecuteDispatch = async(task:FastTrackTaskInput) => {
+    setDispatchError('')
     try {
-      const res = await fastTrackService.executeDispatch({
-        defectIds: selectedDefectIds,
-        crewName: selectedDispatchCrew,
-        notes: dispatchNotes
-      })
-
-      setDefects((prev) =>
-        prev.map((d) =>
-          selectedDefectIds.includes(d.id) ? { ...d, assignedCrew: selectedDispatchCrew } : d
-        )
-      )
-
-      setIsDispatchModalOpen(false)
-      showToast(res.message)
-    } catch (err: any) {
-      showToast(`Lỗi điều phối: ${err.message}`)
-    }
+      const res=await fastTrackService.executeDispatch({projectId:selectedProjectId,items:selectedItems,task,defectIds:selectedDefectIds,crewName:selectedDispatchCrew,notes:dispatchNotes})
+      setIsDispatchModalOpen(false);setRevision(n=>n+1);showToast(res.message)
+    }catch(e){setDispatchError(exportError(e))}
   }
 
   return {
+    dispatchError,dispatchLoading,
     crewTeams,
     setCrewTeams,
     defects,

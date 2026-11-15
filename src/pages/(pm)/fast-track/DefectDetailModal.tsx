@@ -1,4 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { fastTrackService } from '../../../api/services/fastTrackService'
+import { useAuthStore } from '../../../store/authStore'
+import { exportError } from '../../../api/services/projectExportService'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem } from './types'
 
@@ -34,6 +37,13 @@ function formatSeverityVi(sev?: string): string {
 
 function formatStatusVi(st?: string): string {
   switch (st?.toUpperCase()) {
+    case 'READYTOASSIGN': return 'Sẵn sàng giao việc có điều kiện'
+    case 'ASSIGNED': return 'Đã giao Crew'
+    case 'INPROGRESS': return 'Đang thi công'
+    case 'SUBMITTED': return 'Chờ PM rà soát'
+    case 'REVIEWED': return 'Chờ xác nhận cuối'
+    case 'CONFIRMED': return 'Đã xác nhận'
+    case 'CANCELLED': return 'Đã hủy'
     case 'OPEN':
       return 'Chờ xử lý'
     case 'IN_PROGRESS':
@@ -52,14 +62,24 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
   detailDefect,
   onClose
 }) => {
+  const isPM=useAuthStore(s=>s.user?.role==='PROJECT_MANAGER')
+  const [form,setForm]=useState({fromMeters:'',toMeters:'',offsetFromMeters:'',offsetToMeters:'',segmentSetId:'',layoutRevisionId:'',slabId:'',repairPlan:'',checklistVersion:'',reason:''})
+  const [prepareError,setPrepareError]=useState(''),[preparing,setPreparing]=useState(false)
+  const prepare=async()=>{
+    if(!detailDefect || preparing)return
+    setPreparing(true);setPrepareError('')
+    try{if(!form.fromMeters || !form.toMeters || !form.offsetFromMeters || !form.offsetToMeters)throw new Error('Nhập rõ phạm vi; không tự lấy kích thước từ hình ảnh.')
+      await fastTrackService.prepareItem(detailDefect,{...form,fromMeters:Number(form.fromMeters),toMeters:Number(form.toMeters),offsetFromMeters:Number(form.offsetFromMeters),offsetToMeters:Number(form.offsetToMeters),segmentSetId:form.segmentSetId || null,layoutRevisionId:form.layoutRevisionId || null,slabId:form.slabId || null});window.dispatchEvent(new Event('fasttrack-refresh'));onClose()
+    }catch(e){setPrepareError(exportError(e))}finally{setPreparing(false)}
+  }
   if (!detailDefect) return null
 
-  const isEligible = detailDefect.isFastTrackEligible ?? true
+  const isEligible = detailDefect.isFastTrackEligible === true
   const missingReasons = detailDefect.violationReason ? [detailDefect.violationReason] : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-brand-border space-y-4 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
@@ -71,7 +91,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
                     : 'bg-rose-100 text-rose-800'
                 }`}
               >
-                {isEligible ? 'Đạt chuẩn xử lý nhanh' : 'Không đủ điều kiện'}
+                {isEligible ? 'Đạt chuẩn xử lý nhanh' : 'Chưa đủ căn cứ thi công'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -104,7 +124,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
 
           <div className="text-xs space-y-1.5 text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
             <div>Mã định danh CSDL: <strong className="font-mono text-slate-800">{detailDefect.id}</strong></div>
-            <div>Đội thi công phụ trách: <strong>{detailDefect.assignedCrew || 'Chưa phân công'}</strong></div>
+            <div>Đội thi công phụ trách: <strong>{detailDefect.assignedCrew || 'Chưa có thông tin Crew'}</strong></div>
             {detailDefect.version && (
               <div>Phiên bản bản ghi: <strong className="font-mono text-slate-800">{detailDefect.version}</strong></div>
             )}
@@ -125,6 +145,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
           )}
         </div>
 
+        {isPM && !detailDefect.itemId && <div className="space-y-3 border-t pt-4"><h4 className="font-bold text-sm">Lập nghĩa vụ và hạng mục Fast Track</h4><p className="text-xs text-slate-500">Tuyến lấy theo hồ sơ hiện hành của khiếm khuyết. Phạm vi dưới đây phải có căn cứ thực địa; không suy từ AI.</p><div className="grid grid-cols-2 gap-2">{(Object.keys(form) as Array<keyof typeof form>).map((key,i)=><label key={key} className="text-xs">{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)','Bộ phân đoạn đã công bố (nếu có)','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Phương án kỹ thuật','Checklist áp dụng','Căn cứ lập nghĩa vụ'][i]}<input value={form[key]} onChange={e=>setForm(previous=>({...previous,[key]:e.target.value}))} className="block border rounded-lg p-2 w-full mt-1"/></label>)}</div>{prepareError && <p role="alert" className="text-xs text-red-800">{prepareError}</p>}<button disabled={preparing} onClick={prepare} className="border rounded-lg p-2 text-xs font-bold text-[#8C6D1F]">{preparing?'Đang đối chiếu…':'Lập gói và đề xuất hạng mục'}</button></div>}
         <div className="pt-2 flex justify-end border-t border-slate-100">
           <button
             onClick={onClose}

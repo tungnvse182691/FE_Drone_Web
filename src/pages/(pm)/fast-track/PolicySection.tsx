@@ -66,7 +66,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    CHƯA XUẤT BẢN CHÍNH SÁCH
+                    CHƯA CÓ THAM CHIẾU CHÍNH SÁCH
                   </span>
                 )}
               </div>
@@ -116,7 +116,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                     Phạm vi tuyến bảo hành
                   </span>
                   <span className="font-mono text-[11px] text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
-                    Lý trình: Km {roadCoverage.fromKm} - Km {roadCoverage.toKm}
+                    {roadCoverage.scopes?.length===1 ? `Lý trình: Km ${roadCoverage.fromKm} - Km ${roadCoverage.toKm}` : `${roadCoverage.scopes?.length || 0} phạm vi nghĩa vụ — chọn trong hồ sơ độ phủ`}
                   </span>
                   <span
                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${
@@ -133,11 +133,11 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-600 flex items-center gap-3 flex-wrap">
-                  <span>Căn cứ pháp lý: <strong className="text-slate-800">{roadCoverage.sourceKind === 'WARRANTY' ? 'Hợp đồng bảo hành' : 'Bảo dưỡng thường xuyên'}</strong></span>
+                  <span>Căn cứ pháp lý: <strong className="text-slate-800">{roadCoverage.sourceId ? (roadCoverage.sourceKind === 'WARRANTY' ? 'Hợp đồng bảo hành' : 'Bảo dưỡng thường xuyên') : 'Chưa có căn cứ đã xác nhận'}</strong></span>
                   <span>•</span>
-                  <span>Số hiệu văn bản: <strong className="font-mono text-slate-800">{roadCoverage.documentNo || 'BB-BG-2026/QL1A-PK01'}</strong></span>
+                  <span>Số hiệu văn bản: <strong className="font-mono text-slate-800">{roadCoverage.documentNo || 'Chưa có hồ sơ bàn giao'}</strong></span>
                   <span>•</span>
-                  <span>Hiệu lực áp dụng: <strong className="text-slate-800">{roadCoverage.applicableFromUtc === '—' ? 'Chưa xác lập ngày' : `${roadCoverage.applicableFromUtc} → ${roadCoverage.applicableToUtc}`}</strong></span>
+                  <span>Hiệu lực áp dụng: <strong className="text-slate-800">{!roadCoverage.applicableFromUtc || roadCoverage.applicableFromUtc === '—' ? 'Chưa xác lập ngày' : `${roadCoverage.applicableFromUtc} → ${roadCoverage.applicableToUtc}`}</strong></span>
                   {roadCoverage.confirmedBy && (
                     <>
                       <span>•</span>
@@ -176,12 +176,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-brand-dark">
-                  ≤ {currentPolicy.maxAreaM2}
+                  ≤ {Number.isFinite(currentPolicy.maxAreaM2) ? currentPolicy.maxAreaM2 : '—'}
                 </span>
                 <span className="text-xs font-bold text-slate-500">m²</span>
               </div>
               <p className="text-[10px] text-slate-500">
-                Vượt ngưỡng: Bắt buộc Giám sát phê duyệt
+                Vượt ngưỡng: Không cấp quyền thi công Fast Track
               </p>
             </div>
 
@@ -192,9 +192,9 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-brand-dark">
-                  ≤ {currentPolicy.maxDepthCm}
+                  ≤ {Number.isFinite(currentPolicy.maxDepthCm) ? currentPolicy.maxDepthCm : '—'}
                 </span>
-                <span className="text-xs font-bold text-slate-500">cm</span>
+                <span className="text-xs font-bold text-slate-500">mm</span>
               </div>
               <p className="text-[10px] text-slate-500">
                 Hạn mức kỹ thuật an toàn mặt đường
@@ -225,7 +225,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200 text-center space-y-2">
             <Icon name="info" size={24} className="text-[#C9A227] mx-auto" />
             <p className="text-xs font-medium text-slate-700">
-              Dự án này hiện chưa xuất bản chính sách xử lý nhanh nào trong CSDL Backend.
+              Chưa đọc được chính sách trong phạm vi hiện tại. Không suy thành chưa có chính sách.
             </p>
             {!isSupervisor && onOpenPolicyModal && (
               <button
@@ -331,9 +331,9 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                         <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
                       </div>
                       <div className="text-slate-600 flex items-center gap-3">
-                        <span>Diện tích hư hỏng ≤ {h.maxArea} m²</span>
+                        <span>Diện tích hư hỏng ≤ {Number.isFinite(h.maxArea) ? h.maxArea : '—'} m²</span>
                         <span>•</span>
-                        <span>Độ sâu hư hỏng ≤ {h.maxDepth} cm</span>
+                        <span>Độ sâu hư hỏng ≤ {Number.isFinite(h.maxDepth) ? h.maxDepth : '—'} mm</span>
                       </div>
                     </div>
                   ))

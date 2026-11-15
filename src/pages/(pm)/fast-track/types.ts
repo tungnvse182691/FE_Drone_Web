@@ -19,8 +19,16 @@ export interface DefectItem {
   status: string
   reportedAt?: string
   version?: string
+  defectId?: string
+  packageId?: string
+  itemId?: string
+  obligationId?: string
+  canAssign?: boolean
+  eligibilityKnown?: boolean
+  policyRevisionId?: string
   isFastTrackEligible: boolean
   violationReason?: string
+  assignedCrewId?: string
   assignedCrew?: string
 }
 
@@ -37,6 +45,7 @@ export interface PolicyThresholdConfig {
   description: string
   defectTypeCode?: string
   stopConditions?: string[]
+  rules?: Array<{code: string; unit: string; minimum: number; maximum: number}>
   revision?: number
 }
 
@@ -106,10 +115,24 @@ export interface RoadCoverageFact {
   reason?: string
   sourceId?: string
   sourceVersion?: string
+  history?: Array<{id:string;actorId:string;confirmedAtUtc:string;reason:string;provenance:string}>
+  provenance?: string
+  blockers?: string[]
+  scopes?: Array<{obligationId: string; roadSectionId: string; locationVersion?: string; from: number; to: number; offsetFrom: number; offsetTo: number; scopeHash: string}>
+  sources?: Array<{kind: string; id: string; version: string; from?: string; to?: string; provenance?: string}>
   etag?: string
 }
 
+export interface FastTrackTaskInput {
+  sourceKind: string; surveyId: string | null; segmentSetId: string | null; layoutRevisionId: string | null; slabId: string | null
+  mapPublicationId: string | null; crsProfileRevisionId: string | null
+  requiredMeasurementType: number; measurementScope: string; dueAt: string; policyRevisionId: string
+}
+
 export interface DispatchPayload {
+  projectId: string
+  items: DefectItem[]
+  task: FastTrackTaskInput
   defectIds: string[]
   crewName: string
   notes?: string

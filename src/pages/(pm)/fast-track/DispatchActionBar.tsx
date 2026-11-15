@@ -38,7 +38,7 @@ export const DispatchActionBar: React.FC<DispatchActionBarProps> = ({
           <p className="text-xs text-slate-500">
             {isSupervisor
               ? 'Theo dõi tiến độ, kiểm tra điều kiện kỹ thuật và ghi nhận phạm vi xử lý'
-              : 'Phát lệnh thi công trực tiếp cho các hạng mục thỏa mãn quy chuẩn kỹ thuật'}
+              : 'Giao nhiệm vụ có điều kiện; Crew phải đánh giá quyền thi công trước khi bắt đầu'}
           </p>
         </div>
       </div>

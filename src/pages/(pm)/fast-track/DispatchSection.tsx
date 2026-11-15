@@ -7,6 +7,8 @@ import { DispatchActionBar } from './DispatchActionBar'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 
 interface DispatchSectionProps {
+  loading?: boolean
+  readError?: string
   projects: ProjectOption[]
   selectedProjectId: string
   onProjectChange: (id: string) => void
@@ -34,6 +36,7 @@ interface DispatchSectionProps {
 }
 
 export const DispatchSection: React.FC<DispatchSectionProps> = ({
+  loading, readError,
   projects,
   selectedProjectId,
   onProjectChange,
@@ -69,7 +72,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
       const next: Record<string, { eligible: boolean; missingReasons: string[]; loading: boolean }> = {}
       for (const d of filteredDefects) {
         next[d.id] = {
-          eligible: d.isFastTrackEligible ?? true,
+          eligible: d.isFastTrackEligible === true,
           missingReasons: d.violationReason ? [d.violationReason] : [],
           loading: false
         }
@@ -80,7 +83,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
 
   const apiHasViolation = selectedItems.some((d) => {
     const el = eligibilityMap[d.id]
-    return el ? !el.eligible : !d.isFastTrackEligible
+    return !d.canAssign
   })
   const effectiveHasViolation = hasViolationItem || apiHasViolation
 
@@ -108,7 +111,7 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
 
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold shrink-0 border border-slate-200">
           <span className="w-2 h-2 rounded-full bg-[#C9A227] animate-pulse"></span>
-          <span>{filteredDefects.length} khiếm khuyết trong CSDL</span>
+          <span>{filteredDefects.length} hồ sơ trong phạm vi được phép đọc</span>
         </div>
       </div>
 
@@ -126,6 +129,8 @@ export const DispatchSection: React.FC<DispatchSectionProps> = ({
 
       {/* Table & Violation Warning */}
       <DispatchTable
+        loading={loading}
+        readError={readError}
         selectedDefectIds={selectedDefectIds}
         filteredDefects={filteredDefects}
         handleSelectAll={handleSelectAll}

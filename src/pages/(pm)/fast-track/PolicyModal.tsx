@@ -1,11 +1,16 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { fastTrackService } from '../../../api/services/fastTrackService'
+import { fastTrackStorage } from '../../../api/services/fastTrackJournal'
+import { exportError } from '../../../api/services/projectExportService'
 import { Icon } from '../../../components/ui/Icon'
 import { PolicyThresholdConfig } from './types'
 
 export interface PolicyModalProps {
+  projectId: string
+  actionError: string
   isOpen: boolean
   onClose: () => void
-  currentPolicy: PolicyThresholdConfig
+  currentPolicy: PolicyThresholdConfig | null
   formVersionName: string
   setFormVersionName: (v: string) => void
   formMaxArea: string
@@ -18,6 +23,7 @@ export interface PolicyModalProps {
 }
 
 export const PolicyModal: React.FC<PolicyModalProps> = ({
+  projectId, actionError,
   isOpen,
   onClose,
   currentPolicy,
@@ -31,11 +37,14 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   setFormPolicyNote,
   handleApplyPolicy
 }) => {
+  const [reference,setReference]=useState(''),[referenceKind,setReferenceKind]=useState<'drafts'|'revisions'>('revisions'),[error,setError]=useState('')
+  const [type,setType]=useState(()=>localStorage.getItem(fastTrackStorage(projectId,'policy-type')) || '')
+  const readReference=async()=>{try{setError('');await fastTrackService.readPolicy(projectId,reference.trim(),referenceKind);window.dispatchEvent(new Event('fasttrack-refresh'));setError('Đã đọc chính sách từ hệ thống.')}catch(e){setError(exportError(e))}}
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-brand-border space-y-5 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-brand-gold">
@@ -55,6 +64,10 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         </div>
 
         <div className="space-y-4 text-xs">
+          {(error || actionError) && <p role="alert" className="text-red-800">{error || actionError}</p>}
+          <div className="space-y-2"><label>Đọc chính sách đã có (tham chiếu từ hồ sơ)</label><div className="flex gap-2"><select value={referenceKind} onChange={e=>setReferenceKind(e.target.value as 'drafts'|'revisions')} className="border rounded-lg p-2"><option value="revisions">Đã xuất bản</option><option value="drafts">Dự thảo</option></select><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="Tham chiếu chính sách" className="border rounded-lg p-2 min-w-0 flex-1"/><button onClick={readReference} className="border rounded-lg p-2">Đọc</button></div></div>
+          <label className="block">Mã loại hư hỏng từ hồ sơ nguồn<input value={type} onChange={e=>{setType(e.target.value);localStorage.setItem(fastTrackStorage(projectId,'policy-type'),e.target.value)}} className="block w-full border rounded-lg p-2 mt-1"/></label>
+          <p className="text-slate-500">Dự thảo này dùng khoảng từ 0 đến ngưỡng nhập cho Area (m²), DepressionDepth (mm); chưa khai báo điều kiện dừng bổ sung. Không phải ngưỡng TCVN mặc định.</p>
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">Tên phiên bản chính sách</label>
             <input
@@ -76,10 +89,10 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 onChange={(e) => setFormMaxArea(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxAreaM2} m²</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxAreaM2) ? currentPolicy?.maxAreaM2 : '—')} m²</span>
             </div>
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng độ sâu tối đa (cm)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng độ sâu tối đa (mm)</label>
               <input
                 type="number"
                 step="0.5"
@@ -87,14 +100,14 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 onChange={(e) => setFormMaxDepth(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {currentPolicy.maxDepthCm} cm</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxDepthCm) ? currentPolicy?.maxDepthCm : '—')} mm</span>
             </div>
           </div>
 
           {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
-              Mức độ nghiêm trọng cho phép áp dụng xử lý nhanh
+              Mức độ hư hỏng (tham khảo, không quyết định điều kiện Fast Track)
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
@@ -105,17 +118,17 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 <Icon name="check_circle" size={14} className="text-blue-600 shrink-0" />
                 <span>Trung bình (Vừa)</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt xử lý nhanh với lỗi nặng">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
                 <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
-                <span>HIGH (Khóa)</span>
+                <span>HIGH</span>
               </div>
-              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Quy chuẩn an toàn cấm tự duyệt xử lý nhanh với lỗi khẩn cấp/nguy hiểm">
+              <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
                 <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
-                <span>CRITICAL (Khóa)</span>
+                <span>CRITICAL</span>
               </div>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">
-              <strong>Ràng buộc bất biến:</strong> Theo quy định BR-04 &amp; BR-08, xử lý nhanh chỉ áp dụng cho hư hỏng nhẹ/vừa (Thấp &amp; Trung bình). Hư hỏng kết cấu nặng (HIGH/CRITICAL) bắt buộc phải qua thẩm duyệt Giám sát hoặc đội cứu hộ khẩn cấp.
+              Điều kiện thi công do chính sách, số đo, vị trí, độ phủ và quyền hiện hành quyết định; không suy từ mức độ hư hỏng.
             </span>
           </div>
 
@@ -133,7 +146,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
             <Icon name="info" size={16} className="text-[#C9A227] shrink-0 mt-0.5" />
             <span>
-              <strong>Thẩm quyền PM:</strong> Chỉ huy trưởng có quyền lập dự thảo, điều chỉnh ngưỡng kỹ thuật và xuất bản chính sách. Khi xuất bản, hệ thống sẽ tự động đánh giá lại tính hợp lệ cho toàn bộ khiếm khuyết trên tuyến.
+              <strong>Thẩm quyền PM:</strong> Chỉ huy trưởng có quyền lập dự thảo, điều chỉnh ngưỡng kỹ thuật và xuất bản chính sách. Khi giao việc cần chọn đúng phiên bản chính sách. Crew đánh giá điều kiện thi công sau khi nhận nhiệm vụ.
             </span>
           </div>
         </div>

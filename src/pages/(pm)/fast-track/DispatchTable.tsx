@@ -4,6 +4,8 @@ import { DefectItem, PolicyThresholdConfig } from './types'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 
 export interface DispatchTableProps {
+  loading?: boolean
+  readError?: string
   selectedDefectIds: string[]
   filteredDefects: DefectItem[]
   handleSelectAll: (checked: boolean) => void
@@ -46,6 +48,13 @@ function formatSeverityVi(sev?: string): string {
 
 function formatStatusVi(st?: string): string {
   switch (st?.toUpperCase()) {
+    case 'READYTOASSIGN': return 'Sẵn sàng giao việc có điều kiện'
+    case 'ASSIGNED': return 'Đã giao Crew'
+    case 'INPROGRESS': return 'Đang thi công'
+    case 'SUBMITTED': return 'Chờ PM rà soát'
+    case 'REVIEWED': return 'Chờ xác nhận cuối'
+    case 'CONFIRMED': return 'Đã xác nhận'
+    case 'CANCELLED': return 'Đã hủy'
     case 'OPEN':
       return 'Chờ xử lý'
     case 'IN_PROGRESS':
@@ -193,7 +202,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                 <Icon name="error" size={13} className="text-rose-600 shrink-0" />
-                <span>Không đủ điều kiện xử lý nhanh</span>
+                <span>Chưa đủ căn cứ thi công</span>
               </div>
               {missingReasons.length > 0 && (
                 <p className="text-[10px] text-rose-600 leading-tight">
@@ -208,7 +217,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
       {/* Footer thẻ */}
       <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
         <div className="text-[11px] text-slate-500 truncate">
-          Phụ trách: <strong className="text-slate-700">{defect.assignedCrew || 'Chưa chỉ định'}</strong>
+          Phụ trách: <strong className="text-slate-700">{defect.assignedCrew || 'Chưa có thông tin Crew'}</strong>
         </div>
         <button
           type="button"
@@ -227,6 +236,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
 }
 
 export const DispatchTable: React.FC<DispatchTableProps> = ({
+  loading, readError,
   selectedDefectIds,
   filteredDefects,
   handleSelectAll,
@@ -268,9 +278,9 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
       {filteredDefects.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 space-y-2">
           <Icon name="inbox" size={36} className="text-slate-300 mx-auto" />
-          <h4 className="font-bold text-slate-700 text-sm">Không có dữ liệu khiếm khuyết trên dự án này</h4>
+          <h4 className="font-bold text-slate-700 text-sm">{loading ? 'Đang đọc hồ sơ…' : readError ? 'Không đọc được hồ sơ' : 'Không có dữ liệu khiếm khuyết trên dự án này'}</h4>
           <p className="text-xs text-slate-400">
-            CSDL hiện tại chưa ghi nhận khiếm khuyết nào khớp với bộ lọc được chọn.
+            {loading ? 'Đang tải dữ liệu dự án đã chọn.' : readError ? 'Xem thông báo lỗi phía trên; không dùng dữ liệu thay thế.' : 'CSDL hiện tại chưa ghi nhận khiếm khuyết nào khớp với bộ lọc được chọn.'}
           </p>
         </div>
       ) : (

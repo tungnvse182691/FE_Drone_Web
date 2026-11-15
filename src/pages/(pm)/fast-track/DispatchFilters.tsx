@@ -73,8 +73,8 @@ export const DispatchFilters: React.FC<DispatchFiltersProps> = ({
           className="w-full px-3 py-2 bg-slate-50 hover:bg-white rounded-xl text-xs font-medium text-slate-700 border border-[#E2E5E9] focus:outline-none focus:ring-2 focus:ring-[#C9A227] cursor-pointer transition-colors"
         >
           <option value="ALL">Tất cả trạng thái khiếm khuyết</option>
-          <option value="ELIGIBLE">Chỉ hiển thị Đạt chuẩn xử lý nhanh</option>
-          <option value="VIOLATION">Chỉ hiển thị Vượt ngưỡng quy chuẩn (Cần trình duyệt)</option>
+          <option value="ELIGIBLE">Đã đủ điều kiện thi công theo nguồn</option>
+          <option value="VIOLATION">Chưa sẵn sàng giao việc / cần bổ sung</option>
         </select>
       </div>
 

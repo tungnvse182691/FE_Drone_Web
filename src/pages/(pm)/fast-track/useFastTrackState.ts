@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../../store/authStore'
+import { exportError } from '../../../api/services/projectExportService'
 import { useState, useEffect, useCallback } from 'react'
 import { ProjectOption } from './types'
 import { fastTrackService } from '../../../api/services/fastTrackService'
@@ -5,11 +7,13 @@ import { useFastTrackPolicy } from './useFastTrackPolicy'
 import { useFastTrackDispatch } from './useFastTrackDispatch'
 
 export const useFastTrackState = (isSupervisor = false) => {
+  const epoch=useAuthStore(s=>s.authEpoch)
+  const [projectError,setProjectError]=useState('')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg)
     setTimeout(() => setToastMessage(null), 3800)
-  }, [])
+  }, [epoch])
 
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<string>('')
@@ -17,6 +21,7 @@ export const useFastTrackState = (isSupervisor = false) => {
   // Tải danh sách dự án thật từ GET /api/v1/projects
   useEffect(() => {
     let isMounted = true
+    setProjects([]);setSelectedProjectId('');setProjectError('')
     fastTrackService.getProjects().then((projs) => {
       if (!isMounted) return
       if (projs.length > 0) {
@@ -26,11 +31,11 @@ export const useFastTrackState = (isSupervisor = false) => {
         setProjects([])
         setSelectedProjectId('')
       }
-    })
+    }).catch(e=>{if(isMounted)setProjectError(exportError(e))})
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [epoch])
 
   const policy = useFastTrackPolicy(selectedProjectId, showToast)
   const dispatch = useFastTrackDispatch(selectedProjectId, showToast)
@@ -40,6 +45,10 @@ export const useFastTrackState = (isSupervisor = false) => {
   }
 
   return {
+    projectError,
+    policyError: policy.policyError,
+    dispatchError: dispatch.dispatchError,
+    dispatchLoading: dispatch.dispatchLoading,
     projects,
     selectedProjectId,
     handleProjectChange,

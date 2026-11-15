@@ -1,528 +1,205 @@
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
-import { RoleCode } from '../../types/enums'
-import {
-  PolicyThresholdConfig,
-  PolicyHistoryItem,
-  AuditLogItem,
-  DefectItem,
-  CrewTeam,
-  ProjectOption,
-  RoadCoverageFact,
-  RoadCoverageInputDto,
-  DispatchPayload
-} from '../../pages/(pm)/fast-track/types'
-
+import { triageGeometryService } from './triageGeometryService'
+import { projectService } from './projectService'
+import { workflowCollection } from './workflowCollection'
+import { repairWorkflowService } from './repairWorkflowService'
+import { fastTrackCommand, fastTrackStorage, fastTrackPending } from './fastTrackJournal'
+import type { PolicyThresholdConfig, DefectItem, CrewTeam, ProjectOption, RoadCoverageFact, RoadCoverageInputDto, DispatchPayload } from '../../pages/(pm)/fast-track/types'
 export type { PolicyThresholdConfig, RoadCoverageFact, RoadCoverageInputDto, ProjectOption }
-
-const DEFAULT_PROJECT_ID = '72f84201-c001-4000-8000-000000000001'
-const DEFAULT_PACKAGE_ID = '1b5305b6-6cb3-4af6-a0b1-c13fafb6b028'
-
-export interface RepairMeasurementRule {
-  code: string
-  unit: string
-  minimum: number
-  maximum: number
+export interface RepairMeasurementRule { code: string; unit: string; minimum: number; maximum: number }
+export interface RepairPolicyDefinitionInput { defectTypeCode: string; checklistVersion: string; measurements: RepairMeasurementRule[]; stopConditions: string[]; reason: string }
+export interface RepairPolicyView extends RepairPolicyDefinitionInput { id: string; projectId: string; currentChangeId?: string; publishedRevisionId?: string; revision?: number; state: string; actorId: string; at: string; version: string }
+export interface RoadCoverageReadFact { projectId: string; scopes: NonNullable<RoadCoverageFact['scopes']>; sources: NonNullable<RoadCoverageFact['sources']>; history: any[]; version: string }
+const requireProject = (p: string) => { if (!p) throw new Error('Chọn dự án trước khi thao tác.') }
+async function versioned<T extends {version: string}>(path: string) {
+  const response = await apiClient.get<T>(path)
+  if (!response.data?.version || response.headers.etag !== `"${response.data.version}"`) throw new Error('Thiếu phiên bản hoặc ETag không khớp hồ sơ.')
+  return response
 }
-
-export interface RepairPolicyDefinitionInput {
-  defectTypeCode?: string | null
-  checklistVersion?: string | null
-  measurements?: RepairMeasurementRule[] | null
-  stopConditions?: string[] | null
-  reason?: string | null
+function refs(project: string): Array<{id: string; kind: 'drafts' | 'revisions'}> {
+  return JSON.parse(localStorage.getItem(fastTrackStorage(project, 'policy-refs')) || '[]')
 }
-
-export interface RepairPolicyView {
-  id: string
-  projectId: string
-  currentChangeId?: string | null
-  publishedRevisionId?: string | null
-  revision?: number | null
-  defectTypeCode?: string | null
-  checklistVersion?: string | null
-  measurements?: RepairMeasurementRule[] | null
-  stopConditions?: string[] | null
-  state?: string | null
-  actorId: string
-  at: string
-  reason?: string | null
-  version?: string | null
+function remember(project: string, row: RepairPolicyView, kind: 'drafts' | 'revisions') {
+  const next = refs(project).filter(r => r.id !== row.id); next.push({id: row.id, kind})
+  localStorage.setItem(fastTrackStorage(project, 'policy-refs'), JSON.stringify(next))
 }
-
-export interface RoadCoverageScopeFact {
-  obligationId: string
-  roadSectionId: string
-  locationVersion?: string | null
-  from: number
-  to: number
-  offsetFrom: number
-  offsetTo: number
-  scopeHash?: string | null
-}
-
-export interface RoadCoverageSourceFact {
-  kind?: string | null
-  id: string
-  fileId: string
-  version?: string | null
-  from?: string | null
-  to?: string | null
-  provenance?: string | null
-}
-
-export interface RoadCoverageHistoryItem {
-  id: string
-  projectId: string
-  scopeObligationId: string
-  roadSectionId: string
-  locationVersion?: string | null
-  from: number
-  to: number
-  offsetFrom: number
-  offsetTo: number
-  applicableFromUtc: string
-  applicableToUtc: string
-  handoverDocumentId: string
-  handoverVersion?: string | null
-  sourceKind?: string | null
-  sourceId: string
-  sourceVersion?: string | null
-  handoverFileId?: string | null
-  coverageFileId?: string | null
-  provenance?: string | null
-  actorId: string
-  confirmedAtUtc: string
-  reason?: string | null
-  supersedesId?: string | null
-}
-
-export interface RoadCoverageReadFact {
-  projectId: string
-  scopes: RoadCoverageScopeFact[]
-  sources: RoadCoverageSourceFact[]
-  history: RoadCoverageHistoryItem[]
-  version?: string | null
-}
-
-function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
-  }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
 export const fastTrackService = {
-  /**
-   * Lấy danh sách dự án thực tế từ CSDL Backend (GET /api/v1/projects)
-   */
   async getProjects(): Promise<ProjectOption[]> {
-    try {
-      const res = await apiClient.get<{ items: any[] }>('/projects')
-      if (res.data?.items && res.data.items.length > 0) {
-        return res.data.items.map((p: any) => ({
-          id: p.projectId || p.id,
-          name: p.name || 'Dự án bảo hành',
-          projectCode: p.projectCode || 'PRJ'
-        }))
-      }
-    } catch {
-      // Fallback nếu token/cookie có sự cố
-    }
-
-    try {
-      const devRes = await fetch('/__dev/projects')
-      const devJson = await devRes.json()
-      if (devJson?.items && devJson.items.length > 0) {
-        return devJson.items.map((p: any) => ({
-          id: p.projectId || p.id,
-          name: p.name || 'Dự án bảo hành',
-          projectCode: p.projectCode || 'PRJ'
-        }))
-      }
-    } catch (err) {
-      console.warn('Lỗi khi tải danh sách dự án từ CSDL Docker:', err)
-    }
-
-    return [
-      {
-        id: DEFAULT_PROJECT_ID,
-        name: 'Synthetic Project A',
-        projectCode: 'SBX-A'
-      }
-    ]
+    return (await projectService.fetchProjects()).map(p => ({id: p.id, name: p.name, projectCode: p.code}))
   },
-
-  /**
-   * Đọc độ phủ tuyến đường bảo hành (API-175: GET /api/v1/projects/{projectId}/road-coverage)
-   */
-  async getRoadCoverage(projectId = DEFAULT_PROJECT_ID): Promise<RoadCoverageFact | null> {
-    const pid = (projectId && projectId.length === 36) ? projectId : DEFAULT_PROJECT_ID
-    try {
-      const res = await apiClient.get<RoadCoverageReadFact>(`/projects/${pid}/road-coverage`)
-      const data = res.data
-      if (!data) return null
-
-      const scope = data.scopes?.[0]
-      const handoverSource = data.sources?.find((s) => s.kind === 'HANDOVER')
-      const basisSource = data.sources?.find((s) => s.kind === 'MAINTENANCE_BASIS' || s.kind === 'WARRANTY')
-      const hasWarrantySource = Boolean(data.sources?.some((s) => s.kind === 'WARRANTY'))
-      const hasConfirmedHistory = data.history && data.history.length > 0
-      const hist = hasConfirmedHistory ? data.history[0] : null
-
-      let docNo = 'BB-BG-2026/QL1A-PK01'
-      if (hist?.handoverDocumentId) {
-        docNo = hist.handoverDocumentId
-      } else if ((hist as any)?.sourceFactsJson) {
-        try {
-          const facts = JSON.parse((hist as any).sourceFactsJson)
-          if (facts.handover?.documentNo) docNo = facts.handover.documentNo
-        } catch {}
-      }
-
-      const etagHeader = res.headers?.etag || res.headers?.ETag
-      const etag = data.version || (etagHeader ? String(etagHeader).replace(/"/g, '') : '')
-
-      return {
-        projectId: data.projectId,
-        projectName: 'Tuyến đường dự án',
-        scopeObligationId: scope?.obligationId || '',
-        scopeHash: scope?.scopeHash || '',
-        fromKm: scope?.from ?? 0,
-        toKm: scope?.to ?? 0,
-        sourceKind: (basisSource?.kind as any) || 'MAINTENANCE_BASIS',
-        hasWarrantySource,
-        handoverDocumentId: handoverSource?.id || 'a1111111-2222-3333-4444-555555555555',
-        handoverVersion: handoverSource?.version || hist?.handoverVersion || '87b7e4d0f2c7136f426533ec6127f4230584b8551afba5824b8347aacbd15ebf',
-        documentNo: docNo,
-        applicableFromUtc: hist ? hist.applicableFromUtc : (handoverSource?.from || '2026-01-01'),
-        applicableToUtc: hist ? hist.applicableToUtc : (handoverSource?.to || '2026-12-31'),
-        status: hasConfirmedHistory ? 'CONFIRMED' : 'PENDING',
-        confirmedBy: hist ? 'Kỹ sư Giám sát / Chủ đầu tư' : undefined,
-        confirmedAt: hist ? new Date(hist.confirmedAtUtc).toLocaleString('vi-VN') : undefined,
-        reason: hist ? hist.reason || undefined : undefined,
-        sourceId: basisSource?.id,
-        sourceVersion: basisSource?.version || undefined,
-        etag
-      }
-    } catch (err) {
-      console.error('Lỗi khi lấy độ phủ tuyến từ API-175:', err)
-      return null
-    }
+  async getRoadCoverage(projectId: string): Promise<RoadCoverageFact> {
+    requireProject(projectId)
+    const {data, headers} = await versioned<RoadCoverageReadFact>(`/projects/${projectId}/road-coverage`)
+    if (data.projectId !== projectId || !Array.isArray(data.scopes) || !Array.isArray(data.sources) || !Array.isArray(data.history)) throw new Error('Hồ sơ độ phủ sai phạm vi/cấu trúc.')
+    const scope = data.scopes.length === 1 ? data.scopes[0] : undefined
+    const history = scope ? data.history.filter(h => h.scopeObligationId === scope.obligationId).sort((a,b) => Date.parse(b.confirmedAtUtc)-Date.parse(a.confirmedAtUtc))[0] : undefined
+    return {projectId, projectName: '', scopeObligationId: scope?.obligationId || '', scopeHash: scope?.scopeHash,
+      fromKm: scope ? scope.from/1000 : 0, toKm: scope ? scope.to/1000 : 0, sourceKind: history?.sourceKind || 'MAINTENANCE_BASIS',
+      handoverDocumentId: history?.handoverDocumentId, handoverVersion: history?.handoverVersion || '',
+      applicableFromUtc: history?.applicableFromUtc || '', applicableToUtc: history?.applicableToUtc || '',
+      status: history?.provenance==='REAL_SOURCE' ? 'CONFIRMED' : 'PENDING', provenance: history?.provenance,
+      confirmedBy: history?.actorId, confirmedAt: history?.confirmedAtUtc, reason: history?.reason,
+      sourceId: history?.sourceId, sourceVersion: history?.sourceVersion, etag: headers.etag,
+      scopes: data.scopes, sources: data.sources, history:data.history, hasWarrantySource:data.sources.some(s=>s.kind==='WARRANTY'), blockers: data.sources.some(s=>s.kind==='HANDOVER') ? [] : ['Chưa có hồ sơ bàn giao đã được chấp nhận. Không thể xác nhận độ phủ.']}
   },
-
-  /**
-   * Supervisor Phê duyệt độ phủ tuyến đường bảo hành (API-176: POST /api/v1/projects/{projectId}/road-coverage)
-   */
-  async confirmRoadCoverage(
-    projectId: string,
-    input: RoadCoverageInputDto,
-    ifMatch: string
-  ): Promise<RoadCoverageReadFact> {
-    const cleanedEtag = ifMatch.startsWith('"') ? ifMatch : `"${ifMatch}"`
-    const res = await apiClient.post<RoadCoverageReadFact>(
-      `/projects/${projectId}/road-coverage`,
-      input,
-      {
-        headers: {
-          'Idempotency-Key': `IDEM-COV-${generateUUID()}`,
-          'If-Match': cleanedEtag
+  async confirmRoadCoverage(p: string, input: RoadCoverageInputDto, ifMatch: string): Promise<RoadCoverageReadFact> {
+    return fastTrackCommand(p, 'coverage', `/projects/${p}/road-coverage`, input, async () => {
+      const current = await this.getRoadCoverage(p)
+      const scope = current.scopes?.find(s=>s.obligationId===input.scopeObligationId)
+      const handover = current.sources?.find(s=>s.kind==='HANDOVER' && s.id===input.handoverDocumentId && s.version===input.handoverVersion)
+      const source = current.sources?.find(s=>s.kind===input.sourceKind && s.id===input.sourceId && s.version===input.sourceVersion)
+      if (!scope || scope.scopeHash!==input.expectedScopeHash || !handover || !source || current.etag!==ifMatch) throw new Error('Căn cứ độ phủ thiếu hoặc đã thay đổi; đọc lại hồ sơ trước khi xác nhận.')
+      if (input.provenance==='REAL_SOURCE' && [handover,source].some(s=>s.provenance!=='REAL_SOURCE')) throw new Error('Nguồn thử nghiệm/chưa xác minh không được đổi thành nguồn đã xác minh thực tế.')
+      return current.etag
+    }, async receipt => {
+      const response = await versioned<RoadCoverageReadFact>(`/projects/${p}/road-coverage`)
+      if (receipt?.projectId!==p || response.data.projectId!==p || !response.data.history.some(h=>h.scopeObligationId===input.scopeObligationId && h.reason===input.reason)) throw new Error('Đã có phản hồi ghi nhưng chưa đối chiếu được xác nhận độ phủ. Chỉ đọc lại.')
+      return response.data
+    })
+  },
+  async getPolicyDraft(p: string, id: string): Promise<RepairPolicyView> { return this.readPolicy(p,id,'drafts') },
+  async getPolicyRevision(p: string, id: string): Promise<RepairPolicyView> { return this.readPolicy(p,id,'revisions') },
+  async readPolicy(p: string, id: string, kind: 'drafts' | 'revisions'): Promise<RepairPolicyView> {
+    requireProject(p)
+    const {data} = await versioned<RepairPolicyView>(`/projects/${p}/repair-policies/${kind}/${id}`)
+    if (data.id!==id || data.projectId!==p || !Array.isArray(data.measurements)) throw new Error('Chính sách sai phạm vi hoặc thiếu quy tắc.')
+    remember(p,data,kind); return data
+  },
+  policyView(row: RepairPolicyView): PolicyThresholdConfig {
+    return {id: row.id, version: row.checklistVersion, status: row.state==='PUBLISHED' ? 'ACTIVE' : row.state==='DRAFT' ? 'DRAFT' : 'ARCHIVED',
+      maxAreaM2: row.measurements.find(r=>r.code==='Area' && r.unit==='m2')?.maximum ?? NaN,
+      maxDepthCm: row.measurements.find(r=>r.code==='DepressionDepth' && r.unit==='mm')?.maximum ?? NaN,
+      allowedSeverities: [], activatedBy: row.actorId, activatedAt: row.at, appliedRoute: 'Phạm vi chính sách của dự án', description: row.reason,
+      defectTypeCode: row.defectTypeCode, stopConditions: row.stopConditions, revision: row.revision, rules: row.measurements}
+  },
+  async getPolicies(p: string): Promise<RepairPolicyView[]> {
+    // There is no canonical policy collection. References are receipts or explicitly entered IDs, never guessed.
+    if (useAuthStore.getState().user?.role !== 'PROJECT_MANAGER') return []
+    return Promise.all(refs(p).map(r => this.readPolicy(p,r.id,r.kind)))
+  },
+  async getActivePolicy(p: string): Promise<PolicyThresholdConfig | null> {
+    const rows = (await this.getPolicies(p)).filter(r=>r.state==='PUBLISHED')
+    return rows.length === 1 ? this.policyView(rows[0]) : null
+  },
+  async createPolicyDraft(p: string, input: RepairPolicyDefinitionInput): Promise<RepairPolicyView> {
+    return fastTrackCommand(p,'policy-create',`/projects/${p}/repair-policies/drafts`,input,async()=>undefined,async receipt=> {
+      if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt chính sách sai phạm vi.')
+      return this.getPolicyDraft(p,receipt.id)
+    })
+  },
+  async publishPolicy(p: string, id: string, reason: string, _version?: string): Promise<RepairPolicyView> {
+    return fastTrackCommand(p,`policy-publish:${id}`,`/projects/${p}/repair-policies/drafts/${id}/publish`,{reason},async()=> {
+      const row = await this.getPolicyDraft(p,id)
+      if (row.state!=='DRAFT') throw new Error('Bản dự thảo không còn được phép xuất bản.')
+      return `"${row.version}"`
+    },async receipt=> {
+      if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt xuất bản sai phạm vi.')
+      const row = await this.getPolicyRevision(p,receipt.id)
+      if (row.state!=='PUBLISHED') throw new Error('Chưa xác nhận chính sách đã xuất bản.')
+      return row
+    })
+  },
+  async getCrews(p: string): Promise<CrewTeam[]> {
+    const rows = await projectService.fetchProjectMembers(p)
+    const day = new Date().toISOString().slice(0,10)
+    return rows.filter((m:any)=>m.role==='CREW' && m.status==='ACTIVE' && m.validFrom<=day && (!m.validTo || m.validTo>=day)).map((m:any)=>({id:m.userId,name:m.displayName,leader:m.displayName,role:m.role,isAvailable:true}))
+  },
+  async getDefects(p: string): Promise<DefectItem[]> {
+    const packages = await repairWorkflowService.packages(p)
+    const supervisor=useAuthStore.getState().user?.role==='SUPERVISOR'
+    // The Supervisor can read repair collections but not the defect collection in this runtime.
+    // Carry only the package's authoritative defect reference; leave unavailable fields explicit.
+    const defects = supervisor
+      ? [...new Set(packages.map(pkg=>pkg.defectId))].map(id=>({id,projectId:p,defectTypeCode:'',severity:'Chưa có quyền đọc hồ sơ gốc',status:'',version:''}))
+      : await repairWorkflowService.defects(p)
+    const result: DefectItem[] = []
+    for (const d of defects) {
+      const items = (await Promise.all(packages.filter(pkg=>pkg.defectId===d.id).map(async pkg=>(await repairWorkflowService.items(p,pkg.id)).filter(i=>i.mode==='FastTrack').map(i=>({...i,packageId:pkg.id}))))).flat()
+      for (const i of items.length ? items : [null]) {
+        let eligible = false, known = false, reason = i ? 'Chưa đánh giá thi công. Giao việc có điều kiện; Crew phải kiểm tra nguồn và số đo trước khi thi công.' : 'Chưa có hạng mục Fast Track. Cần lập gói/nghĩa vụ và đề xuất hạng mục trước khi giao việc.'
+        if (i && i.state!=='ReadyToAssign') {
+          try {
+            const e = await repairWorkflowService.eligibility(p,i.packageId,i.id)
+            eligible=e.eligible;known=true;reason=e.missingReasons.join('; ')
+          } catch(error:any) {
+            reason=`Không đọc được điều kiện: HTTP ${error.response?.status || 'network'} ${error.response?.data?.code || error.message}`
+          }
         }
-      }
-    )
-    return res.data
-  },
-
-  /**
-   * Lấy cấu hình chính sách hiệu lực thực tế từ CSDL Backend
-   */
-  async getActivePolicy(projectId = DEFAULT_PROJECT_ID): Promise<PolicyThresholdConfig | null> {
-    const pid = (projectId && projectId.length === 36) ? projectId : DEFAULT_PROJECT_ID
-    try {
-      // 1. Lấy dữ liệu chính sách từ CSDL Docker
-      const metaRes = await fetch(`/__dev/project-policy-meta?projectId=${pid}`)
-      const metaJson = await metaRes.json()
-      const d = metaJson?.data
-      if (!d || !d.publishedRevisionId) {
-        return null
-      }
-
-      // Chỉ gọi API canonical nếu là PM; nếu là Giám sát (Supervisor), dùng trực tiếp dữ liệu từ CSDL Docker để không bị 403 Forbidden
-      const isSupervisor = useAuthStore.getState().user?.role === RoleCode.SUPERVISOR
-      let data: any = null
-      if (!isSupervisor) {
-        try {
-          data = await this.getPolicyRevision(pid, d.publishedRevisionId)
-        } catch {
-          // Bỏ qua lỗi nếu API có sự cố
-        }
-      }
-
-      const areaRule = data?.measurements?.find((m: any) => m.code === 'AREA') ||
-        (Array.isArray(d.measurementRules) ? d.measurementRules.find((m: any) => m.code === 'AREA') : null)
-      const depthRule = data?.measurements?.find((m: any) => m.code === 'DEPTH') ||
-        (Array.isArray(d.measurementRules) ? d.measurementRules.find((m: any) => m.code === 'DEPTH') : null)
-
-      let stopConditions: string[] = []
-      if (Array.isArray(data?.stopConditions)) {
-        stopConditions = data.stopConditions
-      } else if (typeof d.stopConditions === 'string') {
-        try { stopConditions = JSON.parse(d.stopConditions) } catch {}
-      } else if (Array.isArray(d.stopConditions)) {
-        stopConditions = d.stopConditions
-      }
-
-      return {
-        id: d.revisionId || d.publishedRevisionId,
-        version: d.checklistVersion || data?.checklistVersion || `REV-${d.revision || 1}`,
-        status: 'ACTIVE',
-        maxAreaM2: areaRule?.maximum ?? 0.5,
-        maxDepthCm: depthRule?.maximum ?? 5.0,
-        allowedSeverities: ['LOW', 'MEDIUM'],
-        activatedBy: 'Chỉ huy trưởng (PM)',
-        activatedAt: d.publishedAt ? new Date(d.publishedAt).toLocaleString('vi-VN') : '',
-        appliedRoute: 'Toàn tuyến dự án',
-        description: `Quy chuẩn kỹ thuật xử lý nhanh ${d.checklistVersion || ''}`,
-        defectTypeCode: d.defectTypeCode || 'POTHOLE',
-        stopConditions,
-        revision: d.revision || 1
-      }
-    } catch (err) {
-      console.warn('Dự án chưa có chính sách xuất bản trong CSDL:', err)
-      return null
-    }
-  },
-
-  /**
-   * PM Lập bản dự thảo chính sách Fast Track mới (API-162: POST /api/v1/projects/{projectId}/repair-policies/drafts)
-   */
-  async createPolicyDraft(
-    projectId: string,
-    input: RepairPolicyDefinitionInput
-  ): Promise<RepairPolicyView> {
-    const res = await apiClient.post<RepairPolicyView>(
-      `/projects/${projectId}/repair-policies/drafts`,
-      input,
-      {
-        headers: {
-          'Idempotency-Key': `IDEM-DRAFT-${generateUUID()}`
-        }
-      }
-    )
-    return res.data
-  },
-
-  /**
-   * PM Xuất bản chính sách Fast Track chính thức có hiệu lực (API-165: POST /api/v1/projects/{projectId}/repair-policies/drafts/{draftId}/publish)
-   */
-  async publishPolicy(
-    projectId: string,
-    draftId: string,
-    reason: string,
-    ifMatch: string
-  ): Promise<RepairPolicyView> {
-    const cleanedEtag = ifMatch.startsWith('"') ? ifMatch : `"${ifMatch}"`
-    const res = await apiClient.post<RepairPolicyView>(
-      `/projects/${projectId}/repair-policies/drafts/${draftId}/publish`,
-      { reason },
-      {
-        headers: {
-          'Idempotency-Key': `IDEM-PUB-${generateUUID()}`,
-          'If-Match': cleanedEtag
-        }
-      }
-    )
-    return res.data
-  },
-
-  /**
-   * Lấy chi tiết bản dự thảo chính sách (API-163: GET /api/v1/projects/{projectId}/repair-policies/drafts/{draftId})
-   */
-  async getPolicyDraft(projectId: string, draftId: string): Promise<RepairPolicyView> {
-    const res = await apiClient.get<RepairPolicyView>(
-      `/projects/${projectId}/repair-policies/drafts/${draftId}`
-    )
-    return res.data
-  },
-
-  /**
-   * Lấy chi tiết phiên bản chính sách đã xuất bản (API-166: GET /api/v1/projects/{projectId}/repair-policies/revisions/{revisionId})
-   */
-  async getPolicyRevision(projectId: string, revisionId: string): Promise<RepairPolicyView> {
-    const res = await apiClient.get<RepairPolicyView>(
-      `/projects/${projectId}/repair-policies/revisions/${revisionId}`
-    )
-    return res.data
-  },
-
-  /**
-   * PM Thu hồi chính sách đã xuất bản (API-167: POST /api/v1/projects/{projectId}/repair-policies/revisions/{revisionId}/revoke)
-   */
-  async revokePolicy(projectId: string, revisionId: string, reason: string): Promise<void> {
-    await apiClient.post(
-      `/projects/${projectId}/repair-policies/revisions/${revisionId}/revoke`,
-      { reason },
-      {
-        headers: {
-          'Idempotency-Key': `IDEM-REVOKE-${generateUUID()}`
-        }
-      }
-    )
-  },
-
-  /**
-   * Lấy danh sách khiếm khuyết thực tế từ CSDL Backend
-   */
-  async getDefects(projectId = DEFAULT_PROJECT_ID): Promise<DefectItem[]> {
-    const pid = (projectId && projectId.length === 36) ? projectId : DEFAULT_PROJECT_ID
-    const isSupervisor = useAuthStore.getState().user?.role === RoleCode.SUPERVISOR
-    let rawItems: any[] = []
-
-    // Chỉ gọi endpoint PM nếu người dùng là PM; nếu là Supervisor thì không gọi để tránh 403 Forbidden trong DevTools
-    if (!isSupervisor) {
-      try {
-        const res = await apiClient.get<{ items: any[] }>(`/projects/${pid}/defects`)
-        if (res.data?.items && res.data.items.length > 0) {
-          rawItems = res.data.items
-        }
-      } catch {
-        // Fallback đọc trực tiếp từ CSDL Docker nếu API có sự cố
+        result.push({id:i?.id || d.id,defectId:d.id,code:`DEF-${d.id.slice(0,8)}${i ? ' · FT' : ''}`,projectId:p,defectTypeCode:d.defectTypeCode || '',severity:(d as any).severity || 'Chưa có thông tin',status:i?.state || d.status || '',version:i?.version || d.version,
+          packageId:i?.packageId,itemId:i?.id,obligationId:i?.obligationId,canAssign:!!i && (i.state==='ReadyToAssign' || !!fastTrackPending(p,`assign:${i.id}`)),eligibilityKnown:known,isFastTrackEligible:eligible,violationReason:reason})
       }
     }
-
-    if (rawItems.length === 0) {
-      try {
-        const devRes = await fetch(`/__dev/project-defects?projectId=${pid}`)
-        const devJson = await devRes.json()
-        if (devJson?.items && devJson.items.length > 0) {
-          rawItems = devJson.items
-        }
-      } catch (devErr) {
-        console.warn('Lỗi khi đọc khiếm khuyết từ CSDL Docker:', devErr)
+    if(result.some(r=>r.itemId && r.status!=='ReadyToAssign')) {
+      const tasks=await workflowCollection<any>(`/projects/${p}/field-inspection-tasks`,p)
+      for(const row of result) {
+        const matches=tasks.filter(t=>t.repairContext?.itemId===row.itemId && t.repairContext?.packageId===row.packageId)
+        if(matches.length===1)row.assignedCrewId=matches[0].assignedToUserId
+        else if(matches.length>1)throw new Error('Có nhiều binding nhiệm vụ cho một hạng mục; cần đối chiếu nguồn.')
       }
     }
-
-    if (rawItems.length > 0) {
-      return rawItems.map((item: any) => {
-        const isHigh = item.severity === 'HIGH' || item.severity === 'CRITICAL'
-        const isEligible = !isHigh
-
-        return {
-          id: item.id,
-          code: `#DEF-${item.id.substring(0, 8).toUpperCase()}`,
-          projectId: item.projectId || pid,
-          defectTypeCode: item.defectTypeCode || 'POTHOLE',
-          severity: item.severity || 'LOW',
-          status: item.status || 'OPEN',
-          version: item.version,
-          isFastTrackEligible: isEligible,
-          violationReason: isHigh ? 'Mức độ nghiêm trọng HIGH/CRITICAL vượt ngưỡng cho phép xử lý nhanh' : undefined
-        }
+    return result
+  },
+  async prepareItem(row:DefectItem, input:{fromMeters:number;toMeters:number;offsetFromMeters:number;offsetToMeters:number;segmentSetId:string|null;layoutRevisionId:string|null;slabId:string|null;repairPlan:string;checklistVersion:string;reason:string}) {
+    const p=row.projectId, storage=fastTrackStorage(p,`prepare:${row.defectId || row.id}`)
+    if(row.itemId)throw new Error('Hạng mục đã tồn tại. Đọc lại danh sách, không lập trùng.')
+    const defect=(await versioned<any>(`/projects/${p}/defects/${row.defectId || row.id}`)).data
+    if(defect.projectId!==p || defect.id!==(row.defectId || row.id))throw new Error('Nguồn khiếm khuyết sai phạm vi.')
+    if(!input.reason.trim() || !input.repairPlan.trim() || !input.checklistVersion.trim() || ![input.fromMeters,input.toMeters,input.offsetFromMeters,input.offsetToMeters].every(Number.isFinite) || input.fromMeters<0 || input.toMeters<=input.fromMeters || input.offsetToMeters<=input.offsetFromMeters)throw new Error('Nhập đủ phạm vi vật lý, phương án, checklist và căn cứ; không dùng kích thước AI làm số đo.')
+    const roads=await triageGeometryService.routes(p),road=roads.find(r=>r.currentVersionId===defect.roadSectionVersionId)
+    if(!road)throw new Error('Khiếm khuyết không thuộc tuyến hiện hành.')
+    if(input.segmentSetId && !(await triageGeometryService.sets(p,road)).some(s=>s.id===input.segmentSetId))throw new Error('Bộ phân đoạn chưa công bố hoặc sai tuyến.')
+    let pipeline=JSON.parse(localStorage.getItem(storage)||'null')
+    if(pipeline && JSON.stringify(pipeline.input)!==JSON.stringify(input))throw new Error('Đang giữ gói đã tạo. Dùng lại đúng phương án để đề xuất tiếp; không tạo gói trùng.')
+    if(!pipeline) {
+      const {repairPlan,checklistVersion,reason,...scope}=input
+      const body={defectId:defect.id,defectVersion:defect.version,obligations:[{kind:'FORMAL_REPAIR',mandatory:true,scope:{...scope,physicalRoadId:road.roadSectionId,routeVersionId:road.currentVersionId},reason}],reason}
+      const pkg=await fastTrackCommand(p,`package:${defect.id}`,`/projects/${p}/repair-packages`,body,async()=>`"${defect.version}"`,async receipt=> {
+        if(receipt?.projectId!==p || receipt.defectId!==defect.id || !receipt.version || receipt.unresolvedMandatoryObligationIds?.length!==1)throw new Error('Receipt tạo gói thiếu nghĩa vụ. Giữ receipt, không tạo lại.')
+        if(!(await repairWorkflowService.packages(p)).some(r=>r.id===receipt.id))throw new Error('Chưa đọc lại được gói đã tạo.')
+        return receipt
+      })
+      pipeline={input,pkg};localStorage.setItem(storage,JSON.stringify(pipeline))
+    }
+    const pkg=pipeline.pkg, base=`/projects/${p}/repair-packages/${pkg.id}/items`
+    await fastTrackCommand(p,`propose:${pkg.id}`,base,{obligationId:pkg.unresolvedMandatoryObligationIds[0],mode:'FAST_TRACK',repairPlan:input.repairPlan,checklistVersion:input.checklistVersion,reason:input.reason},async()=>`"${pkg.version}"`,async receipt=> {
+      if(receipt?.projectId!==p || receipt.mode!=='FastTrack' || !receipt.id)throw new Error('Receipt hạng mục không khớp Fast Track.')
+      const item=(await versioned<any>(`${base}/${receipt.id}`)).data
+      if(item.id!==receipt.id || item.projectId!==p || item.mode!=='FastTrack')throw new Error('Chưa đọc lại được hạng mục đã đề xuất.')
+      return item
+    })
+    localStorage.removeItem(storage)
+  },
+  async executeDispatch(payload: DispatchPayload): Promise<{success: boolean; message: string; count: number}> {
+    const p=payload.projectId, crew=(await this.getCrews(p)).find(c=>c.id===payload.crewName)
+    if (!crew || !payload.items.length || !payload.notes?.trim()) throw new Error('Chọn Crew hiện hành, hạng mục và ghi rõ chỉ đạo.')
+    for (const row of payload.items) {
+      if (!row.itemId || !row.packageId || !row.defectId) throw new Error('Chưa có hạng mục sửa chữa để giao việc.')
+      const base=`/projects/${p}/repair-packages/${row.packageId}/items/${row.itemId}`
+      const operation=`assign:${row.itemId}`
+      const d=(await versioned<any>(`/projects/${p}/defects/${row.defectId}`)).data
+      const {policyRevisionId,...pins}=payload.task
+      let task={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
+      const held=fastTrackPending(p,operation)
+      // Reconcile with the immutable saved assignment, even after defect versions/forms change.
+      const saved=held?.body as {task:typeof task;policyRevisionId:string;reason:string} | undefined
+      if(saved && !held?.receipt && (saved.reason!==payload.notes || saved.task.assignedToUserId!==crew.id || saved.policyRevisionId!==policyRevisionId || JSON.stringify({...saved.task,defectVersion:task.defectVersion})!==JSON.stringify(task))) throw new Error('Có lệnh giao việc chưa rõ kết quả. Giữ đúng Crew, chỉ đạo, phạm vi và hạn đã gửi để đối chiếu.')
+      if(saved)task=saved.task
+      const commandPolicy=saved?.policyRevisionId || policyRevisionId
+      const commandBody=saved || {task,policyRevisionId:commandPolicy,reason:payload.notes}
+      await fastTrackCommand(p,operation,`${base}/assign`,commandBody,async()=> {
+        const current=await versioned<any>(base), policy=await this.getPolicyRevision(p,commandPolicy)
+        if (current.data.id!==row.itemId || current.data.projectId!==p || current.data.mode!=='FastTrack' || current.data.state!=='ReadyToAssign' || policy.state!=='PUBLISHED' || policy.defectTypeCode!==d.defectTypeCode) throw new Error('Hạng mục/chính sách không còn phù hợp để giao việc.')
+        if (!Number.isFinite(Date.parse(task.dueAt)) || Date.parse(task.dueAt)<=Date.now() || !task.measurementScope.trim()) throw new Error('Nhập hạn hoàn thành trong tương lai và phạm vi đo có căn cứ.')
+        return current.headers.etag
+      },async receipt=> {
+        if (receipt?.itemId!==row.itemId || !receipt.taskId || !receipt.assignmentId || receipt.policyRevisionId!==commandPolicy) throw new Error('Receipt giao việc không khớp hạng mục/chính sách.')
+        const current=(await versioned<any>(base)).data
+        const {data:native}=await apiClient.get(`/projects/${p}/field-inspection-tasks/${receipt.taskId}`)
+        if (current.id!==row.itemId || current.state==='ReadyToAssign' || native.id!==receipt.taskId || native.projectId!==p || native.defectId!==row.defectId || native.assignedToUserId!==task.assignedToUserId || native.assignmentId!==receipt.assignmentId || native.repairContext?.itemId!==row.itemId || native.repairContext?.packageId!==row.packageId) throw new Error('Đã có receipt nhưng chưa đối chiếu được nhiệm vụ Crew. Chỉ đọc lại, không giao trùng.')
+        return native
       })
     }
-    return []
-  },
-
-  /**
-   * Lấy danh sách nhân sự thành viên dự án thực tế từ CSDL (GET /api/v1/projects/{projectId}/members)
-   */
-  async getCrews(projectId = DEFAULT_PROJECT_ID): Promise<CrewTeam[]> {
-    const pid = (projectId && projectId.length === 36) ? projectId : DEFAULT_PROJECT_ID
-    try {
-      const res = await apiClient.get<{ items: any[] }>(`/projects/${pid}/members`)
-      if (res.data?.items && res.data.items.length > 0) {
-        return res.data.items.map((m: any) => ({
-          id: m.userId || m.membershipId,
-          name: m.displayName || m.email || 'Nhân sự dự án',
-          leader: m.displayName || 'Kỹ thuật viên',
-          role: m.role || 'CREW',
-          isAvailable: m.status === 'ACTIVE'
-        }))
-      }
-      return []
-    } catch {
-      return []
-    }
-  },
-
-  /**
-   * Kiểm tra điều kiện Fast Track cho hạng mục sửa chữa (API-146)
-   */
-  async checkEligibility(
-    firstArg: string,
-    secondArg?: string,
-    thirdArg?: string
-  ): Promise<{ eligible: boolean; missingReasons: string[] }> {
-    let projectId = DEFAULT_PROJECT_ID
-    let packageId = DEFAULT_PACKAGE_ID
-    let itemId = firstArg
-
-    if (thirdArg) {
-      projectId = firstArg
-      packageId = secondArg || DEFAULT_PACKAGE_ID
-      itemId = thirdArg
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(itemId) || !uuidRegex.test(packageId) || !uuidRegex.test(projectId)) {
-      return {
-        eligible: false,
-        missingReasons: ['Mã định danh không hợp lệ']
-      }
-    }
-
-    try {
-      const res = await apiClient.get<{
-        eligible: boolean
-        missingReasons?: string[]
-      }>(`/projects/${projectId}/repair-packages/${packageId}/items/${itemId}/eligibility`)
-
-      return {
-        eligible: res.data.eligible,
-        missingReasons: res.data.missingReasons ?? []
-      }
-    } catch {
-      return {
-        eligible: false,
-        missingReasons: ['Hạng mục chưa đủ điều kiện kỹ thuật theo chính sách']
-      }
-    }
-  },
-
-  /**
-   * PM Chốt nghiệm thu cuối cùng cho hạng mục Fast Track (API-147 FT mode)
-   */
-  async finalConfirmation(
-    projectId: string,
-    packageId: string,
-    itemId: string,
-    ifMatch: string
-  ): Promise<void> {
-    const cleanedEtag = ifMatch.startsWith('"') ? ifMatch : `"${ifMatch}"`
-    await apiClient.post(
-      `/projects/${projectId}/repair-packages/${packageId}/items/${itemId}/final-confirmation`,
-      {},
-      {
-        headers: {
-          'Idempotency-Key': `IDEM-CONFIRM-${generateUUID()}`,
-          'If-Match': cleanedEtag
-        }
-      }
-    )
-  },
-
-  /**
-   * Thực hiện điều phối giao việc
-   */
-  async executeDispatch(payload: DispatchPayload): Promise<{ success: boolean; message: string; count: number }> {
-    return {
-      success: true,
-      message: `Đã giao thành công ${payload.defectIds.length} vị trí cho ${payload.crewName}`,
-      count: payload.defectIds.length
-    }
+    return {success:true,count:payload.items.length,message:`Đã đối chiếu ${payload.items.length} nhiệm vụ đã giao. Crew vẫn phải kiểm tra điều kiện thi công.`}
   }
 }
