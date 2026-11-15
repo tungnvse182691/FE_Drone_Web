@@ -36,5 +36,5 @@ Không thể chứng minh byte-for-byte khoảng trắng cuối dòng trước t
 - 34 mục trong manifest khớp hash sau phục hồi; ba hash service nêu trên khớp diff gốc. Các file KPI/map/local được giữ nguyên cũng được kiểm tra không đổi so với trước lượt này.
 - Typecheck và production build PASS. Không sửa code để làm xanh các test của luồng UI mới đã bị gỡ.
 - Diff-check UI báo ba lỗi khoảng trắng có sẵn trong ResearchValidation được phục hồi nguyên từ Git (dòng 365, 490 và dòng trắng cuối file); cố ý không format lại bản gốc.
-- Browser Supervisor mở đủ bảy màn; ảnh toàn trang ở `artifacts/pre-prompt-ui-restore/screenshots/`. Audit đã đợi qua loading trước khi chụp lại. Không có tràn ngang trong lượt kiểm này. Không bấm mutation nghiệp vụ.
+- Browser PM và Supervisor đều mở đủ bảy màn; 14 ảnh toàn trang ở `artifacts/pre-prompt-ui-restore/screenshots/`. Audit đã đợi qua loading trước khi chụp lại. Không có tràn ngang trong lượt kiểm này. Không bấm mutation nghiệp vụ.
 - Bằng chứng này xác nhận nguồn phục hồi và khả năng render, không khẳng định các thao tác nghiệp vụ cũ đã được nghiệm thu.
