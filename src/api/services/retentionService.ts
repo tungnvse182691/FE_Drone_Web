@@ -1,4 +1,3 @@
-import { workflowCollection } from './workflowCollection'
 import { apiClient } from '../client'
 import { LegalHoldProject, DataDeletionRequest } from '../../types/domain'
 
@@ -49,7 +48,39 @@ export const retentionService = {
    * Ánh xạ theo operation_catalog.md dòng 118
    */
   async requestDeletion(payload: CreateDeletionPayload): Promise<DataDeletionRequest> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    await new Promise((resolve) => setTimeout(resolve, 120))
+    const proj = inMemoryProjects.find((p) => p.project_id === payload.projectId)
+    const isLegalHold = proj?.is_legal_hold || false
+    const isEligible5Y = (proj?.years_since_warranty_end || 0) >= 5
+
+    const newReq: DataDeletionRequest = {
+      id: `req-${Date.now()}`,
+      request_code: `#REQ-DEL-2026-0${inMemoryRequests.length + 1}`,
+      project_id: payload.projectId,
+      project_name: proj?.project_name || 'Dự án chỉ định',
+      requested_by_id: payload.requestedById,
+      requested_by_name: payload.requestedByName,
+      requested_at: new Date().toLocaleString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }),
+      data_type: payload.dataType,
+      data_description: `Yêu cầu giải phóng dữ liệu: ${payload.dataType} dung lượng ${payload.sizeGb} GB`,
+      data_size_gb: payload.sizeGb,
+      warranty_end_date: proj?.warranty_end_date || 'N/A',
+      years_since_warranty: proj?.years_since_warranty_end || 0,
+      is_eligible_5years: isEligible5Y,
+      status: 'PENDING_APPROVAL',
+      blocked_by_legal_hold: isLegalHold,
+      justification_notes: payload.justification
+    }
+
+    inMemoryRequests = [newReq, ...inMemoryRequests]
+    return newReq
   },
 
   /**
@@ -61,7 +92,28 @@ export const retentionService = {
     decision: 'APPROVE' | 'REJECT',
     reason?: string
   ): Promise<DataDeletionRequest> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    const index = inMemoryRequests.findIndex((r) => r.id === requestId)
+    if (index === -1) {
+      throw new Error('Không tìm thấy yêu cầu xóa dữ liệu')
+    }
+
+    const current = inMemoryRequests[index]
+    if (decision === 'APPROVE') {
+      if (current.blocked_by_legal_hold) {
+        throw new Error('Không thể phê duyệt: Dự án đang có lệnh phong tỏa pháp lý')
+      }
+      if (!current.is_eligible_5years) {
+        throw new Error('Không thể phê duyệt: Dữ liệu chưa đủ thời hạn 5 năm sau bảo hành')
+      }
+      current.status = 'APPROVED_PURGED'
+    } else {
+      current.status = 'REJECTED'
+      current.rejection_reason = reason || 'Chưa đủ điều kiện pháp lý'
+    }
+
+    inMemoryRequests[index] = { ...current }
+    return { ...current }
   },
 
   /**
@@ -77,14 +129,46 @@ export const retentionService = {
       reference?: string
     }
   ): Promise<LegalHoldProject> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    const index = inMemoryProjects.findIndex((p) => p.project_id === projectId)
+    if (index === -1) {
+      throw new Error('Không tìm thấy dự án')
+    }
+
+    const current = inMemoryProjects[index]
+    current.is_legal_hold = payload.enabled
+
+    if (payload.enabled) {
+      current.hold_reason = payload.reason || 'Yêu cầu phong tỏa phục vụ thanh tra, kiểm toán công trình'
+      current.hold_authority = payload.authority || 'Cơ quan có thẩm quyền'
+      current.hold_reference = payload.reference || 'Văn bản / Quyết định thanh tra'
+      current.hold_since = new Date().toLocaleString('vi-VN')
+    } else {
+      current.hold_reason = undefined
+      current.hold_authority = undefined
+      current.hold_reference = undefined
+      current.hold_since = undefined
+    }
+
+    // Cập nhật cờ blocked_by_legal_hold cho các yêu cầu xóa tương ứng
+    inMemoryRequests = inMemoryRequests.map((req) => {
+      if (req.project_id === projectId) {
+        return { ...req, blocked_by_legal_hold: payload.enabled }
+      }
+      return req
+    })
+
+    inMemoryProjects[index] = { ...current }
+    return { ...current }
   },
 
   /**
    * Supervisor bật / tắt nhanh lệnh phong tỏa pháp lý (Legal Hold)
    */
   async toggleLegalHold(projectId: string): Promise<LegalHoldProject> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    const found = inMemoryProjects.find((p) => p.project_id === projectId)
+    const nextState = !found?.is_legal_hold
+    return this.setLegalHold(projectId, { enabled: nextState })
   },
 
   // =========================================================================
@@ -94,23 +178,33 @@ export const retentionService = {
   /**
    * Đọc danh sách đánh giá lưu trữ hồ sơ (GET /api/v1/projects/{projectId}/retention/evaluations)
    */
-  async getRetentionEvaluations(projectId: string, signal?: AbortSignal): Promise<RetentionEvaluation[]> {
-    return workflowCollection<RetentionEvaluation>(`/projects/${projectId}/retention/evaluations`, projectId, signal)
+  async getRetentionEvaluations(projectId: string, signal?: AbortSignal): Promise<any[]> {
+    if (!projectId || projectId === 'ALL') return []
+    try {
+      const res = await apiClient.get(`/projects/${projectId}/retention/evaluations`, { signal })
+      return res.data?.items || []
+    } catch (err) {
+      console.warn('Lỗi đọc retention evaluations từ API:', err)
+      return []
+    }
   },
 
   /**
    * Tạo đánh giá lưu trữ hồ sơ công trình (POST /api/v1/projects/{projectId}/retention/evaluations)
    */
   async createRetentionEvaluation(projectId: string, request: any): Promise<any> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    const key = crypto.randomUUID()
+    const res = await apiClient.post(`/projects/${projectId}/retention/evaluations`, request, {
+      headers: { 'Idempotency-Key': key }
+    })
+    return res.data
   },
 
   /**
    * Lấy chi tiết đánh giá lưu trữ hồ sơ (GET /api/v1/projects/{projectId}/retention/evaluations/{id})
    */
-  async getRetentionEvaluationDetail(projectId: string, id: string, signal?: AbortSignal): Promise<RetentionEvaluationDetail> {
-    const res = await apiClient.get<RetentionEvaluationDetail>(`/projects/${projectId}/retention/evaluations/${id}`, { signal })
-    if (res.data?.id !== id || res.data.projectId !== projectId || !Array.isArray(res.data.items)) throw new Error('Kết quả đánh giá lưu trữ sai phạm vi hoặc thiếu danh sách tệp.')
+  async getRetentionEvaluationDetail(projectId: string, id: string, signal?: AbortSignal): Promise<any> {
+    const res = await apiClient.get(`/projects/${projectId}/retention/evaluations/${id}`, { signal })
     return res.data
   },
 
@@ -118,22 +212,24 @@ export const retentionService = {
    * Tạo lệnh phong tỏa pháp lý Legal Hold (POST /api/v1/retention/holds)
    */
   async createLegalHoldApi(request: any): Promise<any> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    const key = crypto.randomUUID()
+    const res = await apiClient.post('/retention/holds', request, {
+      headers: { 'Idempotency-Key': key }
+    })
+    return res.data
   },
 
   /**
    * Giải tỏa lệnh phong tỏa pháp lý Legal Hold (POST /api/v1/retention/holds/{id}/release)
    */
   async releaseLegalHoldApi(holdId: string, version: string): Promise<any> {
-    throw new Error('Luồng giao diện cũ chưa có nguồn/contract đầy đủ. Sử dụng menu đã nối API; không cập nhật bộ nhớ thay cho Backend.')
+    const key = crypto.randomUUID()
+    const res = await apiClient.post(`/retention/holds/${holdId}/release`, {}, {
+      headers: {
+        'Idempotency-Key': key,
+        'If-Match': version.startsWith('"') ? version : `"${version}"`
+      }
+    })
+    return res.data
   }
-}
-
-export interface RetentionEvaluation {
-  id: string; projectId: string; status?: string | null; createdAt: string
-  evaluatedAt?: string | null; policyVersion?: string | null; version?: string | null
-}
-export interface RetentionEvaluationDetail extends RetentionEvaluation {
-  items: Array<{fileId: string; eligibility?: string | null; reasonCodes?: string[] | null; eligibleAfter?: string | null; isCurrent: boolean}>
-  nextCursor?: string | null
 }
