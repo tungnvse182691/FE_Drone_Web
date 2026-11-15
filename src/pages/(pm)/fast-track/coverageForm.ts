@@ -16,7 +16,8 @@ export function coverageFormErrors(data:RoadCoverageFact,form:CoverageChoice):Pa
   if(handover?.from && form.from<handover.from.slice(0,10) || form.sourceKind==='WARRANTY' && source?.from && form.from<source.from.slice(0,10))errors.from='Ngày bắt đầu trước thời gian bàn giao/bảo hành của nguồn.'
   if(form.sourceKind==='WARRANTY' && source?.to && form.through>source.to.slice(0,10))errors.through='Ngày kết thúc vượt thời hạn bảo hành của nguồn.'
   if(form.provenance==='REAL_SOURCE' && [handover,source].some(s=>!s || !['SOURCE_NOT_EXTERNALLY_VERIFIED','REAL_SOURCE'].includes(s.provenance || '')))errors.provenance='Nguồn thử nghiệm hoặc chưa rõ nguồn gốc không được khai báo là căn cứ thực tế.'
-  if(form.supersedesId && !data.history?.some(h=>h.id===form.supersedesId && h.scopeObligationId===scope?.obligationId && !data.history?.some(next=>next.supersedesId===h.id)))errors.supersedesId='Xác nhận thay thế không thuộc phạm vi hoặc đã bị thay thế.'
+  if(form.supersedesId && !data.history?.some(h=>h.id===form.supersedesId && h.scopeObligationId===scope?.obligationId && h.provenance===form.provenance && !data.history?.some(next=>next.supersedesId===h.id)))errors.supersedesId='Xác nhận thay thế không cùng phạm vi/nguồn gốc hoặc đã bị thay thế.'
+  if(form.provenance==='REAL_SOURCE' && data.history?.some(h=>h.provenance==='TEST_ONLY' && (h.sourceKind===form.sourceKind && h.sourceId===form.sourceId || !!form.handoverId && h.handoverDocumentId===form.handoverId)))errors.provenance='Nguồn đã dùng trong xác nhận thử nghiệm không được chuyển thành căn cứ thực tế; cần hồ sơ nguồn độc lập hợp lệ.'
   const reason=form.reason+(form.documentNo.trim()?` (Căn cứ văn bản: ${form.documentNo})`:'')
   if(!form.reason.trim() || reason.length>2000)errors.reason='Ý kiến bắt buộc, tối đa 2000 ký tự gồm ghi chú văn bản.'
   return errors

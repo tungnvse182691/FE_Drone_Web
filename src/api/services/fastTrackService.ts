@@ -6,7 +6,6 @@ import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
 import { triageGeometryService } from './triageGeometryService'
 import { projectService } from './projectService'
-import { workflowCollection } from './workflowCollection'
 import { repairWorkflowService } from './repairWorkflowService'
 import { assertFastTrackMeasurementScope, fastTrackMeasurementScope } from './fastTrackMeasurementScope'
 import { fastTrackCommand, fastTrackStorage, fastTrackPending } from './fastTrackJournal'
@@ -32,7 +31,9 @@ function remember(project: string, row: RepairPolicyView, kind: 'drafts' | 'revi
 function proposalChecklist(p:string,pkg:string,item:any):string|undefined {
   const proofs=JSON.parse(localStorage.getItem(fastTrackStorage(p,'proposal-checklists')) || '[]')
   const proof=proofs.find((r:any)=>r.packageId===pkg && r.receipt?.id===item.id && r.receipt.projectId===p && r.receipt.defectId===item.defectId && r.receipt.obligationId===item.obligationId && r.checklistVersion)
-  return proof?.checklistVersion
+  if(proof)return proof.checklistVersion
+  const held=fastTrackPending(p,`propose:${pkg}`),body=held?.body as {obligationId?:string;checklistVersion?:string}|undefined
+  return held && body && held.receipt?.id===item.id && held.receipt.projectId===p && body.obligationId===item.obligationId ? body.checklistVersion:undefined
 }
 export const fastTrackService = {
   policyBound(text:string): number | null {
@@ -87,20 +88,23 @@ export const fastTrackService = {
       allowedSeverities: [], activatedBy: row.actorId, activatedAt: row.at, appliedRoute: 'Phạm vi chính sách của dự án', description: row.reason,
       defectTypeCode: row.defectTypeCode, stopConditions: row.stopConditions, revision: row.revision, rules: row.measurements}
   },
-  async getPolicies(p: string): Promise<RepairPolicyView[]> {
+  async getPolicies(p: string,onWarning?:(message:string)=>void): Promise<RepairPolicyView[]> {
     // There is no canonical policy collection. References are receipts or explicitly entered IDs, never guessed.
     if (useAuthStore.getState().user?.role !== 'PROJECT_MANAGER') return []
     const known=refs(p),receipt=fastTrackPending(p,'policy-create')?.receipt
     if(receipt?.id && receipt.projectId===p && !known.some(r=>r.id===receipt.id))known.push({id:receipt.id,kind:'drafts'})
-    const raw=await Promise.all(known.map(r => this.readPolicy(p,r.id,r.kind)))
+    const reads=await Promise.allSettled(known.map(r => this.readPolicy(p,r.id,r.kind))),issues:string[]=[]
+    const raw=reads.flatMap((r,i)=>{if(r.status==='fulfilled')return [r.value];issues.push(`Tham chiếu chính sách ${i+1}: HTTP ${r.reason?.response?.status || 'network'} ${r.reason?.response?.data?.code || r.reason?.message || 'không đọc được'}`);return []})
     const rows:RepairPolicyView[]=[]
     for(const row of raw) {
       if(row.revision==null && row.publishedRevisionId) {
-        const revision=raw.find(r=>r.id===row.publishedRevisionId && r.revision!=null) || await this.getPolicyRevision(p,row.publishedRevisionId)
+        let revision=raw.find(r=>r.id===row.publishedRevisionId && r.revision!=null)
+        if(!revision){try{revision=await this.getPolicyRevision(p,row.publishedRevisionId)}catch(e:any){issues.push(`Không đọc được revision đã ban hành: HTTP ${e.response?.status || 'network'}`);continue}}
         const grouped={...revision,draftId:row.id,draftVersion:row.version},index=rows.findIndex(r=>r.id===revision.id)
         if(index<0)rows.push(grouped);else rows[index]=grouped
       } else if(!rows.some(r=>r.id===row.id))rows.push(row)
     }
+    if(issues.length){if(!onWarning)throw new Error(issues.join(' · '));onWarning(issues.join(' · '))}
     return rows
   },
   async getActivePolicy(p: string): Promise<PolicyThresholdConfig | null> {
@@ -109,8 +113,8 @@ export const fastTrackService = {
     return row ? this.policyView(row) : null
   },
   async createPolicyDraft(p: string, input: RepairPolicyDefinitionInput): Promise<RepairPolicyView> {
-    assertPolicyRules(input.measurements)
-    if(!(await defectTypeCatalog.read()).some(t=>t.code===input.defectTypeCode))throw new Error('Loại hư hỏng không còn trong danh mục hệ thống.')
+    if(!fastTrackPending(p,'policy-create')?.receipt){assertPolicyRules(input.measurements)
+      if(!(await defectTypeCatalog.read()).some(t=>t.code===input.defectTypeCode))throw new Error('Loại hư hỏng không còn trong danh mục hệ thống.')}
     return fastTrackCommand(p,'policy-create',`/projects/${p}/repair-policies/drafts`,input,async()=>undefined,async receipt=> {
       if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt chính sách sai phạm vi.')
       const row=await this.getPolicyDraft(p,receipt.id)
@@ -119,7 +123,7 @@ export const fastTrackService = {
     })
   },
   async updatePolicyDraft(p:string,id:string,input:RepairPolicyDefinitionInput,expectedVersion:string):Promise<RepairPolicyView> {
-    assertPolicyRules(input.measurements)
+    if(!fastTrackPending(p,`policy-update:${id}`)?.receipt)assertPolicyRules(input.measurements)
     return fastTrackCommand(p,`policy-update:${id}`,`/projects/${p}/repair-policies/drafts/${id}`,input,async()=>{
       const current=await this.getPolicyDraft(p,id)
       if(current.state!=='DRAFT' || current.version!==expectedVersion)throw new Error('Bản dự thảo đã thay đổi hoặc đã xuất bản. Nội dung đang nhập được giữ; đọc lại trước khi quyết định.')
@@ -195,14 +199,20 @@ export const fastTrackService = {
       }
     }
     if(result.some(r=>r.itemId && r.status!=='ReadyToAssign')) {
-      const tasks=await workflowCollection<any>(`/projects/${p}/field-inspection-tasks`,p)
       for(const row of result) {
-        const matches=tasks.filter(t=>t.repairContext?.itemId===row.itemId && t.repairContext?.packageId===row.packageId)
-        if(matches.length===1){row.assignedCrewId=matches[0].assignedToUserId;row.checklistVersion=matches[0].repairContext?.checklistVersion;row.checklistSource='Hồ sơ nhiệm vụ đã ghim'}
-        else if(matches.length>1)throw new Error('Có nhiều binding nhiệm vụ cho một hạng mục; cần đối chiếu nguồn.')
+        const held=row.itemId && fastTrackPending(p,`assign:${row.itemId}`)
+        if(held && held.receipt){const native=await this.readAssignment(p,row,held.receipt,held.body);row.assignedCrewId=native.assignedToUserId;row.policyRevisionId=(held.body as any).policyRevisionId}
       }
     }
     return result
+  },
+  async preparationSources(row:DefectItem) {
+    const p=row.projectId,defect=(await versioned<any>(`/projects/${p}/defects/${row.defectId || row.id}`)).data
+    if(defect.projectId!==p || defect.id!==(row.defectId || row.id))throw new Error('Nguồn khiếm khuyết sai phạm vi.')
+    const road=(await triageGeometryService.routes(p)).find(r=>r.currentVersionId===defect.roadSectionVersionId)
+    if(!road)throw new Error('Khiếm khuyết không thuộc tuyến hiện hành.')
+    const [sets,tasks]=await Promise.all([triageGeometryService.sets(p,road),fastTrackFormSources.list(p,[defect.id])])
+    return {sets,tasks}
   },
   async prepareItem(row:DefectItem, input:{fromMeters:number;toMeters:number;offsetFromMeters:number;offsetToMeters:number;segmentSetId:string|null;layoutRevisionId:string|null;slabId:string|null;repairPlan:string;checklistVersion:string;reason:string}) {
     const p=row.projectId, storage=fastTrackStorage(p,`prepare:${row.defectId || row.id}`)
@@ -213,6 +223,7 @@ export const fastTrackService = {
     const roads=await triageGeometryService.routes(p),road=roads.find(r=>r.currentVersionId===defect.roadSectionVersionId)
     if(!road)throw new Error('Khiếm khuyết không thuộc tuyến hiện hành.')
     if(input.segmentSetId && !(await triageGeometryService.sets(p,road)).some(s=>s.id===input.segmentSetId))throw new Error('Bộ phân đoạn chưa công bố hoặc sai tuyến.')
+    if((input.layoutRevisionId || input.slabId) && !(await fastTrackFormSources.list(p,[defect.id])).some(s=>s.pins.segmentSetId===input.segmentSetId && s.pins.layoutRevisionId===input.layoutRevisionId && s.pins.slabId===input.slabId))throw new Error('Bố trí/tấm không có hồ sơ nguồn đã đối chiếu; không nhập reference thủ công.')
     let pipeline=JSON.parse(localStorage.getItem(storage)||'null')
     if(pipeline && JSON.stringify(pipeline.input)!==JSON.stringify(input))throw new Error('Đang giữ gói đã tạo. Dùng lại đúng phương án để đề xuất tiếp; không tạo gói trùng.')
     if(!pipeline) {
@@ -238,16 +249,19 @@ export const fastTrackService = {
     localStorage.removeItem(fastTrackStorage(p,`propose:${pkg.id}`))
   },
   async executeDispatch(payload: DispatchPayload): Promise<{success: boolean; message: string; count: number}> {
-    const p=payload.projectId, crew=(await this.getCrews(p)).find(c=>c.id===payload.crewName)
-    if (!crew || !payload.items.length || !payload.notes?.trim()) throw new Error('Chọn Crew hiện hành, hạng mục và ghi rõ chỉ đạo.')
+    const p=payload.projectId
+    if(!payload.items.length)throw new Error('Chọn hạng mục cần đối chiếu.')
     for (const row of payload.items) {
       if (!row.itemId || !row.packageId || !row.defectId) throw new Error('Chưa có hạng mục sửa chữa để giao việc.')
       const base=`/projects/${p}/repair-packages/${row.packageId}/items/${row.itemId}`
       const operation=`assign:${row.itemId}`
+      const held=fastTrackPending(p,operation)
+      if(held?.receipt){await fastTrackCommand(p,operation,`${base}/assign`,held.body,async()=>undefined,receipt=>this.readAssignment(p,row,receipt,held.body as any));continue}
+      const crew=(await this.getCrews(p)).find(c=>c.id===payload.crewName)
+      if(!crew || !payload.notes?.trim())throw new Error('Chọn Crew hiện hành, hạng mục và ghi rõ chỉ đạo.')
       const d=(await versioned<any>(`/projects/${p}/defects/${row.defectId}`)).data
       const {policyRevisionId,sourceTaskId,...pins}=payload.task
       const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
-      const held=fastTrackPending(p,operation)
       const saved=held?.body as {task:typeof requestedTask;policyRevisionId:string;reason:string} | undefined
       if(!held) {
         if(!sourceTaskId)throw new Error('Chọn hồ sơ nguồn đã đọc từ hệ thống trước khi giao việc.')
@@ -279,14 +293,22 @@ export const fastTrackService = {
         if (current.data.id!==row.itemId || current.data.projectId!==p || current.data.mode!=='FastTrack' || current.data.state!=='ReadyToAssign' || policy.state!=='PUBLISHED' || policy.defectTypeCode!==d.defectTypeCode) throw new Error('Hạng mục/chính sách không còn phù hợp để giao việc.')
         if (!Number.isFinite(Date.parse(task.dueAt)) || Date.parse(task.dueAt)<=Date.now() || !task.measurementScope.trim()) throw new Error('Nhập hạn hoàn thành trong tương lai và phạm vi đo có căn cứ.')
         return current.headers.etag
-      },async receipt=> {
-        if (receipt?.itemId!==row.itemId || !receipt.taskId || !receipt.assignmentId || receipt.policyRevisionId!==commandPolicy) throw new Error('Receipt giao việc không khớp hạng mục/chính sách.')
-        const current=(await versioned<any>(base)).data
-        const {data:native}=await apiClient.get(`/projects/${p}/field-inspection-tasks/${receipt.taskId}`)
-        if (current.id!==row.itemId || current.state==='ReadyToAssign' || native.id!==receipt.taskId || native.projectId!==p || native.defectId!==row.defectId || native.assignedToUserId!==task.assignedToUserId || native.assignmentId!==receipt.assignmentId || native.repairContext?.itemId!==row.itemId || native.repairContext?.packageId!==row.packageId) throw new Error('Đã có receipt nhưng chưa đối chiếu được nhiệm vụ Crew. Chỉ đọc lại, không giao trùng.')
-        return native
-      })
+      },receipt=>this.readAssignment(p,row,receipt,commandBody))
     }
     return {success:true,count:payload.items.length,message:`Đã đối chiếu ${payload.items.length} nhiệm vụ đã giao. Crew vẫn phải kiểm tra điều kiện thi công.`}
+  },
+  async readAssignment(p:string,row:DefectItem,receipt:any,body:any) {
+    if(receipt?.itemId!==row.itemId || !receipt.taskId || !receipt.assignmentId || receipt.policyRevisionId!==body.policyRevisionId)throw new Error('Receipt giao việc không khớp hạng mục/chính sách.')
+    const current=(await versioned<any>(`/projects/${p}/repair-packages/${row.packageId}/items/${row.itemId}`)).data
+    const {data:native}=await versioned<any>(`/projects/${p}/field-inspection-tasks/${receipt.taskId}`)
+    // b89a52f only emits repairContext to the assigned Crew. PM verifies the binding receipt and guarded task read.
+    if(current.id!==row.itemId || current.projectId!==p || current.defectId!==row.defectId || current.state==='ReadyToAssign' || native.id!==receipt.taskId || native.projectId!==p || native.defectId!==row.defectId || native.assignedToUserId!==body.task.assignedToUserId || native.assignmentId!==receipt.assignmentId || native.repairContext && (native.repairContext.itemId!==row.itemId || native.repairContext.packageId!==row.packageId))throw new Error('Đã có receipt nhưng chưa đối chiếu được nhiệm vụ Crew. Chỉ đọc lại, không giao trùng.')
+    if(receipt.obligationId && receipt.obligationId!==current.obligationId || receipt.mode && receipt.mode!==native.mode || receipt.routeVersionId && receipt.routeVersionId!==native.routeVersionId || body.task.routeVersionId && body.task.routeVersionId!==native.routeVersionId)throw new Error('Binding/phiên bản tuyến không khớp nhiệm vụ đã đọc; giữ receipt để đối chiếu.')
+    return native
+  },
+  async readItemSources(p:string,pkg:string,id:string) {
+    const item=await repairWorkflowService.detail(p,pkg,id),history=await repairWorkflowService.history(p,pkg,id)
+    if(history.item.id!==item.id || history.item.projectId!==p || history.item.obligationId!==item.obligationId || history.item.version!==item.version)throw new Error('Lịch sử không khớp hồ sơ phương án hoặc phiên bản đã thay đổi; đọc lại hồ sơ.')
+    return {item,history,checklistVersion:proposalChecklist(p,pkg,item),checklistSource:proposalChecklist(p,pkg,item)?'Receipt đề xuất đã GET đối chiếu':'Chi tiết/lịch sử chưa cung cấp checklist; cần bổ sung nguồn đọc cho PM trước khi giao item cũ.'}
   }
 }

@@ -54,7 +54,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
     let active=true
     if(!isOpen)return
     setLoading(true);setError('');setPolicies([]);setTypes([])
-    Promise.all([fastTrackService.getPolicies(projectId),defectTypeCatalog.read()]).then(([p,t])=>{if(active){setPolicies(p);setTypes(t)}}).catch(e=>{if(active)setError(exportError(e))}).finally(()=>{if(active)setLoading(false)})
+    Promise.allSettled([fastTrackService.getPolicies(projectId,message=>{if(active)setError(message)}),defectTypeCatalog.read()]).then(([p,t])=>{if(active){if(p.status==='fulfilled')setPolicies(p.value);else setError(exportError(p.reason));if(t.status==='fulfilled')setTypes(t.value);else setError(exportError(t.reason));setLoading(false)}})
     return()=>{active=false}
   },[isOpen,projectId,policyEditor.record?.id,policyEditor.record?.version])
   const available=policies.filter(p=>referenceKind==='revisions' ? p.revision!=null && ['PUBLISHED','REVOKED'].includes(p.state) : p.state==='DRAFT')
@@ -68,7 +68,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   const lockedInput=(pending?.body || (policyEditor.mode==='new'?pipeline?.input:null)) as RepairPolicyView | undefined
   const unsupportedPending=!!(lockedInput || policyEditor.record)?.measurements.some(r=>!policyRuleSupported(r))
   const locked=!!lockedInput || unsupportedPending || policyEditor.pending || policyEditor.busy || policyEditor.mode==='view'
-  const canCreate=policyEditor.mode!=='view' && !policyEditor.busy && !loading && !unsupportedPending && types.some(t=>t.code===type) && !!formVersionName.trim() && formVersionName.length<=200 && !!formPolicyNote.trim() && formPolicyNote.length<=2000 && (ruleSelection.area || ruleSelection.depth) && (!ruleSelection.area || fastTrackService.policyBound(formMaxArea)!==null) && (!ruleSelection.depth || ['mm','cm','m'].includes(ruleSelection.depthUnit) && fastTrackService.policyBound(formMaxDepth)!==null) && ruleSelection.stopConditions.every(code=>stopCodes.includes(code))
+  const canCreate=!policyEditor.busy && (policyEditor.hasReceipt || policyEditor.mode!=='view' && !loading && !unsupportedPending && types.some(t=>t.code===type) && !!formVersionName.trim() && formVersionName.length<=200 && !!formPolicyNote.trim() && formPolicyNote.length<=2000 && (ruleSelection.area || ruleSelection.depth) && (!ruleSelection.area || fastTrackService.policyBound(formMaxArea)!==null) && (!ruleSelection.depth || ['mm','cm','m'].includes(ruleSelection.depthUnit) && fastTrackService.policyBound(formMaxDepth)!==null) && ruleSelection.stopConditions.every(code=>stopCodes.includes(code)))
   const currentArea=(policyEditor.record?.measurements || currentPolicy?.rules)?.find(r=>r.code==='Area'),currentDepth=(policyEditor.record?.measurements || currentPolicy?.rules)?.find(r=>r.code==='DepressionDepth')
   if (!isOpen) return null
 
@@ -221,7 +221,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               title="Xuất bản revision để chọn cho lệnh phù hợp; không cấp quyền thi công"
             >
               <Icon name="check_circle" size={14} />
-              <span>Xuất bản chính sách</span>
+              <span>{policyEditor.hasReceipt?'Đối chiếu receipt đã nhận':'Xuất bản chính sách'}</span>
             </button>
           </div>
         </div>

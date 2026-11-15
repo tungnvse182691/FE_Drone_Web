@@ -60,7 +60,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
         setApplicableTo(coverageDate(roadCoverage.applicableToUtc,true))
       }
     }
-  }, [isOpen, roadCoverage.sourceKind, roadCoverage.documentNo, roadCoverage.applicableFromUtc, roadCoverage.applicableToUtc])
+  }, [isOpen])
 
   const [supersedesId,setSupersedesId]=useState('')
   const [scopeId,setScopeId]=useState(roadCoverage.scopeObligationId || '')
@@ -75,7 +75,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
   const scope=roadCoverage.scopes?.find(s=>s.obligationId===scopeId)
   const handover=roadCoverage.sources?.find(s=>s.kind==='HANDOVER' && s.id===handoverId)
   const source=roadCoverage.sources?.find(s=>s.kind===sourceKind && s.id===sourceId)
-    const currentConfirmations=roadCoverage.history?.filter(h=>h.scopeObligationId===scopeId && !roadCoverage.history?.some(next=>next.supersedesId===h.id)) || []
+    const currentConfirmations=roadCoverage.history?.filter(h=>h.scopeObligationId===scopeId && h.provenance===provenance && !roadCoverage.history?.some(next=>next.supersedesId===h.id)) || []
   const pending=fastTrackPending(roadCoverage.projectId,'coverage')
   const fieldErrors=coverageFormErrors(roadCoverage,{scopeId,handoverId,sourceId,sourceKind,provenance,from:applicableFrom,through:applicableTo,reason,documentNo,supersedesId})
   const validation=Object.values(fieldErrors)[0] || ''
@@ -191,6 +191,8 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           </div>
 
           <div className="space-y-3">
+            <p className="text-slate-500">Hồ sơ bàn giao được tạo cùng dự án; để làm căn cứ còn cần tệp đã xác minh thuộc đúng dự án. Hiện chưa có thao tác bổ sung tệp bàn giao cho dự án đã tạo. Tải tệp căn cứ trên Web chưa được hỗ trợ bởi phiên đăng nhập hiện tại.</p>
+            <button type="button" disabled={isSubmitting} onClick={()=>window.dispatchEvent(new Event('fasttrack-refresh'))} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">Đọc lại nguồn hồ sơ</button>
             <label className="block">Phạm vi nghĩa vụ<select disabled={!!pending} value={scopeId} onChange={e=>{setScopeId(e.target.value);setSupersedesId('')}} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn phạm vi</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m, lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select>{errorAt('scopeId')}</label>
             <label className="block">Hồ sơ bàn giao đã chấp nhận<select disabled={!!pending || !roadCoverage.sources?.some(s=>s.kind==='HANDOVER')} value={handoverId} onChange={e=>setHandoverId(e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn hồ sơ bàn giao</option>{roadCoverage.sources?.filter(s=>s.kind==='HANDOVER').map((s,i)=><option key={s.id} value={s.id}>Hồ sơ bàn giao {i+1} · {s.provenance==='TEST_ONLY'?'Thử nghiệm':'Chưa xác minh bên ngoài'}</option>)}</select>{errorAt('handoverId')}</label>
             <label className="block">Nguồn bảo hành / bảo trì<select disabled={!!pending || !roadCoverage.sources?.some(s=>s.kind===sourceKind)} value={sourceId} onChange={e=>setSourceId(e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn căn cứ</option>{roadCoverage.sources?.filter(s=>s.kind===sourceKind).map((s,i)=><option key={s.id} value={s.id}>Căn cứ {i+1} · {s.provenance==='TEST_ONLY'?'Thử nghiệm':'Chưa xác minh bên ngoài'}</option>)}</select>{errorAt('sourceId')}</label>

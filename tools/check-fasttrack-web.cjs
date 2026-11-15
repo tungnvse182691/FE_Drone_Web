@@ -21,7 +21,7 @@ await test('assignment uses current item ETag and explicit source pins; receipt 
  s.api.get=async path=>{
  if(path.endsWith('/defects/d'))return {data:{id:'d',projectId:'p',defectTypeCode:'POTHOLE',roadSectionVersionId:'route',version:'defect-v'},headers:{etag:'"defect-v"'}};
  if(path.includes('/repair-policies/'))return {data:{id:'policy',projectId:'p',state:'PUBLISHED',defectTypeCode:'POTHOLE',checklistVersion:'c',measurements:[],version:'policy-v'},headers:{etag:'"policy-v"'}};
- if(path.endsWith('/field-inspection-tasks/task')){if(failNative)throw Error('native GET500');return {data:{id:'task',projectId:'p',defectId:'d',assignedToUserId:'crew',assignmentId:'assignment',repairContext:{itemId:'i',packageId:'pkg'}}}}
+ if(path.endsWith('/field-inspection-tasks/task')){if(failNative)throw Error('native GET500');return {data:{id:'task',projectId:'p',defectId:'d',assignedToUserId:'crew',assignmentId:'assignment',version:'tv',routeVersionId:'route',repairContext:null},headers:{etag:'"tv"'}}}
  return {data:{id:'i',projectId:'p',defectId:'d',obligationId:'o',mode:'FastTrack',state:assigned?'Assigned':'ReadyToAssign',version:'item-v'},headers:{etag:'"item-v"'}}
  };s.api.post=async(path,body,config)=>{s.posts.push({path,body,config});assigned=true;return {data:{itemId:'i',taskId:'task',assignmentId:'assignment',policyRevisionId:'policy'}}};
  const payload={projectId:'p',items:[{id:'i',itemId:'i',packageId:'pkg',defectId:'d'}],task:input,defectIds:['i'],crewName:'crew',notes:'explicit plan'};
@@ -45,7 +45,7 @@ await test('legacy invalid pending scopes block before POST without changing bod
   const {policyRevisionId,...pins}=task,body={task:{...pins,defectId:'d',defectVersion:'old-v',routeVersionId:'route',purpose:'POST_REPAIR',assignedToUserId:'crew',instructions:'original notes'},policyRevisionId,reason:'original notes'};
   const held={path:'/projects/p/repair-packages/pkg/items/i/assign',key:'old-key',etag:'"old-etag"',uncertain:true,body};
   const key=s.journal.fastTrackStorage('p','assign:i');s.storage.setItem(key,JSON.stringify(held));const before=s.storage.getItem(key);
-  s.api.get=async path=>path.endsWith('/defects/d')?{data:{id:'d',projectId:'p',roadSectionVersionId:'route',version:'now-v'},headers:{etag:'"now-v"'}}:path.includes('/field-inspection-tasks/')?{data:{id:'task',projectId:'p',defectId:'d',assignedToUserId:'crew',assignmentId:'a',repairContext:{itemId:'i',packageId:'pkg'}}}:{data:{id:'i',projectId:'p',state:'Assigned',version:'iv'},headers:{etag:'"iv"'}};
+  s.api.get=async path=>path.endsWith('/defects/d')?{data:{id:'d',projectId:'p',roadSectionVersionId:'route',version:'now-v'},headers:{etag:'"now-v"'}}:path.includes('/field-inspection-tasks/')?{data:{id:'task',projectId:'p',defectId:'d',assignedToUserId:'crew',assignmentId:'a',version:'tv',routeVersionId:'route',repairContext:null},headers:{etag:'"tv"'}}:{data:{id:'i',projectId:'p',defectId:'d',state:'Assigned',version:'iv'},headers:{etag:'"iv"'}};
   const payload={projectId:'p',items:[{itemId:'i',packageId:'pkg',defectId:'d'}],task,crewName:'crew',notes:'original notes'};
   await assert.rejects(s.service.executeDispatch(payload),/ValidateScope/);assert.equal(s.posts.length,0);assert.equal(s.storage.getItem(key),before);
   held.receipt={itemId:'i',taskId:'task',assignmentId:'a',policyRevisionId:'policy'};s.storage.setItem(key,JSON.stringify(held));const receiptBefore=s.storage.getItem(key);await s.service.executeDispatch(payload);assert.equal(s.posts.length,0);assert.equal(s.storage.getItem(key),receiptBefore)

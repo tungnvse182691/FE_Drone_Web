@@ -127,7 +127,7 @@ export interface RoadCoverageFact {
   reason?: string
   sourceId?: string
   sourceVersion?: string
-  history?: Array<{id:string;scopeObligationId:string;supersedesId?:string|null;actorId:string;confirmedAtUtc:string;reason:string;provenance:string}>
+  history?: Array<{id:string;scopeObligationId:string;supersedesId?:string|null;actorId:string;confirmedAtUtc:string;reason:string;provenance:string;sourceKind?:string;sourceId?:string;handoverDocumentId?:string}>
   provenance?: string
   blockers?: string[]
   scopes?: Array<{obligationId: string; roadSectionId: string; locationVersion?: string; from: number; to: number; offsetFrom: number; offsetTo: number; scopeHash: string}>

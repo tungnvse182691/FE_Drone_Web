@@ -47,11 +47,13 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   },[isOpen,projectId,selectedKey])
   const [sources,setSources]=useState<FastTrackSource[]>([]),[policies,setPolicies]=useState<RepairPolicyView[]>([])
   const [sourceError,setSourceError]=useState(''),[loading,setLoading]=useState(false)
+  const [policyWarning,setPolicyWarning]=useState('')
+  const [submitting,setSubmitting]=useState(false)
   useEffect(()=>{
     let active=true
     if(!isOpen || !selectedItems.length)return
-    setLoading(true);setSourceError('');setSources([]);setPolicies([])
-    Promise.all([fastTrackFormSources.list(projectId,selectedItems.map(i=>i.defectId || i.id)),fastTrackService.getPolicies(projectId)]).then(([rows,p])=>{
+    setLoading(true);setSourceError('');setPolicyWarning('');setSources([]);setPolicies([])
+    Promise.all([fastTrackFormSources.list(projectId,selectedItems.map(i=>i.defectId || i.id)),fastTrackService.getPolicies(projectId,message=>{if(active)setPolicyWarning(message)})]).then(([rows,p])=>{
       if(!active)return
       setSources(rows);setPolicies(p.filter(r=>r.state==='PUBLISHED' && r.revision!=null && selectedItems.every(i=>i.defectTypeCode===r.defectTypeCode && !!i.checklistVersion && i.checklistVersion===r.checklistVersion)))
       const held=selectedItems.length===1 && selectedItems[0].itemId ? fastTrackPending(projectId,`assign:${selectedItems[0].itemId}`) : null
@@ -143,8 +145,10 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </div>
 
           {actionError && <p role="alert" className="text-red-800">{actionError}</p>}
+          {!pending?.receipt && policyWarning && <p role="alert" className="text-amber-800 text-xs">{policyWarning}</p>}
           <p className="text-slate-500 text-xs">Policy đang xem trên thẻ không tự ghim vào lệnh. Chỉ các revision phù hợp checklist phương án được chọn tại đây; BE còn kiểm lại điều kiện.</p>
-          {(sourceError || formError) && <p role="alert" className="text-red-800">{sourceError || formError}</p>}
+          {pending?.receipt && <p role="status" className="text-slate-500 text-xs">Đã nhận receipt. Chỉ đọc lại hạng mục và nhiệm vụ đã giao; không gửi thêm lệnh.</p>}
+          {!pending?.receipt && (sourceError || formError) && <p role="alert" className="text-red-800">{sourceError || formError}</p>}
           <div className="grid grid-cols-2 gap-3">
             <label className="col-span-2">Policy ghim cho lệnh mới *<select aria-label="Chính sách giao việc" required value={task.policyRevisionId} disabled={loading || !policies.length || !!pending} onChange={e=>update('policyRevisionId',e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang đọc chính sách…':policies.length?'Chọn chính sách':'Chưa có chính sách phù hợp từ nguồn'}</option>{policies.map(p=><option key={p.id} value={p.id}>{p.checklistVersion} · Lần ban hành {p.revision}</option>)}</select></label>
             <label className="col-span-2">Hồ sơ nguồn khảo sát *<select aria-label="Hồ sơ nguồn giao việc" required value={task.sourceTaskId || ''} onChange={e=>chooseSource(e.target.value)} disabled={loading || !sources.length || !!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang xác thực hồ sơ…':sources.length?'Chọn hồ sơ nguồn':'Chưa có hồ sơ phù hợp'}</option>{sources.map(r=><option key={r.id} value={r.id}>{r.routeLabel} · {r.label}</option>)}</select></label>
@@ -172,17 +176,18 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            disabled={submitting}
             className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl bg-slate-100 hover:bg-slate-200 cursor-pointer"
           >
             Hủy
           </button>
           <button
             type="button"
-            onClick={()=>{if(validDate || pending)handleExecuteDispatch({...task,dueAt:pending ? task.dueAt : validDate ? new Date(task.dueAt).toISOString() : task.dueAt})}}
-            disabled={hasViolation || selectedDefectIds.length === 0 || !selectedDispatchCrew || (!pending && (loading || !!sourceError || !!formError || !validSource || !policies.some(p=>p.id===task.policyRevisionId) || !validDate || !task.measurementScope.trim() || !dispatchNotes.trim()))}
+            onClick={async()=>{if(submitting || !(validDate || pending))return;setSubmitting(true);try{await handleExecuteDispatch({...task,dueAt:pending ? task.dueAt : validDate ? new Date(task.dueAt).toISOString() : task.dueAt})}finally{setSubmitting(false)}}}
+            disabled={submitting || selectedDefectIds.length === 0 || (!pending?.receipt && (hasViolation || !selectedDispatchCrew || (!pending && (loading || !!sourceError || !!formError || !validSource || !policies.some(p=>p.id===task.policyRevisionId) || !validDate || !task.measurementScope.trim() || !dispatchNotes.trim()))))}
             className="px-5 py-2 text-xs font-bold text-white bg-[#C9A227] hover:bg-[#b08d20] rounded-xl shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
-            {pending ? 'Đối chiếu lệnh đã gửi' : 'Xác nhận phát lệnh'}
+            {submitting?'Đang đối chiếu…':pending ? 'Đối chiếu lệnh đã gửi' : 'Xác nhận phát lệnh'}
           </button>
         </div>
       </div>

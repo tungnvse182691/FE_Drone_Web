@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   DefectItem as DispatchDefectItem,
   CrewTeam, FastTrackTaskInput
@@ -12,6 +12,7 @@ export function useFastTrackDispatch(
   showToast: (msg: string) => void
 ) {
   const epoch=useAuthStore(s=>s.authEpoch)
+  const actionBusy=useRef(false),scope=useRef({project:selectedProjectId,epoch});scope.current={project:selectedProjectId,epoch}
   const [revision,setRevision]=useState(0)
   const [dispatchLoading,setDispatchLoading]=useState(false)
   const [dispatchError,setDispatchError]=useState('')
@@ -105,11 +106,15 @@ export function useFastTrackDispatch(
     showToast('Đã chọn Crew cho biểu mẫu. Chưa gửi lệnh giao việc.')
   }
   const handleExecuteDispatch = async(task:FastTrackTaskInput) => {
+    if(actionBusy.current)return
+    actionBusy.current=true
+    const project=selectedProjectId,version=epoch
     setDispatchError('')
     try {
       const res=await fastTrackService.executeDispatch({projectId:selectedProjectId,items:selectedItems,task,defectIds:selectedDefectIds,crewName:selectedDispatchCrew,notes:dispatchNotes})
+      if(scope.current.project!==project || scope.current.epoch!==version)return
       setIsDispatchModalOpen(false);setRevision(n=>n+1);showToast(res.message)
-    }catch(e){setDispatchError(exportError(e))}
+    }catch(e){if(scope.current.project===project && scope.current.epoch===version)setDispatchError(exportError(e))}finally{actionBusy.current=false}
   }
 
   return {
