@@ -26,11 +26,12 @@ export const FastTrackDispatch: React.FC = () => {
     setToastMessage,
     showToast,
     // Policy states
+    policyEditor, handleReadHistory,
     ruleSelection, setRuleSelection,
     currentPolicy,
     policyHistory,
     auditLogs,
-    roadCoverage,
+    roadCoverage, selectCoverageScope,
     isRoadCoverageModalOpen,
     setIsRoadCoverageModalOpen,
     handleConfirmRoadCoverage,
@@ -113,6 +114,8 @@ export const FastTrackDispatch: React.FC = () => {
       {(projectError || policyError || coverageError || dispatchError) && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3">{[projectError,policyError,coverageError,dispatchError].filter(Boolean).join(' · ')}</p>}
       {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection
+        onSelectCoverageScope={selectCoverageScope}
+        onReadPolicy={handleReadHistory}
         currentPolicy={currentPolicy}
         policyHistory={policyHistory}
         auditLogs={auditLogs}
@@ -158,6 +161,7 @@ export const FastTrackDispatch: React.FC = () => {
 
       {/* MODALS */}
       <FastTrackModals
+        policyEditor={policyEditor}
         ruleSelection={ruleSelection}
         setRuleSelection={setRuleSelection}
         key={selectedProjectId}
@@ -195,6 +199,7 @@ export const FastTrackDispatch: React.FC = () => {
       {/* Modal Phê duyệt độ phủ tuyến đường bảo hành (API-176 - SUP-08) */}
       {roadCoverage && (
         <RoadCoverageConfirmModal
+          key={`coverage:${selectedProjectId}`}
           isOpen={isRoadCoverageModalOpen}
           onClose={() => setIsRoadCoverageModalOpen(false)}
           roadCoverage={roadCoverage}

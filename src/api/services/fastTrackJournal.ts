@@ -1,7 +1,7 @@
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
 
-interface Command { path: string; body: unknown; etag?: string; key: string; uncertain?: boolean; receipt?: any }
+interface Command { method?: 'POST'|'PUT'; path: string; body: unknown; etag?: string; key: string; uncertain?: boolean; receipt?: any }
 const running = new Set<string>()
 export function fastTrackIdentity() {
   const s = useAuthStore.getState()
@@ -17,7 +17,7 @@ export function fastTrackPending(project: string, operation: string): Command | 
 }
 // Exact command identity survives reload and ambiguous transport outcomes. No credentials are stored.
 export async function fastTrackCommand<T>(project: string, operation: string, path: string, body: unknown,
-  preflight: () => Promise<string | undefined>, readback: (receipt: any) => Promise<T>): Promise<T> {
+  preflight: () => Promise<string | undefined>, readback: (receipt: any) => Promise<T>, method:'POST'|'PUT'='POST'): Promise<T> {
   const storage = fastTrackStorage(project, operation), epoch = useAuthStore.getState().authEpoch
   const active = () => { if (epoch !== useAuthStore.getState().authEpoch || storage !== fastTrackStorage(project, operation)) throw new Error('Phiên Fast Track đã thay đổi.') }
   if (useAuthStore.getState().user?.role !== (operation === 'coverage' ? 'SUPERVISOR' : 'PROJECT_MANAGER')) throw new Error('Không có quyền thực hiện thao tác này.')
@@ -28,15 +28,15 @@ export async function fastTrackCommand<T>(project: string, operation: string, pa
   try {
     // A receipt always reconciles by GET, regardless of edits made after reload.
     if (held?.receipt) {
-      const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$)/.test(operation)) localStorage.removeItem(storage); return result
+      const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$|policy-update:|policy-revoke:)/.test(operation)) localStorage.removeItem(storage); return result
     }
-    if (held && (held.path !== path || JSON.stringify(held.body) !== JSON.stringify(body))) throw new Error('Có yêu cầu chưa rõ kết quả. Giữ nguyên nội dung cũ để đối chiếu, không tạo yêu cầu mới.')
+    if (held && ((held.method || 'POST')!==method || held.path !== path || JSON.stringify(held.body) !== JSON.stringify(body))) throw new Error('Có yêu cầu chưa rõ kết quả. Giữ nguyên nội dung cũ để đối chiếu, không tạo yêu cầu mới.')
     if (!held) {
       const etag = await preflight(); active()
-      held = {path, body: JSON.parse(JSON.stringify(body)), etag, key: crypto.randomUUID()}; save()
+      held = {...(method==='PUT'?{method}:{}),path, body: JSON.parse(JSON.stringify(body)), etag, key: crypto.randomUUID()}; save()
     }
     try {
-      const response = await apiClient.post(held.path, held.body, {headers: {'Idempotency-Key': held.key, ...(held.etag ? {'If-Match': held.etag} : {})}})
+      const response = await (method==='PUT' ? apiClient.put : apiClient.post)(held.path, held.body, {headers: {'Idempotency-Key': held.key, ...(held.etag ? {'If-Match': held.etag} : {})}})
       // Save receipt even if the actor changes while receiving the response; never POST it again.
       held.receipt = response.data; save()
     } catch (error: any) {
@@ -46,6 +46,6 @@ export async function fastTrackCommand<T>(project: string, operation: string, pa
       throw error
     }
     active()
-    const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$)/.test(operation)) localStorage.removeItem(storage); return result
+    const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$|policy-update:|policy-revoke:)/.test(operation)) localStorage.removeItem(storage); return result
   } finally { running.delete(storage) }
 }

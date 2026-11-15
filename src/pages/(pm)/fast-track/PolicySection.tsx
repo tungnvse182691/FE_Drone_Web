@@ -4,6 +4,8 @@ import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBoun
 import type { PolicyThresholdConfig, PolicyHistoryItem, RoadCoverageFact, AuditLogItem } from './types'
 
 export interface PolicySectionProps {
+  onSelectCoverageScope?:(id:string)=>void
+  onReadPolicy?: (id:string)=>void
   currentPolicy: PolicyThresholdConfig | null
   policyHistory: (PolicyHistoryItem | any)[]
   auditLogs?: AuditLogItem[]
@@ -29,6 +31,8 @@ function formatStopConditionVi(cond: string): string {
 }
 
 export const PolicySection: React.FC<PolicySectionProps> = ({
+  onSelectCoverageScope,
+  onReadPolicy,
   currentPolicy,
   policyHistory,
   auditLogs = [],
@@ -60,7 +64,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 {currentPolicy ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                    {currentPolicy.version} (ĐÃ XUẤT BẢN)
+                    {currentPolicy.version} ({currentPolicy.status==='DRAFT'?'DỰ THẢO':currentPolicy.status==='REVOKED'?'ĐÃ THU HỒI':'ĐÃ XUẤT BẢN'})
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -69,7 +73,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Chính sách do Chỉ huy trưởng lập dự thảo &amp; xuất bản • Căn cứ phạm vi tuyến bảo hành được phê duyệt
+                Bản đang xem độc lập với policy ghim trong lệnh; xuất bản không tự xác nhận độ phủ hoặc cấp quyền thi công.
               </p>
             </div>
           </div>
@@ -111,7 +115,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                    Phạm vi tuyến bảo hành
+                    Phạm vi nghĩa vụ đang đọc
                   </span>
                   <span className="font-mono text-[11px] text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200">
                     {roadCoverage.scopes?.length===1 ? `Lý trình: Km ${roadCoverage.fromKm} - Km ${roadCoverage.toKm}` : `${roadCoverage.scopes?.length || 0} phạm vi nghĩa vụ — chọn trong hồ sơ độ phủ`}
@@ -127,9 +131,10 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                       name={roadCoverage.status === 'CONFIRMED' ? 'verified' : 'pending_actions'}
                       size={12}
                     />
-                    {roadCoverage.provenance==='TEST_ONLY' ? 'ĐÃ LƯU THỬ NGHIỆM — CHƯA CẤP QUYỀN THI CÔNG' : roadCoverage.status === 'CONFIRMED' ? 'CÓ XÁC NHẬN ĐỘ PHỦ' : 'CHƯA XÁC NHẬN ĐỘ PHỦ'}
+                    {roadCoverage.coverageMessage || 'Chưa có kết quả xác nhận theo phạm vi'}
                   </span>
                 </div>
+                {onSelectCoverageScope && <select aria-label="Phạm vi độ phủ đang xem" value={roadCoverage.scopeObligationId} onChange={e=>onSelectCoverageScope(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><option value="">Chọn phạm vi, không suy toàn tuyến</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m · lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select>}
                 <div className="text-[11px] text-slate-600 flex items-center gap-3 flex-wrap">
                   <span>Căn cứ pháp lý: <strong className="text-slate-800">{roadCoverage.sourceId ? (roadCoverage.sourceKind === 'WARRANTY' ? 'Hợp đồng bảo hành' : 'Bảo dưỡng thường xuyên') : 'Chưa có căn cứ đã xác nhận'}</strong></span>
                   <span>•</span>
@@ -325,9 +330,10 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   policyHistory.map((h, idx) => (
                     <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900">{h.version}</span>
+                        <span className="font-bold text-slate-900">{h.version} · {h.status==='DRAFT'?'Dự thảo':h.status==='REVOKED'?'Đã thu hồi':`Lần ban hành ${h.revision ?? '—'}`}</span>
                         <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
                       </div>
+                      {h.id && onReadPolicy && <button type="button" onClick={()=>{onReadPolicy(h.id!);setIsActivityModalOpen(false)}} className="px-3 py-1.5 border rounded-lg bg-white text-slate-700">{h.status==='DRAFT'?'Đọc / Tiếp tục draft':'Chi tiết / Thu hồi'}</button>}
                       <div className="text-slate-600 flex items-center gap-3">
                         <span>Diện tích: {policyRuleText(h.rules?.find((r: any)=>r.code==='Area'))}</span>
                         <span>•</span>
@@ -337,7 +343,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   ))
                 ) : (
                   <div className="py-8 text-center text-xs text-slate-500">
-                    Chưa có dữ liệu lịch sử phiên bản nào được ghi nhận trong CSDL.
+                    Chưa có tham chiếu lịch sử đã đọc; không suy thành CSDL rỗng.
                   </div>
                 )}
               </div>

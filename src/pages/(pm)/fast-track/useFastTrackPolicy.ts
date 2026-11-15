@@ -1,95 +1,110 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { PolicyThresholdConfig, PolicyHistoryItem, AuditLogItem, RoadCoverageFact, RoadCoverageInputDto, PolicyRuleSelection } from './types'
+import { coverageScopeView } from '../../../api/services/fastTrackCoverage'
 import { assertPolicyRules } from '../../../api/services/fastTrackPolicyRules'
-import { fastTrackService, type RepairPolicyDefinitionInput } from '../../../api/services/fastTrackService'
+import { fastTrackService, type RepairPolicyDefinitionInput, type RepairPolicyView } from '../../../api/services/fastTrackService'
 import { fastTrackStorage, fastTrackPending } from '../../../api/services/fastTrackJournal'
 import { exportError } from '../../../api/services/projectExportService'
 import { useAuthStore } from '../../../store/authStore'
-export function useFastTrackPolicy(selectedProjectId: string, showToast: (msg: string) => void) {
-  const epoch = useAuthStore(s=>s.authEpoch), role = useAuthStore(s=>s.user?.role)
-  const generation = useRef(0), busy = useRef(false)
-  const [currentPolicy,setCurrentPolicy]=useState<PolicyThresholdConfig|null>(null)
-  const [policyHistory,setPolicyHistory]=useState<PolicyHistoryItem[]>([])
-  const [auditLogs,setAuditLogs]=useState<AuditLogItem[]>([])
+export function useFastTrackPolicy(selectedProjectId:string,showToast:(msg:string)=>void) {
+  const epoch=useAuthStore(s=>s.authEpoch),role=useAuthStore(s=>s.user?.role),generation=useRef(0),busy=useRef(false),skipPersist=useRef(true)
+  const scopeRef=useRef({project:selectedProjectId,epoch});scopeRef.current={project:selectedProjectId,epoch}
+  const activeScope=(project:string,version:number)=>scopeRef.current.project===project && scopeRef.current.epoch===version
+  const [currentPolicy,setCurrentPolicy]=useState<PolicyThresholdConfig|null>(null),[policies,setPolicies]=useState<RepairPolicyView[]>([])
+  const [policyHistory,setPolicyHistory]=useState<PolicyHistoryItem[]>([]),[auditLogs,setAuditLogs]=useState<AuditLogItem[]>([])
   const [roadCoverage,setRoadCoverage]=useState<RoadCoverageFact|null>(null)
-  const [isRoadCoverageModalOpen,setIsRoadCoverageModalOpen]=useState(false)
-  const [formVersionName,setFormVersionName]=useState('')
-  const [formMaxArea,setFormMaxArea]=useState('')
-  const [formMaxDepth,setFormMaxDepth]=useState('')
+  const [isRoadCoverageModalOpen,setIsRoadCoverageModalOpen]=useState(false),[isPolicyModalOpen,setIsPolicyModalOpen]=useState(false),[isAuditModalOpen,setIsAuditModalOpen]=useState(false)
+  const [formVersionName,setFormVersionName]=useState(''),[formMaxArea,setFormMaxArea]=useState(''),[formMaxDepth,setFormMaxDepth]=useState(''),[formPolicyNote,setFormPolicyNote]=useState(''),[formType,setFormType]=useState('')
   const [ruleSelection,setRuleSelection]=useState<PolicyRuleSelection>({area:false,depth:false,depthUnit:'mm',stopConditions:[]})
-  const [formPolicyNote,setFormPolicyNote]=useState('')
-  const [isPolicyModalOpen,setIsPolicyModalOpen]=useState(false)
-  const [isAuditModalOpen,setIsAuditModalOpen]=useState(false)
-  const [coverageError,setCoverageError]=useState<string|null>(null)
-  const [policyError,setPolicyError]=useState('')
-  const [isSubmittingCoverage,setIsSubmittingCoverage]=useState(false)
+  const [mode,setMode]=useState<'new'|'draft'|'view'>('new'),[record,setRecord]=useState<RepairPolicyView|null>(null),[base,setBase]=useState('')
+  const [pendingRead,setPendingRead]=useState<RepairPolicyView|null>(null),[pendingNew,setPendingNew]=useState(false)
+  const [policyError,setPolicyError]=useState(''),[coverageError,setCoverageError]=useState<string|null>(null),[policyBusy,setPolicyBusy]=useState(false),[isSubmittingCoverage,setIsSubmittingCoverage]=useState(false)
+  const fields=()=>({formVersionName,formMaxArea,formMaxDepth,formPolicyNote,formType,ruleSelection})
+  const dirty=base ? JSON.stringify(fields())!==base : !!(formVersionName || formMaxArea || formMaxDepth || formPolicyNote || formType || ruleSelection.area || ruleSelection.depth || ruleSelection.stopConditions.length)
+  const hydrate=(f:ReturnType<typeof fields>)=>{setFormVersionName(f.formVersionName);setFormMaxArea(f.formMaxArea);setFormMaxDepth(f.formMaxDepth);setFormPolicyNote(f.formPolicyNote);setFormType(f.formType);setRuleSelection(f.ruleSelection)}
+  const fromRow=(row:RepairPolicyDefinitionInput)=>{const a=row.measurements.find(r=>r.code==='Area'),d=row.measurements.find(r=>r.code==='DepressionDepth');return {formVersionName:row.checklistVersion,formMaxArea:a ? String(a.maximum) : '',formMaxDepth:d ? String(d.maximum) : '',formPolicyNote:row.reason,formType:row.defectTypeCode,ruleSelection:{area:!!a,depth:!!d,depthUnit:(d?.unit || 'mm') as PolicyRuleSelection['depthUnit'],stopConditions:row.stopConditions}}}
+  const storeEditor=(m:typeof mode,r:RepairPolicyView|null,f:ReturnType<typeof fields>,original:string)=>localStorage.setItem(fastTrackStorage(selectedProjectId,'policy-editor'),JSON.stringify({mode:m,record:r,fields:f,base:original}))
+  const adopt=(row:RepairPolicyView)=>{const f=fromRow(row),m=row.state==='DRAFT'?'draft':'view';hydrate(f);setRecord(row);setMode(m);setBase(JSON.stringify(f));storeEditor(m,row,f,JSON.stringify(f))}
+  const pending=selectedProjectId ? fastTrackPending(selectedProjectId,'policy-create') || (record?.state==='DRAFT' ? fastTrackPending(selectedProjectId,`policy-update:${record.id}`) || fastTrackPending(selectedProjectId,`policy-publish:${record.id}`) : null) : null
   useEffect(()=>{
     if(!selectedProjectId)return
-    const input=fastTrackPending(selectedProjectId,'policy-create')?.body as RepairPolicyDefinitionInput | undefined
-    const pipeline=JSON.parse(localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-pipeline'))||'null')
-    const restored=input || pipeline?.input
-    setFormVersionName(restored?.checklistVersion || '');setFormPolicyNote(restored?.reason || '')
-    setFormMaxArea(restored ? String(restored.measurements.find((r: any)=>r.code==='Area')?.maximum ?? '') : '')
-    setFormMaxDepth(restored ? String(restored.measurements.find((r:any)=>r.code==='DepressionDepth')?.maximum ?? '') : '')
-    const depthRule=restored?.measurements.find((r:any)=>r.code==='DepressionDepth')
-    setRuleSelection({area:!!restored?.measurements.some((r:any)=>r.code==='Area'),depth:!!depthRule,depthUnit:depthRule?.unit || 'mm',stopConditions:restored?.stopConditions || []})
-    if(restored)localStorage.setItem(fastTrackStorage(selectedProjectId,'policy-type'),restored.defectTypeCode)
-    setIsPolicyModalOpen(false);setIsRoadCoverageModalOpen(false)
+    skipPersist.current=true
+    const saved=JSON.parse(localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-editor')) || 'null')
+    const pipeline=JSON.parse(localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-pipeline')) || 'null')
+    const input=fastTrackPending(selectedProjectId,'policy-create')?.body as RepairPolicyDefinitionInput|undefined
+    if(saved){setMode(saved.mode);setRecord(saved.record);setBase(saved.base);hydrate(saved.fields)}
+    else if(input || pipeline?.input){const f=fromRow(input || pipeline.input);hydrate(f);setMode('new');setRecord(null);setBase('')}
+    else{hydrate({formVersionName:'',formMaxArea:'',formMaxDepth:'',formPolicyNote:'',formType:'',ruleSelection:{area:false,depth:false,depthUnit:'mm',stopConditions:[]}});setMode('new');setRecord(null);setBase('')}
+    setIsPolicyModalOpen(false);setIsRoadCoverageModalOpen(false);setPendingRead(null);setPendingNew(false)
   },[selectedProjectId,epoch])
-  const loadPolicyData=useCallback(async()=> {
+  useEffect(()=>{if(!selectedProjectId)return;if(skipPersist.current){skipPersist.current=false;return}storeEditor(mode,record,fields(),base)},[selectedProjectId,epoch,mode,record,base,formType,formVersionName,formMaxArea,formMaxDepth,formPolicyNote,ruleSelection])
+  const loadPolicyData=useCallback(async(preferred?:string)=>{
+    if(!activeScope(selectedProjectId,epoch))return
     const gen=++generation.current
-    setCurrentPolicy(null);setPolicyHistory([]);setAuditLogs([]);setRoadCoverage(null);setPolicyError('');setCoverageError(null)
-    if (!selectedProjectId) return
-    const results=await Promise.allSettled([fastTrackService.getPolicies(selectedProjectId),fastTrackService.getRoadCoverage(selectedProjectId)])
-    if (generation.current!==gen) return
-    const [pol,cov]=results
-    if(pol.status==='fulfilled') {
-      const rows=pol.value, published=rows.filter(r=>r.state==='PUBLISHED' && r.revision != null)
-      if(published.length===1)setCurrentPolicy(fastTrackService.policyView(published[0]))
-      setPolicyHistory(rows.map(r=>{const v=fastTrackService.policyView(r);return {id:r.id,version:r.checklistVersion,status:v.status,activatedBy:r.actorId,activatedAt:r.at,route:r.reason,maxArea:v.maxAreaM2,maxDepth:v.maxDepthMm,rules:r.measurements}}))
-      if(role==='SUPERVISOR')setPolicyError('Chính sách và số liệu khiếm khuyết gốc hiện chỉ PM đọc được. Giám sát xem hạng mục sửa chữa và xác nhận độ phủ tại đây.')
-      else if(!rows.length)setPolicyError('Chưa có tham chiếu chính sách trong phiên làm việc này. Mở Điều chỉnh chính sách để đọc bản đã có hoặc lập dự thảo.')
-      else if(published.length>1)setPolicyError('Có nhiều chính sách đã xuất bản. Chọn đúng tham chiếu chính sách trong lệnh giao việc; không tự chọn bản mới nhất.')
-    } else setPolicyError(exportError(pol.reason))
-    if(cov.status==='fulfilled') {
-      setRoadCoverage(cov.value)
-      setAuditLogs((cov.value.history || []).map(h=>({title:'Xác nhận độ phủ đã lưu',time:h.confirmedAtUtc,user:h.actorId,hash:h.id,note:`${h.provenance} · ${h.reason}`})))
-    } else setCoverageError(exportError(cov.reason))
+    if(!selectedProjectId){setPolicies([]);setCurrentPolicy(null);setRoadCoverage(null);return}
+    const [pol,cov]=await Promise.allSettled([fastTrackService.getPolicies(selectedProjectId),fastTrackService.getRoadCoverage(selectedProjectId)])
+    if(generation.current!==gen)return
+    if(pol.status==='fulfilled'){
+      const rows=pol.value,chosen=preferred || localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-view')),view=rows.find(r=>r.id===chosen || r.draftId===chosen) || rows[0]
+      setPolicies(rows);setCurrentPolicy(view ? fastTrackService.policyView(view):null)
+      if(view)localStorage.setItem(fastTrackStorage(selectedProjectId,'policy-view'),view.id)
+      setPolicyHistory(rows.map(r=>({id:r.id,draftId:r.draftId,revision:r.revision,version:r.checklistVersion,status:fastTrackService.policyView(r).status,activatedBy:r.actorId,activatedAt:r.at,route:r.reason,rules:r.measurements})))
+      setPolicyError(role==='SUPERVISOR'?'Chính sách và số liệu khiếm khuyết gốc hiện chỉ PM đọc được. Giám sát xem hạng mục sửa chữa và xác nhận độ phủ tại đây.':!rows.length?'Chưa có tham chiếu chính sách đã đọc; không suy thành chưa có policy trong hệ thống.':'')
+    }else{setPolicies([]);setCurrentPolicy(null);setPolicyError(exportError(pol.reason))}
+    if(cov.status==='fulfilled'){setRoadCoverage(cov.value);setCoverageError(null);setAuditLogs((cov.value.history||[]).map(h=>({title:'Xác nhận độ phủ đã lưu',time:h.confirmedAtUtc,user:h.actorId,hash:h.id,note:`${h.provenance} · ${h.reason}`})))}else{setRoadCoverage(null);setCoverageError(exportError(cov.reason))}
   },[selectedProjectId,epoch,role])
-  useEffect(()=>{void loadPolicyData();const reload=()=>void loadPolicyData();window.addEventListener('fasttrack-refresh',reload);return()=>{generation.current++;window.removeEventListener('fasttrack-refresh',reload)}},[loadPolicyData])
-  const handleApplyPolicy=async(shouldPublish:boolean)=> {
-    if(busy.current)return
-    const gen=generation.current
-    busy.current=true;setPolicyError('')
-    try {
+  useEffect(()=>{void loadPolicyData();const refresh=()=>void loadPolicyData();window.addEventListener('fasttrack-refresh',refresh);return()=>{generation.current++;window.removeEventListener('fasttrack-refresh',refresh)}},[loadPolicyData])
+  const readPolicy=async(row:RepairPolicyView,discard=false)=>{
+    if(pending && record?.id!==row.id){setPolicyError('Đối chiếu yêu cầu đang chờ trước khi đổi bản; giữ nguyên journal và nội dung.');return false}
+    if(dirty && !discard){setPendingRead(row);setPendingNew(false);setIsPolicyModalOpen(true);return false}
+    try{let fresh=await fastTrackService.readPolicy(selectedProjectId,row.id,row.revision!=null?'revisions':'drafts');if(fresh.revision==null && fresh.publishedRevisionId)fresh=await fastTrackService.getPolicyRevision(selectedProjectId,fresh.publishedRevisionId);if(!activeScope(selectedProjectId,epoch))return false;adopt(fresh);setPendingRead(null);setPolicyError('');await loadPolicyData(fresh.id);return true}catch(e){setPolicyError(exportError(e));return false}
+  }
+  const newPolicy=(discard=false)=>{
+    if(pending){setPolicyError('Còn yêu cầu đang chờ; không tạo bản khác thay cho lệnh chưa rõ kết quả.');return false}
+    if(dirty && !discard){setPendingNew(true);setPendingRead(null);return false}
+    const f={formVersionName:'',formMaxArea:'',formMaxDepth:'',formPolicyNote:'',formType:'',ruleSelection:{area:false,depth:false,depthUnit:'mm' as const,stopConditions:[]}}
+    hydrate(f);setMode('new');setRecord(null);setBase('');setPendingNew(false);setPendingRead(null);setPolicyError('');storeEditor('new',null,f,'');return true
+  }
+  const handleApplyPolicy=async(shouldPublish:boolean)=>{
+    if(busy.current || mode==='view')return
+    const actionEpoch=useAuthStore.getState().authEpoch,p=selectedProjectId
+    busy.current=true;setPolicyBusy(true);setPolicyError('')
+    try{
       const area=fastTrackService.policyBound(formMaxArea),depth=fastTrackService.policyBound(formMaxDepth)
-      if(!formVersionName.trim() || formVersionName.length>200 || !formPolicyNote.trim() || formPolicyNote.length>2000 || (!ruleSelection.area && !ruleSelection.depth) || ruleSelection.area && area===null || ruleSelection.depth && depth===null)throw new Error('Nhập checklist (tối đa 200 ký tự), căn cứ (tối đa 2000 ký tự) và ngưỡng không âm, tối đa 6 chữ số thập phân.')
-      const type=localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-type'))
-      if(!type)throw new Error('Chọn loại hư hỏng từ danh mục hệ thống.')
-      const input:RepairPolicyDefinitionInput={defectTypeCode:type,checklistVersion:formVersionName,measurements:[...(ruleSelection.area ? [{code:'Area',unit:'m²',minimum:0,maximum:area!}] : []),...(ruleSelection.depth ? [{code:'DepressionDepth',unit:ruleSelection.depthUnit,minimum:0,maximum:depth!}] : [])],stopConditions:ruleSelection.stopConditions,reason:formPolicyNote}
+      if(!formType || !formVersionName.trim() || formVersionName.length>200 || !formPolicyNote.trim() || formPolicyNote.length>2000 || (!ruleSelection.area && !ruleSelection.depth) || ruleSelection.area && area===null || ruleSelection.depth && depth===null)throw new Error('Chọn loại hư hỏng, quy tắc và nhập đủ checklist, ngưỡng, căn cứ hợp lệ.')
+      const old=mode==='draft'?record:null
+      const input:RepairPolicyDefinitionInput={defectTypeCode:formType,checklistVersion:formVersionName,reason:formPolicyNote,measurements:[...(ruleSelection.area?[{code:'Area',unit:'m²',minimum:old?.measurements.find(r=>r.code==='Area')?.minimum || 0,maximum:area!}]:[]),...(ruleSelection.depth?[{code:'DepressionDepth',unit:ruleSelection.depthUnit,minimum:old?.measurements.find(r=>r.code==='DepressionDepth')?.minimum || 0,maximum:depth!}]:[]),...(old?.measurements.filter(r=>!['Area','DepressionDepth'].includes(r.code))||[])],stopConditions:ruleSelection.stopConditions}
       assertPolicyRules(input.measurements)
-      if(input.stopConditions.length){const known=(await fastTrackService.getPolicies(selectedProjectId)).filter(p=>p.defectTypeCode===type).flatMap(p=>p.stopConditions);if(input.stopConditions.some(code=>!known.includes(code)))throw new Error('Chưa có nguồn xác nhận mã điều kiện dừng đã chọn. Không tự tạo mã.')}
-      const previous=fastTrackPending(selectedProjectId,'policy-create')?.body as RepairPolicyDefinitionInput | undefined
-      if(previous)assertPolicyRules(previous.measurements)
-      const storage=fastTrackStorage(selectedProjectId,'policy-pipeline')
-      let pipeline=JSON.parse(localStorage.getItem(storage)||'null')
-      if(pipeline && JSON.stringify(pipeline.input)!==JSON.stringify(input))throw new Error('Đang giữ bản dự thảo trước. Kích hoạt bản đó từ lịch sử hoặc dùng lại đúng nội dung.')
-      if(!pipeline){const draft=await fastTrackService.createPolicyDraft(selectedProjectId,input);pipeline={input,draftId:draft.id};localStorage.setItem(storage,JSON.stringify(pipeline));localStorage.removeItem(fastTrackStorage(selectedProjectId,'policy-create'))}
-      if(shouldPublish)await fastTrackService.publishPolicy(selectedProjectId,pipeline.draftId,formPolicyNote)
-      localStorage.removeItem(storage)
-      if(generation.current!==gen)return
-      await loadPolicyData();setIsPolicyModalOpen(false);showToast(shouldPublish?'Đã đối chiếu chính sách xuất bản.':'Đã đối chiếu bản dự thảo đã lưu.')
-    }catch(e){if(generation.current===gen)setPolicyError(exportError(e))}finally{busy.current=false}
+      if(input.stopConditions.length){const known=(await fastTrackService.getPolicies(p)).filter(r=>r.defectTypeCode===formType).flatMap(r=>r.stopConditions);if(input.stopConditions.some(code=>!known.includes(code)))throw new Error('Mã điều kiện dừng chưa có nguồn xác nhận.')}
+      let row:RepairPolicyView
+      if(old){row=dirty || fastTrackPending(p,`policy-update:${old.id}`) ? await fastTrackService.updatePolicyDraft(p,old.id,input,old.version):await fastTrackService.getPolicyDraft(p,old.id);if(!dirty && !pending && row.version!==old.version)throw new Error('Dự thảo đã thay đổi từ khi mở; giữ nội dung đang xem và đọc lại trước khi lưu/xuất bản.')}
+      else{
+        const storage=fastTrackStorage(p,'policy-pipeline');let pipeline=JSON.parse(localStorage.getItem(storage)||'null')
+        if(pipeline && JSON.stringify(pipeline.input)!==JSON.stringify(input))throw new Error('Giữ nguyên nội dung của gói lệnh tạo đang chờ; không tạo trùng.')
+        if(!pipeline){const draft=await fastTrackService.createPolicyDraft(p,input);pipeline={input,draftId:draft.id};localStorage.setItem(storage,JSON.stringify(pipeline));localStorage.removeItem(fastTrackStorage(p,'policy-create'))}
+        row=await fastTrackService.getPolicyDraft(p,pipeline.draftId)
+      }
+      if(shouldPublish && row.state==='DRAFT')row=await fastTrackService.publishPolicy(p,row.id,input.reason,row.version)
+      if(row.state==='PUBLISHED' && row.revision==null && row.publishedRevisionId)row=await fastTrackService.getPolicyRevision(p,row.publishedRevisionId)
+      if(!activeScope(p,actionEpoch))return
+      adopt(row);localStorage.removeItem(fastTrackStorage(p,'policy-pipeline'));if(old)localStorage.removeItem(fastTrackStorage(p,`policy-update:${old.id}`))
+      await loadPolicyData(row.id);showToast(`Đã GET đối chiếu ${row.checklistVersion}: ${row.state==='DRAFT'?'Dự thảo':row.state==='REVOKED'?'Đã thu hồi':'Đã xuất bản'}.`)
+    }catch(e){setPolicyError(exportError(e))}finally{busy.current=false;setPolicyBusy(false)}
   }
-  const handleActivateDraft=async(item:PolicyHistoryItem)=> {
-    if(busy.current)return
-    busy.current=true
-    try{if(!item.id)throw new Error('Thiếu tham chiếu bản dự thảo.');await fastTrackService.publishPolicy(selectedProjectId,item.id,formPolicyNote.trim() || item.route);await loadPolicyData();showToast('Đã đối chiếu chính sách xuất bản.')}catch(e){setPolicyError(exportError(e))}finally{busy.current=false}
+  const revokePolicy=async(row:RepairPolicyView,reason:string)=>{
+    if(busy.current)return false
+    busy.current=true;setPolicyBusy(true)
+    const p=selectedProjectId,version=epoch
+    try{const result=await fastTrackService.revokePolicy(p,row.id,reason);if(!activeScope(p,version))return false;adopt(result);await loadPolicyData(result.id);showToast('Đã GET đối chiếu thu hồi. Không đổi policy ghim trong nhiệm vụ cũ.');return true}catch(e){setPolicyError(exportError(e));return false}finally{busy.current=false;setPolicyBusy(false)}
   }
-  const handleConfirmRoadCoverage=async(input:RoadCoverageInputDto)=> {
-    if(busy.current)return
-    busy.current=true;setIsSubmittingCoverage(true);setCoverageError(null)
-    try{if(!roadCoverage?.etag)throw new Error('Đọc lại phiên bản độ phủ.');await fastTrackService.confirmRoadCoverage(selectedProjectId,input,roadCoverage.etag);await loadPolicyData();setIsRoadCoverageModalOpen(false);showToast('Đã đối chiếu xác nhận độ phủ.')}catch(e){setCoverageError(exportError(e))}finally{busy.current=false;setIsSubmittingCoverage(false)}
+  const handleReadHistory=(id:string)=>{const row=policies.find(r=>r.id===id);if(row){setIsPolicyModalOpen(true);void readPolicy(row)}}
+  const handleActivateDraft=async(item:PolicyHistoryItem)=>{if(item.id)handleReadHistory(item.id)}
+  const selectCoverageScope=(id:string)=>{localStorage.setItem(fastTrackStorage(selectedProjectId,'coverage-scope'),id);setRoadCoverage(current=>current?.readFact && current.etag ? coverageScopeView(current.readFact,current.etag,id,current.coverageReadAt):current)}
+  const handleConfirmRoadCoverage=async(input:RoadCoverageInputDto)=>{
+    if(busy.current)return;busy.current=true;setIsSubmittingCoverage(true);setCoverageError(null)
+    try{if(!roadCoverage?.etag)throw new Error('Đọc lại phiên bản độ phủ.');await fastTrackService.confirmRoadCoverage(selectedProjectId,input,roadCoverage.etag);if(!activeScope(selectedProjectId,epoch))return;localStorage.setItem(fastTrackStorage(selectedProjectId,'coverage-scope'),input.scopeObligationId);await loadPolicyData();setIsRoadCoverageModalOpen(false);showToast('Đã GET đối chiếu xác nhận. Đọc hiệu lực theo đúng phạm vi.')}catch(e){setCoverageError(exportError(e))}finally{busy.current=false;setIsSubmittingCoverage(false)}
   }
-  return {ruleSelection,setRuleSelection,currentPolicy,policyHistory,auditLogs,roadCoverage,isRoadCoverageModalOpen,setIsRoadCoverageModalOpen,handleConfirmRoadCoverage,coverageError,policyError,isSubmittingCoverage,formVersionName,setFormVersionName,formMaxArea,setFormMaxArea,formMaxDepth,setFormMaxDepth,formPolicyNote,setFormPolicyNote,isPolicyModalOpen,setIsPolicyModalOpen,isAuditModalOpen,setIsAuditModalOpen,handleApplyPolicy,handleActivateDraft,loadPolicyData}
+  const policyEditor={mode,record,dirty,busy:policyBusy,pending:!!pending,formType,setFormType,read:readPolicy,newPolicy,revoke:revokePolicy,pendingRead,pendingNew,cancelRead:()=>{setPendingRead(null);setPendingNew(false)}}
+  return {selectCoverageScope,policyEditor,handleReadHistory,ruleSelection,setRuleSelection,currentPolicy,policyHistory,auditLogs,roadCoverage,isRoadCoverageModalOpen,setIsRoadCoverageModalOpen,handleConfirmRoadCoverage,coverageError,policyError,isSubmittingCoverage,formVersionName,setFormVersionName,formMaxArea,setFormMaxArea,formMaxDepth,setFormMaxDepth,formPolicyNote,setFormPolicyNote,isPolicyModalOpen,setIsPolicyModalOpen,isAuditModalOpen,setIsAuditModalOpen,handleApplyPolicy,handleActivateDraft,loadPolicyData}
 }
+export type FastTrackPolicyEditor=ReturnType<typeof useFastTrackPolicy>['policyEditor']

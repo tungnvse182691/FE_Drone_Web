@@ -7,12 +7,14 @@ import {
   CrewTeam,
   AuditLogItem
 } from './types'
+import type { FastTrackPolicyEditor } from './useFastTrackPolicy'
 import { PolicyModal } from './PolicyModal'
 import { AuditModal } from './AuditModal'
 import { DefectDetailModal } from './DefectDetailModal'
 import { FastTrackDispatchModal } from './FastTrackDispatchModal'
 
 interface FastTrackModalsProps {
+  policyEditor:FastTrackPolicyEditor
   ruleSelection: PolicyRuleSelection
   setRuleSelection: React.Dispatch<React.SetStateAction<PolicyRuleSelection>>
   projectId: string
@@ -47,6 +49,7 @@ interface FastTrackModalsProps {
 }
 
 export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
+  policyEditor,
   ruleSelection, setRuleSelection,
   projectId, actionError,
   isPolicyModalOpen,
@@ -81,6 +84,7 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
     <>
       {(
         <PolicyModal
+          policyEditor={policyEditor}
           ruleSelection={ruleSelection}
           setRuleSelection={setRuleSelection}
           projectId={projectId}

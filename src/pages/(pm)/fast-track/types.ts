@@ -1,3 +1,4 @@
+import type { RoadCoverageReadFact } from '../../../api/services/fastTrackService'
 // ==========================================
 // ROADGUARD FAST TRACK (W08) - DOMAIN TYPES
 // 100% Theo quy chuẩn Spec 17_10 & OpenAPI Canonical
@@ -23,6 +24,8 @@ export interface DefectItem {
   packageId?: string
   itemId?: string
   obligationId?: string
+  checklistVersion?:string
+  checklistSource?:string
   canAssign?: boolean
   eligibilityKnown?: boolean
   policyRevisionId?: string
@@ -37,7 +40,7 @@ export interface PolicyRuleSelection { area:boolean; depth:boolean; depthUnit:'m
 export interface PolicyThresholdConfig {
   id?: string
   version: string
-  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | 'REVOKED'
   maxAreaM2?: number
   maxDepthMm?: number
   allowedSeverities: string[]
@@ -52,11 +55,13 @@ export interface PolicyThresholdConfig {
 }
 
 export interface PolicyHistoryItem {
+  draftId?:string
+  revision?:number
   rules?: Array<{code:string;unit:string;minimum:number;maximum:number}>
   id?: string
   version: string
   displayName?: string
-  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED' | 'REVOKED'
   activatedBy: string
   activatedAt: string
   route: string
@@ -99,6 +104,10 @@ export interface RoadCoverageInputDto {
 }
 
 export interface RoadCoverageFact {
+  readFact?:RoadCoverageReadFact
+  coverageReadAt?:number
+  coverageStatus?:string
+  coverageMessage?:string
   projectId: string
   projectName: string
   scopeObligationId: string
@@ -122,7 +131,7 @@ export interface RoadCoverageFact {
   provenance?: string
   blockers?: string[]
   scopes?: Array<{obligationId: string; roadSectionId: string; locationVersion?: string; from: number; to: number; offsetFrom: number; offsetTo: number; scopeHash: string}>
-  sources?: Array<{kind: string; id: string; version: string; from?: string; to?: string; provenance?: string}>
+  sources?: Array<{kind: string; id: string; fileId?: string; version: string; from?: string; to?: string; provenance?: string}>
   etag?: string
 }
 
