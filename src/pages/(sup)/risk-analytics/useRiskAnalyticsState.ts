@@ -1,3 +1,4 @@
+import type {ReportingGeometry} from '../../../api/services/projectReportingService'
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
@@ -38,7 +39,7 @@ export function useRiskAnalyticsState() {
 
   // RPT-06 Deterioration Risks & GIS State
   const [rpt06Segments, setRpt06Segments] = useState<Rpt06RiskSegment[]>([])
-  const [mainlineCoords, setMainlineCoords] = useState<[number, number][]>([])
+  const [mainlineCoords, setMainlineCoords] = useState<[number, number][][]>([])
   const [activeSegmentId, setActiveSegmentId] = useState<string>('')
   const [mapLayer, setMapLayer] = useState<'satellite' | 'vector'>('satellite')
 
@@ -69,7 +70,7 @@ export function useRiskAnalyticsState() {
   useEffect(()=>{let live=true;setProjects([]);setProjectsConfig({});projectService.fetchProjects().then(rows=>{if(!live)return;setProjects(rows);setProjectsConfig(Object.fromEntries(rows.map(p=>[p.id,{...emptyProject,id:p.id,code:p.code,name:p.name,shortName:p.name,chainage:p.stationing_text||'Chưa có lý trình'}])))}).catch(e=>{if(live)setApiError(exportError(e))});return()=>{live=false}},[actorScope])
   const loadData=useCallback(async()=>{
     const scope=`${actorScope}:${selectedProject}`,n=++requestId.current
-    setExportRecords([]);setActiveJob(null);setApiError('');setRpt06Segments([]);setMainlineCoords([])
+    setExportRecords([]);setActiveJob(null);setApiError('')
     if(selectedProject==='ALL')return
     try{const rows=await projectExportService.list(selectedProject);if(currentScope.current!==scope||requestId.current!==n)return;setExportRecords(rows.map(r=>record(r)))
       const running=rows.find(r=>r.status==='QUEUED'||r.status==='RUNNING');if(running)setActiveJob({id:running.id,name:running.kind,progress:NaN,processedItems:NaN,totalItems:NaN,estimatedSecondsRemaining:NaN,tempSizeMb:NaN,status:'PROCESSING'})
@@ -125,12 +126,13 @@ export function useRiskAnalyticsState() {
     }
 
     // 1. Tuyến đường tim tuyến toàn dự án (LineString chính)
-    if (mainlineCoords && mainlineCoords.length > 1) {
+    for(const id of ['project-mainline','risk-segments']){const source=map.getSource(id) as maplibregl.GeoJSONSource|undefined;source?.setData({type:'FeatureCollection',features:[]})}
+    if (mainlineCoords.length) {
       const mainlineGeoJson: GeoJSON.Feature = {
         type: 'Feature',
         properties: {},
         geometry: {
-          type: 'LineString',
+          type: 'MultiLineString',
           coordinates: mainlineCoords
         }
       }
@@ -187,7 +189,7 @@ export function useRiskAnalyticsState() {
         type: 'Feature',
         properties: {
           id: s.id,
-          color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#3B82F6',
+          color: s.risk_level === 'CRITICAL' ? '#E11D48' : s.risk_level === 'WATCH' ? '#F59E0B' : '#64748B',
           chainage: s.chainage_display
         },
         geometry: {
@@ -291,13 +293,13 @@ export function useRiskAnalyticsState() {
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return
 
-    const defaultCenter: [number, number] = [108.1492, 16.2238]
+    const defaultCenter: [number, number] = [0, 0]
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: getMapLibreStyle('SATELLITE'),
       center: defaultCenter,
-      zoom: 12,
-      minZoom: 5,
+      zoom: 1,
+      minZoom: 0,
       maxZoom: 18,
       pitch: 25
     })
@@ -351,7 +353,7 @@ export function useRiskAnalyticsState() {
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
-    rpt06Segments.forEach((item) => {
+    rpt06Segments.filter(item=>item.coordinates.length>1).forEach((item) => {
       const isSelected = item.id === activeSegmentId
       const el = document.createElement('div')
       el.className = 'cursor-pointer transition-transform duration-200'
@@ -367,10 +369,10 @@ export function useRiskAnalyticsState() {
       el.innerHTML = `
         <div class="flex flex-col items-center">
           <div class="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md border ${badgeColor} whitespace-nowrap mb-1">
-            ${item.chainage_start}: ${item.open_defects_count} lỗi
+            ${item.chainage_start}: Chưa có dữ liệu đánh giá
           </div>
           <div class="w-4 h-4 rounded-full ${
-            item.risk_level === 'CRITICAL' ? 'bg-rose-500' : item.risk_level === 'WATCH' ? 'bg-amber-500' : 'bg-blue-500'
+            item.risk_level === 'CRITICAL' ? 'bg-rose-500' : item.risk_level === 'WATCH' ? 'bg-amber-500' : 'bg-slate-500'
           } border-2 border-white shadow-lg animate-pulse"></div>
         </div>
       `
@@ -386,27 +388,19 @@ export function useRiskAnalyticsState() {
       markersRef.current.push(marker)
     })
 
-    // If active segment changes, center map
-    if (activeSegment && map) {
-      map.flyTo({
-        center: [activeSegment.gps_lng, activeSegment.gps_lat],
-        zoom: 14,
-        speed: 1.2
-      })
-    }
   }, [rpt06Segments, activeSegmentId, activeSegment])
 
-  const handleFocusSegment = useCallback((segment: Rpt06RiskSegment) => {
-    setActiveSegmentId(segment.id)
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo({
-        center: [segment.gps_lng, segment.gps_lat],
-        zoom: 14.5,
-        speed: 1.2,
-        curve: 1.4
-      })
-    }
-  }, [])
+  const fitCoordinates=useCallback((coordinates:[number,number][],maxZoom=16)=>{
+    if(!mapInstanceRef.current||coordinates.length<2)return
+    const bounds=new maplibregl.LngLatBounds();coordinates.forEach(c=>bounds.extend(c));mapInstanceRef.current.fitBounds(bounds,{padding:60,maxZoom,duration:600})
+  },[])
+  const handleFocusSegment=useCallback((segment:Rpt06RiskSegment)=>{setActiveSegmentId(segment.id);fitCoordinates(segment.coordinates)},[fitCoordinates])
+  useEffect(()=>{const map=mapInstanceRef.current;if(!map)return;const fit=()=>fitCoordinates(mainlineCoords.flat(),15);if(map.isStyleLoaded())fit();else map.once('load',fit);return()=>{map.off('load',fit)}},[mainlineCoords,fitCoordinates])
+  const bindReportingGeometry=useCallback((data:ReportingGeometry|null)=>{
+    setMainlineCoords(data?.routes.map(r=>r.coordinates).filter(c=>c.length>1)||[])
+    setRpt06Segments(data?.segments.map(s=>({id:s.id,project_id:'',project_name:'',section_name:s.name,chainage_start:`${s.from} m`,chainage_end:`${s.to} m`,chainage_display:`${s.from} → ${s.to} m`,risk_level:'UNKNOWN',risk_level_label:'Chưa có dữ liệu đánh giá',risk_score:NaN,open_defects_count:NaN,defect_summary:'Chưa có nguồn đánh giá nguy cơ/đa kỳ',damaged_area_m2:NaN,crack_length_m:NaN,avg_depth_cm:NaN,deterioration_rate_pct:NaN,temporal_comparison:{baseline_epoch:'Chưa có dữ liệu',current_epoch:'Chưa có dữ liệu',growth_pct:NaN},sla_remaining:'Chưa có nguồn SLA',sla_status:'normal',gps_lng:s.coordinates[0]?.[0]??NaN,gps_lat:s.coordinates[0]?.[1]??NaN,start_km_num:s.from/1000,end_km_num:s.to/1000,coordinates:s.coordinates}))||[])
+    setActiveSegmentId('')
+  },[])
 
   const handleZoomIn = useCallback(() => {
     if (mapInstanceRef.current) mapInstanceRef.current.zoomIn({ duration: 300 })
@@ -416,12 +410,7 @@ export function useRiskAnalyticsState() {
     if (mapInstanceRef.current) mapInstanceRef.current.zoomOut({ duration: 300 })
   }, [])
 
-  const handleFitBounds = useCallback(() => {
-    if (!mapInstanceRef.current || rpt06Segments.length === 0) return
-    const bounds = new maplibregl.LngLatBounds()
-    rpt06Segments.forEach((s) => bounds.extend([s.gps_lng, s.gps_lat]))
-    mapInstanceRef.current.fitBounds(bounds, { padding: 60, maxZoom: 15, duration: 800 })
-  }, [rpt06Segments])
+  const handleFitBounds=useCallback(()=>fitCoordinates(mainlineCoords.flat(),15),[mainlineCoords,fitCoordinates])
 
   const handleToggleSort = (field: 'as_of_timestamp' | 'code' | 'scope_display' | 'file_size_mb' | 'status') => {
     if (sortField === field) {
@@ -469,7 +458,7 @@ export function useRiskAnalyticsState() {
   }
 
   return {
-    apiError,detailError,exportBusy,held,journalError,
+    bindReportingGeometry,apiError,detailError,exportBusy,held,journalError,
     projects,
     projectsConfig,
     selectedProject,

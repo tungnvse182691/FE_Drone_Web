@@ -40,7 +40,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Xử lý kết xuất tệp bằng chứng nén ZIP và báo cáo đối soát kỹ thuật PDF chuẩn TCVN
+              Xử lý kết xuất tệp bằng chứng nén ZIP và báo cáo đối soát kỹ thuật PDF
             </p>
           </div>
         </div>

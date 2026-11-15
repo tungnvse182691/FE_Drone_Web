@@ -105,7 +105,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 font-medium text-xs hover:bg-slate-50 transition cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px] text-slate-500">calendar_month</span>
-              <span>Tùy chỉnh thời gian</span>
+              <span>Giới hạn nguồn KPI</span>
             </button>
 
             <button
@@ -165,7 +165,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 value={selectedTimeRange}
                 onChange={(e) => {
                   setSelectedTimeRange(e.target.value)
-                  showToast('Đã lọc lại số liệu theo mốc kỳ hạn mới')
+                  showToast('Đã lọc ngày tạo hồ sơ xuất; dùng phạm vi báo cáo phía dưới để lọc KPI.')
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >

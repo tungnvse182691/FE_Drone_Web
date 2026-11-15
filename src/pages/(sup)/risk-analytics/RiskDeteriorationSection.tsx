@@ -2,6 +2,7 @@ import React from 'react'
 import { Rpt06RiskSegment } from './types'
 
 export interface RiskDeteriorationSectionProps {
+  loading?:boolean;error?:string;warnings?:string[];hasMapGeometry?:boolean
   segments: Rpt06RiskSegment[]
   activeSegmentId: string
   activeSegment: Rpt06RiskSegment | undefined
@@ -16,6 +17,7 @@ export interface RiskDeteriorationSectionProps {
 }
 
 export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> = ({
+  loading=false,error,warnings=[],hasMapGeometry=false,
   segments,
   activeSegmentId,
   activeSegment,
@@ -29,6 +31,8 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
   projectName
 }) => {
   const [isHudMinimized, setIsHudMinimized] = React.useState(false)
+  const fmt=(v:number)=>Number.isFinite(v)?v.toLocaleString('vi-VN'):'—'
+  const evaluated=segments.some(s=>s.risk_level!=='UNKNOWN')
   const criticalCount = segments.filter((s) => s.risk_level === 'CRITICAL').length
   const watchCount = segments.filter((s) => s.risk_level === 'WATCH').length
   const moderateCount = segments.filter((s) => s.risk_level === 'MODERATE').length
@@ -51,7 +55,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              So sánh đa kỳ (Temporal Epoch) giữa đợt bay gốc Baseline và hiện tại • Đánh giá các đoạn nguy cơ suy thoái kỹ thuật
+              Hình học và phân đoạn lấy từ máy chủ. Chưa có nguồn đánh giá nguy cơ hoặc so sánh đa kỳ; baseline coverage không phải tốc độ suy thoái.
             </p>
             <div className="flex items-center gap-3 text-[11px] text-slate-500 pt-1">
               <div className="flex items-center gap-1">
@@ -75,13 +79,13 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
           <div className="flex items-center gap-1.5 text-xs">
             <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-              Rất cao ({criticalCount})
+              Rất cao ({evaluated?criticalCount:'—'})
             </span>
             <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-              Theo dõi ({watchCount})
+              Theo dõi ({evaluated?watchCount:'—'})
             </span>
             <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-              Trung bình ({moderateCount})
+              Trung bình ({evaluated?moderateCount:'—'})
             </span>
           </div>
 
@@ -118,9 +122,12 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
       </div>
 
       {/* GIS MAP CONTAINER WITH FLOATING HUD */}
+      {loading?<p role="status">Đang tải tuyến và phân đoạn…</p>:error?<p role="alert" className="text-rose-800">{error}</p>:<p>Chưa có dữ liệu đánh giá. {segments.length?`Đã đọc ${segments.length} phân đoạn hình học; chưa thể phân loại nguy cơ.`:'Chưa có phân đoạn PUBLISHED trong phạm vi này.'}</p>}
+      {warnings.map((w,i)=><p key={i} className="text-xs text-amber-800">{w}</p>)}
       <div className="bg-white rounded-xl overflow-hidden border border-slate-200 shadow-xs">
         <div className="relative w-full h-[360px] bg-slate-950 overflow-hidden select-none">
-          <div ref={mapContainerRef} className="w-full h-full" />
+          <div ref={mapContainerRef} className={`w-full h-full ${hasMapGeometry?'':'invisible'}`} />
+          {!hasMapGeometry&&<div className="absolute inset-0 flex items-center justify-center p-6 text-slate-200 text-sm">{loading?'Đang đọc geometry từ máy chủ…':error?'Không đọc được geometry; chưa định vị.':'Chưa có geometry WGS84 từ máy chủ để định vị đúng tuyến. Không dùng tọa độ metric làm kinh/vĩ độ.'}</div>}
 
           {/* Floating Map HUD Card */}
           {activeSegment && (
@@ -162,11 +169,11 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
                     <div className="bg-slate-800/60 p-2 rounded-lg">
                       <span className="text-slate-400 block text-[10px]">Diện tích hư hỏng</span>
-                      <span className="font-bold font-mono text-rose-300">{activeSegment.damaged_area_m2} m²</span>
+                      <span className="font-bold font-mono text-rose-300">{fmt(activeSegment.damaged_area_m2)} m²</span>
                     </div>
                     <div className="bg-slate-800/60 p-2 rounded-lg">
                       <span className="text-slate-400 block text-[10px]">Tốc độ suy thoái</span>
-                      <span className="font-bold font-mono text-amber-300">+{activeSegment.deterioration_rate_pct}% / kỳ</span>
+                      <span className="font-bold font-mono text-amber-300">{fmt(activeSegment.deterioration_rate_pct)}% / kỳ</span>
                     </div>
                   </div>
 
@@ -174,7 +181,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                     <div className="flex items-center justify-between text-slate-400">
                       <span>Mức độ khẩn cấp:</span>
                       <span className="font-semibold text-rose-400">
-                        {activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
+                        {activeSegment.risk_level === 'UNKNOWN'?'Chưa có dữ liệu đánh giá':activeSegment.risk_level === 'CRITICAL' ? 'Cấp bách' : activeSegment.risk_level === 'WATCH' ? 'Cần theo dõi' : 'Bình thường'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-slate-400">
@@ -227,7 +234,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px] text-slate-700">analytics</span>
             <h3 className="text-sm font-bold text-slate-900">
-              Danh sách phân đoạn rủi ro suy thoái kỹ thuật theo lý trình Km ({segments.length} đoạn)
+              Phân đoạn hình học và tình trạng dữ liệu đánh giá ({segments.length} đoạn)
             </h3>
           </div>
         </div>
@@ -239,7 +246,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                 <th className="py-3 px-4">Lý trình &amp; Phân đoạn</th>
                 <th className="py-3 px-4">Mức độ rủi ro</th>
                 <th className="py-3 px-4">Khối lượng hư hỏng</th>
-                <th className="py-3 px-4">Diễn biến đa kỳ (MET-13)</th>
+                <th className="py-3 px-4">Diễn biến đa kỳ (chưa có nguồn)</th>
                 <th className="py-3 px-4">Hạn cam kết xử lý (SLA)</th>
                 <th className="py-3 px-4 text-right">Định vị</th>
               </tr>
@@ -248,7 +255,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
               {segments.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-400">
-                    Không có phân đoạn nguy cơ nào được ghi nhận cho dự án này.
+                    {loading?'Đang tải phân đoạn…':error?'Không tải được phân đoạn; không coi là danh sách rỗng.':'Chưa có dữ liệu đánh giá; chưa có phân đoạn PUBLISHED trong phạm vi được đọc.'}
                   </td>
                 </tr>
               ) : (
@@ -283,7 +290,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                                 : 'bg-blue-100 text-blue-800 border border-blue-200'
                             }`}
                           >
-                            {seg.risk_level === 'CRITICAL' ? 'RẤT CAO' : seg.risk_level === 'WATCH' ? 'THEO DÕI' : 'TRUNG BÌNH'}
+                            {seg.risk_level === 'UNKNOWN'?'CHƯA CÓ ĐÁNH GIÁ':seg.risk_level === 'CRITICAL' ? 'RẤT CAO' : seg.risk_level === 'WATCH' ? 'THEO DÕI' : 'TRUNG BÌNH'}
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-500 mt-1 leading-snug">
@@ -294,13 +301,13 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                       {/* Cột 3: Khối lượng hư hỏng kỹ thuật */}
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-900 font-mono text-xs">
-                          {seg.damaged_area_m2} m²
+                          {fmt(seg.damaged_area_m2)} m²
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Nứt: <span className="font-mono">{seg.crack_length_m} m</span> • Sâu: <span className="font-mono">{seg.avg_depth_cm} cm</span>
+                          Nứt: <span className="font-mono">{fmt(seg.crack_length_m)} m</span> • Sâu: <span className="font-mono">{fmt(seg.avg_depth_cm)} cm</span>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {seg.open_defects_count} vị trí hư hỏng mở
+                          {fmt(seg.open_defects_count)} vị trí hư hỏng mở
                         </div>
                       </td>
 
@@ -308,10 +315,10 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                       <td className="py-3 px-4 max-w-xs">
                         <div className="flex items-center gap-1.5">
                           <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 font-mono">
-                            +{seg.deterioration_rate_pct}% / kỳ
+                            {fmt(seg.deterioration_rate_pct)}% / kỳ
                           </span>
                           <span className="text-[11px] text-slate-500 font-medium">
-                            (Tăng {seg.temporal_comparison.growth_pct.toFixed(0)}% so với gốc)
+                            {Number.isFinite(seg.temporal_comparison.growth_pct)?`Tăng ${seg.temporal_comparison.growth_pct.toFixed(0)}% so với gốc`:'Chưa có dữ liệu đánh giá đa kỳ'}
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-600 mt-1 font-mono">
@@ -326,7 +333,7 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                           <span className="font-semibold text-rose-600 text-xs font-mono">{seg.sla_remaining}</span>
                         </div>
                         <div className="text-[11px] text-slate-500 mt-1">
-                          {seg.risk_level === 'CRITICAL' ? 'Ưu tiên khẩn cấp (< 24h)' : seg.risk_level === 'WATCH' ? 'Ưu tiên cảnh báo (< 7 ngày)' : 'Theo dõi định kỳ'}
+                          Chưa có nguồn xác định mức ưu tiên/thời hạn
                         </div>
                       </td>
 
@@ -334,9 +341,10 @@ export const RiskDeteriorationSection: React.FC<RiskDeteriorationSectionProps> =
                       <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
+                          disabled={seg.coordinates.length<2}
                           onClick={() => onFocusSegment(seg)}
                           className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-                          title="Phóng to vị trí trên bản đồ vệ tinh"
+                          title={seg.coordinates.length<2?'Máy chủ chưa trả geometry WGS84 của đoạn':'Phóng to đúng geometry phân đoạn'}
                         >
                           <span className="material-symbols-outlined text-[18px]">my_location</span>
                         </button>

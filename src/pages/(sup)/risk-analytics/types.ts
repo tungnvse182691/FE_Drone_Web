@@ -77,7 +77,7 @@ export interface Rpt06RiskSegment {
   chainage_start: string
   chainage_end: string
   chainage_display: string
-  risk_level: 'CRITICAL' | 'WATCH' | 'MODERATE'
+  risk_level: 'CRITICAL' | 'WATCH' | 'MODERATE' | 'UNKNOWN'
   risk_level_label: string
   risk_score: number
   open_defects_count: number

@@ -1,3 +1,4 @@
+import {ReportingMetricsPanel,useProjectReporting} from './risk-analytics/ReportingMetricsPanel'
 // @refresh reset
 import React from 'react'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -12,7 +13,7 @@ import { RiskModals } from './risk-analytics/RiskModals'
 export const RiskAnalytics: React.FC = () => {
   const metric=(value:number)=>Number.isFinite(value)?value:'—'
   const {
-    apiError,detailError,exportBusy,held,journalError,
+    bindReportingGeometry,apiError,detailError,exportBusy,held,journalError,
     projects,
     projectsConfig,
     selectedProject,
@@ -65,6 +66,8 @@ export const RiskAnalytics: React.FC = () => {
     handleRefresh,
     resetFilters
   } = useRiskAnalyticsState()
+  const reporting=useProjectReporting(selectedProject)
+  React.useEffect(()=>{const g=reporting.geometry.value,f=reporting.filters;bindReportingGeometry(g?{...g,routes:g.routes.filter(r=>!f.routeVersionId||r.id===f.routeVersionId),segments:g.segments.filter(s=>(!f.routeVersionId||s.routeVersionId===f.routeVersionId)&&(!f.segmentSetId||s.segmentSetId===f.segmentSetId)&&(!f.segmentIds?.length||f.segmentIds.includes(s.id)))}:null)},[reporting.geometry.value,reporting.filters,bindReportingGeometry])
 
   return (
     <div className="space-y-6 pb-16 text-[#1E293B]">
@@ -78,7 +81,7 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* Header & Filter Controls */}
       {(apiError||journalError)&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{apiError||journalError}</p>}
-      <p className="text-xs text-slate-500">Danh mục và hồ sơ xuất lấy từ máy chủ. Các chỉ số SLA, thời gian duyệt và rủi ro chưa có nguồn đối chiếu nên chưa hiển thị số liệu.</p>
+      <p className="text-xs text-slate-500">SLA, thời gian duyệt, tái phát và tỷ lệ toàn vẹn chưa có metric tương ứng; các chỉ số được hỗ trợ hiển thị riêng theo đúng định nghĩa nguồn.</p>
       <RiskHeader
         currentProject={currentProject}
         isRefreshing={isRefreshing}
@@ -300,6 +303,7 @@ export const RiskAnalytics: React.FC = () => {
           </div>
         </div>
 
+        <ReportingMetricsPanel project={selectedProject} data={reporting} />
         {/* ASYNC EXPORT WORKER QUEUE CARD */}
         <AsyncExportWorkerCard
           currentProject={currentProject}
@@ -315,6 +319,10 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* RPT-06: GIS Risk Map & Deterioration Progression by Chainage Km */}
       <RiskDeteriorationSection
+        loading={reporting.geometry.loading}
+        error={reporting.geometry.error}
+        warnings={reporting.geometry.value?.warnings}
+        hasMapGeometry={!!reporting.geometry.value?.routes.some(r=>(!reporting.filters.routeVersionId||r.id===reporting.filters.routeVersionId)&&r.coordinates.length>1)}
         segments={rpt06Segments}
         activeSegmentId={activeSegmentId}
         activeSegment={activeSegment}
