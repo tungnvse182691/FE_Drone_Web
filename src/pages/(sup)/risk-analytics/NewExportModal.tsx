@@ -8,6 +8,7 @@ export interface NewExportModalProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -17,6 +18,7 @@ export interface NewExportModalProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -77,10 +79,13 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             <p className="text-slate-500">Xuất toàn bộ phạm vi được phép đọc của dự án đã chọn.</p>
           </div>
 
+          <div className="space-y-1"><label className="font-medium text-slate-700">Lọc dữ liệu từ thời điểm (tùy chọn)</label><input aria-label="Thời điểm bắt đầu lọc export" type="datetime-local" value={exportForm.fromDate} onChange={e=>setExportForm({...exportForm,fromDate:e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono" /></div>
+          <p className="text-slate-500">Nhập cả hai mốc Từ và Đến, hoặc bỏ trống cả hai để lấy toàn bộ thời gian. Giờ theo múi giờ trình duyệt ({Intl.DateTimeFormat().resolvedOptions().timeZone}); gửi UTC đến máy chủ. Khoảng lọc gồm Từ và không gồm Đến.</p>
           {/* Lọc dữ liệu đến thời điểm (tùy chọn) */}
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Lọc dữ liệu đến thời điểm (tùy chọn)</label>
             <input
+              aria-label="Thời điểm kết thúc lọc export"
               type="datetime-local"
               value={exportForm.asOfDate}
               onChange={(e) => setExportForm({ ...exportForm, asOfDate: e.target.value })}

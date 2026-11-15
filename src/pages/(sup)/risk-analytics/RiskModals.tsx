@@ -12,6 +12,7 @@ export interface RiskModalsProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean
@@ -21,6 +22,7 @@ export interface RiskModalsProps {
     reportType: string
     scope: string
     asOfDate: string
+    fromDate: string
     includeOriginalFiles: boolean
     includeSha256Checksum: boolean
     compressRawTiff: boolean

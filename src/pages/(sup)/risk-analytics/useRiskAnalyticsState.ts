@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
 import { ExportRecord, AsyncExportJob, Rpt06RiskSegment, ProjectConfig } from './types'
 import {useAuthStore} from '../../../store/authStore'
-import {projectExportService,exportError,type ExportJob,type ExportManifest} from '../../../api/services/projectExportService'
+import {projectExportService,exportError,exportPeriod,type ExportJob,type ExportManifest} from '../../../api/services/projectExportService'
 import { filterAndSortRecords } from './riskAnalyticsCalculations'
 import { projectService, HubProject } from '../../../api/services/projectService'
 
@@ -54,7 +54,7 @@ export function useRiskAnalyticsState() {
   const [exportForm, setExportForm] = useState({
     reportType: 'DOSSIER',
     scope: '',
-    asOfDate: '',
+    asOfDate: '',fromDate:'',
     includeOriginalFiles: false,
     includeSha256Checksum: true,
     compressRawTiff: false,
@@ -440,14 +440,13 @@ export function useRiskAnalyticsState() {
   try{if(selectedProject!=='ALL')held=projectExportService.pending(selectedProject)}catch(e){journalError=(e as Error).message}
   const openExport=(open:boolean)=>{
     if(open&&selectedProject==='ALL'){setApiError('Chọn dự án cụ thể trước khi xuất hồ sơ.');return}
-    const cutoff=held?.body.to?new Date(held.body.to):null
-    const localCutoff=cutoff?`${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}T${String(cutoff.getHours()).padStart(2,'0')}:${String(cutoff.getMinutes()).padStart(2,'0')}`:''
-    if(open)setExportForm({reportType:held?.body.kind||'DOSSIER',scope:selectedProject,asOfDate:localCutoff,includeOriginalFiles:held?.body.includeOriginalFiles||false,includeSha256Checksum:true,compressRawTiff:false,format:held?.body.format||''})
+    const local=(iso?:string)=>{if(!iso)return '';const d=new Date(iso);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+    if(open)setExportForm({reportType:held?.body.kind||'DOSSIER',scope:selectedProject,asOfDate:local(held?.body.to),fromDate:local(held?.body.from),includeOriginalFiles:held?.body.includeOriginalFiles||false,includeSha256Checksum:true,compressRawTiff:false,format:held?.body.format||''})
     setIsExportModalOpen(open)
   }
   const handleCreateExportJob=async(e:React.FormEvent)=>{
     e.preventDefault();if(exportBusy)return;const scope=currentScope.current;setExportBusy(true);setApiError('')
-    try{if(exportForm.scope!==selectedProject)throw new Error('Dự án của yêu cầu đã thay đổi; mở lại form để xác nhận.');const input=held?.body||{kind:'DOSSIER' as const,format:exportForm.format as 'PDF'|'ZIP',includeOriginalFiles:exportForm.includeOriginalFiles,...(exportForm.asOfDate?{to:new Date(exportForm.asOfDate).toISOString()}:{})};const controller=new AbortController();exportController.current=controller;const job=await projectExportService.create(selectedProject,input,controller.signal);if(currentScope.current!==scope)return;setIsExportModalOpen(false);await loadData();if(currentScope.current===scope)showToast(`Đã GET xác nhận yêu cầu ${job.id}; trạng thái ${job.status}.`)}catch(e){if(currentScope.current===scope)setApiError(exportError(e))}finally{if(currentScope.current===scope)setExportBusy(false)}
+    try{if(exportForm.scope!==selectedProject)throw new Error('Dự án của yêu cầu đã thay đổi; mở lại form để xác nhận.');const input=held?.body||{kind:'DOSSIER' as const,format:exportForm.format as 'PDF'|'ZIP',includeOriginalFiles:exportForm.includeOriginalFiles,...exportPeriod(exportForm.fromDate,exportForm.asOfDate)};const controller=new AbortController();exportController.current=controller;const job=await projectExportService.create(selectedProject,input,controller.signal);if(currentScope.current!==scope)return;setIsExportModalOpen(false);await loadData();if(currentScope.current===scope)showToast(`Đã GET xác nhận yêu cầu ${job.id}; trạng thái ${job.status}.`)}catch(e){if(currentScope.current===scope)setApiError(exportError(e))}finally{if(currentScope.current===scope)setExportBusy(false)}
   }
   const handleCancelActiveJob=()=>{setApiError('Chưa có lệnh hủy export trong contract hiện tại; không thay trạng thái tác vụ.')}
   const handleDeleteRecord=()=>{setApiError('Chưa có lệnh xóa export trong contract hiện tại; hồ sơ vẫn được giữ.')}
