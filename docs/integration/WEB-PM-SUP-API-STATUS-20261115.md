@@ -13,7 +13,8 @@ Nguồn đối chiếu: AGENTS.md; Spec17_10 PM/Sup matrix, business workflows, 
 
 - `633d5ea`: tải danh mục Defect/Crew độc lập, lỗi GET không giả làm empty.
 - `908481e`: API079 scope JSON object đúng validator, CRS từ GET tuyến, pin set tùy chọn; journal cũ giữ nguyên.
-- `003f502`: API084 nguồn Report thật, PM chọn bằng chứng/lý do; journal và receipt/GET; bỏ caller IDs/metadata/ảnh mẫu.
+- `003f502`: API084 nguồn Report thật, PM chọn bằng chứng/lý do; journal và receipt/GET; bỏ caller IDs/metadata/ảnh mẫu. Runtime POST chưa nghiệm thu.
+- `2b646f7`: API074–077 và ADD-04 export PM/Sup: list/detail/manifest/content/create DOSSIER PDF/ZIP; bỏ tiến độ/hash/size/record mẫu, giữ journal và readback.
 
 ## Mâu thuẫn và phần bị chặn
 
@@ -31,9 +32,9 @@ Nguồn đối chiếu: AGENTS.md; Spec17_10 PM/Sup matrix, business workflows, 
 
 ## Kiểm thử và nghiệm thu
 
-Tự động: 93 nhóm PASS gồm dropdown/KEEP_NEW10; notifications6; FIELD read/UI8; FIELD review4; REPORT→FIELD create6; FIELD list actor/project fence1; API02411; geometry scope8; D225; Refresh2; intake12. Typecheck `tsc -b` PASS; `npm run build` PASS (2080 modules; còn cảnh báo Tailwind duration-[250ms] và bundle lớn). `git diff --check` và staged diff-check PASS. Tests dùng HTTP/hooks/storage mô phỏng, không chứng nhận database mutation/SMTP/GIS/worker. Build dùng toàn bộ working tree hiện có, bao gồm local giữ nguyên ngoài commit.
+Các lần kiểm trong chuỗi tích hợp đã có 113 nhóm PASS: KEEP_NEW10, notifications6, FIELD read8/review4/create9/list1, API02411, geometry8, D225, Refresh2, intake12, API0847, export10. Riêng đợt export vừa chạy lại 36 nhóm (export10/API0847/FIELD create9/read8/Refresh2). Typecheck `tsc -b` PASS; `npm run build` PASS2081 modules với V8 pool1 (còn cảnh báo Tailwind duration-[250ms] và bundle lớn). `git diff --check` và staged diff-check PASS. Tests dùng HTTP/hooks/storage mô phỏng, không chứng nhận database mutation/SMTP/GIS/worker. Build dùng toàn bộ working tree hiện có, bao gồm local giữ nguyên ngoài commit.
 
-Runtime chỉ đọc: GET notifications200 items[]; GET FIELD list200 items[] trên7 dự án PM hiện được cấp. Không tạo fixture để làm đầy. Do chưa có notification/task/submission thích hợp, mark-read/review/evidence-content runtime còn NOT_RUN.
+Runtime trước nghiệm thu: GET notifications200 items[]; GET FIELD list200 items[] trên7 dự án PM được cấp. Sau đó người dùng tự tạo FIELD và F5 PASS như mục API079 bên dưới. Mark-read/review/submission/evidence-reuse POST runtime vẫn NOT_RUN. Không tạo fixture để làm đầy.
 
 Theo dõi riêng: lỗi retry D1 đã biết vẫn chưa xử lý/nghiệm thu lại; không gộp vào kết quả PASS D2/API024/FIELD của đợt này.
 
@@ -42,6 +43,14 @@ Nghiệm thu tay ngắn:
 - Thông báo: PM/Sup mở chuông → inbox. Có bản ghi thì bấm đọc chi tiết/phạm vi (GET); tự đánh dấu đọc một lần rồi đối chiếu POST key/If-Match → GET read=true. F5 và đổi actor không lẫn inbox. List rỗng/error phải khác nhau. Inbox có bản ghi không chứng minh đã giao thông báo ra ngoài.
 - Tạo FIELD: PM chọn dự án cụ thể → mở lại Report đã KEEP_NEW để GET đối chiếu → mở tạo phiếu, tự chọn Defect OPEN, Crew ACTIVE, phương pháp, loại đo, hạn; tuyến lấy từ Defect, chỉ chọn set PUBLISHED nếu cần pin thêm phạm vi. Tự bấm một lần, đối chiếu receipt TaskID → GET/list; đổi dự án/actor không nhận phản hồi cũ. Thiếu nguồn hoặc stale version/hash phải chặn trước POST, không tạo pending. Sau timeout/F5 giữ nguyên journal; receipt chỉ GET. Nhánh Survey chưa hoàn tất.
 - FIELD: mở phiếu đo → task/history/submission → chọn ảnh → GET metadata VERIFIED/checksum → content. Zero/UNKNOWN giữ nguyên. PM chọn quyết định/lý do rồi tự xác nhận một lần; receipt/GET phải COMPLETED hoặc SUPPLEMENT_REQUIRED, Defect không tự VERIFIED. Sup không có form review. Timeout/F5 giữ key/body/version; có receipt chỉ GET;403/412 báo rõ, không thay key để thử.
+
+## Nghiệm thu Web export API074–077
+
+- Quyền: PM hoặc Sup có tài khoản ACTIVE và membership ACTIVE trên cùng dự án; form khóa khi chưa chọn dự án cụ thể. Dữ liệu tạo chỉ `kind:DOSSIER`, `format:PDF|ZIP`; PDF không kèm file gốc theo validator BE. Không có lệnh hủy/xóa trong contract hiện tại, nên các nút tương ứng bị khóa/báo rõ.
+- Dòng test: vào `/sup/reports` hoặc `/sup/risk-analytics`, chọn dự án thật → **Xuất báo cáo tổng hợp** → chọn PDF/ZIP, tùy chọn mốc đến nếu cần → bấm một lần. Đối chiếu POST074 `202`, receipt job/version/snapshot → GET075. Nếu `SUCCEEDED`, mở chi tiết để GET077 manifest rồi tải GET076; FE kiểm mediaType, expiry, SHA256 content với ETag. Job `QUEUED/RUNNING` không hiển thị phần trăm giả và không tự retry.
+- Runtime hiện đã đọc GET `/projects/15d119fe-0c03-4e25-aa5d-95e97ddd881d/exports?limit=100` trả `200 items:[]`; chưa gửi POST074, nên runtime mutation vẫn NOT_RUN.
+- Lưu ý điều kiện runtime: Sup có quyền reporting toàn cục vẫn có thể bị403 export nếu thiếu membership ACTIVE của project, đúng ExportService.AuthorizeAsync:35–40. Chưa có endpoint cancel/delete/retry, nút retry hiện chỉ đọc chi tiết lỗi. Form hiện nối DOSSIER toàn dự án; TRAINING và chọn subset segment/Defect chưa có caller phù hợp, không gửi option giả. Summary KPI/mapping rủi ro chưa nối, giữ bố cục và hiện thiếu nguồn; không dùng mock để điền số liệu.
+- Bằng chứng source: ExportsController.cs:17–48 hỗ trợ WebCookie/Idempotency-Key/ETag; ExportService.cs:61–68 giới hạn kind/format/PDF originals/filters; ExportRecords.cs:12–42 trạng thái QUEUED/RUNNING/SUCCEEDED/FAILED. API075 GET có version/ETag mới; worker có thể đổi version sau receipt, FE đối chiếu snapshot/kind/format giữ nguyên thay vì ép rowVersion không được đổi.
 
 ## Nghiệm thu runtime API079 và bước tiếp theo
 
@@ -68,14 +77,14 @@ Nghiệm thu tay ngắn:
 
 “đã có” là có code/caller đã xác định, không đồng nghĩa full runtime PASS. “vừa nối” chỉ phần đợt này. “bị chặn” kèm predicate/role/source; không đồng nghĩa yêu cầu BE mới. “chưa làm” là chưa rà đủ hoặc chưa triển khai trong đợt, không phải kết luận không có bất kỳ code nào. Bảng bao gồm local chưa commit; không gom local đó vào các commit mới.
 
-Tổng dòng: 275; đã có: 69, chưa làm: 180, bị chặn: 14, vừa nối: 12.
+Tổng dòng: 275; đã có: 69, chưa làm: 175, bị chặn: 14, vừa nối: 17.
 
 | Mã catalog | Method | Endpoint | Trạng thái | Bằng chứng / phạm vi |
 |---|---|---|---|---|
 | ADD-01 | GET | `/api/v1/projects/{projectId}/ai-mock-runs` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:496 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | ADD-02 | GET | `/api/v1/projects/{projectId}/repair-packages` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
 | ADD-03 | GET | `/api/v1/projects/{projectId}/repair-packages/{packageId}/items` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| ADD-04 | GET | `/api/v1/projects/{projectId}/exports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| ADD-04 | GET | `/api/v1/projects/{projectId}/exports` | **vừa nối** | projectExportService + RiskAnalytics: cursor/list, project/actor/status/version guard, error rõ. Runtime danh mục project321 hiện items[] 200; không tạo fixture. |
 | ADD-05 | GET | `/api/v1/projects/{projectId}/survey-plans` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:467 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | ADD-06 | GET | `/api/v1/projects/{projectId}/survey-tasks` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:482 (surveyService.getSurveys); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | ADD-07 | GET | `/api/v1/projects/{projectId}/processing-jobs` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
@@ -164,10 +173,10 @@ Tổng dòng: 275; đã có: 69, chưa làm: 180, bị chặn: 14, vừa nối: 
 | API-071 | GET | `/api/v1/projects/{projectId}/defects/{defectId}` | **đã có** | Giữ luồng auth/Case/candidate/readback hiện có; gồm caller local; không viết lại. Runtime chỉ theo các ca đã ghi nhận, không chứng nhận toàn contract. |
 | API-072 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/assessments` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1573 (surveyService.assessDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
 | API-073 | POST | `/api/v1/projects/{projectId}/defects/{defectId}/verification-decisions` | **đã có** | Callsite + caller hiện hữu: src/api/services/surveyService.ts:1617 (surveyService.verifyDefect); chưa chứng nhận đầy đủ DTO/quyền/runtime trong đợt. |
-| API-074 | POST | `/api/v1/projects/{projectId}/exports` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-075 | GET | `/api/v1/projects/{projectId}/exports/{exportId}` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-076 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/content` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
-| API-077 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/manifest` | **chưa làm** | Chưa rà đủ service + caller + state trong đợt; không khẳng định API chưa có code. |
+| API-074 | POST | `/api/v1/projects/{projectId}/exports` | **vừa nối** | projectExportService + modal: PM/Sup chọn dự án cụ thể, DOSSIER PDF/ZIP, exact body + Idempotency-Key; journal receipt→GET. Runtime mutation NOT_RUN. |
+| API-075 | GET | `/api/v1/projects/{projectId}/exports/{exportId}` | **vừa nối** | detail validates project/status/snapshot/hash/version/ETag; đổi actor/project fence. |
+| API-076 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/content` | **vừa nối** | chỉ tải SUCCEEDED chưa hết hạn; manifest/readiness, mediaType và SHA256 content ETag; binary lỗi không nuốt. |
+| API-077 | GET | `/api/v1/projects/{projectId}/exports/{exportId}/manifest` | **vừa nối** | manifest khớp schemaVersion, project/snapshot/hash/kind/format/ETag, files/sections/sourceRevisions. |
 | API-078 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks` | **đã có** | Đã gọi DB từ trước; đợt này sửa đi hết afterId/nextCursor, kiểm project/ID và không suy nguồn DRONE. |
 | API-079 | POST | `/api/v1/projects/{projectId}/field-inspection-tasks` | **vừa nối** | fieldCreateCommands.ts + MeasurementsTab: REPORTER/PRE_MEASUREMENT từ KEEP_NEW đã GET xác nhận. PM chọn Crew ACTIVE, Defect/version, type1–4, hạn xử lý. Tuyến bắt buộc từ Defect, CRS từ GET geometry; set/layout/slab/map tùy chọn. Scope JSON object {}; phương pháp giữ trong instructions. Runtime PASS task 574b3f4c-0778-4564-baea-35398b298ce2: 1 POST201→GET task/list200→F5 GET200, không POST mới; submission/readiness NOT_RUN. Survey và thiếu reference bị chặn rõ. |
 | API-080 | GET | `/api/v1/projects/{projectId}/field-inspection-tasks/{taskId}` | **vừa nối** | fieldTaskReadService / fieldReviewCommands + modal chi tiết FIELD; test mô phỏng, chưa POST runtime. |
