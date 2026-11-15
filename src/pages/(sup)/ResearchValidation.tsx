@@ -1,3 +1,4 @@
+import { ResearchHeader } from './research/ResearchHeader'
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { projectService } from '../../api/services/projectService'
@@ -7,6 +8,8 @@ import { exportError } from '../../api/services/projectExportService'
 
 const statuses: Record<string, string> = { QUEUED: 'Chờ xử lý', RUNNING: 'Đang xử lý', SUCCEEDED: 'Thành công', FAILED: 'Thất bại', COMPLETED: 'Hoàn thành' }
 export const ResearchValidation: React.FC = () => {
+  const [actionNotice, setActionNotice] = useState('')
+  const [metricIndex, setMetricIndex] = useState(0)
   const epoch = useAuthStore(s => s.authEpoch)
   const [projects, setProjects] = useState<Awaited<ReturnType<typeof projectService.fetchProjects>>>([])
   const [project, setProject] = useState(''), [revision, setRevision] = useState(0)
@@ -37,12 +40,10 @@ export const ResearchValidation: React.FC = () => {
     return () => controller.abort()
   }, [project, selected, revision, epoch])
   return <div className="space-y-6 max-w-7xl mx-auto pb-16">
-    <section className="bg-white border border-slate-200 rounded-[20px] p-6 space-y-4">
-      <div className="flex flex-wrap justify-between gap-4"><div><h1 className="text-2xl font-bold text-slate-900">Thực nghiệm AI và đối soát thực địa</h1><p className="text-xs text-slate-500 mt-2">Kết quả từng lần chạy; Bias, MAE, RMSE và đơn vị do Backend cung cấp.</p></div>
-        <button onClick={() => setRevision(n => n + 1)} className="px-4 py-2 border rounded-xl text-sm">Đọc lại</button></div>
-      <label className="text-sm">Dự án <select aria-label="Dự án thực nghiệm" value={project} onChange={e => setProject(e.target.value)} className="ml-3 border rounded-xl p-2"><option value="">Chọn dự án</option>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-    </section>
-    <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">Chưa thể tạo đợt AI/kiểm định hoặc đọc kết quả AI bằng phiên Web ở revision Backend hiện tại. Chức năng sẽ báo lỗi xác thực khi đọc chi tiết; không mô phỏng tiến trình hoặc tự sinh mẫu. Xuất hồ sơ tại Báo cáo KPI.</p>
+    <ResearchHeader selectedProject={project} onSelectProject={setProject} projectOptions={projects.map(p => ({id:p.id,name:p.name,code:p.code,chainage:'',surface_type:''}))} isExporting={false} isRunningVal={false} onExport={()=>setActionNotice('Chưa hỗ trợ xuất CSV đối soát tại đây. Hồ sơ PDF nằm tại Báo cáo KPI.')} onTriggerValidation={()=>setActionNotice('Chưa hỗ trợ chạy kiểm định mới tại đây.')} />
+    {actionNotice && <p role="status" className="text-sm text-amber-800">{actionNotice}</p>}
+    <div className="flex flex-wrap items-center gap-3"><h2 className="font-bold mr-auto">Đánh giá sai số đối soát</h2><select aria-label="Chọn kết quả kiểm định" value={metricIndex} onChange={e=>setMetricIndex(Number(e.target.value))} className="border rounded-xl p-2 text-sm"><option value={0}>Chọn kết quả</option>{metrics.map((m,i)=><option key={m.id} value={i}>Lần {i+1} · {m.measurementType}</option>)}</select><button onClick={()=>setRevision(n=>n+1)} className="border rounded-xl px-4 py-2 text-sm">Làm mới</button></div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{(['bias','mae','rmse'] as const).map((key,i)=><article key={key} className="bg-white border rounded-[20px] p-5 space-y-3"><p className="text-xs uppercase tracking-wider font-bold text-slate-500">{['Độ lệch Bias','Sai số tuyệt đối MAE','Sai số bình phương RMSE'][i]}</p><p className="text-3xl font-bold text-slate-900">{metrics[metricIndex]?.[key]?.toLocaleString('vi-VN') ?? '—'} <small className="text-sm font-normal">{metrics[metricIndex]?.unit}</small></p><p className="text-xs text-slate-500">{metrics[metricIndex] ? `Kết quả lần ${metricIndex+1}` : 'Chưa có kết quả đối soát'}</p></article>)}</div>
     <section className="bg-white border border-slate-200 rounded-[20px] p-5 space-y-4"><h2 className="font-bold text-slate-900">Các lần chạy AI</h2>
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {loading ? <p>Đang tải các lần chạy…</p> : !runs.length && !error ? <p className="text-sm text-slate-500">{project ? 'Chưa có lần chạy AI trong CSDL.' : 'Chọn dự án để đọc dữ liệu.'}</p> : null}
