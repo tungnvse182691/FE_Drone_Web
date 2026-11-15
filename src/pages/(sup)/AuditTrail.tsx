@@ -248,14 +248,12 @@ export const AuditTrail: React.FC = () => {
         onSelectProject={setSelectedProject}
         isRefreshing={isRefreshing}
         onRefresh={handleRefresh}
-        onOpenExportModal={() => setError('Backend chưa có API xuất riêng nhật ký. Xuất hồ sơ PDF tại Báo cáo KPI.')}
+        onOpenExportModal={() => setError('Chưa hỗ trợ xuất riêng nhật ký. Xuất hồ sơ PDF tại Báo cáo KPI.')}
         projects={projects}
       />
 
       {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-      <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
-        {partial ? 'Lịch sử có dữ liệu một phần. ' : ''}Chỉ hiển thị sự kiện được nguồn báo cáo cung cấp; chưa có dữ liệu vai trò, trạng thái trước/sau hoặc ảnh để đối chiếu. Số đếm chỉ thuộc danh sách đang hiển thị.
-      </p>
+      {partial && <p className="text-xs text-slate-500">Lịch sử hiện có dữ liệu một phần trong phạm vi đang chọn.</p>}
       <AuditTrailMetrics
         calculatedStats={calculatedStats}
         isSupervisor={isSupervisor}
