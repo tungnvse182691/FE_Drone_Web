@@ -71,7 +71,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
         <div className="flex items-center justify-end gap-1">
           {record.status === 'COMPLETED' && (
             <button
-              onClick={() => onDownloadFile(`${record.code}.zip`)}
+              onClick={() => onDownloadFile(record.id)}
               type="button"
               className="p-1 rounded text-slate-500 hover:text-[#8C6D1F] hover:bg-slate-100 transition cursor-pointer"
               title="Tải xuống tệp lưu trữ"
@@ -94,17 +94,18 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
               onClick={() => onRetry(record.id)}
               type="button"
               className="p-1 rounded text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition cursor-pointer"
-              title="Thử lại tác vụ nén"
+              title="Đọc lại trạng thái lỗi"
             >
               <span className="material-symbols-outlined text-[16px]">refresh</span>
             </button>
           )}
 
           <button
+            disabled
             onClick={() => onDelete(record.id, record.code)}
             type="button"
             className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-            title="Xóa hồ sơ khỏi danh mục"
+            title="Chưa có lệnh xóa hồ sơ trong contract"
           >
             <span className="material-symbols-outlined text-[16px]">delete</span>
           </button>

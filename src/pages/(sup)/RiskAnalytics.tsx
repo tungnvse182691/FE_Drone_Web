@@ -1,3 +1,4 @@
+// @refresh reset
 import React from 'react'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useRiskAnalyticsState } from './risk-analytics/useRiskAnalyticsState'
@@ -9,7 +10,9 @@ import { RiskDeteriorationSection } from './risk-analytics/RiskDeteriorationSect
 import { RiskModals } from './risk-analytics/RiskModals'
 
 export const RiskAnalytics: React.FC = () => {
+  const metric=(value:number)=>Number.isFinite(value)?value:'—'
   const {
+    apiError,detailError,exportBusy,held,journalError,
     projects,
     projectsConfig,
     selectedProject,
@@ -74,6 +77,8 @@ export const RiskAnalytics: React.FC = () => {
       )}
 
       {/* Header & Filter Controls */}
+      {(apiError||journalError)&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{apiError||journalError}</p>}
+      <p className="text-xs text-slate-500">Danh mục và hồ sơ xuất lấy từ máy chủ. Các chỉ số SLA, thời gian duyệt và rủi ro chưa có nguồn đối chiếu nên chưa hiển thị số liệu.</p>
       <RiskHeader
         currentProject={currentProject}
         isRefreshing={isRefreshing}
@@ -120,7 +125,7 @@ export const RiskAnalytics: React.FC = () => {
               </div>
               <div className="pt-1">
                 <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                  {currentProject.met01_ratio}%
+                  {metric(currentProject.met01_ratio)}%
                 </span>
                 <p className="text-xs text-slate-600 mt-1 font-medium">
                   {currentProject.met01_completed_text}
@@ -132,12 +137,12 @@ export const RiskAnalytics: React.FC = () => {
               <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-[#1E40AF] h-full rounded-full transition-all duration-700"
-                  style={{ width: `${currentProject.met01_ratio}%` }}
+                  style={{ width: `${metric(currentProject.met01_ratio)}%` }}
                 />
               </div>
               <div className="flex justify-between text-[11px] text-slate-500 font-medium">
                 <span>Tiến độ cam kết SLA</span>
-                <span className="font-semibold text-slate-800">Mục tiêu: ≥ {currentProject.met01_target}%</span>
+                <span className="font-semibold text-slate-800">Mục tiêu: ≥ {metric(currentProject.met01_target)}%</span>
               </div>
             </div>
           </div>
@@ -160,12 +165,12 @@ export const RiskAnalytics: React.FC = () => {
               <div className="pt-1">
                 <div className="flex items-baseline gap-1">
                   <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                    {currentProject.met04_mtta}
+                    {metric(currentProject.met04_mtta)}
                   </span>
                   <span className="text-sm font-semibold text-slate-600">ngày</span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1 font-medium">
-                  Mục tiêu trung bình: ≤ 4.0 ngày / đợt
+                  Chưa có dữ liệu mục tiêu thời gian
                 </p>
               </div>
             </div>
@@ -174,12 +179,12 @@ export const RiskAnalytics: React.FC = () => {
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex justify-between items-center text-xs">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 font-bold uppercase">Giám sát duyệt</span>
-                  <span className="font-mono font-bold text-slate-800">{currentProject.met04_sup_days} ngày</span>
+                  <span className="font-mono font-bold text-slate-800">{metric(currentProject.met04_sup_days)} ngày</span>
                 </div>
                 <span className="text-slate-300 font-light">|</span>
                 <div className="flex flex-col text-right">
                   <span className="text-[10px] text-slate-500 font-bold uppercase">PM XỬ LÝ NHANH</span>
-                  <span className="font-mono font-bold text-[#8C6D1F]">{currentProject.met04_pm_days} ngày</span>
+                  <span className="font-mono font-bold text-[#8C6D1F]">{metric(currentProject.met04_pm_days)} ngày</span>
                 </div>
               </div>
             </div>
@@ -221,7 +226,7 @@ export const RiskAnalytics: React.FC = () => {
                       : 'bg-emerald-50 text-[#047857] border-emerald-200'
                   }`}
                 >
-                  {currentProject.met08_recurrence >= 5.0 ? 'CẢNH BÁO' : 'ĐẠT CHUẨN'}
+                  {Number.isFinite(currentProject.met08_recurrence)?currentProject.met08_recurrence >= 5.0 ? 'CẢNH BÁO' : 'ĐẠT CHUẨN':'CHƯA CÓ DỮ LIỆU'}
                 </span>
               </div>
               <div className="pt-1">
@@ -231,7 +236,7 @@ export const RiskAnalytics: React.FC = () => {
                       currentProject.met08_recurrence >= 5.0 ? 'text-[#B91C1C]' : 'text-slate-900'
                     }`}
                   >
-                    {currentProject.met08_recurrence}%
+                    {metric(currentProject.met08_recurrence)}%
                   </span>
                   <span className="text-xs text-slate-500 font-medium">tái phát</span>
                 </div>
@@ -253,7 +258,7 @@ export const RiskAnalytics: React.FC = () => {
                   {currentProject.met08_recurrence >= 5.0 ? 'report' : 'check_circle'}
                 </span>
                 <span>
-                  {currentProject.met08_recurrence >= 5.0
+                  {!Number.isFinite(currentProject.met08_recurrence)?'Chưa có nguồn đánh giá':currentProject.met08_recurrence >= 5.0
                     ? 'Vượt ngưỡng kỹ thuật (≥ 5.0%)'
                     : 'Đạt chuẩn kỹ thuật (< 5.0%)'}
                 </span>
@@ -278,7 +283,7 @@ export const RiskAnalytics: React.FC = () => {
               </div>
               <div className="pt-1">
                 <span className="font-sansation text-3xl font-bold tracking-tight text-slate-900">
-                  {currentProject.met11_integrity}%
+                  {metric(currentProject.met11_integrity)}%
                 </span>
                 <p className="text-xs text-slate-600 mt-1 font-medium">
                   {currentProject.met11_items_text}
@@ -289,7 +294,7 @@ export const RiskAnalytics: React.FC = () => {
             <div className="pt-3 border-t border-slate-100 mt-3">
               <div className="inline-flex items-center justify-center gap-1.5 w-full bg-slate-50 border border-slate-200 py-1.5 px-3 rounded-xl text-xs font-semibold text-slate-700">
                 <span className="material-symbols-outlined text-[15px] text-[#047857]">shield_with_heart</span>
-                <span className="truncate">TCVN 8819:2011 • Đạt chuẩn</span>
+                <span className="truncate">Chưa có kết quả đối soát toàn bộ hồ sơ</span>
               </div>
             </div>
           </div>
@@ -441,7 +446,7 @@ export const RiskAnalytics: React.FC = () => {
                       <span className="material-symbols-outlined text-[36px] text-slate-300 mx-auto block">
                         folder_open
                       </span>
-                      <p className="text-sm font-semibold text-slate-700">Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại</p>
+                      <p className="text-sm font-semibold text-slate-700">{apiError?'Không tải được danh mục export':selectedProject==='ALL'?'Chọn dự án để đọc hồ sơ':'Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại'}</p>
                       <p className="text-xs text-slate-400">Hãy thử đổi dự án, điều chỉnh kỳ báo cáo hoặc nhấn "Đặt lại".</p>
                     </td>
                   </tr>
@@ -491,6 +496,7 @@ export const RiskAnalytics: React.FC = () => {
 
       {/* All Modal Windows */}
       <RiskModals
+        busy={exportBusy} pending={!!held} received={!!held?.received} journalKey={held?.key} error={apiError||journalError} detailError={detailError}
         isExportModalOpen={isExportModalOpen}
         setIsExportModalOpen={setIsExportModalOpen}
         exportForm={exportForm}

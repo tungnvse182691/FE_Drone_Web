@@ -89,10 +89,10 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                   sync
                 </span>
                 <span>
-                  Cập nhật lúc: <strong className="text-slate-800 font-semibold font-mono">21:45, 25/08/2026</strong>
+                  Cập nhật lúc: <strong className="text-slate-800 font-semibold font-mono">Đọc lại từ máy chủ</strong>
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="text-slate-600">Đồng bộ tự động theo thời gian thực</span>
+                <span className="text-slate-600">Danh mục export đọc lại định kỳ khi còn tác vụ</span>
               </div>
             </div>
           </div>
@@ -169,6 +169,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >
+                <option value="ALL">Toàn bộ thời gian tạo hồ sơ</option>
                 <option value="Q3_2026">Quý 3 / 2026 (01/07/2026 - 30/09/2026)</option>
                 <option value="Q2_2026">Quý 2 / 2026 (01/04/2026 - 30/06/2026)</option>
                 <option value="MONTH_08_2026">Tháng 08/2026 (Kỳ giải trình thanh tra)</option>
@@ -182,6 +183,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
             {/* Workflow Track Selector */}
             <div className="relative min-w-[220px]">
               <select
+                disabled title="Chưa có phân loại luồng của export"
                 value={selectedTrack}
                 onChange={(e) => {
                   setSelectedTrack(e.target.value)

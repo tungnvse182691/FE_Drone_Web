@@ -2,6 +2,7 @@ import React from 'react'
 import { ExportRecord } from './types'
 
 export interface DossierDetailModalProps {
+  error?:string
   isOpen: boolean
   onClose: () => void
   record: ExportRecord | null
@@ -9,6 +10,7 @@ export interface DossierDetailModalProps {
 }
 
 export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
+  error,
   isOpen,
   onClose,
   record,
@@ -36,6 +38,10 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
         </div>
 
         <div className="space-y-3 text-xs">
+          {error&&<p role="alert" className="text-rose-800">{error}</p>}
+          {!record.manifest&&!error&&<p role="status">Đang đọc chi tiết và manifest…</p>}
+          <p>Trạng thái máy chủ: {record.server?.status||'Chưa đọc'} · Phiên bản {record.server?.version||'—'}</p>
+          <p>Tính đầy đủ: {record.server?.completeness||'Chưa có'} · {record.server?.missingSections?.join(', ')}</p>
           <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <div>
               <span className="text-slate-500 block text-[11px]">Loại tài liệu:</span>
@@ -46,11 +52,11 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
               <span className="font-semibold text-slate-800 font-mono">{record.project_code}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Lý trình đoạn tuyến:</span>
+              <span className="text-slate-500 block text-[11px]">Phạm vi dự án:</span>
               <span className="font-mono font-medium text-slate-800">{record.scope_display}</span>
             </div>
             <div>
-              <span className="text-slate-500 block text-[11px]">Thời gian chốt số liệu:</span>
+              <span className="text-slate-500 block text-[11px]">Thời gian tạo yêu cầu:</span>
               <span className="font-mono font-medium text-slate-800">{record.as_of_time}</span>
             </div>
           </div>
@@ -59,16 +65,17 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
           <div className="bg-emerald-50/70 p-3.5 rounded-lg border border-emerald-200 space-y-1.5">
             <div className="flex items-center gap-1.5 font-semibold text-emerald-800 text-[11px] uppercase tracking-wide">
               <span className="material-symbols-outlined text-[15px] text-emerald-600">verified_user</span>
-              <span>Đã xác thực tính toàn vẹn số</span>
+              <span>Hash snapshot từ manifest</span>
             </div>
             <div className="font-mono text-[11px] break-all bg-white p-2 rounded-md border border-emerald-200 text-slate-700">
-              {record.hash_sha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
+              {record.manifest?.snapshotHash||'Chưa có hash từ manifest'}
             </div>
             <p className="text-[11px] text-emerald-700 font-medium">
-              Đã đối soát 48/48 tệp ảnh gốc khớp mã băm SHA-256 không bị sửa đổi.
+              {record.manifest?`${record.manifest.files.length} tệp trong manifest; ${record.manifest.files.filter(f=>f.included).length} tệp được đưa vào gói.`:'Chưa đọc danh sách tệp; chưa xác minh nội dung tải.'}
             </p>
           </div>
 
+          {record.manifest&&<details><summary>Manifest: tệp, nguồn và phần dữ liệu</summary><p>Snapshot {record.manifest.snapshotId} · {record.manifest.snapshotAt}</p><pre className="whitespace-pre-wrap break-all max-h-64 overflow-auto">{JSON.stringify({filters:record.manifest.filters,files:record.manifest.files,sections:record.manifest.sections,sourceRevisions:record.manifest.sourceRevisions},null,2)}</pre></details>}
           {/* Metadata Items */}
           <div className="border border-slate-200 rounded-lg p-3 space-y-2">
             <div className="flex justify-between text-slate-600">
@@ -81,7 +88,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
             </div>
             <div className="flex justify-between text-slate-600">
               <span>Kiểm tra mã băm tệp:</span>
-              <span className="font-medium text-emerald-700 font-mono">SHA-256 Hợp lệ</span>
+              <span className="font-medium text-emerald-700 font-mono">Đối chiếu khi tải nội dung</span>
             </div>
           </div>
         </div>
@@ -96,14 +103,15 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
           </button>
           <button
             onClick={() => {
-              onDownloadFile(`${record.code}.zip`)
+              onDownloadFile(record.id)
               onClose()
             }}
             type="button"
+            disabled={!record.manifest||record.server?.status!=='SUCCEEDED'}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-medium text-xs cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[15px]">download</span>
-            <span>Tải xuống tệp nén</span>
+            <span>Tải nội dung hồ sơ</span>
           </button>
         </div>
       </div>

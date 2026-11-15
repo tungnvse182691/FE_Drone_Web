@@ -2,16 +2,16 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
 import { ExportRecord, AsyncExportJob, Rpt06RiskSegment, ProjectConfig } from './types'
-import { PROJECTS_CONFIG } from './data'
-import { computeProjectMetrics, filterAndSortRecords } from './riskAnalyticsCalculations'
-import { reportService } from '../../../api/services/reportService'
+import {useAuthStore} from '../../../store/authStore'
+import {projectExportService,exportError,type ExportJob,type ExportManifest} from '../../../api/services/projectExportService'
+import { filterAndSortRecords } from './riskAnalyticsCalculations'
 import { projectService, HubProject } from '../../../api/services/projectService'
 
 export function useRiskAnalyticsState() {
   const [projects, setProjects] = useState<HubProject[]>([])
-  const [projectsConfig, setProjectsConfig] = useState<Record<string, ProjectConfig>>(PROJECTS_CONFIG)
-  const [selectedProject, setSelectedProject] = useState('prj-ql1a-02')
-  const [selectedTimeRange, setSelectedTimeRange] = useState('Q3_2026')
+  const [projectsConfig, setProjectsConfig] = useState<Record<string, ProjectConfig>>({})
+  const [selectedProject, setSelectedProject] = useState('ALL')
+  const [selectedTimeRange, setSelectedTimeRange] = useState('ALL')
   const [selectedTrack, setSelectedTrack] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'PROCESSING' | 'FAILED'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -24,10 +24,14 @@ export function useRiskAnalyticsState() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
-  const currentProject = useMemo(() => {
-    const base = projectsConfig[selectedProject] || PROJECTS_CONFIG[selectedProject] || PROJECTS_CONFIG['prj-ql1a-02']
-    return computeProjectMetrics(base, selectedTrack, selectedTimeRange)
-  }, [projectsConfig, selectedProject, selectedTrack, selectedTimeRange])
+  const epoch=useAuthStore(s=>s.authEpoch),userId=useAuthStore(s=>s.user?.id),role=useAuthStore(s=>s.user?.role),actorScope=`${epoch}:${userId}:${role}`
+  const currentScope=useRef(`${actorScope}:${selectedProject}`);currentScope.current=`${actorScope}:${selectedProject}`
+  const requestId=useRef(0),detailId=useRef(0),exportController=useRef<AbortController|null>(null)
+  useEffect(()=>()=>exportController.current?.abort(),[actorScope,selectedProject])
+  const [apiError,setApiError]=useState(''),[exportBusy,setExportBusy]=useState(false),[detailError,setDetailError]=useState('')
+  const emptyProject:ProjectConfig={id:selectedProject,code:projects.find(p=>p.id===selectedProject)?.code||'Chọn dự án',name:projects.find(p=>p.id===selectedProject)?.name||'Chưa chọn dự án',shortName:'',route:'',chainage:'Chưa có lý trình',serverNode:'Chưa có dữ liệu',met01_ratio:NaN,met01_change:'Chưa có dữ liệu chỉ số',met01_completed_text:'Chưa nối nguồn chỉ số SLA',met01_target:NaN,met04_mtta:NaN,met04_change:'Chưa có dữ liệu chỉ số',met04_sup_days:NaN,met04_pm_days:NaN,met08_recurrence:NaN,met08_status:'BÌNH THƯỜNG',met08_note:'Chưa nối nguồn tỷ lệ tái phát',met11_integrity:NaN,met11_items_text:'Đối chiếu từng manifest và nội dung tải xuống'}
+  const currentProject=projectsConfig[selectedProject]||emptyProject
+  const record=(job:ExportJob,manifest?:ExportManifest):ExportRecord=>({id:job.id,code:job.id,project_id:job.projectId,project_code:projects.find(p=>p.id===job.projectId)?.code||job.projectId,quarter:`Q${Math.floor(new Date(job.createdAt).getMonth()/3)+1}_${new Date(job.createdAt).getFullYear()}`,track:'ALL',type:job.kind==='DOSSIER'?'Hồ sơ kỹ thuật':'Dữ liệu huấn luyện',type_badge_color:'',type_category_name:job.kind,dossier_no:job.snapshotId||'Đọc chi tiết để lấy snapshot',scope_display:job.projectId,as_of_time:job.createdAt,as_of_timestamp:Date.parse(job.createdAt),file_size:'Đọc nội dung để xác định',file_size_mb:NaN,format_display:job.format,status:job.status==='SUCCEEDED'?'COMPLETED':job.status==='FAILED'?'FAILED':'PROCESSING',error_message:job.errorCode||undefined,hash_sha256:job.snapshotHash,total_items:manifest?.files.length,server:job,manifest})
 
   const [activeJob, setActiveJob] = useState<AsyncExportJob | null>(null)
   const [exportRecords, setExportRecords] = useState<ExportRecord[]>([])
@@ -35,7 +39,7 @@ export function useRiskAnalyticsState() {
   // RPT-06 Deterioration Risks & GIS State
   const [rpt06Segments, setRpt06Segments] = useState<Rpt06RiskSegment[]>([])
   const [mainlineCoords, setMainlineCoords] = useState<[number, number][]>([])
-  const [activeSegmentId, setActiveSegmentId] = useState<string>('rpt06-ql1a-01')
+  const [activeSegmentId, setActiveSegmentId] = useState<string>('')
   const [mapLayer, setMapLayer] = useState<'satellite' | 'vector'>('satellite')
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -45,16 +49,16 @@ export function useRiskAnalyticsState() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
   const [isTimeRangeModalOpen, setIsTimeRangeModalOpen] = useState(false)
-  const [selectedRecordForDetail, setSelectedRecordForDetail] = useState<ExportRecord | null>(null)
+  const [selectedRecordForDetail, setDetailRecord] = useState<ExportRecord | null>(null)
 
   const [exportForm, setExportForm] = useState({
-    reportType: 'DOSSIER_COMPLETE',
-    scope: 'PRJ-QL1A-02',
-    asOfDate: '2026-08-25T21:45',
-    includeOriginalFiles: true,
+    reportType: 'DOSSIER',
+    scope: '',
+    asOfDate: '',
+    includeOriginalFiles: false,
     includeSha256Checksum: true,
     compressRawTiff: false,
-    format: 'ZIP_PDF'
+    format: ''
   })
 
   const showToast = useCallback((msg: string) => {
@@ -62,65 +66,16 @@ export function useRiskAnalyticsState() {
     setTimeout(() => setToastMessage(null), 3500)
   }, [])
 
-  // Load initial data from async Mock API (No localStorage!)
-  const loadData = useCallback(async () => {
-    try {
-      const [records, job, segments, mainline, projectList] = await Promise.all([
-        reportService.getExportRecords(),
-        reportService.getActiveJob(),
-        reportService.getRpt06DeteriorationRisks(selectedProject),
-        reportService.getProjectMainline(selectedProject),
-        projectService.fetchProjects()
-      ])
-      setProjects(projectList)
-      setExportRecords(records as ExportRecord[])
-      if (job) {
-        setActiveJob(job as AsyncExportJob)
-      }
-      setRpt06Segments(segments as Rpt06RiskSegment[])
-      setMainlineCoords(mainline)
-      if (segments.length > 0) {
-        setActiveSegmentId(segments[0].id)
-      }
-
-      // Xây dựng cấu hình động cho toàn bộ dự án từ projectService
-      const configMap: Record<string, ProjectConfig> = { ...PROJECTS_CONFIG }
-      projectList.forEach((p) => {
-        if (!configMap[p.id]) {
-          configMap[p.id] = {
-            id: p.id,
-            code: p.code,
-            name: p.name,
-            shortName: p.name.length > 25 ? p.code : p.name,
-            route: p.code,
-            chainage: p.stationing_text || `Km 0+000 → Km ${(p.length_km || 10).toFixed(1)}`,
-            serverNode: `Trạm giám sát ${p.code}`,
-            met01_ratio: p.warranty_passed_percent ? Math.min(95, Math.max(60, p.warranty_passed_percent)) : 78.4,
-            met01_change: '+2.5% so với kỳ trước',
-            met01_completed_text: `${Math.max(1, (p.open_defects || 0) * 3)}/${Math.max(2, (p.open_defects || 0) * 4)} khiếm khuyết xử lý đúng hạn cam kết`,
-            met01_target: 75.0,
-            met04_mtta: 3.2,
-            met04_change: '-0.8 ngày',
-            met04_sup_days: 2.1,
-            met04_pm_days: 1.1,
-            met08_recurrence: 3.8,
-            met08_status: 'ĐẠT CHUẨN',
-            met08_note: 'Mặt đường ổn định, tuân thủ TCVN 8819:2011',
-            met11_integrity: 99.8,
-            met11_items_text: '100% hồ sơ & ảnh đối soát hợp lệ'
-          }
-        }
-      })
-      setProjectsConfig(configMap)
-    } catch {
-      // Fallback
-    }
-  }, [selectedProject])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
+  useEffect(()=>{let live=true;setProjects([]);setProjectsConfig({});projectService.fetchProjects().then(rows=>{if(!live)return;setProjects(rows);setProjectsConfig(Object.fromEntries(rows.map(p=>[p.id,{...emptyProject,id:p.id,code:p.code,name:p.name,shortName:p.name,chainage:p.stationing_text||'Chưa có lý trình'}])))}).catch(e=>{if(live)setApiError(exportError(e))});return()=>{live=false}},[actorScope])
+  const loadData=useCallback(async()=>{
+    const scope=`${actorScope}:${selectedProject}`,n=++requestId.current
+    setExportRecords([]);setActiveJob(null);setApiError('');setRpt06Segments([]);setMainlineCoords([])
+    if(selectedProject==='ALL')return
+    try{const rows=await projectExportService.list(selectedProject);if(currentScope.current!==scope||requestId.current!==n)return;setExportRecords(rows.map(r=>record(r)))
+      const running=rows.find(r=>r.status==='QUEUED'||r.status==='RUNNING');if(running)setActiveJob({id:running.id,name:running.kind,progress:NaN,processedItems:NaN,totalItems:NaN,estimatedSecondsRemaining:NaN,tempSizeMb:NaN,status:'PROCESSING'})
+    }catch(e){if(currentScope.current===scope&&requestId.current===n)setApiError(exportError(e))}
+  },[actorScope,selectedProject,projects])
+  useEffect(()=>{setDetailRecord(null);setDetailError('');setIsPreviewModalOpen(false);setIsExportModalOpen(false);setExportBusy(false);void loadData()},[loadData])
   // Lắng nghe sự kiện toàn hệ thống để cập nhật danh sách dự án tức thì
   useEffect(() => {
     const handleStateChange = () => {
@@ -135,39 +90,13 @@ export function useRiskAnalyticsState() {
   // Cập nhật scope khi chọn dự án
   useEffect(() => {
     if (selectedProject && selectedProject !== 'ALL') {
-      const code = projectsConfig[selectedProject]?.code || selectedProject.toUpperCase()
+      const code = selectedProject
       setExportForm((prev) => ({ ...prev, scope: code }))
     }
   }, [selectedProject, projectsConfig])
 
-  // Background worker progress simulation
-  useEffect(() => {
-    if (!activeJob || activeJob.status !== 'PROCESSING') return
-    const interval = setInterval(() => {
-      setActiveJob((prev) => {
-        if (!prev || prev.status !== 'PROCESSING') return prev
-        if (prev.progress >= 98) {
-          showToast(`Tác vụ #${prev.id} đã hoàn tất đóng gói hồ sơ!`)
-          return {
-            ...prev,
-            progress: 100,
-            status: 'COMPLETED',
-            estimatedSecondsRemaining: 0
-          }
-        }
-        const nextProgress = Math.min(prev.progress + 3, 98)
-        const nextItems = Math.min(Math.floor((nextProgress / 100) * prev.totalItems), prev.totalItems)
-        const nextTime = Math.max(Math.round(((100 - nextProgress) / 100) * 20), 2)
-        return {
-          ...prev,
-          progress: nextProgress,
-          processedItems: nextItems,
-          estimatedSecondsRemaining: nextTime
-        }
-      })
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [activeJob?.status, showToast])
+  // Only GET refreshes existing jobs; no timer creates, retries or invents progress.
+  useEffect(()=>{if(!activeJob||activeJob.status!=='PROCESSING')return;const timer=setInterval(()=>{void loadData()},10000);return()=>clearInterval(timer)},[activeJob?.id,activeJob?.status,loadData])
 
   const processedRecords = useMemo(() => {
     return filterAndSortRecords(
@@ -503,58 +432,35 @@ export function useRiskAnalyticsState() {
     }
   }
 
-  const handleCreateExportJob = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsExportModalOpen(false)
-
-    try {
-      const res = await reportService.createExportJob(exportForm)
-      setActiveJob(res.job as AsyncExportJob)
-      setExportRecords((prev) => [res.record as ExportRecord, ...prev])
-      showToast(`Đã khởi tạo lệnh xuất hồ sơ (${res.job.id})!`)
-    } catch {
-      showToast('Có lỗi xảy ra khi tạo tác vụ xuất.')
-    }
+  const setSelectedRecordForDetail=async(r:ExportRecord)=>{
+    const scope=currentScope.current,n=++detailId.current;setDetailRecord(r);setDetailError('');setIsPreviewModalOpen(true)
+    try{const value=await projectExportService.manifest(r.project_id,r.id);if(currentScope.current!==scope||detailId.current!==n)return;setDetailRecord(record(value.detail,value.manifest))}catch(e){if(currentScope.current===scope&&detailId.current===n)setDetailError(exportError(e))}
   }
-
-  const handleCancelActiveJob = async () => {
-    if (!activeJob) return
-    await reportService.cancelExportJob(activeJob.id)
-    setActiveJob((prev) => (prev ? { ...prev, status: 'CANCELLED' } : null))
-    showToast(`Đã dừng tác vụ ${activeJob.id}`)
+  let held:ReturnType<typeof projectExportService.pending>=null,journalError=''
+  try{if(selectedProject!=='ALL')held=projectExportService.pending(selectedProject)}catch(e){journalError=(e as Error).message}
+  const openExport=(open:boolean)=>{
+    if(open&&selectedProject==='ALL'){setApiError('Chọn dự án cụ thể trước khi xuất hồ sơ.');return}
+    const cutoff=held?.body.to?new Date(held.body.to):null
+    const localCutoff=cutoff?`${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}T${String(cutoff.getHours()).padStart(2,'0')}:${String(cutoff.getMinutes()).padStart(2,'0')}`:''
+    if(open)setExportForm({reportType:held?.body.kind||'DOSSIER',scope:selectedProject,asOfDate:localCutoff,includeOriginalFiles:held?.body.includeOriginalFiles||false,includeSha256Checksum:true,compressRawTiff:false,format:held?.body.format||''})
+    setIsExportModalOpen(open)
   }
-
-  const handleDeleteRecord = async (id: string, code: string) => {
-    await reportService.deleteExportRecord(id)
-    setExportRecords((prev) => prev.filter((r) => r.id !== id))
-    showToast(`Đã xóa hồ sơ lưu trữ ${code}`)
+  const handleCreateExportJob=async(e:React.FormEvent)=>{
+    e.preventDefault();if(exportBusy)return;const scope=currentScope.current;setExportBusy(true);setApiError('')
+    try{if(exportForm.scope!==selectedProject)throw new Error('Dự án của yêu cầu đã thay đổi; mở lại form để xác nhận.');const input=held?.body||{kind:'DOSSIER' as const,format:exportForm.format as 'PDF'|'ZIP',includeOriginalFiles:exportForm.includeOriginalFiles,...(exportForm.asOfDate?{to:new Date(exportForm.asOfDate).toISOString()}:{})};const controller=new AbortController();exportController.current=controller;const job=await projectExportService.create(selectedProject,input,controller.signal);if(currentScope.current!==scope)return;setIsExportModalOpen(false);await loadData();if(currentScope.current===scope)showToast(`Đã GET xác nhận yêu cầu ${job.id}; trạng thái ${job.status}.`)}catch(e){if(currentScope.current===scope)setApiError(exportError(e))}finally{if(currentScope.current===scope)setExportBusy(false)}
   }
-
-  const handleRetryRecord = async (id: string) => {
-    try {
-      const updated = await reportService.retryExportRecord(id)
-      setExportRecords((prev) => prev.map((r) => (r.id === id ? (updated as ExportRecord) : r)))
-      showToast('Đã gửi yêu cầu chạy lại tiến trình xuất!')
-    } catch {
-      showToast('Có lỗi khi khởi động lại tiến trình.')
-    }
+  const handleCancelActiveJob=()=>{setApiError('Chưa có lệnh hủy export trong contract hiện tại; không thay trạng thái tác vụ.')}
+  const handleDeleteRecord=()=>{setApiError('Chưa có lệnh xóa export trong contract hiện tại; hồ sơ vẫn được giữ.')}
+  const handleRetryRecord=async(id:string)=>{const r=exportRecords.find(r=>r.id===id);if(r)await setSelectedRecordForDetail(r)}
+  const handleDownloadFile=async(id:string)=>{
+    const scope=currentScope.current;setApiError('')
+    try{const r=exportRecords.find(r=>r.id===id);if(!r)throw new Error('Chọn export từ danh mục thật; không tải theo tên file mẫu.');const content=await projectExportService.content(r.project_id,r.id);if(currentScope.current!==scope)return;const url=URL.createObjectURL(content.blob);const a=document.createElement('a');a.href=url;a.download=content.fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast(`Đã đối chiếu SHA-256 nội dung tải: ${content.checksum}`)}catch(e){if(currentScope.current===scope)setApiError(exportError(e))}
   }
-
-  const handleDownloadFile = async (filename: string) => {
-    const res = await reportService.downloadExportFile(filename)
-    showToast(`Đang tải tệp: ${res.fileName} (Chứng thực mã băm SHA-256 hợp lệ)`)
-  }
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await loadData()
-    setIsRefreshing(false)
-    showToast('Dữ liệu chỉ số KPI, bản đồ rủi ro và hàng đợi xuất đã được đồng bộ mới nhất!')
-  }
+  const handleRefresh=async()=>{setIsRefreshing(true);await loadData();setIsRefreshing(false)}
 
   const resetFilters = () => {
-    setSelectedProject('prj-ql1a-02')
-    setSelectedTimeRange('Q3_2026')
+    setSelectedProject('ALL')
+    setSelectedTimeRange('ALL')
     setSelectedTrack('ALL')
     setStatusFilter('ALL')
     setSearchQuery('')
@@ -564,6 +470,7 @@ export function useRiskAnalyticsState() {
   }
 
   return {
+    apiError,detailError,exportBusy,held,journalError,
     projects,
     projectsConfig,
     selectedProject,
@@ -586,7 +493,7 @@ export function useRiskAnalyticsState() {
     activeJob,
     exportRecords,
     isExportModalOpen,
-    setIsExportModalOpen,
+    setIsExportModalOpen:openExport,
     isPreviewModalOpen,
     setIsPreviewModalOpen,
     isTimeRangeModalOpen,

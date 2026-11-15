@@ -1,3 +1,4 @@
+import type {ExportJob,ExportManifest} from '../../../api/services/projectExportService'
 export interface ProjectConfig {
   id: string
   code: string
@@ -22,6 +23,8 @@ export interface ProjectConfig {
 }
 
 export interface ExportRecord {
+  server?:ExportJob
+  manifest?:ExportManifest
   id: string
   code: string
   project_id: string

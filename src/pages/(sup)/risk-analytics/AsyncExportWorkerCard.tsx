@@ -22,6 +22,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
   setSelectedRecordForDetail,
   setIsPreviewModalOpen
 }) => {
+  const latest=processedRecords.find(r=>r.status==='COMPLETED')
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -70,21 +71,21 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
                 Đang đóng gói hồ sơ nghiệm thu {activeJob.name}...
               </span>
               <span className="font-sansation text-[#8C6D1F] font-bold text-sm">
-                {activeJob.progress}%
+                {Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}
               </span>
             </div>
 
             <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
               <span>
-                Đã xử lý: <strong className="text-slate-800 font-semibold font-mono">{activeJob.processedItems}/{activeJob.totalItems} mục</strong>
+                Đã xử lý: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.processedItems)?activeJob.processedItems:'—'}/{Number.isFinite(activeJob.totalItems)?activeJob.totalItems:'—'} mục</strong>
               </span>
               <span className="text-slate-300">•</span>
               <span>
-                Thời gian ước tính: <strong className="text-slate-800 font-semibold font-mono">{activeJob.estimatedSecondsRemaining} giây</strong>
+                Thời gian ước tính: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.estimatedSecondsRemaining)?activeJob.estimatedSecondsRemaining:'—'} giây</strong>
               </span>
               <span className="text-slate-300">•</span>
               <span>
-                Dung lượng: <strong className="text-slate-800 font-semibold font-mono">{activeJob.tempSizeMb} MB</strong>
+                Dung lượng: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.tempSizeMb)?activeJob.tempSizeMb:'—'} MB</strong>
               </span>
             </div>
           </div>
@@ -92,15 +93,16 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
           <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#C9A227] rounded-full transition-all duration-500"
-              style={{ width: `${activeJob.progress}%` }}
+              style={{ width: `${Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}` }}
             ></div>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
             <span>
-              Ghi chú kỹ thuật: Đang ghép 48 cặp ảnh đối chứng Trước/Sau sửa chữa và biên bản nghiệm thu TCVN 8819.
+              Đọc lại trạng thái từ máy chủ; chưa có dữ liệu phần trăm hoặc thời gian hoàn tất.
             </span>
             <button
+              disabled title="Chưa có lệnh hủy export trong contract"
               onClick={handleCancelActiveJob}
               type="button"
               className="text-rose-600 hover:text-rose-800 hover:underline self-start sm:self-auto font-medium cursor-pointer"
@@ -114,17 +116,18 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
       <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
         <div className="flex items-center gap-2 text-xs text-slate-600">
           <span className="text-slate-500">Bản sao lưu gần nhất:</span>
-          <span className="font-mono font-medium text-slate-800">{currentProject.code}_Final.zip (142 MB)</span>
+          <span className="font-mono font-medium text-slate-800">{latest?`${latest.id} (${latest.format_display})`:'Chưa có export hoàn tất trong danh mục'}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleDownloadFile(`${currentProject.code}_Final.zip`)}
+            disabled={!latest}
+            onClick={() => {if(latest)handleDownloadFile(latest.id)}}
             type="button"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-medium text-xs shadow-xs transition cursor-pointer"
           >
             <span className="material-symbols-outlined text-[15px]">download</span>
-            <span>Tải gói ZIP (142 MB)</span>
+            <span>Tải hồ sơ hoàn tất</span>
           </button>
 
           <button
