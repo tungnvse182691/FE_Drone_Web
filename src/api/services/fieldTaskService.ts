@@ -2,7 +2,6 @@ import { apiClient } from '../client'
 import { FieldTask } from '../../types/domain'
 import { projectService } from './projectService'
 import { surveyService } from './surveyService'
-import { saveToStorage } from './storageHelper'
 
 /**
  * ============================================================================
@@ -403,55 +402,6 @@ export const fieldTaskService = {
     payload: FieldEvidenceReuseInput,
     rowVersion?: string
   ): Promise<void> {
-    const idempotencyKey = generateUuid()
-    const reqBody = {
-      fileId: payload.fileId,
-      sourceEvidenceId: payload.sourceEvidenceId,
-      sourceKind: payload.sourceKind,
-      expectedChecksum: payload.expectedChecksum,
-      reason: payload.reason
-    }
-
-    const formattedRowVersion = rowVersion
-      ? (rowVersion.startsWith('"') ? rowVersion : `"${rowVersion}"`)
-      : undefined
-
-    try {
-      await apiClient.post(
-        `/projects/${projectId}/field-inspection-tasks/${taskId}/evidence-reuse`,
-        reqBody,
-        {
-          headers: {
-            'Idempotency-Key': idempotencyKey,
-            ...(formattedRowVersion ? { 'If-Match': formattedRowVersion } : {})
-          }
-        }
-      )
-
-      saveToStorage(`roadguard_reused_evidence_${taskId.toLowerCase()}`, {
-        file_id: payload.fileId,
-        source_evidence_id: payload.sourceEvidenceId,
-        source_kind: payload.sourceKind,
-        checksum_sha256: payload.expectedChecksum,
-        reason: payload.reason,
-        reused_at: new Date().toISOString(),
-        photo_url: undefined
-      })
-    } catch (err: any) {
-      const respData = err?.response?.data
-      let detail = respData?.detail || respData?.title || err.message
-      const code = respData?.code || respData?.type
-
-      if (err?.response?.status === 428 || code === 'precondition_required') {
-        detail = 'Thiếu thông tin phiên bản kiểm soát tương tranh (If-Match RowVersion). Vui lòng làm mới trang và thử lại.'
-      } else if (err?.response?.status === 404) {
-        detail = 'Không tìm thấy hồ sơ nhiệm vụ hoặc file ảnh phản ánh tương ứng trong CSDL.'
-      } else if (err?.response?.status === 409 || code === 'source_not_ready') {
-        detail = 'Hồ sơ bằng chứng nguồn chưa sẵn sàng để tái sử dụng trong CSDL.'
-      }
-
-      console.error('[fieldTaskService.reuseEvidence] Lỗi từ Backend:', detail, respData)
-      throw new Error(detail)
-    }
+    throw new Error('Mở modal tái sử dụng bằng chứng, chọn ảnh nguồn thật và nhập căn cứ; caller cũ không có provenance/journal nên chưa gửi lệnh.')
   }
 }

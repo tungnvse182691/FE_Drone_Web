@@ -1,3 +1,4 @@
+import {fieldEvidenceReuseCommands,type ReuseSource} from '../../../api/services/fieldEvidenceReuseCommands'
 import {fieldCreateCommands,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
 import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
 import type {TriageGeometryPins} from '../../../api/services/triageGeometryService'
@@ -9,7 +10,6 @@ import { FieldTask, Project, HubProject } from '../../../types/domain'
 import { SafeImage } from '../../../components/common/SafeImage'
 import {
   fieldTaskService,
-  FieldEvidenceReuseInput
 } from '../../../api/services/fieldTaskService'
 import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModal'
 import { ImageComparisonSlider } from '../../../components/common/ImageComparisonSlider'
@@ -114,11 +114,26 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Modal Tái sử dụng ảnh phản ánh (API-084 Evidence Reuse)
   const [isReuseModalOpen, setIsReuseModalOpen] = useState(false)
   const [taskForReuse, setTaskForReuse] = useState<FieldTask | null>(null)
-  const [reuseSourceKind] = useState<'REPORTER'>('REPORTER')
-  const [reuseReason, setReuseReason] = useState<string>(
-    'Ảnh người dân phản ánh có góc chụp rõ nét, tọa độ GPS trùng khớp với vị trí khiếm khuyết (< 1.5m), đủ điều kiện kỹ thuật làm bằng chứng đối chứng trước thi công.'
-  )
-  const [isSubmittingReuse, setIsSubmittingReuse] = useState(false)
+  const [reuseReason,setReuseReason]=useState('')
+  const [isSubmittingReuse,setIsSubmittingReuse]=useState(false)
+  const [reuseSources,setReuseSources]=useState<ReuseSource[]>([]),[reuseChoice,setReuseChoice]=useState(''),[reuseError,setReuseError]=useState(''),[reuseLoading,setReuseLoading]=useState(false)
+  const [reusePhoto,setReusePhoto]=useState<{url:string;checksum:string}|null>(null)
+  const [reuseResult,setReuseResult]=useState<Awaited<ReturnType<typeof fieldEvidenceReuseCommands.result>>>(null)
+  const reuseScope=`${isReuseModalOpen}:${taskForReuse?.project_id}:${taskForReuse?.id}`
+  const latestReuse=React.useRef(reuseScope);latestReuse.current=reuseScope
+  let reuseHeld:ReturnType<typeof fieldEvidenceReuseCommands.pending>=null,reuseJournalError=''
+  try{if(!isSupervisor&&taskForReuse?.project_id)reuseHeld=fieldEvidenceReuseCommands.pending(taskForReuse.project_id,taskForReuse.id)}catch(e){reuseJournalError=(e as Error).message}
+  const reuseSource=reuseSources.find(r=>r.evidence.evidenceId===reuseChoice)
+  React.useEffect(()=>{const c=new AbortController();setReuseSources([]);setReuseChoice('');setReuseError('');setReusePhoto(null);setReuseResult(null);setReuseLoading(false)
+    if(isReuseModalOpen&&!isSupervisor&&taskForReuse?.project_id){setReuseLoading(true)
+      fieldEvidenceReuseCommands.sources(taskForReuse.project_id,taskForReuse.id,c.signal).then(rows=>{if(!c.signal.aborted)setReuseSources(rows)}).catch(e=>{if(!c.signal.aborted)setReuseError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)}).finally(()=>{if(!c.signal.aborted)setReuseLoading(false)})
+      fieldEvidenceReuseCommands.result(taskForReuse.project_id,taskForReuse.id).then(result=>{if(!c.signal.aborted)setReuseResult(result)}).catch(e=>{if(!c.signal.aborted)setReuseError(e.message)})
+    }return()=>c.abort()
+  },[reuseScope,isSupervisor])
+  React.useEffect(()=>{const c=new AbortController();let url='';setReusePhoto(null)
+    if(reuseSource)fieldEvidenceReuseCommands.image(reuseSource,c.signal).then(image=>{if(!c.signal.aborted){url=URL.createObjectURL(image.blob);setReusePhoto({url,checksum:image.checksum})}}).catch(e=>{if(!c.signal.aborted)setReuseError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)})
+    return()=>{c.abort();if(url)URL.revokeObjectURL(url)}
+  },[reuseScope,reuseChoice])
 
   // Đếm theo từng trạng thái phục vụ hiển thị số lượng trên Tab lọc
   const counts = useMemo(() => {
@@ -233,44 +248,21 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Mở modal phê duyệt tái sử dụng ảnh phản ánh (API-084)
   const handleOpenReuseModal = (task: FieldTask) => {
     setTaskForReuse(task)
-    if (task.reused_evidence) {
-      setReuseReason(task.reused_evidence.reason)
-    } else {
-      setReuseReason(
-        'Ảnh người dân phản ánh có góc chụp rõ nét, tọa độ GPS trùng khớp với vị trí khiếm khuyết (< 1.5m), đủ điều kiện kỹ thuật làm bằng chứng đối chứng trước thi công.'
-      )
-    }
+    setReuseReason('')
     setIsReuseModalOpen(true)
   }
 
   // Xác nhận gọi API-084 Tái sử dụng ảnh phản ánh
   const handleConfirmReuseEvidence = async () => {
-    if (!taskForReuse) return
-    setIsSubmittingReuse(true)
+    if (!taskForReuse?.project_id||isSupervisor||isSubmittingReuse) return
+    const scope=reuseScope,context=createContext.current
+    setIsSubmittingReuse(true);setReuseError('')
     try {
-      const pId = taskForReuse.project_id || (selectedProjectId !== 'ALL' ? selectedProjectId : projects[0]?.id)
-      if (!pId) throw new Error('Không xác định được dự án của phiếu đo đạc.')
-      // Bằng chứng và file ảnh gốc lưu trong CSDL Backend Candidate3
-      const payload: FieldEvidenceReuseInput = {
-        fileId: 'b58915d3-bc67-4056-a62a-003576faf286',
-        sourceEvidenceId: '3cb5d47c-57a7-4e29-936d-5c5be26d7806',
-        sourceKind: 'REPORTER',
-        expectedChecksum: '6b1048f8a6d40bac0b2954c18fefa40c4ea7a96120fc2e54b7317c0e43c2bbec',
-        reason: reuseReason.trim()
-      }
-      await fieldTaskService.reuseEvidence(pId, taskForReuse.id, payload, taskForReuse.version || undefined)
-      await onRefreshTasks()
-      setIsReuseModalOpen(false)
-      notify(
-        `✅ Đã phê duyệt tái sử dụng ảnh phản ánh Người dân (API-084) cho phiếu [${taskForReuse.code}]!`,
-        'success'
-      )
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Lỗi khi gọi API tái sử dụng ảnh'
-      notify(`❌ Lỗi: ${errMsg}`, 'error')
-    } finally {
-      setIsSubmittingReuse(false)
-    }
+      const result=await fieldEvidenceReuseCommands.request(taskForReuse.project_id,taskForReuse.id,reuseHeld?null:reuseSource||null,reuseHeld?.body.expectedChecksum||reusePhoto?.checksum||'',reuseHeld?.body.reason||reuseReason,reuseHeld?.version||taskForReuse.version||'')
+      if(latestReuse.current!==scope||!context.active)return
+      setReuseResult(result);await onRefreshTasks();if(latestReuse.current===scope&&context.active)notify('Đã đối chiếu receipt và GET bằng chứng tái sử dụng.','success')
+    } catch(e:any){if(latestReuse.current===scope&&context.active)setReuseError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)}
+    finally{if(latestReuse.current===scope&&context.active)setIsSubmittingReuse(false)}
   }
 
   return (
@@ -1610,6 +1602,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </button>
             </div>
 
+            {reuseLoading&&<p role="status">Đang đọc bằng chứng nguồn…</p>}
+            {(reuseError||reuseJournalError)&&<p role="alert" className="text-rose-700 text-xs">{reuseError||reuseJournalError}</p>}
+            {reuseHeld&&<p role="status" className="text-xs break-all">Giữ yêu cầu {reuseHeld.key} cho file {reuseHeld.body.fileId}; không thay body/key/version.</p>}
+            {reuseResult&&<p role="status" className="text-emerald-800 text-xs break-all">Đã GET đối chiếu file {reuseResult.receipt.fileId} · checksum {reuseResult.receipt.fileChecksum}. Receipt {reuseResult.receipt.id} · {reuseResult.receipt.reason}</p>}
+            <select aria-label="Bằng chứng Report tái sử dụng" disabled={isSubmittingReuse||!!reuseHeld||!!reuseResult} value={reuseChoice} onChange={e=>{setReuseChoice(e.target.value);setReuseError('')}} className="w-full border border-slate-200 rounded-lg p-2 text-xs"><option value="">{reuseLoading?'Đang tải bằng chứng':reuseError?'Chưa tải được bằng chứng':'Chọn bằng chứng Report'}</option>{reuseSources.map(r=><option key={r.evidence.evidenceId} value={r.evidence.evidenceId}>{r.report.reportId} • {r.evidence.evidenceId}{r.evidence.supplementId?' • Bổ sung':' • Gốc'}</option>)}</select>
+            {!reuseLoading&&!reuseError&&!reuseSources.length&&<p className="text-xs">Không có bằng chứng của Report trong dữ liệu nguồn.</p>}
             {/* Modal Body */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               {/* Cột trái: Ảnh phản ánh & Metadata GPS/EXIF */}
@@ -1619,26 +1617,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     Ảnh phản ánh hiện trường
                   </span>
                   <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                    EXIF đã xác thực
+                    Metadata từ Report
                   </span>
                 </div>
 
                 <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 w-full h-56 sm:h-64 group shadow-inner">
-                  <img
-                    src={
-                      taskForReuse.defect_photo_url ||
-                      'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
-                    }
-                    onError={(e) => {
-                      e.currentTarget.onerror = null
-                      e.currentTarget.src = 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=1200&q=80'
-                    }}
-                    alt="Ảnh phản ánh hiện trường"
-                    className="w-full h-full object-cover block"
-                  />
+                  {reusePhoto?<img src={reusePhoto.url} alt="Ảnh bằng chứng Report được phép đọc" className="w-full h-full object-cover block" />:<p className="text-slate-200 p-4">{reuseSource?'Đang đọc ảnh gốc…':'Chọn bằng chứng để xem ảnh gốc.'}</p>}
                   <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 font-semibold">
                     <Icon name="location_on" size={12} className="text-amber-400" />
-                    <span>Km {taskForReuse.chainage_km}</span>
+                    <span>{taskForReuse.chainage_km!=null?`Km ${taskForReuse.chainage_km}`:'Chưa có lý trình'}</span>
                   </div>
                 </div>
 
@@ -1647,29 +1634,29 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Tọa độ GPS:</span>
                     <span className="font-mono font-medium text-slate-800">
-                      {taskForReuse.gps_lat || 16.2458}° N, {taskForReuse.gps_lng || 108.1245}° E
+                      {reuseSource?.evidence.location?`${reuseSource.evidence.location.latitude ?? '—'}, ${reuseSource.evidence.location.longitude ?? '—'}`:'Chưa có tọa độ nguồn'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Độ lệch vị trí:</span>
-                    <span className="text-emerald-700 font-semibold">&lt; 1.5 mét (Đạt chuẩn định vị GPS)</span>
+                    <span className="text-emerald-700 font-semibold">{reuseSource?.evidence.location?.accuracyMeters!=null?`${reuseSource.evidence.location.accuracyMeters} mét`:'Chưa có độ chính xác vị trí'}</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Thiết bị ghi nhận:</span>
                     <span className="text-slate-800">
-                      {taskForReuse.exif_device || 'Thiết bị di động hiện trường'}
+                      Chưa có dữ liệu thiết bị
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Thời gian chụp:</span>
                     <span className="text-slate-800">
-                      {taskForReuse.exif_captured_at || taskForReuse.created_at || '2026-08-25 08:35:10'}
+                      {reuseSource?.evidence.capturedAt||'Chưa có thời gian chụp'}
                     </span>
                   </div>
                   <div className="pt-1 border-t border-slate-200">
                     <span className="text-slate-500 block text-[10px]">Mã băm an toàn SHA-256:</span>
                     <span className="font-mono text-[9px] text-slate-600 block truncate">
-                      8f4c28b7e21a81239c0fae31245e3ab2140c8f59d18b2f901a1c97a9f731c512
+                      {reusePhoto?.checksum||'Chưa đọc nội dung ảnh'}
                     </span>
                   </div>
                 </div>
@@ -1690,7 +1677,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-amber-800 font-medium">Vị trí:</span>
                     <span className="text-slate-700 font-medium">
-                      Km {taskForReuse.chainage_km} • {taskForReuse.lane || 'Làn cơ giới 1'}
+                      {taskForReuse.chainage_km!=null?`Km ${taskForReuse.chainage_km}`:'Chưa có lý trình'} • {taskForReuse.lane || 'Chưa có làn'}
                     </span>
                   </div>
                 </div>
@@ -1703,7 +1690,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       <span>Hồ sơ phản ánh tiếp nhận gốc:</span>
                     </span>
                     <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded text-[10px] border border-amber-200">
-                      {taskForReuse.linked_case_code || '#CAS-2026-0839'}
+                      {reuseSource?.caseId||'Chưa chọn nguồn'}
                     </span>
                   </div>
 
@@ -1711,26 +1698,24 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Người dân phản ánh:</span>
                       <span className="font-semibold text-slate-900">
-                        {taskForReuse.reporter_name?.includes('(')
-                          ? taskForReuse.reporter_name
-                          : `${taskForReuse.reporter_name || 'Nguyễn Văn A'} (${taskForReuse.reporter_phone || '0905.123.456'})`}
+                        {reuseSource?.report.reporterDisplayName||'Chưa có thông tin nguồn'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Kênh tiếp nhận:</span>
                       <span className="text-slate-800 font-medium flex items-center gap-1">
                         <Icon name="smartphone" size={13} className="text-emerald-600" />
-                        <span>Ứng dụng di động phản ánh</span>
+                        <span>Report được phép đọc</span>
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Thời gian tiếp nhận:</span>
-                      <span className="font-mono text-slate-800">21:30, 25/08/2026</span>
+                      <span className="font-mono text-slate-800">{reuseSource?.report.receivedAt||'Chưa có thời gian tiếp nhận'}</span>
                     </div>
                     <div className="pt-1">
                       <span className="text-slate-500 block text-[10px]">Nội dung phản ánh:</span>
                       <p className="italic text-slate-800 bg-slate-50 p-2.5 rounded border border-slate-200 text-[11px] mt-0.5">
-                        "{taskForReuse.report_description || 'Vỡ cạnh mép tấm BTXM lân cận, xe máy va quẹt gồ ghề nguy hiểm.'}"
+                        "{reuseSource?.report.description||'Chưa có nội dung nguồn'}"
                       </p>
                     </div>
                   </div>
@@ -1742,12 +1727,14 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     <label className="font-medium text-slate-700">
                       Lý do phê duyệt của Chỉ huy trưởng <span className="text-rose-500">*</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">Tối đa 1000 ký tự</span>
+                    <span className="text-[10px] text-slate-400">Tối đa 2000 ký tự</span>
                   </div>
 
                   <textarea
                     rows={4}
-                    value={reuseReason}
+                    value={reuseHeld?.body.reason||reuseReason}
+                    maxLength={2000}
+                    disabled={!!reuseHeld||isSubmittingReuse||!!reuseResult}
                     onChange={(e) => setReuseReason(e.target.value)}
                     placeholder="Nhập căn cứ thẩm định của Chỉ huy trưởng..."
                     className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:border-[#C9A227] focus:bg-white transition-colors"
@@ -1775,7 +1762,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <button
                     type="button"
                     onClick={handleConfirmReuseEvidence}
-                    disabled={isSubmittingReuse || !reuseReason.trim()}
+                    disabled={isSubmittingReuse||!!reuseResult||!!reuseJournalError||!reuseHeld&&(!reuseReason.trim()||!reusePhoto||!reuseSource)}
                     className="px-4 py-1.5 text-xs font-semibold bg-[#C9A227] hover:bg-[#b08d20] disabled:bg-slate-300 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                   >
                     {isSubmittingReuse ? (
@@ -1786,7 +1773,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     ) : (
                       <>
                         <Icon name="check" size={14} />
-                        <span>Xác nhận tái sử dụng ảnh</span>
+                        <span>{reuseHeld?.received?'Đọc lại bằng chứng đã phê duyệt':reuseHeld?'Đối chiếu đúng yêu cầu đang chờ':'Xác nhận tái sử dụng ảnh'}</span>
                       </>
                     )}
                   </button>
