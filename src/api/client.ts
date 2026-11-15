@@ -1,9 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig, CanceledError } from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { devFileBearerEnabled, devFileBearerEndpoint, devFileAuthorization } from './devFileBearer'
 
 interface WebRequestConfig extends InternalAxiosRequestConfig {
   webEpoch?: number
   webRetried?: boolean
+  devFileBearer?: boolean
 }
 
 export const apiClient = axios.create({
@@ -22,12 +24,14 @@ function current(config: WebRequestConfig): boolean {
 }
 
 apiClient.interceptors.request.use(async (request: WebRequestConfig) => {
-  // This shared Web client never borrows a Bearer credential, including legacy callers.
+  // Ignore caller-supplied credentials; transport is selected by an explicit dev endpoint allowlist.
   request.headers.delete('Authorization')
   if (isAuthRequest(request.url)) return request
   const state = useAuthStore.getState()
   request.webEpoch ??= state.authEpoch
   if (!current(request)) throw new CanceledError('Phiên Web đã thay đổi hoặc chưa sẵn sàng.')
+  request.devFileBearer=devFileBearerEnabled() && devFileBearerEndpoint(request.method || 'get',request.url || '',request.baseURL)
+  if(request.devFileBearer){request.headers.set('Authorization',devFileAuthorization({id:state.user!.id,role:state.user!.role,epoch:state.authEpoch}));request.headers.delete('X-CSRF-TOKEN');request.withCredentials=false;return request}
   const mutation = !['get', 'head', 'options'].includes((request.method || 'get').toLowerCase())
   if (mutation) {
     request.headers['X-CSRF-TOKEN'] = await state.ensureCsrfToken()
@@ -39,14 +43,17 @@ apiClient.interceptors.request.use(async (request: WebRequestConfig) => {
 apiClient.interceptors.response.use(
   response => {
     const config = response.config as WebRequestConfig
+    config.headers.delete('Authorization')
     if (!isAuthRequest(config.url) && !current(config)) throw new CanceledError('Bỏ phản hồi của phiên Web cũ.')
     return response
   },
   async (error: AxiosError) => {
     const request = error.config as WebRequestConfig | undefined
+    request?.headers?.delete('Authorization')
     // Bootstrap/login/renew/logout handle their own outcome. Never recurse on 401.
     if (!request || isAuthRequest(request.url)) throw error
     if (!current(request)) throw new CanceledError('Bỏ lỗi của phiên Web cũ.')
+    if(request.devFileBearer)throw error // Never retry a file request or switch transport after 401/403.
     if (error.response?.status !== 401) throw error
     if (request.webRetried) {
       error.message = `API ${request.url} từ chối xác thực dù phiên Web hợp lệ. Cần kiểm tra cookie eligibility/quyền backend; không chuyển sang Bearer.`

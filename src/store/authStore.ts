@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { RoleCode } from '../types/enums'
 import { User } from '../types/domain'
+import { clearDevFileBearer, prepareDevFileBearer } from '../api/devFileBearer'
 import { fetchCsrfToken, loginApi, logoutApi, getSessionApi, renewSessionApi, SessionResponse, webLoginErrorMessage, webSessionErrorMessage } from '../api/auth'
 
 interface AuthState {
@@ -102,6 +103,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const session = await getSessionApi()
         assertEpoch(epoch)
         get().setSession(session)
+        if(!get().mustChangePassword){const user=get().user!;await prepareDevFileBearer(email,password,{id:user.id,role:user.role,epoch},()=>{const state=get();return state.user && state.isAuthenticated && state.authEpoch===epoch ? {id:state.user.id,role:state.user.role,epoch:state.authEpoch}:null});assertEpoch(epoch)}
         set({ csrfToken: null })
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('rg_web_logged_out')
         sessionEvents?.postMessage('invalidate')
@@ -209,6 +211,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateUser: data => set(state => ({ user: state.user ? { ...state.user, ...data } : null })),
 }))
+
+useAuthStore.subscribe((state,previous)=>{if(state.authEpoch!==previous.authEpoch || state.user?.id!==previous.user?.id || state.user?.role!==previous.user?.role || !state.isAuthenticated)clearDevFileBearer()})
 
 if (sessionEvents) sessionEvents.onmessage = event => {
   if (event.data === 'invalidate') useAuthStore.getState().expireSession('Phiên đã thay đổi ở tab khác. Vui lòng đăng nhập lại.')
