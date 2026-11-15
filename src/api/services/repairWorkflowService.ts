@@ -15,6 +15,17 @@ export interface RepairDraft {
   fromMeters: number; toMeters: number; offsetFromMeters: number; offsetToMeters: number
   reason: string; repairPlan: string; checklistVersion: string
 }
+export interface RepairEligibility {
+  eligible: boolean; itemId: string; version: string; policyState: string
+  missingReasons: string[]; originalVerifiedStart?: string | null; executionExpiresAt?: string | null
+  rules: Array<{code: string; unit: string; minimum: number; maximum: number}>
+}
+export interface RoadCoverage {
+  projectId: string; version: string
+  scopes: Array<{obligationId: string; roadSectionId: string; from: number; to: number; offsetFrom: number; offsetTo: number}>
+  sources: Array<{kind: string; id: string; from?: string; to?: string; provenance?: string}>
+  history: Array<{id: string; applicableFromUtc: string; applicableToUtc: string; confirmedAtUtc: string; reason?: string; provenance?: string}>
+}
 interface Creation {
   input: RepairDraft; createKey: string; proposeKey: string
   createBody: unknown; version: string; packageReceived?: boolean
@@ -35,6 +46,16 @@ function validate(row: RepairItem, p: string, id?: string) {
   return row
 }
 export const repairWorkflowService = {
+  async coverage(p: string, signal?: AbortSignal) {
+    const s = identity(), r = await apiClient.get<RoadCoverage>(`/projects/${p}/road-coverage`, {signal}); active(s, signal)
+    if (r.data?.projectId !== p || !Array.isArray(r.data.scopes) || !Array.isArray(r.data.sources) || !Array.isArray(r.data.history) || !r.data.version || r.headers?.etag !== `"${r.data.version}"`) throw new Error('Nguồn độ phủ sai dự án/cấu trúc/ETag.')
+    return r.data
+  },
+  async eligibility(p: string, pkg: string, id: string, signal?: AbortSignal) {
+    const s = identity(), r = await apiClient.get<RepairEligibility>(`/projects/${p}/repair-packages/${pkg}/items/${id}/eligibility`, {signal}); active(s, signal)
+    if (r.data?.itemId !== id || typeof r.data.eligible !== 'boolean' || !Array.isArray(r.data.missingReasons) || !Array.isArray(r.data.rules) || !r.data.version || r.headers?.etag !== `"${r.data.version}"`) throw new Error('Nguồn đủ điều kiện không khớp hạng mục/ETag.')
+    return r.data
+  },
   async defects(p: string, signal?: AbortSignal) {
     const s = identity(), rows: Array<{id: string; projectId: string; defectTypeCode?: string; status?: string; roadSectionVersionId?: string; version: string}> = []
     let cursor: string | undefined

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { projectService } from '../../api/services/projectService'
-import { repairWorkflowService as service, type RepairPackage, type RepairItem, type RepairHistory } from '../../api/services/repairWorkflowService'
+import { repairWorkflowService as service, type RepairPackage, type RepairItem, type RepairHistory, type RepairEligibility, type RoadCoverage } from '../../api/services/repairWorkflowService'
 import { exportError } from '../../api/services/projectExportService'
 import { CreateRepairForm } from './CreateRepairForm'
 
@@ -19,6 +19,13 @@ export function RepairWorkflowPanel({ acceptance = false, fastTrack = false, pac
   const [reason, setReason] = useState(''), [busy, setBusy] = useState(false), [notice, setNotice] = useState('')
   const [pendingAction, setPendingAction] = useState<'approve' | 'final-confirmation' | null>(null)
   const [creating, setCreating] = useState(false)
+  const [coverage, setCoverage] = useState<RoadCoverage | null>(null), [coverageError, setCoverageError] = useState('')
+  const [eligibility, setEligibility] = useState<RepairEligibility | null>(null), [eligibilityError, setEligibilityError] = useState('')
+  useEffect(() => {
+    const c = new AbortController(); setCoverage(null); setCoverageError('')
+    if (fastTrack && project) service.coverage(project, c.signal).then(data => {if (!c.signal.aborted) setCoverage(data)}).catch(e => {if (!c.signal.aborted) setCoverageError(exportError(e))})
+    return () => c.abort()
+  }, [fastTrack, project, revision, epoch, role])
   useEffect(() => {
     let current = true
     setProjects([]); setProject(''); setPackages([]); setSelected(null)
@@ -39,6 +46,7 @@ export function RepairWorkflowPanel({ acceptance = false, fastTrack = false, pac
   useEffect(() => {
     const c = new AbortController()
     setHistory(null); setHistoryError(''); setReason(''); setPendingAction(null)
+    setEligibility(null); setEligibilityError('')
     if (selected) {
       try {
         for (const action of ['approve', 'final-confirmation'] as const) {
@@ -47,6 +55,7 @@ export function RepairWorkflowPanel({ acceptance = false, fastTrack = false, pac
         }
       } catch (e) { setHistoryError(exportError(e)) }
       service.history(project, selected.pkg, selected.item.id, c.signal).then(data => { if (!c.signal.aborted) setHistory(data) }).catch(e => { if (!c.signal.aborted) setHistoryError(exportError(e)) })
+      if (selected.item.mode === 'FastTrack') service.eligibility(project, selected.pkg, selected.item.id, c.signal).then(data => {if (!c.signal.aborted) setEligibility(data)}).catch(e => {if (!c.signal.aborted) setEligibilityError(exportError(e))})
     }
     return () => c.abort()
   }, [selected, project, epoch, role])
@@ -74,6 +83,16 @@ export function RepairWorkflowPanel({ acceptance = false, fastTrack = false, pac
       {acceptance && <p>PM rà soát ACCEPT/SUPPLEMENT sau khi Crew nộp bằng chứng thật. NORMAL do Giám sát xác nhận cuối; Fast Track do PM xác nhận cuối. Chưa có nguồn Crew hợp lệ thì không thể đi tiếp.</p>}
       {fastTrack && <p>Chỉ hiển thị hạng mục Fast Track đã có; không tự kết luận đủ điều kiện từ mức độ hư hỏng. Chính sách và độ phủ cần nguồn đã xác minh; không dùng cấu hình hoặc phạm vi mặc định.</p>}
     </div>
+    {fastTrack && <section className="bg-white border border-slate-200 rounded-[20px] p-5 space-y-3"><h2 className="font-bold text-slate-900">Nguồn độ phủ tuyến</h2>
+      {coverageError && <p role="alert" className="text-red-800 text-sm">{coverageError}</p>}
+      {coverage && <><p className="text-sm">{coverage.scopes.length} phạm vi nghĩa vụ · {coverage.sources.length} nguồn căn cứ · {coverage.history.length} lần xác nhận</p>
+        {coverage.sources.map((s,i) => <p key={`${s.id}:${i}`} className="text-sm text-amber-900">{s.kind === 'HANDOVER' ? 'Tài liệu bàn giao' : s.kind === 'WARRANTY' ? 'Căn cứ bảo hành' : s.kind === 'MAINTENANCE_BASIS' ? 'Cơ sở bảo trì' : 'Căn cứ từ nguồn'} · {s.provenance === 'SOURCE_NOT_EXTERNALLY_VERIFIED' ? 'Chưa được xác minh từ nguồn bên ngoài' : s.provenance === 'TEST_ONLY' ? 'Chỉ dùng kiểm thử' : 'Cần đối chiếu hồ sơ nguồn trước khi xác nhận'}</p>)}
+        {coverage.scopes.map((s,i) => <p key={`${s.obligationId}:${i}`} className="border rounded-xl p-3 text-sm">Phạm vi {i+1}: {s.from.toLocaleString('vi-VN')}–{s.to.toLocaleString('vi-VN')} m · Độ lệch {s.offsetFrom.toLocaleString('vi-VN')}–{s.offsetTo.toLocaleString('vi-VN')} m</p>)}
+        {!coverage.history.length && <p className="text-sm text-slate-500">Chưa có xác nhận độ phủ; không tự điền tài liệu hoặc hạn bảo hành.</p>}
+        {coverage.history.map(h => <div key={h.id} className="border rounded-xl p-3 text-sm"><p>Xác nhận: {new Date(h.confirmedAtUtc).toLocaleString('vi-VN')}</p><p>Hiệu lực: {new Date(h.applicableFromUtc).toLocaleDateString('vi-VN')}–{new Date(h.applicableToUtc).toLocaleDateString('vi-VN')}</p><p>{h.reason || 'Nguồn chưa có lý do riêng.'}</p>{h.provenance === 'TEST_ONLY' && <p className="text-amber-800">Nguồn được Backend đánh dấu chỉ dùng kiểm thử.</p>}</div>)}
+        <p className="text-xs text-slate-500">Chưa nối thao tác xác nhận độ phủ và tạo/xuất bản chính sách. API chính sách cần reference bản dự thảo/phiên bản cụ thể; danh mục hiện chưa cung cấp reference chính sách đang áp dụng.</p>
+      </>}
+    </section>}
     {role === 'PROJECT_MANAGER' && !acceptance && !fastTrack && project && <button onClick={() => setCreating(v => !v)} className="border border-[#C9A227] text-[#8C6D1F] rounded-xl px-4 py-2 text-sm">{creating ? 'Đóng form tạo gói' : 'Lập gói sửa chữa'}</button>}
     {creating && role === 'PROJECT_MANAGER' && !acceptance && !fastTrack && project && <CreateRepairForm key={`${epoch}:${project}`} project={project} onCreated={() => {setCreating(false); setRevision(n => n+1); setNotice('Đã đọc lại gói và hạng mục đề xuất từ Backend.')}} />}
     {notice && <p role="status" className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm">{notice}</p>}
@@ -88,6 +107,8 @@ export function RepairWorkflowPanel({ acceptance = false, fastTrack = false, pac
       <div className="flex justify-between"><h2 className="font-bold text-lg">Hồ sơ hạng mục</h2><button disabled={busy} onClick={() => setSelected(null)} className="border rounded-lg px-3 py-1">Đóng</button></div>
       <p className="text-sm">{states[currentItem?.state || ''] || currentItem?.state} · {results[currentItem?.result || ''] || currentItem?.result}</p>
       {historyError && <p role="alert" className="text-red-800 bg-red-50 rounded-xl p-3 text-sm">{historyError}</p>}
+      {eligibilityError && <p role="alert" className="text-red-800 bg-red-50 rounded-xl p-3 text-sm">{eligibilityError}</p>}
+      {eligibility && <section className="border rounded-xl p-4 space-y-2 text-sm"><h3 className="font-bold">Điều kiện xử lý nhanh theo nguồn Backend</h3><p>{eligibility.eligible ? 'Đủ điều kiện tại thời điểm đọc' : 'Chưa đủ điều kiện tại thời điểm đọc'}</p>{eligibility.missingReasons.map(r => <p key={r} className="text-amber-800">Lý do từ nguồn: {r}</p>)}{eligibility.rules.map(r => <p key={r.code}>{r.code}: {r.minimum}–{r.maximum} {r.unit}</p>)}{eligibility.executionExpiresAt && <p>Hạn thực hiện: {new Date(eligibility.executionExpiresAt).toLocaleString('vi-VN')}</p>}</section>}
       {!history && !historyError && <p>Đang đọc lịch sử…</p>}
       {history && <><h3 className="font-semibold">Quyết định đã ghi nhận</h3>{!history.decisions.length && <p className="text-sm text-slate-500">Chưa có quyết định.</p>}{history.decisions.map(d => <div key={d.id} className="border rounded-xl p-3 text-sm"><p>{new Date(d.at).toLocaleString('vi-VN')} · {d.role === 'SUPERVISOR' ? 'Giám sát' : d.role === 'PROJECT_MANAGER' ? 'Chỉ huy trưởng' : d.role}</p><p>{results[d.result] || d.result}</p><p>{d.reason}</p></div>)}
         <h3 className="font-semibold">Lịch sử thi công và bằng chứng</h3>{!history.attempts.length && <p className="text-sm text-slate-500">Chưa có lần thi công được nộp. Không có ảnh Trước/Sau hoặc số đo để đối chiếu.</p>}{history.attempts.map((a, i) => <div key={a.id} className="border rounded-xl p-3 text-sm"><b>Lần thi công {i + 1}</b><p>{a.performed ? 'Đã thi công' : a.unperformedReason || 'Chưa thi công'}</p><p>{a.startedAt ? new Date(a.startedAt).toLocaleString('vi-VN') : 'Chưa có giờ bắt đầu'} → {a.finishedAt ? new Date(a.finishedAt).toLocaleString('vi-VN') : 'Chưa có giờ kết thúc'}</p><p>{a.evidence.length} bằng chứng; {a.evidence.filter(e => e.verified).length} đã xác minh.</p><p className="text-amber-800">Chưa nối trình xem ảnh/bản đo từ nguồn này; cần kiểm tra đủ bằng chứng trước khi xác nhận.</p></div>)}
