@@ -42,6 +42,7 @@ import { SystemControl } from './pages/(sup)/SystemControl'
 import { PersonnelManagement } from './pages/(sup)/PersonnelManagement'
 import { ProfilePage } from './pages/(pm)/ProfilePage'
 
+import { FastTrackWorkspace } from './pages/(pm)/FastTrackWorkspace'
 import { RepairWorkflowPanel } from './components/repair/RepairWorkflowPanel'
 
 function RepairDetailRoute({ acceptance = false }: { acceptance?: boolean }) {
@@ -106,8 +107,8 @@ export const App: React.FC = () => {
             <Route path="field-tasks" element={<FieldTasks />} />
             <Route path="conflicts" element={<OfflineConflicts />} />
             <Route path="conflict-center" element={<OfflineConflicts />} />
-            <Route path="fast-track" element={<RepairWorkflowPanel fastTrack />} />
-            <Route path="dispatch" element={<RepairWorkflowPanel fastTrack />} />
+            <Route path="fast-track" element={<FastTrackWorkspace />} />
+            <Route path="dispatch" element={<FastTrackWorkspace />} />
             <Route path="proposals" element={<RepairWorkflowPanel />} />
             <Route path="proposals/:id" element={<RepairDetailRoute />} />
             <Route path="work-packages" element={<RepairWorkflowPanel />} />
@@ -153,8 +154,8 @@ export const App: React.FC = () => {
             <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
             <Route path="cases" element={<AIReviewInbox />} />
             <Route path="ai-inbox" element={<AIReviewInbox />} />
-            <Route path="fast-track" element={<RepairWorkflowPanel fastTrack />} />
-            <Route path="dispatch" element={<RepairWorkflowPanel fastTrack />} />
+            <Route path="fast-track" element={<FastTrackWorkspace />} />
+            <Route path="dispatch" element={<FastTrackWorkspace />} />
             <Route path="field-tasks" element={<FieldTasks />} />
             <Route path="conflicts" element={<OfflineConflicts />} />
             <Route path="conflict-center" element={<OfflineConflicts />} />
