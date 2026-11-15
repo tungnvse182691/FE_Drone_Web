@@ -33,5 +33,6 @@ await test('package receipt persists across proposal failure and later retry doe
  const row={id:'d',projectId:'p'},input={fromMeters:3,toMeters:4,offsetFromMeters:0,offsetToMeters:1,segmentSetId:'set',layoutRevisionId:null,slabId:null,repairPlan:'plan',checklistVersion:'c',reason:'test'};
  await assert.rejects(service.prepareItem(row,input),/timeout/);fail=false;await service.prepareItem(row,input);assert.equal(created,1);assert.equal(proposed,2)
 })
+await test('creation receipt is retained until pipeline storage; reopening published draft uses only GETs',async()=>{const s=setup();const result=await s.journal.fastTrackCommand('p','policy-create','/draft',{reason:'a'},async()=>undefined,async()=> 'read');assert.equal(result,'read');assert.ok(s.journal.fastTrackPending('p','policy-create').receipt);s.api.get=async path=>{const draft=path.includes('/drafts/');return {data:{id:draft?'draft':'revision',projectId:'p',state:'PUBLISHED',publishedRevisionId:'revision',measurements:[],version:'v'},headers:{etag:'"v"'}}};const row=await s.service.publishPolicy('p','draft','reason');assert.equal(row.id,'revision');assert.equal(s.posts.length,1)})
 console.log(count+' Fast Track groups PASS; no runtime writes')
 })().catch(e=>{console.error(e);process.exitCode=1})

@@ -28,7 +28,7 @@ export async function fastTrackCommand<T>(project: string, operation: string, pa
   try {
     // A receipt always reconciles by GET, regardless of edits made after reload.
     if (held?.receipt) {
-      const result = await readback(held.receipt); active(); if (!operation.startsWith('assign:')) localStorage.removeItem(storage); return result
+      const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$)/.test(operation)) localStorage.removeItem(storage); return result
     }
     if (held && (held.path !== path || JSON.stringify(held.body) !== JSON.stringify(body))) throw new Error('Có yêu cầu chưa rõ kết quả. Giữ nguyên nội dung cũ để đối chiếu, không tạo yêu cầu mới.')
     if (!held) {
@@ -46,6 +46,6 @@ export async function fastTrackCommand<T>(project: string, operation: string, pa
       throw error
     }
     active()
-    const result = await readback(held.receipt); active(); if (!operation.startsWith('assign:')) localStorage.removeItem(storage); return result
+    const result = await readback(held.receipt); active(); if (!/^(assign:|package:|propose:|policy-create$)/.test(operation)) localStorage.removeItem(storage); return result
   } finally { running.delete(storage) }
 }

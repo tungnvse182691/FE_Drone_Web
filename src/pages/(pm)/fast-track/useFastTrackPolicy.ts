@@ -66,7 +66,7 @@ export function useFastTrackPolicy(selectedProjectId: string, showToast: (msg: s
       const storage=fastTrackStorage(selectedProjectId,'policy-pipeline')
       let pipeline=JSON.parse(localStorage.getItem(storage)||'null')
       if(pipeline && JSON.stringify(pipeline.input)!==JSON.stringify(input))throw new Error('Đang giữ bản dự thảo trước. Kích hoạt bản đó từ lịch sử hoặc dùng lại đúng nội dung.')
-      if(!pipeline){const draft=await fastTrackService.createPolicyDraft(selectedProjectId,input);pipeline={input,draftId:draft.id};localStorage.setItem(storage,JSON.stringify(pipeline))}
+      if(!pipeline){const draft=await fastTrackService.createPolicyDraft(selectedProjectId,input);pipeline={input,draftId:draft.id};localStorage.setItem(storage,JSON.stringify(pipeline));localStorage.removeItem(fastTrackStorage(selectedProjectId,'policy-create'))}
       if(shouldPublish)await fastTrackService.publishPolicy(selectedProjectId,pipeline.draftId,formPolicyNote)
       localStorage.removeItem(storage)
       if(generation.current!==gen)return

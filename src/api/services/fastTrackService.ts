@@ -89,6 +89,10 @@ export const fastTrackService = {
     })
   },
   async publishPolicy(p: string, id: string, reason: string, _version?: string): Promise<RepairPolicyView> {
+    if(!fastTrackPending(p,`policy-publish:${id}`)) {
+      const current=await this.getPolicyDraft(p,id)
+      if(current.state==='PUBLISHED' && current.publishedRevisionId)return this.getPolicyRevision(p,current.publishedRevisionId)
+    }
     return fastTrackCommand(p,`policy-publish:${id}`,`/projects/${p}/repair-policies/drafts/${id}/publish`,{reason},async()=> {
       const row = await this.getPolicyDraft(p,id)
       if (row.state!=='DRAFT') throw new Error('Bản dự thảo không còn được phép xuất bản.')
@@ -159,7 +163,7 @@ export const fastTrackService = {
         if(!(await repairWorkflowService.packages(p)).some(r=>r.id===receipt.id))throw new Error('Chưa đọc lại được gói đã tạo.')
         return receipt
       })
-      pipeline={input,pkg};localStorage.setItem(storage,JSON.stringify(pipeline))
+      pipeline={input,pkg};localStorage.setItem(storage,JSON.stringify(pipeline));localStorage.removeItem(fastTrackStorage(p,`package:${defect.id}`))
     }
     const pkg=pipeline.pkg, base=`/projects/${p}/repair-packages/${pkg.id}/items`
     await fastTrackCommand(p,`propose:${pkg.id}`,base,{obligationId:pkg.unresolvedMandatoryObligationIds[0],mode:'FAST_TRACK',repairPlan:input.repairPlan,checklistVersion:input.checklistVersion,reason:input.reason},async()=>`"${pkg.version}"`,async receipt=> {
@@ -169,6 +173,7 @@ export const fastTrackService = {
       return item
     })
     localStorage.removeItem(storage)
+    localStorage.removeItem(fastTrackStorage(p,`propose:${pkg.id}`))
   },
   async executeDispatch(payload: DispatchPayload): Promise<{success: boolean; message: string; count: number}> {
     const p=payload.projectId, crew=(await this.getCrews(p)).find(c=>c.id===payload.crewName)
