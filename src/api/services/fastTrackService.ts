@@ -4,6 +4,7 @@ import { triageGeometryService } from './triageGeometryService'
 import { projectService } from './projectService'
 import { workflowCollection } from './workflowCollection'
 import { repairWorkflowService } from './repairWorkflowService'
+import { assertFastTrackMeasurementScope, fastTrackMeasurementScope } from './fastTrackMeasurementScope'
 import { fastTrackCommand, fastTrackStorage, fastTrackPending } from './fastTrackJournal'
 import type { PolicyThresholdConfig, DefectItem, CrewTeam, ProjectOption, RoadCoverageFact, RoadCoverageInputDto, DispatchPayload } from '../../pages/(pm)/fast-track/types'
 export type { PolicyThresholdConfig, RoadCoverageFact, RoadCoverageInputDto, ProjectOption }
@@ -184,14 +185,26 @@ export const fastTrackService = {
       const operation=`assign:${row.itemId}`
       const d=(await versioned<any>(`/projects/${p}/defects/${row.defectId}`)).data
       const {policyRevisionId,...pins}=payload.task
-      let task={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
+      const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
       const held=fastTrackPending(p,operation)
-      // Reconcile with the immutable saved assignment, even after defect versions/forms change.
-      const saved=held?.body as {task:typeof task;policyRevisionId:string;reason:string} | undefined
-      if(saved && !held?.receipt && (saved.reason!==payload.notes || saved.task.assignedToUserId!==crew.id || saved.policyRevisionId!==policyRevisionId || JSON.stringify({...saved.task,defectVersion:task.defectVersion})!==JSON.stringify(task))) throw new Error('Có lệnh giao việc chưa rõ kết quả. Giữ đúng Crew, chỉ đạo, phạm vi và hạn đã gửi để đối chiếu.')
-      if(saved)task=saved.task
+      const saved=held?.body as {task:typeof requestedTask;policyRevisionId:string;reason:string} | undefined
+      // Never migrate a pending command, including a legacy raw-text scope. Receipts remain GET-only.
+      let task=requestedTask
+      if(saved) {
+        if(!held?.receipt) {
+          assertFastTrackMeasurementScope(saved.task.measurementScope)
+          const expected=JSON.stringify({...saved.task,defectVersion:d.version})
+          if(saved.reason!==payload.notes || saved.policyRevisionId!==policyRevisionId ||
+            (expected!==JSON.stringify(requestedTask) && expected!==JSON.stringify({...requestedTask,...fastTrackMeasurementScope(pins.measurementScope,payload.notes)}))) throw new Error('Có lệnh giao việc chưa rõ kết quả. Giữ đúng Crew, chỉ đạo, phạm vi và hạn đã gửi để đối chiếu.')
+        }
+        task=saved.task
+      } else task={...requestedTask,...fastTrackMeasurementScope(pins.measurementScope,payload.notes)}
       const commandPolicy=saved?.policyRevisionId || policyRevisionId
       const commandBody=saved || {task,policyRevisionId:commandPolicy,reason:payload.notes}
+      if(!held?.receipt) {
+        assertFastTrackMeasurementScope(task.measurementScope)
+        if(task.instructions != null && (typeof task.instructions!=='string' || task.instructions.trim().length>1000)) throw new Error('Chỉ dẫn trong lệnh vượt giới hạn runtime hoặc sai kiểu. Giữ nguyên journal; chưa gửi POST.')
+      }
       await fastTrackCommand(p,operation,`${base}/assign`,commandBody,async()=> {
         const current=await versioned<any>(base), policy=await this.getPolicyRevision(p,commandPolicy)
         if (current.data.id!==row.itemId || current.data.projectId!==p || current.data.mode!=='FastTrack' || current.data.state!=='ReadyToAssign' || policy.state!=='PUBLISHED' || policy.defectTypeCode!==d.defectTypeCode) throw new Error('Hạng mục/chính sách không còn phù hợp để giao việc.')

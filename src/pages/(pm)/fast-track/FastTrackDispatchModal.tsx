@@ -40,7 +40,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
     const item=selectedItems[0]
     const held=item.itemId ? fastTrackPending(projectId,`assign:${item.itemId}`) : null
     const body=held?.body as any
-    if(body?.task){const {defectId,defectVersion,routeVersionId,purpose,assignedToUserId,instructions,...pins}=body.task;setTask({...pins,policyRevisionId:body.policyRevisionId});setSelectedDispatchCrew(assignedToUserId);setDispatchNotes(body.reason)}
+    if(body?.task){const {defectId,defectVersion,routeVersionId,purpose,assignedToUserId,instructions,...pins}=body.task;const description=typeof instructions==='string' && instructions.startsWith(body.reason+'\n') ? instructions.slice(body.reason.length+1) : pins.measurementScope;setTask({...pins,measurementScope:description,policyRevisionId:body.policyRevisionId});setSelectedDispatchCrew(assignedToUserId);setDispatchNotes(body.reason)}
   },[isOpen,projectId,selectedKey])
   if (!isOpen) return null
 

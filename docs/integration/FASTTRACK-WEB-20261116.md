@@ -67,3 +67,12 @@ Tiến độ/K/body/receipt và source reads giữ ở `artifacts/fasttrack-curr
 Typecheck/build PASS; diff-check cho thay đổi đợt này PASS. Cảnh báo duration-[250ms]/bundle lớn có sẵn. `check-fasttrack-web.cjs`:11 nhóm PASS; `check-repair-workflow.cjs`:7 nhóm PASS. Tests transport mô phỏng kiểm timeout/receipt, ETag, actor switch, permission, no severity inference, coverage sources, assignment readback, package/propose; không thay thế runtime acceptance.
 
 Browser PM/Sup dùng phiên thực, GET policy/collections/coverage và modal cũ; policy Sup403 được kiểm trực tiếp, không fallback. Nút cuối tại modal PM đã mở cho Hoàng nhưng không bấm. Ảnh nằm trong `artifacts/fasttrack-current/screenshots/`.
+
+
+## Sửa payload measurementScope sau 61e997b
+
+Đối chiếu trực tiếp `FieldInspectionTask.ValidateScope` của runtime b89a52fe11ed: trường này phải là chuỗi JSON có root object, parser giới hạn sâu64, không có schema khóa nghiệp vụ cụ thể. Lệnh giao Crew mới tạo `measurementScope: "{}"`; nguyên nội dung ô phạm vi và ô chỉ đạo được ghép bằng xuống dòng trong `instructions`, không trim/cắt mất nội dung và không yêu cầu người dùng nhập JSON. Nếu tổng chỉ dẫn vượt1000 ký tự theo CreateRepair→CreateOperational, chặn trước POST thay vì cắt bớt.
+
+Journal cũ không bị migrate: scope sai bị chặn trước POST và giữ nguyên body/key/ETag; scope object hợp lệ vẫn dùng chính body/key/ETag đã lưu. Có receipt thì chỉ GET đối chiếu, kể cả scope legacy sai. Modal chỉ khôi phục phần mô tả từ instructions của lệnh mới, không đổi bố cục hay sửa journal. Fixture và dữ liệu test được giữ nguyên. Không gửi lệnh giao Crew trong lượt sửa này.
+
+Regression `node tools/check-fasttrack-scope-validator.cjs` lấy chính thân hàm C# tại revision đầy đủ trong Git BE và biên dịch/chạy cục bộ, so17 ca với kiểm tra FE (object, text, array, null, malformed, độ sâu64/65 và duplicate key). Script chỉ ghi harness vào artifacts, không sửa BE hoặc gọi HTTP. Cần .NET9 và checkout BE tại đường dẫn sibling hiện hữu; có thể đặt ROADGUARD_BE_SOURCE nếu đường dẫn khác. `check-fasttrack-web.cjs` bổ sung kiểm plaintext→object/instructions, overflow, legacy invalid/receipt GET-only và replay nguyên trạng journal object hợp lệ. Typecheck và diff-check PASS.
