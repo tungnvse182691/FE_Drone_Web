@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { STORAGE_KEYS, removeFromStorage } from './api/services/storageHelper'
 import { useQueryClient } from '@tanstack/react-query'
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { RoleCode } from './types/enums'
@@ -42,13 +42,12 @@ import { SystemControl } from './pages/(sup)/SystemControl'
 import { PersonnelManagement } from './pages/(sup)/PersonnelManagement'
 import { ProfilePage } from './pages/(pm)/ProfilePage'
 
-import { FastTrackWorkspace } from './pages/(pm)/FastTrackWorkspace'
 import { RepairPackagesWorkspace } from './pages/(pm)/RepairPackagesWorkspace'
-import { RepairWorkflowPanel } from './components/repair/RepairWorkflowPanel'
+import { FastTrackWorkspace } from './pages/(pm)/FastTrackWorkspace'
+import { AcceptanceWorkspace } from './pages/(sup)/AcceptanceWorkspace'
 
 function RepairDetailRoute({ acceptance = false }: { acceptance?: boolean }) {
-  const { id, batchId } = useParams()
-  return acceptance ? <RepairWorkflowPanel acceptance packageId={batchId || id} /> : <RepairPackagesWorkspace />
+  return acceptance ? <AcceptanceWorkspace /> : <RepairPackagesWorkspace />
 }
 
 export const App: React.FC = () => {
@@ -120,7 +119,7 @@ export const App: React.FC = () => {
             <Route path="work-orders/:id/confirm" element={<RepairDetailRoute acceptance />} />
             <Route path="evidence-closeout" element={<RepairDetailRoute acceptance />} />
             <Route path="evidence-closeout/:id" element={<RepairDetailRoute acceptance />} />
-            <Route path="acceptance" element={<RepairWorkflowPanel acceptance />} />
+            <Route path="acceptance" element={<AcceptanceWorkspace />} />
             <Route path="acceptance/:batchId" element={<RepairDetailRoute acceptance />} />
             <Route path="research-validation" element={<ResearchValidation />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
@@ -168,7 +167,7 @@ export const App: React.FC = () => {
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="approvals/:id" element={<RepairDetailRoute />} />
             <Route path="approvals/:id/reject" element={<Navigate to="/sup/proposals" replace />} />
-            <Route path="acceptance" element={<RepairWorkflowPanel acceptance />} />
+            <Route path="acceptance" element={<AcceptanceWorkspace />} />
             <Route path="acceptance/:batchId" element={<RepairDetailRoute acceptance />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
             <Route path="research-validation" element={<ResearchValidation />} />
