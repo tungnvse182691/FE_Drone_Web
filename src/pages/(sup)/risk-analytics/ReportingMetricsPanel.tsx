@@ -55,13 +55,11 @@ const statusLabels: Record<string, string> = {
 
 export function metricDimensions(m: Metric) {
   const d = m.dimensions
-  const uuid = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i
-  const label = (v: string) => uuid.test(v) ? 'đã chọn' : v
   return [
-    d.status && (m.code === 'segmentRelatedDefects' ? `Phân đoạn ${label(d.status)}` : `Trạng thái ${statusLabels[d.status] || d.status}`),
+    d.status && (m.code === 'segmentRelatedDefects' ? `Phân đoạn ${d.status}` : `Trạng thái ${statusLabels[d.status] || d.status}`),
     d.band && `Dải ${d.band === 'SURFACE' ? 'mặt đường' : d.band === 'LEFT_EDGE' ? 'mép trái' : d.band === 'RIGHT_EDGE' ? 'mép phải' : d.band}`,
-    d.routeVersionId && `Tuyến ${label(d.routeVersionId)}`,
-    d.segmentSetId && `Bộ ${label(d.segmentSetId)}`
+    d.routeVersionId && `Tuyến ${d.routeVersionId}`,
+    d.segmentSetId && `Bộ ${d.segmentSetId}`
   ].filter(Boolean).join(' · ') || 'Toàn phạm vi đã lọc'
 }
 
@@ -341,12 +339,22 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
             }
 
             // Danh sách metrics hiển thị trên Grid
-            const displayMetrics: Metric[] = rawMetrics.filter(m =>
+            let displayMetrics: Metric[] = rawMetrics.filter(m =>
               ['surveyTasksByStatus', 'baselineCoverageByBand', 'reportsReceived', 'casesByStatus', 'defectsByStatus'].includes(m.code)
             )
 
-            if (!data.summary.value || data.summary.loading || data.summary.error) return null
-            if (!displayMetrics.length) return <p className="p-5 text-sm text-slate-500">Chưa có chỉ số trong phạm vi này.</p>
+            // Nếu DB rỗng hoặc chưa có metric nào, hiển thị 7 thẻ mặc định chuẩn ban đầu như Ảnh 1
+            if (displayMetrics.length === 0) {
+              displayMetrics = [
+                { code: 'surveyTasksByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'baselineCoverageByBand', dimensions: { band: 'SURFACE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'baselineCoverageByBand', dimensions: { band: 'LEFT_EDGE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'baselineCoverageByBand', dimensions: { band: 'RIGHT_EDGE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'reportsReceived', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: true, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'casesByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
+                { code: 'defectsByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] }
+              ]
+            }
 
             return (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -545,14 +553,20 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                             <tr key={r.id} className="hover:bg-slate-50/80 transition">
                               <td className="break-all p-2.5 font-medium text-slate-800">
                                 <span>{r.type}</span>
-
+                                <details className="mt-0.5">
+                                  <summary className="cursor-pointer text-slate-500 hover:text-[#C9A227]">Tham chiếu</summary>
+                                  <span className="font-mono text-[10px] text-slate-600">{r.id}</span>
+                                </details>
                                 <small className="block text-slate-500">{r.band || ''}</small>
                               </td>
                               <td className="p-2.5">
                                 <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200">
                                   {r.status || 'Chưa có trạng thái'}
                                 </span>
-
+                                <details className="mt-0.5">
+                                  <summary className="cursor-pointer text-slate-500 hover:text-[#C9A227]">Phiên bản nguồn</summary>
+                                  <span className="font-mono text-[10px] text-slate-600">{r.version}</span>
+                                </details>
                               </td>
                               <td className="p-2.5 text-slate-700 font-medium">
                                 {r.sizeBytes != null ? (
@@ -602,7 +616,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                               </span>
                             </div>
                             <span className="text-slate-600 pl-2">
-                              {r.action === 'survey_task_created' ? 'Đã tạo nhiệm vụ khảo sát' : r.action === 'survey_task_accept' ? 'Đã tiếp nhận nhiệm vụ khảo sát' : r.action === 'survey_dataset_submitted' ? 'Đã nộp dữ liệu khảo sát' : 'Sự kiện từ nguồn báo cáo'}
+                              {r.summary || 'Chưa có mô tả'} · <span className="font-mono text-[11px]">{r.source.type}: {r.source.id}</span>
                             </span>
                           </div>
                         ))}

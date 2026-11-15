@@ -45,7 +45,7 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
           </span>
         </div>
         <p className="text-xs text-slate-500">
-          Lập gói cho từng khiếm khuyết, xác định phương án kỹ thuật và theo dõi phê duyệt từng hạng mục.
+          Tập hợp các điểm khiếm khuyết mặt đường thành gói thi công, xác định biện pháp kỹ thuật và trình nộp Giám sát trưởng phê duyệt.
         </p>
       </div>
 

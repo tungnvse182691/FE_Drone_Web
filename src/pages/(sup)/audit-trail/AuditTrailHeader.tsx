@@ -59,7 +59,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
             Nhật Ký Hoạt Động &amp; Truy Vết Hệ Thống
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Theo dõi các sự kiện mà nguồn báo cáo hiện cung cấp trong phạm vi dự án được phép đọc.
+            Dòng sự kiện bất biến ghi nhận mọi thao tác kỹ thuật, trình duyệt hồ sơ đợt sửa chữa và nghiệm thu hiện trường theo thời gian thực.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
           {/* Nút Xuất nhật ký (1 CTA duy nhất màu vàng đồng) */}
           <button
             type="button"
-            disabled title="Chưa có API xuất riêng nhật ký; dùng Xuất hồ sơ tại Báo cáo KPI" onClick={onOpenExportModal}
+            onClick={onOpenExportModal}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-semibold text-xs transition cursor-pointer shadow-2xs"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>

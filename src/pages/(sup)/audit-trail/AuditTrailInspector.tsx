@@ -133,7 +133,7 @@ export const AuditTrailInspector: React.FC<AuditTrailInspectorProps> = ({
           <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
             <span>Mã sự kiện:</span>
             <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800 font-semibold border border-slate-200">
-              Tham chiếu sự kiện
+              {selectedEvent.event_id}
             </span>
             <button
               type="button"
@@ -309,7 +309,7 @@ export const AuditTrailInspector: React.FC<AuditTrailInspectorProps> = ({
               </div>
             ) : (
               <div className="text-[11px] text-slate-400 italic pt-1">
-                Nguồn chưa cung cấp trạng thái trước
+                Khởi tạo lần đầu
               </div>
             )}
           </div>
@@ -340,7 +340,7 @@ export const AuditTrailInspector: React.FC<AuditTrailInspectorProps> = ({
               </div>
             ) : (
               <div className="text-[11px] text-slate-400 italic pt-1">
-                Nguồn chưa cung cấp trạng thái sau
+                Không ghi nhận thay đổi
               </div>
             )}
           </div>

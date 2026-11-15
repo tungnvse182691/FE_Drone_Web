@@ -16,7 +16,7 @@ const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
   if (filter === 'all') return true
   const eventTime = new Date(occurredAtStr).getTime()
   // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
-  const now = Date.now()
+  const now = new Date('2026-10-10T12:00:00Z').getTime()
   const diffHours = (now - eventTime) / (1000 * 60 * 60)
   if (filter === '24h') return diffHours <= 24 && diffHours >= 0
   if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
@@ -25,14 +25,11 @@ const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
 }
 
 export const AuditTrail: React.FC = () => {
-  const { user, authEpoch } = useAuthStore()
-  const [revision, setRevision] = useState(0)
+  const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
   // Dữ liệu dòng sự kiện hoạt động bất đồng bộ từ auditService (In-Memory Mock API, zero localStorage)
-  const [error, setError] = useState('')
-  const [partial, setPartial] = useState(false)
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedEventId, setSelectedEventId] = useState<string>('')
@@ -43,10 +40,8 @@ export const AuditTrail: React.FC = () => {
   const [projects, setProjects] = useState<any[]>(() => projectService.getProjects())
 
   useEffect(() => {
-    let active = true
-    projectService.fetchProjects().then(rows => {if (active) setProjects(rows)}).catch(e => {if (active) setError(e.message)})
-    return () => {active = false}
-  }, [authEpoch])
+    projectService.fetchProjects().then(setProjects).catch(console.warn)
+  }, [])
 
   // Bộ lọc tiêu chí nghiệp vụ
   const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
@@ -85,34 +80,27 @@ export const AuditTrail: React.FC = () => {
   // Tải dữ liệu bất đồng bộ từ auditService
   useEffect(() => {
     let mounted = true
-    const controller = new AbortController()
     const loadEvents = async () => {
       try {
         setLoading(true)
-        setEvents([])
-        const snapshot = await auditService.getAuditSnapshot({
+        const data = await auditService.getAuditEvents({
           projectId: selectedProject
-        }, controller.signal)
+        })
         if (mounted) {
-          setEvents(snapshot.events)
-          setPartial(snapshot.partial)
-          setError('')
-          if (snapshot.events.length > 0) {
-            setSelectedEventId((prev) => prev || snapshot.events[0].id)
+          setEvents(data)
+          if (data.length > 0) {
+            setSelectedEventId((prev) => prev || data[0].id)
           }
         }
-      } catch (e: any) {
-        if (mounted) { setEvents([]); setError(e.message) }
       } finally {
-        if (mounted) {setLoading(false); setIsRefreshing(false)}
+        if (mounted) setLoading(false)
       }
     }
     loadEvents()
     return () => {
       mounted = false
-      controller.abort()
     }
-  }, [selectedProject, authEpoch, revision])
+  }, [selectedProject])
 
   // Lọc dữ liệu theo vai trò, dự án, mốc thời gian và từ khóa
   const filteredEvents = useMemo(() => {
@@ -172,7 +160,7 @@ export const AuditTrail: React.FC = () => {
 
   // Sự kiện đang được chọn để soi chi tiết
   const selectedEvent = useMemo(() => {
-    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0]
+    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
   }, [filteredEvents, selectedEventId, events])
 
   // Thống kê số liệu tính toán động theo danh sách đang hiển thị
@@ -202,9 +190,16 @@ export const AuditTrail: React.FC = () => {
   }
 
   // Làm mới dữ liệu
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true)
-    setRevision(n => n + 1)
+    try {
+      const data = await auditService.getAuditEvents({
+        projectId: selectedProject
+      })
+      setEvents(data)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   // Xuất báo cáo nhật ký
@@ -248,12 +243,10 @@ export const AuditTrail: React.FC = () => {
         onSelectProject={setSelectedProject}
         isRefreshing={isRefreshing}
         onRefresh={handleRefresh}
-        onOpenExportModal={() => setError('Chưa hỗ trợ xuất riêng nhật ký. Xuất hồ sơ PDF tại Báo cáo KPI.')}
+        onOpenExportModal={() => setShowExportModal(true)}
         projects={projects}
       />
 
-      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-      {partial && <p className="text-xs text-slate-500">Lịch sử hiện có dữ liệu một phần trong phạm vi đang chọn.</p>}
       <AuditTrailMetrics
         calculatedStats={calculatedStats}
         isSupervisor={isSupervisor}

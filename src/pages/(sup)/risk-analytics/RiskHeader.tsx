@@ -172,7 +172,8 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 <option value="ALL">Toàn bộ thời gian tạo hồ sơ</option>
                 <option value="Q3_2026">Quý 3 / 2026 (01/07/2026 - 30/09/2026)</option>
                 <option value="Q2_2026">Quý 2 / 2026 (01/04/2026 - 30/06/2026)</option>
-                <option value="MONTH_08_2026">Tháng 08/2026</option>
+                <option value="MONTH_08_2026">Tháng 08/2026 (Kỳ giải trình thanh tra)</option>
+                <option value="YTD">Lũy kế 12 tháng gần nhất (Year-To-Date)</option>
               </select>
               <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                 expand_more
@@ -198,7 +199,10 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 }}
                 className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
               >
-                <option value="ALL">Chưa có bộ lọc quy trình từ nguồn</option>
+                <option value="ALL">Tất cả quy trình (Xử lý nhanh, Thẩm duyệt, Khẩn cấp)</option>
+                <option value="FAST_TRACK">Quy trình xử lý nhanh (&lt; 24h)</option>
+                <option value="APPROVAL_TRACK">Thẩm duyệt thông thường (Hồ sơ kỹ thuật)</option>
+                <option value="EMERGENCY">Xử lý khẩn cấp (24/7)</option>
               </select>
               <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                 expand_more

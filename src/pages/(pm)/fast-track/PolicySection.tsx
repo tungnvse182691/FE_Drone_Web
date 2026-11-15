@@ -66,7 +66,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    CHƯA CÓ THÔNG TIN CHÍNH SÁCH
+                    CHƯA XUẤT BẢN CHÍNH SÁCH
                   </span>
                 )}
               </div>
@@ -162,7 +162,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           </div>
         ) : (
           <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500 text-center">
-            Đối chiếu nguồn độ phủ tuyến trong hồ sơ bên dưới.
+            Chưa có thông tin độ phủ tuyến đường bảo hành cho dự án này trong CSDL.
           </div>
         )}
 
@@ -225,7 +225,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
           <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200 text-center space-y-2">
             <Icon name="info" size={24} className="text-[#C9A227] mx-auto" />
             <p className="text-xs font-medium text-slate-700">
-              Chưa có thông tin chính sách đang áp dụng để đối chiếu.
+              Dự án này hiện chưa xuất bản chính sách xử lý nhanh nào trong CSDL Backend.
             </p>
             {!isSupervisor && onOpenPolicyModal && (
               <button

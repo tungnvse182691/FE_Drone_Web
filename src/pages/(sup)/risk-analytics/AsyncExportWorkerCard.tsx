@@ -36,7 +36,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
                 Hàng đợi xuất dữ liệu bất đồng bộ
               </h3>
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-xs font-medium border border-slate-200">
-                {activeJob ? 'Đang xử lý hồ sơ' : 'Không có tác vụ chạy'}
+                {activeJob ? `#${activeJob.id}` : 'Không có tác vụ chạy'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -116,7 +116,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
       <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
         <div className="flex items-center gap-2 text-xs text-slate-600">
           <span className="text-slate-500">Bản sao lưu gần nhất:</span>
-          <span className="font-mono font-medium text-slate-800">{latest?`Hồ sơ ${latest.format_display} đã hoàn tất`:'Chưa có export hoàn tất trong danh mục'}</span>
+          <span className="font-mono font-medium text-slate-800">{latest?`${latest.id} (${latest.format_display})`:'Chưa có export hoàn tất trong danh mục'}</span>
         </div>
 
         <div className="flex items-center gap-2">
