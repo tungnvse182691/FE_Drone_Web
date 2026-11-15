@@ -63,7 +63,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
         <span>Báo cáo & Hồ sơ</span>
         <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
-        <span className="text-[#8C6D1F] font-semibold">Phân tích rủi ro suy thoái & Bằng chứng số (RPT-06)</span>
+        <span className="text-[#8C6D1F] font-semibold">Báo cáo KPI & Hồ sơ</span>
       </nav>
 
       {/* 2. PAGE HEADER & PRIMARY ACTION CONTROLS */}
@@ -72,7 +72,7 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="font-sansation text-2xl font-bold tracking-tight text-slate-900">
-                Báo cáo phân tích rủi ro & Diễn biến suy thoái (RPT-06)
+                Báo cáo KPI
               </h1>
               <span className="px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-mono text-xs font-semibold border border-amber-200">
                 {currentProject.code}

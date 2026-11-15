@@ -369,7 +369,7 @@ export function useRiskAnalyticsState() {
       el.innerHTML = `
         <div class="flex flex-col items-center">
           <div class="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md border ${badgeColor} whitespace-nowrap mb-1">
-            ${item.chainage_start}: Chưa có dữ liệu đánh giá
+            ${item.chainage_start}
           </div>
           <div class="w-4 h-4 rounded-full ${
             item.risk_level === 'CRITICAL' ? 'bg-rose-500' : item.risk_level === 'WATCH' ? 'bg-amber-500' : 'bg-slate-500'

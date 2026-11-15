@@ -46,6 +46,14 @@ Nghiệm thu tay ngắn:
 
 - `ca18c16`: API168–170 KPI theo metric/dimensions/availability thật; bộ lọc riêng cho báo cáo; bảng phân đoạn server và MapLibre WGS84 có kiểm phạm vi; giữ export đã PASS.
 
+## Điều chỉnh UI KPI và geometry trên baseline8545120
+
+- Theo yêu cầu mới, bỏ bốn thẻ KPI thiếu nguồn và khối risk/đa kỳ/SLA/HUD; giữ thẻ chỉ số có dữ liệu, phần đầy đủ metric/chi tiết nguồn/timeline thu gọn. Màn chính không rải UUID/version hoặc DTO. Bảng đoạn chỉ tên, lý trình, chiều dài server và nút Xem đoạn; không đánh giá nguy cơ.
+- Sửa kết luận thiếu WGS84 trước đây: FE đã có adapter được dùng ở Alignment. Reporting nay dùng confirmedGeometryDisplay(route) ưu tiên WGS84, fallback metric32648 bằng engineeringSrid server; đoạn dùng previewCenterlineCoordinates cùng logic segmentRows/useSegmentSetWorkflow. Không thêm CRS giả, không suy từ giá trị mét; CRS chưa hỗ trợ vẫn không định vị.
+- Đối chiếu runtime GET cùng project321/road5bb0367d…/route0b9a06ba…/setb62de51a… với confirmedRouteCoordinates và segmentRows thực: tuyến119 điểm và đoạn47/38/29/11 điểm đều trùng chính xác. Đoạn0–200m,200–400m,400–600m,600–701.2905185122771m; chiều dài200/200/200/101.29051851227712m. Tọa độ sau chuyển nằm107.7366421…107.7412323E và11.4711327…11.4748028N. Cùng tuyến hiển thị của Alignment, không kéo về tọa độ mẫu Đà Nẵng.
+- UI browser project321 đã có canvas, bốn nút Xem đoạn không bị khóa, không alert; regression actual MapLibre hook xác nhận fitBounds toàn bộ đoạn và clear khi đổi scope. Chưa coi kiểm code/GET là user nghiệm thu thao tác bản đồ; cần review lại màn.
+- Giữ service/payload/journal export đã PASS, chỉ rút gọn phần báo cáo/geometry; không POST hay sửa BE/Mobile. Tests reporting10/export12, typecheck/build/diff-check kết quả cuối đợt.
+
 ## Báo cáo KPI API168–170 — giới hạn và mapping
 
 Nguồn đúng runtime b89a52fe11ed: ReportingDefinitions.cs:9–78; CaseDefectCaptureConsumer.cs; DefectStatisticsCaptureConsumer.cs:10–34; CurrentRepairCaptureConsumer.cs; ReportingService.cs:65–121; RoadGeometryVersionView/SegmentGeometry DTO. API168 items, API169 summary, API170 timeline; UI có trên PM/Sup, không mở quyền Crew.
