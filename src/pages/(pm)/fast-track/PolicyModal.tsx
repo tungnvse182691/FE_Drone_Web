@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
 import { fastTrackService, type RepairPolicyView } from '../../../api/services/fastTrackService'
-import { fastTrackStorage } from '../../../api/services/fastTrackJournal'
+import { policyRuleSupported, policyRuleText } from '../../../api/services/fastTrackPolicyRules'
+import { fastTrackStorage, fastTrackPending } from '../../../api/services/fastTrackJournal'
 import { exportError } from '../../../api/services/projectExportService'
 import { Icon } from '../../../components/ui/Icon'
-import { PolicyThresholdConfig } from './types'
+import { PolicyThresholdConfig, PolicyRuleSelection } from './types'
 
 export interface PolicyModalProps {
+  ruleSelection: PolicyRuleSelection
+  setRuleSelection: React.Dispatch<React.SetStateAction<PolicyRuleSelection>>
   projectId: string
   actionError: string
   isOpen: boolean
@@ -24,6 +27,7 @@ export interface PolicyModalProps {
 }
 
 export const PolicyModal: React.FC<PolicyModalProps> = ({
+  ruleSelection, setRuleSelection,
   projectId, actionError,
   isOpen,
   onClose,
@@ -51,7 +55,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   },[isOpen,projectId])
   const available=policies.filter(p=>referenceKind==='revisions' ? p.revision!=null && p.state==='PUBLISHED' : p.state==='DRAFT')
   const readReference=async()=>{try{setError('');if(!available.some(p=>p.id===reference))throw new Error('Chọn chính sách từ hồ sơ đã đọc.');await fastTrackService.readPolicy(projectId,reference,referenceKind);window.dispatchEvent(new Event('fasttrack-refresh'));setNotice('Đã đọc chính sách từ hệ thống. Không sửa bản đã lưu.')}catch(e){setError(exportError(e))}}
-  const canCreate=!loading && types.some(t=>t.code===type) && !!formVersionName.trim() && formVersionName.length<=200 && !!formPolicyNote.trim() && formPolicyNote.length<=2000 && [formMaxArea,formMaxDepth].every(v=>fastTrackService.policyBound(v)!==null)
+  const stopCodes=[...new Set(policies.filter(p=>p.defectTypeCode===type).flatMap(p=>p.stopConditions))]
+  const pending=fastTrackPending(projectId,'policy-create')
+  const pipeline=JSON.parse(localStorage.getItem(fastTrackStorage(projectId,'policy-pipeline')) || 'null')
+  const lockedInput=(pending?.body || pipeline?.input) as RepairPolicyView | undefined
+  const unsupportedPending=!!lockedInput?.measurements.some(r=>!policyRuleSupported(r))
+  const canCreate=!loading && !unsupportedPending && types.some(t=>t.code===type) && !!formVersionName.trim() && formVersionName.length<=200 && !!formPolicyNote.trim() && formPolicyNote.length<=2000 && (ruleSelection.area || ruleSelection.depth) && (!ruleSelection.area || fastTrackService.policyBound(formMaxArea)!==null) && (!ruleSelection.depth || ['mm','cm','m'].includes(ruleSelection.depthUnit) && fastTrackService.policyBound(formMaxDepth)!==null) && ruleSelection.stopConditions.every(code=>stopCodes.includes(code))
+  const currentArea=currentPolicy?.rules?.find(r=>r.code==='Area'),currentDepth=currentPolicy?.rules?.find(r=>r.code==='DepressionDepth')
   if (!isOpen) return null
 
   return (
@@ -78,8 +88,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         <div className="space-y-4 text-xs">
           {(error || actionError) && <p role="alert" className="text-red-800">{error || actionError}</p>}
           <div className="space-y-2"><label>Chính sách đã lưu</label><div className="flex gap-2"><select aria-label="Nhóm chính sách" value={referenceKind} onChange={e=>{setReferenceKind(e.target.value as 'drafts'|'revisions');setReference('')}} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><option value="revisions">Đã xuất bản</option><option value="drafts">Dự thảo</option></select><select aria-label="Chính sách đã lưu" value={reference} onChange={e=>setReference(e.target.value)} disabled={loading || !available.length} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs min-w-0 flex-1"><option value="">{loading?'Đang đọc…':available.length?'Chọn chính sách':'Chưa có tham chiếu từ nguồn'}</option>{available.map(p=><option key={p.id} value={p.id}>{p.checklistVersion}{p.revision!=null ? ` · Lần ban hành ${p.revision}` : ' · Dự thảo'}</option>)}</select><button type="button" disabled={!available.some(p=>p.id===reference)} onClick={readReference} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">Đọc</button></div>{!loading && !available.length && <p className="text-slate-500">Danh mục hiện chỉ gồm tham chiếu từ hồ sơ/receipt đã đọc và được hệ thống xác nhận lại; chưa có API liệt kê toàn bộ chính sách.</p>}{notice && <p role="status">{notice}</p>}</div>
-          <label className="block">Loại hư hỏng *<select aria-label="Loại hư hỏng chính sách" required value={type} onChange={e=>{setType(e.target.value);localStorage.setItem(fastTrackStorage(projectId,'policy-type'),e.target.value)}} disabled={loading || !types.length} className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs mt-1"><option value="">{loading?'Đang đọc danh mục…':types.length?'Chọn loại hư hỏng':'Chưa có danh mục loại hư hỏng'}</option>{types.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}</select></label>
-          <p className="text-slate-500">Dự thảo này dùng khoảng từ 0 đến ngưỡng nhập cho Area (m²), DepressionDepth (mm); chưa khai báo điều kiện dừng bổ sung. Không phải ngưỡng TCVN mặc định. Ngưỡng không âm, tối đa 6 chữ số thập phân.</p>
+          <label className="block">Loại hư hỏng *<select aria-label="Loại hư hỏng chính sách" required value={type} onChange={e=>{setType(e.target.value);setRuleSelection(previous=>({...previous,stopConditions:[]}));localStorage.setItem(fastTrackStorage(projectId,'policy-type'),e.target.value)}} disabled={loading || !types.length || !!lockedInput} className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs mt-1"><option value="">{loading?'Đang đọc danh mục…':types.length?'Chọn loại hư hỏng':'Chưa có danh mục loại hư hỏng'}</option>{types.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}</select></label>
+          <p className="text-slate-500">Chọn ít nhất một quy tắc áp dụng. Khoảng từ 0 đến ngưỡng nhập, không âm, tối đa 6 chữ số thập phân; không phải ngưỡng TCVN mặc định. Đơn vị phải trùng số đo lưu; không tự quy đổi.</p>
+          {unsupportedPending && <p role="alert" className="text-red-800">Quy tắc trong journal đang chờ không khớp đơn vị runtime. Giữ nguyên body/key; chưa gửi lại hay tự chuyển đơn vị.</p>}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">Tên phiên bản checklist * </label>
             <input
@@ -88,7 +99,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               onChange={(e) => setFormVersionName(e.target.value)}
               aria-label="Phiên bản checklist"
               required
-              maxLength={200}
+              maxLength={200} disabled={!!lockedInput}
               placeholder="Tên phiên bản checklist áp dụng"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
@@ -96,31 +107,33 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng diện tích tối đa (m²)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1"><input type="checkbox" aria-label="Áp dụng quy tắc Area" checked={ruleSelection.area} disabled={!!lockedInput} onChange={e=>setRuleSelection(previous=>({...previous,area:e.target.checked}))} className="mr-1.5 accent-[#C9A227]"/>Ngưỡng diện tích tối đa (m²)</label>
               <input
                 type="number"
                 aria-label="Ngưỡng diện tích tối đa"
-                required min="0" max="99999999999999" step="0.000001"
+                required={ruleSelection.area} disabled={!ruleSelection.area || !!lockedInput} min="0" max="99999999999999" step="0.000001"
                 value={formMaxArea}
                 onChange={(e) => setFormMaxArea(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxAreaM2) ? currentPolicy?.maxAreaM2 : '—')} m²</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Đã đọc: {policyRuleText(currentArea)}</span>
             </div>
             <div>
-              <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng độ sâu tối đa (mm)</label>
+              <label className="block font-bold text-slate-700 uppercase mb-1"><input type="checkbox" aria-label="Áp dụng quy tắc DepressionDepth" checked={ruleSelection.depth} disabled={!!lockedInput} onChange={e=>setRuleSelection(previous=>({...previous,depth:e.target.checked}))} className="mr-1.5 accent-[#C9A227]"/>Ngưỡng độ sâu tối đa</label>
+              <select aria-label="Đơn vị quy tắc độ sâu" value={ruleSelection.depthUnit} disabled={!ruleSelection.depth || !!lockedInput} onChange={e=>{setRuleSelection(previous=>({...previous,depthUnit:e.target.value as 'mm'|'cm'|'m'}));setFormMaxDepth('')}} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs mb-1">{['mm','cm','m'].map(unit=><option key={unit} value={unit}>{unit}</option>)}</select>
               <input
                 type="number"
                 aria-label="Ngưỡng độ sâu tối đa"
-                required min="0" max="99999999999999" step="0.000001"
+                required={ruleSelection.depth} disabled={!ruleSelection.depth || !!lockedInput} min="0" max="99999999999999" step="0.000001"
                 value={formMaxDepth}
                 onChange={(e) => setFormMaxDepth(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxDepthMm) ? currentPolicy?.maxDepthMm : '—')} mm</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Đã đọc: {policyRuleText(currentDepth)}. Đổi đơn vị cần nhập lại ngưỡng, không tự quy đổi.</span>
             </div>
           </div>
 
+          <div><label className="block font-bold text-slate-700 uppercase mb-1">Điều kiện dừng (nếu có mã nguồn)</label><select aria-label="Mã điều kiện dừng chính sách" multiple={stopCodes.length>0} size={Math.max(1,Math.min(stopCodes.length,3))} value={stopCodes.length ? ruleSelection.stopConditions : ''} disabled={!stopCodes.length || !!lockedInput} onChange={e=>setRuleSelection(previous=>({...previous,stopConditions:Array.from(e.target.selectedOptions,option=>option.value)}))} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">{!stopCodes.length && <option value="">Chưa có mã từ nguồn</option>}{stopCodes.map(code=><option key={code} value={code}>{code}</option>)}</select><p className="text-[10px] text-slate-500 mt-1">{stopCodes.length ? 'Chỉ dùng mã từ policy cùng loại hư hỏng đã đọc. Crew phải quan sát đúng các mã đã chọn; chưa rõ quan sát không được xem là an toàn.' : 'Chưa có danh mục mã điều kiện dừng hoặc mã từ policy cùng loại hư hỏng đã đọc. Chưa hỗ trợ tự khai báo mã; không cấu hình điều kiện dừng không có nghĩa là không có nguy cơ.'}</p></div>
           {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
@@ -153,7 +166,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
             <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chú căn cứ &amp; lý do ban hành *</label>
             <textarea
               rows={2}
-              required maxLength={2000} aria-label="Căn cứ ban hành chính sách"
+              required disabled={!!lockedInput} maxLength={2000} aria-label="Căn cứ ban hành chính sách"
               value={formPolicyNote}
               onChange={(e) => setFormPolicyNote(e.target.value)}
               placeholder="Ghi rõ cơ sở điều chỉnh..."

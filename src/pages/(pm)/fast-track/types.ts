@@ -32,12 +32,14 @@ export interface DefectItem {
   assignedCrew?: string
 }
 
+export interface PolicyRuleSelection { area:boolean; depth:boolean; depthUnit:'mm'|'cm'|'m'; stopConditions:string[] }
+
 export interface PolicyThresholdConfig {
   id?: string
   version: string
   status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
-  maxAreaM2: number
-  maxDepthMm: number
+  maxAreaM2?: number
+  maxDepthMm?: number
   allowedSeverities: string[]
   activatedBy: string
   activatedAt: string
@@ -50,6 +52,7 @@ export interface PolicyThresholdConfig {
 }
 
 export interface PolicyHistoryItem {
+  rules?: Array<{code:string;unit:string;minimum:number;maximum:number}>
   id?: string
   version: string
   displayName?: string
@@ -57,8 +60,8 @@ export interface PolicyHistoryItem {
   activatedBy: string
   activatedAt: string
   route: string
-  maxArea: number
-  maxDepth: number
+  maxArea?: number
+  maxDepth?: number
 }
 
 export interface CrewTeam {

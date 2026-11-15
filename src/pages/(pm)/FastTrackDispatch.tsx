@@ -26,6 +26,7 @@ export const FastTrackDispatch: React.FC = () => {
     setToastMessage,
     showToast,
     // Policy states
+    ruleSelection, setRuleSelection,
     currentPolicy,
     policyHistory,
     auditLogs,
@@ -157,6 +158,8 @@ export const FastTrackDispatch: React.FC = () => {
 
       {/* MODALS */}
       <FastTrackModals
+        ruleSelection={ruleSelection}
+        setRuleSelection={setRuleSelection}
         key={selectedProjectId}
         projectId={selectedProjectId}
         actionError={policyError || dispatchError}

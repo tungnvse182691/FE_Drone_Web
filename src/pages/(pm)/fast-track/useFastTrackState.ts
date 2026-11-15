@@ -56,6 +56,8 @@ export const useFastTrackState = (isSupervisor = false) => {
     setToastMessage,
     showToast,
     // Policy states
+    ruleSelection: policy.ruleSelection,
+    setRuleSelection: policy.setRuleSelection,
     currentPolicy: policy.currentPolicy,
     policyHistory: policy.policyHistory,
     auditLogs: policy.auditLogs,

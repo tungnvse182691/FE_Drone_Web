@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
+import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBounds } from '../../../api/services/fastTrackPolicyRules'
 import type { PolicyThresholdConfig, PolicyHistoryItem, RoadCoverageFact, AuditLogItem } from './types'
 
 export interface PolicySectionProps {
@@ -24,10 +25,6 @@ function formatDefectTypeVi(code?: string): string {
 }
 
 function formatStopConditionVi(cond: string): string {
-  const c = cond.trim().toUpperCase()
-  if (c.includes('WEATHER_RAIN') || c.includes('RAIN')) return 'Trời mưa'
-  if (c.includes('NIGHT_WITHOUT_LIGHT') || c.includes('NIGHT')) return 'Ban đêm thiếu ánh sáng'
-  if (c.includes('TRAFFIC')) return 'Mật độ xe cao'
   return cond
 }
 
@@ -43,6 +40,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'audit' | 'history'>('audit')
 
+  const areaRule=currentPolicy?.rules?.find(r=>r.code==='Area'),depthRule=currentPolicy?.rules?.find(r=>r.code==='DepressionDepth')
   const totalLogs = auditLogs.length + policyHistory.length
 
   return (
@@ -176,12 +174,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-brand-dark">
-                  ≤ {Number.isFinite(currentPolicy.maxAreaM2) ? currentPolicy.maxAreaM2 : '—'}
+                  {policyRuleRange(areaRule)}
                 </span>
-                <span className="text-xs font-bold text-slate-500">m²</span>
+                <span className="text-xs font-bold text-slate-500">{policyRuleHasBounds(areaRule) ? areaRule.unit : ''}</span>
               </div>
               <p className="text-[10px] text-slate-500">
-                Vượt ngưỡng: Không cấp quyền thi công Fast Track
+                {areaRule && !policyRuleSupported(areaRule) ? 'Đơn vị đang lưu không khớp số đo Area: runtime lưu m². Không tự chuyển m2 thành m².' : policyRuleHasBounds(areaRule) ? 'Vượt ngưỡng: Không cấp quyền thi công Fast Track' : 'Chưa cấu hình quy tắc diện tích.'}
               </p>
             </div>
 
@@ -192,12 +190,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-brand-dark">
-                  ≤ {Number.isFinite(currentPolicy.maxDepthMm) ? currentPolicy.maxDepthMm : '—'}
+                  {policyRuleRange(depthRule)}
                 </span>
-                <span className="text-xs font-bold text-slate-500">mm</span>
+                <span className="text-xs font-bold text-slate-500">{policyRuleHasBounds(depthRule) ? depthRule.unit : ''}</span>
               </div>
               <p className="text-[10px] text-slate-500">
-                Hạn mức kỹ thuật an toàn mặt đường
+                {depthRule && !policyRuleSupported(depthRule) ? 'Đơn vị đang lưu không khớp số đo độ dài. Không tự quy đổi.' : policyRuleHasBounds(depthRule) ? 'Ngưỡng theo đúng đơn vị đã cấu hình.' : 'Chưa cấu hình quy tắc độ sâu.'}
               </p>
             </div>
 
@@ -217,7 +215,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               <p className="text-[10px] text-slate-500">
                 Điều kiện dừng: {currentPolicy.stopConditions && currentPolicy.stopConditions.length > 0
                   ? currentPolicy.stopConditions.map(formatStopConditionVi).join(', ')
-                  : 'Không có'}
+                  : 'Chưa cấu hình điều kiện dừng; không suy thành không có nguy cơ'}
               </p>
             </div>
           </div>
@@ -331,9 +329,9 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                         <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
                       </div>
                       <div className="text-slate-600 flex items-center gap-3">
-                        <span>Diện tích hư hỏng ≤ {Number.isFinite(h.maxArea) ? h.maxArea : '—'} m²</span>
+                        <span>Diện tích: {policyRuleText(h.rules?.find((r: any)=>r.code==='Area'))}</span>
                         <span>•</span>
-                        <span>Độ sâu hư hỏng ≤ {Number.isFinite(h.maxDepth) ? h.maxDepth : '—'} mm</span>
+                        <span>Độ sâu: {policyRuleText(h.rules?.find((r: any)=>r.code==='DepressionDepth'))}</span>
                       </div>
                     </div>
                   ))

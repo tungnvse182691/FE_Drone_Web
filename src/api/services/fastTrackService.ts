@@ -1,3 +1,4 @@
+import { assertPolicyRules } from './fastTrackPolicyRules'
 import { fastTrackFormSources } from './fastTrackFormSources'
 import { defectTypeCatalog } from './defectTypeCatalog'
 import { apiClient } from '../client'
@@ -79,21 +80,24 @@ export const fastTrackService = {
   },
   policyView(row: RepairPolicyView): PolicyThresholdConfig {
     return {id: row.id, version: row.checklistVersion, status: row.state==='PUBLISHED' ? 'ACTIVE' : row.state==='DRAFT' ? 'DRAFT' : 'ARCHIVED',
-      maxAreaM2: row.measurements.find(r=>r.code==='Area' && r.unit==='m2')?.maximum ?? NaN,
-      maxDepthMm: row.measurements.find(r=>r.code==='DepressionDepth' && r.unit==='mm')?.maximum ?? NaN,
+      maxAreaM2: row.measurements.find(r=>r.code==='Area' && r.unit==='m²')?.maximum,
+      maxDepthMm: row.measurements.find(r=>r.code==='DepressionDepth' && r.unit==='mm')?.maximum,
       allowedSeverities: [], activatedBy: row.actorId, activatedAt: row.at, appliedRoute: 'Phạm vi chính sách của dự án', description: row.reason,
       defectTypeCode: row.defectTypeCode, stopConditions: row.stopConditions, revision: row.revision, rules: row.measurements}
   },
   async getPolicies(p: string): Promise<RepairPolicyView[]> {
     // There is no canonical policy collection. References are receipts or explicitly entered IDs, never guessed.
     if (useAuthStore.getState().user?.role !== 'PROJECT_MANAGER') return []
-    return Promise.all(refs(p).map(r => this.readPolicy(p,r.id,r.kind)))
+    const known=refs(p),receipt=fastTrackPending(p,'policy-create')?.receipt
+    if(receipt?.id && receipt.projectId===p && !known.some(r=>r.id===receipt.id))known.push({id:receipt.id,kind:'drafts'})
+    return Promise.all(known.map(r => this.readPolicy(p,r.id,r.kind)))
   },
   async getActivePolicy(p: string): Promise<PolicyThresholdConfig | null> {
     const rows = (await this.getPolicies(p)).filter(r=>r.state==='PUBLISHED')
     return rows.length === 1 ? this.policyView(rows[0]) : null
   },
   async createPolicyDraft(p: string, input: RepairPolicyDefinitionInput): Promise<RepairPolicyView> {
+    assertPolicyRules(input.measurements)
     if(!(await defectTypeCatalog.read()).some(t=>t.code===input.defectTypeCode))throw new Error('Loại hư hỏng không còn trong danh mục hệ thống.')
     return fastTrackCommand(p,'policy-create',`/projects/${p}/repair-policies/drafts`,input,async()=>undefined,async receipt=> {
       if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt chính sách sai phạm vi.')
@@ -101,13 +105,15 @@ export const fastTrackService = {
     })
   },
   async publishPolicy(p: string, id: string, reason: string, _version?: string): Promise<RepairPolicyView> {
-    if(!fastTrackPending(p,`policy-publish:${id}`)) {
+    if(!fastTrackPending(p,`policy-publish:${id}`)?.receipt) {
       const current=await this.getPolicyDraft(p,id)
       if(current.state==='PUBLISHED' && current.publishedRevisionId)return this.getPolicyRevision(p,current.publishedRevisionId)
+      assertPolicyRules(current.measurements)
     }
     return fastTrackCommand(p,`policy-publish:${id}`,`/projects/${p}/repair-policies/drafts/${id}/publish`,{reason},async()=> {
       const row = await this.getPolicyDraft(p,id)
       if (row.state!=='DRAFT') throw new Error('Bản dự thảo không còn được phép xuất bản.')
+      assertPolicyRules(row.measurements)
       return `"${row.version}"`
     },async receipt=> {
       if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt xuất bản sai phạm vi.')

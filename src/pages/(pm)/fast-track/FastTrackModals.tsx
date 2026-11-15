@@ -1,5 +1,6 @@
 import React from 'react'
 import {
+  PolicyRuleSelection,
   FastTrackTaskInput,
   PolicyThresholdConfig,
   DefectItem,
@@ -12,6 +13,8 @@ import { DefectDetailModal } from './DefectDetailModal'
 import { FastTrackDispatchModal } from './FastTrackDispatchModal'
 
 interface FastTrackModalsProps {
+  ruleSelection: PolicyRuleSelection
+  setRuleSelection: React.Dispatch<React.SetStateAction<PolicyRuleSelection>>
   projectId: string
   actionError: string
   isPolicyModalOpen: boolean
@@ -44,6 +47,7 @@ interface FastTrackModalsProps {
 }
 
 export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
+  ruleSelection, setRuleSelection,
   projectId, actionError,
   isPolicyModalOpen,
   setIsPolicyModalOpen,
@@ -77,6 +81,8 @@ export const FastTrackModals: React.FC<FastTrackModalsProps> = ({
     <>
       {(
         <PolicyModal
+          ruleSelection={ruleSelection}
+          setRuleSelection={setRuleSelection}
           projectId={projectId}
           actionError={actionError}
           isOpen={isPolicyModalOpen}
