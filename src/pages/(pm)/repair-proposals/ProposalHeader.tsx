@@ -7,6 +7,8 @@ export interface ProposalHeaderProps {
   totalPackagesCount: number
   isPM: boolean
   onOpenCreateModal: () => void
+  projectName?: string
+  projectCode?: string
 }
 
 export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
@@ -14,6 +16,8 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
   totalPackagesCount,
   isPM,
   onOpenCreateModal,
+  projectName,
+  projectCode,
 }) => {
   const navigate = useNavigate()
 
@@ -25,7 +29,7 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
             Dự án
           </button>
           <Icon name="chevron_right" size={14} className="text-slate-400" />
-          <span className="hover:text-brand-gold cursor-pointer transition-colors">QL1A - Giai đoạn 2</span>
+          <span className="hover:text-brand-gold cursor-pointer transition-colors">{projectName || 'Tất cả dự án'}</span>
           <Icon name="chevron_right" size={14} className="text-slate-400" />
           <span className="hover:text-brand-gold cursor-pointer transition-colors">Sửa chữa</span>
           <Icon name="chevron_right" size={14} className="text-slate-400" />
@@ -37,11 +41,11 @@ export const ProposalHeader: React.FC<ProposalHeaderProps> = ({
             Danh mục gói đề xuất sửa chữa kỹ thuật
           </h1>
           <span className="px-3.5 py-1.5 rounded-full bg-white border border-[#E2E5E9] text-slate-800 font-mono text-xs font-bold shadow-2xs">
-            PRJ-QL1A-02 • {totalPackagesCount} Gói công việc
+            {projectCode ? `${projectCode} • ` : ''}{totalPackagesCount} Gói công việc
           </span>
         </div>
         <p className="text-xs text-slate-500">
-          Tập hợp các điểm khiếm khuyết mặt đường thành gói thi công, xác định biện pháp kỹ thuật và trình nộp Giám sát trưởng phê duyệt.
+          Lập gói cho từng khiếm khuyết, xác định phương án kỹ thuật và theo dõi phê duyệt từng hạng mục.
         </p>
       </div>
 

@@ -43,11 +43,12 @@ import { PersonnelManagement } from './pages/(sup)/PersonnelManagement'
 import { ProfilePage } from './pages/(pm)/ProfilePage'
 
 import { FastTrackWorkspace } from './pages/(pm)/FastTrackWorkspace'
+import { RepairPackagesWorkspace } from './pages/(pm)/RepairPackagesWorkspace'
 import { RepairWorkflowPanel } from './components/repair/RepairWorkflowPanel'
 
 function RepairDetailRoute({ acceptance = false }: { acceptance?: boolean }) {
   const { id, batchId } = useParams()
-  return <RepairWorkflowPanel acceptance={acceptance} packageId={batchId || id} />
+  return acceptance ? <RepairWorkflowPanel acceptance packageId={batchId || id} /> : <RepairPackagesWorkspace />
 }
 
 export const App: React.FC = () => {
@@ -109,11 +110,11 @@ export const App: React.FC = () => {
             <Route path="conflict-center" element={<OfflineConflicts />} />
             <Route path="fast-track" element={<FastTrackWorkspace />} />
             <Route path="dispatch" element={<FastTrackWorkspace />} />
-            <Route path="proposals" element={<RepairWorkflowPanel />} />
+            <Route path="proposals" element={<RepairPackagesWorkspace />} />
             <Route path="proposals/:id" element={<RepairDetailRoute />} />
-            <Route path="work-packages" element={<RepairWorkflowPanel />} />
+            <Route path="work-packages" element={<RepairPackagesWorkspace />} />
             <Route path="work-packages/:id" element={<RepairDetailRoute />} />
-            <Route path="repair-batches" element={<RepairWorkflowPanel />} />
+            <Route path="repair-batches" element={<RepairPackagesWorkspace />} />
             <Route path="repair-batches/:id" element={<RepairDetailRoute />} />
             <Route path="work-orders/confirm" element={<RepairDetailRoute acceptance />} />
             <Route path="work-orders/:id/confirm" element={<RepairDetailRoute acceptance />} />
@@ -159,11 +160,11 @@ export const App: React.FC = () => {
             <Route path="field-tasks" element={<FieldTasks />} />
             <Route path="conflicts" element={<OfflineConflicts />} />
             <Route path="conflict-center" element={<OfflineConflicts />} />
-            <Route path="proposals" element={<RepairWorkflowPanel />} />
+            <Route path="proposals" element={<RepairPackagesWorkspace />} />
             <Route path="proposals/:id" element={<RepairDetailRoute />} />
-            <Route path="work-packages" element={<RepairWorkflowPanel />} />
+            <Route path="work-packages" element={<RepairPackagesWorkspace />} />
             <Route path="work-packages/:id" element={<RepairDetailRoute />} />
-            <Route path="repair-batches" element={<RepairWorkflowPanel />} />
+            <Route path="repair-batches" element={<RepairPackagesWorkspace />} />
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="approvals/:id" element={<RepairDetailRoute />} />
             <Route path="approvals/:id/reject" element={<Navigate to="/sup/proposals" replace />} />
