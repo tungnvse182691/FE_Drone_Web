@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { fastTrackService, type RepairPolicyView } from '../../../api/services/fastTrackService'
+import { fastTrackFormSources, type FastTrackSource } from '../../../api/services/fastTrackFormSources'
+import { exportError } from '../../../api/services/projectExportService'
 import { fastTrackStorage, fastTrackPending } from '../../../api/services/fastTrackJournal'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, CrewTeam, PolicyThresholdConfig, FastTrackTaskInput } from './types'
@@ -42,6 +45,31 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
     const body=held?.body as any
     if(body?.task){const {defectId,defectVersion,routeVersionId,purpose,assignedToUserId,instructions,...pins}=body.task;const description=typeof instructions==='string' && instructions.startsWith(body.reason+'\n') ? instructions.slice(body.reason.length+1) : pins.measurementScope;setTask({...pins,measurementScope:description,policyRevisionId:body.policyRevisionId});setSelectedDispatchCrew(assignedToUserId);setDispatchNotes(body.reason)}
   },[isOpen,projectId,selectedKey])
+  const [sources,setSources]=useState<FastTrackSource[]>([]),[policies,setPolicies]=useState<RepairPolicyView[]>([])
+  const [sourceError,setSourceError]=useState(''),[loading,setLoading]=useState(false)
+  useEffect(()=>{
+    let active=true
+    if(!isOpen || !selectedItems.length)return
+    setLoading(true);setSourceError('');setSources([]);setPolicies([])
+    Promise.all([fastTrackFormSources.list(projectId,selectedItems.map(i=>i.defectId || i.id)),fastTrackService.getPolicies(projectId)]).then(([rows,p])=>{
+      if(!active)return
+      setSources(rows);setPolicies(p.filter(r=>r.state==='PUBLISHED' && r.revision!=null && selectedItems.every(i=>i.defectTypeCode===r.defectTypeCode)))
+      const held=selectedItems.length===1 && selectedItems[0].itemId ? fastTrackPending(projectId,`assign:${selectedItems[0].itemId}`) : null
+      if(held){const body=held.body as any;const matches=rows.filter(r=>Object.entries(r.pins).every(([key,v])=>body.task?.[key]===v));if(matches.length===1)setTask(previous=>({...previous,sourceTaskId:matches[0].id}))}
+    }).catch(e=>{if(active)setSourceError(exportError(e))}).finally(()=>{if(active)setLoading(false)})
+    return()=>{active=false}
+  },[isOpen,projectId,selectedKey])
+  const source=sources.find(s=>s.id===task.sourceTaskId)
+  const chooseSource=(id:string)=>{
+    const row=sources.find(r=>r.id===id)
+    setTask(previous=>{const next={...previous,sourceTaskId:row?.id || '',sourceKind:row?.pins.sourceKind || '',surveyId:row?.pins.surveyId ?? null,segmentSetId:row?.pins.segmentSetId ?? null,layoutRevisionId:row?.pins.layoutRevisionId ?? null,slabId:row?.pins.slabId ?? null,mapPublicationId:row?.pins.mapPublicationId ?? null,crsProfileRevisionId:row?.pins.crsProfileRevisionId ?? null,requiredMeasurementType:row?.requiredMeasurementType || 0};localStorage.setItem(fastTrackStorage(projectId,'task-form'),JSON.stringify(next));return next})
+  }
+  const pending=selectedItems.length===1 && selectedItems[0].itemId ? fastTrackPending(projectId,`assign:${selectedItems[0].itemId}`) : null
+  const mixed=selectedItems.some(i=>i.defectId!==selectedItems[0]?.defectId)
+  const instructionLength=[dispatchNotes,task.measurementScope].filter(t=>t.length>0).join('\n').trim().length
+  const validDate=Number.isFinite(Date.parse(task.dueAt)) && Date.parse(task.dueAt)>Date.now()
+  const validSource=!!source && Object.entries(source.pins).every(([key,v])=>(task as any)[key]===v) && source.requiredMeasurementType===task.requiredMeasurementType
+  const formError=!selectedItems.length ? 'Chọn hạng mục cần giao việc trước khi lập lệnh.' : mixed ? 'Mỗi lệnh sử dụng một hồ sơ nguồn. Chọn các hạng mục cùng một khiếm khuyết.' : !loading && !sources.length ? 'Chưa có hồ sơ nhiệm vụ phù hợp để xác thực nguồn và phiên bản tuyến. Chưa thể giao việc.' : !loading && !policies.length ? 'Chưa có chính sách đã xuất bản được đọc và phù hợp loại hư hỏng.' : instructionLength>1000 ? 'Tổng phạm vi và chỉ dẫn vượt 1000 ký tự; cần rút gọn, hệ thống không tự cắt nội dung.' : task.dueAt && !validDate ? 'Hạn hoàn thành phải là thời điểm hợp lệ trong tương lai.' : ''
   if (!isOpen) return null
 
   const hasViolation = selectedItems.some((item) => !item.canAssign)
@@ -77,7 +105,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </div>
 
           {/* Cảnh báo vi phạm */}
-          {hasViolation ? (
+          {hasViolation || !selectedItems.length ? (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 space-y-1">
               <div className="flex items-center gap-1.5 font-bold">
                 <Icon name="error" size={16} className="text-rose-600" />
@@ -96,8 +124,10 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
 
           {/* Chọn đội thi công */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700">Phân công nhân sự / tổ đội phụ trách</label>
+            <label className="font-bold text-slate-700">Phân công nhân sự / tổ đội phụ trách *</label>
             <select
+              required aria-label="Crew giao việc"
+              disabled={!!pending}
               value={selectedDispatchCrew}
               onChange={(e) => setSelectedDispatchCrew(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800"
@@ -112,19 +142,23 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </div>
 
           {actionError && <p role="alert" className="text-red-800">{actionError}</p>}
+          {(sourceError || formError) && <p role="alert" className="text-red-800">{sourceError || formError}</p>}
           <div className="grid grid-cols-2 gap-3">
-            <label className="col-span-2">Chính sách đã xuất bản (tham chiếu hồ sơ)<input value={task.policyRevisionId} onChange={e=>update('policyRevisionId',e.target.value)} className="block w-full border rounded-lg p-2 mt-1"/></label>
-            <label>Nguồn khiếm khuyết<select value={task.sourceKind} onChange={e=>update('sourceKind',e.target.value)} className="block w-full border rounded-lg p-2 mt-1"><option value="">Chọn nguồn</option><option value="REPORTER">Phản ánh đã xác nhận</option><option value="SURVEY">Đợt khảo sát Drone</option></select></label>
-            <label>Loại số đo<select value={task.requiredMeasurementType} onChange={e=>update('requiredMeasurementType',Number(e.target.value))} className="block w-full border rounded-lg p-2 mt-1"><option value={0}>Chọn số đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Xói lề</option><option value={4}>Diện tích</option></select></label>
-            {(['surveyId','segmentSetId','layoutRevisionId','slabId','mapPublicationId','crsProfileRevisionId'] as const).map((key,i)=><label key={key}>{['Đợt khảo sát (nếu có)','Bộ phân đoạn đã công bố','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Bản đồ công bố (nếu có)','Hệ tọa độ (nếu có)'][i]}<input value={task[key] || ''} onChange={e=>update(key,e.target.value || null)} className="block w-full border rounded-lg p-2 mt-1"/></label>)}
-            <label className="col-span-2">Hạn hoàn thành<input type="datetime-local" value={task.dueAt ? (task.dueAt.includes('Z') || /[+-]\d\d:\d\d$/.test(task.dueAt) ? new Date(new Date(task.dueAt).getTime()-new Date(task.dueAt).getTimezoneOffset()*60000).toISOString().slice(0,16) : task.dueAt.slice(0,16)) : ''} onChange={e=>update('dueAt',e.target.value)} className="block w-full border rounded-lg p-2 mt-1"/></label>
-            <label className="col-span-2">Phạm vi đo theo hồ sơ<textarea value={task.measurementScope} onChange={e=>update('measurementScope',e.target.value)} className="block w-full border rounded-lg p-2 mt-1"/></label>
+            <label className="col-span-2">Chính sách đã xuất bản *<select aria-label="Chính sách giao việc" required value={task.policyRevisionId} disabled={loading || !policies.length || !!pending} onChange={e=>update('policyRevisionId',e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang đọc chính sách…':policies.length?'Chọn chính sách':'Chưa có chính sách phù hợp từ nguồn'}</option>{policies.map(p=><option key={p.id} value={p.id}>{p.checklistVersion} · Lần ban hành {p.revision}</option>)}</select></label>
+            <label className="col-span-2">Hồ sơ nguồn khảo sát *<select aria-label="Hồ sơ nguồn giao việc" required value={task.sourceTaskId || ''} onChange={e=>chooseSource(e.target.value)} disabled={loading || !sources.length || !!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang xác thực hồ sơ…':sources.length?'Chọn hồ sơ nguồn':'Chưa có hồ sơ phù hợp'}</option>{sources.map(r=><option key={r.id} value={r.id}>{r.routeLabel} · {r.label}</option>)}</select></label>
+            <label>Nguồn khiếm khuyết<select aria-label="Nguồn khiếm khuyết giao việc" value={source?.pins.sourceKind || ''} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn hồ sơ nguồn trước</option>{source && <option value={source.pins.sourceKind}>{source.pins.sourceKind==='REPORTER'?'Phản ánh đã xác nhận':'Đợt khảo sát Drone'}</option>}</select></label>
+            <label>Loại số đo theo hồ sơ<select aria-label="Loại số đo giao việc" value={source?.requiredMeasurementType || 0} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value={0}>Chọn hồ sơ nguồn trước</option>{source && <option value={source.requiredMeasurementType}>{({1:'Độ sâu lún (mm)',2:'Chênh cao tấm',3:'Xói lề',4:'Diện tích (m²)'} as Record<number,string>)[source.requiredMeasurementType] || 'Chưa có loại đo được hỗ trợ'}</option>}</select></label>
+            {(['surveyId','segmentSetId','layoutRevisionId','slabId','mapPublicationId','crsProfileRevisionId'] as const).map((key,i)=><label key={key}>{['Đợt khảo sát Drone','Bộ phân đoạn đã công bố','Bố trí mặt đường','Tấm','Bản đồ công bố','Hệ tọa độ'][i]}<select aria-label={`Nguồn ${key}`} value={source?.pins[key] || ''} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1">{source ? <option value={source.pins[key] || ''}>{source.pins[key] ? key==='slabId' ? `Tấm ${source.pins.slabId}` : 'Đã đối chiếu theo hồ sơ nguồn' : 'Không có trong hồ sơ nguồn'}</option> : <option value="">Chọn hồ sơ nguồn trước</option>}</select></label>)}
+            <label className="col-span-2">Hạn hoàn thành *<input aria-label="Hạn hoàn thành giao việc" required type="datetime-local" value={task.dueAt ? (task.dueAt.includes('Z') || /[+-]\d\d:\d\d$/.test(task.dueAt) ? new Date(new Date(task.dueAt).getTime()-new Date(task.dueAt).getTimezoneOffset()*60000).toISOString().slice(0,16) : task.dueAt.slice(0,16)) : ''} onChange={e=>update('dueAt',e.target.value)} disabled={!!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"/></label>
+            <label className="col-span-2">Mô tả phạm vi đo *<textarea aria-label="Mô tả phạm vi giao việc" required value={task.measurementScope} onChange={e=>update('measurementScope',e.target.value)} disabled={!!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"/></label>
+            <p className="col-span-2 text-slate-500">Nhập mô tả bằng văn bản thường. Phạm vi và chỉ đạo được giữ trong chỉ dẫn nhiệm vụ; tổng tối đa 1000 ký tự. Việc chọn hồ sơ không chứng minh đã đủ điều kiện thi công.</p>
           </div>
           {/* Ghi chú */}
           <div className="space-y-1.5">
             <label className="font-bold text-slate-700">Ghi chú chỉ đạo hiện trường</label>
             <textarea
               rows={2}
+              aria-label="Chỉ đạo giao việc" required disabled={!!pending}
               value={dispatchNotes}
               onChange={(e) => setDispatchNotes(e.target.value)}
               className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800"
@@ -142,11 +176,11 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={()=>handleExecuteDispatch({...task,dueAt:task.dueAt ? new Date(task.dueAt).toISOString() : ''})}
-            disabled={hasViolation || selectedDefectIds.length === 0 || !selectedDispatchCrew || !task.policyRevisionId || !task.sourceKind || !task.requiredMeasurementType || !task.dueAt || !task.measurementScope}
+            onClick={()=>{if(validDate || pending)handleExecuteDispatch({...task,dueAt:pending ? task.dueAt : validDate ? new Date(task.dueAt).toISOString() : task.dueAt})}}
+            disabled={hasViolation || selectedDefectIds.length === 0 || !selectedDispatchCrew || (!pending && (loading || !!sourceError || !!formError || !validSource || !policies.some(p=>p.id===task.policyRevisionId) || !validDate || !task.measurementScope.trim() || !dispatchNotes.trim()))}
             className="px-5 py-2 text-xs font-bold text-white bg-[#C9A227] hover:bg-[#b08d20] rounded-xl shadow-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
-            Xác nhận phát lệnh
+            {pending ? 'Đối chiếu lệnh đã gửi' : 'Xác nhận phát lệnh'}
           </button>
         </div>
       </div>

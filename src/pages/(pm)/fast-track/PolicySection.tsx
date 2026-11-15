@@ -57,12 +57,12 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-bold text-brand-dark tracking-tight">
-                  Quy chuẩn chính sách xử lý nhanh áp dụng
+                  Chính sách xử lý nhanh đã đọc
                 </h2>
                 {currentPolicy ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                    {currentPolicy.version} (HIỆU LỰC)
+                    {currentPolicy.version} (ĐÃ XUẤT BẢN)
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
@@ -129,7 +129,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                       name={roadCoverage.status === 'CONFIRMED' ? 'verified' : 'pending_actions'}
                       size={12}
                     />
-                    {roadCoverage.status === 'CONFIRMED' ? 'ĐỘ PHỦ TUYẾN ĐÃ DUYỆT' : 'CHỜ GIÁM SÁT DUYỆT'}
+                    {roadCoverage.provenance==='TEST_ONLY' ? 'ĐÃ LƯU THỬ NGHIỆM — CHƯA CẤP QUYỀN THI CÔNG' : roadCoverage.status === 'CONFIRMED' ? 'CÓ XÁC NHẬN ĐỘ PHỦ' : 'CHƯA XÁC NHẬN ĐỘ PHỦ'}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-600 flex items-center gap-3 flex-wrap">
@@ -192,7 +192,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xl sm:text-2xl font-black text-brand-dark">
-                  ≤ {Number.isFinite(currentPolicy.maxDepthCm) ? currentPolicy.maxDepthCm : '—'}
+                  ≤ {Number.isFinite(currentPolicy.maxDepthMm) ? currentPolicy.maxDepthMm : '—'}
                 </span>
                 <span className="text-xs font-bold text-slate-500">mm</span>
               </div>

@@ -1,3 +1,5 @@
+import { fastTrackFormSources } from './fastTrackFormSources'
+import { defectTypeCatalog } from './defectTypeCatalog'
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
 import { triageGeometryService } from './triageGeometryService'
@@ -26,6 +28,14 @@ function remember(project: string, row: RepairPolicyView, kind: 'drafts' | 'revi
   localStorage.setItem(fastTrackStorage(project, 'policy-refs'), JSON.stringify(next))
 }
 export const fastTrackService = {
+  policyBound(text:string): number | null {
+    const parts=/^(\d+)(?:\.(\d{1,6}))?$/.exec(text)
+    if(!parts)return null
+    const value=Number(text)
+    // Do not silently round a user-entered decimal when building the numeric DTO.
+    if(!Number.isFinite(value) || value>99999999999999 || value.toFixed(6)!==`${Number(parts[1])}.${(parts[2] || '').padEnd(6,'0')}`)return null
+    return value
+  },
   async getProjects(): Promise<ProjectOption[]> {
     return (await projectService.fetchProjects()).map(p => ({id: p.id, name: p.name, projectCode: p.code}))
   },
@@ -51,7 +61,7 @@ export const fastTrackService = {
       const handover = current.sources?.find(s=>s.kind==='HANDOVER' && s.id===input.handoverDocumentId && s.version===input.handoverVersion)
       const source = current.sources?.find(s=>s.kind===input.sourceKind && s.id===input.sourceId && s.version===input.sourceVersion)
       if (!scope || scope.scopeHash!==input.expectedScopeHash || !handover || !source || current.etag!==ifMatch) throw new Error('Căn cứ độ phủ thiếu hoặc đã thay đổi; đọc lại hồ sơ trước khi xác nhận.')
-      if (input.provenance==='REAL_SOURCE' && [handover,source].some(s=>s.provenance!=='REAL_SOURCE')) throw new Error('Nguồn thử nghiệm/chưa xác minh không được đổi thành nguồn đã xác minh thực tế.')
+      if (input.provenance==='REAL_SOURCE' && [handover,source].some(s=>!['SOURCE_NOT_EXTERNALLY_VERIFIED','REAL_SOURCE'].includes(s.provenance || ''))) throw new Error('Nguồn thử nghiệm hoặc chưa rõ nguồn gốc không được khai báo là căn cứ thực tế.')
       return current.etag
     }, async receipt => {
       const response = await versioned<RoadCoverageReadFact>(`/projects/${p}/road-coverage`)
@@ -70,7 +80,7 @@ export const fastTrackService = {
   policyView(row: RepairPolicyView): PolicyThresholdConfig {
     return {id: row.id, version: row.checklistVersion, status: row.state==='PUBLISHED' ? 'ACTIVE' : row.state==='DRAFT' ? 'DRAFT' : 'ARCHIVED',
       maxAreaM2: row.measurements.find(r=>r.code==='Area' && r.unit==='m2')?.maximum ?? NaN,
-      maxDepthCm: row.measurements.find(r=>r.code==='DepressionDepth' && r.unit==='mm')?.maximum ?? NaN,
+      maxDepthMm: row.measurements.find(r=>r.code==='DepressionDepth' && r.unit==='mm')?.maximum ?? NaN,
       allowedSeverities: [], activatedBy: row.actorId, activatedAt: row.at, appliedRoute: 'Phạm vi chính sách của dự án', description: row.reason,
       defectTypeCode: row.defectTypeCode, stopConditions: row.stopConditions, revision: row.revision, rules: row.measurements}
   },
@@ -84,6 +94,7 @@ export const fastTrackService = {
     return rows.length === 1 ? this.policyView(rows[0]) : null
   },
   async createPolicyDraft(p: string, input: RepairPolicyDefinitionInput): Promise<RepairPolicyView> {
+    if(!(await defectTypeCatalog.read()).some(t=>t.code===input.defectTypeCode))throw new Error('Loại hư hỏng không còn trong danh mục hệ thống.')
     return fastTrackCommand(p,'policy-create',`/projects/${p}/repair-policies/drafts`,input,async()=>undefined,async receipt=> {
       if (!receipt?.id || receipt.projectId!==p) throw new Error('Receipt chính sách sai phạm vi.')
       return this.getPolicyDraft(p,receipt.id)
@@ -184,10 +195,15 @@ export const fastTrackService = {
       const base=`/projects/${p}/repair-packages/${row.packageId}/items/${row.itemId}`
       const operation=`assign:${row.itemId}`
       const d=(await versioned<any>(`/projects/${p}/defects/${row.defectId}`)).data
-      const {policyRevisionId,...pins}=payload.task
+      const {policyRevisionId,sourceTaskId,...pins}=payload.task
       const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
       const held=fastTrackPending(p,operation)
       const saved=held?.body as {task:typeof requestedTask;policyRevisionId:string;reason:string} | undefined
+      if(!held) {
+        if(!sourceTaskId)throw new Error('Chọn hồ sơ nguồn đã đọc từ hệ thống trước khi giao việc.')
+        const source=await fastTrackFormSources.read(p,sourceTaskId,row.defectId)
+        if(Object.entries(source.pins).some(([key,value])=>(pins as any)[key]!==value))throw new Error('Các tham chiếu không còn khớp hồ sơ nguồn. Chọn lại hồ sơ; không nhập mã thay thế.')
+      }
       // Never migrate a pending command, including a legacy raw-text scope. Receipts remain GET-only.
       let task=requestedTask
       if(saved) {

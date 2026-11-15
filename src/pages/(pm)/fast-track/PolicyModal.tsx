@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { fastTrackService } from '../../../api/services/fastTrackService'
+import React, { useState, useEffect } from 'react'
+import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
+import { fastTrackService, type RepairPolicyView } from '../../../api/services/fastTrackService'
 import { fastTrackStorage } from '../../../api/services/fastTrackJournal'
 import { exportError } from '../../../api/services/projectExportService'
 import { Icon } from '../../../components/ui/Icon'
@@ -39,7 +40,18 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 }) => {
   const [reference,setReference]=useState(''),[referenceKind,setReferenceKind]=useState<'drafts'|'revisions'>('revisions'),[error,setError]=useState('')
   const [type,setType]=useState(()=>localStorage.getItem(fastTrackStorage(projectId,'policy-type')) || '')
-  const readReference=async()=>{try{setError('');await fastTrackService.readPolicy(projectId,reference.trim(),referenceKind);window.dispatchEvent(new Event('fasttrack-refresh'));setError('Đã đọc chính sách từ hệ thống.')}catch(e){setError(exportError(e))}}
+  const [policies,setPolicies]=useState<RepairPolicyView[]>([]),[types,setTypes]=useState<DefectTypeOption[]>([]),[loading,setLoading]=useState(false)
+  const [notice,setNotice]=useState('')
+  useEffect(()=>{
+    let active=true
+    if(!isOpen)return
+    setLoading(true);setError('');setPolicies([]);setTypes([])
+    Promise.all([fastTrackService.getPolicies(projectId),defectTypeCatalog.read()]).then(([p,t])=>{if(active){setPolicies(p);setTypes(t)}}).catch(e=>{if(active)setError(exportError(e))}).finally(()=>{if(active)setLoading(false)})
+    return()=>{active=false}
+  },[isOpen,projectId])
+  const available=policies.filter(p=>referenceKind==='revisions' ? p.revision!=null && p.state==='PUBLISHED' : p.state==='DRAFT')
+  const readReference=async()=>{try{setError('');if(!available.some(p=>p.id===reference))throw new Error('Chọn chính sách từ hồ sơ đã đọc.');await fastTrackService.readPolicy(projectId,reference,referenceKind);window.dispatchEvent(new Event('fasttrack-refresh'));setNotice('Đã đọc chính sách từ hệ thống. Không sửa bản đã lưu.')}catch(e){setError(exportError(e))}}
+  const canCreate=!loading && types.some(t=>t.code===type) && !!formVersionName.trim() && formVersionName.length<=200 && !!formPolicyNote.trim() && formPolicyNote.length<=2000 && [formMaxArea,formMaxDepth].every(v=>fastTrackService.policyBound(v)!==null)
   if (!isOpen) return null
 
   return (
@@ -65,16 +77,19 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
         <div className="space-y-4 text-xs">
           {(error || actionError) && <p role="alert" className="text-red-800">{error || actionError}</p>}
-          <div className="space-y-2"><label>Đọc chính sách đã có (tham chiếu từ hồ sơ)</label><div className="flex gap-2"><select value={referenceKind} onChange={e=>setReferenceKind(e.target.value as 'drafts'|'revisions')} className="border rounded-lg p-2"><option value="revisions">Đã xuất bản</option><option value="drafts">Dự thảo</option></select><input value={reference} onChange={e=>setReference(e.target.value)} placeholder="Tham chiếu chính sách" className="border rounded-lg p-2 min-w-0 flex-1"/><button onClick={readReference} className="border rounded-lg p-2">Đọc</button></div></div>
-          <label className="block">Mã loại hư hỏng từ hồ sơ nguồn<input value={type} onChange={e=>{setType(e.target.value);localStorage.setItem(fastTrackStorage(projectId,'policy-type'),e.target.value)}} className="block w-full border rounded-lg p-2 mt-1"/></label>
-          <p className="text-slate-500">Dự thảo này dùng khoảng từ 0 đến ngưỡng nhập cho Area (m²), DepressionDepth (mm); chưa khai báo điều kiện dừng bổ sung. Không phải ngưỡng TCVN mặc định.</p>
+          <div className="space-y-2"><label>Chính sách đã lưu</label><div className="flex gap-2"><select aria-label="Nhóm chính sách" value={referenceKind} onChange={e=>{setReferenceKind(e.target.value as 'drafts'|'revisions');setReference('')}} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"><option value="revisions">Đã xuất bản</option><option value="drafts">Dự thảo</option></select><select aria-label="Chính sách đã lưu" value={reference} onChange={e=>setReference(e.target.value)} disabled={loading || !available.length} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs min-w-0 flex-1"><option value="">{loading?'Đang đọc…':available.length?'Chọn chính sách':'Chưa có tham chiếu từ nguồn'}</option>{available.map(p=><option key={p.id} value={p.id}>{p.checklistVersion}{p.revision!=null ? ` · Lần ban hành ${p.revision}` : ' · Dự thảo'}</option>)}</select><button type="button" disabled={!available.some(p=>p.id===reference)} onClick={readReference} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">Đọc</button></div>{!loading && !available.length && <p className="text-slate-500">Danh mục hiện chỉ gồm tham chiếu từ hồ sơ/receipt đã đọc và được hệ thống xác nhận lại; chưa có API liệt kê toàn bộ chính sách.</p>}{notice && <p role="status">{notice}</p>}</div>
+          <label className="block">Loại hư hỏng *<select aria-label="Loại hư hỏng chính sách" required value={type} onChange={e=>{setType(e.target.value);localStorage.setItem(fastTrackStorage(projectId,'policy-type'),e.target.value)}} disabled={loading || !types.length} className="block w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs mt-1"><option value="">{loading?'Đang đọc danh mục…':types.length?'Chọn loại hư hỏng':'Chưa có danh mục loại hư hỏng'}</option>{types.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}</select></label>
+          <p className="text-slate-500">Dự thảo này dùng khoảng từ 0 đến ngưỡng nhập cho Area (m²), DepressionDepth (mm); chưa khai báo điều kiện dừng bổ sung. Không phải ngưỡng TCVN mặc định. Ngưỡng không âm, tối đa 6 chữ số thập phân.</p>
           <div>
-            <label className="block font-bold text-slate-700 uppercase mb-1">Tên phiên bản chính sách</label>
+            <label className="block font-bold text-slate-700 uppercase mb-1">Tên phiên bản checklist * </label>
             <input
               type="text"
               value={formVersionName}
               onChange={(e) => setFormVersionName(e.target.value)}
-              placeholder="Ví dụ: TCVN-8819-2011"
+              aria-label="Phiên bản checklist"
+              required
+              maxLength={200}
+              placeholder="Tên phiên bản checklist áp dụng"
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold focus:bg-white focus:border-brand-gold focus:outline-none"
             />
           </div>
@@ -84,7 +99,8 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng diện tích tối đa (m²)</label>
               <input
                 type="number"
-                step="0.05"
+                aria-label="Ngưỡng diện tích tối đa"
+                required min="0" max="99999999999999" step="0.000001"
                 value={formMaxArea}
                 onChange={(e) => setFormMaxArea(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
@@ -95,35 +111,36 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               <label className="block font-bold text-slate-700 uppercase mb-1">Ngưỡng độ sâu tối đa (mm)</label>
               <input
                 type="number"
-                step="0.5"
+                aria-label="Ngưỡng độ sâu tối đa"
+                required min="0" max="99999999999999" step="0.000001"
                 value={formMaxDepth}
                 onChange={(e) => setFormMaxDepth(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg font-bold focus:border-brand-gold focus:outline-none"
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxDepthCm) ? currentPolicy?.maxDepthCm : '—')} mm</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Hiện hành: ≤ {(Number.isFinite(currentPolicy?.maxDepthMm) ? currentPolicy?.maxDepthMm : '—')} mm</span>
             </div>
           </div>
 
           {/* Cấu hình Mức độ nghiêm trọng áp dụng */}
           <div>
             <label className="block font-bold text-slate-700 uppercase mb-1">
-              Mức độ hư hỏng (tham khảo, không quyết định điều kiện Fast Track)
+              Mức độ tham khảo — không gửi trong chính sách
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
-                <Icon name="check_circle" size={14} className="text-emerald-600 shrink-0" />
+                <Icon name="info" size={14} className="text-emerald-600 shrink-0" />
                 <span>Thấp (Nhẹ)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs font-bold text-blue-800">
-                <Icon name="check_circle" size={14} className="text-blue-600 shrink-0" />
+                <Icon name="info" size={14} className="text-blue-600 shrink-0" />
                 <span>Trung bình (Vừa)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
-                <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
+                <Icon name="info" size={14} className="text-slate-400 shrink-0" />
                 <span>HIGH</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
-                <Icon name="lock" size={14} className="text-slate-400 shrink-0" />
+                <Icon name="info" size={14} className="text-slate-400 shrink-0" />
                 <span>CRITICAL</span>
               </div>
             </div>
@@ -133,9 +150,10 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chú căn cứ &amp; lý do ban hành</label>
+            <label className="block font-bold text-slate-700 uppercase mb-1">Ghi chú căn cứ &amp; lý do ban hành *</label>
             <textarea
               rows={2}
+              required maxLength={2000} aria-label="Căn cứ ban hành chính sách"
               value={formPolicyNote}
               onChange={(e) => setFormPolicyNote(e.target.value)}
               placeholder="Ghi rõ cơ sở điều chỉnh..."
@@ -162,17 +180,19 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              disabled={!canCreate}
               onClick={() => handleApplyPolicy('DRAFT')}
               type="button"
-              className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-xl border border-amber-200 shadow-2xs cursor-pointer transition-colors"
+              className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-[#8F7212] text-xs font-bold rounded-xl border border-amber-200 shadow-2xs cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title="Lưu bản ghi dự thảo chính sách"
             >
               Lưu dự thảo
             </button>
             <button
+              disabled={!canCreate}
               onClick={() => handleApplyPolicy('ACTIVATE')}
               type="button"
-              className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 bg-[#C9A227] hover:bg-[#B38E1F] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-colors flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
               title="Xuất bản chính thức áp dụng toàn tuyến"
             >
               <Icon name="check_circle" size={14} />

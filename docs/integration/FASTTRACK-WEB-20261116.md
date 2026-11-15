@@ -54,8 +54,8 @@ Tiến độ/K/body/receipt và source reads giữ ở `artifacts/fasttrack-curr
 ## Checklist Hoàng nghiệm thu
 
 1. Đăng nhập PM-A, mở `/pm/fast-track`, chọn **final testttttttt (321)**. Phải có thẻ FT chờ giao việc có điều kiện; chưa được ghi “đủ điều kiện thi công”.
-2. Nếu máy/phiên chưa có reference policy: mở Điều chỉnh chính sách → chọn Đã xuất bản → nhập `774a2364-7c1b-4635-8397-7ee31a1988f7` → Đọc. Phải đọc ra TEST-FASTTRACK-321-20261116. Area chưa khai báo hiện gạch ngang, Depth50mm. Không nhấn xuất bản thêm bản test trùng.
-3. Chọn thẻ FT → Phát lệnh xử lý nhanh. Giữ modal cũ. Chọn Synthetic crew-a; policy dùng revision ở trên. Source REPORTER, loại đo Độ sâu lún. Survey/set/layout/slab/map/CRS để trống **cho đúng fixture này**, vì pins nguồn thực hiện hữu đều null; không áp dụng cách để trống cho hồ sơ khác.
+2. Mở Điều chỉnh chính sách → chọn nhóm Đã xuất bản → chọn TEST-FASTTRACK-321-20261116 từ dropdown hồ sơ đã được GET xác nhận → Đọc. Không nhập UUID. Nếu máy/phiên thiếu nguồn tham chiếu, UI báo rõ thay vì đoán policy. Area chưa khai báo hiện gạch ngang, Depth50mm. Không xuất bản thêm bản test trùng.
+3. Chọn thẻ FT → Phát lệnh xử lý nhanh. Chọn Synthetic crew-a, policy TEST-FASTTRACK-321-20261116 và hồ sơ nhiệm vụ nguồn từ dropdown server. Source REPORTER, loại đo Độ sâu lún và các reference phụ được đối chiếu, gắn theo hồ sơ; không nhập UUID/JSON. Fixture này có survey/set/layout/slab/map/CRS null, không suy cách để trống cho hồ sơ khác.
 4. Hạn hoàn thành phải ở tương lai. Phạm vi đo và ghi chú giữ TEST-FASTTRACK, nêu rõ đây là phạm vi giả lập; không đánh dấu là bằng chứng thực địa. Biểu mẫu fixture đã điền tại browser kiểm thử, chưa gửi lệnh.
 5. **Hoàng tự bấm “Xác nhận phát lệnh”.** FE phải đọc current item/ETag, policy; POST đúng lệnh rồi GET item/native task. Chỉ sau đối chiếu item/task/assignment/Crew/context mới báo thành công. F5/retry sau timeout phải giữ K/body/version; có receipt thì chỉ GET.
 6. Nếu nhận409/403/source_not_ready hoặc lỗi khác: giữ thông báo, không tự đổi ID/phiên bản. Chưa có runtime PASS cho bước5 trước khi Hoàng bấm.
@@ -76,3 +76,5 @@ Browser PM/Sup dùng phiên thực, GET policy/collections/coverage và modal c�
 Journal cũ không bị migrate: scope sai bị chặn trước POST và giữ nguyên body/key/ETag; scope object hợp lệ vẫn dùng chính body/key/ETag đã lưu. Có receipt thì chỉ GET đối chiếu, kể cả scope legacy sai. Modal chỉ khôi phục phần mô tả từ instructions của lệnh mới, không đổi bố cục hay sửa journal. Fixture và dữ liệu test được giữ nguyên. Không gửi lệnh giao Crew trong lượt sửa này.
 
 Regression `node tools/check-fasttrack-scope-validator.cjs` lấy chính thân hàm C# tại revision đầy đủ trong Git BE và biên dịch/chạy cục bộ, so17 ca với kiểm tra FE (object, text, array, null, malformed, độ sâu64/65 và duplicate key). Script chỉ ghi harness vào artifacts, không sửa BE hoặc gọi HTTP. Cần .NET9 và checkout BE tại đường dẫn sibling hiện hữu; có thể đặt ROADGUARD_BE_SOURCE nếu đường dẫn khác. `check-fasttrack-web.cjs` bổ sung kiểm plaintext→object/instructions, overflow, legacy invalid/receipt GET-only và replay nguyên trạng journal object hợp lệ. Typecheck và diff-check PASS.
+
+Chi tiết rà soát ba form, ảnh review và tách PASS code/UI/runtime: [FASTTRACK-FORMS-REVIEW-20261116.md](FASTTRACK-FORMS-REVIEW-20261116.md).

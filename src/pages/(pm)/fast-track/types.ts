@@ -37,7 +37,7 @@ export interface PolicyThresholdConfig {
   version: string
   status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
   maxAreaM2: number
-  maxDepthCm: number
+  maxDepthMm: number
   allowedSeverities: string[]
   activatedBy: string
   activatedAt: string
@@ -115,7 +115,7 @@ export interface RoadCoverageFact {
   reason?: string
   sourceId?: string
   sourceVersion?: string
-  history?: Array<{id:string;actorId:string;confirmedAtUtc:string;reason:string;provenance:string}>
+  history?: Array<{id:string;scopeObligationId:string;supersedesId?:string|null;actorId:string;confirmedAtUtc:string;reason:string;provenance:string}>
   provenance?: string
   blockers?: string[]
   scopes?: Array<{obligationId: string; roadSectionId: string; locationVersion?: string; from: number; to: number; offsetFrom: number; offsetTo: number; scopeHash: string}>
@@ -124,6 +124,7 @@ export interface RoadCoverageFact {
 }
 
 export interface FastTrackTaskInput {
+  sourceTaskId?: string
   sourceKind: string; surveyId: string | null; segmentSetId: string | null; layoutRevisionId: string | null; slabId: string | null
   mapPublicationId: string | null; crsProfileRevisionId: string | null
   requiredMeasurementType: number; measurementScope: string; dueAt: string; policyRevisionId: string

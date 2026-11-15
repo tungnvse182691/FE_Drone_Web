@@ -42,7 +42,7 @@ export function useFastTrackPolicy(selectedProjectId: string, showToast: (msg: s
     if(pol.status==='fulfilled') {
       const rows=pol.value, published=rows.filter(r=>r.state==='PUBLISHED' && r.revision != null)
       if(published.length===1)setCurrentPolicy(fastTrackService.policyView(published[0]))
-      setPolicyHistory(rows.map(r=>{const v=fastTrackService.policyView(r);return {id:r.id,version:r.checklistVersion,status:v.status,activatedBy:r.actorId,activatedAt:r.at,route:r.reason,maxArea:v.maxAreaM2,maxDepth:v.maxDepthCm}}))
+      setPolicyHistory(rows.map(r=>{const v=fastTrackService.policyView(r);return {id:r.id,version:r.checklistVersion,status:v.status,activatedBy:r.actorId,activatedAt:r.at,route:r.reason,maxArea:v.maxAreaM2,maxDepth:v.maxDepthMm}}))
       if(role==='SUPERVISOR')setPolicyError('Chính sách và số liệu khiếm khuyết gốc hiện chỉ PM đọc được. Giám sát xem hạng mục sửa chữa và xác nhận độ phủ tại đây.')
       else if(!rows.length)setPolicyError('Chưa có tham chiếu chính sách trong phiên làm việc này. Mở Điều chỉnh chính sách để đọc bản đã có hoặc lập dự thảo.')
       else if(published.length>1)setPolicyError('Có nhiều chính sách đã xuất bản. Chọn đúng tham chiếu chính sách trong lệnh giao việc; không tự chọn bản mới nhất.')
@@ -58,10 +58,10 @@ export function useFastTrackPolicy(selectedProjectId: string, showToast: (msg: s
     const gen=generation.current
     busy.current=true;setPolicyError('')
     try {
-      const area=Number(formMaxArea),depth=Number(formMaxDepth)
-      if(!formVersionName.trim() || !formPolicyNote.trim() || !formMaxArea || !formMaxDepth || !Number.isFinite(area) || !Number.isFinite(depth) || area<0 || depth<0)throw new Error('Nhập rõ phiên bản, ngưỡng không âm và căn cứ ban hành.')
+      const area=fastTrackService.policyBound(formMaxArea),depth=fastTrackService.policyBound(formMaxDepth)
+      if(!formVersionName.trim() || formVersionName.length>200 || !formPolicyNote.trim() || formPolicyNote.length>2000 || area===null || depth===null)throw new Error('Nhập checklist (tối đa 200 ký tự), căn cứ (tối đa 2000 ký tự) và ngưỡng không âm, tối đa 6 chữ số thập phân.')
       const type=localStorage.getItem(fastTrackStorage(selectedProjectId,'policy-type'))
-      if(!type)throw new Error('Nhập mã loại hư hỏng từ hồ sơ nguồn trong modal chính sách.')
+      if(!type)throw new Error('Chọn loại hư hỏng từ danh mục hệ thống.')
       const input:RepairPolicyDefinitionInput={defectTypeCode:type,checklistVersion:formVersionName,measurements:[{code:'Area',unit:'m2',minimum:0,maximum:area},{code:'DepressionDepth',unit:'mm',minimum:0,maximum:depth}],stopConditions:[],reason:formPolicyNote}
       const storage=fastTrackStorage(selectedProjectId,'policy-pipeline')
       let pipeline=JSON.parse(localStorage.getItem(storage)||'null')

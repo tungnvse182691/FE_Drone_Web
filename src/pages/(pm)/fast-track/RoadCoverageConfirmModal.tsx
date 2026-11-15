@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { buildCoverageInput, coverageDate } from './coverageForm'
 import { Icon } from '../../../components/ui/Icon'
 import { fastTrackPending } from '../../../api/services/fastTrackJournal'
 import type { RoadCoverageFact, RoadCoverageInputDto } from './types'
@@ -31,12 +32,12 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
   )
   const [applicableFrom, setApplicableFrom] = useState(
     roadCoverage.applicableFromUtc && roadCoverage.applicableFromUtc !== '—'
-      ? roadCoverage.applicableFromUtc.substring(0, 10)
+      ? coverageDate(roadCoverage.applicableFromUtc)
       : ''
   )
   const [applicableTo, setApplicableTo] = useState(
     roadCoverage.applicableToUtc && roadCoverage.applicableToUtc !== '—'
-      ? roadCoverage.applicableToUtc.substring(0, 10)
+      ? coverageDate(roadCoverage.applicableToUtc,true)
       : ''
   )
   const [reason, setReason] = useState(
@@ -53,14 +54,15 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
         setDocumentNo(roadCoverage.documentNo)
       }
       if (roadCoverage.applicableFromUtc && roadCoverage.applicableFromUtc !== '—') {
-        setApplicableFrom(roadCoverage.applicableFromUtc.substring(0, 10))
+        setApplicableFrom(coverageDate(roadCoverage.applicableFromUtc))
       }
       if (roadCoverage.applicableToUtc && roadCoverage.applicableToUtc !== '—') {
-        setApplicableTo(roadCoverage.applicableToUtc.substring(0, 10))
+        setApplicableTo(coverageDate(roadCoverage.applicableToUtc,true))
       }
     }
   }, [isOpen, roadCoverage.sourceKind, roadCoverage.documentNo, roadCoverage.applicableFromUtc, roadCoverage.applicableToUtc])
 
+  const [supersedesId,setSupersedesId]=useState('')
   const [scopeId,setScopeId]=useState(roadCoverage.scopeObligationId || '')
   const [handoverId,setHandoverId]=useState(''),[sourceId,setSourceId]=useState('')
   const [provenance,setProvenance]=useState<'TEST_ONLY'|'REAL_SOURCE'>('TEST_ONLY')
@@ -68,18 +70,22 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
     if(!isOpen)return
     const held=fastTrackPending(roadCoverage.projectId,'coverage')
     const body=held?.body as RoadCoverageInputDto | undefined
-    if(body){setScopeId(body.scopeObligationId);setHandoverId(body.handoverDocumentId);setSourceKind(body.sourceKind);setSourceId(body.sourceId || '');setProvenance(body.provenance);setApplicableFrom(body.applicableFromUtc.slice(0,10));setApplicableTo(body.applicableToUtc.slice(0,10));const parsed=body.reason.match(/^(.*) \(Căn cứ văn bản: (.*)\)$/s);setReason(parsed?.[1] || body.reason);setDocumentNo(parsed?.[2] || '')}
+    if(body){setSupersedesId(body.supersedesId || '');setScopeId(body.scopeObligationId);setHandoverId(body.handoverDocumentId);setSourceKind(body.sourceKind);setSourceId(body.sourceId || '');setProvenance(body.provenance);setApplicableFrom(coverageDate(body.applicableFromUtc));setApplicableTo(coverageDate(body.applicableToUtc,true));const parsed=body.reason.match(/^(.*) \(Căn cứ văn bản: (.*)\)$/s);setReason(parsed?.[1] || body.reason);setDocumentNo(parsed?.[2] || '')}
   },[isOpen,roadCoverage.projectId])
   const scope=roadCoverage.scopes?.find(s=>s.obligationId===scopeId)
   const handover=roadCoverage.sources?.find(s=>s.kind==='HANDOVER' && s.id===handoverId)
   const source=roadCoverage.sources?.find(s=>s.kind===sourceKind && s.id===sourceId)
-  const blocked=!scope || !handover || !source || !scope.scopeHash || !handover.version || !source.version
+    const currentConfirmations=roadCoverage.history?.filter(h=>h.scopeObligationId===scopeId && !roadCoverage.history?.some(next=>next.supersedesId===h.id)) || []
+  const pending=fastTrackPending(roadCoverage.projectId,'coverage')
+  let validation=''
+  try{buildCoverageInput(roadCoverage,{scopeId,handoverId,sourceId,sourceKind,provenance,from:applicableFrom,through:applicableTo,reason,documentNo,supersedesId})}catch(e){validation=(e as Error).message}
   if (!isOpen) return null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if(blocked || !scope || !handover || !source)return
-    onConfirm({scopeObligationId:scope.obligationId,expectedScopeHash:scope.scopeHash,handoverDocumentId:handover.id,handoverVersion:handover.version,sourceKind,sourceId:source.id,sourceVersion:source.version,applicableFromUtc:`${applicableFrom}T00:00:00Z`,applicableToUtc:`${applicableTo}T23:59:59Z`,provenance,reason:`${reason} (Căn cứ văn bản: ${documentNo})`}, {projectId:roadCoverage.projectId,projectName:roadCoverage.projectName,fromKm:scope.from/1000,toKm:scope.to/1000})
+    if(pending){onConfirm(pending.body as RoadCoverageInputDto,{projectId:roadCoverage.projectId,projectName:roadCoverage.projectName,fromKm:roadCoverage.fromKm,toKm:roadCoverage.toKm});return}
+    if(validation || !scope)return
+    onConfirm(buildCoverageInput(roadCoverage,{scopeId,handoverId,sourceId,sourceKind,provenance,from:applicableFrom,through:applicableTo,reason,documentNo,supersedesId}), {projectId:roadCoverage.projectId,projectName:roadCoverage.projectName,fromKm:scope.from/1000,toKm:scope.to/1000})
   }
 
   return (
@@ -107,15 +113,15 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           {/* Thông tin dự án và lý trình */}
           <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-slate-500">Phân đoạn bảo hành:</span>
+              <span className="text-slate-500">Phạm vi nghĩa vụ cần xác nhận:</span>
               <span className="font-bold text-slate-900">
-                Lý trình Km {roadCoverage.fromKm} - Km {roadCoverage.toKm}
+                Lý trình Km {scope ? scope.from/1000 : '—'} - Km {scope ? scope.to/1000 : '—'}
               </span>
             </div>
             <div className="flex justify-between items-center text-[11px]">
-              <span className="text-slate-500">Mã nghĩa vụ tuyến:</span>
+              <span className="text-slate-500">Phạm vi nguồn:</span>
               <span className="font-mono text-slate-700 font-semibold truncate max-w-[200px]">
-                {roadCoverage.scopeObligationId || 'Theo dữ liệu CSDL'}
+                {scope ? `${scope.from}–${scope.to} m, lệch ${scope.offsetFrom}–${scope.offsetTo} m` : 'Chọn phạm vi từ hồ sơ'}
               </span>
             </div>
           </div>
@@ -140,6 +146,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
                   <input
                     type="radio"
                     name="sourceKind"
+                    disabled={!!pending}
                     checked={sourceKind === 'MAINTENANCE_BASIS'}
                     onChange={() => setSourceKind('MAINTENANCE_BASIS')}
                     className="sr-only"
@@ -165,7 +172,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
                   <input
                     type="radio"
                     name="sourceKind"
-                    disabled={!roadCoverage.hasWarrantySource}
+                    disabled={!!pending || !roadCoverage.hasWarrantySource}
                     checked={sourceKind === 'WARRANTY'}
                     onChange={() => {
                       if (roadCoverage.hasWarrantySource) setSourceKind('WARRANTY')
@@ -183,21 +190,23 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           </div>
 
           <div className="space-y-3">
-            <label className="block">Phạm vi nghĩa vụ<select value={scopeId} onChange={e=>setScopeId(e.target.value)} className="block w-full border rounded-lg p-2 mt-1"><option value="">Chọn phạm vi</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m, lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select></label>
-            <label className="block">Hồ sơ bàn giao đã chấp nhận<select value={handoverId} onChange={e=>setHandoverId(e.target.value)} className="block w-full border rounded-lg p-2 mt-1"><option value="">Chọn hồ sơ bàn giao</option>{roadCoverage.sources?.filter(s=>s.kind==='HANDOVER').map((s,i)=><option key={s.id} value={s.id}>Hồ sơ {i+1} · {s.provenance}</option>)}</select></label>
-            <label className="block">Nguồn bảo hành / bảo trì<select value={sourceId} onChange={e=>setSourceId(e.target.value)} className="block w-full border rounded-lg p-2 mt-1"><option value="">Chọn căn cứ</option>{roadCoverage.sources?.filter(s=>s.kind===sourceKind).map((s,i)=><option key={s.id} value={s.id}>Căn cứ {i+1} · {s.provenance}</option>)}</select></label>
-            <label className="block">Nguồn gốc<select value={provenance} onChange={e=>setProvenance(e.target.value as 'REAL_SOURCE'|'TEST_ONLY')} className="block w-full border rounded-lg p-2 mt-1"><option value="TEST_ONLY">Thử nghiệm — không cấp quyền thi công</option><option value="REAL_SOURCE" disabled={handover?.provenance!=='REAL_SOURCE' || source?.provenance!=='REAL_SOURCE'}>Đã xác minh thực tế</option></select></label>
-            {blocked && <p role="alert" className="text-amber-800">Thiếu phạm vi, hồ sơ bàn giao đã chấp nhận hoặc căn cứ có phiên bản. Chưa thể xác nhận độ phủ.</p>}
+            <label className="block">Phạm vi nghĩa vụ<select disabled={!!pending} value={scopeId} onChange={e=>{setScopeId(e.target.value);setSupersedesId('')}} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn phạm vi</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m, lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select></label>
+            <label className="block">Hồ sơ bàn giao đã chấp nhận<select disabled={!!pending} value={handoverId} onChange={e=>setHandoverId(e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn hồ sơ bàn giao</option>{roadCoverage.sources?.filter(s=>s.kind==='HANDOVER').map((s,i)=><option key={s.id} value={s.id}>Hồ sơ bàn giao {i+1} · {s.provenance==='TEST_ONLY'?'Thử nghiệm':'Chưa xác minh bên ngoài'}</option>)}</select></label>
+            <label className="block">Nguồn bảo hành / bảo trì<select disabled={!!pending} value={sourceId} onChange={e=>setSourceId(e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn căn cứ</option>{roadCoverage.sources?.filter(s=>s.kind===sourceKind).map((s,i)=><option key={s.id} value={s.id}>Căn cứ {i+1} · {s.provenance==='TEST_ONLY'?'Thử nghiệm':'Chưa xác minh bên ngoài'}</option>)}</select></label>
+            <label className="block">Nguồn gốc<select disabled={!!pending} value={provenance} onChange={e=>setProvenance(e.target.value as 'REAL_SOURCE'|'TEST_ONLY')} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="TEST_ONLY">Thử nghiệm — không cấp quyền thi công</option><option value="REAL_SOURCE" disabled={[handover,source].some(s=>!s || !['SOURCE_NOT_EXTERNALLY_VERIFIED','REAL_SOURCE'].includes(s.provenance || ''))}>Căn cứ thực tế — Giám sát phải đối chiếu</option></select></label>
+            {provenance==='REAL_SOURCE' && <p className="text-amber-800">Chỉ xác nhận khi Giám sát đã đối chiếu hồ sơ thực tế. Tệp đã tải lên không tự chứng minh việc xác minh ngoài thực tế.</p>}
+            <label className="block">Thay thế xác nhận đã lưu (nếu có)<select aria-label="Xác nhận độ phủ cần thay thế" disabled={!!pending || !currentConfirmations.length} value={supersedesId} onChange={e=>setSupersedesId(e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Không thay thế xác nhận cũ</option>{currentConfirmations.map(h=><option key={h.id} value={h.id}>Xác nhận {coverageDate(h.confirmedAtUtc)} · {h.provenance==='TEST_ONLY'?'Thử nghiệm':'Hồ sơ đã lưu'}</option>)}</select></label>
+            {validation && !pending && <p role="alert" className="text-amber-800">{validation}</p>}
           </div>
           {/* Số văn bản bàn giao */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700">Số hiệu biên bản / Văn bản bàn giao tuyến</label>
+            <label className="font-bold text-slate-700">Ghi chú số hiệu văn bản (không bắt buộc)</label>
             <input
               type="text"
-              required
+              disabled={!!pending}
               value={documentNo}
               onChange={(e) => setDocumentNo(e.target.value)}
-              placeholder="VD: BB-BG-2026/QL1A-PK01"
+              placeholder="Số hiệu nếu hồ sơ nguồn có cung cấp"
               className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-mono font-medium text-slate-800"
             />
           </div>
@@ -205,20 +214,22 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           {/* Thời hạn hiệu lực */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <label className="font-bold text-slate-700">Hiệu lực từ ngày</label>
+              <label className="font-bold text-slate-700">Hiệu lực từ ngày (giờ Việt Nam) *</label>
               <input
                 type="date"
                 required
+                aria-label="Ngày bắt đầu độ phủ" disabled={!!pending}
                 value={applicableFrom}
                 onChange={(e) => setApplicableFrom(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-bold text-slate-700">Đến hết ngày</label>
+              <label className="font-bold text-slate-700">Đến hết ngày (giờ Việt Nam) *</label>
               <input
                 type="date"
                 required
+                aria-label="Ngày kết thúc độ phủ" disabled={!!pending}
                 value={applicableTo}
                 onChange={(e) => setApplicableTo(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800"
@@ -228,9 +239,10 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
 
           {/* Lý do / Ý kiến phê duyệt */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700">Ý kiến thẩm duyệt của Giám sát</label>
+            <label className="font-bold text-slate-700">Ý kiến thẩm duyệt của Giám sát *</label>
             <textarea
               rows={2}
+              maxLength={2000} disabled={!!pending} aria-label="Ý kiến xác nhận độ phủ"
               required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -260,11 +272,11 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || blocked}
+              disabled={isSubmitting || (!pending && !!validation)}
               className="px-5 py-2 text-xs font-bold text-white bg-[#C9A227] hover:bg-[#b08d20] rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
               {isSubmitting && <Icon name="sync" size={14} className="animate-spin" />}
-              <span>{isSubmitting ? 'Đang gửi phê duyệt...' : 'Xác nhận phê duyệt độ phủ'}</span>
+              <span>{isSubmitting ? 'Đang đối chiếu...' : pending ? 'Đối chiếu xác nhận đã gửi' : 'Xác nhận phê duyệt độ phủ'}</span>
             </button>
           </div>
         </form>
