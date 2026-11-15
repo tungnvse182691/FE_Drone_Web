@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { STORAGE_KEYS, removeFromStorage } from './api/services/storageHelper'
 import { useQueryClient } from '@tanstack/react-query'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { RoleCode } from './types/enums'
@@ -30,23 +30,24 @@ import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
 import { OfflineConflicts } from './pages/(pm)/OfflineConflicts'
-import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
-import { RepairProposals } from './pages/(pm)/RepairProposals'
 import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
 
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
 import { SupDashboard } from './pages/(sup)/SupDashboard'
-import { BatchRejection } from './pages/(sup)/BatchRejection'
-import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
-import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
-import { AcceptanceList } from './pages/(sup)/AcceptanceList'
 import { RiskAnalytics } from './pages/(sup)/RiskAnalytics'
 import { ResearchValidation } from './pages/(sup)/ResearchValidation'
 import { AuditTrail } from './pages/(sup)/AuditTrail'
 import { SystemControl } from './pages/(sup)/SystemControl'
 import { PersonnelManagement } from './pages/(sup)/PersonnelManagement'
 import { ProfilePage } from './pages/(pm)/ProfilePage'
+
+import { RepairWorkflowPanel } from './components/repair/RepairWorkflowPanel'
+
+function RepairDetailRoute({ acceptance = false }: { acceptance?: boolean }) {
+  const { id, batchId } = useParams()
+  return <RepairWorkflowPanel acceptance={acceptance} packageId={batchId || id} />
+}
 
 export const App: React.FC = () => {
   const { user, isAuthenticated } = useAuthStore()
@@ -105,20 +106,20 @@ export const App: React.FC = () => {
             <Route path="field-tasks" element={<FieldTasks />} />
             <Route path="conflicts" element={<OfflineConflicts />} />
             <Route path="conflict-center" element={<OfflineConflicts />} />
-            <Route path="fast-track" element={<FastTrackDispatch />} />
-            <Route path="dispatch" element={<FastTrackDispatch />} />
-            <Route path="proposals" element={<RepairProposals />} />
-            <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
-            <Route path="work-packages" element={<RepairProposals />} />
-            <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
-            <Route path="repair-batches" element={<RepairProposals />} />
-            <Route path="repair-batches/:id" element={<ProposalApprovalDetail />} />
-            <Route path="work-orders/confirm" element={<EvidenceCloseoutDetail />} />
-            <Route path="work-orders/:id/confirm" element={<EvidenceCloseoutDetail />} />
-            <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
-            <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
-            <Route path="acceptance" element={<AcceptanceList />} />
-            <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
+            <Route path="fast-track" element={<RepairWorkflowPanel fastTrack />} />
+            <Route path="dispatch" element={<RepairWorkflowPanel fastTrack />} />
+            <Route path="proposals" element={<RepairWorkflowPanel />} />
+            <Route path="proposals/:id" element={<RepairDetailRoute />} />
+            <Route path="work-packages" element={<RepairWorkflowPanel />} />
+            <Route path="work-packages/:id" element={<RepairDetailRoute />} />
+            <Route path="repair-batches" element={<RepairWorkflowPanel />} />
+            <Route path="repair-batches/:id" element={<RepairDetailRoute />} />
+            <Route path="work-orders/confirm" element={<RepairDetailRoute acceptance />} />
+            <Route path="work-orders/:id/confirm" element={<RepairDetailRoute acceptance />} />
+            <Route path="evidence-closeout" element={<RepairDetailRoute acceptance />} />
+            <Route path="evidence-closeout/:id" element={<RepairDetailRoute acceptance />} />
+            <Route path="acceptance" element={<RepairWorkflowPanel acceptance />} />
+            <Route path="acceptance/:batchId" element={<RepairDetailRoute acceptance />} />
             <Route path="research-validation" element={<ResearchValidation />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
             <Route path="audit-trail" element={<AuditTrail />} />
@@ -152,28 +153,28 @@ export const App: React.FC = () => {
             <Route path="drone-mission/:id" element={<DroneMissionAIReview />} />
             <Route path="cases" element={<AIReviewInbox />} />
             <Route path="ai-inbox" element={<AIReviewInbox />} />
-            <Route path="fast-track" element={<FastTrackDispatch />} />
-            <Route path="dispatch" element={<FastTrackDispatch />} />
+            <Route path="fast-track" element={<RepairWorkflowPanel fastTrack />} />
+            <Route path="dispatch" element={<RepairWorkflowPanel fastTrack />} />
             <Route path="field-tasks" element={<FieldTasks />} />
             <Route path="conflicts" element={<OfflineConflicts />} />
             <Route path="conflict-center" element={<OfflineConflicts />} />
-            <Route path="proposals" element={<RepairProposals />} />
-            <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
-            <Route path="work-packages" element={<RepairProposals />} />
-            <Route path="work-packages/:id" element={<ProposalApprovalDetail />} />
-            <Route path="repair-batches" element={<RepairProposals />} />
+            <Route path="proposals" element={<RepairWorkflowPanel />} />
+            <Route path="proposals/:id" element={<RepairDetailRoute />} />
+            <Route path="work-packages" element={<RepairWorkflowPanel />} />
+            <Route path="work-packages/:id" element={<RepairDetailRoute />} />
+            <Route path="repair-batches" element={<RepairWorkflowPanel />} />
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
-            <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
-            <Route path="approvals/:id/reject" element={<BatchRejection />} />
-            <Route path="acceptance" element={<AcceptanceList />} />
-            <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
+            <Route path="approvals/:id" element={<RepairDetailRoute />} />
+            <Route path="approvals/:id/reject" element={<Navigate to="/sup/proposals" replace />} />
+            <Route path="acceptance" element={<RepairWorkflowPanel acceptance />} />
+            <Route path="acceptance/:batchId" element={<RepairDetailRoute acceptance />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />
             <Route path="research-validation" element={<ResearchValidation />} />
             <Route path="rpt-09" element={<ResearchValidation />} />
             <Route path="audit-trail" element={<AuditTrail />} />
             <Route path="rpt-10" element={<AuditTrail />} />
-            <Route path="evidence-closeout" element={<EvidenceCloseoutDetail />} />
-            <Route path="evidence-closeout/:id" element={<EvidenceCloseoutDetail />} />
+            <Route path="evidence-closeout" element={<RepairDetailRoute acceptance />} />
+            <Route path="evidence-closeout/:id" element={<RepairDetailRoute acceptance />} />
             <Route path="reports" element={<RiskAnalytics />} />
             <Route path="risk-analytics" element={<RiskAnalytics />} />
             <Route path="system-control" element={<SystemControl />} />
