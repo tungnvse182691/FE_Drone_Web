@@ -107,7 +107,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
 
                 className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
               />
-              <span className="text-slate-700">Manifest luôn có mã băm snapshot; nội dung tải được đối chiếu riêng</span>
+              <span className="text-slate-700">Nội dung tệp được kiểm tra khi tải hồ sơ.</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">

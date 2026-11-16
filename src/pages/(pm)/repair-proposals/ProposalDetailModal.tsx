@@ -1,3 +1,4 @@
+import {businessError} from '../../../utils/businessDisplay'
 import React,{useState,useEffect,useRef} from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { ProposalWorkPackage } from './types'
@@ -33,7 +34,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div className="w-full max-w-4xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {(error||journalError)&&<p role="alert" className="p-3 text-xs text-rose-700">{error||journalError}</p>}{message&&<p role="status" className="p-3 text-xs text-emerald-800">{message}</p>}
+        {(error||journalError)&&<p role="alert" className="p-3 text-xs text-rose-700">{businessError(error||journalError)}</p>}{message&&<p role="status" className="p-3 text-xs text-emerald-800">{message}</p>}
         {/* Header chi tiết */}
         <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3.5">

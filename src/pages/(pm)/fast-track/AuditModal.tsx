@@ -1,3 +1,4 @@
+import {businessText,businessDate} from '../../../utils/businessDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AuditLogItem } from './types'
@@ -39,16 +40,11 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-brand-dark">{log.title}</span>
-                <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
+                <span className="font-mono text-slate-400 text-[10px]">{businessDate(log.time)}</span>
               </div>
-              <p className="text-slate-600">
-                Người thực hiện: <strong>{log.user}</strong> • Hash kiểm tra:{' '}
-                <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200">
-                  {log.hash}
-                </code>
-              </p>
+
               <div className="text-[11px] text-slate-500 pt-1">
-                {log.note}
+                {businessText(log.note)}
               </div>
             </div>
           ))}

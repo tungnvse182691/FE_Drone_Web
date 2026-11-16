@@ -1,3 +1,4 @@
+import {businessText} from '../../../utils/businessDisplay'
 import {fieldEvidenceReuseCommands,type ReuseSource} from '../../../api/services/fieldEvidenceReuseCommands'
 import {fieldCreateCommands,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
 import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
@@ -183,7 +184,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,routeVersionId:target!.route_version_id,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,measurementScope:method,instructions:newNotes,dueAt:newDueAt,...(createScope.pins?{pins:createScope.pins}:{})}
       const created=await fieldCreateCommands.request(selectedProjectId,choice)
       if(!current())return
-      setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã GET xác nhận tạo phiếu FIELD ${created.id}.`,'success')
+      setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã tạo phiếu hiện trường và đọc lại hồ sơ.`,'success')
     }catch(e:any){if(!current())return;const message=e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message;setCreateModalError(message);notify(message,'error')}finally{if(current())setIsSubmittingCreate(false)}
   }
 
@@ -460,7 +461,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         <div className="text-[11px] text-slate-600 line-clamp-1">{task.defect_name}</div>
                       )}
                       <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                        Km {task.chainage_km} {task.lane ? `• ${task.lane}` : ''}
+                        {Number.isFinite(task.chainage_km)?`Km ${task.chainage_km}`:'Chưa có lý trình từ nguồn đọc'} {task.lane ? `• ${task.lane}` : ''}
                       </div>
                     </td>
 
@@ -480,14 +481,14 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : (
                         <span className="font-bold text-slate-900 text-xs font-mono">
-                          {task.measured_value} mm
+                          Chưa có số đo trong danh sách; xem chi tiết
                         </span>
                       )}
                     </td>
 
                     {/* Kỹ sư phụ trách */}
                     <td className="py-3.5 px-4 text-slate-700 text-xs">
-                      <span>{task.technician_name}</span>
+                      <span>{businessText(task.technician_name,'Chưa có tên người phụ trách')}</span>
                     </td>
 
                     {/* Ảnh đối chứng (Cặp Trước - Sau: Hiện trạng vs Thước đo) */}
@@ -717,7 +718,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             </div>
 
             <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
-              {heldCreate&&<p role="status" className="break-all">Giữ yêu cầu tạo FIELD {heldCreate.key} cho Defect {heldCreate.input.defectId}; dùng đúng body/key đã lưu để đối chiếu.</p>}
+              {heldCreate&&<p role="status" className="break-all">Yêu cầu lập phiếu đang chờ đối chiếu; nội dung đã gửi được giữ nguyên.</p>}
               {(catalogError||createJournalError)&&<p role="alert" className="text-rose-700">{catalogError||createJournalError}</p>}
               {crewError&&<p role="alert" className="text-rose-700">{crewError}</p>}
               <fieldset disabled={isSubmittingCreate||!!heldCreate} className="border-0 p-0 m-0 space-y-3.5 min-w-0">
@@ -979,7 +980,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-600">
                 <div className="font-medium text-slate-800">{selectedTaskToSubmit.measurement_type}</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">
-                  Người đo: <strong>{selectedTaskToSubmit.technician_name}</strong>
+                  Người đo: <strong>{businessText(selectedTaskToSubmit.technician_name,'Chưa có tên người phụ trách')}</strong>
                 </div>
               </div>
 
@@ -1302,8 +1303,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   ) : (
                     <div className="w-full h-44 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center">
                       <Icon name="pending" size={28} className="text-slate-300 mb-1" />
-                      <span className="font-medium text-slate-600">Đang chờ Repair Crew đo đạc ngoài hiện trường</span>
-                      <span className="text-[11px] text-slate-400 mt-0.5">Số đo và ảnh thước đo sẽ tự động đồng bộ khi kỹ sư nộp</span>
+                      <span className="font-medium text-slate-600">Chưa có ảnh trong dữ liệu danh sách</span>
+                      <span className="text-[11px] text-slate-400 mt-0.5">Ảnh và số đo đã nộp được đọc tại hồ sơ nguồn phía trên; không suy thành chưa nộp.</span>
                     </div>
                   )}
 
@@ -1431,7 +1432,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div>
                     <span className="text-slate-500 block text-[11px]">Vị trí lý trình:</span>
                     <span className="font-semibold text-slate-800">
-                      Km {selectedDetailTask.chainage_km} {selectedDetailTask.lane ? `• ${selectedDetailTask.lane}` : ''}
+                      {Number.isFinite(selectedDetailTask.chainage_km)?`Km ${selectedDetailTask.chainage_km}`:'Chưa có lý trình từ nguồn đọc'} {selectedDetailTask.lane ? `• ${selectedDetailTask.lane}` : ''}
                     </span>
                   </div>
 
@@ -1445,29 +1446,16 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div>
                     <span className="text-slate-500 block text-[11px]">Kỹ sư / Đội thực hiện:</span>
                     <span className="text-slate-800 font-medium">
-                      {selectedDetailTask.technician_name}
+                      {businessText(selectedDetailTask.technician_name,'Chưa có tên người phụ trách')}
                     </span>
                   </div>
 
                   {/* Giá trị đo đạc nổi bật */}
                   <div className="p-3 bg-white rounded-lg border border-slate-200 mt-2">
                     <span className="text-[11px] font-medium text-slate-500 block">
-                      Kết quả đo thực tế (mm):
+                      Kết quả đo thực tế:
                     </span>
-                    {selectedDetailTask.measured_value ? (
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-2xl font-bold font-mono text-rose-600">
-                          {selectedDetailTask.measured_value} mm
-                        </span>
-                        <span className="text-[11px] text-rose-600 font-medium">
-                          (Vượt ngưỡng kỹ thuật cho phép)
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 italic text-xs mt-1 block">
-                        Chưa có số đo nộp về
-                      </span>
-                    )}
+                    <span className="text-slate-600 text-xs mt-1 block">Đọc giá trị, đơn vị và KNOWN/UNKNOWN trong hồ sơ nguồn phía trên; không tự so ngưỡng từ danh sách.</span>
                   </div>
 
                   {/* Thông tin bằng chứng tái sử dụng (API-084) nếu có */}
@@ -1608,8 +1596,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
             {reuseLoading&&<p role="status">Đang đọc bằng chứng nguồn…</p>}
             {(reuseError||reuseJournalError)&&<p role="alert" className="text-rose-700 text-xs">{reuseError||reuseJournalError}</p>}
-            {reuseHeld&&<p role="status" className="text-xs break-all">Giữ yêu cầu {reuseHeld.key} cho file {reuseHeld.body.fileId}; không thay body/key/version.</p>}
-            {reuseResult&&<p role="status" className="text-emerald-800 text-xs break-all">Đã GET đối chiếu file {reuseResult.receipt.fileId} · checksum {reuseResult.receipt.fileChecksum}. Receipt {reuseResult.receipt.id} · {reuseResult.receipt.reason}</p>}
+            {reuseHeld&&<p role="status" className="text-xs break-all">Yêu cầu sử dụng lại ảnh đang chờ kiểm tra kết quả.</p>}
+            {reuseResult&&<p role="status" className="text-emerald-800 text-xs break-all">Đã xác nhận ảnh được liên kết với hồ sơ. {reuseResult.receipt.reason}</p>}
             <select aria-label="Bằng chứng Report tái sử dụng" disabled={isSubmittingReuse||!!reuseHeld||!!reuseResult} value={reuseChoice} onChange={e=>{setReuseChoice(e.target.value);setReuseError('')}} className="w-full border border-slate-200 rounded-lg p-2 text-xs"><option value="">{reuseLoading?'Đang tải bằng chứng':reuseError?'Chưa tải được bằng chứng':'Chọn bằng chứng Report'}</option>{reuseSources.map(r=><option key={r.evidence.evidenceId} value={r.evidence.evidenceId}>{r.report.reportId} • {r.evidence.evidenceId}{r.evidence.supplementId?' • Bổ sung':' • Gốc'}</option>)}</select>
             {!reuseLoading&&!reuseError&&!reuseSources.length&&<p className="text-xs">Không có bằng chứng của Report trong dữ liệu nguồn.</p>}
             {/* Modal Body */}
@@ -1812,7 +1800,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           gpsLng={lightboxTask.gps_lng || 108.1310}
           deviceInfo={lightboxTask.exif_device || 'Samsung Galaxy Tab Active 4 Pro'}
           capturedAt={lightboxTask.exif_captured_at || lightboxTask.created_at}
-          technicianName={lightboxTask.technician_name}
+          technicianName={businessText(lightboxTask.technician_name,'Chưa có tên người phụ trách')}
           notes={lightboxTask.notes}
           statusBadge={
             lightboxTask.status === 'ASSIGNED' ? (

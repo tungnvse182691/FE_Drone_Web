@@ -616,7 +616,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                               </span>
                             </div>
                             <span className="text-slate-600 pl-2">
-                              {r.summary || 'Chưa có mô tả'} · <span className="font-mono text-[11px]">{r.source.type}: {r.source.id}</span>
+                              {r.summary || 'Chưa có mô tả'}
                             </span>
                           </div>
                         ))}

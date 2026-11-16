@@ -33,10 +33,10 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-sansation text-base font-bold text-slate-900">
-                Hàng đợi xuất dữ liệu bất đồng bộ
+                Tiến độ xuất hồ sơ
               </h3>
               <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-xs font-medium border border-slate-200">
-                {activeJob ? `#${activeJob.id}` : 'Không có tác vụ chạy'}
+                {activeJob ? 'Đang xử lý yêu cầu' : 'Không có tác vụ chạy'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -71,7 +71,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
                 Đang đóng gói hồ sơ nghiệm thu {activeJob.name}...
               </span>
               <span className="font-sansation text-[#8C6D1F] font-bold text-sm">
-                {Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}
+                {Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Đang xử lý'}
               </span>
             </div>
 
@@ -93,7 +93,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
           <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#C9A227] rounded-full transition-all duration-500"
-              style={{ width: `${Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}` }}
+              style={{ width: `${Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Đang xử lý'}` }}
             ></div>
           </div>
 
@@ -116,7 +116,7 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
       <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
         <div className="flex items-center gap-2 text-xs text-slate-600">
           <span className="text-slate-500">Bản sao lưu gần nhất:</span>
-          <span className="font-mono font-medium text-slate-800">{latest?`${latest.id} (${latest.format_display})`:'Chưa có export hoàn tất trong danh mục'}</span>
+          <span className="font-mono font-medium text-slate-800">{latest?`${latest.code} (${latest.format_display})`:'Chưa có export hoàn tất trong danh mục'}</span>
         </div>
 
         <div className="flex items-center gap-2">

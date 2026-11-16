@@ -12,7 +12,7 @@ export const LegalAuditStrip: React.FC = () => {
             Tiêu chuẩn pháp lý & Toàn vẹn chứng từ số
           </span>
           <p className="text-slate-500 leading-relaxed text-[11px] lg:text-xs">
-            Manifest ghi lại snapshot, nguồn và tệp của yêu cầu xuất. Kiểm tra tính đầy đủ và đối chiếu mã băm nội dung khi tải hồ sơ.
+            Hồ sơ lưu danh mục nguồn và tài liệu kèm theo. Nội dung tệp được kiểm tra khi tải.
           </p>
         </div>
       </div>
@@ -22,8 +22,8 @@ export const LegalAuditStrip: React.FC = () => {
           check_circle
         </span>
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-900 text-xs">SHA-256: đối chiếu từng nội dung tải</span>
-          <span className="font-mono text-[10px] text-slate-500">Chưa kết luận tính đầy đủ từ trạng thái job</span>
+          <span className="font-semibold text-slate-900 text-xs">Kiểm tra tính toàn vẹn khi tải</span>
+          <span className="font-mono text-[10px] text-slate-500">Tệp tạo thành công vẫn có thể chứa dữ liệu chưa đầy đủ.</span>
         </div>
       </div>
     </div>

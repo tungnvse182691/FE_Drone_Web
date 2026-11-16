@@ -1,3 +1,4 @@
+import {businessError} from '../../../utils/businessDisplay'
 import React, { useState, useEffect } from 'react'
 import { buildCoverageInput, coverageDate, coverageFormErrors } from './coverageForm'
 import { CoverageDocumentUpload } from './CoverageDocumentUpload'
@@ -265,7 +266,7 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
               <Icon name="error" size={16} className="text-red-500 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
                 <div className="font-bold">Lỗi khi phê duyệt độ phủ tuyến:</div>
-                <div className="text-[11px] leading-relaxed break-words">{errorMessage}</div>
+                <div className="text-[11px] leading-relaxed break-words">{businessError(errorMessage)}</div>
               </div>
             </div>
           )}

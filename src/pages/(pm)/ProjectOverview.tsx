@@ -159,7 +159,7 @@ export const ProjectOverview: React.FC = () => {
     return (
       <div className="p-16 text-center bg-white rounded-[20px] border-[1.5px] border-[#E2E5E9] text-slate-500 text-xs flex flex-col items-center justify-center gap-2 shadow-2xs">
         <Icon name="sync" size={24} className="animate-spin text-[#C9A227]" />
-        <span>Đang nạp dữ liệu hồ sơ dự án [{projectId}] từ máy chủ...</span>
+        <span>Đang tải hồ sơ dự án…</span>
       </div>
     )
   }

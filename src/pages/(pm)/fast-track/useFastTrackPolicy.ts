@@ -76,7 +76,7 @@ export function useFastTrackPolicy(selectedProjectId:string,showToast:(msg:strin
         const row=create?.receipt ? await fastTrackService.createPolicyDraft(p,create.body as RepairPolicyDefinitionInput) : update?.receipt && record ? await fastTrackService.updatePolicyDraft(p,record.id,update.body as RepairPolicyDefinitionInput,record.version) : record ? await fastTrackService.publishPolicy(p,record.id,(pending.body as {reason:string}).reason) : null
         if(!row)throw new Error('Receipt chưa gắn được với hồ sơ; giữ nguyên journal.')
         if(!activeScope(p,actionEpoch))return
-        adopt(row);localStorage.removeItem(fastTrackStorage(p,'policy-create'));localStorage.removeItem(fastTrackStorage(p,'policy-pipeline'));if(update?.receipt && record)localStorage.removeItem(fastTrackStorage(p,`policy-update:${record.id}`));await loadPolicyData(row.id);showToast('Đã GET đối chiếu receipt. Chưa gửi thao tác tiếp theo.');return
+        adopt(row);localStorage.removeItem(fastTrackStorage(p,'policy-create'));localStorage.removeItem(fastTrackStorage(p,'policy-pipeline'));if(update?.receipt && record)localStorage.removeItem(fastTrackStorage(p,`policy-update:${record.id}`));await loadPolicyData(row.id);showToast('Đã kiểm tra kết quả yêu cầu đã gửi.');return
       }
       const area=fastTrackService.policyBound(formMaxArea),depth=fastTrackService.policyBound(formMaxDepth)
       if(!formType || !formVersionName.trim() || formVersionName.length>200 || !formPolicyNote.trim() || formPolicyNote.length>2000 || (!ruleSelection.area && !ruleSelection.depth) || ruleSelection.area && area===null || ruleSelection.depth && depth===null)throw new Error('Chọn loại hư hỏng, quy tắc và nhập đủ checklist, ngưỡng, căn cứ hợp lệ.')
@@ -96,21 +96,21 @@ export function useFastTrackPolicy(selectedProjectId:string,showToast:(msg:strin
       if(row.state==='PUBLISHED' && row.revision==null && row.publishedRevisionId)row=await fastTrackService.getPolicyRevision(p,row.publishedRevisionId)
       if(!activeScope(p,actionEpoch))return
       adopt(row);localStorage.removeItem(fastTrackStorage(p,'policy-pipeline'));if(old)localStorage.removeItem(fastTrackStorage(p,`policy-update:${old.id}`))
-      await loadPolicyData(row.id);showToast(`Đã GET đối chiếu ${row.checklistVersion}: ${row.state==='DRAFT'?'Dự thảo':row.state==='REVOKED'?'Đã thu hồi':'Đã xuất bản'}.`)
+      await loadPolicyData(row.id);showToast(`Đã lưu ${row.checklistVersion}: ${row.state==='DRAFT'?'Dự thảo':row.state==='REVOKED'?'Đã thu hồi':'Đã xuất bản'}.`)
     }catch(e){setPolicyError(exportError(e))}finally{busy.current=false;setPolicyBusy(false)}
   }
   const revokePolicy=async(row:RepairPolicyView,reason:string)=>{
     if(busy.current)return false
     busy.current=true;setPolicyBusy(true)
     const p=selectedProjectId,version=epoch
-    try{const result=await fastTrackService.revokePolicy(p,row.id,reason);if(!activeScope(p,version))return false;adopt(result);await loadPolicyData(result.id);showToast('Đã GET đối chiếu thu hồi. Không đổi policy ghim trong nhiệm vụ cũ.');return true}catch(e){setPolicyError(exportError(e));return false}finally{busy.current=false;setPolicyBusy(false)}
+    try{const result=await fastTrackService.revokePolicy(p,row.id,reason);if(!activeScope(p,version))return false;adopt(result);await loadPolicyData(result.id);showToast('Đã thu hồi chính sách. Các nhiệm vụ cũ giữ nguyên chính sách.');return true}catch(e){setPolicyError(exportError(e));return false}finally{busy.current=false;setPolicyBusy(false)}
   }
   const handleReadHistory=(id:string)=>{const row=policies.find(r=>r.id===id);if(row){setIsPolicyModalOpen(true);void readPolicy(row)}}
   const handleActivateDraft=async(item:PolicyHistoryItem)=>{if(item.id)handleReadHistory(item.id)}
   const selectCoverageScope=(id:string)=>{localStorage.setItem(fastTrackStorage(selectedProjectId,'coverage-scope'),id);setRoadCoverage(current=>current?.readFact && current.etag ? coverageScopeView(current.readFact,current.etag,id,current.coverageReadAt):current)}
   const handleConfirmRoadCoverage=async(input:RoadCoverageInputDto)=>{
     if(busy.current)return;busy.current=true;setIsSubmittingCoverage(true);setCoverageError(null)
-    try{if(!roadCoverage?.etag)throw new Error('Đọc lại phiên bản độ phủ.');await fastTrackService.confirmRoadCoverage(selectedProjectId,input,roadCoverage.etag);if(!activeScope(selectedProjectId,epoch))return;localStorage.setItem(fastTrackStorage(selectedProjectId,'coverage-scope'),input.scopeObligationId);await loadPolicyData();setIsRoadCoverageModalOpen(false);showToast('Đã GET đối chiếu xác nhận. Đọc hiệu lực theo đúng phạm vi.')}catch(e){setCoverageError(exportError(e))}finally{busy.current=false;setIsSubmittingCoverage(false)}
+    try{if(!roadCoverage?.etag)throw new Error('Đọc lại phiên bản độ phủ.');await fastTrackService.confirmRoadCoverage(selectedProjectId,input,roadCoverage.etag);if(!activeScope(selectedProjectId,epoch))return;localStorage.setItem(fastTrackStorage(selectedProjectId,'coverage-scope'),input.scopeObligationId);await loadPolicyData();setIsRoadCoverageModalOpen(false);showToast('Đã lưu xác nhận độ phủ.')}catch(e){setCoverageError(exportError(e))}finally{busy.current=false;setIsSubmittingCoverage(false)}
   }
   const policyEditor={mode,record,dirty,busy:policyBusy,pending:!!pending,hasReceipt:!!pending?.receipt,formType,setFormType,read:readPolicy,newPolicy,revoke:revokePolicy,pendingRead,pendingNew,cancelRead:()=>{setPendingRead(null);setPendingNew(false)}}
   return {selectCoverageScope,policyEditor,handleReadHistory,ruleSelection,setRuleSelection,currentPolicy,policyHistory,auditLogs,roadCoverage,isRoadCoverageModalOpen,setIsRoadCoverageModalOpen,handleConfirmRoadCoverage,coverageError,policyError,isSubmittingCoverage,formVersionName,setFormVersionName,formMaxArea,setFormMaxArea,formMaxDepth,setFormMaxDepth,formPolicyNote,setFormPolicyNote,isPolicyModalOpen,setIsPolicyModalOpen,isAuditModalOpen,setIsAuditModalOpen,handleApplyPolicy,handleActivateDraft,loadPolicyData}

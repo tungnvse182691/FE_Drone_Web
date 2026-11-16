@@ -1,3 +1,4 @@
+import {businessError} from '../../utils/businessDisplay'
 import {ReportingMetricsPanel,useProjectReporting} from './risk-analytics/ReportingMetricsPanel'
 // @refresh reset
 import React from 'react'
@@ -79,7 +80,7 @@ export const RiskAnalytics: React.FC = () => {
       )}
 
       {/* Header & Filter Controls */}
-      {(apiError||journalError)&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{apiError||journalError}</p>}
+      {(apiError||journalError)&&<p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{businessError(apiError||journalError)}</p>}
       <RiskHeader
         currentProject={currentProject}
         isRefreshing={isRefreshing}
@@ -259,7 +260,7 @@ export const RiskAnalytics: React.FC = () => {
                       <span className="material-symbols-outlined text-[36px] text-slate-300 mx-auto block">
                         folder_open
                       </span>
-                      <p className="text-sm font-semibold text-slate-700">{apiError?'Không tải được danh mục export':selectedProject==='ALL'?'Chọn dự án để đọc hồ sơ':'Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại'}</p>
+                      <p className="text-sm font-semibold text-slate-700">{apiError?'Chưa đọc được hồ sơ trong phạm vi quyền hiện tại':selectedProject==='ALL'?'Chọn dự án để đọc hồ sơ':'Không tìm thấy hồ sơ phù hợp với bộ lọc hiện tại'}</p>
                       <p className="text-xs text-slate-400">Hãy thử đổi dự án, điều chỉnh kỳ báo cáo hoặc nhấn "Đặt lại".</p>
                     </td>
                   </tr>

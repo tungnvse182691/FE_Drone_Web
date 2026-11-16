@@ -84,7 +84,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
             onClick={() => onSelectDetail(record)}
             type="button"
             className="p-1 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-            title="Xem chi tiết hồ sơ & mã băm SHA-256"
+            title="Xem chi tiết hồ sơ"
           >
             <span className="material-symbols-outlined text-[16px]">open_in_new</span>
           </button>
@@ -100,15 +100,7 @@ export const ExportRecordRow: React.FC<ExportRecordRowProps> = ({
             </button>
           )}
 
-          <button
-            disabled
-            onClick={() => onDelete(record.id, record.code)}
-            type="button"
-            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-            title="Chưa có lệnh xóa hồ sơ trong contract"
-          >
-            <span className="material-symbols-outlined text-[16px]">delete</span>
-          </button>
+
         </div>
       </td>
     </tr>
