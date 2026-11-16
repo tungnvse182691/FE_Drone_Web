@@ -38,7 +38,7 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
   secondaryPhotoUrl,
   secondaryPhotoLabel = 'Ảnh Drone Khảo Sát Ban Đầu',
   measuredValue,
-  unit = 'mm',
+  unit,
   chainage,
   lane,
   gpsLat,
@@ -351,8 +351,8 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
               {measuredValue !== undefined ? (
                 <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700/80 space-y-1">
                   <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>Kết quả đo thực tế (mm):</span>
-                    <span className="text-[10px] font-mono text-emerald-400">Mobile EXIF Verified</span>
+                    <span>Kết quả đo đã nộp:</span>
+                    <span className="text-[10px] font-mono text-emerald-400">Theo hồ sơ nguồn</span>
                   </div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold font-mono text-rose-500">
@@ -360,13 +360,13 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
                     </span>
                     <span className="text-sm font-semibold text-slate-300">{unit}</span>
                     <span className="text-[11px] text-rose-400 ml-auto font-medium">
-                      (Vượt ngưỡng kỹ thuật)
+
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-xs text-slate-400 italic">
-                  Chưa có số đo nộp về từ hiện trường
+                  Chưa xác định số đo hoặc chưa có dữ liệu trong hồ sơ
                 </div>
               )}
 
@@ -378,21 +378,23 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
                     <span>Lý trình:</span>
                   </span>
                   <span className="font-semibold text-slate-200 text-right">
-                    Km {chainage} {lane ? `• ${lane}` : ''}
+                    {chainage!==undefined&&chainage!==''?`Km ${chainage}`:'Chưa xác định'} {lane ? `• ${lane}` : ''}
                   </span>
                 </div>
 
-                {(gpsLat || gpsLng) && (
+                {(Number.isFinite(gpsLat) && Number.isFinite(gpsLng)) && (
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-slate-400 flex items-center gap-1.5">
                       <Icon name="gps_fixed" size={14} className="text-emerald-400" />
                       <span>Tọa độ GPS:</span>
                     </span>
                     <span className="font-mono text-slate-200 text-right">
-                      {gpsLat?.toFixed(4)}° N, {gpsLng?.toFixed(4)}° E
+                      {gpsLat}°, {gpsLng}°
                     </span>
                   </div>
                 )}
+                {(!Number.isFinite(gpsLat)||!Number.isFinite(gpsLng))&&<p className="text-slate-400">GPS: Chưa xác định</p>}
+                {!deviceInfo&&<p className="text-slate-400">Thiết bị: Chưa có thông tin nguồn</p>}
 
                 {deviceInfo && (
                   <div className="flex items-start justify-between gap-2">

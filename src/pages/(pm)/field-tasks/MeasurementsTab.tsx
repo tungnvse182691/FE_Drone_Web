@@ -104,10 +104,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Modal Ghi nhận số đo
   const [isSubmitValueModalOpen, setIsSubmitValueModalOpen] = useState(false)
   const [selectedTaskToSubmit, setSelectedTaskToSubmit] = useState<FieldTask | null>(null)
-  const [inputMeasuredValue, setInputMeasuredValue] = useState<number>(38)
+  const [inputMeasuredValue, setInputMeasuredValue] = useState<number | ''>('')
   const [submitNotes, setSubmitNotes] = useState<string>('')
 
   // Modal Xem chi tiết & Ảnh thước đo
+  const [measurementTarget,setMeasurementTarget]=useState<HTMLDivElement|null>(null),[imageTarget,setImageTarget]=useState<HTMLDivElement|null>(null)
   const [selectedDetailTask, setSelectedDetailTask] = useState<FieldTask | null>(null)
   const [modalPhotoTab, setModalPhotoTab] = useState<'RULER' | 'DRONE' | 'SPLIT' | 'REUSED'>('RULER')
 
@@ -208,7 +209,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Mở modal nhập số đo
   const handleOpenSubmitModal = (task: FieldTask) => {
     setSelectedTaskToSubmit(task)
-    setInputMeasuredValue(task.measured_value || 42)
+    setInputMeasuredValue(task.measured_value ?? '')
     setSubmitNotes(task.notes || '')
     setIsSubmitValueModalOpen(true)
   }
@@ -217,6 +218,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const handleConfirmSubmitValue = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedTaskToSubmit) return
+    if(inputMeasuredValue===''||!Number.isFinite(inputMeasuredValue)){notify('Nhập số đo có căn cứ hoặc giữ chưa xác định.','error');return}
 
     setActionLoadingId(selectedTaskToSubmit.id)
     try {
@@ -225,7 +227,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       await fieldTaskService.recordMeasurement(
         pId,
         selectedTaskToSubmit.id,
-        Number(inputMeasuredValue) || 40,
+        Number(inputMeasuredValue),
         submitNotes
       )
       const code = selectedTaskToSubmit.code
@@ -816,7 +818,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 )}
               </div>
 
-              
+
 
               <div className="flex flex-col">
                 <div className="mb-1">
@@ -993,7 +995,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     type="number"
                     step="0.1"
                     value={inputMeasuredValue}
-                    onChange={(e) => setInputMeasuredValue(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setInputMeasuredValue(e.target.value===''?'':Number(e.target.value))}
                     className="w-full bg-transparent font-mono text-sm font-bold text-slate-900 focus:outline-none"
                     required
                     autoFocus
@@ -1063,12 +1065,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </button>
             </div>
 
-            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status?.toUpperCase()==='COMPLETED'?'VERIFIED':task.status?.replace(/_/g,'').toUpperCase()==='SUPPLEMENTREQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
+            {selectedDetailTask.project_id?<FieldTaskReadDetails measurementTarget={measurementTarget} imageTarget={imageTarget} projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status?.toUpperCase()==='COMPLETED'?'VERIFIED':task.status?.replace(/_/g,'').toUpperCase()==='SUPPLEMENTREQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
 
             {/* Content: 2 cột */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Cột trái: Xem ảnh với Tabs chuyển đổi & Chế độ so sánh song song */}
               <div className="space-y-2">
+                <h4 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Hình ảnh kỹ thuật đối chứng</h4>
+                <div ref={setImageTarget} className="space-y-2"/>
+                {(selectedDetailTask.evidence_photo_url || selectedDetailTask.defect_photo_url || selectedDetailTask.reused_evidence?.photo_url) && <>
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
                     Hình ảnh kỹ thuật đối chứng
@@ -1116,7 +1121,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         }`}
                       >
                         <Icon name="history_edu" size={11} />
-                        <span>Phản ánh (API-084)</span>
+                        <span>Phản ánh</span>
                       </button>
                     )}
 
@@ -1231,12 +1236,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           <span className="font-medium text-amber-300">Ảnh Drone khảo sát ban đầu</span>
                         </div>
                         <span className="font-mono text-slate-300 text-[10px]">
-                          Zenmuse P1 (GSD 0.8cm/px)
+                          Chưa có thông tin thiết bị từ nguồn
                         </span>
                       </div>
                     </div>
                   ) : modalPhotoTab === 'REUSED' && selectedDetailTask.reused_evidence ? (
-                    /* 4. CHẾ ĐỘ XEM ẢNH PHẢN ÁNH TÁI SỬ DỤNG (API-084) */
+                    /* 4. CHẾ ĐỘ XEM ẢNH PHẢN ÁNH TÁI SỬ DỤNG (hồ sơ phản ánh) */
                     <div
                       onClick={() => {
                         handleOpenReuseModal(selectedDetailTask)
@@ -1247,7 +1252,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         src={
                           selectedDetailTask.reused_evidence.photo_url ||
                           selectedDetailTask.defect_photo_url ||
-                          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
+                          ''
                         }
                         alt="Ảnh phản ánh tái sử dụng"
                         className="w-full h-56 object-cover object-center group-hover:scale-102 transition-transform duration-200"
@@ -1255,7 +1260,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 bg-amber-950/90 text-amber-200 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg transition-opacity border border-amber-400">
                           <Icon name="history_edu" size={16} />
-                          <span>Xem chi tiết hồ sơ thẩm định API-084</span>
+                          <span>Xem chi tiết hồ sơ thẩm định hồ sơ phản ánh</span>
                         </span>
                       </div>
                       <div className="absolute bottom-2 left-2 right-2 bg-slate-900/85 backdrop-blur-xs text-white p-2 rounded-lg text-[11px] flex items-center justify-between">
@@ -1266,7 +1271,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           </span>
                         </div>
                         <span className="font-mono text-amber-400 font-bold text-[10px]">
-                          API-084 Approved
+                          Bằng chứng phản ánh
                         </span>
                       </div>
                     </div>
@@ -1296,7 +1301,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           <span className="font-medium text-emerald-300">Ảnh thước đo Mobile</span>
                         </div>
                         <span className="font-mono text-slate-300 text-[10px]">
-                          {selectedDetailTask.exif_device || 'EXIF Verified'}
+                          {selectedDetailTask.exif_device || 'Chưa có thông tin thiết bị'}
                         </span>
                       </div>
                     </div>
@@ -1349,7 +1354,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             src={
                               selectedDetailTask.reused_evidence.photo_url ||
                               selectedDetailTask.defect_photo_url ||
-                              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
+                              ''
                             }
                             alt="Phản ánh"
                             className="w-10 h-8 rounded object-cover"
@@ -1358,7 +1363,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             <span className="text-[10px] font-bold text-amber-900 block truncate">
                               Ảnh phản ánh
                             </span>
-                            <span className="text-[9px] text-amber-700 block">API-084</span>
+                            <span className="text-[9px] text-amber-700 block">hồ sơ phản ánh</span>
                           </div>
                         </button>
                       )}
@@ -1389,6 +1394,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </div>
                   )}
                 </div>
+                </>}
               </div>
 
               {/* Cột phải: Thông số kỹ thuật & Số đo */}
@@ -1450,13 +1456,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </span>
                   </div>
 
-                  {/* Giá trị đo đạc nổi bật */}
-                  <div className="p-3 bg-white rounded-lg border border-slate-200 mt-2">
-                    <span className="text-[11px] font-medium text-slate-500 block">
-                      Kết quả đo thực tế:
-                    </span>
-                    <span className="text-slate-600 text-xs mt-1 block">Đọc giá trị, đơn vị và KNOWN/UNKNOWN trong hồ sơ nguồn phía trên; không tự so ngưỡng từ danh sách.</span>
-                  </div>
+                  <div ref={setMeasurementTarget} className="p-3 bg-white rounded-lg border border-slate-200 mt-2 space-y-2"/>
 
                   {/* Thông tin bằng chứng tái sử dụng (API-084) nếu có */}
                   {selectedDetailTask.reused_evidence && (
@@ -1792,14 +1792,14 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
           primaryPhotoLabel="Ảnh Thước Đo (Hiện trường)"
           secondaryPhotoUrl={lightboxTask.defect_photo_url || ''}
           secondaryPhotoLabel="Ảnh Khảo Sát Drone"
-          measuredValue={lightboxTask.measured_value}
-          unit="mm"
+
+
           chainage={lightboxTask.chainage_km ?? undefined}
           lane={lightboxTask.lane}
-          gpsLat={lightboxTask.gps_lat || 16.2405}
-          gpsLng={lightboxTask.gps_lng || 108.1310}
-          deviceInfo={lightboxTask.exif_device || 'Samsung Galaxy Tab Active 4 Pro'}
-          capturedAt={lightboxTask.exif_captured_at || lightboxTask.created_at}
+          gpsLat={lightboxTask.gps_lat ?? undefined}
+          gpsLng={lightboxTask.gps_lng ?? undefined}
+          deviceInfo={lightboxTask.exif_device}
+          capturedAt={lightboxTask.exif_captured_at}
           technicianName={businessText(lightboxTask.technician_name,'Chưa có tên người phụ trách')}
           notes={lightboxTask.notes}
           statusBadge={

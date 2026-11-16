@@ -48,3 +48,12 @@ Lỗi script ban đầu dùng client origin thay vì ID của start receipt gây
 4. **PM-A là creator export** → Báo cáo → chọn project TEST → xem/tải PDF/ZIP đã tạo. Sup đọc catalog export của PM có thể403 đúng creator-only; không đổi role để vượt guard. Web PM đã đọc detail PARTIAL, bấm tải, F5; API kiểm bytes/manifest đầy đủ hơn UI.
 
 Chưa phải “full PASS”: còn FIELD vị trí thực không được phép giả, attach-handover/read checklist BE, survey/AI/retention chưa chạy, audit UI toàn modal và các thao tác runtime qua Web còn chưa đủ. Dữ liệu Crew chạy bằng API, không phải Mobile/Web Crew; mutations PM/Sup chủ yếu harness HTTP, Web mới kiểm phần đọc và tải nêu trên.
+
+## Bổ sung kiểm ba phát hiện UI
+
+- FIELD giữ vùng ảnh bên trái, submission/số đo bên phải của modal hiện có; giữ các tab/so sánh ảnh khi có nguồn. Không còn panel submission/ảnh riêng phía trên.
+- Lightbox dùng số đo KNOWN và đơn vị từ submission; UNKNOWN không đổi thành0. Bỏ GPS, thiết bị, thời gian và mm giả định, không kết luận vượt ngưỡng. Không có nguồn thì ghi chưa xác định.
+- Export khôi phục5 phần thiếu từ missingSections/manifest bằng tiếng Việt; vẫn PARTIAL, không phơi reasonCodes.
+- Browser Sup mở task7328, submission2 UNKNOWN, tải ảnh synthetic và mở lightbox; PM mở task54D7 đọc0m² và lịch sử7 sự kiện; PM mở exportHS-B100A1EA đọc đủ5 giải thích phần thiếu. Không tạo lại TEST hoặc sửa journal.
+- Ảnh bổ sung: sup-field-unknown-lightbox-after.png, pm-field-zero-placed-after.png, pm-export-missing-vietnamese-after.png trong artifacts/demo-e2e-20261116. Ảnh trước: sup-field-after.png, pm-export-after.png (checkpoint trước sửa ba phát hiện).
+- Typecheck/build qua; regression FIELD read8, create9, export12, FastTrack23 và kiểm trình bày lightbox/export qua. Đây là kiểm các phần nêu trên, không phải toàn bộ audit UI/runtime đã hoàn tất.

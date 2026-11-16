@@ -1,4 +1,5 @@
 import {businessError} from '../../../utils/businessDisplay'
+import {exportMissingDetails} from '../../../utils/exportCompleteness'
 import React from 'react'
 import { ExportRecord } from './types'
 
@@ -43,6 +44,7 @@ export const DossierDetailModal: React.FC<DossierDetailModalProps> = ({
           {!record.manifest&&!error&&<p role="status">Đang đọc hồ sơ…</p>}
           <p>Trạng thái: {record.server?.status==='SUCCEEDED'?'Đã tạo hồ sơ':record.server?.status==='FAILED'?'Chưa tạo được hồ sơ':'Đang xử lý'}</p>
           <p>Tính đầy đủ: {record.server?.completeness==='PARTIAL'?'Một phần (PARTIAL)':record.server?.completeness==='COMPLETE'?'Đầy đủ':'Chưa có kết quả'}</p>
+          {exportMissingDetails(record.server?.missingSections ?? [],record.manifest?.sections).length>0&&<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2"><h4 className="font-semibold text-amber-900">Các phần cần bổ sung</h4>{exportMissingDetails(record.server?.missingSections ?? [],record.manifest?.sections).map((part,i)=><p key={i} className="text-amber-900"><strong>{part.name}:</strong> {part.explanation}</p>)}</div>}
           <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
             <div>
               <span className="text-slate-500 block text-[11px]">Loại tài liệu:</span>
