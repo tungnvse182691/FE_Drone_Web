@@ -150,40 +150,7 @@ export const validationService = {
     job: AsyncValidationJob
     run: ExtendedValidationRun
   }> {
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    const projConfig =
-      VALIDATION_PROJECT_OPTIONS.find((p) => p.id === projectId) ||
-      VALIDATION_PROJECT_OPTIONS[0]
-
-    const newRunCode = `VAL-RUN-2026-${Math.floor(Math.random() * 89 + 10)}`
-    const newJobId = `job-val-${Math.floor(Math.random() * 899 + 100)}`
-    const newJobCode = `#VAL-2026-${Math.floor(Math.random() * 89 + 10)}`
-
-    const newJob: AsyncValidationJob = {
-      id: newJobId,
-      code: newJobCode,
-      name: `Đang đối soát ma trận ghép cặp trên đoạn ${projConfig.chainage}`,
-      progress: 5,
-      status: 'RUNNING',
-      section: projConfig.chainage,
-      project_id: projectId,
-      estimated_seconds: 40
-    }
-
-    const currentBase = RUNS_BY_PROJECT[projectId] || RUNS_BY_PROJECT['prj-ql1a-02']
-    const newRun: ExtendedValidationRun = {
-      ...currentBase,
-      id: `val-run-${Date.now()}`,
-      run_code: newRunCode,
-      executed_at: 'Hôm nay ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'RUNNING',
-      progress_percent: 5
-    }
-
-    inMemoryActiveJob = newJob
-    RUNS_BY_PROJECT[projectId] = newRun
-
-    return { job: newJob, run: newRun }
+    throw Error('Chưa có đủ nguồn kiểm định và cặp số đo đã xác minh cho thao tác này.')
   },
 
   /**
@@ -208,11 +175,7 @@ export const validationService = {
    * Hủy tiến trình kiểm định nền đang chạy
    */
   async cancelValidationJob(jobId: string): Promise<boolean> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    if (inMemoryActiveJob && inMemoryActiveJob.id === jobId) {
-      inMemoryActiveJob = null
-    }
-    return true
+    throw Error('Chưa có đủ nguồn kiểm định và cặp số đo đã xác minh cho thao tác này.')
   },
 
   /**
@@ -223,29 +186,7 @@ export const validationService = {
     csvContent: string
     totalRows: number
   }> {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    const list =
-      projectId === 'ALL'
-        ? inMemorySamples
-        : inMemorySamples.filter((s) => s.project_id === projectId)
-
-    const headers =
-      'Sample_ID,Project_ID,Defect_Type,Chainage_KM,Ground_Truth_mm,Derived_AI_mm,Signed_Error_mm,Absolute_Error_mm,Status,Exclusion_Reason,Instrument,Measured_By\n'
-    const rows = list
-      .map(
-        (s) =>
-          `"${s.sample_id}","${s.project_id}","${s.defect_name_vi}","Km${s.chainage_km}",${s.ground_truth_value},${s.derived_value},${s.signed_error},${s.absolute_error},"${s.inclusion_status}","${s.exclusion_reason || ''}","${s.instrument_name}","${s.measured_by}"`
-      )
-      .join('\n')
-
-    const filePrefix =
-      projectId === 'ALL' ? 'ALL' : projectId.replace('prj-', '').toUpperCase()
-
-    return {
-      fileName: `RPT-09-Research-Validation-Paired-Data-${filePrefix}-v2.2.csv`,
-      csvContent: headers + rows,
-      totalRows: list.length
-    }
+    throw Error('Chưa có đủ nguồn kiểm định và cặp số đo đã xác minh cho thao tác này.')
   },
 
   // =========================================================================

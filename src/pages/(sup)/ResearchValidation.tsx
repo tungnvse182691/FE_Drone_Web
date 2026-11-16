@@ -1,4 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import {useAuthStore} from '../../store/authStore'
+import {projectService} from '../../api/services/projectService'
+import {businessError,businessDate,businessState} from '../../utils/businessDisplay'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   MeasurementValidationSample,
   MeasurementValidationRun
@@ -6,16 +9,21 @@ import {
 import {
   validationService,
   AsyncValidationJob,
-  ValidationProjectOption,
-  VALIDATION_PROJECT_OPTIONS
+  ValidationProjectOption
 } from '../../api/services'
 import { ResearchHeader } from './research/ResearchHeader'
 import { AsyncValidationJobBanner } from './research/AsyncValidationJobBanner'
 
 export const ResearchValidation: React.FC = () => {
   // Scope Dự án (Phục vụ PM được giao 1 hoặc nhiều dự án)
-  const [selectedProject, setSelectedProject] = useState<string>('prj-ql1a-02')
-  const projectOptions: ValidationProjectOption[] = VALIDATION_PROJECT_OPTIONS
+  const [selectedProject, setSelectedProject] = useState<string>('')
+  const [projectOptions,setProjectOptions]=useState<ValidationProjectOption[]>([])
+  const actor=useAuthStore(),identity=`${actor.authEpoch}:${actor.user?.id}:${actor.user?.role}`
+  const [sourceRuns,setSourceRuns]=useState<any[]>([]),[sourceId,setSourceId]=useState(''),[sourceResult,setSourceResult]=useState<any>(null),[sourceError,setSourceError]=useState('')
+  const sourceScope=`${identity}:${selectedProject}`,latest=useRef(sourceScope);latest.current=`${sourceScope}:${sourceId}`
+  useEffect(()=>{let current=true;setProjectOptions([]);setSelectedProject('');projectService.fetchProjects().then(rows=>{if(current)setProjectOptions(rows.map(r=>({id:r.id,code:r.code,name:r.name,chainage:'',surface_type:''})))}).catch(e=>{if(current)setSourceError(businessError(e.message))});return()=>{current=false}},[identity])
+  useEffect(()=>{const c=new AbortController();setSourceRuns([]);setSourceId('');setSourceResult(null);setSourceError('');setActiveRun(null);setSamples([]);setRuns([]);setActiveJob(null);setLoading(false);if(selectedProject)validationService.getAiMockRuns(selectedProject,c.signal).then(rows=>{if(!c.signal.aborted)setSourceRuns(rows)}).catch(e=>{if(!c.signal.aborted)setSourceError(businessError(e.message))});return()=>c.abort()},[sourceScope])
+  const readResult=async()=>{if(!sourceId)return;const scope=`${sourceScope}:${sourceId}`;setSourceError('');setSourceResult(null);try{const r=await validationService.getAiMockRunResult(selectedProject,sourceId);if(latest.current===scope)setSourceResult(r)}catch(e:any){if(latest.current===scope)setSourceError(businessError(e.message))}}
 
   // Loading & In-Memory Data State
   const [loading, setLoading] = useState<boolean>(true)
@@ -37,70 +45,7 @@ export const ResearchValidation: React.FC = () => {
     }, 3200)
   }, [])
 
-  // Tải dữ liệu bất đồng bộ từ validationService (In-Memory Mock API)
-  const loadData = useCallback(async (projId: string) => {
-    try {
-      setLoading(true)
-      const res = await validationService.getValidationOverview(projId)
-      setActiveRun(res.activeRun)
-      setSamples(res.samples)
-      setRuns(res.runs)
-      setActiveJob(res.activeJob)
-    } catch {
-      showToast('Có lỗi khi tải dữ liệu kiểm định thực nghiệm.')
-    } finally {
-      setLoading(false)
-    }
-  }, [showToast])
-
-  useEffect(() => {
-    loadData(selectedProject)
-  }, [loadData, selectedProject])
-
-  // Xử lý khi PM chuyển dự án
-  const handleSelectProject = (newProjId: string) => {
-    setSelectedProject(newProjId)
-    const targetProj = projectOptions.find((p) => p.id === newProjId)
-    showToast(`Đã chuyển sang tập dữ liệu kiểm nghiệm: ${targetProj?.name || newProjId}`)
-  }
-
-  // Tiến trình mô phỏng chạy Async Job tự động (5% -> 35% -> 70% -> 100%)
-  useEffect(() => {
-    if (!activeJob || activeJob.status !== 'RUNNING') return
-
-    const timer = setInterval(() => {
-      setActiveJob((prev) => {
-        if (!prev) return null
-        if (prev.progress >= 100) {
-          clearInterval(timer)
-          return prev
-        }
-        const nextProgress = Math.min(100, prev.progress + 30)
-        if (nextProgress >= 100) {
-          clearInterval(timer)
-
-          // Đồng bộ cập nhật trạng thái đợt chạy sang HOÀN TẤT
-          setActiveRun((r) => (r ? { ...r, status: 'COMPLETED', progress_percent: 100 } : null))
-          setRuns((prevRuns) =>
-            prevRuns.map((r) =>
-              r.status === 'RUNNING' ? { ...r, status: 'COMPLETED', progress_percent: 100 } : r
-            )
-          )
-          validationService.completeValidationRun()
-
-          showToast(`Tiến trình kiểm định ${prev.code} đã hoàn tất ghép cặp 100%! Đợt chạy đã chuyển sang HOÀN TẤT.`)
-          setTimeout(() => {
-            setActiveJob(null)
-          }, 1800)
-          return { ...prev, progress: 100, status: 'COMPLETED' }
-        }
-        return { ...prev, progress: nextProgress }
-      })
-    }, 1200)
-
-    return () => clearInterval(timer)
-  }, [activeJob?.id, activeJob?.status, showToast])
-
+  const handleSelectProject=(id:string)=>setSelectedProject(id)
   // Đồng bộ 100% số liệu giữa các thẻ chỉ số và danh sách dòng trong bảng đối soát
   const validSamples = useMemo(
     () => samples.filter((s) => s.inclusion_status === 'INCLUDED'),
@@ -206,7 +151,7 @@ export const ResearchValidation: React.FC = () => {
     }
   }
 
-  if (loading || !activeRun) {
+  if (loading) {
     return (
       <div className="space-y-6 max-w-7xl mx-auto pb-16 animate-pulse">
         <div className="h-20 bg-slate-100 rounded-xl" />
@@ -235,6 +180,13 @@ export const ResearchValidation: React.FC = () => {
         onTriggerValidation={handleTriggerValidation}
       />
 
+      <div className="space-y-2 text-xs">
+        {sourceError&&<p role="alert" className="text-rose-700">{sourceError}</p>}
+        <p className="text-slate-500">Chưa có nguồn chọn phiên bản mô hình, cấu hình và cặp số đo hợp lệ để tạo kiểm định. Không dùng số 0 hoặc ngưỡng mặc định thay cho kết quả.</p>
+        {selectedProject&&<label className="block">Lần thực nghiệm đã lưu<select aria-label="Lần thực nghiệm AI" value={sourceId} onChange={e=>{setSourceId(e.target.value);setSourceResult(null)}} className="block mt-1 w-full max-w-lg border rounded-xl p-2 bg-white"><option value="">{sourceRuns.length?'Chọn lần thực nghiệm từ hồ sơ':'Chưa có lần thực nghiệm trong nguồn dữ liệu'}</option>{sourceRuns.map((r,i)=><option key={r.id} value={r.id}>Lần {i+1} · {businessState(r.status)}</option>)}</select></label>}
+        {sourceId&&<button type="button" onClick={()=>void readResult()} className="border rounded-lg px-3 py-2">Đọc kết quả thực nghiệm</button>}
+        {sourceResult&&<p>Kết quả đã đọc lúc {businessDate(sourceResult.completedAt)} · {sourceResult.detections?.length??0} nhận diện · {sourceResult.matches?.length??0} đối chiếu. Chưa suy ra số đo hoặc kết quả nghiệm thu.</p>}
+      </div>
       {/* 2. Banner Async Job 202 Đang chạy */}
       {activeJob && (
         <AsyncValidationJobBanner
@@ -257,19 +209,19 @@ export const ResearchValidation: React.FC = () => {
                 </span>
               </div>
               <span className="px-[10px] py-[3px] rounded-full text-[11px] font-bold bg-emerald-50 text-[#047857] border border-emerald-200">
-                {validCount}/{totalCount} cặp
+                {activeRun?`${validCount}/${totalCount} cặp`:'Chưa có mẫu từ nguồn'}
               </span>
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold font-sansation text-slate-900 tracking-tight">
-                {validRatio}%
+                {activeRun?`${validRatio}%`:'—'}
               </span>
               <span className="text-xs text-slate-500 font-medium">tỷ lệ hợp lệ</span>
             </div>
           </div>
           <div className="text-[11px] text-slate-500 mt-4 pt-3 border-t border-slate-100 flex items-center justify-between font-medium">
             <span>Bị loại: <strong className="text-rose-600 font-bold">{excludedCount}</strong> mẫu</span>
-            <span className="text-slate-600 font-semibold">Quy chuẩn DD-C09</span>
+            <span className="text-slate-600 font-semibold">Theo hồ sơ kiểm định</span>
           </div>
         </div>
 
@@ -290,13 +242,13 @@ export const ResearchValidation: React.FC = () => {
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold font-sansation text-slate-900 tracking-tight">
-                {bias > 0 ? `+${bias.toFixed(1)}` : bias.toFixed(1)}
+                {activeRun?(bias > 0 ? `+${bias.toFixed(1)}` : bias.toFixed(1)):'—'}
               </span>
-              <span className="text-xs text-slate-500 font-bold font-mono">mm</span>
+              <span className="text-xs text-slate-500 font-bold font-mono">{activeRun?'mm':'Chưa có đơn vị'}</span>
             </div>
           </div>
           <div className="text-[11px] text-slate-500 mt-4 pt-3 border-t border-slate-100 font-medium line-clamp-1" title={bias > 0 ? `Ước lượng sâu hơn thực tế ${Math.abs(bias).toFixed(1)} mm` : `Ước lượng nông hơn thực tế ${Math.abs(bias).toFixed(1)} mm`}>
-            {bias > 0
+            {!activeRun?'Chưa có số đo đối soát':bias > 0
               ? `Ước lượng sâu hơn thực tế ${Math.abs(bias).toFixed(1)} mm`
               : `Ước lượng nông hơn thực tế ${Math.abs(bias).toFixed(1)} mm`}
           </div>
@@ -319,14 +271,14 @@ export const ResearchValidation: React.FC = () => {
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold font-sansation text-slate-900 tracking-tight">
-                {mae.toFixed(1)}
+                {activeRun?mae.toFixed(1):'—'}
               </span>
-              <span className="text-xs text-slate-500 font-bold font-mono">mm</span>
+              <span className="text-xs text-slate-500 font-bold font-mono">{activeRun?'mm':'Chưa có đơn vị'}</span>
             </div>
           </div>
           <div className="text-[11px] text-[#047857] mt-4 pt-3 border-t border-slate-100 font-semibold flex items-center gap-1">
             <span className="material-symbols-outlined text-[15px]">check_circle</span>
-            <span>Đạt nghiệm thu (&lt; 5.0 mm)</span>
+            <span>Chưa có kết luận từ hồ sơ kiểm định</span>
           </div>
         </div>
 
@@ -347,14 +299,14 @@ export const ResearchValidation: React.FC = () => {
             </div>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold font-sansation text-slate-900 tracking-tight">
-                {rmse.toFixed(1)}
+                {activeRun?rmse.toFixed(1):'—'}
               </span>
-              <span className="text-xs text-slate-500 font-bold font-mono">mm</span>
+              <span className="text-xs text-slate-500 font-bold font-mono">{activeRun?'mm':'Chưa có đơn vị'}</span>
             </div>
           </div>
           <div className="text-[11px] text-slate-500 mt-4 pt-3 border-t border-slate-100 flex items-center justify-between font-medium">
             <span>Độ không đảm bảo:</span>
-            <span className="font-bold text-slate-800 font-mono">±{activeRun.uncertainty_value} mm</span>
+            <span className="font-bold text-slate-800 font-mono">{activeRun?`±${activeRun.uncertainty_value} mm`:'Chưa có kết quả'}</span>
           </div>
         </div>
       </div>
@@ -413,9 +365,9 @@ export const ResearchValidation: React.FC = () => {
                 <th className="py-3 px-4">MÃ MẪU</th>
                 <th className="py-3 px-4">LOẠI HƯ HỎNG</th>
                 <th className="py-3 px-4">LÝ TRÌNH</th>
-                <th className="py-3 px-4 text-right">THỰC ĐỊA (MM)</th>
-                <th className="py-3 px-4 text-right">TRÍCH XUẤT AI (MM)</th>
-                <th className="py-3 px-4 text-right">SAI SỐ (MM)</th>
+                <th className="py-3 px-4 text-right">THỰC ĐỊA</th>
+                <th className="py-3 px-4 text-right">TRÍCH XUẤT AI</th>
+                <th className="py-3 px-4 text-right">SAI SỐ</th>
                 <th className="py-3 px-4 text-center">TRẠNG THÁI</th>
                 <th className="py-3 px-4">DỤNG CỤ ĐO &amp; KỸ SƯ THỰC HIỆN</th>
               </tr>
@@ -511,9 +463,9 @@ export const ResearchValidation: React.FC = () => {
                 <th className="py-3 px-4">TẬP MẪU ĐỐI SOÁT</th>
                 <th className="py-3 px-4 text-center">NGUỒN DỮ LIỆU</th>
                 <th className="py-3 px-4 text-center">MẪU ĐẠT / LOẠI</th>
-                <th className="py-3 px-4 text-right">BIAS (MM)</th>
-                <th className="py-3 px-4 text-right">MAE (MM)</th>
-                <th className="py-3 px-4 text-right">RMSE (MM)</th>
+                <th className="py-3 px-4 text-right">BIAS</th>
+                <th className="py-3 px-4 text-right">MAE</th>
+                <th className="py-3 px-4 text-right">RMSE</th>
                 <th className="py-3 px-4">NGƯỜI KÍCH HOẠT &amp; THỜI GIAN</th>
                 <th className="py-3 px-4 text-center">TRẠNG THÁI</th>
               </tr>
