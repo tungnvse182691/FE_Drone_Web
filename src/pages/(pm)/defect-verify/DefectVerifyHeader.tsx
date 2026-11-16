@@ -103,8 +103,9 @@ export const DefectVerifyHeader: React.FC<DefectVerifyHeaderProps> = ({
           <p className="text-xs text-slate-500 mt-1">
             Dự án: <span className="font-semibold text-slate-700">{defect.project_name}</span> • Lý trình:{' '}
             <strong className="text-slate-800 font-mono">
-              Km {Math.floor(defect.chainage_km)}+
-              {String(Math.round((defect.chainage_km % 1) * 1000)).padStart(3, '0')}
+              {Number.isFinite(defect.chainage_km)
+                ? `Km ${Math.floor(defect.chainage_km)}+${String(Math.round((defect.chainage_km % 1) * 1000)).padStart(3, '0')}`
+                : 'Chưa có lý trình từ server'}
             </strong>
             {defect.fixture_version && (
               <>

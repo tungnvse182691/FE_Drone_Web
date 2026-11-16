@@ -213,7 +213,7 @@ export const DefectBoundingBoxViewer: React.FC<DefectBoundingBoxViewerProps> = (
 
   const displayType = currentType || defect.defect_type
   const displayTypeLabel = formatDefectTypeLabel(displayType, customTypeLabel)
-  const stationingLabel = `Km ${Math.floor(defect.chainage_km)}+${String(Math.round((defect.chainage_km % 1) * 1000)).padStart(3, '0')}`
+  const stationingLabel = !Number.isFinite(defect.chainage_km) ? 'Chưa có lý trình từ server' : `Km ${Math.floor(defect.chainage_km)}+${String(Math.round((defect.chainage_km % 1) * 1000)).padStart(3, '0')}`
 
   return (
     <div className="space-y-3">

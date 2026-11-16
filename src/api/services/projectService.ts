@@ -311,16 +311,8 @@ function mapBackendProjectToHub(
   return project
 }
 
-// In-Memory Store có khôi phục từ sessionStorage khi F5/reload trang
-let projectStore: HubProject[] = (() => {
-  try {
-    const cached = false ? sessionStorage.getItem('roadguard_project_store') : null
-    if (cached && useAuthStore.getState().isAuthenticated) return JSON.parse(cached)
-  } catch {}
-  return false
-    ? JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
-    : []
-})()
+// Bộ nhớ đệm danh sách dự án đọc từ BE (không có dữ liệu khởi tạo cứng)
+let projectStore: HubProject[] = []
 
 useAuthStore.subscribe((state, previous) => {
   if (state.authEpoch !== previous.authEpoch) {
@@ -367,8 +359,7 @@ export const projectService = {
    */
   async fetchProjects(): Promise<HubProject[]> {
     const epoch = useAuthStore.getState().authEpoch
-    const isMock = false
-    if (!isMock) {
+    {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
         let directoryError = ''
@@ -471,8 +462,6 @@ export const projectService = {
       }
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    return this.getProjects()
   },
 
   /**
@@ -494,14 +483,8 @@ export const projectService = {
    * GET /projects/:id hoặc lấy chi tiết kèm thành viên / lifecycle
    */
   async fetchProjectById(id: string): Promise<HubProject | undefined> {
-    const isMock = false
-    if (!isMock) {
-      const all = await this.fetchProjects()
-      return all.find(project => project.id === id || project.code === id)
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    return this.getProjectById(id)
+    const all = await this.fetchProjects()
+    return all.find(project => project.id === id || project.code === id)
   },
 
   /**
@@ -547,8 +530,7 @@ export const projectService = {
    * Header: Idempotency-Key
    */
   async createProject(payload: ProjectCreatePayload, replay = false): Promise<HubProject> {
-    const isMock = false
-    if (!isMock) {
+    {
       this.pendingProjectCreate()
       const epoch = useAuthStore.getState().authEpoch
       const actor = useAuthStore.getState().user?.id
@@ -684,75 +666,6 @@ export const projectService = {
         command.busy = false
       }
     }
-
-    // Giả lập độ trễ truyền thông qua mạng HTTP
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const code = payload.code?.trim().toUpperCase()
-    const name = payload.name?.trim()
-    const handoverDate = payload.handoverDate
-    const warrantyEndDate = payload.warrantyEndDate
-    const pmId = payload.primaryPmId?.trim()
-
-    // 1. Kiểm tra trường bắt buộc
-    if (!code || !name) {
-      throw new Error('[422] Mã dự án (code) và Tên dự án (name) là các trường bắt buộc.')
-    }
-
-    // 2. Quy tắc BR-01: Bắt buộc chỉ định đúng 1 PM chính
-    if (!pmId || pmId === '-- Để trống --') {
-      throw new Error('[422] Bắt buộc chỉ định đúng 1 PM chính (primaryPmId) theo quy tắc BR-01.')
-    }
-
-    // 3. Quy tắc FR-04 / validation: warrantyEndDate >= handoverDate
-    if (new Date(warrantyEndDate).getTime() < new Date(handoverDate).getTime()) {
-      throw new Error('[422] Ngày hết hạn bảo hành (warrantyEndDate) không được nhỏ hơn ngày bàn giao (handoverDate).')
-    }
-
-    // 4. Kiểm tra mã dự án trùng lặp (HTTP 409 Conflict)
-    if (projectStore.some((p) => p.code.toUpperCase() === code)) {
-      throw new Error(`[409] Mã dự án [${code}] đã tồn tại trong hệ thống. Vui lòng chọn mã khác.`)
-    }
-
-    // Trích xuất tên và email của PM
-    const pmName = pmId.includes('(') ? pmId.split(' (')[0].trim() : pmId
-    const pmEmail = pmId.includes('(') ? pmId.split('(')[1].replace(')', '').trim() : 'pmhoang@gmail.com'
-
-    // Khởi tạo hồ sơ dự án theo schema chuẩn v2.2 / DA01
-    const newProject: HubProject = {
-      id: `prj-${Date.now()}`,
-      code,
-      name,
-      region: payload.region?.trim() || '',
-      location_detail: payload.region?.trim() || '',
-      start_km: 0.0,
-      end_km: 0.0,
-      stationing_text: 'Chờ thiết lập tim tuyến (PM)',
-      status: 'ACTIVE',
-      status_label: 'Đang bảo hành',
-      status_color: '#1B5E20',
-      pm_name: pmName,
-      pm_email: pmEmail,
-      pm_role_badge: 'PM Chính',
-      warranty_passed_percent: 0,
-      days_remaining: 1095,
-      length_km: 0.0,
-      open_defects: 0,
-      repair_packages: 0,
-      image_url: 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800&auto=format&fit=crop&q=80',
-      is_assigned: true,
-      is_restricted_for_pm: false,
-      kml_status: 'Chưa có tim tuyến',
-      handover_date: handoverDate,
-      warranty_end_date: warrantyEndDate,
-      handover_file_ids: payload.handoverFileIds || []
-    }
-
-    projectStore = [newProject, ...projectStore]
-
-    // Phát sự kiện đồng bộ reactive trên toàn client
-    window.dispatchEvent(new Event('roadguard_state_change'))
-    return JSON.parse(JSON.stringify(newProject))
   },
 
   /**
@@ -811,21 +724,6 @@ export const projectService = {
     throw new Error(`Máy chủ chưa có lệnh vòng đời '${command}' cho Web.`)
   },
 
-  updateProjectStatus(id: string, status: HubProject['status']): HubProject | null {
-    let updatedProj: HubProject | null = null
-    projectStore = projectStore.map((p) => {
-      if (p.id === id || p.code === id) {
-        updatedProj = { ...p, status }
-        return updatedProj
-      }
-      return p
-    })
-    if (updatedProj) {
-      window.dispatchEvent(new Event('roadguard_state_change'))
-    }
-    return updatedProj
-  },
-
   updateProjectAlignment(
     id: string,
     data: { length_km?: number; kml_status?: string; stationing_text?: string; status?: HubProject['status'] }
@@ -854,11 +752,5 @@ export const projectService = {
       window.dispatchEvent(new Event('roadguard_state_change'))
     }
     return updatedProj
-  },
-
-  resetProjects(): void {
-    projectStore = JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
-    window.dispatchEvent(new Event('roadguard_state_change'))
   }
 }
-

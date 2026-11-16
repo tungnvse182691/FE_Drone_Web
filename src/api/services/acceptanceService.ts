@@ -62,8 +62,6 @@ export const INITIAL_ACCEPTANCE_RECORDS: AcceptanceRecord[] = []
 
 let inMemoryPackages: AcceptancePackage[] = []
 let inMemoryCaseItems: CaseItem[] = []
-let inMemoryAcceptanceRecords: AcceptanceRecord[] = []
-const inMemoryClosedPackageIds = new Set<string>()
 
 // Metadata BE của từng hạng mục (phục vụ thao tác ghi): projectId, packageId, taskId, state.
 const itemMeta = new Map<string, { projectId: string; packageId: string; taskId: string | null; state: string }>()
@@ -200,10 +198,10 @@ export const acceptanceService = {
     let result = JSON.parse(JSON.stringify(inMemoryPackages)) as AcceptancePackage[]
     result = result.map((pkg) => {
       syncPackageStats(pkg.id)
-      const isClosed = inMemoryClosedPackageIds.has(pkg.id) || inMemoryClosedPackageIds.has(pkg.code)
+      // BE chưa có API đóng gói/vụ việc nên chưa có trạng thái đóng từ máy chủ
       return {
         ...pkg,
-        is_closed: isClosed
+        is_closed: false
       }
     })
 
@@ -243,10 +241,9 @@ export const acceptanceService = {
     const found = lookup()
     if (found) {
       syncPackageStats(found.id)
-      const isClosed = inMemoryClosedPackageIds.has(found.id) || inMemoryClosedPackageIds.has(found.code)
       return {
         ...JSON.parse(JSON.stringify(found)),
-        is_closed: isClosed
+        is_closed: false
       }
     }
     return null
@@ -321,15 +318,9 @@ export const acceptanceService = {
    * Không tự động đóng: Chỉ đóng khi Supervisor đã chủ động bấm nút xác nhận đóng đợt
    */
   async getCaseCloseoutStatus(packageId?: string): Promise<{ isCaseClosed: boolean; caseCode: string }> {
-    await new Promise((resolve) => setTimeout(resolve, 60))
+    // BE chưa có API trạng thái đóng vụ việc: không giả lập, luôn chưa đóng
     const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
-    const isClosed = packageId
-      ? inMemoryClosedPackageIds.has(packageId) || (pkg ? inMemoryClosedPackageIds.has(pkg.id) : false)
-      : false
-    return {
-      isCaseClosed: isClosed,
-      caseCode: pkg ? pkg.case_code : '#CASE-2026-0842'
-    }
+    return { isCaseClosed: false, caseCode: pkg ? pkg.case_code : '' }
   },
 
   /**
@@ -401,9 +392,6 @@ export const acceptanceService = {
       rework_reason: fullReason,
       rework_directives: payload.directives || []
     }
-    if (current.package_id && inMemoryClosedPackageIds.has(current.package_id)) {
-      inMemoryClosedPackageIds.delete(current.package_id)
-    }
     syncPackageStats(current.package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
@@ -413,18 +401,7 @@ export const acceptanceService = {
    * (POST /api/v1/evidence-closeout/items/:id/close-fast-track)
    */
   async closeFastTrackItem(itemId: string): Promise<CaseItem> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
-    if (index === -1) {
-      throw new Error(`Item ${itemId} not found`)
-    }
-    inMemoryCaseItems[index] = {
-      ...inMemoryCaseItems[index],
-      status: 'ACCEPTED',
-      status_label: 'ĐÃ ĐÓNG (FAST-TRACK RESOLVED)'
-    }
-    syncPackageStats(inMemoryCaseItems[index].package_id)
-    return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
+    throw new Error('Chưa nối máy chủ: BE chưa có API đóng lỗi Fast Track.')
   },
 
   /**
@@ -452,31 +429,7 @@ export const acceptanceService = {
    * (POST /api/v1/evidence-closeout/close-case)
    */
   async closeCompositeCase(caseCode: string, packageId?: string): Promise<{ success: boolean; caseCode: string }> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    const targetItems = packageId
-      ? inMemoryCaseItems.filter((it) => it.package_id === packageId)
-      : inMemoryCaseItems
-    const hasPending = targetItems.some((it) => it.status !== 'ACCEPTED')
-    if (hasPending) {
-      throw new Error('CASE_HAS_OPEN_REQUIRED_ITEMS: Chưa thể đóng vụ việc khi còn hạng mục dở dang')
-    }
-    if (packageId) {
-      inMemoryClosedPackageIds.add(packageId)
-      const pkg = inMemoryPackages.find((p) => p.id === packageId || p.code === packageId)
-      if (pkg) {
-        inMemoryClosedPackageIds.add(pkg.id)
-        inMemoryClosedPackageIds.add(pkg.code)
-        pkg.status = 'PASSED'
-        pkg.status_label = `Đã nghiệm thu đạt (${pkg.total_items}/${pkg.total_items})`
-      }
-    }
-    if (caseCode) {
-      inMemoryClosedPackageIds.add(caseCode)
-    }
-    return {
-      success: true,
-      caseCode
-    }
+    throw new Error('Chưa nối máy chủ: BE chưa có API đóng gói/vụ việc.')
   },
 
   /**
@@ -484,57 +437,27 @@ export const acceptanceService = {
    * (POST /api/v1/evidence-closeout/items/:id/publish-citizen)
    */
   async publishCitizenResult(itemId: string, published: boolean = true): Promise<CaseItem> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
-    if (index === -1) {
-      throw new Error(`Item ${itemId} not found`)
-    }
-    inMemoryCaseItems[index] = {
-      ...inMemoryCaseItems[index],
-      citizen_published: published
-    }
-    return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
+    throw new Error('Chưa nối máy chủ: BE chưa có API công bố kết quả cho Citizen App.')
   },
 
   /**
    * Tương thích ngược: Lấy danh sách AcceptanceRecord
    */
   async getRecords(): Promise<AcceptanceRecord[]> {
-    await new Promise((resolve) => setTimeout(resolve, 60))
-    return JSON.parse(JSON.stringify(inMemoryAcceptanceRecords))
+    throw new Error('Chưa nối máy chủ: BE chưa có API liệt kê biên bản nghiệm thu.')
   },
 
   /**
    * Tương thích ngược: Phê duyệt biên bản
    */
   async approveAcceptance(recordId: string, inspectorName: string, notes?: string): Promise<AcceptanceRecord | null> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const index = inMemoryAcceptanceRecords.findIndex((r) => r.id === recordId || r.item_code === recordId)
-    if (index === -1) return null
-    inMemoryAcceptanceRecords[index] = {
-      ...inMemoryAcceptanceRecords[index],
-      status: 'PASSED',
-      inspector_name: inspectorName,
-      inspector_notes: notes || 'Nghiệm thu đạt tiêu chuẩn kỹ thuật',
-      inspected_at: new Date().toLocaleDateString('vi-VN')
-    }
-    return JSON.parse(JSON.stringify(inMemoryAcceptanceRecords[index]))
+    throw new Error('Chưa nối máy chủ: BE chưa có API phê duyệt biên bản nghiệm thu.')
   },
 
   /**
    * Tương thích ngược: Từ chối biên bản
    */
   async rejectAcceptance(recordId: string, inspectorName: string, reason: string): Promise<AcceptanceRecord | null> {
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    const index = inMemoryAcceptanceRecords.findIndex((r) => r.id === recordId || r.item_code === recordId)
-    if (index === -1) return null
-    inMemoryAcceptanceRecords[index] = {
-      ...inMemoryAcceptanceRecords[index],
-      status: 'REJECTED',
-      inspector_name: inspectorName,
-      inspector_notes: reason,
-      inspected_at: new Date().toLocaleDateString('vi-VN')
-    }
-    return JSON.parse(JSON.stringify(inMemoryAcceptanceRecords[index]))
+    throw new Error('Chưa nối máy chủ: BE chưa có API từ chối biên bản nghiệm thu.')
   }
 }

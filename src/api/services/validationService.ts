@@ -34,10 +34,6 @@ export interface ExtendedValidationRun extends MeasurementValidationRun {
 }
 
 // 100% DỮ LIỆU THẬT CSDL BACKEND DOCKER - KHÔNG DÙNG MOCK DATA
-export const RUNS_BY_PROJECT: Record<string, ExtendedValidationRun> = {}
-let inMemorySamples: ExtendedValidationSample[] = []
-let inMemoryRuns: MeasurementValidationRun[] = []
-let inMemoryActiveJob: AsyncValidationJob | null = null
 
 export const METRICS_FORMULA_EXPLANATION = {
   MAE: {
@@ -130,20 +126,12 @@ export const validationService = {
     }
   },
 
-  /**
-   * Lọc danh sách mẫu theo trạng thái và dự án
-   */
+  /** BE không có API liệt kê mẫu đối soát. */
   async getSamples(
-    projectId: string = 'prj-ql1a-02',
-    filter: 'ALL' | 'INCLUDED' | 'EXCLUDED' | 'OUTLIER' = 'ALL'
+    _projectId: string = '',
+    _filter: 'ALL' | 'INCLUDED' | 'EXCLUDED' | 'OUTLIER' = 'ALL'
   ): Promise<ExtendedValidationSample[]> {
-    await new Promise((resolve) => setTimeout(resolve, 80))
-    let list =
-      projectId === 'ALL'
-        ? inMemorySamples
-        : inMemorySamples.filter((s) => s.project_id === projectId)
-    if (filter === 'ALL') return [...list]
-    return list.filter((s) => s.inclusion_status === filter)
+    throw new Error('Chưa nối máy chủ: BE không có API liệt kê mẫu đối soát.')
   },
 
   /** Khởi tạo kiểm định: cần danh sách cặp id từ BE (web chưa có nguồn) nên không thể thực hiện. */

@@ -102,6 +102,8 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         onClose={() => setIsCloseCaseModalOpen(false)}
         onConfirm={onConfirmCloseCase}
         caseItems={caseItems}
+        caseCode={currentPackage?.case_code}
+        projectName={currentPackage?.project_name}
       />
 
       {/* MODAL 3: EXPORT EVIDENCE DOSSIER RPT-07 */}
@@ -112,6 +114,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             onClose={() => setIsExportModalOpen(false)}
             currentItem={currentItem}
             setExportFormat={setExportFormat}
+            caseCode={currentPackage?.case_code}
             includeSha256Checksum={includeSha256Checksum}
             setIncludeSha256Checksum={setIncludeSha256Checksum}
             isExporting={isExporting}
@@ -123,6 +126,7 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
             onClose={() => setIsExportModalOpen(false)}
             currentItem={currentItem}
             setExportFormat={setExportFormat}
+            caseCode={currentPackage?.case_code}
             includeDroneRawTiff={includeDroneRawTiff}
             setIncludeDroneRawTiff={setIncludeDroneRawTiff}
             isExporting={isExporting}

@@ -36,7 +36,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSwitchToForce
 }) => {
   const toast = useToastStore()
-  const [loadingSample, setLoadingSample] = useState(false)
   // API-008: dùng email đang nhập ở ô Email; BE trả 202 chung cho mọi email (không lộ tài khoản).
   const requestRecovery = async () => {
     if (!email.trim()) { toast.info('Nhập email công vụ vào ô Email rồi bấm "Quên mật khẩu?" để gửi yêu cầu khôi phục.'); return }
@@ -48,19 +47,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       toast.error(err.response ? `Không gửi được yêu cầu khôi phục: HTTP ${err.response.status} ${err.response.data?.code || err.response.data?.title || ''}` : `Không gửi được yêu cầu khôi phục: ${err.message}`)
     }
   }
-  const fillSample = async (key: 'supervisor' | 'pm-a') => {
-    if (!import.meta.env.DEV || loadingSample || isLoading) return
-    setLoadingSample(true)
-    try {
-      const response = await fetch(`/__dev/test-account?key=${key}`, { credentials: 'same-origin', cache: 'no-store' })
-      if (!response.ok) throw new Error('Không đọc được tài khoản mẫu từ runtime sạch.')
-      const account = await response.json()
-      if (typeof account.email !== 'string' || typeof account.password !== 'string') throw new Error('Tài khoản mẫu không hợp lệ.')
-      setEmail(account.email); setPassword(account.password); setLoginError(false)
-    } catch { toast.error('Không đọc được tài khoản mẫu từ runtime sạch.') }
-    finally { setLoadingSample(false) }
-  }
-
   return (
     <section className="space-y-5">
       <div>
@@ -217,12 +203,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </button>
         </div>
       )}
-
-      {import.meta.env.DEV && <div className="pt-4 border-t border-[#E2E5E9] space-y-2">
-        <p className="text-xs">Tài khoản mẫu của runtime test local</p>
-        <div className="grid grid-cols-2 gap-3"><button type="button" className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-[#C9A227] transition-colors disabled:opacity-50" disabled={isLoading || loadingSample} onClick={() => fillSample('supervisor')}><span className="material-symbols-outlined text-[#C9A227] block mb-1">admin_panel_settings</span><span className="text-xs font-bold block">Điền tài khoản Supervisor mẫu</span><span className="text-[11px] text-slate-500">Giám sát dự án</span></button>
-        <button type="button" className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-[#C9A227] transition-colors disabled:opacity-50" disabled={isLoading || loadingSample} onClick={() => fillSample('pm-a')}><span className="material-symbols-outlined text-[#C9A227] block mb-1">engineering</span><span className="text-xs font-bold block">Điền tài khoản PM mẫu</span><span className="text-[11px] text-slate-500">Chỉ huy trưởng</span></button></div>
-      </div>}
     </section>
   )
 }

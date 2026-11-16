@@ -89,7 +89,7 @@ export const DefectVerifyForm: React.FC<DefectVerifyFormProps> = ({
   )
 
   const displayBbox = liveBbox || defect.bounding_box
-  const stationingLabel = `Km ${Math.floor(defect.chainage_km)}+${String(
+  const stationingLabel = !Number.isFinite(defect.chainage_km) ? 'Chưa có lý trình từ server' : `Km ${Math.floor(defect.chainage_km)}+${String(
     Math.round((defect.chainage_km % 1) * 1000)
   ).padStart(3, '0')}`
 

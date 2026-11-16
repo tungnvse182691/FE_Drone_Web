@@ -58,7 +58,7 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
           const displayImage =
             secondary?.image_url ||
             selectedCase.image_url ||
-            'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&auto=format&fit=crop&q=80'
+            ''
           const displayTime = secondary?.created_at || selectedCase.created_at || 'Tiếp nhận gần đây'
           const displayGps = secondary?.gps || selectedCase.gps
 
@@ -83,11 +83,15 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                 >
                   {/* Thumbnail ảnh với hiệu ứng xem nhanh */}
                   <div className="relative group/thumb w-14 h-12 rounded-lg overflow-hidden border border-slate-200 bg-slate-900 shrink-0">
-                    <img
-                      src={displayImage}
-                      alt={code}
-                      className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-200"
-                    />
+                    {displayImage ? (
+                      <img
+                        src={displayImage}
+                        alt={code}
+                        className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-200"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[8px] text-slate-400 text-center leading-tight px-0.5">Chưa có ảnh từ máy chủ</div>
+                    )}
                     <div className="absolute inset-0 bg-black/30 group-hover/thumb:bg-black/10 flex items-center justify-center text-white transition-colors">
                       <Icon name="search" size={14} />
                     </div>
@@ -202,11 +206,15 @@ export const DrawerMergedReportsList: React.FC<DrawerMergedReportsListProps> = (
                         </button>
                       </div>
                       <div className="w-full h-36 rounded-md overflow-hidden bg-slate-900 border border-slate-100">
-                        <img
-                          src={displayImage}
-                          alt="Ảnh báo cáo đã gộp"
-                          className="w-full h-full object-cover"
-                        />
+                        {displayImage ? (
+                          <img
+                            src={displayImage}
+                            alt="Ảnh báo cáo đã gộp"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">Chưa có ảnh từ máy chủ</div>
+                        )}
                       </div>
                       <div className="text-[10px] text-slate-500 font-mono flex items-center justify-between">
                         <span>GPS: {displayGps?.lat ?? selectedCase.gps.lat}°, {displayGps?.lng ?? selectedCase.gps.lng}°</span>

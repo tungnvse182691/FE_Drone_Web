@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
-import { getProjectCorridorCoords, getDefectGpsCoordinates } from '../../../utils/projectGeodesy'
+import { fetchProjectGeo, geoErrorMessage, type ProjectGeo } from '../../../api/services/defectGeoService'
 import { AIDetectionItem } from './types'
 import { surveyService } from '../../../api/services'
-import { getFromStorage } from '../../../api/services/storageHelper'
 
 import type { SurveyMissionItem } from '../../../api/services'
 
@@ -26,15 +25,10 @@ export function useDroneMissionReview(
   const [hasBlindspot, setHasBlindspot] = useState<boolean>(false)
 
   const [isReFlightModalOpen, setIsReFlightModalOpen] = useState<boolean>(false)
-  const [pilotNote, setPilotNote] = useState<string>(
-    'Bay quét bù dải phân cách giữa tại lý trình Km 1027+100 bằng góc nghiêng 45° Oblique.'
-  )
+  const [pilotNote, setPilotNote] = useState<string>('')
 
   const isPersistentLocked =
-    currentSurvey?.status === 'BASELINE_LOCKED' ||
-    getFromStorage<boolean>(`roadguard_baseline_locked_${surveyId}`, false) ||
-    (currentSurvey?.id ? getFromStorage<boolean>(`roadguard_baseline_locked_${currentSurvey.id}`, false) : false) ||
-    (currentSurvey?.code ? getFromStorage<boolean>(`roadguard_baseline_locked_${currentSurvey.code}`, false) : false)
+    currentSurvey?.status === 'BASELINE_LOCKED'
 
   const [isBaselineModalOpen, setIsBaselineModalOpen] = useState<boolean>(false)
   const [isLockedSuccess, setIsLockedSuccess] = useState<boolean>(isPersistentLocked)
@@ -129,20 +123,69 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     showToast(`Đã trích xuất khung hình ${item.code} tại lý trình ${item.stationing}`)
   }
 
+  // Hình học hành lang lấy từ BE (geometry-package theo routeVersionId/segmentSetId của phát hiện)
+  const effProjectId = currentSurvey?.project_id || detections[0]?.projectId
+  const geoRouteVersionId = detections.find((d) => d.routeVersionId)?.routeVersionId
+  const geoSegmentSetId = detections.find((d) => d.segmentSetId)?.segmentSetId
+  const [geo, setGeo] = useState<{ status: 'loading' | 'ready' | 'empty' | 'error'; data: ProjectGeo | null; error?: string }>({
+    status: 'loading',
+    data: null
+  })
+
   useEffect(() => {
-    if (viewerMode !== 'GIS_MAP' || !corridorMapContainerRef.current) return
+    if (viewerMode !== 'GIS_MAP' || isLoadingDetections) return
+    let alive = true
+    setGeo({ status: 'loading', data: null })
+    fetchProjectGeo(effProjectId, geoRouteVersionId, geoSegmentSetId)
+      .then((data) => alive && setGeo(data ? { status: 'ready', data } : { status: 'empty', data: null }))
+      .catch((err) => {
+        if (!alive) return
+        setGeo({ status: 'error', data: null, error: geoErrorMessage(err) })
+        showToast(`Lỗi máy chủ khi tải hình học tuyến: ${geoErrorMessage(err)}`)
+      })
+    return () => {
+      alive = false
+    }
+  }, [viewerMode, isLoadingDetections, effProjectId, geoRouteVersionId, geoSegmentSetId])
+
+  useEffect(() => {
+    const container = corridorMapContainerRef.current
+    if (viewerMode !== 'GIS_MAP' || !container) return
 
     if (corridorMapInstanceRef.current) {
       corridorMapInstanceRef.current.remove()
       corridorMapInstanceRef.current = null
     }
 
-    const effProjectId = currentSurvey?.project_id || detections[0]?.projectId
-    const corridorCoords = getProjectCorridorCoords(effProjectId)
+    const corridorCoords = geo.data?.corridor
+    if (!corridorCoords) {
+      const msg = document.createElement('div')
+      msg.className = 'w-full h-full flex items-center justify-center text-slate-300 text-xs px-6 text-center'
+      msg.textContent =
+        geo.status === 'loading'
+          ? 'Đang tải hình học tuyến từ máy chủ...'
+          : geo.status === 'error'
+          ? `Lỗi máy chủ: ${geo.error}`
+          : 'Máy chủ chưa cung cấp tọa độ'
+      container.appendChild(msg)
+      return () => {
+        msg.remove()
+      }
+    }
+
+    const located = detections.filter((d) => d.segmentId && geo.data?.segments[d.segmentId])
+    const note = document.createElement('div')
+    note.className =
+      'absolute bottom-3 left-3 z-10 bg-black/80 text-slate-200 text-[10px] px-2.5 py-1.5 rounded-lg pointer-events-none'
+    if (located.length < detections.length) {
+      note.textContent = `${detections.length - located.length}/${detections.length} phát hiện: máy chủ chưa cung cấp tọa độ`
+      container.appendChild(note)
+    }
+
     const map = new maplibregl.Map({
-      container: corridorMapContainerRef.current,
+      container,
       style: getMapLibreStyle('SATELLITE'),
-      center: corridorCoords[Math.floor(corridorCoords.length / 2)] || [108.274, 16.093],
+      center: corridorCoords[Math.floor(corridorCoords.length / 2)],
       zoom: 16,
       minZoom: 10,
       maxZoom: 22,
@@ -178,12 +221,8 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         paint: { 'line-color': '#C9A227', 'line-width': 5 }
       })
 
-      detections.forEach((det) => {
-        const { lng, lat } = getDefectGpsCoordinates(
-          effProjectId,
-          det.kmValue
-        )
-        const pt: [number, number] = [lng, lat]
+      located.forEach((det) => {
+        const pt = geo.data!.segments[det.segmentId as string].mid
         const isCurrent = det.id === selectedDetectionId
         const size = isCurrent ? 24 : 18
         const dotColor = det.severityLevel?.includes('Khẩn cấp')
@@ -226,12 +265,13 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     corridorMapInstanceRef.current = map
 
     return () => {
+      note.remove()
       if (corridorMapInstanceRef.current) {
         corridorMapInstanceRef.current.remove()
         corridorMapInstanceRef.current = null
       }
     }
-  }, [viewerMode, selectedDetectionId, detections])
+  }, [viewerMode, selectedDetectionId, detections, geo])
 
   const handleApproveDetection = async (
     detId: string,

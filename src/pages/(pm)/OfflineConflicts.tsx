@@ -179,10 +179,12 @@ export const OfflineConflicts: React.FC = () => {
     setIsSubmittingResolution(true)
     setResolutionError(null)
     try {
+      const decidedBy = (user as any)?.displayName || user?.full_name
+      if (!decidedBy) throw new Error('Không xác định được người quyết định từ phiên đăng nhập.')
       const updated = await conflictService.resolveConflict(selectedConflict.id, {
         decision: pendingDecision,
         reason: resolutionReason || 'Đã phân giải theo quyết định hiện trường',
-        decidedBy: (user as any)?.displayName || user?.full_name || (isSupervisor ? 'Synthetic supervisor' : 'Synthetic pm-a'),
+        decidedBy,
         decidedByRole: isSupervisor ? 'SUPERVISOR' : 'PROJECT_MANAGER'
       })
 

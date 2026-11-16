@@ -346,7 +346,7 @@ export const DefectTemporalComparison: React.FC<DefectTemporalComparisonProps> =
                     Chưa có đợt chạy AI Run trước đó tại vị trí này trong CSDL
                   </span>
                   <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Lý trình Km {defect.chainage_km.toFixed(3)} chỉ mới có 1 đợt ghi nhận trong CSDL.
+                    {Number.isFinite(defect.chainage_km) ? `Lý trình Km ${defect.chainage_km.toFixed(3)}` : 'Vị trí này'} chỉ mới có 1 đợt ghi nhận trong CSDL.
                   </span>
                 </div>
               </div>

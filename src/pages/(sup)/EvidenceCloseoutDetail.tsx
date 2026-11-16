@@ -41,7 +41,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true)
-        const targetPkgId = batchId || id || 'pkg-08'
+        const targetPkgId = batchId || id || ''
         const [pkg, items, statusInfo] = await Promise.all([
           acceptanceService.getAcceptancePackageById(targetPkgId),
           acceptanceService.getCloseoutItems(targetPkgId),
@@ -212,7 +212,11 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       return
     }
     try {
-      const caseCode = currentPackage?.case_code || '#CASE-2026-0842'
+      const caseCode = currentPackage?.case_code
+      if (!caseCode) {
+        showToast('Không có mã vụ việc từ máy chủ để đóng.')
+        return
+      }
       await acceptanceService.closeCompositeCase(caseCode, currentPackage?.id)
       setIsCloseCaseModalOpen(false)
       setIsCaseClosed(true)
@@ -223,16 +227,9 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   }
 
   const handleTriggerExport = () => {
-    setIsExporting(true)
-    setTimeout(() => {
-      setIsExporting(false)
-      setIsExportModalOpen(false)
-      showToast(
-        exportFormat === 'PDF_A'
-          ? `Đã tạo tệp PDF/A: Bien_Ban_Nghiem_Thu_${currentItem?.defect_code}_TCVN8819.pdf!`
-          : `Đã đóng gói tệp nén: Dossier_${currentItem?.defect_code}_SHA256_Verified.zip!`
-      )
-    }, 1000)
+    // Không giả lập "đã tạo file": máy chủ chưa có API xuất hồ sơ nghiệm thu từ màn này.
+    setIsExportModalOpen(false)
+    showToast('Xuất hồ sơ nghiệm thu từ màn này chưa nối máy chủ. Hãy tạo hồ sơ xuất thật ở màn "Phân tích rủi ro" (mục Hồ sơ xuất).')
   }
 
   if (loadError) {

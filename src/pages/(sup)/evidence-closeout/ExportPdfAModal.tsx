@@ -10,9 +10,11 @@ export interface ExportPdfAModalProps {
   setIncludeSha256Checksum?: (b: boolean) => void
   isExporting: boolean
   onExport: () => void
+  caseCode?: string
 }
 
 export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
+  caseCode,
   isOpen,
   onClose,
   currentItem,
@@ -118,7 +120,7 @@ export const ExportPdfAModal: React.FC<ExportPdfAModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Mã vụ việc:</span>
-              <span className="font-mono font-medium text-slate-900">#CASE-2026-0842</span>
+              <span className="font-mono font-medium text-slate-900">{caseCode || '—'}</span>
             </div>
             <div className="flex justify-between">
               <span>Mã băm SHA-256:</span>

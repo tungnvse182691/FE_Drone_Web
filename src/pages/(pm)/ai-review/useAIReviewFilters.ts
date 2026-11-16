@@ -6,12 +6,8 @@ export interface UseAIReviewFiltersProps {
   cases: TriageCase[]
 }
 
-// Exact inventory from the test worklog; opt-in display filter, never deletion or authority.
-export const AUTO_TEST_CASE_IDS = new Set(['11ad1a42-cfbb-4cc6-a8a8-a770c7c4ee86', '44c53e93-8868-424a-a88a-f386897a204f', '68fb08f3-e003-4df8-b3aa-f3dfe39a811f'])
-
 export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [hideAutoTests, setHideAutoTests] = useState(false)
   const sourceParam = searchParams.get('source')
 
   // Chế độ xem: Hộp thư tiếp nhận tích hợp toàn diện
@@ -43,7 +39,7 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
     setActiveTab('ALL')
   }
 
-  const visibleCases = useMemo(() => cases.filter(c => !hideAutoTests || !AUTO_TEST_CASE_IDS.has(c.id.toLowerCase())), [cases, hideAutoTests])
+  const visibleCases = cases
 
   // Filtered cases
   const filteredCases = useMemo(() => {
@@ -99,9 +95,6 @@ export const useAIReviewFilters = ({ cases }: UseAIReviewFiltersProps) => {
 
   return {
     visibleCases,
-    hideAutoTests,
-    setHideAutoTests,
-    autoTestCount: cases.filter(c => AUTO_TEST_CASE_IDS.has(c.id.toLowerCase())).length,
     viewSourceMode,
     handleSetViewSourceMode,
     activeTab,

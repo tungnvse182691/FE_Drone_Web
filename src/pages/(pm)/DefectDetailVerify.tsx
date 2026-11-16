@@ -6,8 +6,7 @@ import {
   surveyService,
   BackendDefectDto,
   CandidateMatchItemDto,
-  formatDefectTypeLabel,
-  getAiCandidateOverrides
+  formatDefectTypeLabel
 } from '../../api/services/surveyService'
 import { projectService } from '../../api/services/projectService'
 import { triageService } from '../../api/services/triageService'
@@ -21,7 +20,6 @@ import { DefectBoundingBoxViewer, BoundingBoxCoords } from './defect-verify/Defe
 import { DefectTemporalComparison } from './defect-verify/DefectTemporalComparison'
 import { DefectGisMapViewer } from './defect-verify/DefectGisMapViewer'
 import { DefectVerifyForm } from './defect-verify/DefectVerifyForm'
-import { getDefectGpsCoordinates } from '../../utils/projectGeodesy'
 
 const STANDARD_DEFECT_CODES = new Set<string>([
   DefectType.LONGITUDINAL_CRACK,
@@ -70,7 +68,7 @@ function mapDetectionToDefect(
   }
 
   const defectType = resolveDomainDefectType(item.rawTypeCode)
-  const kmVal = typeof item.kmValue === 'number' ? item.kmValue : 0.351
+  const kmVal = typeof item.kmValue === 'number' ? item.kmValue : Number.NaN
 
   let prevBbox = undefined
   if (companionRunItem) {
@@ -89,8 +87,9 @@ function mapDetectionToDefect(
     project_id: projectId,
     project_name: projectName,
     chainage_km: kmVal,
-    gps_lat: getDefectGpsCoordinates(projectId, kmVal).lat,
-    gps_lng: getDefectGpsCoordinates(projectId, kmVal).lng,
+    // BE không cung cấp GPS cho phát hiện; vị trí lấy từ hình học phân đoạn (xem DefectGisMapViewer)
+    gps_lat: NaN,
+    gps_lng: NaN,
     defect_type: defectType,
     severity,
     confidence_score: (item.confidence || 80) / 100,
@@ -143,24 +142,23 @@ function mapBackendDefectDtoToDomain(
       ? DefectStatus.REJECTED
       : DefectStatus.OPEN
 
-  const overrides = getAiCandidateOverrides()
-  const ov = overrides[dto.id] || overrides[dto.id.toLowerCase()]
-
   return {
     id: dto.id,
     code: `#DEF-${dto.id.slice(0, 8).toUpperCase()}`,
     survey_id: projectId,
     project_id: projectId,
     project_name: projectName,
-    chainage_km: 0.351,
-    gps_lat: getDefectGpsCoordinates(projectId, 0.351).lat,
-    gps_lng: getDefectGpsCoordinates(projectId, 0.351).lng,
-    defect_type: resolveDomainDefectType(ov?.rawTypeCode || dto.defectTypeCode),
+    // BE không trả lý trình cho khiếm khuyết (DefectViewDto không có trường này)
+    chainage_km: Number.NaN,
+    // BE không cung cấp GPS cho khiếm khuyết; vị trí lấy từ hình học phân đoạn (xem DefectGisMapViewer)
+    gps_lat: NaN,
+    gps_lng: NaN,
+    defect_type: resolveDomainDefectType(dto.defectTypeCode),
     severity: sevMap[dto.severity || 'HIGH'] || Severity.HIGH,
     confidence_score: 1.0,
     status,
     image_url: '',
-    bounding_box: ov?.bbox || { x: 0.25, y: 0.25, width: 0.35, height: 0.28 },
+    bounding_box: { x: 0, y: 0, width: 0, height: 0 },
     created_at: new Date().toISOString().slice(0, 10),
     source_kind: 'DEFECT',
     route_version_id: dto.roadSectionVersionId,
@@ -348,6 +346,8 @@ export const DefectDetailVerify: React.FC = () => {
       )
       return {
         kind: 'AI_DETECTION' as const,
+        segmentSetId: matchedDet.item.segmentSetId,
+        segmentId: matchedDet.item.segmentId,
         rawTypeCode: matchedDet.item.rawTypeCode,
         defect: mapDetectionToDefect(
           matchedDet.item,
@@ -362,6 +362,8 @@ export const DefectDetailVerify: React.FC = () => {
     if (matchedDef) {
       return {
         kind: 'DEFECT' as const,
+        segmentSetId: undefined as string | undefined,
+        segmentId: matchedDef.dto.segmentId,
         rawTypeCode: matchedDef.dto.defectTypeCode,
         defect: mapBackendDefectDtoToDomain(matchedDef.dto, matchedDef.projectId, matchedDef.projectName)
       }
@@ -377,6 +379,8 @@ export const DefectDetailVerify: React.FC = () => {
       )
       return {
         kind: 'AI_DETECTION' as const,
+        segmentSetId: first.item.segmentSetId,
+        segmentId: first.item.segmentId,
         rawTypeCode: first.item.rawTypeCode,
         defect: mapDetectionToDefect(first.item, first.projectId, first.projectName, companion?.item || null)
       }
@@ -386,6 +390,8 @@ export const DefectDetailVerify: React.FC = () => {
       const firstDef = allDefects[0]
       return {
         kind: 'DEFECT' as const,
+        segmentSetId: undefined as string | undefined,
+        segmentId: firstDef.dto.segmentId,
         rawTypeCode: firstDef.dto.defectTypeCode,
         defect: mapBackendDefectDtoToDomain(firstDef.dto, firstDef.projectId, firstDef.projectName)
       }
@@ -476,18 +482,8 @@ export const DefectDetailVerify: React.FC = () => {
       setLiveBbox(defect.bounding_box)
       setIsBboxModified(false)
 
-      const overrides = getAiCandidateOverrides()
-      const ov = overrides[defect.id] || overrides[defect.id.toLowerCase()]
-      if (ov?.customTypeLabel) {
-        setCustomDefectType('CUSTOM')
-        setCustomTypeText(ov.customTypeLabel)
-      } else if (ov?.rawTypeCode && STANDARD_DEFECT_CODES.has(ov.rawTypeCode)) {
-        setCustomDefectType(ov.rawTypeCode)
-        setCustomTypeText('')
-      } else {
-        setCustomDefectType(null)
-        setCustomTypeText('')
-      }
+      setCustomDefectType(null)
+      setCustomTypeText('')
 
       setIsRecurrent(defect.decision_kind === 'LINK_EXISTING')
       setLinkedPriorCode(
@@ -876,7 +872,7 @@ export const DefectDetailVerify: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <Card>
-            {viewMode === 'GIS_MAP' && <DefectGisMapViewer defect={defectWithAuthImage || defect} severity={severity} />}
+            {viewMode === 'GIS_MAP' && <DefectGisMapViewer defect={defectWithAuthImage || defect} severity={severity} segmentSetId={activeRecord?.segmentSetId} segmentId={activeRecord?.segmentId} />}
 
             {viewMode === 'SINGLE' && (
               <DefectBoundingBoxViewer

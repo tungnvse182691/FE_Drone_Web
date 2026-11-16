@@ -14,18 +14,6 @@ export interface MissionViewportProps {
   selectedItem?: AIDetectionItem | null
 }
 
-// Map hình ảnh trích xuất mặt đường phân giải cao (sử dụng các URL ổn định 100%)
-const DEFECT_IMAGE_MAP: Record<string, string> = {
-  'DET-01': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80', // Ổ gà sâu
-  'DET-02': 'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=1200&auto=format&fit=crop&q=80', // Vết nứt dọc
-  'DET-03': 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?w=1200&auto=format&fit=crop&q=80', // Vỡ mép thảm
-  'DET-04': 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80', // Nước phản xạ
-  'DET-05': 'https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=1200&auto=format&fit=crop&q=80', // Nứt chéo khe co giãn
-  'DET-06': 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=1200&auto=format&fit=crop&q=80', // Bong tróc vi mô
-  'DET-07': 'https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=1200&auto=format&fit=crop&q=80', // Hằn lún sống trâu
-  'DET-08': 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80', // Nứt ngang
-}
-
 export const MissionViewport: React.FC<MissionViewportProps> = ({
   viewerMode,
   corridorMapContainerRef,

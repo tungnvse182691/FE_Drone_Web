@@ -505,15 +505,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               className="relative group w-11 h-11 rounded-lg overflow-hidden border border-amber-400 ring-2 ring-amber-300/60 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
                               title={`Ảnh TRƯỚC: Đã duyệt tái sử dụng từ Phản ánh người dân (API-084)\nLý do: ${task.reused_evidence.reason}\n(Bấm để xem hồ sơ API-084)`}
                             >
-                              <img
-                                src={
-                                  task.reused_evidence.photo_url ||
-                                  task.defect_photo_url ||
-                                  'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=1200&auto=format&fit=crop&q=80'
-                                }
-                                alt="Ảnh phản ánh"
-                                className="w-full h-full object-cover"
-                              />
+                              {task.reused_evidence.photo_url || task.defect_photo_url ? (
+                                <img
+                                  src={task.reused_evidence.photo_url || task.defect_photo_url}
+                                  alt="Ảnh phản ánh"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="w-full h-full flex items-center justify-center text-[7px] text-slate-400 text-center leading-tight">Chưa có ảnh từ máy chủ</span>
+                              )}
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                                 <Icon name="zoom_in" size={14} />
                               </div>
@@ -1242,15 +1242,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       }}
                       className="relative rounded-xl overflow-hidden border border-amber-300 bg-slate-900 shadow-inner group cursor-pointer"
                     >
-                      <img
-                        src={
-                          selectedDetailTask.reused_evidence.photo_url ||
-                          selectedDetailTask.defect_photo_url ||
-                          'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
-                        }
-                        alt="Ảnh phản ánh tái sử dụng"
-                        className="w-full h-56 object-cover object-center group-hover:scale-102 transition-transform duration-200"
-                      />
+                      {selectedDetailTask.reused_evidence.photo_url || selectedDetailTask.defect_photo_url ? (
+                        <img
+                          src={selectedDetailTask.reused_evidence.photo_url || selectedDetailTask.defect_photo_url}
+                          alt="Ảnh phản ánh tái sử dụng"
+                          className="w-full h-56 object-cover object-center group-hover:scale-102 transition-transform duration-200"
+                        />
+                      ) : (
+                        <div className="w-full h-56 flex items-center justify-center text-xs text-slate-400">Chưa có ảnh từ máy chủ</div>
+                      )}
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                         <span className="opacity-0 group-hover:opacity-100 bg-amber-950/90 text-amber-200 text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg transition-opacity border border-amber-400">
                           <Icon name="history_edu" size={16} />
@@ -1344,15 +1344,15 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               : 'bg-white border-slate-200 hover:bg-slate-50'
                           }`}
                         >
-                          <img
-                            src={
-                              selectedDetailTask.reused_evidence.photo_url ||
-                              selectedDetailTask.defect_photo_url ||
-                              'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=1200&auto=format&fit=crop&q=80'
-                            }
-                            alt="Phản ánh"
-                            className="w-10 h-8 rounded object-cover"
-                          />
+                          {selectedDetailTask.reused_evidence.photo_url || selectedDetailTask.defect_photo_url ? (
+                            <img
+                              src={selectedDetailTask.reused_evidence.photo_url || selectedDetailTask.defect_photo_url}
+                              alt="Phản ánh"
+                              className="w-10 h-8 rounded object-cover"
+                            />
+                          ) : (
+                            <span className="w-10 h-8 rounded bg-slate-100 text-[7px] text-slate-400 flex items-center justify-center text-center leading-tight">Chưa có ảnh từ máy chủ</span>
+                          )}
                           <div className="min-w-0 flex-1">
                             <span className="text-[10px] font-bold text-amber-900 block truncate">
                               Ảnh phản ánh

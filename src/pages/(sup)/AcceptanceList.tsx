@@ -330,7 +330,7 @@ export const AcceptanceList: React.FC = () => {
             })()
 
             // Lấy ảnh mẫu Trước / Sau từ records
-            const matchedRecord = INITIAL_ACCEPTANCE_RECORDS.find((r) => r.package_id === pkg.id) || INITIAL_ACCEPTANCE_RECORDS[0]
+            const matchedRecord = INITIAL_ACCEPTANCE_RECORDS.find((r) => r.package_id === pkg.id)
             const beforePhoto = matchedRecord?.before_photo
             const afterPhoto = matchedRecord?.after_photo
             const progressRatio = pkg.total_items > 0 ? Math.round((pkg.accepted_items / pkg.total_items) * 100) : 0

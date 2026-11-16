@@ -6,14 +6,19 @@ export interface VerifyModalProps {
   onClose: () => void
   onConfirm: () => void
   caseItems: CaseItem[]
+  caseCode?: string
+  projectName?: string
 }
 
 export const VerifyModal: React.FC<VerifyModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  caseItems
+  caseItems,
+  caseCode,
+  projectName
 }) => {
+  const totalAreaM2 = caseItems.reduce((sum, it) => sum + (Number(it.area_m2) || 0), 0)
   if (!isOpen) return null
 
   return (
@@ -32,22 +37,22 @@ export const VerifyModal: React.FC<VerifyModalProps> = ({
           <h3 className="font-bold text-base text-slate-900 font-sansation">Đóng tổng thể vụ việc phức hợp</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
             Toàn bộ <strong className="text-slate-800">{caseItems.length}/{caseItems.length} hạng mục</strong> trong vụ việc{' '}
-            <strong className="text-slate-800">#CASE-2026-0842</strong> đã được nghiệm thu đạt chất lượng. Xác nhận đóng hồ sơ và lưu trữ bảo hành pháp lý?
+            <strong className="text-slate-800">{caseCode || '—'}</strong> đã được nghiệm thu đạt chất lượng. Xác nhận đóng hồ sơ và lưu trữ bảo hành pháp lý?
           </p>
         </div>
 
         <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1.5">
           <div className="flex justify-between">
             <span className="text-slate-500">Mã vụ việc:</span>
-            <span className="font-mono font-medium text-slate-900">#CASE-2026-0842</span>
+            <span className="font-mono font-medium text-slate-900">{caseCode || '—'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Dự án:</span>
-            <span className="font-medium text-slate-900">QL1A - Giai đoạn 2 (Km 1020 - Km 1045)</span>
+            <span className="font-medium text-slate-900">{projectName || '—'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Tổng diện tích hoàn thành:</span>
-            <span className="font-mono font-medium text-[#C9A227]">2.45 m²</span>
+            <span className="font-mono font-medium text-[#C9A227]">{totalAreaM2 > 0 ? `${totalAreaM2.toFixed(2)} m²` : '—'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Thời hạn bảo hành:</span>

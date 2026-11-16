@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { getMapLibreStyle } from '../../../utils/maplibre'
-import { getDefectGpsCoordinates } from '../../../utils/projectGeodesy'
+import { fetchProjectGeo, geoErrorMessage, type ProjectGeo } from '../../../api/services/defectGeoService'
 import { Icon } from '../../../components/ui/Icon'
 import { Defect } from '../../../types/domain'
 import { Severity } from '../../../types/enums'
@@ -10,22 +10,40 @@ import { Severity } from '../../../types/enums'
 interface DefectGisMapViewerProps {
   defect: Defect
   severity: Severity
+  /** Định danh hình học do BE cấp cho khiếm khuyết/phát hiện (nếu có) */
+  segmentSetId?: string | null
+  segmentId?: string | null
 }
 
-export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, severity }) => {
+export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, severity, segmentSetId, segmentId }) => {
   const [mapType, setMapType] = useState<'SATELLITE' | 'VECTOR'>('SATELLITE')
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<maplibregl.Map | null>(null)
 
-  const { lng: calcLng, lat: calcLat, coords: corridorCoords } = getDefectGpsCoordinates(
-    defect.project_id,
-    defect.chainage_km
-  )
-  const lng = defect.gps_lng && !isNaN(defect.gps_lng) ? defect.gps_lng : calcLng
-  const lat = defect.gps_lat && !isNaN(defect.gps_lat) ? defect.gps_lat : calcLat
+  const [geo, setGeo] = useState<{ status: 'loading' | 'ready' | 'empty' | 'error'; data: ProjectGeo | null; error?: string }>({
+    status: 'loading',
+    data: null
+  })
 
   useEffect(() => {
-    if (!mapContainerRef.current) return
+    let alive = true
+    setGeo({ status: 'loading', data: null })
+    fetchProjectGeo(defect.project_id, defect.route_version_id, segmentSetId)
+      .then((data) => alive && setGeo(data ? { status: 'ready', data } : { status: 'empty', data: null }))
+      .catch((err) => alive && setGeo({ status: 'error', data: null, error: geoErrorMessage(err) }))
+    return () => {
+      alive = false
+    }
+  }, [defect.project_id, defect.route_version_id, segmentSetId])
+
+  const corridorCoords = geo.data?.corridor
+  const segGeo = segmentId ? geo.data?.segments[segmentId] : undefined
+  const point = segGeo?.mid
+  const lng = point?.[0]
+  const lat = point?.[1]
+
+  useEffect(() => {
+    if (!mapContainerRef.current || !corridorCoords) return
 
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove()
@@ -35,7 +53,7 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: getMapLibreStyle(mapType === 'SATELLITE' ? 'SATELLITE' : 'STREETS'),
-      center: [lng, lat],
+      center: point || corridorCoords[Math.floor(corridorCoords.length / 2)],
       zoom: 17.5,
       minZoom: 11,
       maxZoom: 22,
@@ -77,6 +95,10 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
         }
       })
 
+      if (!point) {
+        setTimeout(() => map.resize(), 100)
+        return
+      }
       const el = document.createElement('div')
       el.innerHTML = `
         <div style="position:relative; display:flex; align-items:center; justify-content:center;">
@@ -85,14 +107,15 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
         </div>
       `
       new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat([lng, lat])
+        .setLngLat(point)
         .setPopup(
           new maplibregl.Popup({ offset: 25 }).setHTML(`
             <div style="font-family:sans-serif; font-size:12px; padding:6px; color:#1E293B;">
               <strong style="color:#DC2626; font-size:13px;">${defect.code}</strong><br/>
               <span style="font-weight:600;">${defect.defect_type}</span><br/>
-              <span>Lý trình: Km ${typeof defect.chainage_km === 'number' ? defect.chainage_km.toFixed(3).replace('.', '+') : defect.chainage_km}</span><br/>
-              <span style="color:#B45309; font-weight:600;">Mức độ: ${severity}</span>
+              <span>Lý trình: ${Number.isFinite(defect.chainage_km) ? 'Km ' + defect.chainage_km.toFixed(3).replace('.', '+') : 'Chưa có lý trình từ server'}</span><br/>
+              <span style="color:#B45309; font-weight:600;">Mức độ: ${severity}</span><br/>
+              <span style="color:#64748B;">Vị trí: tâm phân đoạn #${segGeo?.sequence}</span>
             </div>
           `)
         )
@@ -109,10 +132,10 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
         mapInstanceRef.current = null
       }
     }
-  }, [corridorCoords, lat, lng, mapType, severity, defect])
+  }, [corridorCoords, point, segGeo, mapType, severity, defect])
 
   const kmDisplay =
-    typeof defect.chainage_km === 'number'
+    Number.isFinite(defect.chainage_km)
       ? defect.chainage_km.toFixed(3).replace('.', '+')
       : String(defect.chainage_km || '')
 
@@ -148,16 +171,35 @@ export const DefectGisMapViewer: React.FC<DefectGisMapViewerProps> = ({ defect, 
       </div>
 
       <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-950 aspect-video">
-        <div ref={mapContainerRef} className="w-full h-full" />
-        <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 pointer-events-none z-10 shadow-lg">
-          <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
-            <Icon name="location_on" size={14} />
-            <span>{lat.toFixed(5)}° N, {lng.toFixed(5)}° E</span>
+        {geo.status === 'ready' ? (
+          <>
+            <div ref={mapContainerRef} className="w-full h-full" />
+            <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-xl text-white font-mono text-[11px] border border-white/10 pointer-events-none z-10 shadow-lg">
+              <div className="flex items-center gap-1.5 font-bold text-[#C9A227]">
+                <Icon name="location_on" size={14} />
+                <span>
+                  {point && lat !== undefined && lng !== undefined
+                    ? `${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`
+                    : 'Máy chủ chưa cung cấp tọa độ khiếm khuyết'}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-300 mt-0.5">
+                Lý trình: Km {kmDisplay} • Tuyến: {defect.project_name || 'Tuyến khảo sát'}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-slate-300 text-xs px-6 text-center">
+            <Icon name="location_off" size={28} />
+            <p>
+              {geo.status === 'loading'
+                ? 'Đang tải hình học tuyến từ máy chủ...'
+                : geo.status === 'error'
+                ? `Lỗi máy chủ: ${geo.error}`
+                : 'Máy chủ chưa cung cấp tọa độ'}
+            </p>
           </div>
-          <div className="text-[10px] text-slate-300 mt-0.5">
-            Lý trình: Km {kmDisplay} • Tuyến: {defect.project_name || 'Tuyến khảo sát'} • RTK: ±2.5cm
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
