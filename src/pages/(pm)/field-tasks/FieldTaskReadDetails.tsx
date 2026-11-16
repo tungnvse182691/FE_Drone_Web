@@ -43,7 +43,7 @@ export function FieldTaskReadDetails({projectId,taskId,onReviewed,measurementTar
    {place(!current.submission?<p>Chưa có lần nộp trong dữ liệu nhiệm vụ.</p>:<>
     <p className="break-all">Lần nộp {current.submission.revision} · {businessState(current.submission.readiness)}</p>
     <p>{current.submission.missingReasons?.map(businessState).join('; ')}</p>
-    <table className="w-full text-left"><thead><tr><th>Loại số đo</th><th>Giá trị</th><th>Trạng thái / lý do</th></tr></thead><tbody>{current.submission.measurements?.map((m,i)=><tr key={m.sampleId||i}><td>{businessState(m.type)}</td><td>{m.value==null?'Chưa có số đo':`${m.value} ${m.unit||''}`}</td><td>{businessState(m.state)} · {m.unknownReason||m.notes||''}</td></tr>)}</tbody></table>
+    <table className="w-full text-left"><thead><tr><th>Loại số đo</th><th>Giá trị</th><th>Trạng thái / lý do</th></tr></thead><tbody>{current.submission.measurements?.map((m,i)=><tr key={m.sampleId||i}><td>{businessState(m.type)}</td><td>{m.state!=='KNOWN'||m.value==null?'Chưa xác định số đo':`${m.value} ${m.unit||''}`}</td><td>{businessState(m.state)} · {m.unknownReason||m.notes||''}</td></tr>)}</tbody></table>
 
    </>,measurementTarget)}
    {place(<div className="space-y-2">

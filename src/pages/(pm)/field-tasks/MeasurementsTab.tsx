@@ -1,4 +1,4 @@
-import {businessText} from '../../../utils/businessDisplay'
+import {businessText,businessDate,businessError,businessState} from '../../../utils/businessDisplay'
 import {fieldEvidenceReuseCommands,type ReuseSource} from '../../../api/services/fieldEvidenceReuseCommands'
 import {fieldCreateCommands,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
 import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
@@ -186,7 +186,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       const created=await fieldCreateCommands.request(selectedProjectId,choice)
       if(!current())return
       setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã tạo phiếu hiện trường và đọc lại hồ sơ.`,'success')
-    }catch(e:any){if(!current())return;const message=e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message;setCreateModalError(message);notify(message,'error')}finally{if(current())setIsSubmittingCreate(false)}
+    }catch(e:any){if(!current())return;const message=e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message;setCreateModalError(message);notify(businessError(message),'error')}finally{if(current())setIsSubmittingCreate(false)}
   }
 
   // Xử lý chuyển sang trạng thái Đang đo đạc (IN_PROGRESS)
@@ -251,7 +251,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     else notify('Không tìm thấy nhiệm vụ trong danh sách hiện tại; hãy đọc lại.','error')
   }
 
-  // Mở modal phê duyệt tái sử dụng ảnh phản ánh (API-084)
+  // Mở modal phê duyệt tái sử dụng ảnh phản ánh
   const handleOpenReuseModal = (task: FieldTask) => {
     setTaskForReuse(task)
     setReuseReason('')
@@ -372,6 +372,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             )}
           </div>
 
+          {!isSupervisor && <>
           <button
             type="button"
             onClick={handleOpenCreateModal}
@@ -380,6 +381,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             <Icon name="add" size={15} />
             <span>Tạo nhiệm vụ</span>
           </button>
+          </>}
         </div>
       </div>
 
@@ -506,7 +508,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                                 setIsReuseModalOpen(true)
                               }}
                               className="relative group w-11 h-11 rounded-lg overflow-hidden border border-amber-400 ring-2 ring-amber-300/60 bg-slate-100 block cursor-pointer transition-transform hover:scale-105 shrink-0"
-                              title={`Ảnh TRƯỚC: Đã duyệt tái sử dụng từ Phản ánh người dân (API-084)\nLý do: ${task.reused_evidence.reason}\n(Bấm để xem hồ sơ API-084)`}
+                              title={`Ảnh TRƯỚC: Đã duyệt tái sử dụng từ Phản ánh người dân\nLý do: ${task.reused_evidence.reason}\n(Bấm để xem hồ sơ API-084)`}
                             >
                               <img
                                 src={
@@ -521,7 +523,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                                 <Icon name="zoom_in" size={14} />
                               </div>
                               <span className="absolute bottom-0 inset-x-0 text-[8px] font-mono font-bold text-center py-0.2 bg-amber-900/90 text-amber-200">
-                                Trước • API-084
+                                Trước • Ảnh nguồn
                               </span>
                             </button>
                           </div>
@@ -626,7 +628,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : (
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Nút Tái sử dụng ảnh phản ánh (API-084) - Chỉ hiện khi chưa có ảnh đo thực tế hoặc đã được duyệt tái sử dụng */}
+                          {/* Nút Tái sử dụng ảnh phản ánh - Chỉ hiện khi chưa có ảnh đo thực tế hoặc đã được duyệt tái sử dụng */}
                           {task.reused_evidence ? (
                             <button
                               type="button"
@@ -634,8 +636,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               className="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs bg-amber-100/70 border-amber-300 text-amber-900 hover:bg-amber-200/70"
                               title={
                                 isSupervisor
-                                  ? 'Giám sát xem bằng chứng ảnh phản ánh đã tái sử dụng (API-084)'
-                                  : 'Xem & cập nhật ảnh phản ánh đã phê duyệt tái sử dụng (API-084)'
+                                  ? 'Giám sát xem bằng chứng ảnh phản ánh đã tái sử dụng'
+                                  : 'Xem & cập nhật ảnh phản ánh đã phê duyệt tái sử dụng'
                               }
                             >
                               <Icon name="history_edu" size={13} className="text-amber-700" />
@@ -650,7 +652,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                               type="button"
                               onClick={() => handleOpenReuseModal(task)}
                               className="px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-2xs bg-amber-50/70 border-amber-200 text-amber-800 hover:bg-amber-100"
-                              title="Chỉ huy trưởng (PM) tái sử dụng ảnh từ nguồn phản ánh người dân làm bằng chứng đối chứng trước thi công (API-084)"
+                              title="Chỉ huy trưởng (PM) tái sử dụng ảnh từ nguồn phản ánh người dân làm bằng chứng đối chứng trước thi công"
                             >
                               <Icon name="history_edu" size={13} className="text-amber-700" />
                               <span>Tái sử dụng ảnh</span>
@@ -721,8 +723,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
             <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
               {heldCreate&&<p role="status" className="break-all">Yêu cầu lập phiếu đang chờ đối chiếu; nội dung đã gửi được giữ nguyên.</p>}
-              {(catalogError||createJournalError)&&<p role="alert" className="text-rose-700">{catalogError||createJournalError}</p>}
-              {crewError&&<p role="alert" className="text-rose-700">{crewError}</p>}
+              {(catalogError||createJournalError)&&<p role="alert" className="text-rose-700">{businessError(catalogError||createJournalError)}</p>}
+              {crewError&&<p role="alert" className="text-rose-700">{businessError(crewError)}</p>}
               <fieldset disabled={isSubmittingCreate||!!heldCreate} className="border-0 p-0 m-0 space-y-3.5 min-w-0">
               {/* Chọn khiếm khuyết nguồn từ đợt bay Drone / khảo sát */}
               <div className="flex flex-col bg-slate-50/80 p-3.5 rounded-xl border border-slate-200">
@@ -732,7 +734,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     <span>Chọn khiếm khuyết cần đo đạc</span>
                   </label>
                   <span className="text-[11px] font-medium text-slate-500">
-                    {defectsLoading?'Đang tải Defect…':catalogError?'Lỗi tải Defect':`${availableDefects.length} hồ sơ trong tuyến`}
+                    {defectsLoading?'Đang tải khiếm khuyết…':catalogError?'Lỗi tải khiếm khuyết':`${availableDefects.length} hồ sơ trong tuyến`}
                   </span>
                 </div>
                 <select
@@ -740,9 +742,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   onChange={(e) => handleSelectDefect(e.target.value)}
                   className="w-full bg-white border border-slate-300 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer font-medium"
                 >
-                  <option value="">Chọn Defect nguồn</option>
+                  <option value="">Chọn khiếm khuyết nguồn</option>
                   {availableDefects.length === 0 ? (
-                    <option value="">{defectsLoading?'Đang tải Defect…':catalogError?'Không tải được danh sách Defect':'Không có khiếm khuyết nào trong tuyến cần đo đạc'}</option>
+                    <option value="">{defectsLoading?'Đang tải khiếm khuyết…':catalogError?'Không tải được danh sách khiếm khuyết':'Không có khiếm khuyết nào trong tuyến cần đo đạc'}</option>
                   ) : (
                     availableDefects.map((d) => {
                       const notOpen = d.status.toUpperCase()!=='OPEN'
@@ -757,11 +759,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           t.status === 'VERIFIED'
                       )
 
-                      let label = `${d.code} • ${d.defect_type} • ${d.status}`
+                      let label = `${d.code} • ${d.defect_type==='CRACK'?'Nứt mặt đường':d.defect_type==='POTHOLE'?'Ổ gà':businessText(d.defect_type)} • ${businessState(d.status)}`
                       let isDisabled = false
 
                       if (notOpen) {
-                        label += ' [Không phải Defect OPEN]'
+                        label += ' [Khiếm khuyết không ở trạng thái đang mở]'
                         isDisabled = true
                       } else if (activeTask) {
                         label += ` [Có phiếu FIELD đang chạy: ${activeTask.code}]`
@@ -889,7 +891,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   }}
                   className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
                 >
-                  <option value="">Chọn Crew đang ACTIVE trong dự án</option>
+                  <option value="">Chọn đội thi công đang tham gia dự án</option>
                   {crewMembers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -919,7 +921,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <Icon name="error" size={16} className="text-rose-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <div className="font-bold">Lỗi từ máy chủ CSDL:</div>
-                    <div className="mt-0.5 text-rose-800 leading-relaxed font-medium">{createModalError}</div>
+                    <div className="mt-0.5 text-rose-800 leading-relaxed font-medium">{businessError(createModalError)}</div>
                   </div>
                   <button
                     type="button"
@@ -1458,18 +1460,18 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
                   <div ref={setMeasurementTarget} className="p-3 bg-white rounded-lg border border-slate-200 mt-2 space-y-2"/>
 
-                  {/* Thông tin bằng chứng tái sử dụng (API-084) nếu có */}
+                  {/* Thông tin bằng chứng tái sử dụng nếu có */}
                   {selectedDetailTask.reused_evidence && (
                     <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-300 space-y-1.5">
                       <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
                         <Icon name="history_edu" size={15} className="text-amber-700" />
-                        <span>Đã tái sử dụng ảnh phản ánh (API-084)</span>
+                        <span>Đã tái sử dụng ảnh phản ánh</span>
                       </div>
                       <div className="text-[11px] text-amber-900 space-y-0.5">
                         <p>
                           <span className="text-amber-700 font-medium">Nguồn dữ liệu: </span>
                           <span className="font-semibold">
-                            Phản ánh người dân (CITIZEN_REPORT • API-084)
+                            Phản ánh người dân (Phản ánh gốc)
                           </span>
                         </p>
                         <p>
@@ -1504,7 +1506,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 Thẩm quyền: Chỉ huy trưởng (PM) kiểm tra ảnh & xác minh
               </span>
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Nút Tái sử dụng ảnh phản ánh (API-084) */}
+                {/* Nút Tái sử dụng ảnh phản ánh */}
                 {selectedDetailTask.reused_evidence ? (
                   <button
                     type="button"
@@ -1512,10 +1514,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       handleOpenReuseModal(selectedDetailTask)
                     }}
                     className="px-3.5 py-1.5 text-xs font-semibold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                    title="Xem & cập nhật thông tin bằng chứng ảnh phản ánh đã phê duyệt tái sử dụng (API-084)"
+                    title="Xem & cập nhật thông tin bằng chứng ảnh phản ánh đã phê duyệt tái sử dụng"
                   >
                     <Icon name="history_edu" size={14} className="text-amber-700" />
-                    <span>Xem ảnh phản ánh (API-084)</span>
+                    <span>Xem ảnh phản ánh</span>
                   </button>
                 ) : !isSupervisor &&
                   !selectedDetailTask.reused_evidence &&
@@ -1528,10 +1530,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       handleOpenReuseModal(selectedDetailTask)
                     }}
                     className="px-3.5 py-1.5 text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                    title="Phê duyệt tái sử dụng ảnh từ nguồn phản ánh người dân/tuần kiểm làm bằng chứng đối chứng trước thi công (API-084)"
+                    title="Phê duyệt tái sử dụng ảnh từ nguồn phản ánh người dân/tuần kiểm làm bằng chứng đối chứng trước thi công"
                   >
                     <Icon name="history_edu" size={14} className="text-amber-700" />
-                    <span>Tái sử dụng ảnh phản ánh (API-084)</span>
+                    <span>Tái sử dụng ảnh phản ánh</span>
                   </button>
                 ) : null}
 
@@ -1577,11 +1579,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       Tái Sử Dụng Ảnh Phản Ánh Hiện Trường
                     </h3>
                     <span className="font-mono text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                      API-084
+                      Ảnh nguồn
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    Phê duyệt dùng ảnh phản ánh chất lượng cao làm bằng chứng "Trước thi công" cho nhiệm vụ {taskForReuse.code}
+                    Đối chiếu và phê duyệt dùng ảnh phản ánh làm bằng chứng "Trước thi công" cho nhiệm vụ {taskForReuse.code}
                   </p>
                 </div>
               </div>
@@ -1595,10 +1597,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             </div>
 
             {reuseLoading&&<p role="status">Đang đọc bằng chứng nguồn…</p>}
-            {(reuseError||reuseJournalError)&&<p role="alert" className="text-rose-700 text-xs">{reuseError||reuseJournalError}</p>}
+            {(reuseError||reuseJournalError)&&<p role="alert" className="text-rose-700 text-xs">{businessError(reuseError||reuseJournalError).replace('reference Report đã ghi nhận cho Defect','tham chiếu phản ánh đã ghi nhận cho khiếm khuyết')}</p>}
             {reuseHeld&&<p role="status" className="text-xs break-all">Yêu cầu sử dụng lại ảnh đang chờ kiểm tra kết quả.</p>}
             {reuseResult&&<p role="status" className="text-emerald-800 text-xs break-all">Đã xác nhận ảnh được liên kết với hồ sơ. {reuseResult.receipt.reason}</p>}
-            <select aria-label="Bằng chứng Report tái sử dụng" disabled={isSubmittingReuse||!!reuseHeld||!!reuseResult} value={reuseChoice} onChange={e=>{setReuseChoice(e.target.value);setReuseError('')}} className="w-full border border-slate-200 rounded-lg p-2 text-xs"><option value="">{reuseLoading?'Đang tải bằng chứng':reuseError?'Chưa tải được bằng chứng':'Chọn bằng chứng Report'}</option>{reuseSources.map(r=><option key={r.evidence.evidenceId} value={r.evidence.evidenceId}>{r.report.reportId} • {r.evidence.evidenceId}{r.evidence.supplementId?' • Bổ sung':' • Gốc'}</option>)}</select>
+            <select aria-label="Bằng chứng Report tái sử dụng" disabled={isSubmittingReuse||!!reuseHeld||!!reuseResult} value={reuseChoice} onChange={e=>{setReuseChoice(e.target.value);setReuseError('')}} className="w-full border border-slate-200 rounded-lg p-2 text-xs"><option value="">{reuseLoading?'Đang tải bằng chứng':reuseError?'Chưa tải được bằng chứng':'Chọn bằng chứng Report'}</option>{reuseSources.map((r,i)=><option key={r.evidence.evidenceId} value={r.evidence.evidenceId}>Ảnh {i+1} · {businessDate(r.report.receivedAt)}{r.evidence.supplementId?' • Bổ sung':' • Gốc'}</option>)}</select>
             {!reuseLoading&&!reuseError&&!reuseSources.length&&<p className="text-xs">Không có bằng chứng của Report trong dữ liệu nguồn.</p>}
             {/* Modal Body */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -1614,7 +1616,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 </div>
 
                 <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 w-full h-56 sm:h-64 group shadow-inner">
-                  {reusePhoto?<img src={reusePhoto.url} alt="Ảnh bằng chứng Report được phép đọc" className="w-full h-full object-cover block" />:<p className="text-slate-200 p-4">{reuseSource?'Đang đọc ảnh gốc…':'Chọn bằng chứng để xem ảnh gốc.'}</p>}
+                  {reusePhoto?<img src={reusePhoto.url} alt="Ảnh bằng chứng Hồ sơ phản ánh được phép đọc" className="w-full h-full object-cover block" />:<p className="text-slate-200 p-4">{reuseSource?'Đang đọc ảnh gốc…':'Chọn bằng chứng để xem ảnh gốc.'}</p>}
                   <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 font-semibold">
                     <Icon name="location_on" size={12} className="text-amber-400" />
                     <span>{taskForReuse.chainage_km!=null?`Km ${taskForReuse.chainage_km}`:'Chưa có lý trình'}</span>
@@ -1626,12 +1628,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Tọa độ GPS:</span>
                     <span className="font-mono font-medium text-slate-800">
-                      {reuseSource?.evidence.location?`${reuseSource.evidence.location.latitude ?? '—'}, ${reuseSource.evidence.location.longitude ?? '—'}`:'Chưa có tọa độ nguồn'}
+                      {reuseSource?.evidence.locationSource!=='UNKNOWN'&&typeof reuseSource?.evidence.location?.latitude==='number'&&typeof reuseSource.evidence.location.longitude==='number'?`${reuseSource.evidence.location.latitude}, ${reuseSource.evidence.location.longitude}`:'Chưa xác định tọa độ nguồn'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Độ lệch vị trí:</span>
-                    <span className="text-emerald-700 font-semibold">{reuseSource?.evidence.location?.accuracyMeters!=null?`${reuseSource.evidence.location.accuracyMeters} mét`:'Chưa có độ chính xác vị trí'}</span>
+                    <span className="text-emerald-700 font-semibold">{reuseSource?.evidence.locationSource!=='UNKNOWN'&&reuseSource?.evidence.location?.accuracyMeters!=null?`${reuseSource.evidence.location.accuracyMeters} mét`:'Chưa có độ chính xác vị trí'}</span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Thiết bị ghi nhận:</span>
@@ -1642,13 +1644,13 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Thời gian chụp:</span>
                     <span className="text-slate-800">
-                      {reuseSource?.evidence.capturedAt||'Chưa có thời gian chụp'}
+                      {reuseSource?.evidence.capturedAt?businessDate(reuseSource.evidence.capturedAt):'Chưa có thời gian chụp'}
                     </span>
                   </div>
                   <div className="pt-1 border-t border-slate-200">
-                    <span className="text-slate-500 block text-[10px]">Mã băm an toàn SHA-256:</span>
+                    <span className="text-slate-500 block text-[10px]">Đối chiếu nội dung ảnh:</span>
                     <span className="font-mono text-[9px] text-slate-600 block truncate">
-                      {reusePhoto?.checksum||'Chưa đọc nội dung ảnh'}
+                      {reusePhoto?'Đã đối chiếu với hồ sơ lưu':'Chưa đọc nội dung ảnh'}
                     </span>
                   </div>
                 </div>
@@ -1697,12 +1699,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       <span className="text-slate-500">Kênh tiếp nhận:</span>
                       <span className="text-slate-800 font-medium flex items-center gap-1">
                         <Icon name="smartphone" size={13} className="text-emerald-600" />
-                        <span>Report được phép đọc</span>
+                        <span>Hồ sơ phản ánh được phép đọc</span>
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">Thời gian tiếp nhận:</span>
-                      <span className="font-mono text-slate-800">{reuseSource?.report.receivedAt||'Chưa có thời gian tiếp nhận'}</span>
+                      <span className="font-mono text-slate-800">{reuseSource?.report.receivedAt?businessDate(reuseSource.report.receivedAt):'Chưa có thời gian tiếp nhận'}</span>
                     </div>
                     <div className="pt-1">
                       <span className="text-slate-500 block text-[10px]">Nội dung phản ánh:</span>

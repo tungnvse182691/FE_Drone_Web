@@ -1,3 +1,4 @@
+import {businessError} from '../../utils/businessDisplay'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -126,17 +127,17 @@ export const FieldTasks: React.FC = () => {
             name={toast.type === 'error' ? 'error' : toast.type === 'info' ? 'info' : 'check_circle'}
             size={18}
           />
-          <span>{toast.message}</span>
+          <span>{toast.type==='error'?businessError(toast.message):toast.message}</span>
         </div>
       )}
 
       {/* Thông báo lỗi nếu có */}
-      {linkedSourceError && <p role="alert" className="text-xs text-rose-700">{linkedSourceError}</p>}
+      {linkedSourceError && <p role="alert" className="text-xs text-rose-700">{businessError(linkedSourceError)}</p>}
       {apiError && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
             <Icon name="error" size={16} className="text-rose-600 shrink-0" />
-            <span>{apiError}</span>
+            <span>{businessError(apiError)}</span>
           </div>
           <button
             type="button"

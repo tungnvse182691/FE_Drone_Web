@@ -36,7 +36,7 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
     <div className="space-y-4">
       {/* 1. BREADCRUMB */}
       <nav aria-label="Đường dẫn trang" className="flex items-center space-x-2 text-xs text-slate-500 font-medium">
-        <a href={isSupervisor ? '#/sup/dashboard' : '#/pm/dashboard'} className="hover:text-[#C9A227] transition-colors flex items-center gap-1">
+        <a href={isSupervisor ? '/sup/dashboard' : '/pm/dashboard'} className="hover:text-[#C9A227] transition-colors flex items-center gap-1">
           <Icon name="home" size={14} />
           <span>Trang chủ</span>
         </a>
@@ -62,7 +62,7 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
           <p className="text-xs text-slate-500 mt-1">
             {currentProject ? (
               <>
-                Dự án: <strong className="text-slate-800 font-semibold">{currentProject.name}</strong> • Lý trình Km {currentProject.start_km} - Km {currentProject.end_km} • Tiếp nhận kết quả đo thực địa & quản lý phiếu giao việc đo đạc.
+                Dự án: <strong className="text-slate-800 font-semibold">{currentProject.name}</strong> • {Number.isFinite(currentProject.start_km)&&Number.isFinite(currentProject.end_km)?`Lý trình Km ${currentProject.start_km} - Km ${currentProject.end_km}`:'Chưa có lý trình từ nguồn đọc'} • Tiếp nhận kết quả đo thực địa & quản lý phiếu giao việc đo đạc.
               </>
             ) : (
               <>
