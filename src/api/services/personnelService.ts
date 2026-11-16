@@ -325,7 +325,14 @@ export const personnelService = {
    * Đặt lại mật khẩu tạm thời cho nhân sự (API-240: POST /api/v1/users/{userId}/password-reset)
    */
   async adminResetPassword(userId: string, temporaryPassword: string, reason?: string): Promise<void> {
-    throw Object.assign(new Error('Đặt lại mật khẩu chưa được hỗ trợ bằng phiên Web.'), { code: 'web_cookie_unsupported' })
+    const state = useAuthStore.getState()
+    if (state.user?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được đặt lại mật khẩu nhân sự.')
+    // BE: POST /users/{userId}/password-reset { temporaryPassword, reason } + Idempotency-Key → 204. Giao diện chưa có ô lý do.
+    await apiClient.post(
+      `/users/${userId}/password-reset`,
+      { temporaryPassword, reason: reason?.trim() || 'Giám sát cấp mật khẩu tạm cho nhân sự' },
+      { headers: { 'Idempotency-Key': crypto.randomUUID() } }
+    )
   },
 
   /**

@@ -104,6 +104,13 @@ export async function getSessionApi(): Promise<SessionResponse> {
   return res.data
 }
 
+/** API-008: Yêu cầu khôi phục mật khẩu (ẩn danh, kèm CSRF). BE trả 202 dù email có tồn tại hay không (không lộ tài khoản). */
+export async function requestPasswordRecoveryApi(email: string): Promise<number> {
+  const csrf = await fetchCsrfToken()
+  const res = await apiClient.post('/auth/password-recovery-requests', { email: email.trim() }, { headers: { 'X-CSRF-TOKEN': csrf.requestToken } })
+  return res.status
+}
+
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string

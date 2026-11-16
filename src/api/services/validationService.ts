@@ -99,30 +99,34 @@ export const validationService = {
   },
 
   /**
-   * Lấy dữ liệu tổng quan màn hình Thực nghiệm Đối soát (RPT-09) theo dự án
+   * Tổng quan màn Thực nghiệm Đối soát (RPT-09). Dự án lấy từ BE (GET /projects, phân trang).
+   * BE KHÔNG có API liệt kê mẫu đối soát hay các đợt kiểm định: chỉ có tạo theo danh sách cặp id và đọc số liệu theo id
+   * (POST /projects/{id}/validation-runs, GET /validation-runs/{id}). Vì vậy mẫu và đợt chạy luôn rỗng, không giả lập.
    */
-  async getValidationOverview(projectId: string = 'prj-ql1a-02'): Promise<{
+  async getValidationOverview(projectId: string = ''): Promise<{
     activeRun: ExtendedValidationRun
     samples: ExtendedValidationSample[]
     runs: ExtendedValidationRun[]
     activeJob: AsyncValidationJob | null
     projects: ValidationProjectOption[]
   }> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    const run = RUNS_BY_PROJECT[projectId] || RUNS_BY_PROJECT['prj-ql1a-02']
-    const samples =
-      projectId === 'ALL'
-        ? inMemorySamples
-        : inMemorySamples.filter((s) => s.project_id === projectId)
-
-    const allRuns = Object.values(RUNS_BY_PROJECT)
-
+    const projects: ValidationProjectOption[] = []
+    let cursor: string | null | undefined
+    for (let page = 0; page < 20; page++) {
+      const res = await apiClient.get<any>('/projects', { params: cursor ? { cursor } : undefined })
+      for (const p of res.data?.items || []) {
+        projects.push({ id: p.projectId, name: p.name, code: p.projectCode, chainage: '—', surface_type: '—' })
+      }
+      cursor = res.data?.nextCursor
+      if (!cursor) break
+    }
+    void projectId
     return {
-      activeRun: { ...run },
-      samples: [...samples],
-      runs: allRuns,
-      activeJob: inMemoryActiveJob ? { ...inMemoryActiveJob } : null,
-      projects: VALIDATION_PROJECT_OPTIONS
+      activeRun: {} as ExtendedValidationRun,
+      samples: [],
+      runs: [],
+      activeJob: null,
+      projects,
     }
   },
 
@@ -142,115 +146,25 @@ export const validationService = {
     return list.filter((s) => s.inclusion_status === filter)
   },
 
-  /**
-   * Khởi tạo đợt kiểm định thực nghiệm mới (HTTP 202 Accepted theo FR-31)
-   */
-  async triggerValidationRun(projectId: string = 'prj-ql1a-02'): Promise<{
+  /** Khởi tạo kiểm định: cần danh sách cặp id từ BE (web chưa có nguồn) nên không thể thực hiện. */
+  async triggerValidationRun(_projectId: string = ''): Promise<{
     job: AsyncValidationJob
     run: ExtendedValidationRun
   }> {
-    await new Promise((resolve) => setTimeout(resolve, 250))
-    const projConfig =
-      VALIDATION_PROJECT_OPTIONS.find((p) => p.id === projectId) ||
-      VALIDATION_PROJECT_OPTIONS[0]
-
-    const newRunCode = `VAL-RUN-2026-${Math.floor(Math.random() * 89 + 10)}`
-    const newJobId = `job-val-${Math.floor(Math.random() * 899 + 100)}`
-    const newJobCode = `#VAL-2026-${Math.floor(Math.random() * 89 + 10)}`
-
-    const newJob: AsyncValidationJob = {
-      id: newJobId,
-      code: newJobCode,
-      name: `Đang đối soát ma trận ghép cặp trên đoạn ${projConfig.chainage}`,
-      progress: 5,
-      status: 'RUNNING',
-      section: projConfig.chainage,
-      project_id: projectId,
-      estimated_seconds: 40
-    }
-
-    const currentBase = RUNS_BY_PROJECT[projectId] || RUNS_BY_PROJECT['prj-ql1a-02']
-    const newRun: ExtendedValidationRun = {
-      ...currentBase,
-      id: `val-run-${Date.now()}`,
-      run_code: newRunCode,
-      executed_at: 'Hôm nay ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      status: 'RUNNING',
-      progress_percent: 5
-    }
-
-    inMemoryActiveJob = newJob
-    RUNS_BY_PROJECT[projectId] = newRun
-
-    return { job: newJob, run: newRun }
+    throw new Error('BE chỉ tạo lần kiểm định từ danh sách cặp id (groundTruthId, derivedMeasurementId) mà web chưa có API để lấy, và API này chưa mở cho cookie web; không thể tạo từ giao diện.')
   },
-
-  /**
-   * Đánh dấu đợt kiểm định hoàn tất (chuyển status từ RUNNING sang COMPLETED)
-   */
-  completeValidationRun(runId?: string) {
-    Object.keys(RUNS_BY_PROJECT).forEach((k) => {
-      if (RUNS_BY_PROJECT[k].status === 'RUNNING') {
-        RUNS_BY_PROJECT[k] = {
-          ...RUNS_BY_PROJECT[k],
-          status: 'COMPLETED',
-          progress_percent: 100
-        }
-      }
-    })
-    if (inMemoryActiveJob) {
-      inMemoryActiveJob = null
-    }
+  /** BE không có API hủy tác vụ kiểm định. */
+  async cancelValidationJob(_jobId: string): Promise<boolean> {
+    throw new Error('BE không có API hủy tác vụ kiểm định.')
   },
-
-  /**
-   * Hủy tiến trình kiểm định nền đang chạy
-   */
-  async cancelValidationJob(jobId: string): Promise<boolean> {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    if (inMemoryActiveJob && inMemoryActiveJob.id === jobId) {
-      inMemoryActiveJob = null
-    }
-    return true
-  },
-
-  /**
-   * Xuất file CSV dữ liệu đối soát chuẩn hóa theo dự án (RS06 / RPT-09)
-   */
-  async exportValidationCsv(projectId: string = 'prj-ql1a-02'): Promise<{
+  /** BE không có API xuất CSV đối soát (không có danh sách mẫu để xuất). */
+  async exportValidationCsv(_projectId: string = ''): Promise<{
     fileName: string
     csvContent: string
     totalRows: number
   }> {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    const list =
-      projectId === 'ALL'
-        ? inMemorySamples
-        : inMemorySamples.filter((s) => s.project_id === projectId)
-
-    const headers =
-      'Sample_ID,Project_ID,Defect_Type,Chainage_KM,Ground_Truth_mm,Derived_AI_mm,Signed_Error_mm,Absolute_Error_mm,Status,Exclusion_Reason,Instrument,Measured_By\n'
-    const rows = list
-      .map(
-        (s) =>
-          `"${s.sample_id}","${s.project_id}","${s.defect_name_vi}","Km${s.chainage_km}",${s.ground_truth_value},${s.derived_value},${s.signed_error},${s.absolute_error},"${s.inclusion_status}","${s.exclusion_reason || ''}","${s.instrument_name}","${s.measured_by}"`
-      )
-      .join('\n')
-
-    const filePrefix =
-      projectId === 'ALL' ? 'ALL' : projectId.replace('prj-', '').toUpperCase()
-
-    return {
-      fileName: `RPT-09-Research-Validation-Paired-Data-${filePrefix}-v2.2.csv`,
-      csvContent: headers + rows,
-      totalRows: list.length
-    }
+    throw new Error('BE không có API xuất CSV đối soát.')
   },
-
-  // =========================================================================
-  // CANONICAL AI MOCK RUNS & VALIDATION API (CANDIDATE3 SPEC 17_10)
-  // =========================================================================
-
   /**
    * Lấy danh sách các đợt chạy thử nghiệm AI (GET /api/v1/projects/{projectId}/ai-mock-runs)
    */

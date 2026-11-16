@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { DefectPublicationPanel } from './defect-verify/DefectPublicationPanel'
 import { Card } from '../../components/ui/Card'
 import {
   surveyService,
@@ -918,6 +919,7 @@ export const DefectDetailVerify: React.FC = () => {
             isSubmitting={isSubmitting}
             isSupervisor={isSupervisor}
           />
+          {!isSupervisor && defect.status === DefectStatus.VERIFIED && defect.project_id && <DefectPublicationPanel projectId={defect.project_id} defectId={defect.id} />}
         </div>
       </div>
 

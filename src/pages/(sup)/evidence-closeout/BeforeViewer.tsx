@@ -24,7 +24,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({ currentItem }) => {
       {/* Vùng hiển thị ảnh */}
       <div className="relative group aspect-video w-full overflow-hidden bg-slate-900">
         <img
-          src={currentItem.before_image}
+          src={currentItem.before_image || undefined}
           alt="Hiện trạng hư hỏng mặt đường trước khi sửa chữa"
           className="w-full h-full object-cover group-hover:scale-101 transition-transform duration-300"
         />
@@ -63,7 +63,7 @@ export const BeforeViewer: React.FC<BeforeViewerProps> = ({ currentItem }) => {
           <div>
             <span className="text-slate-400 block text-[11px] uppercase tracking-wider font-medium">Kích thước ban đầu</span>
             <span className="font-medium text-slate-800 mt-0.5 block">
-              Sâu {currentItem.depth_cm} cm • S = {currentItem.area_m2} m²
+              Sâu {currentItem.depth_cm ?? '—'} cm • S = {currentItem.area_m2 ?? '—'} m²
             </span>
           </div>
         </div>

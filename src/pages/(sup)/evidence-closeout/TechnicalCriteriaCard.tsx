@@ -53,6 +53,10 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
         </div>
       )}
 
+      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        Các chỉ tiêu kỹ thuật (khối lượng, K98, độ phẳng, độ nhám) và kết luận toàn vẹn ảnh chưa có nguồn dữ liệu từ BE; dấu “—” là chưa có dữ liệu. Nội dung diễn giải cố định trên thẻ không phải kết quả kiểm tra của BE.
+      </p>
+
       {/* 4 Chỉ tiêu kỹ thuật phẳng (Minimalist Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5 text-xs">
         {/* Metric 1: Khối lượng thi công */}
@@ -63,14 +67,14 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
               <span className="material-symbols-outlined text-[16px] text-slate-400">square_foot</span>
             </div>
             <div className="text-lg font-bold text-slate-900 font-sansation">
-              {currentItem.area_m2} m² <span className="text-xs font-normal text-slate-500">(Cắt mép chuẩn)</span>
+              {currentItem.area_m2 ?? '—'} m² <span className="text-xs font-normal text-slate-500">(Cắt mép chuẩn)</span>
             </div>
             <p className="text-slate-600 leading-relaxed text-[11px]">
-              Cào bóc sâu {currentItem.depth_cm} cm (vượt chiều sâu khuyết tật 0.5 cm để triệt tiêu nứt ngầm chân móng).
+              Cào bóc sâu {currentItem.depth_cm ?? '—'} cm (vượt chiều sâu khuyết tật 0.5 cm để triệt tiêu nứt ngầm chân móng).
             </p>
           </div>
           <div className="pt-2 border-t border-slate-200/80 text-[11px] text-slate-600 space-y-0.5">
-            <div>• BTN C12.5: <strong className="text-slate-800">{currentItem.volume_btn_c125_kg} kg</strong></div>
+            <div>• BTN C12.5: <strong className="text-slate-800">{currentItem.volume_btn_c125_kg ?? '—'} kg</strong></div>
             <div>• Nhũ tương dính bám: <strong className="text-slate-800">{currentItem.tack_coat_crs1}</strong></div>
           </div>
         </div>
@@ -103,14 +107,14 @@ export const TechnicalCriteriaCard: React.FC<TechnicalCriteriaCardProps> = ({
               <span className="material-symbols-outlined text-[16px] text-slate-400">straighten</span>
             </div>
             <div className="text-lg font-bold text-slate-900 font-sansation">
-              K = {currentItem.compaction_k98} <span className="text-xs font-semibold text-[#2F9E44]">(Đạt K ≥ 0.98)</span>
+              K = {currentItem.compaction_k98 ?? '—'} <span className="text-xs font-semibold text-[#2F9E44]">(Đạt K ≥ 0.98)</span>
             </div>
             <p className="text-slate-600 leading-relaxed text-[11px]">
-              Độ bằng phẳng thước 3m: Khe hở ≤ {currentItem.flatness_3m_gap_mm} mm (Giới hạn: 3.0 mm).
+              Độ bằng phẳng thước 3m: Khe hở ≤ {currentItem.flatness_3m_gap_mm ?? '—'} mm (Giới hạn: 3.0 mm).
             </p>
           </div>
           <div className="pt-2 border-t border-slate-200/80 text-[11px] text-slate-600">
-            Độ nhám rắc cát: <strong className="text-slate-800">{currentItem.sand_patch_roughness_mm} mm</strong>
+            Độ nhám rắc cát: <strong className="text-slate-800">{currentItem.sand_patch_roughness_mm ?? '—'} mm</strong>
           </div>
         </div>
 

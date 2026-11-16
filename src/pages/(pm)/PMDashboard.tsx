@@ -84,7 +84,7 @@ export const PMDashboard: React.FC = () => {
     )
   }
 
-  const { stats, defects, citizenCases, repairBatches, clocks = [] } = data
+  const { stats, defects, citizenCases, repairBatches, clocks = [], errors, clocksTruncated } = data
 
   return (
     <div className="space-y-6">
@@ -301,7 +301,7 @@ export const PMDashboard: React.FC = () => {
       </div>
 
       {/* Widget Đồng hồ thời hạn nhiệm vụ (Clocks & SLA - API-062) */}
-      <OperationalClocksWidget clocks={clocks} />
+      <OperationalClocksWidget clocks={clocks} error={errors.clocks} truncated={clocksTruncated} onChanged={() => refetch()} />
 
       {/* Main Content Grid: Hộp Thư Tiếp Nhận & Danh Sách Đợt Sửa Chữa (Bo góc 16px, viền #E2E5E9) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -365,21 +365,31 @@ export const PMDashboard: React.FC = () => {
           <div className="p-6">
             {inboxTab === 'DRONE' ? (
               <div className="divide-y divide-slate-100">
+                {errors.defects && (
+                  <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được lỗi AI: {errors.defects}</div>
+                )}
+                {!errors.defects && defects.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-500">Không có lỗi AI cần thẩm định trong CSDL.</div>
+                )}
                 {defects.slice(0, 5).map((defect) => (
                   <div key={defect.id} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 px-1 rounded-lg transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
+                      {defect.image_url ? (
                       <img
                         src={defect.image_url}
                         alt={defect.code}
                         className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
                       />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 shrink-0" />
+                      )}
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-brand-dark flex items-center gap-2">
                           <span className="font-mono text-xs">{defect.code}</span>
                           {renderSeverityBadge(defect.severity)}
                         </div>
                         <div className="text-xs text-slate-500 mt-0.5 truncate">
-                          Lý trình: Km{defect.chainage_km} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
+                          Lý trình: {defect.stationing} • Độ tin cậy AI: {(defect.confidence_score * 100).toFixed(0)}%
                         </div>
                       </div>
                     </div>
@@ -397,6 +407,12 @@ export const PMDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
+                {errors.citizenCases && (
+                  <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được ca người dân: {errors.citizenCases}</div>
+                )}
+                {!errors.citizenCases && citizenCases.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-500">Không có ca người dân trong CSDL.</div>
+                )}
                 {citizenCases.slice(0, 5).map((item) => (
                   <div key={item.id} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/50 px-1 rounded-lg transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
@@ -454,6 +470,12 @@ export const PMDashboard: React.FC = () => {
 
           <div className="p-6">
             <div className="space-y-3">
+              {errors.repairBatches && (
+                <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được đợt sửa chữa: {errors.repairBatches}</div>
+              )}
+              {!errors.repairBatches && repairBatches.length === 0 && (
+                <div className="p-4 text-center text-xs text-slate-500">Không có đợt sửa chữa trong CSDL.</div>
+              )}
               {repairBatches.slice(0, 3).map((batch) => (
                 <div key={batch.id} className="p-4 bg-slate-50/70 rounded-xl border border-slate-200/80 space-y-3 hover:border-slate-300 transition-colors">
                   <div className="flex items-center justify-between">
@@ -467,7 +489,7 @@ export const PMDashboard: React.FC = () => {
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200 text-slate-500">
                     <span>Quy mô kỹ thuật:</span>
                     <span className="font-semibold text-slate-800 font-mono text-[11px]">
-                      {batch.defects?.length || 4} điểm nứt lún • {batch.items?.length || 2} hạng mục TCVN
+                      {batch.defect_count} điểm nứt lún • {batch.item_count} hạng mục TCVN
                     </span>
                   </div>
                   <button

@@ -13,15 +13,15 @@ export interface CaseItem {
   status_label: string
   track_type: RepairTrackType
   attempt_number: number
-  area_m2: number
-  depth_cm: number
-  volume_btn_c125_kg: number
+  area_m2: number | null
+  depth_cm: number | null
+  volume_btn_c125_kg: number | null
   tack_coat_crs1: string
-  compaction_k98: number
-  flatness_3m_gap_mm: number
-  sand_patch_roughness_mm: number
-  pave_temp_c: number
-  compact_temp_c: number
+  compaction_k98: number | null
+  flatness_3m_gap_mm: number | null
+  sand_patch_roughness_mm: number | null
+  pave_temp_c: number | null
+  compact_temp_c: number | null
   before_image: string
   before_hash: string
   before_time: string

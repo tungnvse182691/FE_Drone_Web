@@ -1,18 +1,46 @@
 import { apiClient } from '../client'
-import { mockSurveys, mockDefects, mockRepairBatches, mockTriageCases } from '../mock/data'
-import { SurveyRequest, Defect, RepairBatch, TriageCase } from '../../types/domain'
+import { TriageCase } from '../../types/domain'
+import { surveyService } from './surveyService'
+import { repairService } from './repairService'
+import { triageService } from './triageService'
 
 export interface H6ClockItem {
   id: string
   projectId: string
-  kind: 'SURVEY_VERIFICATION' | 'FIELD_INSPECTION' | 'CONSTRUCTION_DECLARATION' | string
+  /** Giá trị `kind` nguyên bản của BE (DeadlineClockKind, PascalCase), ví dụ `SupervisorInitialApproval`. */
+  kind: string
+  /** BE không có tiêu đề: tách từ `kind` thành các từ, không dịch/không đặt nhãn mới. */
   title: string
+  /** BE không có mã đối tượng: rút gọn từ `targetId`. */
   targetCode: string
+  /** BE không cung cấp route đích: để rỗng, widget ẩn nút điều hướng. */
   targetPath: string
   currentDueAt: string
   overdue: boolean
   remainingTime: string
   appointedRole: string
+  /** ETag/version của clock, cần cho If-Match khi gia hạn. */
+  version: string
+}
+
+export interface DashboardDefectRow {
+  id: string
+  code: string
+  image_url: string | null
+  severity: string
+  /** Lý trình theo service khảo sát (BE chưa trả lý trình nên là chuỗi thông báo). */
+  stationing: string
+  /** 0..1 (service khảo sát trả phần trăm 0..100, chia 100 ở đây). */
+  confidence_score: number
+}
+
+export interface DashboardRepairRow {
+  id: string
+  code: string
+  name: string
+  status: string
+  defect_count: number
+  item_count: number
 }
 
 export interface PMDashboardStats {
@@ -23,136 +51,197 @@ export interface PMDashboardStats {
   overdueClocksCount: number
 }
 
+export type PMDashboardSection = 'surveys' | 'defects' | 'citizenCases' | 'repairBatches' | 'clocks'
+
 export interface PMDashboardData {
   stats: PMDashboardStats
-  surveys: SurveyRequest[]
-  defects: Defect[]
+  defects: DashboardDefectRow[]
   citizenCases: TriageCase[]
-  repairBatches: RepairBatch[]
+  repairBatches: DashboardRepairRow[]
   clocks: H6ClockItem[]
+  /** Lỗi theo từng phần (API lỗi thì báo lỗi, không fallback mock). */
+  errors: Partial<Record<PMDashboardSection, string>>
+  /** true nếu BE còn trang tiếp theo mà dashboard chưa nạp hết. */
+  clocksTruncated: boolean
+}
+
+interface PageDto<T> { items?: T[]; nextCursor?: string | null }
+interface ClockViewDto {
+  id: string
+  projectId: string
+  kind?: string | null
+  targetId: string
+  currentDueAt: string
+  overdue: boolean
+  version?: string | null
+  appointedRole?: string | null
+}
+interface ClockPageDto { items?: ClockViewDto[] | null; continuation?: unknown }
+
+const SEVERITY_CODE_BY_VI: Record<string, string> = {
+  'Khẩn cấp': 'CRITICAL',
+  'Nghiêm trọng': 'HIGH',
+  'Trung bình': 'MEDIUM',
+  'Nhẹ': 'LOW',
+}
+
+const errorText = (e: unknown): string => {
+  const anyErr = e as { response?: { status?: number; data?: { detail?: string; title?: string } }; message?: string }
+  const status = anyErr?.response?.status
+  const detail = anyErr?.response?.data?.detail || anyErr?.response?.data?.title || anyErr?.message || 'Lỗi không xác định'
+  return status ? `HTTP ${status}: ${detail}` : detail
+}
+
+const humanizeKind = (kind: string): string => kind.replace(/([a-z])([A-Z])/g, '$1 $2')
+
+const formatRemaining = (dueAt: string): string => {
+  const diff = new Date(dueAt).getTime() - Date.now()
+  const abs = Math.abs(diff)
+  const h = Math.floor(abs / 3_600_000)
+  const m = Math.floor((abs % 3_600_000) / 60_000)
+  const text = h > 0 ? `${h} giờ ${m} phút` : `${m} phút`
+  return diff <= 0 ? `Quá hạn ${text}` : `Còn ${text}`
+}
+
+async function readProjectIds(): Promise<string[]> {
+  const ids: string[] = []
+  let cursor: string | null | undefined
+  for (let page = 0; page < 20; page++) {
+    const res = await apiClient.get<PageDto<{ projectId: string }>>('/projects', {
+      params: cursor ? { cursor } : undefined,
+    })
+    for (const item of res.data?.items || []) ids.push(item.projectId)
+    cursor = res.data?.nextCursor
+    if (!cursor) break
+  }
+  return ids
 }
 
 export const dashboardService = {
   /**
-   * Lấy toàn bộ số liệu và danh sách cho Dashboard PM qua API
-   * (Có async, loading, error state và sẵn sàng swap sang API thật)
+   * Dashboard PM: 100% dữ liệu từ BE qua các service đã gắn API.
+   * BE không có endpoint tổng hợp /dashboard/pm nên gom theo từng dự án của tài khoản.
+   * Mỗi phần tải độc lập; lỗi của phần nào hiển thị lỗi ở phần đó, không dùng dữ liệu giả.
    */
   async getPMDashboard(): Promise<PMDashboardData> {
-    const isMock = import.meta.env.VITE_USE_MOCK === 'true'
-
-    let realCitizenCases: TriageCase[] = []
-    let realProjectsCount = 0
-
-    if (!isMock) {
-      try {
-        const res = await apiClient.get<PMDashboardData>('/dashboard/pm')
-        if (res.data) return res.data
-      } catch {
-        // Backend Candidate3 không có endpoint tổng hợp /dashboard/pm, tiếp tục tổng hợp từ các endpoint rời
-      }
-
-      // Thử gọi các endpoint con của Candidate3
-      try {
-        const casesRes = await apiClient.get<{ items?: any[] }>('/cases')
-        if (casesRes.data?.items) {
-          realCitizenCases = casesRes.data.items.map((item: any, idx: number) => ({
-            id: item.caseId || item.id || `case-${idx}`,
-            code: item.caseCode || item.code || `CASE-${(item.caseId || '').slice(0, 8)}`,
-            source: 'CITIZEN',
-            source_label: 'Phản ánh người dân',
-            source_detail: 'Ứng dụng RoadGuard Citizen',
-            project_id: item.projectId || '72f84201-c001-4000-8000-000000000001',
-            project_name: item.projectName || 'Synthetic Project A',
-            stationing: item.stationing || 'Km 0+000',
-            lane: item.lane || 'Làn 1',
-            defect_title: item.title || item.description || 'Phản ánh mặt đường người dân',
-            defect_type: item.defectType || 'POTHOLE',
-            severity: item.severity || 'MEDIUM',
-            urgency: item.urgency || 'NORMAL',
-            time_ago: 'Hôm nay',
-            created_at: item.createdAt || new Date().toISOString(),
-            status: item.status || 'PENDING',
-            status_label: 'Chờ xử lý',
-            image_url: item.mediaUrls?.[0] || 'https://images.unsplash.com/photo-1545158826-646e7f8e8f81?w=800',
-            gps: {
-              lat: item.lat || 16.0544,
-              lng: item.lng || 108.2022,
-              altitude_m: 10,
-              resolution_cm_px: 0.5,
-            },
-            ai_confidence: item.confidence || 0.85,
-            area_sqm: item.areaSqm || 1.2,
-            ai_area_sqm: item.areaSqm || 1.2,
-            max_depth_cm: item.depthCm || 3.5,
-            ai_depth_cm: item.depthCm || 3.5,
-            pm_notes: '',
-            description: item.description || '',
-            conclusion: item.conclusion || null,
-          }))
-        }
-      } catch (e) {
-        console.warn('⚠️ [Candidate3] Chưa tải được /cases:', e)
-      }
+    const errors: PMDashboardData['errors'] = {}
+    let projectIds: string[] = []
+    let projectsError: string | null = null
+    try {
+      projectIds = await readProjectIds()
+    } catch (e) {
+      projectsError = errorText(e)
     }
 
-    const citizenCases = realCitizenCases.length > 0 
-      ? realCitizenCases 
-      : mockTriageCases.filter((c) => c.source === 'CITIZEN')
-    const pendingAIDefects = mockDefects.filter((d) => d.status === 'OPEN' || d.status === 'VERIFIED')
+    const [surveysR, detectionsR, casesR, packagesR, clocksR] = await Promise.allSettled([
+      surveyService.getSurveys(),
+      surveyService.getAllProjectAiDetections(),
+      triageService.getCases({ source: 'CITIZEN' }),
+      (async () => {
+        if (projectsError) throw new Error(projectsError)
+        const lists = await Promise.all(projectIds.map((id) => repairService.fetchPackagesFromApi(id)))
+        return lists.flat()
+      })(),
+      (async () => {
+        if (projectsError) throw new Error(projectsError)
+        let truncated = false
+        const lists = await Promise.all(
+          projectIds.map(async (id) => {
+            const res = await apiClient.get<ClockPageDto>(`/projects/${id}/clocks`, { params: { limit: 100 } })
+            if (res.data?.continuation) truncated = true
+            return res.data?.items || []
+          })
+        )
+        return { items: lists.flat(), truncated }
+      })(),
+    ])
 
-    const nowTs = Date.now()
-    const mockClocks: H6ClockItem[] = [
-      {
-        id: 'clk-01',
-        projectId: 'prj-01',
-        kind: 'FIELD_INSPECTION',
-        title: 'Nghiệm thu kích thước đo đạc nứt lún thực địa Km 1025+110',
-        targetCode: 'TASK-1025',
-        targetPath: '/pm/field-tasks',
-        currentDueAt: new Date(nowTs - 90 * 60 * 1000).toISOString(), // Quá hạn 90 phút trước
-        overdue: true,
-        remainingTime: 'Quá hạn 1 giờ 30 phút',
-        appointedRole: 'PROJECT_MANAGER',
-      },
-      {
-        id: 'clk-02',
-        projectId: 'prj-01',
-        kind: 'SURVEY_VERIFICATION',
-        title: 'Thẩm định phát hiện AI đợt bay #SRV-01 (Km 1024 - Km 1030)',
-        targetCode: '#SRV-01',
-        targetPath: '/pm/surveys/srv-01/review',
-        currentDueAt: new Date(nowTs + 22 * 60 * 1000).toISOString(), // Còn 22 phút (Khẩn cấp < 30m đếm giây)
-        overdue: false,
-        remainingTime: 'Còn 22 phút',
-        appointedRole: 'PROJECT_MANAGER',
-      },
-      {
-        id: 'clk-03',
-        projectId: 'prj-01',
-        kind: 'CONSTRUCTION_DECLARATION',
-        title: 'Khai báo hoàn thành thi công (Before/After) gói PKG-2026-05',
-        targetCode: 'PKG-2026-05',
-        targetPath: '/pm/acceptance',
-        currentDueAt: new Date(nowTs + 19 * 3600 * 1000).toISOString(), // Còn 19 giờ
-        overdue: false,
-        remainingTime: 'Còn 19 giờ',
-        appointedRole: 'PROJECT_MANAGER',
-      },
-    ]
+    const surveysCount = surveysR.status === 'fulfilled' ? surveysR.value.length : 0
+    if (surveysR.status === 'rejected') errors.surveys = errorText(surveysR.reason)
+
+    let defects: DashboardDefectRow[] = []
+    let pendingAIDefectsCount = 0
+    if (detectionsR.status === 'fulfilled') {
+      const pending = detectionsR.value.filter((d) => d.status === 'PENDING')
+      pendingAIDefectsCount = pending.length
+      const top = pending.slice(0, 5)
+      const urls = await Promise.allSettled(
+        top.map((d) => (d.frameFileId ? surveyService.getFileContentUrl(d.frameFileId) : Promise.resolve(null)))
+      )
+      defects = top.map((d, i) => ({
+        id: d.id,
+        code: d.code,
+        image_url: urls[i].status === 'fulfilled' ? urls[i].value : null,
+        severity: SEVERITY_CODE_BY_VI[d.severityLevel] || d.severityLevel,
+        stationing: d.stationing,
+        confidence_score: d.confidence / 100,
+      }))
+    } else {
+      errors.defects = errorText(detectionsR.reason)
+    }
+
+    const citizenCases = casesR.status === 'fulfilled' ? casesR.value : []
+    if (casesR.status === 'rejected') errors.citizenCases = errorText(casesR.reason)
+
+    const repairBatches: DashboardRepairRow[] =
+      packagesR.status === 'fulfilled'
+        ? packagesR.value.map((p) => ({
+            id: p.id,
+            code: p.code,
+            name: p.title,
+            status: p.status,
+            defect_count: p.defect_count,
+            item_count: p.total_items,
+          }))
+        : []
+    if (packagesR.status === 'rejected') errors.repairBatches = errorText(packagesR.reason)
+
+    let clocks: H6ClockItem[] = []
+    let clocksTruncated = false
+    if (clocksR.status === 'fulfilled') {
+      clocksTruncated = clocksR.value.truncated
+      clocks = clocksR.value.items.map((c) => ({
+        id: c.id,
+        projectId: c.projectId,
+        kind: c.kind || '',
+        title: humanizeKind(c.kind || ''),
+        targetCode: `#${c.targetId.slice(0, 8)}`,
+        targetPath: '',
+        currentDueAt: c.currentDueAt,
+        overdue: c.overdue,
+        remainingTime: formatRemaining(c.currentDueAt),
+        appointedRole: c.appointedRole || '',
+        version: c.version || '',
+      }))
+    } else {
+      errors.clocks = errorText(clocksR.reason)
+    }
 
     return {
       stats: {
-        surveysCount: mockSurveys.length,
-        pendingAIDefectsCount: pendingAIDefects.length,
+        surveysCount,
+        pendingAIDefectsCount,
         citizenCasesCount: citizenCases.length,
-        runningBatchesCount: mockRepairBatches.length,
-        overdueClocksCount: mockClocks.filter((c) => c.overdue).length,
+        runningBatchesCount: repairBatches.length,
+        overdueClocksCount: clocks.filter((c) => c.overdue).length,
       },
-      surveys: mockSurveys,
-      defects: mockDefects,
+      defects,
       citizenCases,
-      repairBatches: mockRepairBatches,
-      clocks: mockClocks,
+      repairBatches,
+      clocks,
+      errors,
+      clocksTruncated,
     }
+  },
+
+  /** Gia hạn clock: POST /projects/{projectId}/clocks/{clockId}/extensions (If-Match = version, Idempotency-Key). */
+  async extendClock(clock: H6ClockItem, extraHours: number, reason: string): Promise<void> {
+    if (!clock.version) throw new Error('Clock không có version (ETag) để gửi If-Match.')
+    const newDueAt = new Date(new Date(clock.currentDueAt).getTime() + extraHours * 3_600_000).toISOString()
+    await apiClient.post(
+      `/projects/${clock.projectId}/clocks/${clock.id}/extensions`,
+      { newDueAt, reason },
+      { headers: { 'If-Match': clock.version, 'Idempotency-Key': crypto.randomUUID() } }
+    )
   },
 }

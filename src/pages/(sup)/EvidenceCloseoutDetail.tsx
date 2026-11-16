@@ -11,6 +11,13 @@ import { acceptanceService, AcceptancePackage } from '../../api/services/accepta
 
 export type { RepairTrackType, ItemReviewStatus, CaseItem }
 
+const beErrorText = (err: unknown): string => {
+  const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
+  const status = e?.response?.status
+  const detail = e?.response?.data?.detail || e?.response?.data?.title || e?.response?.data?.code || e?.message || 'Lỗi không xác định'
+  return status ? `HTTP ${status}: ${detail}` : detail
+}
+
 export const EvidenceCloseoutDetail: React.FC = () => {
   const { id, batchId } = useParams<{ id?: string; batchId?: string }>()
   const navigate = useNavigate()
@@ -25,6 +32,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const [currentPackage, setCurrentPackage] = useState<AcceptancePackage | null>(null)
   const [caseItems, setCaseItems] = useState<CaseItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedItemId, setSelectedItemId] = useState<string>('')
 
   // Load dữ liệu từ Mock API
@@ -48,7 +56,8 @@ export const EvidenceCloseoutDetail: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error('Lỗi khi tải dữ liệu nghiệm thu từ Mock API:', err)
+        console.error('Lỗi khi tải dữ liệu nghiệm thu:', err)
+        if (isMounted) setLoadError(beErrorText(err))
       } finally {
         if (isMounted) setIsLoading(false)
       }
@@ -142,7 +151,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       setIsReworkModalOpen(false)
       showToast(`Đã phát lệnh yêu cầu sửa lại cho hạng mục ${currentItem.item_code}!`)
     } catch (err) {
-      showToast('Có lỗi xảy ra khi phát lệnh sửa lại.')
+      showToast('Không gửi được yêu cầu sửa lại: ' + beErrorText(err))
     }
   }
 
@@ -157,7 +166,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       }
       showToast(`Giám sát đã chấp thuận nghiệm thu đạt hạng mục ${currentItem.item_code}!`)
     } catch (err) {
-      showToast('Có lỗi xảy ra khi phê duyệt nghiệm thu.')
+      showToast('Không xác nhận được nghiệm thu: ' + beErrorText(err))
     }
   }
 
@@ -226,6 +235,22 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     }, 1000)
   }
 
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="p-4 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg max-w-xl">
+          Không tải được hồ sơ nghiệm thu: {loadError}
+        </div>
+      </div>
+    )
+  }
+  if (!isLoading && !currentItem) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-xs text-slate-500">
+        Không có hạng mục nghiệm thu trong CSDL cho gói này.
+      </div>
+    )
+  }
   if (isLoading || !currentItem) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">

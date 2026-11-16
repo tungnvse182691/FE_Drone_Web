@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useToastStore } from '../../../store/toastStore'
+import { requestPasswordRecoveryApi } from '../../../api/auth'
 
 export interface LoginFormProps {
   email: string
@@ -36,6 +37,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const toast = useToastStore()
   const [loadingSample, setLoadingSample] = useState(false)
+  // API-008: dùng email đang nhập ở ô Email; BE trả 202 chung cho mọi email (không lộ tài khoản).
+  const requestRecovery = async () => {
+    if (!email.trim()) { toast.info('Nhập email công vụ vào ô Email rồi bấm "Quên mật khẩu?" để gửi yêu cầu khôi phục.'); return }
+    try {
+      await requestPasswordRecoveryApi(email)
+      toast.success('Đã ghi nhận yêu cầu khôi phục mật khẩu. Nếu email thuộc tài khoản hợp lệ, hướng dẫn sẽ được gửi.')
+    } catch (e) {
+      const err = e as { response?: { status?: number; data?: { code?: string; title?: string } }; message?: string }
+      toast.error(err.response ? `Không gửi được yêu cầu khôi phục: HTTP ${err.response.status} ${err.response.data?.code || err.response.data?.title || ''}` : `Không gửi được yêu cầu khôi phục: ${err.message}`)
+    }
+  }
   const fillSample = async (key: 'supervisor' | 'pm-a') => {
     if (!import.meta.env.DEV || loadingSample || isLoading) return
     setLoadingSample(true)
@@ -146,7 +158,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <button
             type="button"
-            onClick={() => toast.info('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu công vụ.')}
+            onClick={() => { void requestRecovery() }}
             className="text-xs font-medium text-[#8C6D1F] hover:text-[#6B5219] transition-colors cursor-pointer"
           >
             Quên mật khẩu?

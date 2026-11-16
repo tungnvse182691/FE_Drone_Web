@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { LegalHoldProject } from '../../../types/domain'
+import { retentionService } from '../../../api/services/retentionService'
+import { RetentionBasisForm } from './RetentionBasisForm'
 
 export interface ProjectRetentionDetailModalProps {
   project: LegalHoldProject | null
@@ -14,6 +16,53 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
   onClose,
   onOpenCreateDeletionForProject
 }) => {
+  const [evalItems, setEvalItems] = useState<Array<{ fileId: string; eligibility: string; reasonCodes: string[] }>>([])
+  const [evalMeta, setEvalMeta] = useState<{ status: string; evaluatedAt: string; policyVersion: string } | null>(null)
+  const [evalError, setEvalError] = useState<string | null>(null)
+  const [evalLoading, setEvalLoading] = useState(false)
+  const [fileInfo, setFileInfo] = useState<Record<string, string>>({})
+
+  const beErr = (err: unknown): string => {
+    const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
+    const d = e?.response?.data?.detail || e?.response?.data?.title || e?.response?.data?.code || e?.message || 'Lỗi không xác định'
+    return e?.response?.status ? `HTTP ${e.response.status}: ${d}` : d
+  }
+
+  useEffect(() => {
+    if (!isOpen || !project) return
+    let active = true
+    setEvalItems([]); setEvalMeta(null); setEvalError(null); setFileInfo({}); setEvalLoading(true)
+    ;(async () => {
+      try {
+        const list = await retentionService.getRetentionEvaluations(project.project_id)
+        const latest = [...list].sort((a: any, b: any) => String(b.createdAt).localeCompare(String(a.createdAt)))[0]
+        if (!latest) return
+        const detail = await retentionService.getRetentionEvaluationDetail(project.project_id, latest.id)
+        if (!active) return
+        setEvalMeta({ status: detail.status, evaluatedAt: detail.evaluatedAt, policyVersion: detail.policyVersion })
+        setEvalItems(detail.items || [])
+      } catch (err) {
+        if (active) setEvalError(beErr(err))
+      } finally {
+        if (active) setEvalLoading(false)
+      }
+    })()
+    return () => { active = false }
+  }, [isOpen, project?.project_id])
+
+  const showFile = async (fileId: string) => {
+    if (!project) return
+    try {
+      const f = await retentionService.getRetentionFile(project.project_id, fileId)
+      setFileInfo((prev) => ({
+        ...prev,
+        [fileId]: `Phân loại: ${f.classification} • Kiểm kê ${f.inventoryComplete ? 'đầy đủ' : 'chưa đầy đủ'} • Nghĩa vụ bảo hành: ${(f.applicableObligations || []).length} • Lệnh phong tỏa đang hiệu lực: ${f.activeHoldCount}`,
+      }))
+    } catch (err) {
+      setFileInfo((prev) => ({ ...prev, [fileId]: 'Không đọc được: ' + beErr(err) }))
+    }
+  }
+
   if (!isOpen || !project) return null
 
   const isEligible = project.is_warranty_expired && project.years_since_warranty_end >= 5 && !project.is_legal_hold
@@ -96,6 +145,35 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
                     : 'Công trình đang trong thời hạn bảo hành. Không được phép đề xuất hủy dữ liệu.'}
                 </span>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Kết quả đánh giá lưu trữ từ BE */}
+        <div className="px-5 pt-3 text-xs">
+          <h4 className="font-bold text-slate-800 mb-1.5">Kết quả đánh giá lưu trữ từ hệ thống</h4>
+          {evalLoading && <p className="text-slate-500">Đang tải...</p>}
+          {evalError && (
+            <p className="p-2 text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được đánh giá lưu trữ: {evalError}</p>
+          )}
+          {!evalLoading && !evalError && !evalMeta && <p className="text-slate-500">Chưa có đánh giá lưu trữ nào trong CSDL.</p>}
+          {evalMeta && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-slate-500">
+                Trạng thái: <strong>{evalMeta.status}</strong> • Chính sách {evalMeta.policyVersion} • Đánh giá lúc {new Date(evalMeta.evaluatedAt).toLocaleString('vi-VN')}
+              </p>
+              {evalItems.map((it) => (
+                <div key={it.fileId} className="p-2 rounded-lg border border-slate-200 bg-slate-50">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-slate-700">Tệp {it.fileId.slice(0, 8).toUpperCase()}</span>
+                    <button type="button" onClick={() => showFile(it.fileId)} className="text-[11px] text-blue-700 hover:underline cursor-pointer">Xem chi tiết tệp</button>
+                  </div>
+                  <div className="text-[11px] text-slate-700 mt-0.5">Điều kiện: <strong>{it.eligibility}</strong></div>
+                  {it.reasonCodes?.length > 0 && <div className="text-[11px] text-slate-500 mt-0.5">Lý do: {it.reasonCodes.join(', ')}</div>}
+                  {fileInfo[it.fileId] && <div className="text-[11px] text-slate-600 mt-1 pt-1 border-t border-slate-200">{fileInfo[it.fileId]}</div>}
+                  {fileInfo[it.fileId] && !fileInfo[it.fileId].startsWith('Không đọc được') && <RetentionBasisForm projectId={project.project_id} fileId={it.fileId} />}
+                </div>
+              ))}
             </div>
           )}
         </div>

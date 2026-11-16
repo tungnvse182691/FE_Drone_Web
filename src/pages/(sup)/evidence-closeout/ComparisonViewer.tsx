@@ -78,7 +78,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
           <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs select-none bg-slate-900 border border-slate-200">
             {/* Ảnh sau sửa (Lớp nền) */}
             <img
-              src={currentItem.after_image}
+              src={currentItem.after_image || undefined}
               alt="Sau khi hoàn thành sửa chữa"
               className="absolute inset-0 w-full h-full object-cover"
             />
@@ -89,7 +89,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
               style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
             >
               <img
-                src={currentItem.before_image}
+                src={currentItem.before_image || undefined}
                 alt="Trước khi sửa chữa"
                 className="absolute inset-0 w-full h-full object-cover"
               />

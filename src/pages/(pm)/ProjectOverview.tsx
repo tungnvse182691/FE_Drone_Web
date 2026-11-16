@@ -17,6 +17,7 @@ import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
+import { ProjectRenewScopeCard } from './project-overview/ProjectRenewScopeCard'
 import { ProjectWarrantyCard } from './project-overview/ProjectWarrantyCard'
 
 export type { Segment, ProjectMember }
@@ -218,6 +219,8 @@ export const ProjectOverview: React.FC = () => {
             isSupervisor={isSupervisor}
             onNavigate={navigate}
           />
+
+          {isSupervisor && <ProjectRenewScopeCard projectId={project.id} />}
 
           <ProjectSegmentsTable
             serverReadOnly={project.server_data_loaded}

@@ -20,6 +20,7 @@ export const AcceptanceList: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
   const [selectedProject, setSelectedProject] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Tải danh sách gói thầu từ Mock API bất đồng bộ
   useEffect(() => {
@@ -27,12 +28,15 @@ export const AcceptanceList: React.FC = () => {
     const fetchPackages = async () => {
       try {
         setIsLoading(true)
+        setLoadError(null)
         const data = await acceptanceService.getAcceptancePackages()
         if (isMounted) {
           setPackages(data)
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách nghiệm thu:', err)
+        const r = err as { response?: { status?: number; data?: { detail?: string; title?: string } }; message?: string }
+        if (isMounted) setLoadError((r.response?.status ? `HTTP ${r.response.status}: ` : '') + (r.response?.data?.detail || r.response?.data?.title || r.message || 'Lỗi không xác định'))
       } finally {
         if (isMounted) setIsLoading(false)
       }
@@ -268,6 +272,12 @@ export const AcceptanceList: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {loadError && (
+        <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+          Không tải được danh sách nghiệm thu: {loadError}
+        </div>
+      )}
 
       {/* LƯỚI THẺ NGHIỆM THU (GRID 3 CỘT THAY CHO BẢNG) */}
       {isLoading ? (

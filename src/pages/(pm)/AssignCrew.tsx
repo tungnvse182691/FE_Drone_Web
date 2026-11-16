@@ -1,20 +1,94 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { InputField } from '../../components/ui/InputField'
-import { mockRepairBatches } from '../../api/mock/data'
+import { repairService, AssignableRepairItem } from '../../api/services/repairService'
+import { fastTrackService } from '../../api/services/fastTrackService'
 import { Users2, Calendar, ShieldAlert, ClipboardCheck, Smartphone, CheckCircle2 } from 'lucide-react'
 import { useToastStore } from '../../store/toastStore'
 
 export const AssignCrew: React.FC = () => {
   const toast = useToastStore()
-  const [crewName, setCrewName] = useState('Đội Thi Công Số 2 (Hoàng Hải)')
-  const [deadline, setDeadline] = useState('2026-10-25')
-  const [safetyNotes, setSafetyNotes] = useState('Yêu cầu đặt biển báo cách vị trí thi công 150m, có người phân luồng')
+  const [items, setItems] = useState<AssignableRepairItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [selectedItemKey, setSelectedItemKey] = useState('')
+  const [crews, setCrews] = useState<Array<{ id: string; name: string }>>([])
+  const [crewId, setCrewId] = useState('')
+  const [deadline, setDeadline] = useState(() => new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10))
+  const [sourceKind, setSourceKind] = useState<'REPORTER' | 'SURVEY'>('REPORTER')
+  const [surveyId, setSurveyId] = useState('')
+  const [safetyNotes, setSafetyNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleAssign = (e: React.FormEvent) => {
+  const errText = (err: unknown): string => {
+    const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
+    const detail = e?.response?.data?.detail || e?.response?.data?.title || e?.response?.data?.code || e?.message || 'Lỗi không xác định'
+    return e?.response?.status ? `HTTP ${e.response.status}: ${detail}` : detail
+  }
+
+  const loadItems = async () => {
+    try {
+      setIsLoading(true)
+      setLoadError(null)
+      setItems(await repairService.fetchAssignableItems())
+    } catch (err) {
+      setLoadError(errText(err))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadItems()
+  }, [])
+
+  const selected = items.find((it) => `${it.projectId}:${it.itemId}` === selectedItemKey) || null
+
+  useEffect(() => {
+    setCrews([])
+    setCrewId('')
+    if (!selected) return
+    let active = true
+    fastTrackService
+      .getCrews(selected.projectId)
+      .then((rows) => { if (active) setCrews(rows.map((c) => ({ id: c.id, name: c.name }))) })
+      .catch((err) => { if (active) toast.error('Không tải được danh sách đội thi công: ' + errText(err)) })
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItemKey])
+
+  const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast.success('Đã giao việc cho Đội thi công thành công! Lệnh công tác được đồng bộ đến App Mobile của thợ.')
+    if (!selected) return toast.error('Chọn hạng mục cần giao việc.')
+    if (selected.mode !== 'Normal') return toast.error('Hạng mục Fast Track được giao ở màn Điều phối nhanh.')
+    if (!crewId) return toast.error('Chọn đội thi công.')
+    if (!safetyNotes.trim()) return toast.error('Nhập chỉ dẫn và biện pháp an toàn giao thông.')
+    const due = new Date(deadline + 'T23:59:59')
+    if (!Number.isFinite(due.getTime()) || due.getTime() <= Date.now()) return toast.error('Hạn hoàn thành phải ở tương lai.')
+    if (sourceKind === 'SURVEY' && !surveyId.trim()) return toast.error('Nhập mã khảo sát (surveyId) cho nguồn khảo sát.')
+    try {
+      setSubmitting(true)
+      const { taskId } = await repairService.assignNormalItem({
+        projectId: selected.projectId,
+        packageId: selected.packageId,
+        itemId: selected.itemId,
+        defectId: selected.defectId,
+        crewId,
+        dueAt: due.toISOString(),
+        instructions: safetyNotes.trim(),
+        sourceKind,
+        surveyId: surveyId.trim() || undefined,
+      })
+      toast.success(`Đã giao việc cho đội thi công. Mã nhiệm vụ: ${taskId}`)
+      setSelectedItemKey('')
+      setSafetyNotes('')
+      await loadItems()
+    } catch (err) {
+      toast.error('Không giao được việc: ' + errText(err))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -33,16 +107,37 @@ export const AssignCrew: React.FC = () => {
         <div className="lg:col-span-2">
           <Card className="p-6">
             <form onSubmit={handleAssign} className="space-y-4">
+              {loadError && (
+                <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+                  Không tải được hạng mục chờ giao việc: {loadError}
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Đợt Sửa Chữa Cần Giao Việc
+                  Hạng Mục Cần Giao Việc
                 </label>
-                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs font-bold text-brand-dark flex items-center justify-between">
-                  <span>{mockRepairBatches[0].code} — {mockRepairBatches[0].name}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Đã duyệt
-                  </span>
-                </div>
+                <select
+                  value={selectedItemKey}
+                  onChange={(e) => setSelectedItemKey(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+                >
+                  <option value="">{isLoading ? 'Đang tải...' : '— Chọn hạng mục chờ giao việc —'}</option>
+                  {items.map((it) => (
+                    <option key={`${it.projectId}:${it.itemId}`} value={`${it.projectId}:${it.itemId}`}>
+                      {it.projectName} • {it.packageCode} • {it.itemCode} ({it.mode})
+                    </option>
+                  ))}
+                </select>
+                {!isLoading && !loadError && items.length === 0 && (
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Không có hạng mục nào chờ giao việc trong CSDL. Hạng mục thường cần Giám sát duyệt trước khi giao.
+                  </p>
+                )}
+                {selected && selected.mode !== 'Normal' && (
+                  <p className="text-[11px] text-amber-700 mt-1">
+                    Hạng mục Fast Track được giao ở màn Điều phối nhanh (cần chính sách đã công bố), không giao ở đây.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -50,14 +145,19 @@ export const AssignCrew: React.FC = () => {
                   Chỉ Định Đội Thi Công
                 </label>
                 <select
-                  value={crewName}
-                  onChange={(e) => setCrewName(e.target.value)}
+                  value={crewId}
+                  onChange={(e) => setCrewId(e.target.value)}
+                  disabled={!selected}
                   className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
                 >
-                  <option value="Đội Thi Công Số 1 (Hoàng Hải)">Đội Thi Công Số 1 (Chuyên cào bóc thảm nhựa)</option>
-                  <option value="Đội Thi Công Số 2 (Hoàng Hải)">Đội Thi Công Số 2 (Chuyên xử lý khe nứt)</option>
-                  <option value="Đội Thi Công Số 3 (Hoàng Hải)">Đội Thi Công Số 3 (Khẩn cấp)</option>
+                  <option value="">{selected ? '— Chọn đội thi công —' : 'Chọn hạng mục trước'}</option>
+                  {crews.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
                 </select>
+                {selected && crews.length === 0 && (
+                  <p className="text-[11px] text-slate-500 mt-1">Dự án chưa có thành viên Crew còn hiệu lực.</p>
+                )}
               </div>
 
               <InputField
@@ -70,17 +170,40 @@ export const AssignCrew: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nguồn Khuyết Tật
+                </label>
+                <select
+                  value={sourceKind}
+                  onChange={(e) => setSourceKind(e.target.value as 'REPORTER' | 'SURVEY')}
+                  className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold cursor-pointer"
+                >
+                  <option value="REPORTER">Phản ánh người dân (REPORTER)</option>
+                  <option value="SURVEY">Khảo sát Drone/AI (SURVEY)</option>
+                </select>
+                {sourceKind === 'SURVEY' && (
+                  <input
+                    value={surveyId}
+                    onChange={(e) => setSurveyId(e.target.value)}
+                    placeholder="Mã khảo sát (surveyId)"
+                    className="mt-2 w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                   Biện Pháp Đảm Bảo An Toàn Giao Thông
                 </label>
                 <textarea
                   value={safetyNotes}
                   onChange={(e) => setSafetyNotes(e.target.value)}
                   rows={3}
+                  placeholder="Chỉ dẫn thi công và biện pháp an toàn giao thông..."
                   className="w-full px-3.5 py-2 text-sm bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-gold"
                 />
               </div>
 
-              <Button type="submit" className="w-full mt-4" size="lg" icon={<Users2 className="w-4 h-4" />}>
+              <Button type="submit" disabled={submitting || !selected} className="w-full mt-4" size="lg" icon={<Users2 className="w-4 h-4" />}>
                 Ban Hành Lệnh Giao Việc
               </Button>
             </form>

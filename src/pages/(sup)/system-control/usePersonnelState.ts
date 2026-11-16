@@ -435,7 +435,15 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
         ? 'Chưa rõ kết quả gửi lời mời. Giữ nguyên nội dung để thử lại.' : personnelMessage(error))
     } finally { invitationRunning.current = false; if (useAuthStore.getState().authEpoch === epoch) setInvitationBusy(false) }
   }
-  const handleConfirmResetPassword = async (_userId: string, _password: string) => { blocked(personnelBlocks.reset); throw Error('web_cookie_unsupported') }
+  const handleConfirmResetPassword = async (userId: string, password: string) => {
+    try {
+      await personnelService.adminResetPassword(userId, password)
+      triggerNoticeRef.current('Đã cấp mật khẩu tạm; nhân sự phải đổi mật khẩu ở lần đăng nhập tới.', 'success')
+    } catch (error: any) {
+      blocked(personnelMessage(error))
+      throw error
+    }
+  }
   const loadMembershipHistory = async () => {
     if (!selectedUserDetail || user?.role !== RoleCode.SUPERVISOR) return
     if (isLoading) { setHistoryError('Danh sách dự án chưa tải xong. Hãy thử lại sau.'); return }

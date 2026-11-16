@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
-import { H6ClockItem } from '../../../api/services/dashboardService'
+import { H6ClockItem, dashboardService } from '../../../api/services/dashboardService'
 
 interface OperationalClocksWidgetProps {
   clocks: H6ClockItem[]
+  /** Lỗi tải clock từ BE (hiển thị thay vì dữ liệu giả). */
+  error?: string
+  /** BE còn trang tiếp theo chưa nạp hết. */
+  truncated?: boolean
+  /** Gọi sau khi gia hạn thành công để nạp lại dữ liệu. */
+  onChanged?: () => void
 }
 
 /**
@@ -70,12 +76,14 @@ const formatRealtimeDeadline = (dueAtStr: string, now: Date) => {
   }
 }
 
-export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = ({ clocks }) => {
+export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = ({ clocks, error, truncated, onChanged }) => {
   const navigate = useNavigate()
   const [extendingClock, setExtendingClock] = useState<H6ClockItem | null>(null)
   const [extensionHours, setExtensionHours] = useState<number>(4)
   const [extensionReason, setExtensionReason] = useState<string>('')
   const [extensionSuccess, setExtensionSuccess] = useState<boolean>(false)
+  const [extensionError, setExtensionError] = useState<string | null>(null)
+  const [extensionSubmitting, setExtensionSubmitting] = useState<boolean>(false)
 
   // State thời gian thực nhảy từng giây (1000ms)
   const [now, setNow] = useState<Date>(new Date())
@@ -112,14 +120,27 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
     }
   }
 
-  const handleRequestExtension = (e: React.FormEvent) => {
+  const handleRequestExtension = async (e: React.FormEvent) => {
     e.preventDefault()
-    setExtensionSuccess(true)
-    setTimeout(() => {
-      setExtensionSuccess(false)
-      setExtendingClock(null)
-      setExtensionReason('')
-    }, 1500)
+    if (!extendingClock || extensionSubmitting) return
+    setExtensionError(null)
+    setExtensionSubmitting(true)
+    try {
+      await dashboardService.extendClock(extendingClock, extensionHours, extensionReason)
+      setExtensionSuccess(true)
+      onChanged?.()
+      setTimeout(() => {
+        setExtensionSuccess(false)
+        setExtendingClock(null)
+        setExtensionReason('')
+      }, 1500)
+    } catch (err) {
+      const r = (err as { response?: { status?: number; data?: { detail?: string; title?: string } }; message?: string })
+      const detail = r.response?.data?.detail || r.response?.data?.title || r.message || 'Lỗi không xác định'
+      setExtensionError(r.response?.status ? `HTTP ${r.response.status}: ${detail}` : detail)
+    } finally {
+      setExtensionSubmitting(false)
+    }
   }
 
 
@@ -158,6 +179,17 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
 
       {/* Clocks List */}
       <div className="divide-y divide-slate-100 p-2 sm:p-4">
+        {error && (
+          <div className="p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
+            Không tải được đồng hồ thời hạn: {error}
+          </div>
+        )}
+        {!error && evaluatedClocks.length === 0 && (
+          <div className="p-6 text-center text-xs text-slate-500">Không có đồng hồ thời hạn nào trong CSDL.</div>
+        )}
+        {truncated && (
+          <div className="p-2 text-[11px] text-amber-700">Còn thêm đồng hồ chưa nạp hết (BE phân trang).</div>
+        )}
         {evaluatedClocks.map((clock) => {
           const kindInfo = getKindLabel(clock.kind)
           return (
@@ -219,6 +251,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
                   <Icon name="more_time" size={15} />
                   <span>Xin gia hạn</span>
                 </button>
+                {clock.targetPath && (
                 <button
                   type="button"
                   onClick={() => navigate(clock.targetPath)}
@@ -231,6 +264,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
                   <span>Xử lý ngay</span>
                   <Icon name="arrow_forward" size={14} />
                 </button>
+                )}
               </div>
             </div>
           )
@@ -319,19 +353,23 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
                   />
                 </div>
 
+                {extensionError && (
+                  <div className="p-2.5 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">{extensionError}</div>
+                )}
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => setExtendingClock(null)}
+                    onClick={() => { setExtendingClock(null); setExtensionError(null) }}
                     className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
+                    disabled={extensionSubmitting}
                     className="px-4 py-2 text-xs font-bold bg-brand-gold hover:bg-brand-goldDark text-white rounded-lg transition-colors cursor-pointer shadow-xs"
                   >
-                    Xác nhận xin gia hạn
+                    {extensionSubmitting ? 'Đang gửi...' : 'Xác nhận xin gia hạn'}
                   </button>
                 </div>
               </form>

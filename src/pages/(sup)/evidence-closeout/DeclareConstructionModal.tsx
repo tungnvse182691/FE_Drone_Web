@@ -86,8 +86,8 @@ export const DeclareConstructionModal: React.FC<DeclareConstructionModalProps> =
             <span>Lý trình: <strong className="text-slate-900 font-mono">{currentItem.chainage}</strong></span>
           </div>
           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80 text-[11px] text-slate-600">
-            <div>Khối lượng cào bóc: <strong className="text-slate-900">{currentItem.area_m2} m²</strong></div>
-            <div>Định mức BTN C12.5: <strong className="text-slate-900">{currentItem.volume_btn_c125_kg} kg</strong></div>
+            <div>Khối lượng cào bóc: <strong className="text-slate-900">{currentItem.area_m2 ?? '—'} m²</strong></div>
+            <div>Định mức BTN C12.5: <strong className="text-slate-900">{currentItem.volume_btn_c125_kg ?? '—'} kg</strong></div>
           </div>
         </div>
 

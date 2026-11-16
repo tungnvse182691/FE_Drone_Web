@@ -147,7 +147,7 @@ export const SurveyRequests: React.FC = () => {
         />
       )}
 
-      {detailTarget && <SurveyRecordDetailModal projectName={detailTarget.project_name} record={detail} description={description} loading={detailLoading} error={detailError} onRetry={()=>{void openDetail(detailTarget)}} onClose={()=>{detailGeneration.current++;setDetailTarget(null);setDetail(null);setDescription(null);const next=new URLSearchParams(searchParams);next.delete('surveyRecordId');next.delete('surveyRecordKind');setSearchParams(next)}} />}
+      {detailTarget && <SurveyRecordDetailModal projectName={detailTarget.project_name} record={detail} description={description} loading={detailLoading} error={detailError} onRetry={()=>{void openDetail(detailTarget)}} onChanged={()=>{void fetchMissions();void openDetail(detailTarget)}} onClose={()=>{detailGeneration.current++;setDetailTarget(null);setDetail(null);setDescription(null);const next=new URLSearchParams(searchParams);next.delete('surveyRecordId');next.delete('surveyRecordKind');setSearchParams(next)}} />}
       {/* 4. Drone Simulator Modal */}
       <DroneSimulatorModal
         isOpen={sim.isSimulatorOpen}

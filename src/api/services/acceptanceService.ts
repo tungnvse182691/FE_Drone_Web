@@ -65,6 +65,38 @@ let inMemoryCaseItems: CaseItem[] = []
 let inMemoryAcceptanceRecords: AcceptanceRecord[] = []
 const inMemoryClosedPackageIds = new Set<string>()
 
+// Metadata BE của từng hạng mục (phục vụ thao tác ghi): projectId, packageId, taskId, state.
+const itemMeta = new Map<string, { projectId: string; packageId: string; taskId: string | null; state: string }>()
+const STATE_STATUS: Record<string, 'PENDING_INSPECTION' | 'ACCEPTED' | 'REWORK_REQUIRED'> = {
+  Submitted: 'PENDING_INSPECTION',
+  Reviewed: 'PENDING_INSPECTION',
+  CorrectionRequired: 'REWORK_REQUIRED',
+  Confirmed: 'ACCEPTED',
+}
+const short = (id: unknown) => String(id ?? '').slice(0, 8).toUpperCase()
+const idemKey = () => crypto.randomUUID()
+const quoted = (v: unknown) => { const s = String(v ?? ''); return s.startsWith('"') ? s : `"${s}"` }
+// PM review attempt: POST .../tasks/{taskId}/attempts/reviews (decision ACCEPT|SUPPLEMENT, reason, If-Match = version hạng mục).
+async function pmReview(itemId: string, decision: 'ACCEPT' | 'SUPPLEMENT', reason: string): Promise<void> {
+  const meta = itemMeta.get(itemId)
+  if (!meta) throw new Error('Thiếu thông tin BE của hạng mục; hãy tải lại trang.')
+  if (!meta.taskId) throw new Error('Hạng mục chưa có lần thi công (attempt) để review.')
+  const task = await apiClient.get<any>(`/projects/${meta.projectId}/field-inspection-tasks/${meta.taskId}`)
+  const fieldSubmissionId = task.data?.latestSubmissionId
+  if (!fieldSubmissionId) throw new Error('Nhiệm vụ chưa có bản nộp (submission) để review.')
+  await apiClient.post(
+    `/projects/${meta.projectId}/repair-packages/${meta.packageId}/items/${itemId}/tasks/${meta.taskId}/attempts/reviews`,
+    { fieldSubmissionId, decision, reason },
+    { headers: { 'Idempotency-Key': idemKey(), 'If-Match': await itemEtag(meta.projectId, meta.packageId, itemId) } }
+  )
+}
+async function itemEtag(projectId: string, packageId: string, itemId: string): Promise<string> {
+  const res = await apiClient.get<any>(`/projects/${projectId}/repair-packages/${packageId}/items/${itemId}`)
+  const etag = res.headers?.['etag'] || res.data?.version
+  if (!etag) throw new Error('BE không trả ETag/version của hạng mục.')
+  return quoted(etag)
+}
+
 // Helper to re-sync package aggregate stats based on its items
 function syncPackageStats(packageId?: string) {
   if (!packageId) return
@@ -105,37 +137,65 @@ export const acceptanceService = {
     projectId?: string
     query?: string
   }): Promise<AcceptancePackage[]> {
-    if (filter?.projectId && filter.projectId !== 'ALL' && /^[0-9a-f-]{36}$/i.test(filter.projectId)) {
-      try {
-        const res = await apiClient.get<any>(`/projects/${filter.projectId}/repair-packages`)
-        const items = res.data?.items || []
-        const mappedList: AcceptancePackage[] = items.map((pkg: any, idx: number) => ({
-          id: pkg.id,
-          code: `PKG-${pkg.id.slice(0, 8).toUpperCase()}`,
-          case_code: `#CASE-${pkg.defectId ? pkg.defectId.slice(0, 8).toUpperCase() : '0000'}`,
-          title: `Hồ sơ nghiệm thu đợt #${idx + 1}`,
-          project_id: filter.projectId!,
-          project_name: 'Dự án bảo hành tuyến đường',
-          chainage_display: 'Toàn tuyến thi công',
-          contractor_name: 'Đội thi công Hoàng Hải',
-          total_items: 1,
-          accepted_items: pkg.allMandatoryResolved ? 1 : 0,
-          pending_items: pkg.allMandatoryResolved ? 0 : 1,
-          rework_items: 0,
-          technical_scope: 'Nghiệm thu khối lượng kỹ thuật cào bóc & trám nứt TCVN 8819',
-          status: (pkg.allMandatoryResolved ? 'PASSED' : 'PENDING_INSPECTION') as any,
-          is_closed: false,
-          status_label: pkg.allMandatoryResolved ? 'Đã nghiệm thu đạt' : 'Chờ nghiệm thu',
-          sla_display: 'Theo kế hoạch',
-          completion_date: new Date().toLocaleDateString('vi-VN')
-        }))
-        inMemoryPackages = mappedList
-        return mappedList
-      } catch (err) {
-        console.warn('Lỗi gọi API repair-packages cho Acceptance:', err)
-        return []
+    // Dữ liệu thật từ BE: gom theo từng dự án của tài khoản (hoặc đúng dự án được chọn).
+    // Lỗi API được ném ra để UI hiển thị, không nuốt lỗi, không trả dữ liệu giả.
+    const wanted = filter?.projectId && filter.projectId !== 'ALL' && /^[0-9a-f-]{36}$/i.test(filter.projectId) ? filter.projectId : null
+    const projectNames = new Map<string, string>()
+    {
+      let cursor: string | null | undefined
+      for (let page = 0; page < 20; page++) {
+        const res = await apiClient.get<any>('/projects', { params: cursor ? { cursor } : undefined })
+        for (const p of res.data?.items || []) projectNames.set(p.projectId, p.name || p.projectCode || p.projectId)
+        cursor = res.data?.nextCursor
+        if (!cursor) break
       }
     }
+    const projectIds = wanted ? [wanted] : [...projectNames.keys()]
+    const lists = await Promise.all(
+      projectIds.map(async (projectId) => {
+        const pk = await apiClient.get<any>(`/projects/${projectId}/repair-packages`)
+        const out: AcceptancePackage[] = []
+        for (const pkg of pk.data?.items || []) {
+          const itemsRes = await apiClient.get<any>(`/projects/${projectId}/repair-packages/${pkg.id}/items`)
+          const items: Array<{ state?: string }> = itemsRes.data?.items || []
+          // Giai đoạn nghiệm thu theo RepairItemState của BE: Submitted/Reviewed/CorrectionRequired/Confirmed.
+          const inAcceptance = items.filter((it) => ['Submitted', 'Reviewed', 'CorrectionRequired', 'Confirmed'].includes(it.state || ''))
+          if (inAcceptance.length === 0) continue
+          const accepted = items.filter((it) => it.state === 'Confirmed').length
+          const rework = items.filter((it) => it.state === 'CorrectionRequired').length
+          const pending = items.filter((it) => it.state === 'Submitted' || it.state === 'Reviewed').length
+          const status: AcceptancePackage['status'] =
+            accepted === items.length ? 'PASSED' : rework > 0 ? 'REWORK_REQUIRED' : 'PENDING_INSPECTION'
+          out.push({
+            id: pkg.id,
+            code: `PKG-${String(pkg.id).slice(0, 8).toUpperCase()}`,
+            case_code: `#CASE-${pkg.defectId ? String(pkg.defectId).slice(0, 8).toUpperCase() : '0000'}`,
+            title: `Gói ${String(pkg.id).slice(0, 8).toUpperCase()}`,
+            project_id: projectId,
+            project_name: projectNames.get(projectId) || projectId,
+            chainage_display: '—',
+            contractor_name: '—',
+            total_items: items.length,
+            accepted_items: accepted,
+            pending_items: pending,
+            rework_items: rework,
+            technical_scope: '—',
+            status,
+            is_closed: false,
+            status_label:
+              status === 'PASSED'
+                ? `Đã nghiệm thu đạt (${accepted}/${items.length})`
+                : status === 'REWORK_REQUIRED'
+                  ? `Yêu cầu sửa lại (${rework} mục)`
+                  : `Chờ nghiệm thu (${accepted}/${items.length} đạt)`,
+            sla_display: '—',
+            completion_date: '—',
+          })
+        }
+        return out
+      })
+    )
+    inMemoryPackages = lists.flat()
 
     let result = JSON.parse(JSON.stringify(inMemoryPackages)) as AcceptancePackage[]
     result = result.map((pkg) => {
@@ -176,10 +236,11 @@ export const acceptanceService = {
    * Lấy chi tiết gói nghiệm thu theo mã (id hoặc code)
    */
   async getAcceptancePackageById(packageId: string): Promise<AcceptancePackage | null> {
-    await new Promise((resolve) => setTimeout(resolve, 60))
-    const found = inMemoryPackages.find(
+    const lookup = () => inMemoryPackages.find(
       (p) => p.id === packageId || p.code === packageId || p.case_code === packageId
     )
+    if (!lookup()) await acceptanceService.getAcceptancePackages()
+    const found = lookup()
     if (found) {
       syncPackageStats(found.id)
       const isClosed = inMemoryClosedPackageIds.has(found.id) || inMemoryClosedPackageIds.has(found.code)
@@ -196,18 +257,62 @@ export const acceptanceService = {
    * (GET /api/v1/evidence-closeout/items?packageId=...)
    */
   async getCloseoutItems(packageId?: string): Promise<CaseItem[]> {
-    await new Promise((resolve) => setTimeout(resolve, 80))
-    if (packageId) {
-      const matchedPkg = inMemoryPackages.find(
-        (p) => p.id === packageId || p.code === packageId || p.case_code === packageId
-      )
-      const targetPkgId = matchedPkg ? matchedPkg.id : packageId
-      const items = inMemoryCaseItems.filter((it) => it.package_id === targetPkgId)
-      if (items.length > 0) {
-        return JSON.parse(JSON.stringify(items))
+    // Dữ liệu thật từ BE: GET repair-packages/{id}/items + /items/{id}/history. Lỗi API được ném ra.
+    if (!inMemoryPackages.length || (packageId && !inMemoryPackages.some((p) => p.id === packageId || p.code === packageId || p.case_code === packageId))) {
+      await acceptanceService.getAcceptancePackages()
+    }
+    const packages = packageId
+      ? inMemoryPackages.filter((p) => p.id === packageId || p.code === packageId || p.case_code === packageId)
+      : inMemoryPackages
+    const mapped: CaseItem[] = []
+    for (const pkg of packages) {
+      const list = await apiClient.get<any>(`/projects/${pkg.project_id}/repair-packages/${pkg.id}/items`)
+      for (const it of list.data?.items || []) {
+        const hist = await apiClient.get<any>(`/projects/${pkg.project_id}/repair-packages/${pkg.id}/items/${it.id}/history`)
+        const attempts: any[] = hist.data?.attempts || []
+        const last = attempts[attempts.length - 1]
+        const status = STATE_STATUS[it.state]
+        if (!status) continue
+        itemMeta.set(it.id, { projectId: pkg.project_id, packageId: pkg.id, taskId: last?.taskId ?? null, state: it.state })
+        mapped.push({
+          id: it.id,
+          package_id: pkg.id,
+          package_code: pkg.code,
+          item_code: `ITEM-${short(it.id)}`,
+          defect_code: `#DEF-${short(it.defectId)}`,
+          title: `Hạng mục ${it.mode}`,
+          chainage: '—',
+          status,
+          status_label: status === 'ACCEPTED' ? 'Đã nghiệm thu đạt' : status === 'REWORK_REQUIRED' ? 'Yêu cầu sửa lại' : 'Chờ nghiệm thu',
+          track_type: it.mode === 'FastTrack' ? 'FAST_TRACK' : 'APPROVAL_TRACK',
+          attempt_number: attempts.length,
+          area_m2: null,
+          depth_cm: null,
+          volume_btn_c125_kg: null,
+          tack_coat_crs1: '—',
+          compaction_k98: null,
+          flatness_3m_gap_mm: null,
+          sand_patch_roughness_mm: null,
+          pave_temp_c: null,
+          compact_temp_c: null,
+          before_image: '',
+          before_hash: '—',
+          before_time: '—',
+          before_gps: '—',
+          before_source: '—',
+          after_image: '',
+          after_hash: '—',
+          after_time: last?.finishedAt ? new Date(last.finishedAt).toLocaleString('vi-VN') : '—',
+          after_gps: '—',
+          after_crew: last?.crewId ? `Crew ${short(last.crewId)}` : '—',
+          after_equipment: '—',
+          evidence_integrity_status: 'PENDING',
+          citizen_published: false,
+        } as CaseItem)
       }
     }
-    return JSON.parse(JSON.stringify(inMemoryCaseItems))
+    inMemoryCaseItems = [...inMemoryCaseItems.filter((it) => !packages.some((p) => p.id === it.package_id)), ...mapped]
+    return JSON.parse(JSON.stringify(mapped))
   },
 
   /**
@@ -232,11 +337,20 @@ export const acceptanceService = {
    * (POST /api/v1/evidence-closeout/items/:id/accept)
    */
   async acceptCloseoutItem(itemId: string): Promise<CaseItem> {
-    await new Promise((resolve) => setTimeout(resolve, 120))
     const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
     if (index === -1) {
       throw new Error(`Item ${itemId} not found`)
     }
+    const meta = itemMeta.get(itemId)
+    if (!meta) throw new Error('Thiếu thông tin BE của hạng mục; hãy tải lại trang.')
+    // BE: POST .../items/{itemId}/final-confirmation (Supervisor, If-Match = version hạng mục, Idempotency-Key, reason).
+    // Giao diện chưa có ô nhập lý do, BE bắt buộc có lý do nên dùng câu cố định.
+    await apiClient.post(
+      `/projects/${meta.projectId}/repair-packages/${meta.packageId}/items/${itemId}/final-confirmation`,
+      { reason: 'Giám sát xác nhận nghiệm thu đạt' },
+      { headers: { 'Idempotency-Key': idemKey(), 'If-Match': await itemEtag(meta.projectId, meta.packageId, itemId) } }
+    )
+    itemMeta.set(itemId, { ...meta, state: 'Confirmed' })
     inMemoryCaseItems[index] = {
       ...inMemoryCaseItems[index],
       status: 'ACCEPTED',
@@ -262,7 +376,6 @@ export const acceptanceService = {
       fieldSubmissionId?: string
     }
   ): Promise<CaseItem> {
-    await new Promise((resolve) => setTimeout(resolve, 140))
     const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
     if (index === -1) {
       throw new Error(`Item ${itemId} not found`)
@@ -279,6 +392,7 @@ export const acceptanceService = {
         : payload.notes || 'Chưa đạt tiêu chuẩn kỹ thuật thi công TCVN 8819:2011')
     ).slice(0, 2000)
 
+    await pmReview(itemId, decision, fullReason)
     inMemoryCaseItems[index] = {
       ...current,
       status: 'REWORK_REQUIRED',
@@ -318,11 +432,12 @@ export const acceptanceService = {
    * (POST /api/v1/evidence-closeout/items/:id/submit-supervisor)
    */
   async submitItemToSupervisor(itemId: string): Promise<CaseItem> {
-    await new Promise((resolve) => setTimeout(resolve, 90))
     const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
     if (index === -1) {
       throw new Error(`Item ${itemId} not found`)
     }
+    // PM chấp nhận kết quả thi công (review ACCEPT) để chuyển Supervisor xác nhận cuối.
+    await pmReview(itemId, 'ACCEPT', 'PM chấp nhận kết quả thi công, trình Giám sát xác nhận')
     inMemoryCaseItems[index] = {
       ...inMemoryCaseItems[index],
       status: 'PENDING_INSPECTION',

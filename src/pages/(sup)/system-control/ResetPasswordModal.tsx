@@ -14,7 +14,7 @@ export interface ResetPasswordModalProps {
 
 export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   isOpen,
-  blockedReason = personnelBlocks.reset,
+  blockedReason = '',
   user,
   onClose,
   onConfirm

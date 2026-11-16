@@ -15,6 +15,7 @@ import { NotificationsHeader } from './notifications/NotificationsHeader'
 import { NotificationsFilterBar } from './notifications/NotificationsFilterBar'
 import { NotificationsFeed } from './notifications/NotificationsFeed'
 import { NotificationsSlaWidgets } from './notifications/NotificationsSlaWidgets'
+import { DutyPanel } from './notifications/DutyPanel'
 
 export type { NotificationItem }
 
@@ -274,6 +275,8 @@ export const NotificationsHandoffHub: React.FC = () => {
           onPlaySound={playSound}
         />
       </div>
+
+      <DutyPanel />
     </div>
   )
 }

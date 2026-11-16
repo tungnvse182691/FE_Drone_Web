@@ -9,8 +9,12 @@ import { ExportRecordRow } from './risk-analytics/ExportRecordRow'
 import { LegalAuditStrip } from './risk-analytics/LegalAuditStrip'
 import { RiskDeteriorationSection } from './risk-analytics/RiskDeteriorationSection'
 import { RiskModals } from './risk-analytics/RiskModals'
+import { DefectStatisticsPanel } from './risk-analytics/DefectStatisticsPanel'
+import { useAuthStore } from '../../store/authStore'
+import { RoleCode } from '../../types/enums'
 
 export const RiskAnalytics: React.FC = () => {
+  const isPM = useAuthStore((s) => s.user?.role) === RoleCode.PROJECT_MANAGER
   const {
     bindReportingGeometry,apiError,detailError,exportBusy,held,journalError,
     projects,
@@ -109,6 +113,7 @@ export const RiskAnalytics: React.FC = () => {
       {/* KPI METRICS (BỘ 4 THẺ CÓ ĐIỂM NHẤN THEO SPEC B2) */}
       <div className="space-y-5">
         <ReportingMetricsPanel project={selectedProject} data={reporting} />
+        {isPM && selectedProject && selectedProject !== 'ALL' && <DefectStatisticsPanel projectId={selectedProject} />}
         {/* ASYNC EXPORT WORKER QUEUE CARD */}
         <AsyncExportWorkerCard
           currentProject={currentProject}

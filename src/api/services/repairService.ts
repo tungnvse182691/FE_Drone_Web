@@ -76,6 +76,17 @@ export function dispatchMockChangeEvent() {
   }
 }
 
+export interface AssignableRepairItem {
+  projectId: string
+  projectName: string
+  packageId: string
+  packageCode: string
+  itemId: string
+  itemCode: string
+  defectId: string
+  mode: string
+}
+
 export const repairService = {
   // --- SYNC API METHODS (ĐỌC TỪ BỘ ĐỆM ĐÃ ĐỒNG BỘ CSDL THẬT) ---
   getPackages(): ProposalWorkPackage[] {
@@ -447,6 +458,96 @@ export const repairService = {
       }
     )
     return res.data
+  },
+
+  /**
+   * Hạng mục chờ giao việc (state ReadyToAssign) của mọi dự án thuộc tài khoản:
+   * GET /projects (phân trang) → GET repair-packages → GET repair-packages/{id}/items.
+   */
+  async fetchAssignableItems(): Promise<AssignableRepairItem[]> {
+    const projects: Array<{ projectId: string; name: string }> = []
+    let cursor: string | null | undefined
+    for (let page = 0; page < 20; page++) {
+      const res = await apiClient.get<any>('/projects', { params: cursor ? { cursor } : undefined })
+      projects.push(...(res.data?.items || []))
+      cursor = res.data?.nextCursor
+      if (!cursor) break
+    }
+    const out: AssignableRepairItem[] = []
+    for (const p of projects) {
+      const pk = await apiClient.get<any>(`/projects/${p.projectId}/repair-packages`)
+      for (const pkg of pk.data?.items || []) {
+        const its = await apiClient.get<any>(`/projects/${p.projectId}/repair-packages/${pkg.id}/items`)
+        for (const it of its.data?.items || []) {
+          if (it.state !== 'ReadyToAssign') continue
+          out.push({
+            projectId: p.projectId,
+            projectName: p.name,
+            packageId: pkg.id,
+            packageCode: `PKG-${String(pkg.id).slice(0, 8).toUpperCase()}`,
+            itemId: it.id,
+            itemCode: `ITEM-${String(it.id).slice(0, 8).toUpperCase()}`,
+            defectId: it.defectId,
+            mode: it.mode,
+          })
+        }
+      }
+    }
+    return out
+  },
+
+  /**
+   * PM giao việc cho Crew cho hạng mục thường (Normal) đã được Giám sát duyệt:
+   * POST .../repair-packages/{pkg}/items/{item}/assign { task, reason } (Idempotency-Key, If-Match = version hạng mục).
+   * Tuyến/bộ phân đoạn lấy từ BE: routeVersionId = phiên bản tuyến của khuyết tật, segmentSetId = bộ phân đoạn đã công bố.
+   */
+  async assignNormalItem(input: {
+    projectId: string
+    packageId: string
+    itemId: string
+    defectId: string
+    crewId: string
+    dueAt: string
+    instructions: string
+    sourceKind: 'REPORTER' | 'SURVEY'
+    surveyId?: string
+  }): Promise<{ taskId: string }> {
+    const p = input.projectId
+    const defect = await apiClient.get<any>(`/projects/${p}/defects/${input.defectId}`)
+    const wp = await apiClient.get<any>(`/projects/${p}/work-package`)
+    const section = (wp.data?.roadSections || []).find((s: any) => s.currentVersionId === defect.data?.roadSectionVersionId)
+    if (!section) throw new Error('Không tìm thấy tuyến hiện hành chứa khuyết tật của hạng mục.')
+    const sets = await apiClient.get<any>(
+      `/projects/${p}/road-sections/${section.roadSectionId}/versions/${section.currentVersionId}/segment-sets`
+    )
+    const set = (sets.data?.items || []).find((s: any) => s.status === 'PUBLISHED')
+    if (!set) throw new Error('Tuyến chưa có bộ phân đoạn đã công bố để giao việc.')
+    const base = `/projects/${p}/repair-packages/${input.packageId}/items/${input.itemId}`
+    const item = await apiClient.get<any>(base)
+    const version = item.headers?.['etag'] || item.data?.version
+    if (!version) throw new Error('BE không trả ETag/version của hạng mục.')
+    const res = await apiClient.post<any>(
+      `${base}/assign`,
+      {
+        task: {
+          defectId: defect.data.id,
+          defectVersion: defect.data.version,
+          sourceKind: input.sourceKind,
+          ...(input.sourceKind === 'SURVEY' && input.surveyId ? { surveyId: input.surveyId } : {}),
+          routeVersionId: defect.data.roadSectionVersionId,
+          segmentSetId: set.id,
+          purpose: 'POST_REPAIR',
+          requiredMeasurementType: 1,
+          measurementScope: '{}',
+          instructions: input.instructions,
+          assignedToUserId: input.crewId,
+          dueAt: input.dueAt,
+        },
+        reason: input.instructions,
+      },
+      { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': String(version).startsWith('"') ? version : `"${version}"` } }
+    )
+    return { taskId: res.data?.taskId }
   },
 
   async assignItemApi(

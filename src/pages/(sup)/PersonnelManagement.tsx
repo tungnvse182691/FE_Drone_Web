@@ -257,7 +257,7 @@ export const PersonnelManagement: React.FC = () => {
 
       <ResetPasswordModal
         isOpen={p.showResetPasswordModal}
-        blockedReason={personnelBlocks.reset}
+        blockedReason=""
         user={p.userToResetPassword}
         onClose={() => p.setShowResetPasswordModal(false)}
         onConfirm={p.handleConfirmResetPassword}

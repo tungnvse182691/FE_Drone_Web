@@ -17,14 +17,14 @@ export const AfterViewer: React.FC<AfterViewerProps> = ({ currentItem }) => {
           </span>
         </div>
         <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-[#E9F7EC] text-[#2F9E44] border border-[#C3E6CB]">
-          Đã hoàn thành • Đạt K98 ({currentItem.compaction_k98})
+          Đã hoàn thành • K98 ({currentItem.compaction_k98 ?? '—'})
         </span>
       </div>
 
       {/* Vùng hiển thị ảnh */}
       <div className="relative group aspect-video w-full overflow-hidden bg-slate-900">
         <img
-          src={currentItem.after_image}
+          src={currentItem.after_image || undefined}
           alt="Mặt đường bê tông nhựa sau khi vá hoàn thiện"
           className="w-full h-full object-cover group-hover:scale-101 transition-transform duration-300"
         />
