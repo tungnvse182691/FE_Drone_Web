@@ -1,4 +1,3 @@
-import {businessError} from '../../../utils/businessDisplay'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthStore } from '../../../store/authStore'
 import { X, UserPlus, Search, ShieldCheck, Check, AlertCircle, Loader2 } from 'lucide-react'
@@ -130,7 +129,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>🛸 Phi công Drone</span>
+                <span>🛸 Phi công Drone (OPERATOR)</span>
               </button>
               <button
                 type="button"
@@ -141,7 +140,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>👷 Đội thi công</span>
+                <span>👷 Đội thi công (CREW)</span>
               </button>
             </div>
           </div>
@@ -160,12 +159,12 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
           </div>
 
           {/* Error notice */}
-          {journalError && <p role="alert" className="text-xs text-rose-700">{businessError(journalError)}</p>}
-          {held && <p role="status" className="text-xs text-slate-600">Đang giữ lệnh phân công {held.receipt?.displayName || 'nhân sự đã chọn'}. {held.receipt?'Đã có biên nhận; chỉ đọc lại kết quả.':'Tiếp tục đối chiếu đúng nhân sự của yêu cầu đã gửi.'}</p>}
+          {journalError && <p role="alert" className="text-xs text-rose-700">{journalError}</p>}
+          {held && <p role="status" className="text-xs text-slate-600">Đang giữ lệnh phân công {held.receipt?.displayName || 'nhân sự đã chọn'}. {held.receipt?'Đã có biên nhận; chỉ GET đối chiếu.':'Tiếp tục cùng người dùng và key đã gửi; không đổi ý định.'}</p>}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{businessError(errorMsg)}</span>
+              <span>{errorMsg}</span>
             </div>
           )}
 
@@ -181,7 +180,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             {loading ? (
               <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500 text-xs">
                 <Loader2 className="w-6 h-6 animate-spin text-[#C9A227]" />
-                <span>Đang tải danh sách nhân sự…</span>
+                <span>Đang tải danh sách nhân sự từ CSDL Backend...</span>
               </div>
             ) : eligibleMembers.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl p-4">
@@ -216,7 +215,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                             {member.displayName}
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono">
-                            Vai trò: {member.role==='OPERATOR'?'Phi công Drone':member.role==='CREW'?'Đội thi công':'Chưa có vai trò phù hợp'}
+                            Vai trò: {member.role}
                           </div>
                         </div>
                       </div>

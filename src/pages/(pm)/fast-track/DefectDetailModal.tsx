@@ -1,5 +1,3 @@
-import {businessReason} from '../../../utils/businessDisplay'
-import {businessText,businessError} from '../../../utils/businessDisplay'
 import React, { useState, useEffect } from 'react'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 import { useAuthStore } from '../../../store/authStore'
@@ -72,7 +70,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
   const [preparationSources,setPreparationSources]=useState<Awaited<ReturnType<typeof fastTrackService.preparationSources>> | null>(null)
   useEffect(()=>{let active=true;if(!detailDefect || detailDefect.itemId || !isPM)return;setPreparationSources(null);fastTrackService.preparationSources(detailDefect).then(r=>{if(active)setPreparationSources(r)}).catch(e=>{if(active)setPrepareError(exportError(e))});return()=>{active=false}},[detailDefect?.id,isPM])
   const [sourceInfo,setSourceInfo]=useState(''),[reading,setReading]=useState(false),[readRevision,setReadRevision]=useState(0)
-  useEffect(()=>{let active=true;if(!detailDefect?.itemId || !detailDefect.packageId)return;setReading(true);setSourceInfo('');fastTrackService.readItemSources(detailDefect.projectId,detailDefect.packageId,detailDefect.itemId).then(r=>{if(active)setSourceInfo(`${r.checklistVersion ? `Checklist: ${r.checklistVersion}. `:''}${r.checklistVersion?'Đã đọc checklist của phương án.':'Hồ sơ chưa cung cấp checklist phương án; chưa thể chọn chính sách giao việc.'} Có ${r.history.decisions.length} quyết định, ${r.history.attempts.length} lượt thi công.`)}).catch(e=>{if(active)setSourceInfo(exportError(e))}).finally(()=>{if(active)setReading(false)});return()=>{active=false}},[detailDefect?.id,readRevision])
+  useEffect(()=>{let active=true;if(!detailDefect?.itemId || !detailDefect.packageId)return;setReading(true);setSourceInfo('');fastTrackService.readItemSources(detailDefect.projectId,detailDefect.packageId,detailDefect.itemId).then(r=>{if(active)setSourceInfo(`${r.checklistVersion ? `Checklist: ${r.checklistVersion}. `:''}${r.checklistSource} Đã đọc ${r.history.decisions.length} quyết định, ${r.history.attempts.length} lượt thi công.`)}).catch(e=>{if(active)setSourceInfo(exportError(e))}).finally(()=>{if(active)setReading(false)});return()=>{active=false}},[detailDefect?.id,readRevision])
   const prepare=async()=>{
     if(!detailDefect || preparing)return
     setPreparing(true);setPrepareError('')
@@ -131,9 +129,11 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
           </div>
 
           <div className="text-xs space-y-1.5 text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">
-
-            <div>Đội thi công phụ trách: <strong>{businessText(detailDefect.assignedCrew,'Chưa có tên đội phụ trách')}</strong></div>
-
+            <div>Mã định danh CSDL: <strong className="font-mono text-slate-800">{detailDefect.id}</strong></div>
+            <div>Đội thi công phụ trách: <strong>{detailDefect.assignedCrew || 'Chưa có thông tin Crew'}</strong></div>
+            {detailDefect.version && (
+              <div>Phiên bản bản ghi: <strong className="font-mono text-slate-800">{detailDefect.version}</strong></div>
+            )}
           </div>
 
           {!isEligible && (
@@ -144,7 +144,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {missingReasons.map((r, i) => (
-                  <li key={i}>{businessReason(r)}</li>
+                  <li key={i}>{r}</li>
                 ))}
               </ul>
             </div>
@@ -152,7 +152,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
         </div>
 
         {detailDefect.itemId && <div className="space-y-2 border-t pt-3 text-xs"><p role="status">{reading?'Đang đọc chi tiết và lịch sử phương án…':sourceInfo}</p><button type="button" disabled={reading} onClick={()=>setReadRevision(n=>n+1)} className="border rounded-lg p-2">Đọc lại hồ sơ phương án</button></div>}
-        {isPM && !detailDefect.itemId && <div className="space-y-3 border-t pt-4"><h4 className="font-bold text-sm">Lập nghĩa vụ và hạng mục Fast Track</h4><p className="text-xs text-slate-500">Tuyến lấy theo hồ sơ hiện hành của khiếm khuyết. Phạm vi dưới đây phải có căn cứ thực địa; không suy từ AI.</p><div className="grid grid-cols-2 gap-2">{(Object.keys(form) as Array<keyof typeof form>).map((key,i)=><label key={key} className="text-xs">{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)','Bộ phân đoạn đã công bố (nếu có)','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Phương án kỹ thuật','Checklist áp dụng','Căn cứ lập nghĩa vụ'][i]}{['segmentSetId','layoutRevisionId','slabId'].includes(key) ? <select aria-label={key==='segmentSetId'?'Phân đoạn phương án':key==='layoutRevisionId'?'Bố trí phương án':'Tấm phương án'} value={form[key]} onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value,...(key==='segmentSetId'?{layoutRevisionId:'',slabId:''}:key==='layoutRevisionId'?{slabId:''}:{})}))}} className="block border rounded-lg p-2 w-full mt-1"><option value="">Không chọn — phạm vi theo lý trình</option>{key==='segmentSetId' ? preparationSources?.sets.map((r,i)=><option key={r.id} value={r.id}>Bộ phân đoạn đã công bố {i+1}</option>):[...new Set(preparationSources?.tasks.filter(r=>r.pins.segmentSetId===(form.segmentSetId || null) && (key!=='slabId' || r.pins.layoutRevisionId===form.layoutRevisionId)).map(r=>key==='layoutRevisionId'?r.pins.layoutRevisionId:r.pins.slabId).filter(Boolean))].map((id,i)=><option key={id} value={id!}>{key==='layoutRevisionId'?`Bố trí theo hồ sơ ${i+1}`:`Tấm ${id}`}</option>)}</select>:<input aria-label={key} value={form[key]} maxLength={key==='checklistVersion'?200:2000} type={['fromMeters','toMeters','offsetFromMeters','offsetToMeters'].includes(key)?'number':'text'} step="any" onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value}))}} className="block border rounded-lg p-2 w-full mt-1"/>}</label>)}</div>{prepareError && <p role="alert" className="text-xs text-red-800">{businessError(prepareError)}</p>}<button disabled={preparing} onClick={prepare} className="border rounded-lg p-2 text-xs font-bold text-[#8C6D1F]">{preparing?'Đang đối chiếu…':'Lập gói và đề xuất hạng mục'}</button></div>}
+        {isPM && !detailDefect.itemId && <div className="space-y-3 border-t pt-4"><h4 className="font-bold text-sm">Lập nghĩa vụ và hạng mục Fast Track</h4><p className="text-xs text-slate-500">Tuyến lấy theo hồ sơ hiện hành của khiếm khuyết. Phạm vi dưới đây phải có căn cứ thực địa; không suy từ AI.</p><div className="grid grid-cols-2 gap-2">{(Object.keys(form) as Array<keyof typeof form>).map((key,i)=><label key={key} className="text-xs">{['Từ lý trình (m)','Đến lý trình (m)','Độ lệch từ (m)','Độ lệch đến (m)','Bộ phân đoạn đã công bố (nếu có)','Bố trí mặt đường (nếu có)','Tấm (nếu có)','Phương án kỹ thuật','Checklist áp dụng','Căn cứ lập nghĩa vụ'][i]}{['segmentSetId','layoutRevisionId','slabId'].includes(key) ? <select aria-label={key==='segmentSetId'?'Phân đoạn phương án':key==='layoutRevisionId'?'Bố trí phương án':'Tấm phương án'} value={form[key]} onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value,...(key==='segmentSetId'?{layoutRevisionId:'',slabId:''}:key==='layoutRevisionId'?{slabId:''}:{})}))}} className="block border rounded-lg p-2 w-full mt-1"><option value="">Không chọn — phạm vi theo lý trình</option>{key==='segmentSetId' ? preparationSources?.sets.map((r,i)=><option key={r.id} value={r.id}>Bộ phân đoạn đã công bố {i+1}</option>):[...new Set(preparationSources?.tasks.filter(r=>r.pins.segmentSetId===(form.segmentSetId || null) && (key!=='slabId' || r.pins.layoutRevisionId===form.layoutRevisionId)).map(r=>key==='layoutRevisionId'?r.pins.layoutRevisionId:r.pins.slabId).filter(Boolean))].map((id,i)=><option key={id} value={id!}>{key==='layoutRevisionId'?`Bố trí theo hồ sơ ${i+1}`:`Tấm ${id}`}</option>)}</select>:<input aria-label={key} value={form[key]} maxLength={key==='checklistVersion'?200:2000} type={['fromMeters','toMeters','offsetFromMeters','offsetToMeters'].includes(key)?'number':'text'} step="any" onChange={e=>{setPrepareError('');setForm(previous=>({...previous,[key]:e.target.value}))}} className="block border rounded-lg p-2 w-full mt-1"/>}</label>)}</div>{prepareError && <p role="alert" className="text-xs text-red-800">{prepareError}</p>}<button disabled={preparing} onClick={prepare} className="border rounded-lg p-2 text-xs font-bold text-[#8C6D1F]">{preparing?'Đang đối chiếu…':'Lập gói và đề xuất hạng mục'}</button></div>}
         <div className="pt-2 flex justify-end border-t border-slate-100">
           <button
             onClick={onClose}

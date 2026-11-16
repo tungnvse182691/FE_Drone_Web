@@ -1,4 +1,3 @@
-import {businessText,businessDate} from '../../../utils/businessDisplay'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { policyRuleRange, policyRuleText, policyRuleSupported, policyRuleHasBounds } from '../../../api/services/fastTrackPolicyRules'
@@ -256,7 +255,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">Nhật Ký Hoạt Động &amp; Lịch Sử Chính Sách</h3>
-                  <p className="text-[10px] text-slate-500">Lịch sử từ các hồ sơ chính sách đã đọc trong phạm vi này</p>
+                  <p className="text-[10px] text-slate-500">Hồ sơ kiểm toán điện tử bất biến và lịch sử các lần ban hành quy chuẩn</p>
                 </div>
               </div>
               <button
@@ -303,17 +302,22 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                     <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900">{log.title}</span>
-                        <span className="font-mono text-slate-400 text-[10px]">{businessDate(log.time)}</span>
+                        <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
                       </div>
-
+                      <p className="text-slate-600">
+                        Người thực hiện: <strong className="text-slate-800">{log.user}</strong> • Mã băm xác thực:{' '}
+                        <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200 font-mono">
+                          {log.hash}
+                        </code>
+                      </p>
                       <div className="text-[11px] text-slate-500 pt-0.5">
-                        {businessText(log.note)}
+                        {log.note}
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="py-8 text-center text-xs text-slate-500">
-                    Chưa đọc được sự kiện từ các tham chiếu chính sách hiện có.
+                    Chưa có nhật ký kiểm toán nào được ghi nhận.
                   </div>
                 )}
               </div>
@@ -327,7 +331,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                     <div key={idx} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-900">{h.version} · {h.status==='DRAFT'?'Dự thảo':h.status==='REVOKED'?'Đã thu hồi':`Lần ban hành ${h.revision ?? '—'}`}</span>
-                        <span className="text-[11px] text-slate-500">{businessDate(h.activatedAt)}</span>
+                        <span className="text-[11px] text-slate-500">{h.activatedAt}</span>
                       </div>
                       {h.id && onReadPolicy && <button type="button" onClick={()=>{onReadPolicy(h.id!);setIsActivityModalOpen(false)}} className="px-3 py-1.5 border rounded-lg bg-white text-slate-700">{h.status==='DRAFT'?'Đọc / Tiếp tục draft':'Chi tiết / Thu hồi'}</button>}
                       <div className="text-slate-600 flex items-center gap-3">

@@ -1,4 +1,3 @@
-import {businessText,businessDate} from '../../../utils/businessDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { AuditLogItem } from './types'
@@ -24,7 +23,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             <Icon name="history" size={20} className="text-[#C9A227]" />
             <div>
               <h3 className="text-base font-bold text-brand-dark">Nhật Ký Kiểm Toán Thay Đổi Chính Sách (Audit Trail)</h3>
-              <p className="text-[10px] text-slate-500 font-mono">Sự kiện từ các hồ sơ chính sách đã đọc</p>
+              <p className="text-[10px] text-slate-500 font-mono">Bất biến • Ghi nhận xác thực bằng mã băm SHA-256</p>
             </div>
           </div>
           <button
@@ -40,11 +39,16 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-brand-dark">{log.title}</span>
-                <span className="font-mono text-slate-400 text-[10px]">{businessDate(log.time)}</span>
+                <span className="font-mono text-slate-400 text-[10px]">{log.time}</span>
               </div>
-
+              <p className="text-slate-600">
+                Người thực hiện: <strong>{log.user}</strong> • Hash kiểm tra:{' '}
+                <code className="bg-white px-1.5 py-0.5 rounded text-[10px] text-amber-700 border border-slate-200">
+                  {log.hash}
+                </code>
+              </p>
               <div className="text-[11px] text-slate-500 pt-1">
-                {businessText(log.note)}
+                {log.note}
               </div>
             </div>
           ))}

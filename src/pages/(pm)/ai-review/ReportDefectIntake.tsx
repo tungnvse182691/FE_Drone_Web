@@ -1,4 +1,3 @@
-import {businessDate,businessError,businessState} from '../../../utils/businessDisplay'
 import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
 import { triageGeometryService, type TriageRouteReference, type TriagePublishedSet } from '../../../api/services/triageGeometryService'
 import { Link } from 'react-router-dom'
@@ -35,7 +34,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       do {
         const {data} = await apiClient.get(`/projects/${selectedCase.project_id}/candidates`, {params: {sourceKind: 'REPORT', sourceId: report.reportId, pageSize: 50, cursor}, signal: controller.signal})
         if (controller.signal.aborted || useAuthStore.getState().authEpoch !== auth.authEpoch) return
-        if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Nguồn phản ánh thiếu phiên bản hoặc không khớp phạm vi; chưa ghi nhận khiếm khuyết.')
+        if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Candidate thiếu hoặc sai Report/phiên bản nguồn/geometryVersion; chưa ghi nhận khiếm khuyết.')
         if (sourceVersion && (sourceVersion !== data.source.version || geometryVersion !== data.geometryVersion)) throw new Error('Phiên bản candidate thay đổi giữa các trang; cần đọc lại.')
         sourceVersion = data.source.version; geometryVersion = data.geometryVersion; cursor = data.nextCursor || undefined
         if (cursor && seen.has(cursor)) throw new Error('Cursor candidate lặp; chưa đọc đầy đủ nguồn.')
@@ -101,7 +100,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     Phản ánh nguồn
     <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
       {reports.length!==1&&<option value="">Chọn phản ánh nguồn</option>}
-      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {businessDate(r.receivedAt)}</option>)}
+      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'}</option>)}
     </select>
     <span className="text-slate-600 break-words">Phản ánh nguồn không đổi khi chuyển ảnh đang xem.</span>
   </label>
@@ -109,11 +108,11 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     <p className="font-bold text-slate-800">Kết quả ghi nhận phản ánh</p>
     {reportSelector}
     {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
-    {currentRecorded?.error&&<p role="alert">{businessError(currentRecorded.error)}</p>}
+    {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
     {currentRecorded?.result&&<>
       <p>Đã đọc quyết định ghi nhận và khiếm khuyết tương ứng từ máy chủ.</p>
-      <p>Trạng thái khiếm khuyết: {businessState(currentRecorded.result.defect.status)} · Mức độ: {({LOW:'Thấp',MEDIUM:'Trung bình',HIGH:'Cao',CRITICAL:'Nghiêm trọng'} as Record<string,string>)[currentRecorded.result.defect.severity] || 'Chưa xác định'}</p>
-      <p>Nguồn đã ghi nhận; không ghi nhận lại cùng nguồn. Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
+      <p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}</p>
+      <p>Nguồn đã ghi nhận; không tạo KEEP_NEW mới. Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
       <div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>
       <Link className="inline-block underline" to={`/pm/ai-inbox?${new URLSearchParams({projectId:selectedCase.project_id!,caseId:selectedCase.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Liên kết đọc lại kết quả đã lưu</Link>
     </>}
@@ -123,7 +122,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
     <p className="font-bold text-slate-800">Ghi nhận khiếm khuyết</p>
     <div className="flex flex-wrap items-center gap-2">
-      <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{businessError(reason)}</p>
+      <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{reason}</p>
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
     {reportSelector}
@@ -134,7 +133,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
           <option value="">{!activeCatalog?'Đang tải loại lỗi…':activeCatalog.error?'Lỗi tải danh mục':!activeCatalog.items.length?'Chưa có loại lỗi hiệu lực':'Chọn loại lỗi'}</option>
           {activeCatalog?.items.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}
         </select>
-        {activeCatalog?.error&&<span role="alert">{businessError(activeCatalog.error)}</span>}
+        {activeCatalog?.error&&<span role="alert">{activeCatalog.error}</span>}
         {activeCatalog&&!activeCatalog.error&&!activeCatalog.items.length&&<span>Danh mục môi trường chưa có loại lỗi hiệu lực để nghiệm thu.</span>}
       </label>
       <label className="grid min-w-0 gap-1">
@@ -152,15 +151,15 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       Lý do ghi nhận khiếm khuyết
       <textarea aria-label="Lý do ghi nhận khiếm khuyết" value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="w-full min-w-0 max-w-full rounded border bg-white p-2" />
     </label>
-    <label className="grid min-w-0 gap-1">Tuyến hiện hành cho khiếm khuyết<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
-    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{businessError(setError)}</span>}</label>
-    {journalError&&<p role="alert">{businessError(journalError)}</p>}
-    {(roadError||currentPackage?.error)&&<p role="alert">{businessError(roadError||currentPackage?.error)}</p>}
+    <label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
+    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}</label>
+    {journalError&&<p role="alert">{journalError}</p>}
+    {(roadError||currentPackage?.error)&&<p role="alert">{roadError||currentPackage?.error}</p>}
     <p className="text-slate-600 break-words">{missing ? `Còn thiếu: ${missing}` : 'Đã đủ dữ liệu form; máy chủ vẫn kiểm quyền và hiệu lực.'}</p>
     <button type="button" disabled={!canSave} onClick={()=>{void execute()}} className="border rounded-lg px-3 py-2 text-xs font-semibold">{commandBusy?'Đang ghi nhận…':'Xác nhận ghi nhận khiếm khuyết'}</button>
     {heldDecision&&<button type="button" disabled={commandBusy} onClick={()=>{void execute()}} className="text-xs underline">Đối chiếu yêu cầu ghi nhận đang chờ</button>}
-    {command.scope===scope&&command.error&&<p role="alert">{businessError(command.error)}</p>}
-    {selectedCase.case_status === 'OPEN' && current?.error && <p className="text-slate-600">Nếu Case thiếu phạm vi, dùng “Cập nhật phạm vi” trong khối Thông Tin Hồ Sơ; PM giữ nguyên dự án và chọn tuyến và bộ phân đoạn đã công bố. Chỉ ghi nhận khi nguồn trả đủ phiên bản hợp lệ.</p>}
+    {command.scope===scope&&command.error&&<p role="alert">{command.error}</p>}
+    {selectedCase.case_status === 'OPEN' && current?.error && <p className="text-slate-600">Nếu Case thiếu phạm vi, dùng “Cập nhật phạm vi” trong khối Thông Tin Hồ Sơ; PM giữ nguyên dự án và chọn tuyến/bộ PUBLISHED. Chỉ ghi nhận khi GET nguồn trả đủ phiên bản hợp lệ.</p>}
     <p className="text-slate-600">Chưa mở Kết luận có lỗi: cần Defect đã xác minh và bằng chứng đúng phạm vi.</p>
   </div>
 }

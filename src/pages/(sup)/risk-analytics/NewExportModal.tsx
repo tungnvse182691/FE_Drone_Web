@@ -1,4 +1,3 @@
-import {businessError} from '../../../utils/businessDisplay'
 import React from 'react'
 
 export interface NewExportModalProps {
@@ -29,7 +28,7 @@ export interface NewExportModalProps {
 }
 
 export const NewExportModal: React.FC<NewExportModalProps> = ({
-  busy,pending,received,error,detailError,
+  busy,pending,received,journalKey,error,detailError,
   isOpen,
   onClose,
   exportForm,
@@ -58,8 +57,8 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3.5 text-xs">
-          {error&&<p role="alert" className="text-rose-800">{businessError(error)}</p>}
-          {pending&&<p role="status" className="break-all">Yêu cầu đang được đối chiếu; giữ nguyên nội dung đã gửi.</p>}
+          {error&&<p role="alert" className="text-rose-800">{error}</p>}
+          {pending&&<p role="status" className="break-all">Giữ yêu cầu {journalKey}; không thay body/key.</p>}
           <fieldset disabled={busy||pending} className="space-y-3.5 border-0 p-0 m-0">
           {/* Loại báo cáo / hồ sơ */}
           <div className="space-y-1">
@@ -108,7 +107,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
 
                 className="rounded text-[#C9A227] focus:ring-[#C9A227] w-4 h-4 cursor-pointer"
               />
-              <span className="text-slate-700">Nội dung tệp được kiểm tra khi tải hồ sơ.</span>
+              <span className="text-slate-700">Manifest luôn có mã băm snapshot; nội dung tải được đối chiếu riêng</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">

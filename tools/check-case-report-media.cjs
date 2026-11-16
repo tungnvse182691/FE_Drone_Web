@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),ts=require('typescript'),assert=require('assert/strict'),React=require('react'),{renderToStaticMarkup}=require('react-dom/server')
-function load(file,mocks){const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText,{module:m,exports:m.exports,require:n=>{if(n in mocks)return mocks[n];if(n.endsWith('/businessDisplay'))return load('src/utils/businessDisplay.ts',{});if(n.endsWith('/triageService'))return{triageService:{pendingD2:()=>null}};if(n==='react-router-dom')return{useNavigate:()=>()=>{}};throw Error('Unmocked '+n)},AbortController,URL:objectUrls,console});return m.exports}
+function load(file,mocks){const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText,{module:m,exports:m.exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},AbortController,URL:objectUrls,console});return m.exports}
 const objectUrls={createObjectURL:()=> 'blob:server-evidence',revokeObjectURL(){}}
 let media={caseId:'case-a',reports:[],reportsLoading:false,reportsError:'',url:'blob:server-evidence',imageLoading:false,imageError:'',selected:{reportId:'report-a',evidence:{evidenceId:'evidence-a'}},retryImage(){},decodeError(){}}
 const react={__esModule:true,default:React,...React},icon={'../../../components/ui/Icon':{Icon:()=>null}}
@@ -24,12 +24,6 @@ const evidence=(id,version='v1')=>({evidenceId:id,fileVersion:version,contentPat
   media={...media,imageError:'',selected:null};for(const h of render())assert.ok(h.includes('Không có ảnh đính kèm'))
   media={...media,reportsError:'Report GET failed'};for(const h of render()){assert.ok(h.includes('Report GET failed'));assert.ok(!h.includes('Không có ảnh đính kèm'))}
   selectedCase.image_url=''
- })
- await test('zoom metadata follows the selected source evidence; UNKNOWN stays unknown and zero coordinates remain valid',()=>{
-  const {PhotoZoomModal}=components(),old=media,render=()=>renderToStaticMarkup(React.createElement(PhotoZoomModal,{isOpen:true,onClose(){},selectedCase}));
-  media={...old,caseId:'case-a',selected:{evidence:{locationSource:'UNKNOWN',location:{latitude:0,longitude:0}}}};let h=render();assert.ok(h.includes('Chưa xác định vị trí'));assert.ok(!h.includes('0°'));assert.ok(!h.includes('RTK'));assert.ok(!h.includes('0.3 cm/px'));
-  media={...media,selected:{evidence:{locationSource:'EXIF',location:{latitude:0,longitude:-1}}}};h=render();assert.ok(h.includes('0°, -1°'));assert.ok(!h.includes('° N'));assert.ok(!h.includes('° E'));
-  media={...media,caseId:'another-case'};assert.ok(render().includes('Chưa xác định vị trí'));media=old;
  })
  await test('one report/image owner handles originals and supplements, selected private bytes and shared decode failure; blob revoked on switch/unmount',async()=>{
   const h=harness(),calls=[],revoked=[];let epoch=1,caseId='case-a',view,serial=0

@@ -124,14 +124,14 @@ export const ProjectPersonnelCard: React.FC<ProjectPersonnelCardProps> = ({
                     </div>
                   </div>
                   <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white text-slate-700 border border-slate-200 uppercase">
-                    {primaryPm?.userId===mem.user_id?'PM CHÍNH':mem.role_title}
+                    {primaryPm?.userId===mem.user_id?'PM CHÍNH':mem.role_code}
                   </span>
                 </div>
 
                 <div className="text-[11px] bg-white border border-[#E2E5E9] p-2.5 rounded-xl flex flex-col gap-1 text-slate-600">
                   <div className="flex items-center gap-1.5 text-slate-900 font-semibold">
                     <Icon name="verified_user" size={14} className="text-[#C9A227]" />
-                    <span>{({ACTIVE:'Đang tham gia',ENDED:'Đã kết thúc',SUSPENDED:'Tạm ngưng'} as Record<string,string>)[mem.membership_status || ''] || 'Chưa cập nhật trạng thái'}</span>
+                    <span>{mem.membership_status || 'Chưa cập nhật trạng thái'}</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-100">
                     <span>{mem.valid_from ? `Từ ${mem.valid_from}` : 'Chưa cập nhật ngày bắt đầu'}</span>

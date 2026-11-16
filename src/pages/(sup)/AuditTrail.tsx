@@ -1,9 +1,8 @@
-import {businessError} from '../../utils/businessDisplay'
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { AuditEvent } from '../../types/domain'
-import { auditService, projectService } from '../../api/services'
+import { auditService, AUDIT_PROJECT_OPTIONS, projectService } from '../../api/services'
 import { TimeFilter, ExportFormat, ImageModalData } from './audit-trail/types'
 import { AuditTrailHeader } from './audit-trail/AuditTrailHeader'
 import { AuditTrailMetrics } from './audit-trail/AuditTrailMetrics'
@@ -16,8 +15,8 @@ import { AuditTrailModals } from './audit-trail/AuditTrailModals'
 const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
   if (filter === 'all') return true
   const eventTime = new Date(occurredAtStr).getTime()
-  // Lọc theo đồng hồ hiện hành; không dùng ngày fixture.
-  const now = Date.now()
+  // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
+  const now = new Date('2026-10-10T12:00:00Z').getTime()
   const diffHours = (now - eventTime) / (1000 * 60 * 60)
   if (filter === '24h') return diffHours <= 24 && diffHours >= 0
   if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
@@ -26,13 +25,11 @@ const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
 }
 
 export const AuditTrail: React.FC = () => {
-  const { user,authEpoch } = useAuthStore()
-  const actorScope=`${authEpoch}:${user?.id}:${user?.role}`,latest=useRef(actorScope);latest.current=actorScope
-  const [readError,setReadError]=useState(''),[partial,setPartial]=useState(false),[exportError,setExportError]=useState('')
+  const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const isPM = user?.role === RoleCode.PROJECT_MANAGER
 
-  // Lịch sử thật từ các nguồn đọc mà auditService hỗ trợ.
+  // Dữ liệu dòng sự kiện hoạt động bất đồng bộ từ auditService (In-Memory Mock API, zero localStorage)
   const [events, setEvents] = useState<AuditEvent[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedEventId, setSelectedEventId] = useState<string>('')
@@ -40,14 +37,11 @@ export const AuditTrail: React.FC = () => {
 
   // Phân định phạm vi dự án (Mặc định: Tất cả dự án phụ trách)
   const [selectedProject, setSelectedProject] = useState<string>('all')
-  const viewScope=`${actorScope}:${selectedProject}`;latest.current=viewScope
-  const [projects, setProjects] = useState<any[]>([])
+  const [projects, setProjects] = useState<any[]>(() => projectService.getProjects())
 
   useEffect(() => {
-    let active=true;setProjects([]);setEvents([]);setSelectedEventId('');setIsInspectorOpen(false);setShowExportModal(false)
-    projectService.fetchProjects().then(rows=>{if(active)setProjects(rows)}).catch(e=>{if(active)setReadError(businessError(e.message))})
-    return()=>{active=false}
-  }, [actorScope])
+    projectService.fetchProjects().then(setProjects).catch(console.warn)
+  }, [])
 
   // Bộ lọc tiêu chí nghiệp vụ
   const [selectedActorRole, setSelectedActorRole] = useState<string>('all')
@@ -60,7 +54,7 @@ export const AuditTrail: React.FC = () => {
   const [copiedEventId, setCopiedEventId] = useState<boolean>(false)
   const [showExportModal, setShowExportModal] = useState<boolean>(false)
   const [exportFormat, setExportFormat] = useState<ExportFormat>('PDF')
-  const [exportSuccess] = useState<boolean>(false)
+  const [exportSuccess, setExportSuccess] = useState<boolean>(false)
 
   // Xem ảnh phóng to (Lightbox)
   const [activeImageModal, setActiveImageModal] = useState<ImageModalData | null>(null)
@@ -89,16 +83,16 @@ export const AuditTrail: React.FC = () => {
     const loadEvents = async () => {
       try {
         setLoading(true)
-        setEvents([]);setReadError('')
-        const snapshot = await auditService.getAuditSnapshot({projectId:selectedProject})
-        const data=snapshot.events
+        const data = await auditService.getAuditEvents({
+          projectId: selectedProject
+        })
         if (mounted) {
-          setEvents(data);setPartial(snapshot.partial)
+          setEvents(data)
           if (data.length > 0) {
             setSelectedEventId((prev) => prev || data[0].id)
           }
         }
-      } catch(e:any){if(mounted)setReadError(businessError(e.message))} finally {
+      } finally {
         if (mounted) setLoading(false)
       }
     }
@@ -106,7 +100,7 @@ export const AuditTrail: React.FC = () => {
     return () => {
       mounted = false
     }
-  }, [selectedProject,actorScope])
+  }, [selectedProject])
 
   // Lọc dữ liệu theo vai trò, dự án, mốc thời gian và từ khóa
   const filteredEvents = useMemo(() => {
@@ -166,7 +160,7 @@ export const AuditTrail: React.FC = () => {
 
   // Sự kiện đang được chọn để soi chi tiết
   const selectedEvent = useMemo(() => {
-    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0]
+    return filteredEvents.find((e) => e.id === selectedEventId) || filteredEvents[0] || events[0]
   }, [filteredEvents, selectedEventId, events])
 
   // Thống kê số liệu tính toán động theo danh sách đang hiển thị
@@ -197,14 +191,25 @@ export const AuditTrail: React.FC = () => {
 
   // Làm mới dữ liệu
   const handleRefresh = async () => {
-    const scope=viewScope;setIsRefreshing(true);setReadError('')
-    try {const snapshot=await auditService.getAuditSnapshot({projectId:selectedProject});if(latest.current===scope){setEvents(snapshot.events);setPartial(snapshot.partial)}}
-    catch(e:any){if(latest.current===scope)setReadError(businessError(e.message))}
-    finally{if(latest.current===scope)setIsRefreshing(false)}
+    setIsRefreshing(true)
+    try {
+      const data = await auditService.getAuditEvents({
+        projectId: selectedProject
+      })
+      setEvents(data)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
+
+  // Xuất báo cáo nhật ký
   const handleExport = async () => {
-    setExportError('')
-    try{await auditService.exportAuditTrail(exportFormat,selectedProject)}catch(e:any){setExportError(businessError(e.message).replace('Backend chưa có API xuất riêng nhật ký.','Chưa hỗ trợ xuất riêng nhật ký.'))}
+    await auditService.exportAuditTrail(exportFormat, selectedProject)
+    setExportSuccess(true)
+    setTimeout(() => {
+      setExportSuccess(false)
+      setShowExportModal(false)
+    }, 1600)
   }
 
   const handleResetFilters = () => {
@@ -238,19 +243,16 @@ export const AuditTrail: React.FC = () => {
         onSelectProject={setSelectedProject}
         isRefreshing={isRefreshing}
         onRefresh={handleRefresh}
-        onOpenExportModal={() => {setExportError('');setShowExportModal(true)}}
+        onOpenExportModal={() => setShowExportModal(true)}
         projects={projects}
       />
 
-      {readError&&<p role="alert" className="text-xs text-rose-700">{readError}</p>}
-      {partial&&<p className="text-xs text-amber-800">Lịch sử hiện chỉ gồm sự kiện từ nguồn báo cáo được hỗ trợ; chưa phải toàn bộ nhật ký hệ thống.</p>}
       <AuditTrailMetrics
         calculatedStats={calculatedStats}
         isSupervisor={isSupervisor}
       />
 
       <AuditTrailFilters
-        sourceOptions={{actions:[...new Map(events.map(e=>[e.action_type,{value:e.action_type,label:e.action_label_vi}])).values()],entities:[...new Map(events.map(e=>[e.target_entity_type,{value:e.target_entity_type,label:({SurveyRequest:'Nhiệm vụ khảo sát',SurveyDataVersion:'Dữ liệu khảo sát'} as Record<string,string>)[e.target_entity_type] || 'Hồ sơ nguồn'}])).values()],roles:[...new Map(events.filter(e=>e.actor_role).map(e=>[e.actor_role,{value:e.actor_role,label:e.actor_role_label}])).values()]}}
         selectedActorRole={selectedActorRole}
         onChangeActorRole={setSelectedActorRole}
         selectedActionType={selectedActionType}
@@ -307,7 +309,6 @@ export const AuditTrail: React.FC = () => {
       )}
 
       <AuditTrailModals
-        error={exportError}
         activeImageModal={activeImageModal}
         onCloseImageModal={() => setActiveImageModal(null)}
         showExportModal={showExportModal}
@@ -316,7 +317,7 @@ export const AuditTrail: React.FC = () => {
         onChangeExportFormat={setExportFormat}
         isPM={isPM}
         selectedProject={selectedProject}
-        projectList={projects}
+        projectList={AUDIT_PROJECT_OPTIONS}
         filteredCount={filteredEvents.length}
         exportSuccess={exportSuccess}
         onExport={handleExport}

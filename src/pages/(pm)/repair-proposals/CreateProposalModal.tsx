@@ -130,7 +130,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
 
             <div className="space-y-1.5">
               <label className="block font-bold text-slate-700 uppercase text-[11px]">
-                {createApi?'Bộ phân đoạn tham chiếu (tùy chọn)':'Phân đoạn lý trình *'}
+                {createApi?'Bộ phân đoạn tham chiếu':'Phân đoạn lý trình'} <span className="text-rose-500">*</span>
               </label>
               <select
                 value={formSegmentId} aria-label="Bộ phân đoạn đề xuất gói"
@@ -249,7 +249,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             className="px-5 py-2 rounded-xl bg-brand-gold hover:bg-[#B38E1F] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Icon name="send" className="text-sm" />
-            <span>{createApi?createApi.busy?'Đang đối chiếu…':createApi.locked?'Tiếp tục / Đối chiếu yêu cầu':'Đề xuất hạng mục và đọc lại kết quả':'Khóa & Trình duyệt ngay'}</span>
+            <span>{createApi?createApi.busy?'Đang đối chiếu…':createApi.locked?'Tiếp tục / Đối chiếu yêu cầu':'Đề xuất hạng mục và GET xác nhận':'Khóa & Trình duyệt ngay'}</span>
           </button>
         </div>
       </div>

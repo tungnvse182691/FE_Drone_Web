@@ -2,7 +2,6 @@ import React from 'react'
 import { ImageModalData, ExportFormat, AuditProjectOption } from './types'
 
 interface AuditTrailModalsProps {
-  error?:string
   activeImageModal: ImageModalData | null
   onCloseImageModal: () => void
   showExportModal: boolean
@@ -18,7 +17,7 @@ interface AuditTrailModalsProps {
 }
 
 export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
-  error,activeImageModal,
+  activeImageModal,
   onCloseImageModal,
   showExportModal,
   onCloseExportModal,
@@ -31,7 +30,8 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
   exportSuccess,
   onExport
 }) => {
-  const currentProjectName = selectedProject==='all'?'Tất cả dự án trong phạm vi đọc':projectList.find(p=>p.id===selectedProject)?.name || 'Chưa có tên dự án'
+  const currentProjectName =
+    projectList.find((p) => p.id === selectedProject)?.name || 'Dự án hiện hành'
 
   return (
     <>
@@ -112,9 +112,8 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
               </button>
             </div>
 
-            {error&&<p role="alert" className="text-xs text-rose-700">{error}</p>}
             <p className="text-xs text-slate-600 leading-relaxed">
-              Chưa hỗ trợ xuất riêng nhật ký. Mở Báo cáo KPI để xuất hồ sơ dự án được phép đọc.
+              Trích xuất dữ liệu dòng sự kiện bất biến phục vụ công tác đối soát hồ sơ hoàn công và quản lý bảo hành theo quy định BR-45.
             </p>
 
             <div className="space-y-3 text-xs">

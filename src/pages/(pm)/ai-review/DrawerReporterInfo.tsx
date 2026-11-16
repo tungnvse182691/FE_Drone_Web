@@ -1,4 +1,3 @@
-import {businessState} from '../../../utils/businessDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
@@ -16,7 +15,7 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
   onOpenTriageProject,
   isSupervisor = false,
 }) => {
-  const verificationMethod = ({EXISTING_EVIDENCE:'Đối chiếu bằng chứng đã có',FIELD:'Đo đạc thực địa',DRONE:'Khảo sát Drone'} as Record<string,string>)[selectedCase.verification_method || ''] || 'Chưa có phương thức xác minh được hỗ trợ'
+  const verificationMethod = selectedCase.verification_method || 'Chưa chọn phương thức xác minh'
 
   return (
     <div className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-2.5">
@@ -37,12 +36,12 @@ export const DrawerReporterInfo: React.FC<DrawerReporterInfoProps> = ({
         </div>
         <div>
           <span className="text-[10px] text-slate-400 block">Trạng thái hồ sơ:</span>
-          <span className="font-semibold text-slate-800">{businessState(selectedCase.case_status)}</span>
+          <span className="font-semibold text-slate-800">{selectedCase.case_status || 'Chưa có trạng thái từ máy chủ'}</span>
         </div>
       </div>
 
       <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs text-slate-700">
-        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Phương thức xác minh hồ sơ:</span>
+        <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Phương thức xác minh của Case:</span>
         <p className="text-slate-800 leading-relaxed">{verificationMethod}</p>
       </div>
 

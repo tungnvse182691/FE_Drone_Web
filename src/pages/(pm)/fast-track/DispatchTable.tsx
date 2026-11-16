@@ -1,4 +1,3 @@
-import {businessReason} from '../../../utils/businessDisplay'
 import React, { useEffect, useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { DefectItem, PolicyThresholdConfig } from './types'
@@ -182,7 +181,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
             </span>
           </div>
           <div className="bg-slate-50 p-2 rounded-lg border border-slate-200/80">
-            <span className="text-[10px] text-slate-400 block font-medium">Trạng thái hồ sơ</span>
+            <span className="text-[10px] text-slate-400 block font-medium">Trạng thái CSDL</span>
             <span className="font-bold text-slate-800">{formatStatusVi(defect.status)}</span>
           </div>
         </div>
@@ -207,7 +206,7 @@ const DefectCard: React.FC<DefectCardProps> = ({
               </div>
               {missingReasons.length > 0 && (
                 <p className="text-[10px] text-rose-600 leading-tight">
-                  {missingReasons.map(businessReason).join('; ')}
+                  {missingReasons.join('; ')}
                 </p>
               )}
             </div>

@@ -1,4 +1,3 @@
-import {businessState} from '../../../utils/businessDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { UnassignedDefectItem } from './types'
@@ -30,7 +29,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <label className="font-bold text-slate-700 uppercase text-[11px] flex items-center gap-1.5">
-            <span>Chọn một khiếm khuyết gốc cho gói ({unassignedDefects.length} khiếm khuyết đang mở):</span>
+            <span>Chọn một khiếm khuyết gốc cho package ({unassignedDefects.length} khiếm khuyết OPEN):</span>
           </label>
           <span className="text-[11px] text-brand-gold font-semibold">
             Đã chọn {modalCalculations.count} điểm
@@ -40,7 +39,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       {/* Danh sách các khiếm khuyết */}
       {unassignedDefects.length === 0 ? (
         <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-slate-400 text-xs">
-          Chưa có khiếm khuyết đang mở trong danh mục dự án.
+          Chưa có khiếm khuyết OPEN trong danh mục dự án.
         </div>
       ) : (
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto bg-white custom-scrollbar">
@@ -65,7 +64,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                       <div className="flex flex-col flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-slate-800 text-xs">{def.code}</span>
-                          <span className="font-semibold text-slate-800 text-xs">{def.title==='CRACK'?'Nứt mặt đường':def.title==='POTHOLE'?'Ổ gà':def.title}</span>
+                          <span className="font-semibold text-slate-800 text-xs">{def.title}</span>
                           {Boolean(def.stationing) && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
                               {def.stationing}
@@ -79,7 +78,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                               <span>•</span>
                             </>
                           )}
-                          <span>Trạng thái: <strong className="text-slate-700">{businessState(def.status)}</strong></span>
+                          <span>Trạng thái: <strong className="text-slate-700">{def.status_label || def.status || 'Chưa xử lý'}</strong></span>
                         </div>
                       </div>
                     </div>
