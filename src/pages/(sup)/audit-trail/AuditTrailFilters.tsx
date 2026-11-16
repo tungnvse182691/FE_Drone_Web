@@ -3,6 +3,7 @@ import { RoleCode } from '../../../types/enums'
 import { TimeFilter } from './types'
 
 interface AuditTrailFiltersProps {
+  sourceOptions?:{actions:Array<{value:string;label:string}>;entities:Array<{value:string;label:string}>;roles:Array<{value:string;label:string}>}
   selectedActorRole: string
   onChangeActorRole: (role: string) => void
   selectedActionType: string
@@ -19,7 +20,7 @@ interface AuditTrailFiltersProps {
 }
 
 export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
-  selectedActorRole,
+  sourceOptions,selectedActorRole,
   onChangeActorRole,
   selectedActionType,
   onChangeActionType,
@@ -47,12 +48,13 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
             className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả vai trò</option>
-            <option value={RoleCode.SUPERVISOR}>Kỹ sư giám sát</option>
+            {sourceOptions?sourceOptions.roles.map(o=><option key={o.value} value={o.value}>{o.label}</option>):<><option value={RoleCode.SUPERVISOR}>Kỹ sư giám sát</option>
             <option value={RoleCode.PROJECT_MANAGER}>Chỉ huy trưởng</option>
             <option value={RoleCode.REPAIR_CREW}>Đội thi công hiện trường</option>
             {isSupervisor && (
               <option value="SYSTEM">Hệ thống tự động</option>
             )}
+</>}
           </select>
         </div>
 
@@ -67,7 +69,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
             className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả hành động</option>
-            {isSupervisor && (
+{sourceOptions?sourceOptions.actions.map(o=><option key={o.value} value={o.value}>{o.label}</option>):<>            {isSupervisor && (
               <>
                 <option value="APPROVE_BATCH">Phê duyệt đợt sửa chữa</option>
                 <option value="REJECT_BATCH">Yêu cầu sửa lại hồ sơ</option>
@@ -79,6 +81,7 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
             <option value="ASSIGN_CREW">Phân công đội thi công</option>
             <option value="CLOSE_FAST_TRACK">Đóng hồ sơ xử lý nhanh</option>
             <option value="PUBLISH_SEGMENTS">Công bố phân đoạn tim tuyến</option>
+</>}
           </select>
         </div>
 
@@ -93,13 +96,14 @@ export const AuditTrailFilters: React.FC<AuditTrailFiltersProps> = ({
             className="w-full h-9 px-3 rounded-[10px] bg-white border border-[#E2E5E9] text-slate-800 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#C9A227] cursor-pointer transition-colors"
           >
             <option value="all">Tất cả thực thể</option>
-            <option value="REPAIR_BATCH">Đợt sửa chữa</option>
+            {sourceOptions?sourceOptions.entities.map(o=><option key={o.value} value={o.value}>{o.label}</option>):<><option value="REPAIR_BATCH">Đợt sửa chữa</option>
             <option value="DEFECT">Hư hỏng mặt đường</option>
             <option value="WORK_ORDER">Phiếu giao việc</option>
             <option value="ROAD_SEGMENT">Phân đoạn tim tuyến</option>
             {isSupervisor && (
               <option value="LEGAL_HOLD">Hồ sơ khóa lưu trữ</option>
             )}
+</>}
           </select>
         </div>
 

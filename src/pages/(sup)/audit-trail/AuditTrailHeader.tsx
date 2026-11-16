@@ -35,7 +35,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
           {isSupervisor ? (
             <div className="flex items-center gap-1 text-slate-700 font-medium">
               <span className="material-symbols-outlined text-[16px] text-brand-gold">verified_user</span>
-              <span>Giám sát (Toàn hệ thống)</span>
+              <span>Giám sát (Phạm vi được cấp quyền)</span>
             </div>
           ) : (
             <div className="flex items-center gap-1 text-slate-700 font-medium">
@@ -59,7 +59,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
             Nhật Ký Hoạt Động &amp; Truy Vết Hệ Thống
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Dòng sự kiện bất biến ghi nhận mọi thao tác kỹ thuật, trình duyệt hồ sơ đợt sửa chữa và nghiệm thu hiện trường theo thời gian thực.
+            Các sự kiện đọc được từ hồ sơ dự án; nguồn hiện tại có thể chưa bao gồm toàn bộ hoạt động.
           </p>
         </div>
 
