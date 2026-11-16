@@ -111,6 +111,7 @@ export const FastTrackDispatch: React.FC = () => {
         }}
       />
 
+      {selectedProjectId && <div className="flex flex-wrap gap-2 text-xs"><button type="button" onClick={()=>navigate(`${basePath}/projects/${selectedProjectId}`)} className="border border-slate-200 bg-white rounded-lg px-3 py-2">Dự án · Nhân sự · Tài liệu/Bảo hành</button><button type="button" onClick={()=>navigate(`${basePath}/field-tasks?projectId=${encodeURIComponent(selectedProjectId)}`)} className="border border-slate-200 bg-white rounded-lg px-3 py-2">Nhiệm vụ nguồn hiện trường</button><button type="button" onClick={()=>navigate(`${basePath}/${isSupervisor?'cases':'ai-inbox'}?projectId=${encodeURIComponent(selectedProjectId)}`)} className="border border-slate-200 bg-white rounded-lg px-3 py-2">Phản ánh &amp; ghi nhận khiếm khuyết</button></div>}
       {(projectError || policyError || coverageError || dispatchError) && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3">{[projectError,policyError,coverageError,dispatchError].filter(Boolean).join(' · ')}</p>}
       {/* 2. SECTION A: QUY CHUẨN CHÍNH SÁCH XỬ LÝ NHANH ÁP DỤNG & ĐỘ PHỦ TUYẾN (API-175, API-176) */}
       <PolicySection

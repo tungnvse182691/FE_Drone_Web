@@ -1,5 +1,6 @@
 import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
-import { triageGeometryService, type TriageRouteReference } from '../../../api/services/triageGeometryService'
+import { triageGeometryService, type TriageRouteReference, type TriagePublishedSet } from '../../../api/services/triageGeometryService'
+import { Link } from 'react-router-dom'
 import { reportKeepNewCommands, type KeepNewResult, type ReportKeepNewInput } from '../../../api/services/reportKeepNewCommands'
 import React, { useEffect, useRef, useState } from 'react'
 import { apiClient } from '../../../api/client'
@@ -12,16 +13,17 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const media = useCaseReportMedia(), auth = useAuthStore()
   const caseScope = `${auth.authEpoch}:${auth.user?.id}:${selectedCase.id}:${selectedCase.project_id}`
   const reports = media?.caseId === selectedCase.id ? media.reports.filter(r => r.caseId === selectedCase.id) : []
+  const query=typeof window!=='undefined'?new URLSearchParams(window.location.search):null
   const [sourceChoice, setSourceChoice] = useState<{scope: string; reportId: string} | null>(null)
-  const reportId = reports.length === 1 ? reports[0].reportId : sourceChoice?.scope === caseScope ? sourceChoice.reportId : ''
+  const reportId = reports.length === 1 ? reports[0].reportId : sourceChoice?.scope === caseScope ? sourceChoice.reportId : reports.some(r=>r.reportId===query?.get('reportId'))?query!.get('reportId')!:''
   const report = reports.find(r => r.reportId === reportId)
   const scope = `${auth.authEpoch}:${auth.user?.id}:${selectedCase.id}:${selectedCase.project_id}:${reportId}`
   const [read, setRead] = useState<{scope: string; sourceVersion?: string; geometryVersion?: string; error?: string} | null>(null)
   const [reload, setReload] = useState(0)
-  const [form, setForm] = useState({scope: '', severity: '', reason: '', defectTypeCode:'', roadId:''})
+  const [form, setForm] = useState({scope: '', severity: '', reason: '', defectTypeCode:'', roadId:'',setId:''})
   const severity = form.scope === scope ? form.severity : ''
   const decisionReason = form.scope === scope ? form.reason : ''
-  const changeForm = (key: 'severity' | 'reason' | 'defectTypeCode' | 'roadId', value: string) => setForm(old => ({scope, severity: old.scope === scope ? old.severity : '', reason: old.scope === scope ? old.reason : '', defectTypeCode: old.scope===scope?old.defectTypeCode:'', roadId:old.scope===scope?old.roadId:'', [key]: value}))
+  const changeForm = (key: 'severity' | 'reason' | 'defectTypeCode' | 'roadId'|'setId', value: string) => setForm(old => ({scope, severity: old.scope === scope ? old.severity : '', reason: old.scope === scope ? old.reason : '', defectTypeCode: old.scope===scope?old.defectTypeCode:'', roadId:old.scope===scope?old.roadId:'',setId:key==='roadId'?'':old.scope===scope?old.setId:'', [key]: value}))
   const allowed = auth.user?.role === RoleCode.PROJECT_MANAGER && selectedCase.case_status === 'OPEN' && !!selectedCase.project_id
   useEffect(() => {
     const controller = new AbortController(); setRead(null)
@@ -51,14 +53,15 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   useEffect(()=>{const c=new AbortController();setCatalog(null);defectTypeCatalog.read(c.signal).then(items=>{if(!c.signal.aborted)setCatalog({scope:catalogScope,items,error:''})}).catch(e=>{if(!c.signal.aborted)setCatalog({scope:catalogScope,items:[],error:`Không đọc được loại lỗi: HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`})});return()=>c.abort()},[catalogScope,reload])
   useEffect(()=>{const c=new AbortController();setRoads([]);setRoadError('');if(allowed)triageGeometryService.routes(selectedCase.project_id!,c.signal).then(rows=>{if(!c.signal.aborted)setRoads(rows)}).catch(e=>{if(!c.signal.aborted)setRoadError(e.message)});return()=>c.abort()},[caseScope,allowed,reload])
   const roadId=form.scope===scope?form.roadId:'', defectTypeCode=form.scope===scope?form.defectTypeCode:''
-  const road=roads.find(r=>r.roadSectionId===roadId), packageScope=`${scope}:${roadId}`
-  useEffect(()=>{const c=new AbortController();setPackageRead(null);if(road) (async()=>{const sets=await triageGeometryService.sets(selectedCase.project_id!,road,c.signal);if(sets.length!==1)throw new Error('Cần đúng một bộ PUBLISHED của tuyến để xác minh nguồn.');const p=await triageGeometryService.package(selectedCase.project_id!,road,sets[0].id,c.signal);if(!c.signal.aborted)setPackageRead({scope:packageScope,version:p.geometryVersion,error:''})})().catch(e=>{if(!c.signal.aborted)setPackageRead({scope:packageScope,version:'',error:e.message})});return()=>c.abort()},[packageScope,road?.currentVersionId,reload])
+  const setId=form.scope===scope?form.setId:'',road=roads.find(r=>r.roadSectionId===roadId), packageScope=`${scope}:${roadId}:${setId}`
+  const [sets,setSets]=useState<TriagePublishedSet[]>([]),[setError,setSetError]=useState('')
+  useEffect(()=>{const c=new AbortController();setSets([]);setSetError('');if(road)triageGeometryService.sets(selectedCase.project_id!,road,c.signal).then(rows=>{if(!c.signal.aborted)setSets(rows)}).catch(e=>{if(!c.signal.aborted)setSetError(e.message)});return()=>c.abort()},[caseScope,roadId,road?.currentVersionId,reload])
+  useEffect(()=>{const c=new AbortController();setPackageRead(null);if(road&&sets.some(s=>s.id===setId))triageGeometryService.package(selectedCase.project_id!,road,setId,c.signal).then(p=>{if(!c.signal.aborted)setPackageRead({scope:packageScope,version:p.geometryVersion,error:''})}).catch(e=>{if(!c.signal.aborted)setPackageRead({scope:packageScope,version:'',error:e.message})});return()=>c.abort()},[packageScope,road?.currentVersionId,sets,reload])
   const activeCatalog=catalog?.scope===catalogScope?catalog:null
   const currentPackage=packageRead?.scope===packageScope?packageRead:null
   const commandBusy=command.scope===scope&&command.busy
   let heldDecision:ReturnType<typeof reportKeepNewCommands.pending>=null, journalError=''
   try{if(selectedCase.project_id&&report)heldDecision=reportKeepNewCommands.pending(selectedCase.project_id,report.reportId)}catch(e){journalError=(e as Error).message}
-  const query=typeof window!=='undefined'?new URLSearchParams(window.location.search):null
   const suppliedReference=query?.get('reportId')===reportId?query.get('decisionId')||'':''
   let savedReference:ReturnType<typeof reportKeepNewCommands.reference>=null
   try{if(selectedCase.project_id&&report)savedReference=reportKeepNewCommands.reference?.(selectedCase.project_id,report.reportId)||null}catch(e){journalError=(e as Error).message}
@@ -91,13 +94,13 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     : media?.reportsError ? `Không đọc được Report: ${media.reportsError}` : !report ? 'Cần đọc và chọn Report thuộc đúng hồ sơ.'
     : !current ? 'Đang kiểm tra nguồn Report…' : current.error || (sourceStale || packageMismatch ? 'Phiên bản nguồn hoặc hình học không còn khớp; hãy tải lại dữ liệu ghi nhận.' : 'Đã đọc phiên bản nguồn Report và hình học từ máy chủ.')
   const missing = [
-    !report?'Report nguồn':'',!current?.sourceVersion?'source.version':'',!current?.geometryVersion?'geometryVersion':'',!defectTypeCode?'loại lỗi hiệu lực':'',!road?'tuyến':'',road&&currentPackage?.version!==current?.geometryVersion?'package khớp geometryVersion nguồn':'',!severity?'mức độ':'',!decisionReason.trim()?'lý do':''
+    !report?'phản ánh nguồn':'',!current?.sourceVersion?'phiên bản nguồn':'',!current?.geometryVersion?'phiên bản hình học':'',!defectTypeCode?'loại lỗi hiệu lực':'',!road?'tuyến':'',!setId?'bộ phân đoạn đã công bố':'',road&&currentPackage?.version!==current?.geometryVersion?'hồ sơ hình học khớp nguồn':'',!severity?'mức độ':'',!decisionReason.trim()?'lý do':''
   ].filter(Boolean).join('; ')
   const reportSelector=<label className="grid min-w-0 gap-1">
     Phản ánh nguồn
     <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
       {reports.length!==1&&<option value="">Chọn phản ánh nguồn</option>}
-      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'} · {r.reportId}</option>)}
+      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'}</option>)}
     </select>
     <span className="text-slate-600 break-words">Phản ánh nguồn không đổi khi chuyển ảnh đang xem.</span>
   </label>
@@ -107,10 +110,11 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
     {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
     {currentRecorded?.result&&<>
-      <p className="break-all">Decision {currentRecorded.result.decision.id} · {currentRecorded.result.decision.decision}</p>
-      <p className="break-all">Defect {currentRecorded.result.defect.id}</p>
+      <p>Đã đọc quyết định ghi nhận và khiếm khuyết tương ứng từ máy chủ.</p>
       <p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}</p>
       <p>Nguồn đã ghi nhận; không tạo KEEP_NEW mới. Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
+      <div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>
+      <Link className="inline-block underline" to={`/pm/ai-inbox?${new URLSearchParams({projectId:selectedCase.project_id!,caseId:selectedCase.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Liên kết đọc lại kết quả đã lưu</Link>
     </>}
     {heldDecision&&<p role="status" className="break-all">Giữ nguyên journal của yêu cầu {heldDecision.key}. Reference kết quả này không tự giải quyết một yêu cầu khác key/body.</p>}
     <button type="button" disabled={!!currentRecorded?.loading} onClick={()=>setReload(n=>n+1)} className="text-xs underline">Đọc lại kết quả ghi nhận</button>
@@ -148,6 +152,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       <textarea aria-label="Lý do ghi nhận khiếm khuyết" value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="w-full min-w-0 max-w-full rounded border bg-white p-2" />
     </label>
     <label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
+    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}</label>
     {journalError&&<p role="alert">{journalError}</p>}
     {(roadError||currentPackage?.error)&&<p role="alert">{roadError||currentPackage?.error}</p>}
     <p className="text-slate-600 break-words">{missing ? `Còn thiếu: ${missing}` : 'Đã đủ dữ liệu form; máy chủ vẫn kiểm quyền và hiệu lực.'}</p>

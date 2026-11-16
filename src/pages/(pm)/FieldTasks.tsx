@@ -8,9 +8,11 @@ import { FieldTask, HubProject } from '../../types/domain'
 import { Icon } from '../../components/ui/Icon'
 import { FieldTasksHeader } from './field-tasks/FieldTasksHeader'
 import { MeasurementsTab } from './field-tasks/MeasurementsTab'
+import { reportKeepNewCommands } from '../../api/services/reportKeepNewCommands'
 
 export const FieldTasks: React.FC = () => {
-  const [searchParams] = useSearchParams()
+  const [searchParams,setSearchParams] = useSearchParams()
+  const requestedProject=searchParams.get('projectId') || 'ALL',linkedDefect=searchParams.get('defectId') || ''
   const tabParam = searchParams.get('tab')
   const highlightCode = searchParams.get('highlightCode')
 
@@ -33,7 +35,10 @@ export const FieldTasks: React.FC = () => {
 
   // Danh mục tuyến đường / dự án lấy thật 100% từ CSDL Backend
   const [availableProjects, setAvailableProjects] = useState<HubProject[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL')
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(requestedProject)
+  const [projectsLoaded,setProjectsLoaded]=useState(false),[linkedSourceError,setLinkedSourceError]=useState('')
+  useEffect(()=>{setSelectedProjectId(requestedProject)},[requestedProject,actorScope])
+  useEffect(()=>{const c=new AbortController();setLinkedSourceError('');const report=searchParams.get('reportId'),decision=searchParams.get('decisionId');if(isPM && requestedProject!=='ALL' && linkedDefect && report && decision)reportKeepNewCommands.read(requestedProject,report,decision,c.signal).then(r=>{if(!c.signal.aborted && r?.defect.id!==linkedDefect)setLinkedSourceError('Khiếm khuyết trong liên kết không khớp quyết định nguồn. Chưa lập FIELD.')}).catch(e=>{if(!c.signal.aborted)setLinkedSourceError(e.message)});return()=>c.abort()},[actorScope,requestedProject,linkedDefect,searchParams.get('reportId'),searchParams.get('decisionId')])
 
   // Dữ liệu danh sách nhiệm vụ đo đạc hiện trường từ CSDL Backend
   const [fieldTasks, setFieldTasks] = useState<FieldTask[]>([])
@@ -51,11 +56,12 @@ export const FieldTasks: React.FC = () => {
   }
 
   const loadProjects = useCallback(async () => {
-    setAvailableProjects([])
+    setAvailableProjects([]);setProjectsLoaded(false)
     try {
       const hubProjects = await projectService.fetchProjects()
       if (currentActor.current !== actorScope) return
       setAvailableProjects(hubProjects)
+      setProjectsLoaded(true)
     } catch (err: any) {
       if (currentActor.current !== actorScope) return
       console.error('Lỗi tải danh mục dự án từ CSDL:', err)
@@ -67,6 +73,8 @@ export const FieldTasks: React.FC = () => {
     const request = ++taskRequest.current
     const current = () => request === taskRequest.current && currentActor.current === actorScope
     setFieldTasks([])
+    if(!projectsLoaded){setIsLoadingTasks(false);return}
+    if(projId!=='ALL' && !availableProjects.some(p=>p.id===projId)){setIsLoadingTasks(false);setApiError('Dự án trong liên kết không thuộc danh mục được phép đọc; không tự chuyển dự án khác.');return}
     setIsLoadingTasks(true)
     setApiError(null)
     try {
@@ -83,10 +91,11 @@ export const FieldTasks: React.FC = () => {
     } finally {
       if (current()) setIsLoadingTasks(false)
     }
-  }, [selectedProjectId, actorScope])
+  }, [selectedProjectId, actorScope,projectsLoaded,availableProjects])
 
   const handleSelectProject = (projId: string) => {
     setSelectedProjectId(projId)
+    const next=new URLSearchParams(searchParams);next.set('projectId',projId);next.delete('defectId');next.delete('reportId');next.delete('decisionId');setSearchParams(next,{replace:true})
     const p = availableProjects.find((x) => x.id === projId)
     if (p) {
       showToast(`Đã lọc tuyến đường: ${p.code} - ${p.name}`, 'info')
@@ -95,10 +104,8 @@ export const FieldTasks: React.FC = () => {
     }
   }
 
-  useEffect(() => {
-    loadProjects()
-    loadTasks()
-  }, [loadProjects, loadTasks])
+  useEffect(() => {void loadProjects()},[loadProjects])
+  useEffect(() => {void loadTasks()},[loadTasks])
 
   return (
     <div className="space-y-4">
@@ -124,6 +131,7 @@ export const FieldTasks: React.FC = () => {
       )}
 
       {/* Thông báo lỗi nếu có */}
+      {linkedSourceError && <p role="alert" className="text-xs text-rose-700">{linkedSourceError}</p>}
       {apiError && (
         <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-2">
@@ -161,6 +169,8 @@ export const FieldTasks: React.FC = () => {
         isSupervisor={isSupervisor}
         selectedProjectId={selectedProjectId}
         projects={availableProjects}
+        linkedDefectId={linkedSourceError?'':linkedDefect}
+        onOpenFastTrack={defectId=>navigate(`${isSupervisor?'/sup':'/pm'}/fast-track?${new URLSearchParams({projectId:selectedProjectId,...(defectId?{defectId,open:'prepare'}:{})})}`)}
       />
     </div>
   )

@@ -15,6 +15,8 @@ import { PhotoLightboxModal } from '../../../components/common/PhotoLightboxModa
 import { ImageComparisonSlider } from '../../../components/common/ImageComparisonSlider'
 
 export interface MeasurementsTabProps {
+  linkedDefectId?:string
+  onOpenFastTrack?:(defectId?:string)=>void
   fieldTasks: FieldTask[]
   onRefreshTasks: (projId?: string) => Promise<void>
   highlightCode: string | null
@@ -33,7 +35,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   showToast,
   isSupervisor = false,
   selectedProjectId = 'ALL',
-  projects = []
+  projects = [],linkedDefectId='',onOpenFastTrack
 }) => {
   const createContext = React.useRef({project:selectedProjectId,active:true})
   if(createContext.current.project!==selectedProjectId)createContext.current={project:selectedProjectId,active:true}
@@ -94,7 +96,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const handleOpenCreateModal=()=>{
     if(isSupervisor||selectedProjectId==='ALL'){notify('Chọn một dự án thật trước khi tạo FIELD.','error');return}
     setCreateModalError(null);setIsCustomMethod(false);setCustomMethodText('');setCreateScope({project:selectedProjectId})
-    setSelectedDefectId(heldCreate?.input.defectId||'');setNewDefectCode(heldCreate?.input.defectId||'');setNewDefectName('');setNewMethod(heldCreate?.input.measurementScope||'');setNewNotes(heldCreate?.input.instructions||'');setSelectedCrewId(heldCreate?.input.assignedToUserId||'');setNewMeasurementType(heldCreate?.input.requiredMeasurementType||0);setNewDueAt(heldCreate?.input.dueAt||'');setIsCreateModalOpen(true)
+    const intended=heldCreate?.input.defectId || (availableDefects.some(d=>d.id===linkedDefectId)?linkedDefectId:''),source=availableDefects.find(d=>d.id===intended)
+    setSelectedDefectId(intended);setNewDefectCode(source?.code||'');setNewDefectName(source?.defect_type||'');setNewMethod(heldCreate?.input.measurementScope||'');setNewNotes(heldCreate?.input.instructions||'');setSelectedCrewId(heldCreate?.input.assignedToUserId||'');setNewMeasurementType(heldCreate?.input.requiredMeasurementType||0);setNewDueAt(heldCreate?.input.dueAt||'');setIsCreateModalOpen(true)
   }
 
   // Modal Ghi nhận số đo
@@ -267,6 +270,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
   return (
     <div className="rounded-[20px] overflow-hidden border border-[#E2E5E9] bg-white shadow-2xs">
+      {selectedProjectId!=='ALL' && onOpenFastTrack && <div className="flex flex-wrap items-center gap-3 p-3 border-b border-slate-200 text-xs"><p className="text-slate-600">{linkedDefectId?'Liên kết đang giữ khiếm khuyết nguồn; mở form để đọc và chọn trước khi tạo FIELD.':'FIELD là hồ sơ đo đạc; quyền thi công Fast Track phải đánh giá riêng.'}</p><button type="button" className="border rounded-lg px-3 py-2" onClick={()=>onOpenFastTrack(selectedDefectId || (availableDefects.some(d=>d.id===linkedDefectId)?linkedDefectId:undefined))}>Mở phương án &amp; Điều phối nhanh</button></div>}
       {/* Banner thông báo khi được chuyển tiếp từ Triage */}
       {highlightCode && (
         <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3 text-slate-800 text-xs">

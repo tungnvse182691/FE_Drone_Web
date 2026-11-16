@@ -1,12 +1,14 @@
 import { useAuthStore } from '../../../store/authStore'
 import { exportError } from '../../../api/services/projectExportService'
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ProjectOption } from './types'
 import { fastTrackService } from '../../../api/services/fastTrackService'
 import { useFastTrackPolicy } from './useFastTrackPolicy'
 import { useFastTrackDispatch } from './useFastTrackDispatch'
 
 export const useFastTrackState = (isSupervisor = false) => {
+  const [params,setParams]=useSearchParams(),requestedProject=params.get('projectId') || ''
   const epoch=useAuthStore(s=>s.authEpoch)
   const [projectError,setProjectError]=useState('')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -26,7 +28,9 @@ export const useFastTrackState = (isSupervisor = false) => {
       if (!isMounted) return
       if (projs.length > 0) {
         setProjects(projs)
-        setSelectedProjectId(projs[0].id)
+        const requested=requestedProject ? projs.find(p=>p.id===requestedProject):projs[0]
+        if(!requested){setProjectError('Dự án trong liên kết không thuộc danh sách được phép đọc.');return}
+        setSelectedProjectId(requested.id)
       } else {
         setProjects([])
         setSelectedProjectId('')
@@ -35,14 +39,16 @@ export const useFastTrackState = (isSupervisor = false) => {
     return () => {
       isMounted = false
     }
-  }, [epoch])
+  }, [epoch,requestedProject])
 
   const policy = useFastTrackPolicy(selectedProjectId, showToast)
   const dispatch = useFastTrackDispatch(selectedProjectId, showToast)
 
   const handleProjectChange = (newProjectId: string) => {
     setSelectedProjectId(newProjectId)
+    const next=new URLSearchParams(params);next.set('projectId',newProjectId);if(newProjectId!==selectedProjectId){next.delete('defectId');next.delete('itemId');next.delete('open')}setParams(next,{replace:true})
   }
+  useEffect(()=>{if(params.get('open')!=='prepare' || !selectedProjectId || selectedProjectId!==requestedProject || dispatch.dispatchLoading)return;const defect=params.get('defectId'),item=params.get('itemId'),row=dispatch.defects.find(r=>item?r.itemId===item&&(!defect||r.defectId===defect):r.defectId===defect||r.id===defect);if(row){dispatch.setDetailDefect(row);const next=new URLSearchParams(params);next.delete('open');setParams(next,{replace:true})}},[params,selectedProjectId,requestedProject,dispatch.dispatchLoading,dispatch.defects])
 
   return {
     projectError,
