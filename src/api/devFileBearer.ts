@@ -13,7 +13,7 @@ export function devFileBearerEndpoint(method:string,url:string,baseURL='') {
   if(baseURL && !baseURL.startsWith('/')){try{const base=new URL(baseURL);if(!['http:','https:'].includes(base.protocol) || !['localhost','127.0.0.1','[::1]'].includes(base.hostname))return false}catch{return false}}
   const path=url.replace(/^\/api\/v1(?=\/)/,'')
   const id='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
-  return method.toUpperCase()==='POST' && (path==='/uploads' || new RegExp(`^/uploads/${id}/(part-urls|complete)$`).test(path)) ||
+  return method.toUpperCase()==='POST' && (path==='/uploads' || new RegExp(`^/uploads/${id}/(part-urls|complete)$`).test(path) || new RegExp(`^/projects/${id}/warranties$`).test(path)) ||
     method.toUpperCase()==='GET' && (new RegExp(`^/uploads/${id}$`).test(path) || new RegExp(`^/files/${id}(/content)?$`).test(path))
 }
 export function clearDevFileBearer() {held=null;generation++;pending?.abort();pending=null}

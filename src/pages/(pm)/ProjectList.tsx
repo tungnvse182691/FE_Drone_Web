@@ -195,6 +195,7 @@ export const ProjectList: React.FC = () => {
       setIsModalOpen(false)
       showToast(`Đã tạo dự án [${created.code}]. Phân công PM được đọc từ máy chủ.`)
       await loadProjects()
+      if(current())navigate(`${basePath}/projects/${created.id}`)
     } catch (err: any) {
       if (!current()) return
       const pending = projectService.pendingProjectCreate()

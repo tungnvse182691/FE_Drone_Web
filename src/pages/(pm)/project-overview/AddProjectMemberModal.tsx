@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuthStore } from '../../../store/authStore'
 import { X, UserPlus, Search, ShieldCheck, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { personnelService } from '../../../api/services/personnelService'
 
@@ -25,6 +26,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   onMemberAdded,
   showToast
 }) => {
+  const epoch=useAuthStore(s=>s.authEpoch),scope=`${epoch}:${projectId}:${isOpen}`,latest=useRef(scope),request=useRef(0);latest.current=scope
   const [selectedRole, setSelectedRole] = useState<'OPERATOR' | 'CREW'>('OPERATOR')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,54 +34,56 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  let held:ReturnType<typeof personnelService.pendingProjectMember>=null,journalError=''
+  try{held=personnelService.pendingProjectMember?.(projectId)||null}catch(e){journalError=(e as Error).message}
 
-  const loadEligible = useCallback(async () => {
+  const loadEligible = useCallback(async (signal?:AbortSignal) => {
     if (!isOpen || !projectId) return
+    const ticket=++request.current,start=scope,current=()=>!signal?.aborted && latest.current===start && request.current===ticket
     setLoading(true)
     setErrorMsg(null)
-    setSelectedUserId(null)
+    setSelectedUserId(held?.userId || null)
     try {
       const data = await personnelService.fetchEligibleProjectMembers(projectId, {
         role: selectedRole,
         search: searchKeyword.trim() || undefined
-      })
-      setEligibleMembers(data.items || [])
+      },signal)
+      if(current())setEligibleMembers(data.items || [])
     } catch (err: any) {
-      console.error('Lỗi khi tải danh sách nhân sự đủ điều kiện:', err)
       const errText = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Không thể tải danh sách nhân sự đủ điều kiện từ máy chủ'
-      setErrorMsg(errText)
-      setEligibleMembers([])
+      if(current()){setErrorMsg(errText);setEligibleMembers([])}
     } finally {
-      setLoading(false)
+      if(current())setLoading(false)
     }
-  }, [isOpen, projectId, selectedRole, searchKeyword])
+  }, [isOpen, projectId, selectedRole, searchKeyword,epoch])
 
   useEffect(() => {
-    loadEligible()
+    setIsSubmitting(false)
+    const controller=new AbortController();setEligibleMembers([]);void loadEligible(controller.signal)
+    return()=>controller.abort()
   }, [loadEligible])
 
   if (!isOpen) return null
 
   const handleAddMember = async () => {
-    if (!selectedUserId || isSubmitting) return
+    const userId=held?.userId || selectedUserId
+    if (!userId || isSubmitting || journalError) return
+    const start=scope,current=()=>latest.current===start && useAuthStore.getState().authEpoch===epoch
     setIsSubmitting(true)
     setErrorMsg(null)
     try {
-      const selectedMember = eligibleMembers.find((m) => m.userId === selectedUserId)
-      await personnelService.addProjectMember(projectId, selectedUserId)
-      showToast(`Đã thêm thành công nhân sự [${selectedMember?.displayName || 'Nhân sự'}] vào dự án!`)
+      const member=await personnelService.addProjectMember(projectId, userId)
+      if(!current())return
+      showToast(`Đã GET xác nhận phân công [${member.displayName || 'Nhân sự'}] vào dự án.`)
       await onMemberAdded()
-      onClose()
+      if(current())onClose()
     } catch (err: any) {
-      console.error('Lỗi khi thêm thành viên vào dự án:', err)
-      if (err?.response?.status === 409) {
-        setErrorMsg('Nhân sự này đã là thành viên đang hoạt động trong dự án (409 Conflict).')
-      } else {
+      if(current()){
         const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Lỗi khi thêm nhân sự vào dự án'
-        setErrorMsg(`❌ ${msg}`)
+        setErrorMsg(`${err?.response?.status?`HTTP ${err.response.status} ${err.response.data?.code || ''}: `:''}${msg}`)
       }
     } finally {
-      setIsSubmitting(false)
+      if(current())setIsSubmitting(false)
     }
   }
 
@@ -118,7 +122,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
               <button
                 type="button"
-                onClick={() => setSelectedRole('OPERATOR')}
+                disabled={!!held || isSubmitting} onClick={() => setSelectedRole('OPERATOR')}
                 className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   selectedRole === 'OPERATOR'
                     ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
@@ -129,7 +133,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedRole('CREW')}
+                disabled={!!held || isSubmitting} onClick={() => setSelectedRole('CREW')}
                 className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                   selectedRole === 'CREW'
                     ? 'bg-white text-slate-900 shadow-2xs border border-slate-200'
@@ -146,14 +150,17 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo họ tên hoặc ID nhân sự..."
+              placeholder="Tìm kiếm theo họ tên nhân sự..."
               value={searchKeyword}
+              disabled={!!held || isSubmitting}
               onChange={(e) => setSearchKeyword(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C9A227] focus:border-[#C9A227]"
             />
           </div>
 
           {/* Error notice */}
+          {journalError && <p role="alert" className="text-xs text-rose-700">{journalError}</p>}
+          {held && <p role="status" className="text-xs text-slate-600">Đang giữ lệnh phân công {held.receipt?.displayName || 'nhân sự đã chọn'}. {held.receipt?'Đã có biên nhận; chỉ GET đối chiếu.':'Tiếp tục cùng người dùng và key đã gửi; không đổi ý định.'}</p>}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -186,7 +193,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                   return (
                     <div
                       key={member.userId}
-                      onClick={() => setSelectedUserId(member.userId)}
+                      onClick={() => {if(!held && !isSubmitting)setSelectedUserId(member.userId)}}
                       className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
                           ? 'border-[#C9A227] bg-[#C9A227]/10 ring-1 ring-[#C9A227]'
@@ -208,7 +215,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
                             {member.displayName}
                           </div>
                           <div className="text-[11px] text-slate-500 font-mono">
-                            ID: {member.userId.slice(0, 8)}... • Vai trò: {member.role}
+                            Vai trò: {member.role}
                           </div>
                         </div>
                       </div>
@@ -248,7 +255,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
             <button
               type="button"
               onClick={handleAddMember}
-              disabled={!selectedUserId || isSubmitting}
+              disabled={(!selectedUserId && !held) || isSubmitting || !!journalError}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
                 selectedUserId && !isSubmitting
                   ? 'bg-[#C9A227] hover:bg-[#B38E1E] text-white'
@@ -263,7 +270,7 @@ export const AddProjectMemberModal: React.FC<AddProjectMemberModalProps> = ({
               ) : (
                 <>
                   <UserPlus className="w-3.5 h-3.5" />
-                  <span>Thêm Vào Dự Án</span>
+                  <span>{held?'Đối chiếu phân công đang chờ':'Thêm Vào Dự Án'}</span>
                 </>
               )}
             </button>

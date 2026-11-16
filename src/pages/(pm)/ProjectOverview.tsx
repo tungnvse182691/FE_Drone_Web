@@ -17,6 +17,7 @@ import { ProjectSegmentsTable } from './project-overview/ProjectSegmentsTable'
 import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
+import { ProjectWarrantyCard } from './project-overview/ProjectWarrantyCard'
 
 export type { Segment, ProjectMember }
 
@@ -251,6 +252,7 @@ export const ProjectOverview: React.FC = () => {
           />
 
           <ProjectCrsProfileCard key={projectId} projectId={projectId} />
+          <ProjectWarrantyCard key={`sources:${authEpoch}:${projectId}`} projectId={projectId} onOpenCoverage={()=>navigate(`${basePath}/fast-track?projectId=${encodeURIComponent(projectId)}`)}/>
         </div>
       </div>
 

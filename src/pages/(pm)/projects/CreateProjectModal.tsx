@@ -287,7 +287,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-500 leading-normal">
-              Đính kèm các biên bản nghiệm thu hoàn thành công trình để làm căn cứ đối soát hồ sơ gốc.
+              Sau khi GET xác nhận tạo dự án, mở chi tiết để chuẩn bị tuyến, Crew, tài liệu và bảo hành. Dữ liệu ngày bàn giao không thay thế tệp đã xác minh hoặc xác nhận độ phủ; API hiện chưa có thao tác gắn bổ sung tệp vào hồ sơ bàn giao đã tạo.
             </p>
 
             <div className="space-y-2">

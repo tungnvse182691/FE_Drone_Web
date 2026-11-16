@@ -409,17 +409,18 @@ export const personnelService = {
       search?: string
       limit?: number
       cursor?: string
-    }
+    }, signal?: AbortSignal
   ): Promise<{ items: { userId: string; displayName: string; role: string }[]; nextCursor?: string }> {
     const epoch = useAuthStore.getState().authEpoch
     const items: { userId: string; displayName: string; role: string }[] = []
     const seen = new Set<string>()
     let cursor = params.cursor
     do {
-      const res = await apiClient.get(`/projects/${projectId}/members/eligible`, { params: { ...params, limit: 100, cursor } })
-      if (epoch !== useAuthStore.getState().authEpoch) throw new Error('Phiên đã thay đổi; bỏ danh sách eligible cũ.')
+      const res = await apiClient.get(`/projects/${projectId}/members/eligible`, { params: { ...params, limit: 100, cursor }, signal })
+      if (signal?.aborted || epoch !== useAuthStore.getState().authEpoch) throw new Error('Phiên đã thay đổi; bỏ danh sách eligible cũ.')
       if (!Array.isArray(res.data?.items)) throw new Error('Danh sách eligible trả sai contract.')
-      items.push(...res.data.items)
+      if(res.data.items.some((r:any)=>!r.userId || r.displayName!=null&&typeof r.displayName!=='string' || r.role!==params.role || items.some(v=>v.userId===r.userId)) || new Set(res.data.items.map((r:any)=>r.userId)).size!==res.data.items.length)throw new Error('Danh sách nhân sự sai vai trò hoặc bị trùng; chưa chọn thành viên.')
+      items.push(...res.data.items.map((r:any)=>({...r,displayName:r.displayName || 'Nhân sự chưa có tên'})))
       cursor = res.data.nextCursor || undefined
       if (cursor && seen.has(cursor)) throw new Error('Cursor eligible bị lặp.')
       if (cursor) seen.add(cursor)
@@ -433,6 +434,14 @@ export const personnelService = {
    * Header bắt buộc: Idempotency-Key
    * Lỗi 409 Conflict: thành viên đã active
    */
+  pendingProjectMember(projectId:string):{userId:string;key:string;receipt?:any;uncertain?:boolean}|null {
+    const actor=useAuthStore.getState().user
+    if(actor?.role!==RoleCode.PROJECT_MANAGER)return null
+    const raw=sessionStorage.getItem(`rg_member_add_${actor.id}_${projectId}`)
+    if(!raw)return null
+    const held=JSON.parse(raw);if(!held.userId || !held.key)throw new Error('Journal phân công nhân sự thiếu tham chiếu; giữ nguyên để đối chiếu.')
+    return held
+  },
   async addProjectMember(
     projectId: string,
     userId: string,
@@ -457,8 +466,9 @@ export const personnelService = {
       }
       const members = await projectService.fetchProjectMembers(projectId)
       current()
-      const member = members.find(item => item.userId === userId && item.status === 'ACTIVE')
+      const member = members.find(item => item.userId === userId && item.status === 'ACTIVE' && ['CREW','OPERATOR'].includes(item.role))
       if (!member) throw new Error('Đã nhận biên nhận nhưng chưa đọc lại được membership ACTIVE; không POST thêm.')
+      if(command.receipt?.userId && command.receipt.userId!==member.userId || command.receipt?.membershipId && command.receipt.membershipId!==member.membershipId || command.receipt?.role && command.receipt.role!==member.role)throw new Error('GET thành viên không khớp biên nhận; giữ journal và chỉ đọc lại.')
       sessionStorage.removeItem(journalKey)
       return member
     } catch (error: any) {
@@ -467,7 +477,8 @@ export const personnelService = {
         (status === 403 && code === 'access_forbidden') ||
         (status === 404 && ['project_not_found', 'identity_user_not_found'].includes(code)) ||
         (status === 409 && ['duplicate_request', 'idempotency_key_reused'].includes(code))
-      if (!command.receipt && knownRejection) sessionStorage.removeItem(journalKey)
+      if(!status || status>=500 || status===408){command.uncertain=true;sessionStorage.setItem(journalKey,JSON.stringify(command))}
+      if (!command.receipt && !command.uncertain && knownRejection) sessionStorage.removeItem(journalKey)
       throw error
     } finally { memberWrites.delete(journalKey) }
 
