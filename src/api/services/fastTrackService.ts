@@ -229,7 +229,9 @@ export const fastTrackService = {
     if(!pipeline) {
       const {repairPlan,checklistVersion,reason,...scope}=input
       const body={defectId:defect.id,defectVersion:defect.version,obligations:[{kind:'FORMAL_REPAIR',mandatory:true,scope:{...scope,physicalRoadId:road.roadSectionId,routeVersionId:road.currentVersionId},reason}],reason}
-      const pkg=await fastTrackCommand(p,`package:${defect.id}`,`/projects/${p}/repair-packages`,body,async()=>`"${defect.version}"`,async receipt=> {
+      const held=fastTrackPending(p,`package:${defect.id}`),original=held?.body as typeof body|undefined
+      if(original && !held?.receipt && (original.defectId!==body.defectId || original.reason!==body.reason || JSON.stringify(original.obligations)!==JSON.stringify(body.obligations)))throw new Error('Giữ nguyên phạm vi và căn cứ của package chưa rõ kết quả; không tạo ý định khác.')
+      const pkg=await fastTrackCommand(p,`package:${defect.id}`,`/projects/${p}/repair-packages`,original || body,async()=>`"${defect.version}"`,async receipt=> {
         if(receipt?.projectId!==p || receipt.defectId!==defect.id || !receipt.version || receipt.unresolvedMandatoryObligationIds?.length!==1)throw new Error('Receipt tạo gói thiếu nghĩa vụ. Giữ receipt, không tạo lại.')
         if(!(await repairWorkflowService.packages(p)).some(r=>r.id===receipt.id))throw new Error('Chưa đọc lại được gói đã tạo.')
         return receipt
@@ -247,6 +249,7 @@ export const fastTrackService = {
     proofs.push({packageId:pkg.id,checklistVersion:input.checklistVersion,receipt:proposed});localStorage.setItem(proofKey,JSON.stringify(proofs))
     localStorage.removeItem(storage)
     localStorage.removeItem(fastTrackStorage(p,`propose:${pkg.id}`))
+    return {packageId:pkg.id,itemId:proposed.id}
   },
   async executeDispatch(payload: DispatchPayload): Promise<{success: boolean; message: string; count: number}> {
     const p=payload.projectId

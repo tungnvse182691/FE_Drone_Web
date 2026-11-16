@@ -11,7 +11,7 @@ export interface RepairHistory {
   reviewRequests: Array<{id: string; role: string; reason: string; at: string}>
 }
 export interface RepairDraft {
-  defectId: string; physicalRoadId: string; routeVersionId: string; segmentSetId: string
+  defectId: string; physicalRoadId: string; routeVersionId: string; segmentSetId: string | null
   fromMeters: number; toMeters: number; offsetFromMeters: number; offsetToMeters: number
   reason: string; repairPlan: string; checklistVersion: string
 }
@@ -27,12 +27,13 @@ export interface RoadCoverage {
   history: Array<{id: string; applicableFromUtc: string; applicableToUtc: string; confirmedAtUtc: string; reason?: string; provenance?: string}>
 }
 interface Creation {
+  uncertain?:boolean
   input: RepairDraft; createKey: string; proposeKey: string
   createBody: unknown; version: string; packageReceived?: boolean
   receipt?: RepairPackage & { unresolvedMandatoryObligationIds: string[] }
   proposalReceived?: boolean; proposalBody?: unknown
 }
-type Command = { path: string; key: string; version: string; body: { reason: string }; received?: boolean }
+type Command = { path: string; key: string; version: string; body: { reason: string }; received?: boolean; receipt?:RepairItem }
 const busy = new Set<string>()
 function identity() {
   const s = useAuthStore.getState()
@@ -79,16 +80,17 @@ export const repairWorkflowService = {
     if (useAuthStore.getState().user?.role !== 'PROJECT_MANAGER') throw new Error('Chỉ PM được tạo gói và đề xuất hạng mục.')
     if (busy.has(k)) throw new Error('Đang đối chiếu gói sửa chữa.')
     busy.add(k)
+    let held:Creation|null=null
     try {
-      let held = this.pendingCreation(p)
+      held = this.pendingCreation(p)
       if (held && JSON.stringify(held.input) !== JSON.stringify(input)) throw new Error('Giữ nguyên dữ liệu gói đang chờ; không tạo key/body khác.')
       if (!held) {
-        if (!input.reason.trim() || !input.repairPlan.trim() || !input.checklistVersion.trim() || !input.physicalRoadId || !input.segmentSetId ||
+        if (!input.reason.trim() || !input.repairPlan.trim() || !input.checklistVersion.trim() || !input.physicalRoadId ||
           ![input.fromMeters, input.toMeters, input.offsetFromMeters, input.offsetToMeters].every(Number.isFinite) || input.fromMeters < 0 || input.toMeters <= input.fromMeters || input.offsetToMeters <= input.offsetFromMeters) throw new Error('Nhập đủ phạm vi, lý do, phương án và phiên bản checklist; mốc kết thúc phải lớn hơn mốc bắt đầu.')
         const r = await apiClient.get(`/projects/${p}/defects/${input.defectId}`); active(s)
         if (r.data?.id !== input.defectId || r.data.projectId !== p || r.data.roadSectionVersionId !== input.routeVersionId || !r.data.version || r.headers?.etag !== `"${r.data.version}"`) throw new Error('Defect/tuyến/ETag không còn khớp. Đọc lại nguồn.')
         const {reason, physicalRoadId, routeVersionId, segmentSetId, fromMeters, toMeters, offsetFromMeters, offsetToMeters} = input
-        const body = {defectId: input.defectId, defectVersion: r.data.version, obligations: [{kind: 'FORMAL_REPAIR', mandatory: true, scope: {physicalRoadId, routeVersionId, segmentSetId, fromMeters, toMeters, offsetFromMeters, offsetToMeters}, reason}], reason}
+        const body = {defectId: input.defectId, defectVersion: r.data.version, obligations: [{kind: 'FORMAL_REPAIR', mandatory: true, scope: {physicalRoadId, routeVersionId, segmentSetId:segmentSetId || null, fromMeters, toMeters, offsetFromMeters, offsetToMeters}, reason}], reason}
         held = {input, createBody: body, version: r.data.version, createKey: crypto.randomUUID(), proposeKey: crypto.randomUUID()}
         sessionStorage.setItem(k, JSON.stringify(held))
       }
@@ -113,6 +115,9 @@ export const repairWorkflowService = {
       if (!items.some(row => row.obligationId === receipt.unresolvedMandatoryObligationIds[0])) throw new Error('Đã nhận đề xuất nhưng chưa đọc lại được hạng mục.')
       sessionStorage.removeItem(k)
       return receipt.id
+    } catch(error:any) {
+      if(held && !held.packageReceived && !held.receipt){const status=error.response?.status;if(!status || status>=500 || status===408){held.uncertain=true;sessionStorage.setItem(k,JSON.stringify(held))}else if(!held.uncertain && status>=400 && status<500)sessionStorage.removeItem(k)}
+      throw error
     } finally { busy.delete(k) }
   },
   packages(p: string, signal?: AbortSignal) { return workflowCollection<RepairPackage>(`/projects/${p}/repair-packages`, p, signal) },
@@ -162,10 +167,11 @@ export const repairWorkflowService = {
         const r = await apiClient.post(path, c.body, { headers: { 'Idempotency-Key': c.key, 'If-Match': `"${c.version}"` } })
         active(s)
         // Persist receipt before DTO validation/readback: subsequent calls must only GET.
-        c.received = true; sessionStorage.setItem(storageKey, JSON.stringify(c))
+        c.received = true;c.receipt=r.data; sessionStorage.setItem(storageKey, JSON.stringify(c))
         validate(r.data, p, id)
       }
       const row = await this.detail(p, pkg, id); active(s)
+      if(action==='approve' && row.state!=='ReadyToAssign' || action==='final-confirmation' && row.state!=='Confirmed' || c.receipt && (row.id!==c.receipt.id || row.version!==c.receipt.version || row.state!==c.receipt.state))throw new Error('GET chưa khớp quyết định đã nhận; giữ biên nhận và chỉ đọc lại.')
       sessionStorage.removeItem(storageKey)
       return row
     } finally { busy.delete(storageKey) }

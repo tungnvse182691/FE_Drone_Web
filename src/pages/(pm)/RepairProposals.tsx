@@ -5,7 +5,6 @@ import { ProposalStats } from './repair-proposals/ProposalStats'
 import { ProposalTable } from './repair-proposals/ProposalTable'
 import { ProposalModals } from './repair-proposals/ProposalModals'
 import { useRepairProposalsState } from './repair-proposals/useRepairProposalsState'
-import { AVAILABLE_ROUTES, DEFECTS_BY_SEGMENT } from './repair-proposals/mockData'
 import type {
   ProposalWorkPackage,
   UnassignedDefectItem,
@@ -13,14 +12,12 @@ import type {
   RouteOption,
 } from './repair-proposals/types'
 
-// Re-export types and constants for 100% backward-compatibility
 export type {
   ProposalWorkPackage,
   UnassignedDefectItem,
   RouteSegmentOption,
   RouteOption,
 }
-export { AVAILABLE_ROUTES, DEFECTS_BY_SEGMENT }
 
 export const RepairProposals: React.FC = () => {
   const {
@@ -77,6 +74,11 @@ export const RepairProposals: React.FC = () => {
     stats,
     filteredPackages,
     paginatedPackages,
+    projects,
+    currentProject,
+    availableRoutes,
+    projectMembers,
+    apiError,loading,createApi,
   } = useRepairProposalsState()
 
   return (
@@ -98,9 +100,13 @@ export const RepairProposals: React.FC = () => {
         totalPackagesCount={packages.length}
         isPM={isPM}
         onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        projectName={currentProject?.name}
+        projectCode={currentProject?.code}
       />
 
       {/* 2. STATS SUMMARY CARDS */}
+      {apiError&&<p role="alert" className="text-sm text-rose-700 bg-rose-50 p-3 rounded-xl">{apiError}</p>}
+      {loading&&<p role="status" className="text-xs text-slate-500">Đang đọc gói và trạng thái hạng mục từ máy chủ…</p>}
       <ProposalStats
         stats={stats}
         activeFilterTab={activeFilterTab}
@@ -109,6 +115,7 @@ export const RepairProposals: React.FC = () => {
 
       {/* 3. PACKAGES TABLE & ACTION HUB */}
       <ProposalTable
+        onReadPackage={setSelectedPackageForDetail}
         searchTerm={searchTerm}
         onSearchChange={(val) => {
           setSearchTerm(val)
@@ -137,6 +144,7 @@ export const RepairProposals: React.FC = () => {
         onScaleFilterChange={setAdvScale}
         advContractor={advContractor}
         onContractorFilterChange={setAdvContractor}
+        projects={projects}
         onResetFilters={() => {
           setAdvRoute('ALL')
           setAdvScale('ALL')
@@ -148,13 +156,14 @@ export const RepairProposals: React.FC = () => {
 
       {/* 4. MODALS HUB */}
       <ProposalModals
+        createApi={createApi}
         isCreateModalOpen={isCreateModalOpen}
         setIsCreateModalOpen={setIsCreateModalOpen}
         formPackageName={formPackageName}
         setFormPackageName={setFormPackageName}
         formRouteId={formRouteId}
         handleRouteChange={handleRouteChange}
-        availableRoutes={AVAILABLE_ROUTES}
+        availableRoutes={availableRoutes}
         formSegmentId={formSegmentId}
         handleSegmentChange={handleSegmentChange}
         currentRouteSegments={currentRouteSegments}
@@ -171,6 +180,7 @@ export const RepairProposals: React.FC = () => {
         handleUpdateDefectSolution={handleUpdateDefectSolution}
         modalCalculations={modalCalculations}
         handleSaveDraft={handleSaveDraft}
+        projectMembers={projectMembers}
         isPDFPreviewModalOpen={isPDFPreviewModalOpen}
         setIsPDFPreviewModalOpen={setIsPDFPreviewModalOpen}
         packages={packages}

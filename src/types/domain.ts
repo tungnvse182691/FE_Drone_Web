@@ -798,7 +798,8 @@ export interface ProposalWorkPackage {
   created_by_initials: string
   created_by_role: string
   created_at: string
-  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED'
+  status: 'DRAFT' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'READY_TO_ASSIGN' | 'UNPROPOSED'
+  defect_id?:string
   status_label: string
   approved_items: number
   total_items: number

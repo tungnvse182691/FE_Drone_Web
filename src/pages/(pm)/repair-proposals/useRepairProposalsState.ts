@@ -1,332 +1,52 @@
-import { useState, useMemo, useEffect } from 'react'
-import { useAuthStore } from '../../../store/authStore'
-import { RoleCode } from '../../../types/enums'
-import { repairService } from '../../../api/services'
-import { AVAILABLE_ROUTES, DEFECTS_BY_SEGMENT } from './mockData'
-import type { ProposalWorkPackage, UnassignedDefectItem, RepairItemDetail } from './types'
-
-export function useRepairProposalsState() {
-  const { user } = useAuthStore()
-  const isSupervisor = user?.role === RoleCode.SUPERVISOR
-  const isPM = !isSupervisor
-  const basePath = isSupervisor ? '/sup' : '/pm'
-
-  const [packages, setPackages] = useState<ProposalWorkPackage[]>(() => repairService.getPackages())
-
-  useEffect(() => {
-    const handleStateChange = () => {
-      setPackages(repairService.getPackages())
-    }
-    window.addEventListener('roadguard_state_change', handleStateChange)
-    return () => window.removeEventListener('roadguard_state_change', handleStateChange)
-  }, [])
-
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeFilterTab, setActiveFilterTab] = useState<'ALL' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'DRAFT'>('ALL')
-  const [isPDFPreviewModalOpen, setIsPDFPreviewModalOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-
-  const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 10
-
-  const [advRoute, setAdvRoute] = useState<string>('ALL')
-  const [advScale, setAdvScale] = useState<string>('ALL')
-  const [advContractor, setAdvContractor] = useState<string>('ALL')
-
-  const [selectedPackageForDetail, setSelectedPackageForDetail] = useState<ProposalWorkPackage | null>(null)
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg)
-    setTimeout(() => setToastMessage(null), 3800)
-  }
-
-  // MODAL TẠO GÓI ĐỀ XUẤT MỚI STATE
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [formRouteId, setFormRouteId] = useState('QL1A_PK04')
-  const [formSegmentId, setFormSegmentId] = useState('seg-02')
-  const [formPackageName, setFormPackageName] = useState('Khắc phục hằn lún bánh xe & trám nứt Km 1028 - Km 1033')
-  const [formContractor, setFormContractor] = useState('Đội thi công sửa chữa Hoàng Hải 01')
-  const [formDurationDays, setFormDurationDays] = useState(3)
-  const [formTechnicalMethod, setFormTechnicalMethod] = useState('')
-
-  const currentRoute = useMemo(() => {
-    return AVAILABLE_ROUTES.find((r) => r.id === formRouteId) || AVAILABLE_ROUTES[0]
-  }, [formRouteId])
-
-  const currentRouteSegments = useMemo(() => {
-    return currentRoute.segments
-  }, [currentRoute])
-
-  const isAllSegments = formSegmentId === 'ALL'
-
-  const currentSegment = useMemo(() => {
-    if (isAllSegments) {
-      const firstSeg = currentRouteSegments[0]
-      const lastSeg = currentRouteSegments[currentRouteSegments.length - 1]
-      return {
-        id: 'ALL',
-        code: 'TOÀN TUYẾN',
-        name: `Toàn tuyến (${currentRoute.name})`,
-        chainage_start: firstSeg?.chainage_start || 'Km 1024+000',
-        chainage_end: lastSeg?.chainage_end || 'Km 1045+500',
-        chainage_display: `${firstSeg?.chainage_start || 'Km 1024+000'} - ${lastSeg?.chainage_end || 'Km 1045+500'}`
-      }
-    }
-    return (
-      currentRouteSegments.find((s) => s.id === formSegmentId) ||
-      currentRouteSegments[0]
-    )
-  }, [currentRouteSegments, formSegmentId, isAllSegments, currentRoute.name])
-
-  const [unassignedDefects, setUnassignedDefects] = useState<UnassignedDefectItem[]>(
-    DEFECTS_BY_SEGMENT['seg-02'] || []
-  )
-
-  const handleRouteChange = (newRouteId: string) => {
-    setFormRouteId(newRouteId)
-    const targetRoute = AVAILABLE_ROUTES.find((r) => r.id === newRouteId) || AVAILABLE_ROUTES[0]
-    setFormSegmentId('ALL')
-    const allDefects = targetRoute.segments.flatMap((s) => DEFECTS_BY_SEGMENT[s.id] || [])
-    setUnassignedDefects(allDefects)
-    setFormPackageName(`Bảo trì mặt đường & xử lý hư hỏng toàn tuyến ${targetRoute.name}`)
-  }
-
-  const handleSegmentChange = (newSegmentId: string) => {
-    setFormSegmentId(newSegmentId)
-    if (newSegmentId === 'ALL') {
-      const allDefects = currentRouteSegments.flatMap((s) => DEFECTS_BY_SEGMENT[s.id] || [])
-      setUnassignedDefects(allDefects)
-      setFormPackageName(`Bảo trì mặt đường & xử lý hư hỏng toàn tuyến ${currentRoute.name}`)
-    } else {
-      const targetSeg = currentRouteSegments.find((s) => s.id === newSegmentId) || currentRouteSegments[0]
-      setUnassignedDefects(DEFECTS_BY_SEGMENT[newSegmentId] || [])
-      setFormPackageName(`Bảo trì mặt đường & xử lý hư hỏng ${targetSeg.chainage_display}`)
-    }
-  }
-
-  const modalCalculations = useMemo(() => {
-    const selected = unassignedDefects.filter((d) => d.selected)
-    const count = selected.length
-    const totalArea = selected.reduce((sum, item) => sum + item.area_m2, 0).toFixed(2)
-    const totalLength = count * 15
-    return {
-      count,
-      totalArea,
-      totalLength,
-      description: count > 0 ? `${totalArea} m² cào bóc / ${totalLength}m trám` : 'Chưa chọn khiếm khuyết'
-    }
-  }, [unassignedDefects])
-
-  const handleToggleDefect = (id: string) => {
-    setUnassignedDefects((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, selected: !d.selected } : d))
-    )
-  }
-
-  const handleUpdateDefectSolution = (defectId: string, solution: string) => {
-    setUnassignedDefects((prev) =>
-      prev.map((d) => (d.id === defectId ? { ...d, custom_solution: solution } : d))
-    )
-  }
-
-  const handleSaveDraft = (submitDirectly: boolean = false) => {
-    const selectedDefects = unassignedDefects.filter((d) => d.selected)
-    if (selectedDefects.length === 0) {
-      showToast('Vui lòng chọn ít nhất 1 khiếm khuyết để khởi tạo gói đề xuất!')
-      return
-    }
-
-    const newPkgId = `pkg-${Date.now()}`
-    const newPkgCode = `PKG-2026-${Math.floor(10 + Math.random() * 90)}`
-
-    // Sinh các RepairItemDetail thật sự: Ưu tiên phương án kỹ thuật PM tự gõ
-    const createdItems: RepairItemDetail[] = selectedDefects.map((def, idx) => {
-      const solution =
-        def.custom_solution && def.custom_solution.trim().length > 0
-          ? def.custom_solution.trim()
-          : def.area_m2 >= 1.0
-          ? 'Cào bóc 5cm & thảm lại BTN C12.5'
-          : 'Trám vá nhựa nguội khẩn cấp'
-
-      return {
-        id: `item-${newPkgId}-${idx + 1}`,
-        item_code: `#ITEM-${String(idx + 1).padStart(2, '0')}`,
-        defect_code: def.code,
-        chainage: def.stationing,
-        lane_info: def.lane_detail,
-        defect_title: def.title,
-        defect_measurements: `Diện tích ${def.area_m2} m² • Sâu ${def.depth_cm}cm`,
-        solution_title: solution,
-        solution_standard: def.standard || 'Tiêu chuẩn TCVN 8819',
-        volume_display: `${def.area_m2} m²`,
-        volume_sub: `Sâu ${def.depth_cm} cm`,
-        area_m2: def.area_m2,
-        status: 'PENDING',
-        status_label: 'CHỜ DUYỆT',
-        assigned_crew: formContractor,
-        image_url: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
-        ortho_code: `IMG_${def.code}.JPG`,
-        gps_coords: '15.8290, 108.2180',
-        resolution: '4K • 3840x2160'
-      }
-    })
-
-    const newPackage: ProposalWorkPackage = {
-      id: newPkgId,
-      code: newPkgCode,
-      title: formPackageName,
-      route_id: currentRoute.id,
-      route_name: currentRoute.name,
-      chainage_start: currentSegment.chainage_start || '',
-      chainage_end: currentSegment.chainage_end || '',
-      chainage_display: isAllSegments
-        ? `${currentSegment.chainage_display} (Toàn tuyến)`
-        : (currentSegment.chainage_display || ''),
-      segments_count: isAllSegments ? currentRouteSegments.length : 1,
-      defect_count: selectedDefects.length,
-      defect_summary: isAllSegments
-        ? `${selectedDefects.length} điểm hư hỏng gom mới (Toàn tuyến)`
-        : `${selectedDefects.length} điểm hư hỏng gom mới (${currentSegment.code})`,
-      technical_scope: `Cào bóc thảm: ${modalCalculations.totalArea} m²`,
-      material_scope: 'Vật tư theo phương án kỹ thuật',
-      technical_method: formTechnicalMethod.trim() || 'Cào bóc vá dặm xử lý theo quy trình bảo trì mặt đường',
-      duration_days: formDurationDays,
-      date_range: `Dự kiến ${formDurationDays} ngày`,
-      created_by_name: 'Đỗ Quốc Hoàng (PM)',
-      created_by_initials: 'ĐH',
-      created_by_role: 'Chỉ huy trưởng dự án',
-      created_at: 'Vừa tạo - Hôm nay',
-      status: submitDirectly ? 'SUBMITTED' : 'DRAFT',
-      status_label: submitDirectly ? 'Chờ duyệt' : 'Bản nháp',
-      approved_items: 0,
-      total_items: selectedDefects.length,
-      contractor_name: formContractor
-    }
-
-    repairService.createPackage(newPackage, createdItems)
-    setPackages(repairService.getPackages())
-    setIsCreateModalOpen(false)
-    setCurrentPage(1)
-    showToast(
-      submitDirectly
-        ? `Đã tạo và gửi trình duyệt Gói đề xuất [${newPackage.code}] sang Giám sát trưởng!`
-        : `Đã lưu bản nháp Gói đề xuất [${newPackage.code}] thành công!`
-    )
-  }
-
-  const handleSubmitDraftPackage = (id: string, code: string) => {
-    repairService.submitPackage(id)
-    setPackages(repairService.getPackages())
-    showToast(`Đã khóa hồ sơ và gửi gói [${code}] lên Giám sát trưởng phê duyệt!`)
-  }
-
-  const handleDeleteDraft = (id: string, code: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa bản nháp [${code}]?`)) {
-      repairService.deletePackage(id)
-      setPackages(repairService.getPackages())
-      showToast(`Đã xóa bản nháp [${code}].`)
-    }
-  }
-
-  const handleQuickApprove = (id: string, code: string) => {
-    repairService.signPackageApproval(id)
-    setPackages(repairService.getPackages())
-    showToast(`[GIÁM SÁT]: Đã phê duyệt chính thức gói [${code}] và ban hành lệnh công tác!`)
-  }
-
-  const stats = useMemo(() => {
-    const draft = packages.filter((p) => p.status === 'DRAFT').length
-    const submitted = packages.filter((p) => p.status === 'SUBMITTED').length
-    const decided = packages.filter((p) => p.status === 'DECIDED').length
-    const dispatched = packages.filter((p) => p.status === 'DISPATCHED').length
-    return { draft, submitted, decided, dispatched, total: packages.length }
-  }, [packages])
-
-  const filteredPackages = useMemo(() => {
-    return packages.filter((p) => {
-      if (activeFilterTab !== 'ALL' && p.status !== activeFilterTab) return false
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase()
-        const matchCode = p.code.toLowerCase().includes(term)
-        const matchTitle = p.title.toLowerCase().includes(term)
-        const matchChainage = p.chainage_display.toLowerCase().includes(term)
-        const matchContractor = p.contractor_name.toLowerCase().includes(term)
-        if (!matchCode && !matchTitle && !matchChainage && !matchContractor) return false
-      }
-      if (advRoute !== 'ALL' && p.route_id !== advRoute) return false
-      if (advScale === 'LARGE' && p.defect_count < 10) return false
-      if (advScale === 'MEDIUM' && (p.defect_count < 5 || p.defect_count >= 10)) return false
-      if (advScale === 'SMALL' && p.defect_count >= 5) return false
-      if (advContractor !== 'ALL' && !p.contractor_name.includes(advContractor)) return false
-
-      return true
-    })
-  }, [packages, activeFilterTab, searchTerm, advRoute, advScale, advContractor])
-
-  const totalPages = Math.max(1, Math.ceil(filteredPackages.length / pageSize))
-  const paginatedPackages = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredPackages.slice(start, start + pageSize)
-  }, [filteredPackages, currentPage, pageSize])
-
-  const handleTabChange = (tab: 'ALL' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'DRAFT') => {
-    setActiveFilterTab(tab)
-    setCurrentPage(1)
-  }
-
-  return {
-    isSupervisor,
-    isPM,
-    basePath,
-    packages,
-    searchTerm,
-    setSearchTerm,
-    activeFilterTab,
-    handleTabChange,
-    isPDFPreviewModalOpen,
-    setIsPDFPreviewModalOpen,
-    toastMessage,
-    setToastMessage,
-    currentPage,
-    setCurrentPage,
-    pageSize,
-    totalPages,
-    advRoute,
-    setAdvRoute,
-    advScale,
-    setAdvScale,
-    advContractor,
-    setAdvContractor,
-    selectedPackageForDetail,
-    setSelectedPackageForDetail,
-    showToast,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
-    formRouteId,
-    formSegmentId,
-    formPackageName,
-    setFormPackageName,
-    formContractor,
-    setFormContractor,
-    formDurationDays,
-    setFormDurationDays,
-    formTechnicalMethod,
-    setFormTechnicalMethod,
-    currentRoute,
-    currentRouteSegments,
-    currentSegment,
-    unassignedDefects,
-    handleRouteChange,
-    handleSegmentChange,
-    modalCalculations,
-    handleToggleDefect,
-    handleUpdateDefectSolution,
-    handleSaveDraft,
-    handleSubmitDraftPackage,
-    handleDeleteDraft,
-    handleQuickApprove,
-    stats,
-    filteredPackages,
-    paginatedPackages,
-  }
+import {useState,useEffect,useRef} from 'react'
+import {useNavigate,useSearchParams} from 'react-router-dom'
+import {useAuthStore} from '../../../store/authStore'
+import {projectService} from '../../../api/services/projectService'
+import {repairWorkflowService} from '../../../api/services/repairWorkflowService'
+import {readProposalPackages,type ProposalRead} from '../../../api/services/proposalReadModel'
+import {triageGeometryService} from '../../../api/services/triageGeometryService'
+import {fastTrackPending,fastTrackStorage} from '../../../api/services/fastTrackJournal'
+import {fastTrackService} from '../../../api/services/fastTrackService'
+import {exportError} from '../../../api/services/projectExportService'
+import type {ProposalWorkPackage,UnassignedDefectItem} from './types'
+const uiKey=(id:string,role:string,p:string)=>`rg_proposal_ui:${id}:${role}:${p}`
+const blank={mode:'NORMAL' as 'NORMAL'|'FAST_TRACK',fromMeters:'',toMeters:'',offsetFromMeters:'',offsetToMeters:'',checklistVersion:''}
+export function useRepairProposalsState(){
+  const auth=useAuthStore(),isSupervisor=auth.user?.role==='SUPERVISOR',isPM=auth.user?.role==='PROJECT_MANAGER',basePath=isSupervisor?'/sup':'/pm',navigate=useNavigate(),[params,setParams]=useSearchParams()
+  const actor=`${auth.authEpoch}:${auth.user?.id}:${auth.user?.role}`,requested=params.get('projectId')||'ALL',latest=useRef(actor);latest.current=actor
+  const [readScope,setReadScope]=useState('')
+  const [projects,setProjects]=useState<Awaited<ReturnType<typeof projectService.fetchProjects>>>([]),[rows,setRows]=useState<ProposalRead[]>([]),[apiError,setApiError]=useState(''),[loading,setLoading]=useState(false),[revision,setRevision]=useState(0)
+  const [searchTerm,setSearchTerm]=useState(''),[activeFilterTab,setTab]=useState<'ALL'|'SUBMITTED'|'DECIDED'|'DISPATCHED'|'DRAFT'>('ALL'),[currentPage,setCurrentPage]=useState(1),pageSize=10
+  const [advScale,setAdvScale]=useState('ALL'),[advContractor,setAdvContractor]=useState('ALL'),[isPDFPreviewModalOpen,setIsPDFPreviewModalOpen]=useState(false),[toastMessage,setToastMessage]=useState<string|null>(null)
+  const [selectedPackageForDetail,setSelectedPackageForDetail]=useState<ProposalWorkPackage|null>(null),[isCreateModalOpen,setOpen]=useState(false),[formRouteId,setFormRouteId]=useState(''),[formSegmentId,setFormSegmentId]=useState(''),[formPackageName,setFormPackageName]=useState(''),[formTechnicalMethod,setFormTechnicalMethod]=useState(''),[apiForm,setApiForm]=useState(blank),[creating,setCreating]=useState(false),[createError,setCreateError]=useState('')
+  const [unassignedDefects,setDefects]=useState<UnassignedDefectItem[]>([]),[selectedDefect,setSelectedDefect]=useState<any>(null),[currentRouteSegments,setSets]=useState<Array<{id:string;code:string;name:string}>>([]),[road,setRoad]=useState<{roadSectionId:string;currentVersionId:string}|null>(null)
+  const formScope=`${actor}:${formRouteId}`,formCurrent=useRef(formScope);formCurrent.current=formScope
+  const hydrate=useRef(true),wantedDefect=useRef('')
+  const [formContractor,setFormContractor]=useState(''),[formDurationDays,setFormDurationDays]=useState(Number.NaN)
+  const showToast=(m:string)=>{setToastMessage(m);setTimeout(()=>setToastMessage(null),4000)}
+  useEffect(()=>{const c=new AbortController();setRows([]);setProjects([]);setApiError('');setLoading(true)
+    ;(async()=>{const list=await projectService.fetchProjects();if(c.signal.aborted||latest.current!==actor)return;setProjects(list);setReadScope(`${actor}:${requested}`);const selection=requested==='ALL'?list:list.filter(p=>p.id===requested);if(requested!=='ALL'&&!selection.length)throw new Error('Dự án liên kết không thuộc danh mục được phép đọc.');const data=await readProposalPackages(selection,c.signal);if(!c.signal.aborted)setRows(data)})().catch(e=>{if(!c.signal.aborted)setApiError(exportError(e))}).finally(()=>{if(!c.signal.aborted)setLoading(false)});return()=>c.abort()
+  },[actor,requested,revision])
+  useEffect(()=>{setOpen(false);setSelectedPackageForDetail(null)},[actor,requested])
+  useEffect(()=>{const refresh=()=>setRevision(n=>n+1);window.addEventListener('repair-workflow-refresh',refresh);return()=>window.removeEventListener('repair-workflow-refresh',refresh)},[])
+  let pending:ReturnType<typeof repairWorkflowService.pendingCreation>=null,journalError='';try{if(isPM&&formRouteId)pending=repairWorkflowService.pendingCreation(formRouteId)}catch(e){journalError=exportError(e)}
+  const handleRouteChange=(id:string)=>{hydrate.current=true;wantedDefect.current='';setFormRouteId(id);setFormSegmentId('');setSelectedDefect(null);setDefsEmpty();setApiForm(blank);setCreateError('');const saved=id&&auth.user?JSON.parse(localStorage.getItem(uiKey(auth.user.id,auth.user.role,id))||'null'):null;if(saved){setApiForm(saved.form);setFormPackageName(saved.reason);setFormTechnicalMethod(saved.plan);setFormSegmentId(saved.setId);wantedDefect.current=saved.defectId || ''}let held:typeof pending=null;try{held=isPM&&id?repairWorkflowService.pendingCreation(id):null}catch(e){setCreateError(exportError(e))}if(held){const f=held.input;setApiForm({...blank,fromMeters:String(f.fromMeters),toMeters:String(f.toMeters),offsetFromMeters:String(f.offsetFromMeters),offsetToMeters:String(f.offsetToMeters),checklistVersion:f.checklistVersion});setFormPackageName(f.reason);setFormTechnicalMethod(f.repairPlan);setFormSegmentId(f.segmentSetId||'')}}
+  const setDefsEmpty=()=>setDefects([])
+  const setIsCreateModalOpen=(value:boolean)=>{if(creating)return;setOpen(value);if(value&&requested!=='ALL')handleRouteChange(requested)}
+  useEffect(()=>{const c=new AbortController();setDefects([]);setSets([]);setRoad(null);if(formRouteId&&isPM)repairWorkflowService.defects(formRouteId,c.signal).then(data=>{if(c.signal.aborted)return;setDefects(data.filter(d=>String(d.status).toUpperCase()==='OPEN').map(d=>({id:d.id,code:`DEF-${d.id.slice(0,8)}`,title:d.defectTypeCode||'Theo hồ sơ nguồn',defect_type_code:d.defectTypeCode,status:d.status,version:d.version,selected:(pending?.input.defectId||wantedDefect.current)===d.id,area_m2:Number.NaN,depth_cm:Number.NaN}))) }).catch(e=>{if(!c.signal.aborted)setCreateError(exportError(e))});return()=>c.abort()},[formScope,isPM])
+  const chosen=unassignedDefects.find(d=>d.selected)?.id||pending?.input.defectId||''
+  let fastHeld:any=null;try{if(isPM&&formRouteId&&chosen){const pipeline=JSON.parse(localStorage.getItem(fastTrackStorage(formRouteId,`prepare:${chosen}`))||'null');fastHeld=fastTrackPending(formRouteId,`package:${chosen}`) || pipeline}}catch(e){journalError=exportError(e)}
+  useEffect(()=>{const c=new AbortController();setRoad(null);setSets([]);setSelectedDefect(null);if(chosen&&formRouteId)(async()=>{const d=(await repairWorkflowService.defects(formRouteId,c.signal)).find(r=>r.id===chosen);if(!d)throw new Error('Khiếm khuyết đã đổi hoặc không còn trong nguồn.');const roads=await triageGeometryService.routes(formRouteId,c.signal),r=roads.find(r=>r.currentVersionId===d.roadSectionVersionId);if(!r)throw new Error('Tuyến hiện hành không khớp khiếm khuyết.');const sets=await triageGeometryService.sets(formRouteId,r,c.signal);if(!c.signal.aborted){setSelectedDefect(d);setRoad(r);setSets(sets.map((s,i)=>({id:s.id,code:`Bộ ${i+1}`,name:`Bộ phân đoạn đã công bố ${i+1}`})))}})().catch(e=>{if(!c.signal.aborted)setCreateError(exportError(e))});return()=>c.abort()},[formScope,chosen])
+  useEffect(()=>{if(!formRouteId||!auth.user)return;if(hydrate.current){hydrate.current=false;return}localStorage.setItem(uiKey(auth.user.id,auth.user.role,formRouteId),JSON.stringify({form:apiForm,reason:formPackageName,plan:formTechnicalMethod,setId:formSegmentId,defectId:chosen||wantedDefect.current}))},[formScope,apiForm,formPackageName,formTechnicalMethod,formSegmentId,chosen])
+  const handleSaveDraft=async()=>{if(creating||!isPM)return;const start=formScope;setCreating(true);setCreateError('');try{if(readScope!==`${actor}:${requested}`||loading||!projects.some(p=>p.id===formRouteId))throw new Error('Chọn dự án từ nguồn đọc.');if(fastHeld&&apiForm.mode!=='FAST_TRACK')throw new Error('Đang có lệnh Fast Track cho khiếm khuyết này; mở biểu mẫu đang giữ lệnh, không tạo package Normal khác.');const old=repairWorkflowService.pendingCreation(formRouteId);let result:string
+    if(old){result=await repairWorkflowService.createAndPropose(formRouteId,old.input)}else{if(!['NORMAL','FAST_TRACK'].includes(apiForm.mode))throw new Error('Chọn luồng đề xuất theo contract.');if(!selectedDefect||!road||!formPackageName.trim()||!formTechnicalMethod.trim()||!apiForm.checklistVersion.trim()||[apiForm.fromMeters,apiForm.toMeters,apiForm.offsetFromMeters,apiForm.offsetToMeters].some(v=>!v.trim()))throw new Error('Nhập khiếm khuyết, phương án, checklist, căn cứ và phạm vi thực tế; không lấy số đo từ ảnh.');if(formSegmentId&&!currentRouteSegments.some(s=>s.id===formSegmentId))throw new Error('Phân đoạn chưa công bố.');const f={defectId:selectedDefect.id,physicalRoadId:road.roadSectionId,routeVersionId:road.currentVersionId,segmentSetId:formSegmentId,fromMeters:Number(apiForm.fromMeters),toMeters:Number(apiForm.toMeters),offsetFromMeters:Number(apiForm.offsetFromMeters),offsetToMeters:Number(apiForm.offsetToMeters),repairPlan:formTechnicalMethod,checklistVersion:apiForm.checklistVersion,reason:formPackageName};if(apiForm.mode==='FAST_TRACK'){const {defectId,physicalRoadId,routeVersionId,...input}=f;const r=await fastTrackService.prepareItem({id:defectId,defectId,projectId:formRouteId} as any,{...input,segmentSetId:formSegmentId||null,layoutRevisionId:null,slabId:null});result=r.packageId}else result=await repairWorkflowService.createAndPropose(formRouteId,f)}
+    if(formCurrent.current!==start)return;setOpen(false);showToast('Đã GET xác nhận gói và hạng mục đã đề xuất; không phải bản nháp cục bộ.');setRevision(n=>n+1)
+  }catch(e){if(formCurrent.current===start)setCreateError(exportError(e))}finally{if(formCurrent.current===start)setCreating(false)}}
+  const setAdvRoute=(id:string)=>{const next=new URLSearchParams(params);if(id==='ALL')next.delete('projectId');else next.set('projectId',id);setParams(next,{replace:true});setCurrentPage(1)}
+  const ownedProjects=readScope===`${actor}:${requested}`?projects:[]
+  const packages=readScope===`${actor}:${requested}`?rows.map(r=>r.view):[],filteredPackages=packages.filter(p=>(activeFilterTab==='ALL'||activeFilterTab==='DRAFT'&&['UNPROPOSED','READY_TO_ASSIGN'].includes(p.status)||p.status===activeFilterTab)&&(!searchTerm||`${p.code} ${p.title} ${p.route_name} ${p.status_label}`.toLowerCase().includes(searchTerm.toLowerCase())))
+  const stats={draft:packages.filter(p=>['UNPROPOSED','READY_TO_ASSIGN'].includes(p.status)).length,submitted:packages.filter(p=>p.status==='SUBMITTED').length,decided:packages.filter(p=>p.status==='DECIDED').length,dispatched:packages.filter(p=>p.status==='DISPATCHED').length,total:packages.length}
+  const currentProject=ownedProjects.find(p=>p.id===requested)||null,currentRoute=ownedProjects.find(p=>p.id===formRouteId),currentSegment=currentRouteSegments.find(s=>s.id===formSegmentId)
+  const openSource=(id:string)=>{const row=rows.find(r=>r.raw.id===id);if(row)navigate(`${basePath}/fast-track?${new URLSearchParams({projectId:row.view.route_id,defectId:row.raw.defectId,open:'prepare'})}`)}
+  return {isSupervisor,isPM,basePath,packages,searchTerm,setSearchTerm,activeFilterTab,handleTabChange:(v:typeof activeFilterTab)=>{setTab(v);setCurrentPage(1)},isPDFPreviewModalOpen,setIsPDFPreviewModalOpen,toastMessage,setToastMessage,currentPage,setCurrentPage,pageSize,totalPages:Math.max(1,Math.ceil(filteredPackages.length/pageSize)),advRoute:requested,setAdvRoute,advScale,setAdvScale,advContractor,setAdvContractor,selectedPackageForDetail:readScope===`${actor}:${requested}`?selectedPackageForDetail:null,setSelectedPackageForDetail,showToast,isCreateModalOpen:readScope===`${actor}:${requested}`&&isCreateModalOpen,setIsCreateModalOpen,formRouteId,formSegmentId,formPackageName,setFormPackageName,formContractor,setFormContractor,formDurationDays,setFormDurationDays,formTechnicalMethod,setFormTechnicalMethod,currentRoute,currentRouteSegments,currentSegment,unassignedDefects,handleRouteChange,handleSegmentChange:setFormSegmentId,modalCalculations:{count:unassignedDefects.filter(d=>d.selected).length,description:'Một package gắn một khiếm khuyết; phạm vi do PM nhập có căn cứ.'},handleToggleDefect:(id:string)=>setDefects(old=>old.map(d=>({...d,selected:d.id===id&&!d.selected}))),handleUpdateDefectSolution:(id:string,text:string)=>{setFormTechnicalMethod(text);setDefects(old=>old.map(d=>d.id===id?{...d,custom_solution:text}:d))},handleSaveDraft,handleSubmitDraftPackage:openSource,handleDeleteDraft:()=>showToast('Không có API xóa package. Đọc hạng mục và dùng nghiệp vụ hủy/tiếp nối khi có căn cứ.'),handleQuickApprove:(id:string)=>{const row=rows.find(r=>r.raw.id===id);if(row)setSelectedPackageForDetail(row.view)},stats,filteredPackages,paginatedPackages:filteredPackages.slice((currentPage-1)*pageSize,currentPage*pageSize),projects:ownedProjects,currentProject,availableRoutes:ownedProjects.map(p=>({id:p.id,name:p.name,code:p.code})),projectMembers:[],apiError,loading,apiForm,setApiForm,creating,createError,lockedCreate:!!pending||!!fastHeld,createApi:{fields:apiForm,onChange:(key:keyof typeof blank,value:string)=>{setCreateError('');setApiForm(old=>({...old,[key]:value}))},error:createError||journalError,busy:creating,locked:!!pending||!!fastHeld,onResumeOriginal:fastHeld&&apiForm.mode!=='FAST_TRACK'?()=>navigate(`${basePath}/fast-track?${new URLSearchParams({projectId:formRouteId,defectId:chosen,open:'prepare'})}`):undefined}}
 }

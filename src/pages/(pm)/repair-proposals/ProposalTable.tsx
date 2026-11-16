@@ -6,6 +6,7 @@ import { ProposalFilterBar } from './ProposalFilterBar'
 import { ProposalTableRow } from './ProposalTableRow'
 
 export interface ProposalTableProps {
+  onReadPackage?:(pkg:ProposalWorkPackage)=>void
   searchTerm: string
   onSearchChange: (val: string) => void
   activeFilterTab: 'ALL' | 'SUBMITTED' | 'DECIDED' | 'DISPATCHED' | 'DRAFT'
@@ -40,10 +41,12 @@ export interface ProposalTableProps {
   advContractor: string
   onContractorFilterChange: (contractor: string) => void
   onResetFilters: () => void
+  projects?: any[]
 }
 
 export const ProposalTable: React.FC<ProposalTableProps> = ({
   searchTerm,
+  onReadPackage,
   onSearchChange,
   activeFilterTab,
   onTabChange,
@@ -69,6 +72,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
   advContractor,
   onContractorFilterChange,
   onResetFilters,
+  projects = [],
 }) => {
   const navigate = useNavigate()
   const [activeMenu, setActiveMenu] = useState<{
@@ -127,6 +131,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
         advContractor={advContractor}
         onContractorFilterChange={onContractorFilterChange}
         onResetFilters={onResetFilters}
+        projects={projects}
       />
 
       {/* Responsive Table với Sticky Cột Đầu & Cột Cuối — Fit 1440px không tràn ngang */}
@@ -143,7 +148,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
               <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Thời gian thi công</th>
               <th className="py-3 px-3 whitespace-nowrap w-[125px] min-w-[125px]">Người lập / Ngày trình</th>
               <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Trạng thái</th>
-              <th className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">Tiến độ duyệt</th>
+              <th className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">Hạng mục có kết quả</th>
               <th className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 w-[155px] min-w-[155px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
                 Thao tác
               </th>
@@ -161,6 +166,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
                 <ProposalTableRow
                   key={pkg.id}
                   pkg={pkg}
+                  onReadPackage={onReadPackage}
                   basePath={basePath}
                   isSupervisor={isSupervisor}
                   isPM={isPM}
@@ -262,7 +268,7 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
             </button>
             <button
               onClick={() => {
-                navigate(`${basePath}/proposals/${activeMenu.pkg.id}`)
+                if(onReadPackage)onReadPackage(activeMenu.pkg);else navigate(`${basePath}/proposals/${activeMenu.pkg.id}`)
                 setActiveMenu(null)
               }}
               className="w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50 flex items-center gap-2 font-normal transition cursor-pointer"

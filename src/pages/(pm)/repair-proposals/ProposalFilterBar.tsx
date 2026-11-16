@@ -1,5 +1,6 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
+import { HubProject } from '../../../api/services/projectService'
 
 export interface ProposalFilterBarProps {
   searchTerm: string
@@ -21,6 +22,7 @@ export interface ProposalFilterBarProps {
   advContractor: string
   onContractorFilterChange: (contractor: string) => void
   onResetFilters: () => void
+  projects?: HubProject[]
 }
 
 export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
@@ -37,6 +39,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
   advContractor,
   onContractorFilterChange,
   onResetFilters,
+  projects = [],
 }) => {
   return (
     <div className="space-y-3 font-body">
@@ -114,7 +117,7 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
                 : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            Bản nháp ({stats.draft})
+            Chờ chuẩn bị / giao ({stats.draft})
           </button>
         </div>
       </div>
@@ -126,58 +129,29 @@ export const ProposalFilterBar: React.FC<ProposalFilterBarProps> = ({
           <span>Bộ lọc:</span>
         </span>
 
-        {/* Tuyến đường */}
+        {/* Tuyến đường / Dự án lấy từ CSDL thật */}
         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px]">Tuyến:</span>
+          <span className="text-slate-400 text-[11px]">Dự án:</span>
           <select
             value={advRoute}
             onChange={(e) => {
               onRouteFilterChange(e.target.value)
               onSetPage(1)
             }}
-            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
+            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer text-xs"
           >
-            <option value="ALL">Tất cả tuyến đường</option>
-            <option value="QL1A_PK04">QL1A - Giai đoạn 2</option>
-            <option value="ROUTE_EXP_01">Đường nối Cao tốc Bắc - Nam</option>
+            <option value="ALL">Tất cả dự án</option>
+            {projects && projects.length > 0 ? (
+              projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} — {p.name}
+                </option>
+              ))
+            ) : null}
           </select>
         </div>
 
-        {/* Quy mô */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px]">Quy mô:</span>
-          <select
-            value={advScale}
-            onChange={(e) => {
-              onScaleFilterChange(e.target.value)
-              onSetPage(1)
-            }}
-            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL">Tất cả quy mô</option>
-            <option value="LARGE">&gt; 100 m² (Quy mô lớn)</option>
-            <option value="MEDIUM">50 - 100 m² (Vừa)</option>
-            <option value="SMALL">&lt; 50 m² (Cục bộ)</option>
-          </select>
-        </div>
-
-        {/* Đơn vị thi công */}
-        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-          <span className="text-slate-400 text-[11px]">Đơn vị:</span>
-          <select
-            value={advContractor}
-            onChange={(e) => {
-              onContractorFilterChange(e.target.value)
-              onSetPage(1)
-            }}
-            className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer"
-          >
-            <option value="ALL">Tất cả đơn vị</option>
-            <option value="Đội thi công sửa chữa Hoàng Hải 01">Đội Hoàng Hải 01</option>
-            <option value="Tổ cơ động sửa chữa BTXM 02">Tổ BTXM 02</option>
-            <option value="Tổ thi công Asphalt 01">Tổ Asphalt 01</option>
-          </select>
-        </div>
+        <p className="text-[11px] text-slate-500">Chưa có nguồn khối lượng hoặc Crew hiện hành để lọc gói; đọc theo dự án, trạng thái và từ khóa. Crew được đối chiếu trong nhiệm vụ sau giao việc.</p>
 
         {/* Nút reset nếu đang filter */}
         {(advRoute !== 'ALL' || advScale !== 'ALL' || advContractor !== 'ALL') && (

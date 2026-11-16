@@ -29,7 +29,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <label className="font-bold text-slate-700 uppercase text-[11px] flex items-center gap-1.5">
-            <span>Chọn các khiếm khuyết gom vào đợt sửa chữa ({unassignedDefects.length} điểm tồn đọng):</span>
+            <span>Chọn một khiếm khuyết gốc cho package ({unassignedDefects.length} khiếm khuyết OPEN):</span>
           </label>
           <span className="text-[11px] text-brand-gold font-semibold">
             Đã chọn {modalCalculations.count} điểm
@@ -39,16 +39,12 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       {/* Danh sách các khiếm khuyết */}
       {unassignedDefects.length === 0 ? (
         <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-slate-400 text-xs">
-          Phân đoạn này hiện không có khiếm khuyết tồn đọng chưa gán gói.
+          Chưa có khiếm khuyết OPEN trong danh mục dự án.
         </div>
       ) : (
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto bg-white custom-scrollbar">
             {unassignedDefects.map((def) => {
-              const defaultSolution =
-                def.area_m2 >= 1.0
-                  ? 'Cào bóc 5cm & thảm lại BTN C12.5 (TCVN 8819)'
-                  : 'Trám vá nhựa nguội khẩn cấp (TCVN 8819)'
-              const currentSolution = def.custom_solution ?? defaultSolution
+              const currentSolution = def.custom_solution || ''
 
               return (
                 <div
@@ -69,15 +65,27 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-slate-800 text-xs">{def.code}</span>
                           <span className="font-semibold text-slate-800 text-xs">{def.title}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
-                            {def.stationing}
-                          </span>
+                          {Boolean(def.stationing) && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                              {def.stationing}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-[11px] text-slate-500 mt-0.5 truncate">{def.lane_detail}</span>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 flex-wrap">
+                          {Boolean(def.lane_detail) && (
+                            <>
+                              <span>{def.lane_detail}</span>
+                              <span>•</span>
+                            </>
+                          )}
+                          <span>Trạng thái: <strong className="text-slate-700">{def.status_label || def.status || 'Chưa xử lý'}</strong></span>
+                        </div>
                       </div>
                     </div>
                     <span className="font-mono text-xs font-bold text-slate-700 shrink-0 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                      {def.area_m2} m² (Sâu {def.depth_cm}cm)
+                      {def.area_m2 && def.area_m2 > 0
+                        ? `${def.area_m2} m²${def.depth_cm && def.depth_cm > 0 ? ` (Sâu ${def.depth_cm}cm)` : ''}`
+                        : (def.severity_label || (def.severity ? `Mức độ ${def.severity}` : 'Chưa có nguồn mức độ'))}
                     </span>
                   </div>
 
@@ -87,7 +95,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1">
                           <Icon name="build" className="text-xs text-brand-gold" />
-                          <span>Phương án kỹ thuật xử lý (PM tự gõ hoặc chọn gợi ý)</span>
+                          <span>Phương án kỹ thuật xử lý (PM nhập theo hồ sơ)</span>
                         </label>
                         <span className="text-[9px] text-amber-800 font-medium">
                           Ánh xạ sang RepairItem chi tiết
@@ -103,20 +111,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                         className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold shadow-2xs"
                       />
 
-                      {/* Các Chips gợi ý nhanh theo chuẩn TCVN */}
-                      <div className="flex items-center flex-wrap gap-1.5 pt-0.5">
-                        <span className="text-[9px] text-slate-500 font-semibold shrink-0">Gợi ý nhanh:</span>
-                        {COMMON_SOLUTIONS.map((sol) => (
-                          <button
-                            key={sol}
-                            type="button"
-                            onClick={() => handleUpdateDefectSolution(def.id, sol)}
-                            className="px-2 py-0.5 bg-white hover:bg-amber-100/70 text-slate-700 hover:text-amber-950 border border-slate-200 hover:border-amber-300 rounded text-[10px] font-medium transition-colors cursor-pointer"
-                          >
-                            + {sol.split('(')[0].trim()}
-                          </button>
-                        ))}
-                      </div>
+                      <p className="text-[10px] text-slate-500">Nhập phương án theo hồ sơ kỹ thuật; chưa có danh mục phương án hệ thống để chọn.</p>
                     </div>
                   )}
                 </div>
@@ -133,7 +128,7 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
             <Icon name="fact_check" className="text-base" />
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-xs text-amber-950">Tổng kết kỹ thuật tự động</span>
+            <span className="font-bold text-xs text-amber-950">Tóm tắt lựa chọn kỹ thuật</span>
             <span className="text-[11px] text-amber-900">
               Đã chọn: <strong>{modalCalculations.count} hạng mục khiếm khuyết</strong>
             </span>

@@ -1,9 +1,10 @@
 import React from 'react'
-import type { ProposalWorkPackage, UnassignedDefectItem, RouteSegmentOption } from './types'
+import type { ProposalWorkPackage, UnassignedDefectItem, RouteSegmentOption,ProposalCreateApi } from './types'
 import { CreateProposalModal } from './CreateProposalModal'
 import { ProposalDetailModal } from './ProposalDetailModal'
 
 export interface ProposalModalsProps {
+  createApi?:ProposalCreateApi
   // Create Modal
   isCreateModalOpen: boolean
   setIsCreateModalOpen: (open: boolean) => void
@@ -28,6 +29,7 @@ export interface ProposalModalsProps {
   handleUpdateDefectSolution?: (id: string, solution: string) => void
   modalCalculations: { count: number; description: string }
   handleSaveDraft: (andSubmit: boolean) => void
+  projectMembers?: any[]
 
   // PDF Preview Modal (Deprecated, kept for props compatibility)
   isPDFPreviewModalOpen?: boolean
@@ -68,6 +70,8 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
   handleUpdateDefectSolution,
   modalCalculations,
   handleSaveDraft,
+  projectMembers = [],
+  createApi,
   selectedPackageForDetail,
   setSelectedPackageForDetail,
   isSupervisor,
@@ -78,6 +82,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
   return (
     <>
       <CreateProposalModal
+        createApi={createApi}
         isCreateModalOpen={isCreateModalOpen}
         setIsCreateModalOpen={setIsCreateModalOpen}
         formPackageName={formPackageName}
@@ -101,6 +106,7 @@ export const ProposalModals: React.FC<ProposalModalsProps> = ({
         handleUpdateDefectSolution={handleUpdateDefectSolution}
         modalCalculations={modalCalculations}
         handleSaveDraft={handleSaveDraft}
+        projectMembers={projectMembers}
       />
 
       <ProposalDetailModal
