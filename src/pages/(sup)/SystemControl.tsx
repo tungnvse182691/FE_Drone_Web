@@ -9,12 +9,13 @@ import { CreateDeletionRequestModal } from './system-control/CreateDeletionReque
 import { DeletionRequestDetailModal } from './system-control/DeletionRequestDetailModal'
 import { ProjectRetentionDetailModal } from './system-control/ProjectRetentionDetailModal'
 import { LegalHoldModal } from './system-control/LegalHoldModal'
-import { DefectCatalogModal } from './system-control/DefectCatalogModal'
 import { useSystemControlState } from './system-control/useSystemControlState'
 
 export const SystemControl: React.FC = () => {
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
+  const isPM = user?.role === RoleCode.PROJECT_MANAGER
+  const canSeeTabs = isSupervisor || isPM
 
   const s = useSystemControlState(user, isSupervisor)
 
@@ -37,7 +38,7 @@ export const SystemControl: React.FC = () => {
       />
 
       {/* 2. Tabs Navigation (Chỉ hiển thị cho Supervisor khi cần chuyển sang AI Models hoặc Danh mục khiếm khuyết) */}
-      {isSupervisor && (
+      {canSeeTabs && (
         <div className="bg-white border-[1.5px] border-[#E2E5E9] px-4 pt-2 rounded-[20px] shadow-2xs flex items-center gap-2 overflow-x-auto select-none">
           <button
             type="button"
@@ -95,7 +96,7 @@ export const SystemControl: React.FC = () => {
                   : 'bg-slate-100 text-slate-600 border-transparent'
               }`}
             >
-              v2.4.1 Active
+              Chưa có API
             </span>
           </button>
 
@@ -123,7 +124,7 @@ export const SystemControl: React.FC = () => {
                   : 'bg-slate-100 text-slate-600 border-transparent'
               }`}
             >
-              {s.defectCatalog.length} quy tắc
+              {isPM ? (s.defectCatalogLoading || s.defectCatalogError ? '—' : `${s.defectCatalog.length} quy tắc`) : '—'}
             </span>
           </button>
         </div>
@@ -145,22 +146,16 @@ export const SystemControl: React.FC = () => {
           />
         )}
 
-        {isSupervisor && s.activeTab === 'ai-models' && (
-          <AIModelsTab
-            aiModels={s.aiModels}
-            onExportLabels={s.handleExportLabels}
-            onToggleFastTrack={s.handleToggleFastTrack}
-            isSupervisor={isSupervisor}
-          />
+        {canSeeTabs && s.activeTab === 'ai-models' && (
+          <AIModelsTab aiModels={s.aiModels} />
         )}
 
-        {isSupervisor && s.activeTab === 'defect-catalog' && (
+        {canSeeTabs && s.activeTab === 'defect-catalog' && (
           <DefectCatalogTab
             defectCatalog={s.defectCatalog}
-            onToggleActive={s.handleToggleDefectActive}
-            onOpenCreate={s.handleOpenCreateDefect}
-            onOpenEdit={s.handleOpenEditDefect}
-            isSupervisor={isSupervisor}
+            loading={s.defectCatalogLoading}
+            error={s.defectCatalogError}
+            isPM={isPM}
           />
         )}
       </div>
@@ -205,15 +200,6 @@ export const SystemControl: React.FC = () => {
         project={s.projectToSetLegalHold}
         onClose={() => s.setShowLegalHoldModal(false)}
         onConfirm={s.handleConfirmLegalHold}
-      />
-
-      {/* 8. Modal Thêm mới / Chỉnh sửa danh mục khiếm khuyết TCVN (QT03, QT04) */}
-      <DefectCatalogModal
-        isOpen={s.showDefectModal}
-        mode={s.defectModalMode}
-        initialData={s.selectedDefectForEdit}
-        onClose={() => s.setShowDefectModal(false)}
-        onSave={s.handleSaveDefect}
       />
     </div>
   )

@@ -9,6 +9,7 @@ interface AuditTrailHeaderProps {
   onRefresh: () => void
   onOpenExportModal: () => void
   projects?: { id: string; code: string; name: string }[]
+  exportDisabledReason?: string
 }
 
 export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
@@ -20,6 +21,7 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
   onRefresh,
   onOpenExportModal,
   projects = [],
+  exportDisabledReason,
 }) => {
   return (
     <div className="space-y-4">
@@ -103,7 +105,9 @@ export const AuditTrailHeader: React.FC<AuditTrailHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenExportModal}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-semibold text-xs transition cursor-pointer shadow-2xs"
+            disabled={Boolean(exportDisabledReason)}
+            title={exportDisabledReason}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[10px] bg-[#C9A227] hover:bg-[#8C6D1F] text-white font-semibold text-xs transition cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#C9A227]"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
             <span>Xuất nhật ký</span>

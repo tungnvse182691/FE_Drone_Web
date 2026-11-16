@@ -36,3 +36,6 @@ dist-ssr
 
 # Scratch directory
 scratch/
+
+# dữ liệu tiến độ của tools/seed-test-data.mjs
+tools/.seed-state.json

@@ -13,10 +13,13 @@ import {
   FolderKanban,
   RotateCcw
 } from 'lucide-react'
-import { REGION_PROJECTS, MOCK_RISK_ITEMS } from './mockData'
+import type { SupDashboardProject } from '../../../api/services/supDashboardService'
 import { useNavigate } from 'react-router-dom'
 
 export interface DashboardHeaderProps {
+  projects: SupDashboardProject[]
+  asOfText: string | null
+  isLoading: boolean
   selectedMonth: string
   showToast: (msg: string) => void
   onResetFilters: () => void
@@ -31,6 +34,9 @@ export interface DashboardHeaderProps {
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
+  projects,
+  asOfText,
+  isLoading,
   selectedMonth,
   showToast,
   onResetFilters,
@@ -68,7 +74,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start lg:self-center">
             <div className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>Dữ liệu cập nhật lúc 21:45, ngày 25/08/2026</span>
+              <span>{asOfText ? `Dữ liệu cập nhật lúc ${asOfText}` : isLoading ? 'Đang tải dữ liệu từ máy chủ...' : 'Chưa có dữ liệu từ máy chủ'}</span>
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -100,7 +106,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               </button>
 
               <button
-                onClick={() => navigate('/sup/proposals/PKG-2026-08')}
+                onClick={() => navigate('/sup/proposals')}
                 type="button"
                 className="px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5 bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
                 style={{ boxShadow: 'rgba(201, 162, 39, 0.28) 0px 2px 8px' }}
@@ -120,11 +126,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="appearance-none pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
+                disabled
+                title="Máy chủ chưa cung cấp bộ lọc theo kỳ"
+                className="appearance-none pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs focus:outline-none opacity-60 cursor-not-allowed"
               >
-                <option value="2026-08">Tháng 8, 2026</option>
-                <option value="2026-07">Tháng 7, 2026</option>
-                <option value="2026-06">Tháng 6, 2026</option>
+                <option value="">Kỳ: Máy chủ chưa cung cấp</option>
               </select>
               <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -135,11 +141,11 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <select
                 value={selectedRegion}
                 onChange={(e) => handleRegionChange(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
+                disabled
+                title="Máy chủ chưa cung cấp phân vùng khu vực"
+                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs focus:outline-none opacity-60 cursor-not-allowed"
               >
-                <option value="ALL">Khu vực: Tất cả</option>
-                <option value="CENTRAL">Miền Trung (Huế - Đà Nẵng)</option>
-                <option value="NORTH">Miền Bắc (Nghệ An)</option>
+                <option value="ALL">Khu vực: Máy chủ chưa cung cấp</option>
               </select>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
@@ -151,18 +157,9 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 onChange={(e) => setSelectedProject(e.target.value)}
                 className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-brand-gold cursor-pointer"
               >
-                <option value="ALL">
-                  {selectedRegion === 'ALL'
-                    ? 'Dự án: Tất cả'
-                    : selectedRegion === 'CENTRAL'
-                    ? 'Tất cả dự án Miền Trung'
-                    : 'Tất cả dự án Miền Bắc'}
-                </option>
-                {(selectedRegion === 'ALL'
-                  ? [...REGION_PROJECTS.CENTRAL, ...REGION_PROJECTS.NORTH]
-                  : REGION_PROJECTS[selectedRegion] || []
-                ).map((p) => (
-                  <option key={p.id} value={p.id}>
+                <option value="ALL">Dự án: Tất cả</option>
+                {projects.map((p) => (
+                  <option key={p.projectId} value={p.projectId}>
                     {p.name}
                   </option>
                 ))}
@@ -183,10 +180,9 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </button>
             <button
               onClick={() => {
-                const regText = selectedRegion === 'ALL' ? 'Toàn quốc' : selectedRegion === 'NORTH' ? 'Miền Bắc' : 'Miền Trung'
-                const prjTarget = MOCK_RISK_ITEMS.find((it: any) => it.project_id === selectedProject)
-                const prjText = prjTarget ? prjTarget.project_name : 'Tất cả dự án'
-                showToast(`Đã áp dụng bộ lọc: ${regText} • ${prjText} (${selectedMonth})`)
+                const prjTarget = projects.find((p) => p.projectId === selectedProject)
+                const prjText = prjTarget ? prjTarget.name : 'Tất cả dự án'
+                showToast(`Đã áp dụng bộ lọc: ${prjText}`)
               }}
               type="button"
               className="px-4 py-1.5 font-bold text-white rounded-xl transition shadow-2xs bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"

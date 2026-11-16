@@ -2,10 +2,39 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { getMapLibreStyle } from '../../../utils/maplibre'
 import { RiskPortfolioItem } from './types'
-import { REGION_PROJECTS, MOCK_RISK_ITEMS } from './mockData'
+import { supDashboardService, dashboardErrorText, type SupDashboardData } from '../../../api/services/supDashboardService'
+
+// Máy chủ chưa có API danh mục rủi ro (mức rủi ro, GPS, SLA, PCI): để rỗng, không dùng dữ liệu giả.
+const RISK_ITEMS: RiskPortfolioItem[] = []
 
 export function useSupDashboardState() {
-  const [selectedMonth, setSelectedMonth] = useState('2026-08')
+  const [dashboardData, setDashboardData] = useState<SupDashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setIsLoading(true)
+    setLoadError(null)
+    supDashboardService
+      .load(controller.signal)
+      .then((d) => {
+        if (controller.signal.aborted) return
+        setDashboardData(d)
+        setIsLoading(false)
+        setIsRefreshing(false)
+      })
+      .catch((e) => {
+        if (controller.signal.aborted) return
+        setLoadError(dashboardErrorText(e))
+        setIsLoading(false)
+        setIsRefreshing(false)
+      })
+    return () => controller.abort()
+  }, [reloadKey])
+
+  const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedRegion, setSelectedRegion] = useState('ALL')
   const [selectedProject, setSelectedProject] = useState('ALL')
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -27,19 +56,13 @@ export function useSupDashboardState() {
 
   const handleRegionChange = (newRegion: string) => {
     setSelectedRegion(newRegion)
-    if (newRegion !== 'ALL') {
-      const allowed = REGION_PROJECTS[newRegion]?.map((p) => p.id) || []
-      if (!allowed.includes(selectedProject)) {
-        setSelectedProject('ALL')
-      }
-    }
   }
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [exportFormat, setExportFormat] = useState<'PDF_A' | 'ZIP_PACKAGE'>('PDF_A')
   const [isExporting, setIsExporting] = useState(false)
 
-  const [activePinId, setActivePinId] = useState<string>('risk-01')
+  const [activePinId, setActivePinId] = useState<string>('')
   const [mapLayer, setMapLayer] = useState<'satellite' | 'vector'>('satellite')
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -53,14 +76,11 @@ export function useSupDashboardState() {
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    setTimeout(() => {
-      setIsRefreshing(false)
-      showToast('Đã làm mới dữ liệu danh mục bảo hành và tính toán lại các chỉ số KPI!')
-    }, 600)
+    setReloadKey((k) => k + 1)
   }
 
   const filteredRiskItems = useMemo(() => {
-    const result = MOCK_RISK_ITEMS.filter((item: RiskPortfolioItem) => {
+    const result = RISK_ITEMS.filter((item: RiskPortfolioItem) => {
       if (selectedRegion !== 'ALL' && item.region !== selectedRegion) return false
       if (selectedProject !== 'ALL' && item.project_id !== selectedProject) return false
       return true
@@ -86,7 +106,7 @@ export function useSupDashboardState() {
   }, [selectedRegion, selectedProject, sortField, sortAsc])
 
   const activePinItem = useMemo(() => {
-    return filteredRiskItems.find((i) => i.id === activePinId) || filteredRiskItems[0] || MOCK_RISK_ITEMS[0]
+    return filteredRiskItems.find((i) => i.id === activePinId) || filteredRiskItems[0]
   }, [filteredRiskItems, activePinId])
 
   const handleZoomIn = () => {
@@ -114,17 +134,10 @@ export function useSupDashboardState() {
     }
   }
 
+  // Không còn giả lập "đã tạo file": xuất hồ sơ thật nằm ở màn Phân tích rủi ro (POST /projects/{id}/exports).
   const handleTriggerExport = () => {
-    setIsExporting(true)
-    setTimeout(() => {
-      setIsExporting(false)
-      setIsExportModalOpen(false)
-      showToast(
-        exportFormat === 'PDF_A'
-          ? 'Đã tạo thành công Báo cáo Hồ sơ Bằng chứng (RPT-01.pdf) tiêu chuẩn PDF/A!'
-          : 'Đã đóng gói thành công Danh mục Bảo hành & Toàn vẹn dữ liệu (RPT-07.zip) kèm mã SHA-256!'
-      )
-    }, 1200)
+    setIsExportModalOpen(false)
+    showToast('Xuất báo cáo từ màn Dashboard chưa nối máy chủ. Hãy tạo hồ sơ xuất thật ở màn "Phân tích rủi ro" (mục Hồ sơ xuất).')
   }
 
   useEffect(() => {
@@ -203,7 +216,7 @@ export function useSupDashboardState() {
   }, [])
 
   const resetFilters = () => {
-    setSelectedMonth('2026-08')
+    setSelectedMonth('')
     setSelectedRegion('ALL')
     setSelectedProject('ALL')
     setSortField('open_defects_count')
@@ -212,6 +225,9 @@ export function useSupDashboardState() {
   }
 
   return {
+    dashboardData,
+    isLoading,
+    loadError,
     selectedMonth,
     setSelectedMonth,
     selectedRegion,

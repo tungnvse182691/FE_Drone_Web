@@ -47,15 +47,9 @@ export async function prepareDevFileBearer(email:string,password:string,owner:De
 // Chỉ chạy khi devFileBearerEnabled() (DEV + VITE_DEV_FILE_BEARER=true + localhost). Tìm tất cả chỗ tạm: grep "TEMP-BEARER".
 const GUID='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
 const TEMP_BEARER_ROUTES:Array<[string,string]>=[
-  ['GET',`/datasets/${GUID}`],
-  ['GET',`/datasets/${GUID}/coverage`],
+  // Đã gỡ khi BE mới mở Web cookie (SURVEY-V2-WEB-ACTIONS.md): GET datasets/{id}, GET coverage, GET work-package, POST cancel|reassign|supplements, POST survey-plans/{id}/postpone.
   ['POST',`/datasets/${GUID}/assessments`],
   ['GET',`/datasets/${GUID}/assessments/${GUID}`],
-  ['GET',`/survey-tasks/${GUID}/work-package`],
-  ['POST',`/survey-tasks/${GUID}/(cancel|reassign|supplements)`],
-  ['POST',`/survey-plans/${GUID}/postpone`],
-  ['POST',`/projects/${GUID}/survey-plans/${GUID}/postpone`],
-  ['POST',`/projects/${GUID}/road-sections/${GUID}/(survey-plans|survey-requests)`],
   ['POST',`/processing-jobs`],
   ['GET',`/processing-jobs/${GUID}`],
   ['POST',`/processing-jobs/${GUID}/retry`],
@@ -75,7 +69,6 @@ const TEMP_BEARER_ROUTES:Array<[string,string]>=[
   ['POST',`/projects/${GUID}/retention/holds`],
   ['GET',`/projects/${GUID}/retention/holds/${GUID}`],
   ['POST',`/projects/${GUID}/retention/holds/${GUID}/release`],
-  ['GET',`/projects/${GUID}/work-package`],
 ]
 // Token chỉ nằm trong bộ nhớ: tải lại trang (F5) thì mất, cần đăng nhập lại để các route tạm dùng Bearer.
 function tempBearerHeld(){return !!held && held.expiresAt>Date.now()}

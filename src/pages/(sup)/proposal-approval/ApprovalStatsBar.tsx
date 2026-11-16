@@ -87,10 +87,10 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
               Diện tích đã duyệt:
             </span>
             <span className="text-lg font-bold text-slate-900 block font-headline">
-              {stats.approvedArea} <span className="text-xs font-normal text-slate-500">m²</span>
+              — <span className="text-xs font-normal text-slate-500">m²</span>
             </span>
             <span className="text-[11px] text-slate-500 block">
-              Trên tổng số {stats.totalProposedArea} m² đề xuất
+              Hạng mục chưa có diện tích từ máy chủ
             </span>
           </div>
 
@@ -99,9 +99,9 @@ export const ApprovalStatsBar: React.FC<ApprovalStatsBarProps> = ({ stats }) => 
               Thời gian dự kiến:
             </span>
             <span className="text-lg font-bold text-slate-900 block font-headline">
-              3-4 <span className="text-xs font-normal text-slate-500">ngày</span>
+              — <span className="text-xs font-normal text-slate-500">ngày</span>
             </span>
-            <span className="text-[11px] text-slate-500 block">Theo định mức TCVN 8819</span>
+            <span className="text-[11px] text-slate-500 block">Chưa có thời gian kế hoạch từ máy chủ</span>
           </div>
         </div>
       </div>

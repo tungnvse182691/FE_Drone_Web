@@ -34,12 +34,13 @@ try {
 // ĐÃ KIỂM CHỨNG THỦ CÔNG (đọc code gọi API và/hoặc chạy thật). Không còn trạng thái "nghi".
 // kind: 'wired' (đã nối, ev = bằng chứng) | 'todo' (web cần nhưng chưa nối) | 'mobile' (ngoài phạm vi web: Crew/Operator/Reporter/offline)
 const VERIFIED = {
+  'POST /survey-tasks/{}/supplements': { kind: 'wired', ev: 'surveyActions.supplementTask ← surveys/SurveyRecordActions.tsx ("Tạo nhiệm vụ bổ sung", mở nhiệm vụ con qua supplementTaskId); đã chạy thật bằng cookie trên BE mới (201)' },
   'POST /projects/{}/ai-mock-runs': { kind: 'wired', ev: 'surveyDatasetService.createAiRun ← surveys/SurveyDatasetPanel.tsx ("Chạy AI mock trên bộ dữ liệu"); Bearer tạm; đã chạy thật (202)' },
   'POST /projects/{}/survey-plans': { kind: 'wired', ev: 'api/services/surveyCreateCommands.ts (luồng tạo kế hoạch khảo sát đã có từ trước); đã chạy thật bằng cookie (201)' },
   'POST /projects/{}/survey-tasks': { kind: 'wired', ev: 'api/services/surveyCreateCommands.ts (luồng tạo nhiệm vụ khảo sát đã có từ trước); đã chạy thật bằng cookie (201)' },
   'POST /auth/password-recovery-requests': { kind: 'wired', ev: 'api/auth.ts requestPasswordRecoveryApi ← (auth)/login/LoginForm.tsx (nút "Quên mật khẩu?", dùng email đang nhập); đã chạy thật (202)' },
   'PUT /projects/{}/retention/files/{}/basis': { kind: 'wired', ev: 'retentionService.confirmRetentionBasis ← (sup)/system-control/RetentionBasisForm.tsx (trong chi tiết tệp lưu trữ); đã gọi BE thật, BE trả 409 retention_inventory_incomplete với tệp demo (kiểm kê chưa đầy đủ)' },
-  'GET /survey-tasks/{}/work-package': { kind: 'wired', ev: 'surveyDatasetService.workPackage ← surveys/SurveyDatasetPanel.tsx ("Xem gói công việc"); Bearer tạm' },
+  'GET /survey-tasks/{}/work-package': { kind: 'wired', ev: 'surveyDatasetService.workPackage ← surveys/SurveyDatasetPanel.tsx ("Xem gói công việc"); Web cookie (BE mới)' },
   'POST /auth/login': { kind: 'wired', ev: 'api/devFileBearer.ts (đăng nhập Bearer tạm [TEMP-BEARER], chỉ build dev); web chính dùng /auth/web/login' },
   'POST /auth/refresh': { kind: 'mobile', why: 'Làm mới token Bearer (mobile/Bearer); web dùng cookie và /auth/web/renew' },
   'POST /auth/logout': { kind: 'mobile', why: 'Đăng xuất phiên Bearer (mobile); web dùng /auth/web/logout' },
@@ -81,17 +82,17 @@ const VERIFIED = {
   'GET /projects/{}/repair-packages/{}/items/{}/notification-supervisor': { kind: 'wired', ev: 'api/services/notificationSupervisorService.ts ← repair-proposals/NotificationSupervisorPanel.tsx; đã chạy thật' },
   'PUT /projects/{}/repair-packages/{}/items/{}/notification-supervisor': { kind: 'wired', ev: 'notificationSupervisorService.assign ← NotificationSupervisorPanel.tsx; đã gọi thật, BE trả 409 invalid_state_transition (hạng mục demo đã Cancelled), chưa có hạng mục Fast Track đang hoạt động để tạo thành công' },
   'DELETE /projects/{}/repair-packages/{}/items/{}/notification-supervisor': { kind: 'wired', ev: 'notificationSupervisorService.revoke ← NotificationSupervisorPanel.tsx; đã chạy thật (204)' },
-  'GET /datasets/{}': { kind: 'wired', ev: 'api/services/surveyDatasetService.ts ← surveys/SurveyDatasetPanel.tsx; Bearer tạm [TEMP-BEARER]; đã chạy thật' },
-  'GET /datasets/{}/coverage': { kind: 'wired', ev: 'surveyDatasetService.coverage ← SurveyDatasetPanel.tsx; Bearer tạm; đã chạy thật' },
+  'GET /datasets/{}': { kind: 'wired', ev: 'api/services/surveyDatasetService.ts ← surveys/SurveyDatasetPanel.tsx; Web cookie (BE mới); đã chạy thật' },
+  'GET /datasets/{}/coverage': { kind: 'wired', ev: 'surveyDatasetService.coverage ← SurveyDatasetPanel.tsx; Web cookie (BE mới); đã chạy thật' },
   'POST /datasets/{}/assessments': { kind: 'wired', ev: 'surveyDatasetService.createAssessment ← SurveyDatasetPanel.tsx; Bearer tạm; đã chạy thật (201)' },
   'GET /datasets/{}/assessments/{}': { kind: 'wired', ev: 'surveyDatasetService.assessment ← SurveyDatasetPanel.tsx (đọc khi dataset đã có đánh giá); Bearer tạm' },
   'POST /projects/{}/baseline-selections': { kind: 'wired', ev: 'surveyDatasetService.lockBaseline ← SurveyDatasetPanel.tsx; Bearer tạm; đã chạy thật (201)' },
   'POST /processing-jobs': { kind: 'wired', ev: 'surveyDatasetService.createJob ← SurveyDatasetPanel.tsx; Bearer tạm; đã chạy thật (202)' },
   'GET /processing-jobs/{}': { kind: 'wired', ev: 'surveyDatasetService.job ← SurveyDatasetPanel.tsx; Bearer tạm; đã chạy thật' },
   'POST /processing-jobs/{}/retry': { kind: 'wired', ev: 'surveyDatasetService.retryJob ← SurveyDatasetPanel.tsx; Bearer tạm; chưa chạy thật (job QUEUED chưa có trạng thái được phép chạy lại)' },
-  'POST /survey-plans/{}/postpone': { kind: 'wired', ev: 'api/services/surveyActions.ts ← surveys/SurveyRecordActions.tsx; Bearer tạm; đã chạy thật (200)' },
-  'POST /survey-tasks/{}/cancel': { kind: 'wired', ev: 'surveyActions.cancelTask ← SurveyRecordActions.tsx; Bearer tạm; đã chạy thật (200)' },
-  'POST /survey-tasks/{}/reassign': { kind: 'wired', ev: 'surveyActions.reassignTask ← SurveyRecordActions.tsx; Bearer tạm; đã chạy thật (200)' },
+  'POST /survey-plans/{}/postpone': { kind: 'wired', ev: 'api/services/surveyActions.ts ← surveys/SurveyRecordActions.tsx; Web cookie (BE mới); đã chạy thật (200)' },
+  'POST /survey-tasks/{}/cancel': { kind: 'wired', ev: 'surveyActions.cancelTask ← SurveyRecordActions.tsx; Web cookie (BE mới); đã chạy thật (200)' },
+  'POST /survey-tasks/{}/reassign': { kind: 'wired', ev: 'surveyActions.reassignTask ← SurveyRecordActions.tsx; Web cookie (BE mới); đã chạy thật (200)' },
   'GET /projects/{}/field-inspection-tasks/{}/evidence/{}/content': { kind: 'wired', ev: 'api/services/fieldTaskReadService.ts:13' },
   'POST /projects/{}/road-sections/{}/versions/{}/segment-sets/preview': { kind: 'wired', ev: 'api/services/segmentSetService.ts:64' },
   'POST /projects/{}/road-sections/{}/versions/{}/segment-sets/{}/publish': { kind: 'wired', ev: 'api/services/segmentSetService.ts:74' },
@@ -195,7 +196,8 @@ for (const [p, v] of Object.entries(spec.paths)) for (const m of Object.keys(v))
   const n = norm(p), tag = (v[m].tags || ['-'])[0]
   const files = lit.get(n) || lit.get('/api/v1' + n)
   let status, note = ''
-  if (files) { status = 'Đã nối'; note = [...files].slice(0, 2).join(', ') }
+  if (VERIFIED[m.toUpperCase() + ' ' + n]?.kind === 'todo' && VERIFIED[m.toUpperCase() + ' ' + n].override) { const v = VERIFIED[m.toUpperCase() + ' ' + n]; status = 'Chưa nối'; note = 'Chưa nối — ' + v.why }
+  else if (files) { status = 'Đã nối'; note = [...files].slice(0, 2).join(', ') }
   else if (VERIFIED[m.toUpperCase() + ' ' + n]?.kind === 'wired') { status = 'Đã nối'; note = VERIFIED[m.toUpperCase() + ' ' + n].ev }
   else if (VERIFIED[m.toUpperCase() + ' ' + n]) { const v = VERIFIED[m.toUpperCase() + ' ' + n]; status = 'Chưa nối'; note = (v.kind === 'mobile' ? 'Ngoài phạm vi web (mobile/Crew/Operator/Reporter/offline): ' : 'Chưa nối — ') + v.why }
   else {

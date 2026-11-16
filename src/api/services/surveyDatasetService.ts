@@ -8,6 +8,8 @@ export interface DatasetDetail {
   scope: BandScope[]; integrityStatus?: string | null; telemetryStatus?: string | null; version: string
   sourceFiles: { fileId: string; checksumSha256?: string; sizeBytes?: number; mediaType?: string; purpose?: string }[]
 }
+export interface DatasetListItem { id: string; surveyTaskId: string; versionNo: number; submittedAt?: string | null; integrityStatus?: string | null; version: string; assessmentId?: string | null }
+export interface DatasetListPage { items: DatasetListItem[]; nextCursor?: string | null }
 export interface CoverageItem { scope: BandScope; positionCoverage?: string; qualityCoverage?: string; overallCoverage?: string; reasons?: string[]; coverageStatus?: string | null }
 export interface DatasetCoverage { datasetId: string; items: CoverageItem[]; methodVersion?: string | null; assessmentId?: string | null; version?: string | null }
 export interface AssessmentItem { routeVersionId: string; segmentSetId: string; segmentId: string; targetBand: string; positionStatus: Verdict; qualityStatus: Verdict; coverageStatus: Verdict; reason: string; evidence: { fileId: string; fromMilliseconds: number; toMilliseconds: number }[] }
@@ -30,6 +32,12 @@ export const surveyDatasetService = {
   async coverage(datasetId: string) {
     const { data } = await apiClient.get<DatasetCoverage>(`/datasets/${datasetId}/coverage`)
     if (data?.datasetId !== datasetId || !Array.isArray(data.items)) throw new Error('BE trả độ phủ sai dataset/contract.')
+    return data
+  },
+  /** GET /survey-tasks/{taskId}/datasets?limit=&cursor= — các bản nộp của nhiệm vụ, mới nhất trước; truyền nguyên nextCursor để tải tiếp. */
+  async listDatasets(taskId: string, cursor?: string, limit = 25): Promise<DatasetListPage> {
+    const { data } = await apiClient.get<DatasetListPage>(`/survey-tasks/${taskId}/datasets`, { params: { limit, ...(cursor ? { cursor } : {}) } })
+    if (!Array.isArray(data?.items) || data.items.some((i) => !i.id || i.surveyTaskId !== taskId)) throw new Error('BE trả danh sách bản nộp sai contract/nhiệm vụ.')
     return data
   },
   /** GET /survey-tasks/{taskId}/work-package — gói công việc của nhiệm vụ khảo sát (hạn, phạm vi, tham chiếu hình học). */
@@ -56,15 +64,23 @@ export const surveyDatasetService = {
     return data
   },
   /** POST /projects/{projectId}/baseline-selections — khóa baseline cho các phân đoạn của dataset đã được đánh giá. */
-  async lockBaseline(projectId: string, dataset: DatasetDetail, assessmentId: string, reason: string) {
+  async lockBaseline(projectId: string, dataset: DatasetDetail, assessmentId: string, reason: string, picked: { routeVersionId: string; segmentSetId: string; segmentId: string; targetBand: string }[]) {
+    if (!picked.length) throw new Error('Chọn ít nhất một phân đoạn/dải đủ điều kiện để khóa baseline.')
     const { data: existing } = await apiClient.get<{ items: { selectionId: string; routeVersionId: string; segmentSetId: string; segmentId: string; targetBand: string }[] }>(`/projects/${projectId}/baseline-selections`)
     if (!Array.isArray(existing?.items)) throw new Error('BE trả baseline-selections sai contract.')
-    const items = dataset.scope.flatMap((s) => s.segmentIds.map((segmentId) => {
+    const items = picked.map((s) => {
+      const segmentId = s.segmentId
       const prev = existing.items.find((e) => e.routeVersionId === s.routeVersionId && e.segmentSetId === s.segmentSetId && e.segmentId === segmentId && e.targetBand === s.targetBand)
       return { routeVersionId: s.routeVersionId, segmentSetId: s.segmentSetId, segmentId, targetBand: s.targetBand, datasetId: dataset.id, assessmentId, ...(prev ? { expectedBaselineSelectionId: prev.selectionId } : {}) }
-    }))
+    })
     const res = await apiClient.post(`/projects/${projectId}/baseline-selections`, { items, reason: reason.trim() }, { headers: { 'Idempotency-Key': crypto.randomUUID() } })
     return res.data
+  },
+  /** Baseline đang áp dụng theo đoạn/dải của một bộ phân đoạn: GET /projects/{p}/baseline-selections?segmentSetId= (Bearer tạm). */
+  async currentBaselines(projectId: string, segmentSetId: string) {
+    const { data } = await apiClient.get<{ items?: { selectionId: string; segmentId: string; targetBand: string; datasetId: string; assessmentId: string }[] }>(`/projects/${projectId}/baseline-selections`, { params: { segmentSetId } })
+    if (!Array.isArray(data?.items)) throw new Error('BE trả baseline-selections sai contract.')
+    return data.items
   },
   /** GET /projects/{p}/baseline-selections/{id} — id là mã lần khóa baseline do POST trả về. */
   async baselineView(projectId: string, id: string) {

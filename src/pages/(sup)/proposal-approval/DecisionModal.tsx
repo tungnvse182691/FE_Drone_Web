@@ -215,11 +215,15 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
 
           {/* Visual Evidence Preview Thumbnail */}
           <div className="flex items-center gap-3 bg-[#F8F9FA] border border-slate-200 p-2.5 rounded-lg">
-            <img
-              src={activeModalItem.image_url}
-              alt={activeModalItem.defect_title}
-              className="w-12 h-12 rounded-lg object-cover border border-slate-200"
-            />
+            {activeModalItem.image_url ? (
+              <img
+                src={activeModalItem.image_url}
+                alt={activeModalItem.defect_title}
+                className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 shrink-0" />
+            )}
             <div className="flex-1 min-w-0 text-xs">
               <span className="font-semibold text-slate-900 block truncate font-mono">
                 {activeModalItem.ortho_code}

@@ -8,6 +8,7 @@ export interface ConflictQueueTableProps {
   selectedConflict: SyncConflictItem | null
   setSelectedConflictId: (id: string) => void
   onOpenDetail?: (id: string) => void
+  unavailableMessage?: string
 }
 
 interface ConflictCardProps {
@@ -225,8 +226,19 @@ export const ConflictQueueTable: React.FC<ConflictQueueTableProps> = ({
   filteredConflicts,
   selectedConflict,
   setSelectedConflictId,
-  onOpenDetail
+  onOpenDetail,
+  unavailableMessage
 }) => {
+  if (unavailableMessage && filteredConflicts.length === 0) {
+    return (
+      <div role="alert" className="bg-white border border-amber-200 rounded-[20px] p-12 text-center flex flex-col items-center justify-center space-y-2">
+        <Icon name="cloud_off" size={36} className="text-amber-500" />
+        <h4 className="text-sm font-bold text-slate-700">{unavailableMessage}</h4>
+        <p className="text-xs text-slate-400">Chưa thể kết luận có hay không có xung đột; chưa có dữ liệu để hiển thị.</p>
+      </div>
+    )
+  }
+
   if (filteredConflicts.length === 0) {
     return (
       <div className="bg-white border border-[#E2E5E9] rounded-[20px] p-12 text-center flex flex-col items-center justify-center space-y-2">

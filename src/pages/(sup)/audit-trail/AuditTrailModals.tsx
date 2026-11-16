@@ -14,6 +14,7 @@ interface AuditTrailModalsProps {
   filteredCount: number
   exportSuccess: boolean
   onExport: () => void
+  exportDisabledReason?: string
 }
 
 export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
@@ -28,7 +29,8 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
   projectList,
   filteredCount,
   exportSuccess,
-  onExport
+  onExport,
+  exportDisabledReason
 }) => {
   const currentProjectName =
     projectList.find((p) => p.id === selectedProject)?.name || 'Dự án hiện hành'
@@ -162,6 +164,10 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
                 </div>
               </div>
 
+              {exportDisabledReason && (
+                <div role="status" className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">{exportDisabledReason}</div>
+              )}
+
               {exportSuccess && (
                 <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
@@ -181,7 +187,9 @@ export const AuditTrailModals: React.FC<AuditTrailModalsProps> = ({
               <button
                 type="button"
                 onClick={onExport}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-semibold transition cursor-pointer"
+                disabled={Boolean(exportDisabledReason)}
+                title={exportDisabledReason}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-semibold transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-[16px]">download</span>
                 <span>Tải tệp ngay</span>

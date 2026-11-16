@@ -54,8 +54,6 @@ const VALUE_TEXT_MAP: Record<string, string> = {
   PUBLISHED: 'Đã công bố',
   ACTIVE: 'Đang lưu trữ',
   LOCKED: 'Khóa thanh tra',
-  'usr-sup-01': 'Kỹ sư Nguyễn Văn An (Giám sát)',
-  'usr-pm-01': 'Đỗ Quốc Hoàng (Chỉ huy trưởng)',
   'usr-sys-01': 'Hệ thống tự động'
 }
 

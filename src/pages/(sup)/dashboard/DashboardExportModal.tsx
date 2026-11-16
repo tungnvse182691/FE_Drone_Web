@@ -1,6 +1,4 @@
 import React from 'react'
-import { MOCK_RISK_ITEMS } from './mockData'
-import { RiskPortfolioItem } from './types'
 import {
   FileDown,
   X,
@@ -10,8 +8,8 @@ import {
 } from 'lucide-react'
 
 export interface DashboardExportModalProps {
-  selectedProject: string
-  selectedMonth: string
+  scopeLabel: string
+  asOfText: string | null
   isExportModalOpen: boolean
   setIsExportModalOpen: (open: boolean) => void
   exportFormat: 'PDF_A' | 'ZIP_PACKAGE'
@@ -22,8 +20,8 @@ export interface DashboardExportModalProps {
 }
 
 export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
-  selectedProject,
-  selectedMonth,
+  scopeLabel,
+  asOfText,
   isExportModalOpen,
   setIsExportModalOpen,
   exportFormat,
@@ -61,7 +59,7 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
             {/* Body */}
             <div className="p-5 space-y-4 text-xs">
               <p className="text-slate-600 leading-relaxed">
-                Hệ thống khởi tạo tác vụ xuất bất đồng bộ (<code>POST /api/v1/exports</code>), kết xuất toàn bộ dữ liệu 5 dự án bảo hành, ma trận rủi ro suy thoái mặt đường RPT-06 và danh sách hư hỏng trọng yếu.
+                Hệ thống khởi tạo tác vụ xuất bất đồng bộ (<code>POST /api/v1/exports</code>), kết xuất toàn bộ dữ liệu các dự án bảo hành, ma trận rủi ro suy thoái mặt đường RPT-06 và danh sách hư hỏng trọng yếu.
               </p>
 
               <div className="space-y-2">
@@ -120,16 +118,16 @@ export const DashboardExportModal: React.FC<DashboardExportModalProps> = ({
                 <div className="flex justify-between">
                   <span>Phạm vi kết xuất:</span>
                   <span className="font-semibold text-slate-900">
-                    {selectedProject === 'ALL' ? 'Toàn bộ 5 dự án bảo hành (293.8 km)' : MOCK_RISK_ITEMS.find((it: RiskPortfolioItem) => it.project_id === selectedProject)?.project_name || 'Dự án'}
+                    {scopeLabel}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Kỳ đánh giá As-Of:</span>
-                  <span className="font-mono text-slate-900 font-semibold">{selectedMonth} (Cập nhật 21:45 25/08/2026)</span>
+                  <span className="font-mono text-slate-900 font-semibold">{asOfText ?? 'Chưa có dữ liệu từ máy chủ'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Bảo mật chống chối bỏ:</span>
-                  <span className="font-mono text-purple-700 font-bold">SHA256:4C82..FE19 (Pass)</span>
+                  <span className="font-mono text-purple-700 font-bold">Máy chủ chưa cung cấp</span>
                 </div>
               </div>
             </div>

@@ -22,6 +22,8 @@ export const ProposalApprovalDetail: React.FC = () => {
   const basePath = isSupervisor ? '/sup' : '/pm'
 
   const {
+    loading,
+    loadError,
     packageCode,
     packageName,
     routeDisplay,
@@ -84,6 +86,13 @@ export const ProposalApprovalDetail: React.FC = () => {
           </button>
         </div>
       )}
+
+      {loadError && (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+          Không đọc được gói sửa chữa từ máy chủ: {loadError}
+        </p>
+      )}
+      {loading && <p role="status" className="text-xs text-slate-500">Đang đọc gói và hạng mục từ máy chủ...</p>}
 
       {/* Header section with Breadcrumb and Actions */}
       <ApprovalDetailHeader

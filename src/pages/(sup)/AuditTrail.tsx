@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { AuditEvent } from '../../types/domain'
-import { auditService, AUDIT_PROJECT_OPTIONS, projectService } from '../../api/services'
+import { auditService, projectService } from '../../api/services'
+import { exportError } from '../../api/services/projectExportService'
 import { TimeFilter, ExportFormat, ImageModalData } from './audit-trail/types'
 import { AuditTrailHeader } from './audit-trail/AuditTrailHeader'
 import { AuditTrailMetrics } from './audit-trail/AuditTrailMetrics'
@@ -15,14 +16,16 @@ import { AuditTrailModals } from './audit-trail/AuditTrailModals'
 const matchTimeFilter = (occurredAtStr: string, filter: TimeFilter) => {
   if (filter === 'all') return true
   const eventTime = new Date(occurredAtStr).getTime()
-  // Mốc thời gian hệ thống hiện hành: 10/10/2026 12:00:00 UTC
-  const now = new Date('2026-10-10T12:00:00Z').getTime()
+  const now = Date.now()
   const diffHours = (now - eventTime) / (1000 * 60 * 60)
   if (filter === '24h') return diffHours <= 24 && diffHours >= 0
   if (filter === '7d') return diffHours <= 7 * 24 && diffHours >= 0
   if (filter === '30d') return diffHours <= 30 * 24 && diffHours >= 0
   return true
 }
+
+// BE chưa có endpoint xuất nhật ký hoạt động (swagger runtime): khóa nút, không giả vờ xuất
+const EXPORT_DISABLED_REASON = 'Máy chủ chưa có API xuất nhật ký hoạt động. Xuất hồ sơ PDF tại Báo cáo KPI.'
 
 export const AuditTrail: React.FC = () => {
   const { user } = useAuthStore()
@@ -34,6 +37,8 @@ export const AuditTrail: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [selectedEventId, setSelectedEventId] = useState<string>('')
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
+  const [auditError, setAuditError] = useState<string>('')
+  const [partial, setPartial] = useState<boolean>(false)
 
   // Phân định phạm vi dự án (Mặc định: Tất cả dự án phụ trách)
   const [selectedProject, setSelectedProject] = useState<string>('all')
@@ -83,14 +88,21 @@ export const AuditTrail: React.FC = () => {
     const loadEvents = async () => {
       try {
         setLoading(true)
-        const data = await auditService.getAuditEvents({
+        setAuditError('')
+        const { events: data, partial: isPartial } = await auditService.getAuditSnapshot({
           projectId: selectedProject
         })
         if (mounted) {
           setEvents(data)
+          setPartial(isPartial)
           if (data.length > 0) {
             setSelectedEventId((prev) => prev || data[0].id)
           }
+        }
+      } catch (e) {
+        if (mounted) {
+          setEvents([])
+          setAuditError(exportError(e))
         }
       } finally {
         if (mounted) setLoading(false)
@@ -193,10 +205,15 @@ export const AuditTrail: React.FC = () => {
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
-      const data = await auditService.getAuditEvents({
+      setAuditError('')
+      const { events: data, partial: isPartial } = await auditService.getAuditSnapshot({
         projectId: selectedProject
       })
       setEvents(data)
+      setPartial(isPartial)
+    } catch (e) {
+      setEvents([])
+      setAuditError(exportError(e))
     } finally {
       setIsRefreshing(false)
     }
@@ -204,6 +221,7 @@ export const AuditTrail: React.FC = () => {
 
   // Xuất báo cáo nhật ký
   const handleExport = async () => {
+    if (EXPORT_DISABLED_REASON) return
     await auditService.exportAuditTrail(exportFormat, selectedProject)
     setExportSuccess(true)
     setTimeout(() => {
@@ -245,7 +263,18 @@ export const AuditTrail: React.FC = () => {
         onRefresh={handleRefresh}
         onOpenExportModal={() => setShowExportModal(true)}
         projects={projects}
+        exportDisabledReason={EXPORT_DISABLED_REASON}
       />
+
+      <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+        Máy chủ chưa có API nhật ký hoạt động chung. Danh sách chỉ gồm sự kiện từ dòng thời gian báo cáo của từng dự án (GET /projects/{'{projectId}'}/reports/timeline)
+        {partial ? '; nguồn báo cáo hiện chưa đầy đủ.' : '.'}
+      </div>
+      {auditError && (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
+          Không đọc được nhật ký từ máy chủ: {auditError}
+        </p>
+      )}
 
       <AuditTrailMetrics
         calculatedStats={calculatedStats}
@@ -317,10 +346,11 @@ export const AuditTrail: React.FC = () => {
         onChangeExportFormat={setExportFormat}
         isPM={isPM}
         selectedProject={selectedProject}
-        projectList={AUDIT_PROJECT_OPTIONS}
+        projectList={projects}
         filteredCount={filteredEvents.length}
         exportSuccess={exportSuccess}
         onExport={handleExport}
+        exportDisabledReason={EXPORT_DISABLED_REASON}
       />
     </div>
   )

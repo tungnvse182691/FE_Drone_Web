@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { conflictService } from '../../api/services/conflictService'
+import { conflictService, CONFLICT_API_UNAVAILABLE_MESSAGE } from '../../api/services/conflictService'
 import { projectService } from '../../api/services/projectService'
 import { SyncConflictItem, HubProject } from '../../types/domain'
 import { Icon } from '../../components/ui/Icon'
@@ -165,6 +165,9 @@ export const OfflineConflicts: React.FC = () => {
       | 'SUPERVISOR_REJECT_RESCUE'
       | 'REQUEST_ADDITIONAL_EVIDENCE'
   ) => {
+    // Chưa có API BE: khóa phân giải, không mở modal
+    showToast(CONFLICT_API_UNAVAILABLE_MESSAGE + '; không thể phân giải.', 'error')
+    return
     setPendingDecision(decision)
     setResolutionReason('')
     setResolutionError(null)
@@ -337,8 +340,8 @@ export const OfflineConflicts: React.FC = () => {
                 <Icon name="layers" size={16} className="text-[#C9A227]" />
               </div>
               <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.total}</span>
-                <span className="text-xs text-amber-700 font-semibold font-mono">({stats.pending} chờ xử lý)</span>
+                <span className="text-2xl font-bold font-mono text-slate-900">—</span>
+                <span className="text-xs text-amber-700 font-semibold font-mono">(chưa có API)</span>
               </div>
             </div>
           </div>
@@ -367,7 +370,7 @@ export const OfflineConflicts: React.FC = () => {
                 <Icon name="call_split" size={16} className="text-[#1E40AF]" />
               </div>
               <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.reassign}</span>
+                <span className="text-2xl font-bold font-mono text-slate-900">—</span>
                 <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
               </div>
             </div>
@@ -397,7 +400,7 @@ export const OfflineConflicts: React.FC = () => {
                 <Icon name="warning" size={16} className="text-[#B45309]" />
               </div>
               <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold font-mono text-slate-900">{stats.policyMismatch}</span>
+                <span className="text-2xl font-bold font-mono text-slate-900">—</span>
                 <span className="text-xs text-slate-500 font-medium">hồ sơ</span>
               </div>
             </div>
@@ -427,7 +430,7 @@ export const OfflineConflicts: React.FC = () => {
                 <Icon name="phonelink_erase" size={16} className="text-[#B91C1C]" />
               </div>
               <div className="mt-3 flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-2xl font-bold font-mono text-[#B91C1C]">{stats.rescuePending}</span>
+                <span className="text-2xl font-bold font-mono text-[#B91C1C]">—</span>
                 <span className="text-xs text-rose-700 font-medium">chờ Giám sát ký</span>
               </div>
             </div>
@@ -448,6 +451,7 @@ export const OfflineConflicts: React.FC = () => {
         stats={stats}
         isPM={isPM}
         isSupervisor={isSupervisor}
+        unavailableMessage={CONFLICT_API_UNAVAILABLE_MESSAGE}
         handleOpenResolve={handleOpenResolve}
         activeSubTab={activeSubTab}
         setActiveSubTab={setActiveSubTab}

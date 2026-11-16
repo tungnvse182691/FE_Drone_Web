@@ -1,10 +1,9 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, AlertTriangle } from 'lucide-react'
 
 import { RiskPortfolioItem } from './dashboard/types'
-import { REGION_PROJECTS } from './dashboard/mockData'
 import { useSupDashboardState } from './dashboard/useSupDashboardState'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { DashboardTopMetrics } from './dashboard/DashboardTopMetrics'
@@ -13,12 +12,14 @@ import { DashboardRightCards } from './dashboard/DashboardRightCards'
 import { DashboardExportModal } from './dashboard/DashboardExportModal'
 
 export type { RiskPortfolioItem } from './dashboard/types'
-export { REGION_PROJECTS } from './dashboard/mockData'
 
 export const SupDashboard: React.FC = () => {
   const navigate = useNavigate()
 
   const {
+    dashboardData,
+    isLoading,
+    loadError,
     selectedMonth,
     setSelectedMonth,
     selectedRegion,
@@ -52,10 +53,38 @@ export const SupDashboard: React.FC = () => {
     resetFilters
   } = useSupDashboardState()
 
-  // KPI Metrics (5 dự án bảo hành, 1 dự án sắp hết hạn)
-  const totalActiveProjects = 5
-  const expiringProjectsCount = 1
-  const pendingBaselineKm = 14.5
+  // Toàn bộ số liệu lấy từ BE (GET /projects, /projects/{id}/reports/summary|timeline), lọc theo dự án đang chọn.
+  const projects = dashboardData?.projects ?? []
+  const scopedProjects = selectedProject === 'ALL' ? projects : projects.filter((p) => p.projectId === selectedProject)
+  const scopedIds = new Set(scopedProjects.map((p) => p.projectId))
+  const totalActiveProjects = dashboardData ? scopedProjects.filter((p) => p.status === 'ACTIVE').length : null
+
+  const repairItems = { confirmed: 0, other: 0 }
+  scopedProjects.forEach((p) => {
+    dashboardData?.summaries[p.projectId]?.metrics.forEach((m) => {
+      if (m.code !== 'repairItemsByStatus' || m.value == null) return
+      if (m.dimensions.status === 'CONFIRMED') repairItems.confirmed += m.value
+      else repairItems.other += m.value
+    })
+  })
+
+  const activities = (dashboardData?.activities ?? [])
+    .filter((a) => scopedIds.has(a.projectId))
+    .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt))
+    .slice(0, 5)
+
+  const asOfText = dashboardData?.asOf
+    ? new Date(dashboardData.asOf).toLocaleString('vi-VN', { hour12: false })
+    : null
+  const scopeLabel =
+    selectedProject === 'ALL' ? `Toàn bộ ${projects.length} dự án` : scopedProjects[0]?.name || 'Dự án'
+
+  const dashboardErrors = [
+    loadError && `Không tải được dữ liệu dashboard: ${loadError}`,
+    dashboardData?.errors.projects && `Danh sách dự án (GET /projects): ${dashboardData.errors.projects}`,
+    dashboardData?.errors.summaries && `Báo cáo tổng hợp: ${dashboardData.errors.summaries}`,
+    dashboardData?.errors.timeline && `Hoạt động gần đây: ${dashboardData.errors.timeline}`
+  ].filter(Boolean) as string[]
 
   return (
     <div className="space-y-6 pb-12 font-sansation text-slate-800">
@@ -74,7 +103,21 @@ export const SupDashboard: React.FC = () => {
       )}
 
       {/* Top Header & Filter Controls Bar */}
+      {dashboardErrors.length > 0 && (
+        <div role="alert" className="flex items-start gap-3 bg-red-50 text-rose-800 border border-rose-200 rounded-2xl px-5 py-3.5 text-xs font-medium">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            {dashboardErrors.map((m) => (
+              <p key={m}>{m}</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       <DashboardHeader
+        projects={projects}
+        asOfText={asOfText}
+        isLoading={isLoading}
         showToast={showToast}
         onResetFilters={resetFilters}
         selectedMonth={selectedMonth}
@@ -95,8 +138,7 @@ export const SupDashboard: React.FC = () => {
           <div className="lg:col-span-8 flex flex-col gap-5">
             <DashboardTopMetrics
               totalActiveProjects={totalActiveProjects}
-              expiringProjectsCount={expiringProjectsCount}
-              pendingBaselineKm={pendingBaselineKm}
+              isLoading={isLoading}
             />
 
             <DashboardRiskMapTable
@@ -119,6 +161,9 @@ export const SupDashboard: React.FC = () => {
           {/* Right Sub-Column (4 cols): SLA, Audit Trail, PCI */}
           <div className="lg:col-span-4 flex flex-col gap-6">
             <DashboardRightCards
+              repairItems={dashboardData ? repairItems : null}
+              activities={activities}
+              isLoading={isLoading}
               onNavigateAuditTrail={() => navigate('/sup/audit-trail')}
               onNavigateRiskAnalytics={() => navigate('/sup/risk-analytics')}
             />
@@ -128,8 +173,8 @@ export const SupDashboard: React.FC = () => {
 
       {/* Export Dossier Modal */}
       <DashboardExportModal
-        selectedProject={selectedProject}
-        selectedMonth={selectedMonth}
+        scopeLabel={scopeLabel}
+        asOfText={asOfText}
         isExportModalOpen={isExportModalOpen}
         setIsExportModalOpen={setIsExportModalOpen}
         exportFormat={exportFormat}

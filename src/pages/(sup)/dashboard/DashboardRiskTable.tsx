@@ -127,7 +127,7 @@ export const DashboardRiskTable: React.FC<DashboardRiskTableProps> = ({
             {filteredRiskItems.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-6 text-center text-slate-400">
-                  Không có đoạn đường nào phù hợp với bộ lọc.
+                  Máy chủ chưa cung cấp dữ liệu danh mục đoạn tuyến rủi ro.
                 </td>
               </tr>
             ) : (

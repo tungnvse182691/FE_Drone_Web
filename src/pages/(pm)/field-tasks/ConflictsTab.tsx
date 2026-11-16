@@ -25,6 +25,7 @@ export interface ConflictsTabProps {
   }
   isPM: boolean
   isSupervisor: boolean
+  unavailableMessage?: string
   handleOpenResolve: (
     decision:
       | 'ACCEPT_INCOMING'
@@ -51,6 +52,7 @@ export const ConflictsTab: React.FC<ConflictsTabProps> = ({
   stats,
   isPM,
   isSupervisor,
+  unavailableMessage,
   handleOpenResolve,
   activeSubTab: externalSubTab,
   setActiveSubTab: setExternalSubTab
@@ -203,6 +205,7 @@ export const ConflictsTab: React.FC<ConflictsTabProps> = ({
             selectedConflict={selectedConflict}
             setSelectedConflictId={setSelectedConflictId}
             onOpenDetail={handleOpenDetail}
+            unavailableMessage={unavailableMessage}
           />
         </div>
       )}

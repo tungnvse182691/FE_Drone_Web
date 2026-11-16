@@ -10,171 +10,8 @@ import { userDirectory } from './userDirectory'
 
 export type { HubProject }
 
-export const INITIAL_HUB_PROJECTS: HubProject[] = [
-  {
-    id: 'prj-ql1a-02',
-    code: 'PRJ-QL1A-02',
-    name: 'QL1A - Đoạn Km 1020 đến Km 1045',
-    region: 'Miền Trung',
-    location_detail: 'Huế - Đà Nẵng',
-    start_km: 1020.0,
-    end_km: 1045.0,
-    stationing_text: 'Km 1020+000 → Km 1045+000',
-    status: 'ACTIVE',
-    status_label: 'Đang bảo hành',
-    status_color: '#1B5E20',
-    pm_name: 'Đỗ Quốc Hoàng',
-    pm_email: 'pmhoang@gmail.com',
-    pm_role_badge: 'PM Chính',
-    pm_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    warranty_passed_percent: 65,
-    days_remaining: 180,
-    length_km: 156.0,
-    open_defects: 12,
-    repair_packages: 3,
-    image_url: '',
-    is_assigned: true,
-    is_restricted_for_pm: false,
-    kml_status: 'Đã phê duyệt',
-    retention_amount: '15.5 tỷ ₫ (5% HĐ)'
-  },
-  {
-    id: 'prj-ctbn-01',
-    code: 'PRJ-CTBN-01',
-    name: 'Cao tốc Bắc Nam - Đoạn Diễn Châu',
-    region: 'Miền Bắc',
-    location_detail: 'Nghệ An',
-    start_km: 430.0,
-    end_km: 479.3,
-    stationing_text: 'Km 430+000 → Km 479+300',
-    status: 'NEAR_EXPIRY',
-    status_label: 'Sắp hết hạn',
-    status_color: '#BA1A1A',
-    pm_name: 'Trần Minh Tâm',
-    pm_email: 'tam.tm@hoanghai-infra.vn',
-    pm_role_badge: 'PM Tuyến',
-    warranty_passed_percent: 92,
-    days_remaining: 25,
-    length_km: 49.3,
-    open_defects: 5,
-    repair_packages: 1,
-    image_url: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80',
-    is_assigned: true,
-    is_restricted_for_pm: false,
-    kml_status: 'Đã phê duyệt',
-    retention_amount: '12.8 tỷ ₫ (5% HĐ)'
-  },
-  {
-    id: 'prj-dt741-04',
-    code: 'PRJ-DT741-04',
-    name: 'Đường tỉnh ĐT-741 (Bình Dương)',
-    region: 'Miền Nam',
-    location_detail: 'Bình Dương',
-    start_km: 0.0,
-    end_km: 32.8,
-    stationing_text: 'Km 0+000 → Km 32+800',
-    status: 'PENDING_ALIGNMENT',
-    status_label: 'Chờ duyệt tuyến',
-    status_color: '#D97706',
-    pm_name: 'Chưa phân công PM',
-    pm_email: 'Cần gán PM trước khi kích hoạt tim tuyến',
-    pm_role_badge: 'Chưa gán',
-    warranty_passed_percent: 0,
-    days_remaining: 730,
-    length_km: 32.8,
-    open_defects: 0,
-    repair_packages: 0,
-    image_url: 'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?w=800&auto=format&fit=crop&q=80',
-    is_assigned: false,
-    is_restricted_for_pm: false,
-    kml_status: 'Đang thẩm định',
-    retention_amount: '6.2 tỷ ₫ (5% HĐ)'
-  },
-  {
-    id: 'prj-ptdg-03',
-    code: 'PRJ-PTDG-03',
-    name: 'Cao tốc Phan Thiết - Dầu Giây (GĐ 1)',
-    region: 'Miền Nam',
-    location_detail: 'Bình Thuận - Đồng Nai',
-    start_km: 0.0,
-    end_km: 99.0,
-    stationing_text: 'Km 0+000 → Km 99+000',
-    status: 'RESTRICTED',
-    status_label: 'Đang bảo hành',
-    status_color: '#1B5E20',
-    pm_name: 'Lê Văn Cường',
-    pm_email: 'cuong.lv@hoanghai-infra.vn',
-    pm_role_badge: 'PM Phụ trách',
-    warranty_passed_percent: 38,
-    days_remaining: 450,
-    length_km: 99.0,
-    open_defects: 8,
-    repair_packages: 2,
-    image_url: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop&q=80',
-    is_assigned: true,
-    is_restricted_for_pm: true,
-    kml_status: 'Đã phê duyệt',
-    retention_amount: '18.4 tỷ ₫ (5% HĐ)'
-  },
-  {
-    id: 'prj-lstl-05',
-    code: 'PRJ-LSTL-05',
-    name: 'Cao tốc La Sơn - Túy Loan',
-    region: 'Miền Trung',
-    location_detail: 'Huế - Đà Nẵng',
-    start_km: 0.0,
-    end_km: 66.0,
-    stationing_text: 'Km 0+000 → Km 66+000',
-    status: 'ACTIVE',
-    status_label: 'Đang bảo hành',
-    status_color: '#1B5E20',
-    pm_name: 'Đỗ Quốc Hoàng',
-    pm_email: 'pmhoang@gmail.com',
-    pm_role_badge: 'PM Phụ trách',
-    pm_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    warranty_passed_percent: 42,
-    days_remaining: 310,
-    length_km: 66.0,
-    open_defects: 7,
-    repair_packages: 2,
-    image_url: 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&auto=format&fit=crop&q=80',
-    is_assigned: true,
-    is_restricted_for_pm: false,
-    kml_status: 'Đã phê duyệt',
-    retention_amount: '11.0 tỷ ₫ (5% HĐ)'
-  },
-  {
-    id: 'prj-ql1a-p1',
-    code: 'PRJ-QL1A-P1',
-    name: 'QL1A - Giai đoạn 1 (Km 990 - Km 1020)',
-    region: 'Miền Trung',
-    location_detail: 'Quảng Nam',
-    start_km: 990.0,
-    end_km: 1020.0,
-    stationing_text: 'Km 990+000 → Km 1020+000',
-    status: 'CLOSED',
-    status_label: 'Đã đóng hồ sơ',
-    status_color: '#475569',
-    pm_name: 'Đỗ Quốc Hoàng',
-    pm_email: 'pmhoang@gmail.com',
-    pm_role_badge: 'PM Phụ trách',
-    pm_avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-    warranty_passed_percent: 100,
-    days_remaining: 0,
-    length_km: 30.0,
-    open_defects: 0,
-    repair_packages: 0,
-    image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80',
-    is_assigned: true,
-    is_restricted_for_pm: false,
-    kml_status: 'Đã hoàn công',
-    retention_amount: '9.8 tỷ ₫ (Đã quyết toán)',
-    closed_at: '2026-01-15T09:30:00Z',
-    closed_reason: 'Hoàn thành 100% trách nhiệm bảo hành công trình theo HĐ-BH-2023. Nghiệm thu đợt cuối đạt chuẩn TCVN 8819:2011 và giải tỏa bảo lãnh.',
-    closed_by: 'Nguyễn Văn An (Supervisor)',
-    retention_until: '15/01/2031 (Tối thiểu 5 năm - QT13, BR-45)'
-  }
-]
+// Không còn dữ liệu dự án mẫu trong FE: toàn bộ lấy từ API BE
+export const INITIAL_HUB_PROJECTS: HubProject[] = []
 
 export interface ProjectCreatePayload {
   engineeringUtmSrid?: number | null
@@ -477,10 +314,10 @@ function mapBackendProjectToHub(
 // In-Memory Store có khôi phục từ sessionStorage khi F5/reload trang
 let projectStore: HubProject[] = (() => {
   try {
-    const cached = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true' ? sessionStorage.getItem('roadguard_project_store') : null
+    const cached = false ? sessionStorage.getItem('roadguard_project_store') : null
     if (cached && useAuthStore.getState().isAuthenticated) return JSON.parse(cached)
   } catch {}
-  return import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+  return false
     ? JSON.parse(JSON.stringify(INITIAL_HUB_PROJECTS))
     : []
 })()
@@ -530,7 +367,7 @@ export const projectService = {
    */
   async fetchProjects(): Promise<HubProject[]> {
     const epoch = useAuthStore.getState().authEpoch
-    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+    const isMock = false
     if (!isMock) {
       try {
         console.log('🚀 [CANDIDATE3 BE] Gọi GET /api/v1/projects...')
@@ -657,7 +494,7 @@ export const projectService = {
    * GET /projects/:id hoặc lấy chi tiết kèm thành viên / lifecycle
    */
   async fetchProjectById(id: string): Promise<HubProject | undefined> {
-    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+    const isMock = false
     if (!isMock) {
       const all = await this.fetchProjects()
       return all.find(project => project.id === id || project.code === id)
@@ -710,7 +547,7 @@ export const projectService = {
    * Header: Idempotency-Key
    */
   async createProject(payload: ProjectCreatePayload, replay = false): Promise<HubProject> {
-    const isMock = import.meta.env.VITE_USE_MOCK_PROJECTS === 'true'
+    const isMock = false
     if (!isMock) {
       this.pendingProjectCreate()
       const epoch = useAuthStore.getState().authEpoch
@@ -970,58 +807,8 @@ export const projectService = {
     command: 'activate' | 'suspend',
     payload?: { reason?: string; actor?: string }
   ): Promise<HubProject> {
-    const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
-    if (!isMock) {
-      const res = await apiClient.post<HubProject>(`/projects/${projectId}/lifecycle/${command}`, payload)
-      return res.data
-    }
-
-    // Giả lập độ trễ mạng HTTP
-    await new Promise((resolve) => setTimeout(resolve, 300))
-
-    const targetIndex = projectStore.findIndex((p) => p.id === projectId || p.code === projectId)
-    if (targetIndex === -1) {
-      throw new Error(`[404] Không tìm thấy dự án với mã [${projectId}].`)
-    }
-
-    const currentProject = projectStore[targetIndex]
-    if (currentProject.status === 'CLOSED') {
-      throw new Error(`[409] Dự án đã đóng vĩnh viễn, không thể chuyển đổi trạng thái vòng đời.`)
-    }
-
-    let updatedProject: HubProject
-    if (command === 'activate') {
-      updatedProject = {
-        ...currentProject,
-        status: 'ACTIVE',
-        status_label: 'Đang bảo hành',
-        status_color: '#1B5E20'
-      }
-    } else if (command === 'suspend') {
-      const reason = payload?.reason?.trim()
-      if (!reason || reason.length < 5) {
-        throw new Error('[422] Vui lòng nhập lý do tạm dừng dự án (tối thiểu 5 ký tự).')
-      }
-      updatedProject = {
-        ...currentProject,
-        status: 'RESTRICTED',
-        status_label: 'Tạm dừng vận hành',
-        status_color: '#D97706'
-      }
-    } else {
-      throw new Error(`[400] Lệnh vòng đời không hợp lệ: ${command}`)
-    }
-
-    projectStore[targetIndex] = updatedProject
-
-    // Phát sự kiện đồng bộ reactive trên toàn client
-    window.dispatchEvent(
-      new CustomEvent('roadguard_state_change', {
-        detail: { projectId, command, status: updatedProject.status }
-      })
-    )
-
-    return JSON.parse(JSON.stringify(updatedProject))
+    // BE không có lệnh activate/suspend (lifecycle/{command} chỉ gồm declarations/confirmations/closures/transfers/recurrences): không giả vờ gọi
+    throw new Error(`Máy chủ chưa có lệnh vòng đời '${command}' cho Web.`)
   },
 
   updateProjectStatus(id: string, status: HubProject['status']): HubProject | null {

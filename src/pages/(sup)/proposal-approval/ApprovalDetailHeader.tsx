@@ -119,12 +119,12 @@ export const ApprovalDetailHeader: React.FC<ApprovalDetailHeaderProps> = ({
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
               <span className="inline-flex items-center gap-1">
                 <Icon name="navigation" size={14} className="text-brand-gold" />
-                <span>{routeDisplay || 'QL1A'} • {chainageDisplay || 'Km 1024 - Km 1045'}</span>
+                <span>{routeDisplay || '—'} • {chainageDisplay || '—'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1">
                 <Icon name="person" size={14} className="text-slate-400" />
-                <span>Lập bởi: {createdByName || 'PM Đỗ Quốc Hoàng'} • {createdAt || 'Hôm nay'}</span>
+                <span>Lập bởi: {createdByName || '—'} • {createdAt || '—'}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="inline-flex items-center gap-1 text-brand-gold font-medium">

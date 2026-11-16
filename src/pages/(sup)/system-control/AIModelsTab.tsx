@@ -1,19 +1,14 @@
 import React from 'react'
 import { Cpu, CheckCircle2, History, Download } from 'lucide-react'
 import { AIModelVersion } from '../../../types/domain'
+import { AI_MODELS_UNAVAILABLE, EXPORT_LABELS_UNAVAILABLE, FAST_TRACK_UNAVAILABLE } from './useSystemControlState'
 
 export interface AIModelsTabProps {
   aiModels: AIModelVersion[]
-  onExportLabels: () => void
-  onToggleFastTrack: (modelId: string, val: boolean) => void
-  isSupervisor: boolean
 }
 
 export const AIModelsTab: React.FC<AIModelsTabProps> = ({
-  aiModels,
-  onExportLabels,
-  onToggleFastTrack,
-  isSupervisor
+  aiModels
 }) => {
   const activeModel =
     aiModels.find((m) => m.status === 'ACTIVE') || aiModels[0]
@@ -38,15 +33,16 @@ export const AIModelsTab: React.FC<AIModelsTabProps> = ({
           {/* Nút Xuất tập dữ liệu huấn luyện (QT07) */}
           <button
             type="button"
-            onClick={onExportLabels}
-            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            title="Xuất tập dữ liệu nhãn đã duyệt cho huấn luyện theo QT07"
+            disabled
+            className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition flex items-center gap-1.5 cursor-not-allowed opacity-60 shadow-2xs"
+            title={EXPORT_LABELS_UNAVAILABLE}
           >
             <Download className="w-3.5 h-3.5 text-slate-600" />
             <span>Xuất Nhãn Huấn Luyện (QT07)</span>
           </button>
         </div>
       </div>
+      <p className="text-[11px] text-slate-500 -mt-3">{EXPORT_LABELS_UNAVAILABLE}. {FAST_TRACK_UNAVAILABLE}.</p>
 
       {/* Grid 2 cột: Live Model & Version History */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -70,6 +66,12 @@ export const AIModelsTab: React.FC<AIModelsTabProps> = ({
               LIVE
             </span>
           </div>
+
+          {!activeModel && (
+            <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              {AI_MODELS_UNAVAILABLE}
+            </div>
+          )}
 
           {activeModel && (
             <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200 space-y-3">
@@ -153,7 +155,7 @@ export const AIModelsTab: React.FC<AIModelsTabProps> = ({
           <div className="space-y-3">
             {deprecatedModels.length === 0 ? (
               <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                Chưa có phiên bản tiền nhiệm nào được lưu trữ.
+                {AI_MODELS_UNAVAILABLE}
               </div>
             ) : (
               deprecatedModels.map((item) => (

@@ -40,15 +40,13 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
               onClick={() => onViewPhoto(item)}
               className="w-9 h-9 rounded-lg overflow-hidden border border-slate-200 shrink-0 cursor-pointer relative group/img bg-slate-100"
             >
-              <img
-                src={item.image_url}
-                alt=""
-                onError={(e) => {
-                  e.currentTarget.src =
-                    'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80'
-                }}
-                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform"
-              />
+              {item.image_url && (
+                <img
+                  src={item.image_url}
+                  alt=""
+                  className="w-full h-full object-cover group-hover/img:scale-105 transition-transform"
+                />
+              )}
               <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
                 <Icon name="zoom_in" size={14} />
               </div>

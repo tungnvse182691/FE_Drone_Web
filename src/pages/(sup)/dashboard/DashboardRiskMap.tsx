@@ -6,7 +6,6 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { RiskPortfolioItem } from './types'
-import { MOCK_RISK_ITEMS } from './mockData'
 
 export interface DashboardRiskMapProps {
   mapContainerRef: React.RefObject<HTMLDivElement | null>
@@ -44,10 +43,10 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 text-[11px] font-bold text-rose-700 bg-red-100/80 rounded-full border border-red-200 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
-            Rủi ro cao ({filteredRiskItems.filter((i: RiskPortfolioItem) => i.risk_level === 'Critical').length})
+            Rủi ro cao ({filteredRiskItems.length === 0 ? '—' : filteredRiskItems.filter((i: RiskPortfolioItem) => i.risk_level === 'Critical').length})
           </span>
           <span className="px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 bg-sky-100 rounded-full border border-sky-200">
-            Theo dõi ({MOCK_RISK_ITEMS.filter((i) => i.risk_level === 'Watch').length})
+            Theo dõi ({filteredRiskItems.length === 0 ? '—' : filteredRiskItems.filter((i) => i.risk_level === 'Watch').length})
           </span>
         </div>
       </div>
@@ -55,6 +54,14 @@ export const DashboardRiskMap: React.FC<DashboardRiskMapProps> = ({
       {/* Map Viewport Area with real MapLibre GL */}
       <div className="relative w-full h-[400px] bg-slate-900 overflow-hidden select-none">
         <div ref={mapContainerRef} className="w-full h-full" />
+
+        {filteredRiskItems.length === 0 && (
+          <div className="absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+            <span className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-medium text-slate-200">
+              Máy chủ chưa cung cấp dữ liệu điểm rủi ro trên bản đồ
+            </span>
+          </div>
+        )}
 
         {/* Floating Map HUD Detail on Active Pin */}
         {activePinItem && (

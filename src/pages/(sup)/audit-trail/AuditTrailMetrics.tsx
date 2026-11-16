@@ -70,7 +70,7 @@ export const AuditTrailMetrics: React.FC<AuditTrailMetricsProps> = ({
         </div>
         <div className="text-[11px] text-slate-400 mt-2 flex items-center justify-between">
           <span>Kiểm soát chéo 4 mắt</span>
-          <span className="text-emerald-700 font-medium">Hợp lệ</span>
+          <span className="text-slate-600 font-medium">Chưa có nguồn kiểm tra</span>
         </div>
       </div>
     </div>

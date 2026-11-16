@@ -1,12 +1,12 @@
 import { apiClient } from '../client'
-import { surveyPlanningService } from './surveyPlanningService'
+import { surveyPlanningService, type SurveyScope } from './surveyPlanningService'
 
 const quote = (v: string) => (v.startsWith('"') ? v : `"${v}"`)
 const headers = (version: string) => ({ 'Idempotency-Key': crypto.randomUUID(), 'If-Match': quote(version) })
 
 /**
- * Thao tác PM trên kế hoạch/nhiệm vụ khảo sát (spec PM-06). Các route này BE chưa mở cookie web nên đi qua
- * Bearer tạm [TEMP-BEARER] (src/api/devFileBearer.ts) cho tới khi BE gắn [WebCookieEligible].
+ * Thao tác PM trên kế hoạch/nhiệm vụ khảo sát (spec PM-06). BE mới (deploy/fe-handoff/SURVEY-V2-WEB-ACTIONS.md) đã
+ * hỗ trợ Web cookie + CSRF cho cả bốn POST này; không còn dùng Bearer tạm.
  * If-Match = version đọc lại ngay trước khi gửi (GET /survey-plans|tasks/{id}).
  */
 export const surveyActions = {
@@ -30,5 +30,24 @@ export const surveyActions = {
     const body: Record<string, unknown> = { operatorId: input.operatorId, reason: input.reason.trim() }
     if (input.dueAt) body.dueAt = new Date(input.dueAt).toISOString()
     return (await apiClient.post(`/survey-tasks/${taskId}/reassign`, body, { headers: headers(task.version) })).data
+  },
+  /**
+   * POST /survey-tasks/{taskId}/supplements — tạo nhiệm vụ bổ sung (201). Body {operatorId, reason, scope[]};
+   * trả {id, status: SUPPLEMENT_REQUIRED, supplementTaskId, version}, header Location trỏ nhiệm vụ con.
+   */
+  async supplementTask(projectId: string, taskId: string, input: { operatorId: string; reason: string; scope: SurveyScope[] }) {
+    if (!input.operatorId) throw new Error('Chọn Operator nhận nhiệm vụ bổ sung.')
+    if (!input.reason.trim()) throw new Error('Cần nhập lý do bổ sung.')
+    if (!input.scope.length || input.scope.some((s) => !s.segmentIds.length)) throw new Error('Chọn ít nhất một phân đoạn cần bổ sung.')
+    const task = await surveyPlanningService.detail(projectId, taskId, 'TASK')
+    const res = await apiClient.post<{ id: string; status: string; supplementTaskId?: string | null; version: string }>(
+      `/survey-tasks/${taskId}/supplements`,
+      { operatorId: input.operatorId, reason: input.reason.trim(), scope: input.scope },
+      { headers: headers(task.version) }
+    )
+    const location = (res.headers?.location as string | undefined) || ''
+    const childId = res.data.supplementTaskId || location.split('/').pop() || ''
+    if (!childId) throw new Error('BE không trả nhiệm vụ bổ sung (supplementTaskId/Location).')
+    return { ...res.data, supplementTaskId: childId }
   },
 }

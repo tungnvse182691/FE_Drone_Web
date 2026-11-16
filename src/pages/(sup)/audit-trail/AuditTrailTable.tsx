@@ -120,7 +120,7 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
             {paginatedEvents.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-500">
-                  Không tìm thấy sự kiện nào trong khoảng thời gian đã chọn.
+                  Không có sự kiện nào từ máy chủ trong phạm vi và khoảng thời gian đã chọn.
                 </td>
               </tr>
             ) : (

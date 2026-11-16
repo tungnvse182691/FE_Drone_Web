@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
+import { useAuthStore } from '../../../store/authStore'
 import { RepairItemDetail, CREW_OPTIONS } from './types'
 
 export interface ProposalDispatchModalProps {
@@ -151,7 +152,7 @@ export const ProposalDispatchModal: React.FC<ProposalDispatchModalProps> = ({
               <input
                 type="text"
                 disabled
-                value="Kỹ sư Đỗ Quốc Hoàng (Project Manager)"
+                value={useAuthStore.getState().user?.full_name || '—'}
                 className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs text-slate-500 font-normal"
               />
             </div>

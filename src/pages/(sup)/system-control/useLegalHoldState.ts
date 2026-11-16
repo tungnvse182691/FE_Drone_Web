@@ -142,8 +142,8 @@ export function useLegalHoldState(
         justification:
           newDelJustification ||
           'Dự án đã kết thúc bảo hành trên 5 năm theo quy định lưu trữ công trình.',
-        requestedById: currentUser?.id || 'usr-pm-01',
-        requestedByName: currentUser?.full_name || 'Đỗ Quốc Hoàng (Chỉ huy trưởng)'
+        requestedById: currentUser?.id || '',
+        requestedByName: currentUser?.full_name || ''
       })
 
       await reloadData()

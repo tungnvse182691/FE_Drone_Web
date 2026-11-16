@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { surveyDatasetService, type AssessmentItem, type AssessmentView, type DatasetCoverage, type DatasetDetail, type ProcessingJob, type Verdict } from '../../../api/services/surveyDatasetService'
+import React, { useEffect, useState } from 'react'
+import { surveyDatasetService, type AssessmentItem, type AssessmentView, type DatasetCoverage, type DatasetDetail, type DatasetListItem, type ProcessingJob, type Verdict } from '../../../api/services/surveyDatasetService'
 import type { SurveyRecord } from '../../../api/services/surveyPlanningService'
 import { exportError } from '../../../api/services/projectExportService'
 
@@ -9,7 +9,7 @@ type Row = { routeVersionId: string; segmentSetId: string; segmentId: string; ta
 
 /**
  * PM-06/PM-07: bộ dữ liệu của nhiệm vụ khảo sát — độ phủ, đánh giá, khóa baseline, processing-jobs.
- * BE không trả datasetId trong chi tiết nhiệm vụ nên PM nhập mã bộ dữ liệu (xem API-GAP-NOTES mục S).
+ * Danh sách bản nộp lấy theo nhiệm vụ: GET /survey-tasks/{taskId}/datasets (mới nhất trước, phân trang cursor); mặc định mở bản đầu.
  */
 export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record }) => {
   const [datasetId, setDatasetId] = useState('')
@@ -23,10 +23,14 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
   const [toMs, setToMs] = useState('5000')
   const [reason, setReason] = useState('')
   const [baselineReason, setBaselineReason] = useState('')
+  const [lockPick, setLockPick] = useState<Record<string, boolean>>({})
+  const [current, setCurrent] = useState<Record<string, { selectionId: string; datasetId: string }>>({})
   const [jobId, setJobId] = useState('')
   const [job, setJob] = useState<ProcessingJob | null>(null)
   const [jobReason, setJobReason] = useState('')
   const [workInfo, setWorkInfo] = useState('')
+  const [dsList, setDsList] = useState<DatasetListItem[] | null>(null)
+  const [dsNext, setDsNext] = useState<string | null>(null)
   const [aiStage, setAiStage] = useState<'VIDEO_ANALYSIS' | 'DUPLICATE_MATCHING'>('VIDEO_ANALYSIS')
   const [aiFixture, setAiFixture] = useState('')
   const [aiFixtures, setAiFixtures] = useState<string[]>([])
@@ -48,14 +52,27 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
     setBusy(name); setError(''); setMessage('')
     try { await fn() } catch (e) { setError(exportError(e)) } finally { setBusy('') }
   }
-  const load = () => run('load', async () => {
-    const { dataset: d, etag: t } = await surveyDatasetService.dataset(datasetId, { taskId: record.id, projectId: record.projectId })
+  const load = (id: string) => run('load', async () => {
+    const { dataset: d, etag: t } = await surveyDatasetService.dataset(id, { taskId: record.id, projectId: record.projectId })
     const c = await surveyDatasetService.coverage(d.id)
     setDataset(d); setEtag(t); setCoverage(c); setAssessment(null); setScopeIndex(0)
     setFileId(d.sourceFiles[0]?.fileId || '')
     setRows(d.scope.flatMap((s) => s.segmentIds.map((segmentId) => ({ routeVersionId: s.routeVersionId, segmentSetId: s.segmentSetId, segmentId, targetBand: s.targetBand, positionStatus: 'UNKNOWN' as Verdict, qualityStatus: 'UNKNOWN' as Verdict, coverageStatus: 'UNKNOWN' as Verdict }))))
     if (c.assessmentId) setAssessment(await surveyDatasetService.assessment(d.id, c.assessmentId))
   })
+  // Tải danh sách bản nộp khi mở nhiệm vụ (và khi tải lại trang): mặc định mở bản đầu tiên.
+  useEffect(() => {
+    let alive = true
+    setDsList(null); setDsNext(null); setDatasetId(''); setDataset(null); setCoverage(null); setAssessment(null)
+    surveyDatasetService.listDatasets(record.id).then((p) => {
+      if (!alive) return
+      setDsList(p.items); setDsNext(p.nextCursor || null)
+      if (p.items[0]) { setDatasetId(p.items[0].id); void load(p.items[0].id) }
+    }).catch((e) => { if (alive) { setDsList([]); setError(`Không đọc được danh sách bản nộp: ${exportError(e)}`) } })
+    return () => { alive = false }
+  }, [record.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const more = () => run('dsmore', async () => { if (!dsNext) return; const p = await surveyDatasetService.listDatasets(record.id, dsNext); setDsList((l) => [...(l || []), ...p.items]); setDsNext(p.nextCursor || null) })
+  const pick = (id: string) => { setDatasetId(id); if (id) void load(id) }
   const setRow = (i: number, patch: Partial<Row>) => setRows((r) => r.map((x, k) => (k === i ? { ...x, ...patch } : x)))
   const createAssessment = () => run('assess', async () => {
     if (!dataset) return
@@ -67,11 +84,29 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
     setCoverage(await surveyDatasetService.coverage(dataset.id))
     setMessage('Đã tạo đánh giá bộ dữ liệu.')
   })
+  // Điều kiện khóa baseline theo BE: phương pháp pm-evidence-review.v1 và CẢ BA kết quả (vị trí, chất lượng, độ phủ) của đúng đoạn/dải đều PASS.
+  const eligibility = (a: AssessmentItem) => {
+    const bad = [a.positionStatus !== 'PASS' && `vị trí ${VERDICT_LABEL[a.positionStatus]}`, a.qualityStatus !== 'PASS' && `chất lượng ${VERDICT_LABEL[a.qualityStatus]}`, a.coverageStatus !== 'PASS' && `độ phủ ${VERDICT_LABEL[a.coverageStatus]}`].filter(Boolean) as string[]
+    if (assessment?.methodVersion !== 'pm-evidence-review.v1') bad.unshift('phương pháp đánh giá không phải pm-evidence-review.v1')
+    return { ok: bad.length === 0, reason: bad.join(', ') }
+  }
+  const key = (a: { segmentId: string; targetBand: string }) => `${a.segmentId}:${a.targetBand}`
+  useEffect(() => {
+    if (!assessment) { setLockPick({}); setCurrent({}); return }
+    setLockPick(Object.fromEntries(assessment.items.map((a) => [key(a), eligibility(a).ok])))
+    const setIds = Array.from(new Set(assessment.items.map((a) => a.segmentSetId)))
+    Promise.all(setIds.map((sid) => surveyDatasetService.currentBaselines(record.projectId, sid))).then((lists) => {
+      setCurrent(Object.fromEntries(lists.flat().map((b) => [key(b), { selectionId: b.selectionId, datasetId: b.datasetId }])))
+    }).catch((e) => setError(`Không đọc được baseline hiện hành: ${exportError(e)}`))
+  }, [assessment]) // eslint-disable-line react-hooks/exhaustive-deps
+  const pickedItems = assessment ? assessment.items.filter((a) => lockPick[key(a)] && eligibility(a).ok) : []
+  const notLatest = !!dsList && dsList.length > 0 && datasetId !== dsList[0].id
   const lock = () => run('lock', async () => {
     if (!dataset || !assessment) return
-    const locked = await surveyDatasetService.lockBaseline(record.projectId, dataset, assessment.id, baselineReason) as { id?: string }
+    const locked = await surveyDatasetService.lockBaseline(record.projectId, dataset, assessment.id, baselineReason, pickedItems) as { id?: string }
     if (locked?.id) setBaselineId(locked.id)
-    setMessage(`Đã khóa baseline cho các phân đoạn của bộ dữ liệu${locked?.id ? ` (mã lần khóa ${locked.id})` : ''}.`)
+    setMessage(`Đã khóa baseline cho ${pickedItems.length} đoạn/dải đã chọn${locked?.id ? ` (mã lần khóa ${locked.id})` : ''}.`)
+    setAssessment((x) => (x ? { ...x } : x)) // nạp lại baseline hiện hành sau khi khóa
   })
   const readBaseline = () => run('baseline', async () => {
     const v = await surveyDatasetService.baselineView(record.projectId, baselineId)
@@ -98,9 +133,18 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
         <button type="button" disabled={!!busy} onClick={() => { void run('wp', async () => { const w = await surveyDatasetService.workPackage(record.id); setWorkInfo(`Gói công việc: hạn ${w.dueAt ? new Date(w.dueAt).toLocaleString('vi-VN') : '—'} · ${w.geometryRefs?.length ?? 0} tham chiếu hình học (${(w.geometryRefs || []).reduce((n, g) => n + g.segmentIds.length, 0)} phân đoạn) · phiên bản phạm vi ${w.scopeVersion || '—'}`) }) }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy === 'wp' ? 'Đang đọc…' : 'Xem gói công việc'}</button>
         {workInfo && <span data-testid="work-package-info">{workInfo}</span>}
       </div>
-      <div className="flex gap-2">
-        <input aria-label="Mã bộ dữ liệu" value={datasetId} disabled={!!busy} onChange={(e) => setDatasetId(e.target.value)} placeholder="Mã bộ dữ liệu (datasetId, GUID)" className={cls} />
-        <button type="button" disabled={!!busy || !datasetId.trim()} onClick={() => { void load() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2 whitespace-nowrap">{busy === 'load' ? 'Đang đọc…' : 'Đọc bộ dữ liệu'}</button>
+      <div className="space-y-1" data-testid="dataset-list">
+        {dsList === null && <p className="text-slate-500">Đang tải danh sách bản nộp…</p>}
+        {dsList && dsList.length === 0 && !error && <p className="text-slate-500">Chưa có bộ dữ liệu cho nhiệm vụ này.</p>}
+        {dsList && dsList.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <select aria-label="Bản nộp bộ dữ liệu" value={datasetId} disabled={!!busy} onChange={(e) => pick(e.target.value)} className={cls}>
+              {dsList.map((d) => (<option key={d.id} value={d.id}>Bản {d.versionNo} · {d.submittedAt ? new Date(d.submittedAt).toLocaleString('vi-VN') : '—'} · {d.integrityStatus || '—'}{d.assessmentId ? ' · đã đánh giá' : ''}</option>))}
+            </select>
+            {dsNext && <button type="button" disabled={!!busy} onClick={() => { void more() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy === 'dsmore' ? 'Đang tải…' : 'Tải thêm bản nộp'}</button>}
+            <button type="button" disabled={!!busy || !datasetId} onClick={() => { void load(datasetId) }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy === 'load' ? 'Đang đọc…' : 'Đọc lại bản đang chọn'}</button>
+          </div>
+        )}
       </div>
       {error && <p role="alert" className="text-rose-700">{error}</p>}
       {message && <p role="status" className="text-emerald-800">{message}</p>}
@@ -119,9 +163,17 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
           {assessment ? (
             <div className="rounded-xl border border-[#E2E5E9] p-3 space-y-1" data-testid="dataset-assessment">
               <p className="font-semibold">Đánh giá {assessment.methodVersion || ''} · {assessment.reviewedAt ? new Date(assessment.reviewedAt).toLocaleString('vi-VN') : ''}</p>
-              {assessment.items.map((a, i) => (<p key={i}>Phân đoạn {a.segmentId.slice(0, 8)} · {BAND_LABEL[a.targetBand] || a.targetBand}: vị trí {VERDICT_LABEL[a.positionStatus]} · chất lượng {VERDICT_LABEL[a.qualityStatus]} · độ phủ {VERDICT_LABEL[a.coverageStatus]} — {a.reason}</p>))}
+              {notLatest && <p role="note" className="text-amber-700" data-testid="not-latest-warning">Bạn đang chọn bản nộp không phải bản mới nhất (bản mới nhất: {dsList![0].versionNo}). BE vẫn cho khóa baseline từ bản này nếu đoạn/dải đủ điều kiện; bản mới không tự thay baseline đang áp dụng.</p>}
+              <p className="font-semibold">Chọn đoạn/dải để khóa baseline (chỉ đoạn/dải có đủ vị trí, chất lượng, độ phủ = Đạt)</p>
+              {assessment.items.map((a, i) => { const el = eligibility(a); const cur = current[key(a)]; return (
+                <label key={i} className="flex flex-wrap items-start gap-2" data-testid="baseline-candidate">
+                  <input type="checkbox" disabled={!!busy || !el.ok} checked={!!lockPick[key(a)] && el.ok} onChange={() => setLockPick((p) => ({ ...p, [key(a)]: !p[key(a)] }))} />
+                  <span>Phân đoạn {a.segmentId.slice(0, 8)} · {BAND_LABEL[a.targetBand] || a.targetBand}: vị trí {VERDICT_LABEL[a.positionStatus]} · chất lượng {VERDICT_LABEL[a.qualityStatus]} · độ phủ {VERDICT_LABEL[a.coverageStatus]} — {a.reason}</span>
+                  {!el.ok && <span className="text-rose-700">Không đủ điều kiện khóa: {el.reason}</span>}
+                  {cur && <span className="text-slate-600">Đang có baseline (bản {cur.datasetId.slice(0, 8)}{cur.datasetId === dataset?.id ? ', cùng bản này' : ', bản khác'}); khóa sẽ thay baseline này</span>}
+                </label>) })}
               <textarea aria-label="Lý do khóa baseline" rows={2} maxLength={2000} disabled={!!busy} value={baselineReason} onChange={(e) => setBaselineReason(e.target.value)} placeholder="Lý do khóa baseline" className={cls} />
-              <button type="button" disabled={!!busy || !baselineReason.trim()} onClick={() => { void lock() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy === 'lock' ? 'Đang gửi…' : 'Khóa baseline'}</button>
+              <button type="button" disabled={!!busy || !baselineReason.trim() || pickedItems.length === 0} onClick={() => { void lock() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy === 'lock' ? 'Đang gửi…' : `Khóa baseline (${pickedItems.length} đoạn/dải)`}</button>
               <div className="flex gap-2">
                 <input aria-label="Mã lần khóa baseline" disabled={!!busy} value={baselineId} onChange={(e) => setBaselineId(e.target.value)} placeholder="Mã lần khóa baseline (GUID)" className={cls} />
                 <button type="button" disabled={!!busy || !baselineId.trim()} onClick={() => { void readBaseline() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2 whitespace-nowrap">Xem lần khóa</button>
