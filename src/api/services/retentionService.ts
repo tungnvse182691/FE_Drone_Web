@@ -1,3 +1,4 @@
+import {workflowCollection} from './workflowCollection'
 import { apiClient } from '../client'
 import { LegalHoldProject, DataDeletionRequest } from '../../types/domain'
 
@@ -91,14 +92,7 @@ export const retentionService = {
    * Đọc danh sách đánh giá lưu trữ hồ sơ (GET /api/v1/projects/{projectId}/retention/evaluations)
    */
   async getRetentionEvaluations(projectId: string, signal?: AbortSignal): Promise<any[]> {
-    if (!projectId || projectId === 'ALL') return []
-    try {
-      const res = await apiClient.get(`/projects/${projectId}/retention/evaluations`, { signal })
-      return res.data?.items || []
-    } catch (err) {
-      console.warn('Lỗi đọc retention evaluations từ API:', err)
-      return []
-    }
+    return workflowCollection<{id:string;projectId:string}>(`/projects/${projectId}/retention/evaluations`,projectId,signal)
   },
 
   /**
@@ -117,6 +111,7 @@ export const retentionService = {
    */
   async getRetentionEvaluationDetail(projectId: string, id: string, signal?: AbortSignal): Promise<any> {
     const res = await apiClient.get(`/projects/${projectId}/retention/evaluations/${id}`, { signal })
+    if(res.data?.id!==id||res.data.projectId!==projectId)throw Error('Kết quả đánh giá sai phạm vi dự án.')
     return res.data
   },
 

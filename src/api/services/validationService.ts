@@ -1,3 +1,4 @@
+import {workflowCollection} from './workflowCollection'
 import { apiClient } from '../client'
 import {
   MeasurementValidationSample,
@@ -255,14 +256,7 @@ export const validationService = {
    * Lấy danh sách các đợt chạy thử nghiệm AI (GET /api/v1/projects/{projectId}/ai-mock-runs)
    */
   async getAiMockRuns(projectId: string, signal?: AbortSignal): Promise<any[]> {
-    if (!projectId || projectId === 'ALL') return []
-    try {
-      const res = await apiClient.get(`/projects/${projectId}/ai-mock-runs`, { signal })
-      return res.data?.items || []
-    } catch (err) {
-      console.warn('Lỗi tải danh sách AI Mock Runs từ API:', err)
-      return []
-    }
+    return workflowCollection<{id:string;projectId:string}>(`/projects/${projectId}/ai-mock-runs`,projectId,signal)
   },
 
   /**
@@ -281,6 +275,7 @@ export const validationService = {
    */
   async getAiMockRunResult(projectId: string, runId: string, signal?: AbortSignal): Promise<any> {
     const res = await apiClient.get(`/projects/${projectId}/ai-mock-runs/${runId}/result`, { signal })
+    if(res.data?.runId!==runId||!Number.isFinite(Date.parse(res.data.completedAt)))throw Error('Kết quả AI không khớp lần chạy.')
     return res.data
   },
 
