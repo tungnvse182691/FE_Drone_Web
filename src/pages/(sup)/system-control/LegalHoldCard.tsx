@@ -1,3 +1,4 @@
+import {RetentionEvaluationForm} from './RetentionEvaluationForm'
 import React from 'react'
 import { LegalHoldProject } from '../../../types/domain'
 
@@ -151,6 +152,8 @@ export const LegalHoldCard: React.FC<LegalHoldCardProps> = ({
           </div>
         ))}
       </div>
+
+      <RetentionEvaluationForm/>
 
       {/* Chú thích lưu trữ */}
       <div className="p-3.5 bg-[#F8F9FA] rounded-[14px] border border-[#E2E5E9] text-[11px] text-slate-600 flex items-start gap-2.5">

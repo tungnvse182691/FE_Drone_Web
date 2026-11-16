@@ -67,7 +67,7 @@ export const SystemControl: React.FC = () => {
                   : 'bg-slate-100 text-slate-600'
               }`}
             >
-              {s.activeLegalHoldProject ? 'ĐANG BẬT' : 'BÌNH THƯỜNG'}
+              {s.retentionReadError?'Chưa đủ nguồn':s.activeLegalHoldProject ? 'ĐANG BẬT' : 'Chưa có kết quả'}
             </span>
           </button>
 

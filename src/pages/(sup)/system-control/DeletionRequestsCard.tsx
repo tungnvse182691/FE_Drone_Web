@@ -46,7 +46,7 @@ export const DeletionRequestsCard: React.FC<DeletionRequestsCardProps> = ({
       <div className="space-y-3">
         {deletionRequests.length === 0 ? (
           <div className="py-10 text-center text-slate-400 text-xs">
-            Chưa có yêu cầu hủy dữ liệu nào trong hệ thống.
+            Chưa có nguồn đọc đề nghị hủy trong phạm vi này.
           </div>
         ) : (
           deletionRequests.map((req) => {

@@ -9,6 +9,7 @@ export function useLegalHoldState(
 ) {
   const [legalHoldProjects, setLegalHoldProjects] = useState<LegalHoldProject[]>([])
   const [deletionRequests, setDeletionRequests] = useState<DataDeletionRequest[]>([])
+  const [retentionReadError,setRetentionReadError]=useState('')
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   const [showCreateDeletionRequestModal, setShowCreateDeletionRequestModal] = useState<boolean>(false)
@@ -35,8 +36,8 @@ export function useLegalHoldState(
       ])
       setLegalHoldProjects(projs)
       setDeletionRequests(reqs)
-    } catch {
-      triggerNotice('Không thể tải dữ liệu lưu trữ hồ sơ.')
+    } catch(e:any) {
+      setRetentionReadError(e.message)
     } finally {
       setIsLoading(false)
     }
@@ -175,7 +176,7 @@ export function useLegalHoldState(
   }
 
   return {
-    legalHoldProjects,
+    retentionReadError,legalHoldProjects,
     setLegalHoldProjects,
     deletionRequests,
     setDeletionRequests,
