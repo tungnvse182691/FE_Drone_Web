@@ -1,3 +1,4 @@
+import {businessDate,businessError,businessState,businessText} from '../../../utils/businessDisplay'
 import React, { useEffect, useState } from 'react'
 import { useAuthStore } from '../../../store/authStore'
 import {
@@ -24,7 +25,7 @@ const reasons: Record<string, string> = {
   REPAIR_PROJECT_AUTHORITY_NOT_VERIFIED: 'Chưa xác minh quyền đọc dữ liệu sửa chữa'
 }
 
-export const reasonText = (codes: string[]) => codes.map(c => reasons[c] || `Nguồn chưa đầy đủ: ${c}`).join('; ')
+export const reasonText = (codes: string[]) => codes.map(c => reasons[c] || 'Nguồn dữ liệu chưa đầy đủ; cần đối chiếu hồ sơ liên quan').join('; ')
 export const availabilityText = (a: string) => a === 'AVAILABLE' ? 'Có dữ liệu' : a === 'PARTIAL' ? 'Dữ liệu một phần' : 'Chưa có dữ liệu'
 
 export function metricValue(m: Metric) {
@@ -34,6 +35,7 @@ export function metricValue(m: Metric) {
 
 const statusLabels: Record<string, string> = {
   OPEN: 'Đang mở',
+  UNREPAIRED: 'Chưa khắc phục',
   UNASSIGNED: 'Chưa phân công',
   AWAITING_EVIDENCE: 'Chờ bằng chứng',
   CONCLUDED: 'Đã kết luận',
@@ -56,10 +58,10 @@ const statusLabels: Record<string, string> = {
 export function metricDimensions(m: Metric) {
   const d = m.dimensions
   return [
-    d.status && (m.code === 'segmentRelatedDefects' ? `Phân đoạn ${d.status}` : `Trạng thái ${statusLabels[d.status] || d.status}`),
+    d.status && (m.code === 'segmentRelatedDefects' ? 'Theo phân đoạn đã lọc' : `Trạng thái ${statusLabels[d.status] || d.status}`),
     d.band && `Dải ${d.band === 'SURFACE' ? 'mặt đường' : d.band === 'LEFT_EDGE' ? 'mép trái' : d.band === 'RIGHT_EDGE' ? 'mép phải' : d.band}`,
-    d.routeVersionId && `Tuyến ${d.routeVersionId}`,
-    d.segmentSetId && `Bộ ${d.segmentSetId}`
+    d.routeVersionId && 'Theo tuyến đã lọc',
+    d.segmentSetId && 'Theo bộ phân đoạn đã lọc'
   ].filter(Boolean).join(' · ') || 'Toàn phạm vi đã lọc'
 }
 
@@ -159,7 +161,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
   const state = (s: { loading: boolean; error?: string }, empty: string) =>
     s.error ? (
       <div role="alert" className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
-        {s.error}
+        {businessError(s.error)}
       </div>
     ) : s.loading ? (
       <div role="status" className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium flex items-center gap-2">
@@ -180,7 +182,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
             </h2>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
-            API-168 · API-169 · API-170
+            Theo phạm vi dự án đã chọn
           </span>
         </div>
 
@@ -228,7 +230,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
           </label>
 
           <label className="flex flex-col gap-1.5 font-semibold text-slate-700">
-            <span>Bộ phân đoạn PUBLISHED</span>
+            <span>Bộ phân đoạn đã công bố</span>
             <div className="relative">
               <select
                 aria-label="Lọc báo cáo theo bộ"
@@ -318,8 +320,8 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                 case 'surveyTasksByStatus': return 'NHIỆM VỤ KHẢO SÁT THEO TRẠNG THÁI'
                 case 'baselineCoverageByBand': return 'ĐỘ PHỦ BASELINE THEO DẢI'
                 case 'reportsReceived': return 'PHẢN ÁNH TIẾP NHẬN'
-                case 'casesByStatus': return 'CASE THEO TRẠNG THÁI'
-                case 'defectsByStatus': return 'DEFECT THEO TRẠNG THÁI'
+                case 'casesByStatus': return 'HỒ SƠ PHẢN ÁNH THEO TRẠNG THÁI'
+                case 'defectsByStatus': return 'KHIẾM KHUYẾT THEO TRẠNG THÁI'
                 case 'verifiedSourceBytes': return 'DUNG LƯỢNG NGUỒN XÁC MINH'
                 case 'repairItemsByStatus': return 'HẠNG MỤC SỬA CHỮA'
                 case 'repairAcceptanceRate': return 'TỶ LỆ NGHIỆM THU'
@@ -339,22 +341,12 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
             }
 
             // Danh sách metrics hiển thị trên Grid
-            let displayMetrics: Metric[] = rawMetrics.filter(m =>
+            const displayMetrics: Metric[] = rawMetrics.filter(m =>
               ['surveyTasksByStatus', 'baselineCoverageByBand', 'reportsReceived', 'casesByStatus', 'defectsByStatus'].includes(m.code)
             )
 
-            // Nếu DB rỗng hoặc chưa có metric nào, hiển thị 7 thẻ mặc định chuẩn ban đầu như Ảnh 1
-            if (displayMetrics.length === 0) {
-              displayMetrics = [
-                { code: 'surveyTasksByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'baselineCoverageByBand', dimensions: { band: 'SURFACE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'baselineCoverageByBand', dimensions: { band: 'LEFT_EDGE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'baselineCoverageByBand', dimensions: { band: 'RIGHT_EDGE' }, value: 0, unit: 'percent', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'reportsReceived', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: true, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'casesByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] },
-                { code: 'defectsByStatus', dimensions: {}, value: 0, unit: 'count', numerator: null, denominator: null, periodApplicable: false, availability: 'AVAILABLE', reasonCodes: [], sourceRefs: [] }
-              ]
-            }
+            if (!data.summary.value) return null
+            if (!displayMetrics.length) return <p className="text-slate-500">Chưa có chỉ số từ nguồn dữ liệu trong phạm vi này.</p>
 
             return (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -452,7 +444,7 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                   <h3 className="font-bold text-sm text-slate-900">Toàn bộ chỉ số</h3>
                   {data.summary.value && (
                     <span className="text-[11px] text-slate-500 font-mono">
-                      Đọc lúc {data.summary.value.readAt} · Định nghĩa {data.summary.value.definitionVersion}
+                      Đọc lúc {businessDate(data.summary.value.readAt)}
                     </span>
                   )}
                 </div>
@@ -552,21 +544,13 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                           {data.items.value.items.map(r => (
                             <tr key={r.id} className="hover:bg-slate-50/80 transition">
                               <td className="break-all p-2.5 font-medium text-slate-800">
-                                <span>{r.type}</span>
-                                <details className="mt-0.5">
-                                  <summary className="cursor-pointer text-slate-500 hover:text-[#C9A227]">Tham chiếu</summary>
-                                  <span className="font-mono text-[10px] text-slate-600">{r.id}</span>
-                                </details>
-                                <small className="block text-slate-500">{r.band || ''}</small>
+                                <span>{metricLabels[r.metric] || 'Hồ sơ nguồn'}</span>
+                                <small className="block text-slate-500">{statusLabels[r.band || ''] || ''}</small>
                               </td>
                               <td className="p-2.5">
                                 <span className="inline-block px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-[11px] border border-slate-200">
-                                  {r.status || 'Chưa có trạng thái'}
+                                  {statusLabels[r.status || ''] || businessState(r.status)}
                                 </span>
-                                <details className="mt-0.5">
-                                  <summary className="cursor-pointer text-slate-500 hover:text-[#C9A227]">Phiên bản nguồn</summary>
-                                  <span className="font-mono text-[10px] text-slate-600">{r.version}</span>
-                                </details>
                               </td>
                               <td className="p-2.5 text-slate-700 font-medium">
                                 {r.sizeBytes != null ? (
@@ -609,14 +593,14 @@ export function ReportingMetricsPanel({ project, data }: { project: string; data
                         {data.timeline.value.items.map(r => (
                           <div key={r.eventId} className="py-2.5 text-xs text-slate-800 flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-[11px] text-slate-500">{r.occurredAt}</span>
-                              <span className="font-semibold text-slate-900">· {r.actorDisplay || 'Chưa có tên người thực hiện'}</span>
+                              <span className="font-mono text-[11px] text-slate-500">{businessDate(r.occurredAt)}</span>
+                              <span className="font-semibold text-slate-900">· {businessText(r.actorDisplay,'Chưa có tên người thực hiện')}</span>
                               <span className="px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 text-[10px] font-bold">
-                                {r.action}
+                                {businessState(r.action)}
                               </span>
                             </div>
                             <span className="text-slate-600 pl-2">
-                              {r.summary || 'Chưa có mô tả'}
+                              {r.summary==='Survey task workflow recorded.'||r.summary==='Dataset submitted.'?businessState(r.action):businessText(r.summary,'Chưa có mô tả')}
                             </span>
                           </div>
                         ))}

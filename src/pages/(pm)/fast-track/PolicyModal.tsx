@@ -161,11 +161,11 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
                 <Icon name="info" size={14} className="text-slate-400 shrink-0" />
-                <span>HIGH</span>
+                <span>Cao (Nghiêm trọng)</span>
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-80" title="Mức độ hư hỏng không thay thế đánh giá đủ điều kiện">
                 <Icon name="info" size={14} className="text-slate-400 shrink-0" />
-                <span>CRITICAL</span>
+                <span>Đặc biệt nghiêm trọng</span>
               </div>
             </div>
             <span className="text-[10px] text-slate-500 mt-1 block">

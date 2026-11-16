@@ -1,3 +1,4 @@
+import {businessReason} from '../../../utils/businessDisplay'
 import {businessText,businessError} from '../../../utils/businessDisplay'
 import React, { useState, useEffect } from 'react'
 import { fastTrackService } from '../../../api/services/fastTrackService'
@@ -143,7 +144,7 @@ export const DefectDetailModal: React.FC<DefectDetailModalProps> = ({
               </div>
               <ul className="list-disc list-inside text-[11px] text-rose-700 space-y-0.5 font-medium">
                 {missingReasons.map((r, i) => (
-                  <li key={i}>{r}</li>
+                  <li key={i}>{businessReason(r)}</li>
                 ))}
               </ul>
             </div>

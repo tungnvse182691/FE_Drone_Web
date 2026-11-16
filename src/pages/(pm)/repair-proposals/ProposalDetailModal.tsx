@@ -1,4 +1,4 @@
-import {businessError} from '../../../utils/businessDisplay'
+import {businessError,businessState} from '../../../utils/businessDisplay'
 import React,{useState,useEffect,useRef} from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { ProposalWorkPackage } from './types'
@@ -28,7 +28,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
   const items=read?.scope===scope?read.items:[]
   let held:ReturnType<typeof repairWorkflowService.pending>=null,journalError=''
   try{if(isSupervisor&&selectedPackageForDetail&&itemId)held=repairWorkflowService.pending(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve')}catch(e){journalError=exportError(e)}
-  const approve=async()=>{if(!selectedPackageForDetail||!itemId||!isSupervisor||busy||journalError)return;const start=scope;setBusy(true);setError('');try{const r=await repairWorkflowService.decide(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve',held?.body.reason||reason);if(latest.current!==start)return;setMessage(`Đã GET đối chiếu hạng mục: ${r.state}.`);const fresh=await repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id);if(latest.current!==start)return;setRead({scope,items:fresh});window.dispatchEvent(new Event('repair-workflow-refresh'))}catch(e){if(latest.current===start)setError(exportError(e))}finally{if(latest.current===start)setBusy(false)}}
+  const approve=async()=>{if(!selectedPackageForDetail||!itemId||!isSupervisor||busy||journalError)return;const start=scope;setBusy(true);setError('');try{const r=await repairWorkflowService.decide(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve',held?.body.reason||reason);if(latest.current!==start)return;setMessage(`Đã đọc lại hạng mục: ${businessState(r.state)}.`);const fresh=await repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id);if(latest.current!==start)return;setRead({scope,items:fresh});window.dispatchEvent(new Event('repair-workflow-refresh'))}catch(e){if(latest.current===start)setError(exportError(e))}finally{if(latest.current===start)setBusy(false)}}
   if (!selectedPackageForDetail) return null
 
   return (
@@ -67,7 +67,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
                       : 'bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {items.length?[...new Set(items.map(i=>`${i.mode}: ${i.state}`))].join(' · '):selectedPackageForDetail.status_label}
+                  {items.length?[...new Set(items.map(i=>`${businessState(i.mode)}: ${businessState(i.state)}`))].join(' · '):selectedPackageForDetail.status_label}
                 </span>
                 <span className="text-xs text-slate-500 font-mono">
                   Nguồn đang đọc từ hệ thống
@@ -163,7 +163,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
               </div>
 
               {(() => {
-                const packageItems = items.map((item,i)=>({id:item.id,defect_code:`Hạng mục ${i+1}`,item_code:'',chainage:'Theo nghĩa vụ đã lưu',lane_info:'',solution_title:'API đọc chưa trả phương án/checklist; không tự phục dựng.',volume_display:'Chưa có nguồn số đo',area_m2:Number.NaN,status:item.state,status_label:`${item.mode}: ${item.state}`}))
+                const packageItems = items.map((item,i)=>({id:item.id,defect_code:`Hạng mục ${i+1}`,item_code:'',chainage:'Theo nghĩa vụ đã lưu',lane_info:'',solution_title:'Hồ sơ chưa cung cấp phương án và danh mục kiểm tra.',volume_display:'Chưa có nguồn số đo',area_m2:Number.NaN,status:item.state,status_label:`${businessState(item.mode)}: ${businessState(item.state)}`}))
                 if (packageItems.length === 0) {
                   return (
                     <div className="p-6 text-center text-slate-400 text-xs">
@@ -210,7 +210,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
               Đóng
             </button>
 
-            {isSupervisor && items.some(i=>i.mode==='Normal') && <div className="space-y-2 text-xs"><label>Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="block w-full border rounded-lg p-2"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&['AwaitingApproval','ReadyToAssign'].includes(i.state)).map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {i.state}</option>)}</select></label><textarea aria-label="Lý do phê duyệt Normal" placeholder={held?'Lý do đang được giữ trong journal':'Nhập căn cứ phê duyệt'} value={held?.body.reason||reason} disabled={busy||!!held} onChange={e=>setReason(e.target.value)} maxLength={2000} className="block w-full border rounded-lg p-2"/><button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="border rounded-lg px-3 py-2 text-emerald-800">{held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button></div>}
+            {isSupervisor && items.some(i=>i.mode==='Normal') && <div className="space-y-2 text-xs"><label>Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="block w-full border rounded-lg p-2"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&['AwaitingApproval','ReadyToAssign'].includes(i.state)).map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {businessState(i.state)}</option>)}</select></label><textarea aria-label="Lý do phê duyệt Normal" placeholder={held?'Lý do của yêu cầu đang chờ':'Nhập căn cứ phê duyệt'} value={held?.body.reason||reason} disabled={busy||!!held} onChange={e=>setReason(e.target.value)} maxLength={2000} className="block w-full border rounded-lg p-2"/><button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="border rounded-lg px-3 py-2 text-emerald-800">{held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button></div>}
             {items.filter(i=>i.mode==='FastTrack').map((item,n)=><button key={item.id} type="button" onClick={()=>navigate(`${isSupervisor?'/sup':'/pm'}/fast-track?${new URLSearchParams({projectId:selectedPackageForDetail.route_id,defectId:selectedPackageForDetail.defect_id||'',itemId:item.id,open:'prepare'})}`)} className="border rounded-xl px-4 py-2 text-xs font-semibold text-[#8C6D1F]">{isPM?'Điều phối Fast Track có điều kiện':'Đọc độ phủ & điều phối Fast Track'} · Hạng mục {n+1}</button>)}
           </div>
         </div>

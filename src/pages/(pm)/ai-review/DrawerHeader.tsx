@@ -1,3 +1,4 @@
+import {businessDate} from '../../../utils/businessDisplay'
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
@@ -44,7 +45,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tạo hồ sơ lúc {selectedCase.created_at} • {sourceLabel} • {formattedSourceDetail}
+            Tạo hồ sơ lúc {businessDate(selectedCase.created_at)} • {sourceLabel} • {formattedSourceDetail}
           </p>
         </div>
       </div>

@@ -24,7 +24,7 @@ export const AuditModal: React.FC<AuditModalProps> = ({
             <Icon name="history" size={20} className="text-[#C9A227]" />
             <div>
               <h3 className="text-base font-bold text-brand-dark">Nhật Ký Kiểm Toán Thay Đổi Chính Sách (Audit Trail)</h3>
-              <p className="text-[10px] text-slate-500 font-mono">Bất biến • Ghi nhận xác thực bằng mã băm SHA-256</p>
+              <p className="text-[10px] text-slate-500 font-mono">Sự kiện từ các hồ sơ chính sách đã đọc</p>
             </div>
           </div>
           <button

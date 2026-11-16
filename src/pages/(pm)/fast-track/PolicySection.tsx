@@ -256,7 +256,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">Nhật Ký Hoạt Động &amp; Lịch Sử Chính Sách</h3>
-                  <p className="text-[10px] text-slate-500">Hồ sơ kiểm toán điện tử bất biến và lịch sử các lần ban hành quy chuẩn</p>
+                  <p className="text-[10px] text-slate-500">Lịch sử từ các hồ sơ chính sách đã đọc trong phạm vi này</p>
                 </div>
               </div>
               <button
@@ -313,7 +313,7 @@ export const PolicySection: React.FC<PolicySectionProps> = ({
                   ))
                 ) : (
                   <div className="py-8 text-center text-xs text-slate-500">
-                    Chưa có nhật ký kiểm toán nào được ghi nhận.
+                    Chưa đọc được sự kiện từ các tham chiếu chính sách hiện có.
                   </div>
                 )}
               </div>

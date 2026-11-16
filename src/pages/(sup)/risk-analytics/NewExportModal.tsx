@@ -1,3 +1,4 @@
+import {businessError} from '../../../utils/businessDisplay'
 import React from 'react'
 
 export interface NewExportModalProps {
@@ -28,7 +29,7 @@ export interface NewExportModalProps {
 }
 
 export const NewExportModal: React.FC<NewExportModalProps> = ({
-  busy,pending,received,journalKey,error,detailError,
+  busy,pending,received,error,detailError,
   isOpen,
   onClose,
   exportForm,
@@ -57,8 +58,8 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3.5 text-xs">
-          {error&&<p role="alert" className="text-rose-800">{error}</p>}
-          {pending&&<p role="status" className="break-all">Giữ yêu cầu {journalKey}; không thay body/key.</p>}
+          {error&&<p role="alert" className="text-rose-800">{businessError(error)}</p>}
+          {pending&&<p role="status" className="break-all">Yêu cầu đang được đối chiếu; giữ nguyên nội dung đã gửi.</p>}
           <fieldset disabled={busy||pending} className="space-y-3.5 border-0 p-0 m-0">
           {/* Loại báo cáo / hồ sơ */}
           <div className="space-y-1">

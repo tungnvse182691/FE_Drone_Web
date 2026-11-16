@@ -31,7 +31,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
   branchesLengthKm = 0,
   branchesCount = 0
 }) => {
-  const hasPendingProposals = project.repair_packages > 0
+  const hasRepairPackages = project.repair_packages > 0
   const submissionManaged = submissionReady || submissionLoading || !!submissionError || !!submission
   const dossierPath = `${basePath}/projects/${project.id}/alignment` + (submission?.status === 'CONFIRMED' ? `?${new URLSearchParams({draftId: submission.draftId, roadSectionId: submission.roadSectionId!, routeVersionId: submission.confirmedRouteVersionId!})}` : '')
 
@@ -169,13 +169,13 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
               </div>
               <p className="text-xs text-slate-600 mt-0.5">
                 Dự án được đóng bởi <strong className="text-slate-900">{project.closed_by || 'Giám sát'}</strong> ngày{' '}
-                {project.closed_at ? new Date(project.closed_at).toLocaleDateString('vi-VN') : '15/01/2026'}.
+                {project.closed_at ? new Date(project.closed_at).toLocaleDateString('vi-VN') : 'Chưa có ngày đóng'}.
                 {project.closed_reason && ` Kết luận: "${project.closed_reason}"`}
               </p>
             </div>
           </div>
           <div className="text-xs text-slate-600 font-mono shrink-0 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-            Hạn lưu trữ: <span className="font-semibold text-slate-900">{project.retention_until || 'Tối thiểu 5 năm'}</span>
+            Hạn lưu trữ: <span className="font-semibold text-slate-900">{project.retention_until || 'Chưa có thời hạn từ hồ sơ'}</span>
           </div>
         </div>
       ) : project.status === 'RESTRICTED' ? (
@@ -199,7 +199,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             </div>
           </div>
         </div>
-      ) : hasPendingProposals ? (
+      ) : hasRepairPackages ? (
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
@@ -208,14 +208,14 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-bold text-slate-900">
-                  Đang chờ Giám sát duyệt: {project.repair_packages} Đề xuất phương án kỹ thuật sửa chữa
+                  Có {project.repair_packages} gói sửa chữa trong dự án
                 </span>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 uppercase tracking-wide">
-                  SLA CẢNH BÁO
+                  HỒ SƠ SỬA CHỮA
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Trách nhiệm hiện tại: <strong className="font-semibold text-slate-900">Giám sát trưởng</strong>.
+                Mở danh sách để xem trạng thái và bước xử lý của từng gói.
               </p>
             </div>
           </div>
@@ -226,7 +226,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({
               type="button"
               className="w-full md:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white text-xs font-semibold transition-colors cursor-pointer"
             >
-              <span>{isSupervisor ? 'Thẩm duyệt phương án sửa chữa' : 'Xem các đề xuất đã trình'}</span>
+              <span>Xem các gói sửa chữa</span>
               <Icon name="arrow_forward" size={16} />
             </button>
           </div>

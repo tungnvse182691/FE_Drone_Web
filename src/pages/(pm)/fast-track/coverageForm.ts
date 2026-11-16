@@ -7,7 +7,7 @@ export function coverageDate(utc:string, exclusiveEnd=false) {
 }
 export function coverageFormErrors(data:RoadCoverageFact,form:CoverageChoice):Partial<Record<keyof CoverageChoice,string>> {
   const errors:Partial<Record<keyof CoverageChoice,string>>={},scope=data.scopes?.find(s=>s.obligationId===form.scopeId),handover=data.sources?.find(s=>s.kind==='HANDOVER' && s.id===form.handoverId),source=data.sources?.find(s=>s.kind===form.sourceKind && s.id===form.sourceId)
-  if(!scope || !/^[a-f0-9]{64}$/i.test(scope.scopeHash))errors.scopeId=data.scopes?.length?'Chọn phạm vi nghĩa vụ có hash nguồn hợp lệ.':'Chưa có phạm vi nghĩa vụ trong nguồn đọc.'
+  if(!scope || !/^[a-f0-9]{64}$/i.test(scope.scopeHash))errors.scopeId=data.scopes?.length?'Chọn phạm vi nghĩa vụ đã có căn cứ nguồn hợp lệ.':'Chưa có phạm vi nghĩa vụ trong nguồn đọc.'
   if(!handover || !/^[a-f0-9]{64}$/i.test(handover.version))errors.handoverId=data.sources?.some(s=>s.kind==='HANDOVER')?'Chọn hồ sơ bàn giao đã chấp nhận, có phiên bản nguồn.':'Chưa có hồ sơ bàn giao đã được chấp nhận; số hiệu nhập tay không thay thế hồ sơ.'
   if(!source || !/^[a-f0-9]{64}$/i.test(source.version))errors.sourceId=data.sources?.some(s=>s.kind===form.sourceKind)?'Chọn căn cứ có phiên bản nguồn.':'Chưa có nguồn căn cứ phù hợp trong dữ liệu đọc.'
   const day=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value+'T00:00:00Z')) && new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value
