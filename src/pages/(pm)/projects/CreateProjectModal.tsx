@@ -96,20 +96,24 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
 
   if (!isOpen) return null
 
+  const crsInvalid = !pendingCreate && !['32648', '32649'].includes(engineeringCrs)
+  const busy = pendingCreate || isSubmitting
+  const codeError = !!errorMessage && errorMessage.toLowerCase().includes('mã dự án')
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-xl rounded-xl shadow-xl border border-slate-200 flex flex-col overflow-hidden max-h-[92vh]">
-        {/* Header - Minimalism */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-brand-gold/15 text-brand-gold flex items-center justify-center shrink-0">
-              <Icon name="domain_add" size={22} />
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden max-h-[92vh]">
+        {/* Header */}
+        <div className="px-6 py-4 bg-brand-surfaceAlt border-b border-brand-border flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-brand-gold/15 text-brand-gold flex items-center justify-center shrink-0">
+              <Icon name="add_road" size={22} />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 font-headline">
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-brand-dark font-headline leading-tight">
                 Khởi tạo dự án bảo hành mới
               </h2>
-              <p className="text-xs text-slate-500 font-body">
+              <p className="mt-0.5 text-xs text-slate-500 font-body leading-snug">
                 Thiết lập thông tin bàn giao &amp; chỉ định 1 PM chính
               </p>
             </div>
@@ -118,242 +122,250 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer disabled:opacity-50"
             aria-label="Đóng"
           >
             <Icon name="close" size={20} />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={onSubmit} className="p-6 overflow-y-auto space-y-4 text-xs font-body">
-          {/* Thông báo lỗi từ Backend nếu có */}
-          {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in">
-              <Icon name="error" size={18} className="text-rose-600 shrink-0 mt-0.5" />
-              <div className="flex-1 leading-relaxed">
-                <span className="font-bold text-rose-900 block mb-0.5">Trạng thái yêu cầu tạo dự án:</span>
-                <span className="text-rose-700 whitespace-pre-line">{errorMessage}</span>
-              </div>
-            </div>
-          )}
-
-          {pmError && <div role="alert" className="text-xs text-rose-700">{pmError} <button type="button" onClick={onRetryPms} className="underline">Thử lại danh sách PM</button></div>}
-          <fieldset disabled={pendingCreate || isSubmitting} className="space-y-4 border-0 p-0 m-0 min-w-0">
-            <label className="block text-xs font-semibold text-slate-700">CRS kỹ thuật dự án <span className="text-rose-600">*</span>
-              <select required aria-label="CRS kỹ thuật dự án" aria-invalid={!pendingCreate && !['32648', '32649'].includes(engineeringCrs)} aria-describedby="project-crs-help project-crs-error" value={engineeringCrs} onChange={event => onChangeEngineeringCrs?.(event.target.value)} className="mt-1 w-full border border-slate-200 rounded-lg p-2 text-sm">
-                <option value="">Chọn CRS theo hồ sơ tọa độ</option>
-                <option value="32648">WGS 84 / UTM múi 48 Bắc — EPSG:32648</option>
-                <option value="32649">WGS 84 / UTM múi 49 Bắc — EPSG:32649</option>
-              </select>
-            </label>
-            <p id="project-crs-help" className="text-xs text-slate-500">Chọn theo hồ sơ tọa độ kỹ thuật của dự án, không suy từ địa điểm. CRS nguồn tuyến phải khớp; FE không tự chuyển tọa độ.</p>
-            {!pendingCreate && !['32648', '32649'].includes(engineeringCrs) && <p id="project-crs-error" role="alert" className="text-xs text-rose-700">Bắt buộc chọn CRS kỹ thuật trước khi tạo dự án.</p>}
-          {/* Mã dự án & Tên dự án */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <label className="block font-medium text-slate-700">
-                Mã dự án <span className="text-rose-600">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={50}
-                value={projectCode}
-                onChange={handleCodeChange}
-                placeholder="VD: PRJ-QL1A-03"
-                className={`w-full px-3 py-2 border font-mono font-bold text-xs rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                  errorMessage && errorMessage.toLowerCase().includes('mã dự án')
-                    ? 'border-rose-400 bg-rose-50/20 text-rose-900 focus:ring-rose-400'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-brand-gold'
-                }`}
-              />
-              <p className="text-[10.5px] text-slate-500 leading-tight">
-                * Mã in hoa, không dấu (VD: PRJ-QL1A-03, DA-01). Không trùng với dự án đã có.
-              </p>
-            </div>
-            <div className="md:col-span-2 space-y-1">
-              <label className="block font-medium text-slate-700">
-                Tên công trình dự án <span className="text-rose-600">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                maxLength={255}
-                value={projectName}
-                onChange={(e) => onChangeProjectName(e.target.value)}
-                placeholder="VD: Quốc lộ 1A - Đoạn Diễn Châu"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
-            </div>
-          </div>
-
-          {/* Khu vực & Chỉ định PM chính */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block font-medium text-slate-700">
-                Khu vực địa bàn quản lý
-              </label>
-              <input
-                type="text"
-                value={projectRegion}
-                onChange={(e) => onChangeProjectRegion(e.target.value)}
-                placeholder="VD: Nghệ An - Hà Tĩnh"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="block font-medium text-slate-700">
-                  Chỉ định 1 PM chính <span className="text-rose-600">*</span>
-                </label>
-              </div>
-              <select
-                required
-                value={projectPM}
-                onChange={(e) => onChangeProjectPM(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold font-medium"
-              >
-                <option value="">Chọn PM chính</option>
-                {pendingCreate && projectPM && !pmOptions.some(option => option.id === projectPM) && <option value={projectPM}>PM của yêu cầu đang đối chiếu</option>}
-                {pmOptions.length === 0 ? (
-                  <option value="">{pmLoading ? 'Đang tải danh sách PM...' : 'Không có PM đủ điều kiện'}</option>
-                ) : (
-                  pmOptions.map((pm) => (
-                    <option key={pm.id} value={pm.id}>
-                      {pm.name} ({pm.email})
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-          </div>
-
-          {/* Thời hạn bảo hành & Bàn giao */}
-          <div className="p-3.5 rounded-lg bg-slate-50/70 border border-slate-200 space-y-2">
-            <div className="flex items-center gap-1.5 text-slate-800 font-medium text-xs">
-              <Icon name="calendar_month" size={16} className="text-brand-gold" />
-              <span>Thời hạn nghiệm thu &amp; hiệu lực bảo hành</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <span className="text-[11px] text-slate-600">Ngày bàn giao đưa vào sử dụng *</span>
-                <input
-                  type="date"
-                  required
-                  value={startDate}
-                  onChange={(e) => onChangeStartDate(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-gold"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-slate-600">Ngày hết hạn bảo hành *</span>
-                <input
-                  type="date"
-                  required
-                  value={endDate}
-                  onChange={(e) => onChangeEndDate(e.target.value)}
-                  className={`w-full px-3 py-1.5 bg-white border rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 ${
-                    isDateInvalid
-                      ? 'border-rose-400 focus:ring-rose-400 bg-rose-50/30'
-                      : 'border-slate-200 focus:ring-brand-gold'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Cảnh báo vi phạm validation */}
-            {isDateInvalid && (
-              <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-center gap-2">
-                <Icon name="error" size={16} className="shrink-0 text-rose-600" />
-                <span>
-                  <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="font-mono">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="font-mono">{startDate}</code>).
-                </span>
+        <form onSubmit={onSubmit} className="flex flex-col min-h-0 flex-1 text-xs font-body">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {errorMessage && (
+              <div className="rg-alert rg-alert-error" role="alert">
+                <Icon name="error" size={18} className="shrink-0 mt-0.5 text-rose-600" />
+                <div className="flex-1 leading-relaxed min-w-0">
+                  <span className="font-bold block mb-0.5">Trạng thái yêu cầu tạo dự án:</span>
+                  <span className="whitespace-pre-line break-words">{errorMessage}</span>
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Đính kèm tài liệu bàn giao ban đầu */}
-          <div className="p-3.5 rounded-lg bg-slate-50/70 border border-slate-200 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-slate-800 flex items-center gap-1.5 text-xs">
-                <Icon name="attach_file" size={16} className="text-slate-500" />
-                <span>Tài liệu / Biên bản bàn giao ban đầu</span>
-              </span>
-              <span className="text-[10px] text-slate-400 italic">Tùy chọn (được phép để trống)</span>
-            </div>
-
-            <p className="text-[11px] text-slate-500 leading-normal">
-              Sau khi GET xác nhận tạo dự án, mở chi tiết để chuẩn bị tuyến, Crew, tài liệu và bảo hành. Dữ liệu ngày bàn giao không thay thế tệp đã xác minh hoặc xác nhận độ phủ; API hiện chưa có thao tác gắn bổ sung tệp vào hồ sơ bàn giao đã tạo.
-            </p>
-
-            <div className="space-y-2">
-              <label className="flex items-center justify-center p-3 border-2 border-dashed border-slate-200 hover:border-brand-gold rounded-lg cursor-pointer bg-white transition group">
-                <input
-                  disabled
-                  type="file"
-                  multiple
-                  className="hidden"
-
-                />
-                <div className="flex items-center gap-2 text-slate-500 group-hover:text-brand-navy">
-                  <Icon name="upload_file" size={18} className="text-slate-400 group-hover:text-brand-gold" />
-                  <span className="text-xs">Chưa hỗ trợ tải tệp trước khi tạo dự án. Có thể tạo không đính kèm.</span>
-                </div>
-              </label>
-
-              {handoverFiles && handoverFiles.length > 0 ? (
-                <div className="space-y-1">
-                  {handoverFiles.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-[11px]"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <Icon name="description" size={16} className="text-brand-gold shrink-0" />
-                        <span className="truncate font-medium text-slate-800">{file}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onChangeHandoverFiles?.(handoverFiles.filter((_, i) => i !== idx))}
-                        className="text-slate-400 hover:text-rose-600 transition p-1"
-                        title="Xóa tài liệu"
-                      >
-                        <Icon name="close" size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[10px] text-slate-400 italic text-center py-1">
-                  Chưa có tài liệu bàn giao nào được đính kèm.
+            {pmError && (
+              <div className="rg-alert rg-alert-warn" role="alert">
+                <Icon name="warning" size={16} className="shrink-0 mt-px" />
+                <p className="min-w-0 break-words">
+                  {pmError}{' '}
+                  <button type="button" onClick={onRetryPms} className="font-semibold underline cursor-pointer">
+                    Thử lại danh sách PM
+                  </button>
                 </p>
-              )}
-            </div>
+              </div>
+            )}
+
+            <fieldset disabled={busy} className="space-y-4 border-0 p-0 m-0 min-w-0">
+              {/* 1. Thông tin dự án */}
+              <section className="rounded-xl border border-brand-border p-4 space-y-3">
+                <div className="rg-section-title"><Icon name="badge" size={16} className="text-brand-navy" /><p>Thông tin dự án</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="rg-label" htmlFor="project-code">
+                      Mã dự án <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      id="project-code"
+                      type="text"
+                      required
+                      maxLength={50}
+                      value={projectCode}
+                      onChange={handleCodeChange}
+                      placeholder="VD: PRJ-QL1A-03"
+                      aria-invalid={codeError}
+                      className={`rg-field w-full font-mono font-bold ${codeError ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-400' : ''}`}
+                    />
+                    <p className="rg-hint">Mã in hoa, không dấu, không trùng dự án đã có.</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="rg-label" htmlFor="project-name">
+                      Tên công trình dự án <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      id="project-name"
+                      type="text"
+                      required
+                      maxLength={255}
+                      value={projectName}
+                      onChange={(e) => onChangeProjectName(e.target.value)}
+                      placeholder="VD: Quốc lộ 1A - Đoạn Diễn Châu"
+                      className="rg-field w-full"
+                    />
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="rg-label" htmlFor="project-region">Khu vực địa bàn quản lý</label>
+                    <input
+                      id="project-region"
+                      type="text"
+                      value={projectRegion}
+                      onChange={(e) => onChangeProjectRegion(e.target.value)}
+                      placeholder="VD: Nghệ An - Hà Tĩnh"
+                      className="rg-field w-full"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* 2. Quản lý & hệ tọa độ */}
+              <section className="rounded-xl border border-brand-border p-4 space-y-3">
+                <div className="rg-section-title"><Icon name="manage_accounts" size={16} className="text-brand-navy" /><p>Phụ trách &amp; hệ tọa độ</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="rg-label" htmlFor="project-pm">
+                      Chỉ định 1 PM chính <span className="text-rose-600">*</span>
+                    </label>
+                    <select
+                      id="project-pm"
+                      required
+                      value={projectPM}
+                      onChange={(e) => onChangeProjectPM(e.target.value)}
+                      className="rg-field w-full font-medium"
+                    >
+                      <option value="">Chọn PM chính</option>
+                      {pendingCreate && projectPM && !pmOptions.some(option => option.id === projectPM) && <option value={projectPM}>PM của yêu cầu đang đối chiếu</option>}
+                      {pmOptions.length === 0 ? (
+                        <option value="">{pmLoading ? 'Đang tải danh sách PM...' : 'Không có PM đủ điều kiện'}</option>
+                      ) : (
+                        pmOptions.map((pm) => (
+                          <option key={pm.id} value={pm.id}>
+                            {pm.name} ({pm.email})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="rg-label" htmlFor="project-crs">
+                      CRS kỹ thuật dự án <span className="text-rose-600">*</span>
+                    </label>
+                    <select
+                      id="project-crs"
+                      required
+                      aria-label="CRS kỹ thuật dự án"
+                      aria-invalid={crsInvalid}
+                      aria-describedby="project-crs-help project-crs-error"
+                      value={engineeringCrs}
+                      onChange={event => onChangeEngineeringCrs?.(event.target.value)}
+                      className={`rg-field w-full ${crsInvalid ? 'border-rose-300' : ''}`}
+                    >
+                      <option value="">Chọn CRS theo hồ sơ tọa độ</option>
+                      <option value="32648">WGS 84 / UTM múi 48 Bắc — EPSG:32648</option>
+                      <option value="32649">WGS 84 / UTM múi 49 Bắc — EPSG:32649</option>
+                    </select>
+                  </div>
+                </div>
+                <p id="project-crs-help" className="rg-hint">
+                  Chọn theo hồ sơ tọa độ kỹ thuật của dự án, không suy từ địa điểm. CRS nguồn tuyến phải khớp; FE không tự chuyển tọa độ.
+                </p>
+                {crsInvalid && (
+                  <p id="project-crs-error" role="alert" className="text-[11px] font-medium text-rose-700">
+                    Bắt buộc chọn CRS kỹ thuật trước khi tạo dự án.
+                  </p>
+                )}
+              </section>
+
+              {/* 3. Thời hạn */}
+              <section className="rounded-xl border border-brand-border p-4 space-y-3">
+                <div className="rg-section-title"><Icon name="calendar_month" size={16} className="text-brand-navy" /><p>Thời hạn nghiệm thu &amp; hiệu lực bảo hành</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="rg-label" htmlFor="project-handover">
+                      Ngày bàn giao đưa vào sử dụng <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      id="project-handover"
+                      type="date"
+                      required
+                      value={startDate}
+                      onChange={(e) => onChangeStartDate(e.target.value)}
+                      className="rg-field w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="rg-label" htmlFor="project-warranty-end">
+                      Ngày hết hạn bảo hành <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      id="project-warranty-end"
+                      type="date"
+                      required
+                      value={endDate}
+                      onChange={(e) => onChangeEndDate(e.target.value)}
+                      aria-invalid={isDateInvalid}
+                      className={`rg-field w-full ${isDateInvalid ? 'border-rose-400 bg-rose-50/30 focus:ring-rose-400' : ''}`}
+                    />
+                  </div>
+                </div>
+                {isDateInvalid && (
+                  <div className="rg-alert rg-alert-error" role="alert">
+                    <Icon name="error" size={16} className="shrink-0 mt-px" />
+                    <span className="min-w-0">
+                      <strong>Lỗi quy tắc:</strong> Ngày hết hạn bảo hành (<code className="font-mono">{endDate}</code>) không được nhỏ hơn ngày nghiệm thu bàn giao (<code className="font-mono">{startDate}</code>).
+                    </span>
+                  </div>
+                )}
+              </section>
+
+              {/* 4. Tài liệu bàn giao */}
+              <section className="rounded-xl border border-brand-border p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="rg-section-title"><Icon name="attach_file" size={16} className="text-brand-navy" /><p>Tài liệu / Biên bản bàn giao ban đầu</p></div>
+                  <span className="rg-pill rg-pill-neutral">Tùy chọn</span>
+                </div>
+                <p className="rg-hint">
+                  Sau khi GET xác nhận tạo dự án, mở chi tiết để chuẩn bị tuyến, Crew, tài liệu và bảo hành. Dữ liệu ngày bàn giao không thay thế tệp đã xác minh hoặc xác nhận độ phủ; API hiện chưa có thao tác gắn bổ sung tệp vào hồ sơ bàn giao đã tạo.
+                </p>
+                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-brand-border rounded-lg bg-slate-50/60 text-slate-500 cursor-not-allowed">
+                  <input disabled type="file" multiple className="hidden" />
+                  <Icon name="upload_file" size={18} className="text-slate-400" />
+                  <span>Chưa hỗ trợ tải tệp trước khi tạo dự án. Có thể tạo không đính kèm.</span>
+                </label>
+                {handoverFiles && handoverFiles.length > 0 ? (
+                  <div className="space-y-1">
+                    {handoverFiles.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white border border-brand-border text-[11px]"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Icon name="description" size={16} className="text-brand-gold shrink-0" />
+                          <span className="truncate font-medium text-slate-800">{file}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onChangeHandoverFiles?.(handoverFiles.filter((_, i) => i !== idx))}
+                          className="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
+                          title="Xóa tài liệu"
+                        >
+                          <Icon name="close" size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic text-center">
+                    Chưa có tài liệu bàn giao nào được đính kèm.
+                  </p>
+                )}
+              </section>
+            </fieldset>
           </div>
 
-
-          </fieldset>
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+          {/* Footer */}
+          <div className="px-6 py-3 border-t border-brand-border bg-brand-surfaceAlt flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition cursor-pointer text-xs"
+              className="rg-btn !px-4 !py-2 !text-xs"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`px-4 py-2 rounded-lg font-medium shadow-xs transition flex items-center gap-1.5 text-xs text-white ${
+              className={`inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-semibold shadow-xs transition-colors ${
                 isFormValid
-                  ? 'bg-brand-gold hover:bg-brand-goldMuted cursor-pointer'
-                  : 'bg-slate-300 cursor-not-allowed text-slate-500'
+                  ? 'bg-brand-gold text-white hover:bg-brand-goldMuted cursor-pointer'
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed'
               }`}
             >
               <Icon

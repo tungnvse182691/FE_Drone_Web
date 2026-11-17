@@ -5,6 +5,8 @@ import { exportError } from '../../../api/services/projectExportService'
 import { Empty, Feedback, Field, KV, Loading, PanelButton, PanelShell, Pill, SectionTitle } from '../../../components/ui/PanelKit'
 import { Icon } from '../../../components/ui/Icon'
 import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
+import { SourceVideoPanel } from './SourceVideoPanel'
+import { sourceVideosOf } from '../../../api/services/sourceVideoService'
 
 const VERDICT_LABEL: Record<Verdict, string> = { PASS: 'Đạt', FAIL: 'Không đạt', UNKNOWN: 'Chưa rõ' }
 const BAND_LABEL: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Lề trái', RIGHT_EDGE: 'Lề phải' }
@@ -60,7 +62,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
     const { dataset: d, etag: t } = await surveyDatasetService.dataset(id, { taskId: record.id, projectId: record.projectId })
     const c = await surveyDatasetService.coverage(d.id)
     setDataset(d); setEtag(t); setCoverage(c); setAssessment(null); setScopeIndex(0)
-    setFileId(d.sourceFiles[0]?.fileId || '')
+    setFileId(sourceVideosOf(d.sourceFiles)[0]?.fileId || '') // chỉ mặc định theo video nguồn; telemetry/tệp khác phải do PM chọn
     setRows(d.scope.flatMap((s) => s.segmentIds.map((segmentId) => ({ routeVersionId: s.routeVersionId, segmentSetId: s.segmentSetId, segmentId, targetBand: s.targetBand, positionStatus: 'UNKNOWN' as Verdict, qualityStatus: 'UNKNOWN' as Verdict, coverageStatus: 'UNKNOWN' as Verdict }))))
     if (c.assessmentId) setAssessment(await surveyDatasetService.assessment(d.id, c.assessmentId))
   })
@@ -162,6 +164,9 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
               { k: 'Tệp nguồn', v: dataset.sourceFiles.length },
             ]} />
           </div>
+          <div className="rg-subcard">
+            <SourceVideoPanel key={dataset.id} sourceFiles={dataset.sourceFiles} versionNo={dsList?.find((d) => d.id === dataset.id)?.versionNo} />
+          </div>
           <div className="rg-subcard" data-testid="dataset-coverage">
             <SectionTitle icon="donut_large">Độ phủ (phương pháp {coverage?.methodVersion || '—'})</SectionTitle>
             <div className="space-y-1.5">
@@ -219,6 +224,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
               <div className="rg-grid">
                 <Field label="Tệp bằng chứng" span="col-span-12 md:col-span-6">
                   <select aria-label="Tệp bằng chứng" disabled={!!busy} value={fileId} onChange={(e) => setFileId(e.target.value)} className={cls}>
+                    <option value="">Chọn tệp bằng chứng</option>
                     {dataset.sourceFiles.map((f) => (<option key={f.fileId} value={f.fileId}>{f.purpose || 'Tệp'} · {f.mediaType || ''} · {f.fileId.slice(0, 8)}</option>))}
                   </select>
                 </Field>

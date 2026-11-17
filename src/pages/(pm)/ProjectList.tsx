@@ -319,13 +319,15 @@ export const ProjectList: React.FC = () => {
         </div>
       )}
 
-      {projects.some(p => p.stats_error) && <div role="alert" className="p-3 rounded-xl border border-amber-200 text-amber-900 text-xs">
-        Một phần thông tin nhân sự hoặc thống kê chưa tải được. Dữ liệu dự án đã tải vẫn được giữ.
-        <button type="button" className="ml-3 underline" onClick={() => { void loadProjects() }}>Thử lại</button>
+      {projects.some(p => p.stats_error) && <div role="alert" className="rg-alert rg-alert-warn">
+        <Icon name="warning" size={16} className="shrink-0 mt-px" />
+        <p className="flex-1 min-w-0">Một phần thông tin nhân sự hoặc thống kê chưa tải được. Dữ liệu dự án đã tải vẫn được giữ.</p>
+        <button type="button" className="shrink-0 font-semibold underline cursor-pointer" onClick={() => { void loadProjects() }}>Thử lại</button>
       </div>}
-      {!isLoading && !loadError && filteredProjects.length === 0 && <p role="status" className="p-6 text-center text-sm text-slate-500 border rounded-xl bg-white">
-        {projects.length === 0 ? 'Không có dự án trong phạm vi được cấp từ CSDL.' : 'Không có dự án phù hợp bộ lọc.'}
-      </p>}
+      {!isLoading && !loadError && filteredProjects.length === 0 && <div role="status" className="rg-empty">
+        <Icon name="inbox" size={18} className="text-slate-400" />
+        <p>{projects.length === 0 ? 'Không có dự án trong phạm vi được cấp từ CSDL.' : 'Không có dự án phù hợp bộ lọc.'}</p>
+      </div>}
       {isLoading ? (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200 text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
           <Icon name="sync" size={24} className="animate-spin text-brand-gold" />
