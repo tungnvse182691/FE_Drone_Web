@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { defectStatisticsService, type DefectStatisticsView } from '../../../api/services/defectStatisticsService'
 import { exportError } from '../../../api/services/projectExportService'
+import { Empty, Feedback, Field, KV, Loading, PanelButton, PanelShell, Pill, SectionTitle } from '../../../components/ui/PanelKit'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 /** PM: xác nhận thống kê khiếm khuyết (ghim phép đo vào shared part) và xem lịch sử xác nhận. Dữ liệu từ BE. */
 export const DefectStatisticsPanel: React.FC<{ projectId: string }> = ({ projectId }) => {
@@ -13,6 +15,7 @@ export const DefectStatisticsPanel: React.FC<{ projectId: string }> = ({ project
   const [provenance, setProvenance] = useState<'TEST_ONLY' | 'REAL_SOURCE'>('REAL_SOURCE')
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -25,54 +28,69 @@ export const DefectStatisticsPanel: React.FC<{ projectId: string }> = ({ project
   const scope = view?.scopes[scopeIdx]
   const toggle = (list: string[], id: string, set: (v: string[]) => void) => set(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
   const submit = async () => {
-    if (!view || !scope || busy) return
+    if (!view || !scope || !guard.acquire()) return
     setBusy(true); setError(''); setMessage('')
     try {
       await defectStatisticsService.confirm(projectId, view, { scope, sharedPartId, segmentIds: segments, measurementIds: measurements, provenance, reason })
       setMessage('Đã xác nhận thống kê khiếm khuyết.'); setReason(''); await load()
-    } catch (e) { setError(exportError(e)) } finally { setBusy(false) }
+    } catch (e) { setError(exportError(e)) } finally { setBusy(false); guard.release() }
   }
-  const cls = 'border border-[#E2E5E9] rounded-lg p-2 text-xs'
+  const cls = 'rg-field'
   const myMeasurements = view?.measurements.filter((m) => m.defectId === scope?.defectId) || []
 
   return (
-    <section className="bg-white rounded-[16px] border border-[#E2E5E9] p-5 space-y-3 text-xs" data-testid="defect-statistics-panel">
-      <div className="flex items-center gap-3">
-        <h3 className="font-bold text-base text-[#1A1D20]">Xác nhận thống kê khiếm khuyết</h3>
-        <button type="button" disabled={loading} onClick={() => { void load() }} className={cls}>{loading ? 'Đang tải…' : 'Tải lại'}</button>
-      </div>
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
+    <PanelShell icon="query_stats" title="Xác nhận thống kê khiếm khuyết" className="!p-5 !rounded-[16px]" data-testid="defect-statistics-panel"
+      actions={<PanelButton disabled={loading} loading={loading} onClick={() => { void load() }}>{loading ? 'Đang tải…' : 'Tải lại'}</PanelButton>}>
+      <Feedback error={error} message={message} />
+      {!view && loading && <Loading />}
       {view && (
         <>
-          <p>Khiếm khuyết riêng biệt {view.statistics.projectDistinctDefects} · đã khớp {view.statistics.matchedDistinctDefects} · shared part {view.statistics.sharedParts} · chưa ánh xạ {view.statistics.unmappedDefects}{view.statistics.missingReasons?.length ? ` · thiếu: ${view.statistics.missingReasons.join(', ')}` : ''}</p>
-          {view.scopes.length === 0 && <p className="text-slate-500">Không có phạm vi nghĩa vụ nào trong CSDL.</p>}
+          <div className="rg-subcard">
+            <KV items={[
+              { k: 'Khiếm khuyết riêng biệt', v: view.statistics.projectDistinctDefects },
+              { k: 'Đã khớp', v: view.statistics.matchedDistinctDefects },
+              { k: 'Shared part', v: view.statistics.sharedParts },
+              { k: 'Chưa ánh xạ', v: view.statistics.unmappedDefects },
+              ...(view.statistics.missingReasons?.length ? [{ k: 'Thiếu', v: view.statistics.missingReasons.join(', ') }] : []),
+            ]} />
+          </div>
+          {view.scopes.length === 0 && <Empty icon="route">Không có phạm vi nghĩa vụ nào trong CSDL.</Empty>}
           {scope && (
-            <div className="space-y-2 rounded-xl border border-[#E2E5E9] p-3">
-              <select aria-label="Phạm vi nghĩa vụ" value={scopeIdx} disabled={busy} onChange={(e) => { setScopeIdx(Number(e.target.value)); setMeasurements([]) }} className={`${cls} w-full`}>
-                {view.scopes.map((s, i) => (<option key={s.obligationId} value={i}>Khiếm khuyết #{s.defectId.slice(0, 8)} · lý trình {s.from}–{s.to} (+{s.offsetFrom}…{s.offsetTo})</option>))}
-              </select>
-              <p className="font-semibold">Phân đoạn</p>
-              <div className="flex flex-wrap gap-3">{view.segments.filter((s) => s.routeVersionId === scope.routeVersionId).map((s) => (<label key={s.id} className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={segments.includes(s.id)} onChange={() => toggle(segments, s.id, setSegments)} />#{s.id.slice(0, 8)}</label>))}</div>
-              <p className="font-semibold">Phép đo của khiếm khuyết</p>
-              {myMeasurements.length === 0 && <p className="text-slate-500">Khiếm khuyết chưa có phép đo.</p>}
-              <div className="flex flex-wrap gap-3">{myMeasurements.map((m) => (<label key={m.id} className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={measurements.includes(m.id)} onChange={() => toggle(measurements, m.id, setMeasurements)} />{m.type} {m.valueState === 'KNOWN' ? `${m.value} ${m.unit || ''}` : `(${m.unknownReason || 'chưa rõ'})`}</label>))}</div>
-              <div className="flex flex-wrap gap-2">
-                <input aria-label="Mã shared part" value={sharedPartId} disabled={busy} onChange={(e) => setSharedPartId(e.target.value)} placeholder="sharedPartId (GUID)" className={`${cls} flex-1`} />
-                <select aria-label="Nguồn thống kê" value={provenance} disabled={busy} onChange={(e) => setProvenance(e.target.value as 'TEST_ONLY' | 'REAL_SOURCE')} className={cls}><option value="REAL_SOURCE">REAL_SOURCE</option><option value="TEST_ONLY">TEST_ONLY</option></select>
+            <div className="rg-subcard">
+              <Field label="Phạm vi nghĩa vụ">
+                <select aria-label="Phạm vi nghĩa vụ" value={scopeIdx} disabled={busy} onChange={(e) => { setScopeIdx(Number(e.target.value)); setMeasurements([]) }} className={`${cls} w-full`}>
+                  {view.scopes.map((s, i) => (<option key={s.obligationId} value={i}>Khiếm khuyết #{s.defectId.slice(0, 8)} · lý trình {s.from}–{s.to} (+{s.offsetFrom}…{s.offsetTo})</option>))}
+                </select>
+              </Field>
+              <div className="grid lg:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <SectionTitle icon="segment">Phân đoạn</SectionTitle>
+                  <div className="flex flex-wrap gap-2">{view.segments.filter((s) => s.routeVersionId === scope.routeVersionId).map((s) => (<label key={s.id} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors ${segments.includes(s.id) ? 'border-brand-navy bg-brand-navy/5 text-brand-navy' : 'border-brand-border bg-white hover:bg-brand-surfaceAlt'}`}><input type="checkbox" className="accent-brand-navy" disabled={busy} checked={segments.includes(s.id)} onChange={() => toggle(segments, s.id, setSegments)} />#{s.id.slice(0, 8)}</label>))}</div>
+                </div>
+                <div className="space-y-2">
+                  <SectionTitle icon="straighten">Phép đo của khiếm khuyết</SectionTitle>
+                  {myMeasurements.length === 0 && <Empty icon="straighten">Khiếm khuyết chưa có phép đo.</Empty>}
+                  <div className="flex flex-wrap gap-2">{myMeasurements.map((m) => (<label key={m.id} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors ${measurements.includes(m.id) ? 'border-brand-navy bg-brand-navy/5 text-brand-navy' : 'border-brand-border bg-white hover:bg-brand-surfaceAlt'}`}><input type="checkbox" className="accent-brand-navy" disabled={busy} checked={measurements.includes(m.id)} onChange={() => toggle(measurements, m.id, setMeasurements)} />{m.type} {m.valueState === 'KNOWN' ? `${m.value} ${m.unit || ''}` : `(${m.unknownReason || 'chưa rõ'})`}</label>))}</div>
+                </div>
               </div>
-              {view.history.length > 0 && <p>Shared part đã xác nhận: {Array.from(new Set(view.history.map((h) => h.sharedPartId))).map((id) => id.slice(0, 8)).join(', ')} (nhập lại mã đầy đủ để dùng tiếp)</p>}
-              <textarea aria-label="Lý do xác nhận thống kê" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={`${cls} w-full`} />
-              <button type="button" disabled={busy || !reason.trim() || !sharedPartId.trim() || segments.length === 0} onClick={() => { void submit() }} className={cls}>{busy ? 'Đang gửi…' : 'Xác nhận thống kê'}</button>
+              <div className="rg-grid">
+                <Field label="Mã shared part" span="col-span-12 md:col-span-8"><input aria-label="Mã shared part" value={sharedPartId} disabled={busy} onChange={(e) => setSharedPartId(e.target.value)} placeholder="sharedPartId (GUID)" className={`${cls} w-full font-mono`} /></Field>
+                <Field label="Nguồn thống kê" span="col-span-12 md:col-span-4"><select aria-label="Nguồn thống kê" value={provenance} disabled={busy} onChange={(e) => setProvenance(e.target.value as 'TEST_ONLY' | 'REAL_SOURCE')} className={`${cls} w-full`}><option value="REAL_SOURCE">REAL_SOURCE</option><option value="TEST_ONLY">TEST_ONLY</option></select></Field>
+              </div>
+              {view.history.length > 0 && <p className="text-slate-500">Shared part đã xác nhận: <span className="font-mono">{Array.from(new Set(view.history.map((h) => h.sharedPartId))).map((id) => id.slice(0, 8)).join(', ')}</span> (nhập lại mã đầy đủ để dùng tiếp)</p>}
+              <Field label="Lý do xác nhận thống kê"><textarea aria-label="Lý do xác nhận thống kê" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={`${cls} w-full`} /></Field>
+              <div className="rg-footer">
+                <PanelButton variant="primary" loading={busy} disabled={busy || !reason.trim() || !sharedPartId.trim() || segments.length === 0} onClick={() => { void submit() }}>{busy ? 'Đang gửi…' : 'Xác nhận thống kê'}</PanelButton>
+              </div>
             </div>
           )}
-          <div data-testid="defect-statistics-history">
-            <p className="font-semibold">Lịch sử xác nhận ({view.history.length})</p>
-            {view.history.length === 0 && <p className="text-slate-500">Chưa có xác nhận nào trong CSDL.</p>}
-            {view.history.map((h) => (<p key={h.id}>{h.provenance} · shared part #{h.sharedPartId.slice(0, 8)} · khiếm khuyết #{h.defectId.slice(0, 8)} · {h.confirmedAtUtc ? new Date(h.confirmedAtUtc).toLocaleString('vi-VN') : '—'} — {h.reason}</p>))}
+          <div data-testid="defect-statistics-history" className="space-y-2">
+            <SectionTitle icon="history">Lịch sử xác nhận ({view.history.length})</SectionTitle>
+            {view.history.length === 0 && <Empty icon="history_toggle_off">Chưa có xác nhận nào trong CSDL.</Empty>}
+            {view.history.map((h) => (<p key={h.id} className="rg-row !py-2"><Pill tone={h.provenance === 'REAL_SOURCE' ? 'ok' : 'warn'}>{h.provenance}</Pill> · shared part <span className="font-mono">#{h.sharedPartId.slice(0, 8)}</span> · khiếm khuyết <span className="font-mono">#{h.defectId.slice(0, 8)}</span> · {h.confirmedAtUtc ? new Date(h.confirmedAtUtc).toLocaleString('vi-VN') : '—'} — {h.reason}</p>))}
           </div>
         </>
       )}
-    </section>
+    </PanelShell>
   )
 }

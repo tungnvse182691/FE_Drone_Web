@@ -6,9 +6,11 @@ import { repairService, AssignableRepairItem } from '../../api/services/repairSe
 import { fastTrackService } from '../../api/services/fastTrackService'
 import { Users2, Calendar, ShieldAlert, ClipboardCheck, Smartphone, CheckCircle2 } from 'lucide-react'
 import { useToastStore } from '../../store/toastStore'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 export const AssignCrew: React.FC = () => {
   const toast = useToastStore()
+  const submitGuard = useSubmitGuard()
   const [items, setItems] = useState<AssignableRepairItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -67,6 +69,7 @@ export const AssignCrew: React.FC = () => {
     const due = new Date(deadline + 'T23:59:59')
     if (!Number.isFinite(due.getTime()) || due.getTime() <= Date.now()) return toast.error('Hạn hoàn thành phải ở tương lai.')
     if (sourceKind === 'SURVEY' && !surveyId.trim()) return toast.error('Nhập mã khảo sát (surveyId) cho nguồn khảo sát.')
+    if (!submitGuard.acquire()) return
     try {
       setSubmitting(true)
       const { taskId } = await repairService.assignNormalItem({
@@ -87,6 +90,7 @@ export const AssignCrew: React.FC = () => {
     } catch (err) {
       toast.error('Không giao được việc: ' + errText(err))
     } finally {
+      submitGuard.release()
       setSubmitting(false)
     }
   }

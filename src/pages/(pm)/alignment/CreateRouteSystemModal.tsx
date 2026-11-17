@@ -29,7 +29,7 @@ export function CreateRouteSystemModal({projectId,onClose,onCreated}:{projectId:
         <label className="block space-y-1 text-slate-700">Mã hệ tuyến<input aria-label="Mã hệ tuyến" value={code} onChange={e=>setCode(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" /></label>
         <label className="block space-y-1 text-slate-700">Tên hệ tuyến<input aria-label="Tên hệ tuyến" value={name} onChange={e=>setName(e.target.value)} className="w-full px-3 py-2 border border-slate-200 rounded-lg" /></label>
       </fieldset>
-      <footer className="border-t border-slate-100 pt-4 flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="px-4 py-2 border rounded-lg">Hủy bỏ</button><button type="submit" disabled={busy||!!journalError} className="px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white font-semibold disabled:opacity-50">{busy?'Đang tạo/đọc lại…':held?.received?'Đọc lại danh sách':held?'Thử lại cùng yêu cầu':'Tạo hệ tuyến'}</button></footer>
+      <footer className="border-t border-slate-100 pt-4 flex justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className="rg-btn">Hủy bỏ</button><button type="submit" disabled={busy||!!journalError} className="px-4 py-2 rounded-lg bg-brand-gold hover:bg-brand-goldDark text-white font-semibold disabled:opacity-50">{busy?'Đang tạo/đọc lại…':held?.received?'Đọc lại danh sách':held?'Thử lại cùng yêu cầu':'Tạo hệ tuyến'}</button></footer>
     </form>
   </section></div>
 }

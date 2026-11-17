@@ -307,7 +307,7 @@ export const PMDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Panel 1: Hộp thư tiếp nhận & Thẩm định */}
         <div className="bg-white rounded-[16px] border border-[#E2E5E9] shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#E2E5E9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="px-6 py-4 border-b border-[#E2E5E9] flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
                 <Icon name="inbox" size={20} />
@@ -321,7 +321,7 @@ export const PMDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 self-end sm:self-center">
+            <div className="flex items-center gap-3 self-end 2xl:self-center">
               {/* Tabs: nền #F3F4F6, tab active nền trắng có shadow nhẹ */}
               <div className="flex items-center bg-[#F3F4F6] p-1 rounded-lg border border-slate-200/80">
                 <button

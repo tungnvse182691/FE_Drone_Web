@@ -17,7 +17,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRole }) =
   const { user, isAuthenticated, status, authError, checkSession } = useAuthStore()
 
   if (status === 'checking' || status === 'authenticating' || status === 'logging-out') return <div role="status" className="p-6 text-sm text-slate-500">Đang kiểm tra phiên đăng nhập...</div>
-  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="ml-3 border rounded-lg px-3 py-2 text-slate-700">Thử lại</button></div>
+  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="rg-btn ml-3 text-slate-700">Thử lại</button></div>
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />
@@ -46,7 +46,7 @@ export const PublicAuthRoute: React.FC = () => {
   const { user, isAuthenticated, status, authError, checkSession } = useAuthStore()
 
   if (status === 'checking' || status === 'logging-out') return <div role="status" className="p-6 text-sm text-slate-500">Đang kiểm tra phiên đăng nhập...</div>
-  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="ml-3 border rounded-lg px-3 py-2 text-slate-700">Thử lại</button></div>
+  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="rg-btn ml-3 text-slate-700">Thử lại</button></div>
 
   if (isAuthenticated && user) {
     if (user.must_change_password) {
@@ -69,7 +69,7 @@ export const ForcePasswordRoute: React.FC = () => {
   const { user, isAuthenticated, status, authError, checkSession } = useAuthStore()
 
   if (status === 'checking' || status === 'authenticating' || status === 'logging-out') return <div role="status" className="p-6 text-sm text-slate-500">Đang kiểm tra phiên đăng nhập...</div>
-  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="ml-3 border rounded-lg px-3 py-2 text-slate-700">Thử lại</button></div>
+  if (status === 'error') return <div role="alert" className="p-6 text-sm text-rose-700">{authError || 'Không thể khôi phục phiên đăng nhập.'}<button type="button" onClick={() => { void checkSession() }} className="rg-btn ml-3 text-slate-700">Thử lại</button></div>
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />

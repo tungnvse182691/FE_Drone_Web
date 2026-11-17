@@ -55,7 +55,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       {/* TOP HEADER: BREADCRUMB, TITLE & ACTIONS                                  */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-2xl p-6 shadow-xs border border-slate-200/90 space-y-5">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-1.5">
               <span>Trang chủ</span>
@@ -71,7 +71,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           </div>
 
           {/* Timestamp & Top Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start lg:self-center">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 self-start 2xl:self-center">
             <div className="text-xs text-slate-500 flex items-center gap-1.5 font-medium">
               <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span>{asOfText ? `Dữ liệu cập nhật lúc ${asOfText}` : isLoading ? 'Đang tải dữ liệu từ máy chủ...' : 'Chưa có dữ liệu từ máy chủ'}</span>
@@ -90,7 +90,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <button
                 onClick={onOpenExportModal}
                 type="button"
-                className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                className="whitespace-nowrap px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <FileDown className="w-3.5 h-3.5 text-brand-gold" />
                 <span>Xuất báo cáo (RPT-01)</span>
@@ -99,7 +99,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <button
                 onClick={() => navigate('/sup/projects')}
                 type="button"
-                className="px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <FolderGit2 className="w-3.5 h-3.5 text-slate-500" />
                 <span>Khởi tạo dự án</span>
@@ -108,7 +108,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <button
                 onClick={() => navigate('/sup/proposals')}
                 type="button"
-                className="px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5 bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
+                className="whitespace-nowrap px-4 py-2 text-xs font-bold text-white rounded-xl transition shadow-sm flex items-center gap-1.5 bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
                 style={{ boxShadow: 'rgba(201, 162, 39, 0.28) 0px 2px 8px' }}
               >
                 <CheckSquare className="w-3.5 h-3.5" />

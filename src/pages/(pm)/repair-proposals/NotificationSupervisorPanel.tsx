@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { notificationSupervisorService, type NotificationSupervisor } from '../../../api/services/notificationSupervisorService'
 import type { RepairItem } from '../../../api/services/repairWorkflowService'
 import { exportError } from '../../../api/services/projectExportService'
+import { Empty, Feedback, Field, PanelButton, PanelShell } from '../../../components/ui/PanelKit'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 /**
  * PM chỉ định Giám sát nhận thông báo cho hạng mục Fast Track.
@@ -14,6 +16,7 @@ export const NotificationSupervisorPanel: React.FC<{ projectId: string; packageI
   const [loaded, setLoaded] = useState(false)
   const [supervisorId, setSupervisorId] = useState('')
   const [busy, setBusy] = useState(false)
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -26,33 +29,33 @@ export const NotificationSupervisorPanel: React.FC<{ projectId: string; packageI
 
   if (!fastTrack.length) return null
   const run = async (fn: () => Promise<unknown>, done: string) => {
-    if (busy) return
+    if (!guard.acquire()) return
     setBusy(true); setError(''); setMessage('')
-    try { await fn(); setMessage(done); setSupervisorId(''); await load(itemId) } catch (e) { setError(exportError(e)) } finally { setBusy(false) }
+    try { await fn(); setMessage(done); setSupervisorId(''); await load(itemId) } catch (e) { setError(exportError(e)) } finally { setBusy(false); guard.release() }
   }
   const active = current && !current.revokedAt
 
   return (
-    <div className="space-y-2 text-xs border-t pt-3 mt-3" data-testid="notification-supervisor-panel">
-      <p className="font-semibold">Giám sát nhận thông báo (hạng mục Fast Track)</p>
-      <select aria-label="Hạng mục Fast Track" value={itemId} disabled={busy} onChange={(e) => setItemId(e.target.value)} className="w-full border rounded-lg p-2">
-        <option value="">Chọn hạng mục</option>
-        {fastTrack.map((i) => (<option key={i.id} value={i.id}>{i.state} · {i.id.slice(0, 8).toUpperCase()}</option>))}
-      </select>
+    <PanelShell as="div" icon="supervisor_account" title="Giám sát nhận thông báo (hạng mục Fast Track)" className="mt-4" data-testid="notification-supervisor-panel">
+      <Field label="Hạng mục Fast Track">
+        <select aria-label="Hạng mục Fast Track" value={itemId} disabled={busy} onChange={(e) => setItemId(e.target.value)} className="rg-field w-full">
+          <option value="">Chọn hạng mục</option>
+          {fastTrack.map((i) => (<option key={i.id} value={i.id}>{i.state} · {i.id.slice(0, 8).toUpperCase()}</option>))}
+        </select>
+      </Field>
       {itemId && loaded && (active
-        ? <p>Đang chỉ định: <b>{current!.supervisorId}</b> từ {new Date(current!.assignedAt).toLocaleString('vi-VN')}</p>
-        : <p className="text-slate-500">{current?.revokedAt ? 'Chỉ định đã được thu hồi.' : 'Chưa chỉ định Giám sát nhận thông báo.'}</p>)}
+        ? <div className="rg-subcard"><p>Đang chỉ định: <b className="font-mono">{current!.supervisorId}</b> từ {new Date(current!.assignedAt).toLocaleString('vi-VN')}</p></div>
+        : <Empty icon="person_off">{current?.revokedAt ? 'Chỉ định đã được thu hồi.' : 'Chưa chỉ định Giám sát nhận thông báo.'}</Empty>)}
       {itemId && (
         <>
-          <input aria-label="Mã Giám sát nhận thông báo" disabled={busy} value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} placeholder="supervisorId (GUID)" className="w-full border rounded-lg p-2" />
-          <div className="flex gap-2">
-            <button type="button" disabled={busy || !supervisorId.trim()} onClick={() => { void run(() => notificationSupervisorService.assign(projectId, packageId, itemId, supervisorId), 'Đã chỉ định Giám sát nhận thông báo.') }} className="border rounded-lg px-3 py-2">{active ? 'Thay Giám sát' : 'Chỉ định Giám sát'}</button>
-            {active && <button type="button" disabled={busy} onClick={() => { void run(() => notificationSupervisorService.revoke(projectId, packageId, itemId), 'Đã thu hồi chỉ định.') }} className="border rounded-lg px-3 py-2">Thu hồi chỉ định</button>}
+          <Field label="Mã Giám sát nhận thông báo"><input aria-label="Mã Giám sát nhận thông báo" disabled={busy} value={supervisorId} onChange={(e) => setSupervisorId(e.target.value)} placeholder="supervisorId (GUID)" className="rg-field w-full font-mono" /></Field>
+          <div className="rg-footer">
+            {active && <PanelButton variant="danger" disabled={busy} onClick={() => { void run(() => notificationSupervisorService.revoke(projectId, packageId, itemId), 'Đã thu hồi chỉ định.') }}>Thu hồi chỉ định</PanelButton>}
+            <PanelButton variant="primary" loading={busy} disabled={busy || !supervisorId.trim()} onClick={() => { void run(() => notificationSupervisorService.assign(projectId, packageId, itemId, supervisorId), 'Đã chỉ định Giám sát nhận thông báo.') }}>{active ? 'Thay Giám sát' : 'Chỉ định Giám sát'}</PanelButton>
           </div>
         </>
       )}
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
-    </div>
+      <Feedback error={error} message={message} />
+    </PanelShell>
   )
 }

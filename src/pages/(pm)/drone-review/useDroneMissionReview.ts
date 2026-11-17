@@ -4,6 +4,7 @@ import { getMapLibreStyle } from '../../../utils/maplibre'
 import { fetchProjectGeo, geoErrorMessage, type ProjectGeo } from '../../../api/services/defectGeoService'
 import { AIDetectionItem } from './types'
 import { surveyService } from '../../../api/services'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 import type { SurveyMissionItem } from '../../../api/services'
 
@@ -16,6 +17,9 @@ export function useDroneMissionReview(
   const [currentFrame, setCurrentFrame] = useState<number>(1)
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0)
   const totalFrames = 100
+  const detectionGuard = useSubmitGuard()
+  const reFlightGuard = useSubmitGuard()
+  const baselineGuard = useSubmitGuard()
 
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
@@ -279,6 +283,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     customTypeCode?: 'POTHOLE' | 'CRACK',
     customSeverityLevel?: string
   ) => {
+    if (!detectionGuard.acquire()) return
     try {
       const targetDet = detections.find((d) => d.id === detId)
       const effectiveTypeCode = customTypeCode || (targetDet?.rawTypeCode as 'POTHOLE' | 'CRACK') || 'CRACK'
@@ -307,10 +312,11 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         err?.message ||
         'Lỗi khi lưu quyết định thẩm định AI'
       showToast(`Lỗi máy chủ: ${msg}`)
-    }
+    } finally { detectionGuard.release() }
   }
 
   const handleRejectDetection = async (detId: string, reason?: string) => {
+    if (!detectionGuard.acquire()) return
     try {
       const targetDet = detections.find((d) => d.id === detId)
       const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
@@ -332,10 +338,11 @@ const handleSelectDetection = (item: AIDetectionItem) => {
         err?.message ||
         'Lỗi khi bác bỏ phát hiện AI'
       showToast(`Lỗi máy chủ: ${msg}`)
-    }
+    } finally { detectionGuard.release() }
   }
 
   const handleResetDetection = async (detId: string) => {
+    if (!detectionGuard.acquire()) return
     try {
       const targetDet = detections.find((d) => d.id === detId)
       const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
@@ -348,7 +355,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
       }
     } catch (err: any) {
       showToast(`Không thể mở lại rà soát: ${err?.message || 'Lỗi kết nối CSDL'}`)
-    }
+    } finally { detectionGuard.release() }
   }
 
   const handleSubmitReFlight = async (payload: {
@@ -358,6 +365,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     note: string
     range: string
   }) => {
+    if (!reFlightGuard.acquire()) return
     try {
       const res = await surveyService.requestReFlight(surveyId, {
         note: payload.note,
@@ -374,7 +382,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Phát lệnh bay bù thất bại'
       showToast(`Lỗi khi phát lệnh bay bù: ${msg}`)
-    }
+    } finally { reFlightGuard.release() }
   }
 
   const handleLockBaseline = async () => {
@@ -383,6 +391,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
       return
     }
 
+    if (!baselineGuard.acquire()) return
     try {
       const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
       if (success) {
@@ -393,10 +402,11 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Khóa Baseline thất bại'
       showToast(`Lỗi khóa Baseline từ máy chủ: ${msg}`)
-    }
+    } finally { baselineGuard.release() }
   }
 
   const handleConfirmBaseline = async (isPartial: boolean) => {
+    if (!baselineGuard.acquire()) return
     try {
       const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
       if (success) {
@@ -413,7 +423,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Khóa Baseline thất bại'
       showToast(`Lỗi khóa Baseline từ máy chủ: ${msg}`)
-    }
+    } finally { baselineGuard.release() }
   }
 
   const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]

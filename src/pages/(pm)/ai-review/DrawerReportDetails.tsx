@@ -13,7 +13,7 @@ export function ReportEvidence({ reportId, evidence }: { caseId: string; reportI
     <p>{evidence.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'} · Thời gian chụp: {evidence.capturedAt || 'Chưa cập nhật'}</p>
     <p>GPS: {located ? `${location.latitude}, ${location.longitude}` : 'UNKNOWN — chưa có vị trí được xác nhận'}</p>
     {located && <a href={`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}`} target="_blank" rel="noreferrer">Xem vị trí evidence</a>}
-    <button type="button" onClick={() => media?.select(reportId, evidence)} className="border rounded-lg px-3 py-1 text-[#8C6D1F]">{selected ? 'Đang xem ảnh' : 'Xem ảnh'}</button>
+    <button type="button" onClick={() => media?.select(reportId, evidence)} className="rg-btn text-[#8C6D1F]">{selected ? 'Đang xem ảnh' : 'Xem ảnh'}</button>
   </section>
 }
 
@@ -48,7 +48,7 @@ export function DrawerReportDetails({ caseId, caseStatus, onSplit }: { caseId: s
     finally { if (alive.current && active.current.caseId === selectedCase && useAuthStore.getState().authEpoch === actorEpoch) setSplitting(false) }
   }
   return <section className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-3">
-    <header className="flex flex-wrap justify-between gap-2"><h3 className="text-xs font-bold text-brand-dark">Chi tiết từng phản ánh</h3><button type="button" disabled={loading || splitting} onClick={() => media?.retry()} className="text-xs border rounded-lg px-3 py-1">Tải lại phản ánh</button></header>
+    <header className="flex flex-wrap justify-between gap-2"><h3 className="text-xs font-bold text-brand-dark">Chi tiết từng phản ánh</h3><button type="button" disabled={loading || splitting} onClick={() => media?.retry()} className="rg-btn text-xs">Tải lại phản ánh</button></header>
     <p className="text-[11px] text-slate-500">Tên và số điện thoại là thông tin tài khoản hiện tại của người gửi.</p>
     {loading && <p role="status" className="text-xs">Đang tải chi tiết phản ánh...</p>}
     {(error || readError) && <p role="alert" className="text-xs text-rose-700">{error || readError}</p>}
@@ -60,7 +60,7 @@ export function DrawerReportDetails({ caseId, caseStatus, onSplit }: { caseId: s
       {!report.originalEvidence.length && <p className="text-slate-500">Chưa có bằng chứng gốc trong dữ liệu đã đọc.</p>}
       {report.originalEvidence.map(evidence => <ReportEvidence key={evidence.evidenceId} caseId={caseId} reportId={report.reportId} evidence={evidence} />)}
       {report.supplements.map(supplement => <section key={supplement.id} className="border-t pt-3 space-y-2"><h4 className="font-semibold">Bổ sung phản ánh · {supplement.receivedAt}</h4><p className="whitespace-pre-wrap">{supplement.description || 'Chưa có nội dung bổ sung trong response.'}</p>{supplement.evidence.map(evidence => <ReportEvidence key={evidence.evidenceId} caseId={caseId} reportId={report.reportId} evidence={evidence} />)}</section>)}
-      {role === 'PROJECT_MANAGER' && onSplit && reports.length > 1 && <button type="button" disabled={splitting} onClick={() => setSelectedReport(report.reportId)} className="border rounded-lg px-3 py-1">Tách Report này</button>}
+      {role === 'PROJECT_MANAGER' && onSplit && reports.length > 1 && <button type="button" disabled={splitting} onClick={() => setSelectedReport(report.reportId)} className="rg-btn">Tách Report này</button>}
     </article>)}
     {recoveryReport && role === 'PROJECT_MANAGER' && <div className="p-3 border rounded-lg bg-amber-50 space-y-2 text-xs"><p>Lệnh tách Report {recoveryReport} đang chờ đối chiếu. Giữ nguyên key và phiên bản; nếu đã có receipt, chỉ đọc lại.</p><button type="button" disabled={splitting} onClick={() => setSelectedReport(recoveryReport)}>Đối chiếu lệnh tách đang chờ</button></div>}
     {selectedReport && <div className="p-3 border rounded-lg bg-amber-50 space-y-2 text-xs"><p>Chuyển phản ánh đã chọn sang hồ sơ riêng qua máy chủ.</p><button type="button" disabled={splitting} onClick={split} className="bg-brand-gold text-white rounded-lg px-3 py-2">Xác nhận tách Report</button><button type="button" disabled={splitting} onClick={() => setSelectedReport('')}>Hủy</button></div>}

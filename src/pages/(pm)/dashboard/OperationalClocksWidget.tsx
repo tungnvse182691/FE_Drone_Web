@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import { H6ClockItem, dashboardService } from '../../../api/services/dashboardService'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 interface OperationalClocksWidgetProps {
   clocks: H6ClockItem[]
@@ -84,6 +85,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
   const [extensionSuccess, setExtensionSuccess] = useState<boolean>(false)
   const [extensionError, setExtensionError] = useState<string | null>(null)
   const [extensionSubmitting, setExtensionSubmitting] = useState<boolean>(false)
+  const extensionGuard = useSubmitGuard()
 
   // State thời gian thực nhảy từng giây (1000ms)
   const [now, setNow] = useState<Date>(new Date())
@@ -122,7 +124,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
 
   const handleRequestExtension = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!extendingClock || extensionSubmitting) return
+    if (!extendingClock || !extensionGuard.acquire()) return
     setExtensionError(null)
     setExtensionSubmitting(true)
     try {
@@ -140,6 +142,7 @@ export const OperationalClocksWidget: React.FC<OperationalClocksWidgetProps> = (
       setExtensionError(r.response?.status ? `HTTP ${r.response.status}: ${detail}` : detail)
     } finally {
       setExtensionSubmitting(false)
+      extensionGuard.release()
     }
   }
 

@@ -340,6 +340,9 @@ export interface ProjectClosureView {
 }
 const closureWrites = new Set<string>()
 
+// Gộp các lần gọi fetchProjects đồng thời (StrictMode, nhiều component cùng mount) thành 1 lượt đọc N+1; xóa khi đã ghi dự án để không trả danh sách cũ.
+let projectsInFlight: { epoch: unknown; promise: Promise<HubProject[]> } | null = null
+
 export const projectService = {
   pendingProjectCreate() {
     const state = useAuthStore.getState()
@@ -357,7 +360,14 @@ export const projectService = {
    * API-049: GET /projects
    * Lấy danh sách dự án thật từ Backend Candidate3 Docker theo phân quyền (PM / Supervisor)
    */
-  async fetchProjects(): Promise<HubProject[]> {
+  fetchProjects(): Promise<HubProject[]> {
+    const epoch = useAuthStore.getState().authEpoch
+    if (projectsInFlight && projectsInFlight.epoch === epoch) return projectsInFlight.promise
+    const promise: Promise<HubProject[]> = projectService.fetchProjectsUncached().finally(() => { if (projectsInFlight?.promise === promise) projectsInFlight = null })
+    projectsInFlight = { epoch, promise }
+    return promise
+  },
+  async fetchProjectsUncached(): Promise<HubProject[]> {
     const epoch = useAuthStore.getState().authEpoch
     {
       try {
@@ -561,6 +571,7 @@ export const projectService = {
           if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả tạo dự án cũ.')
           if (response.status !== 201 || !(response.data.projectId || response.data.id)) throw new Error('Phản hồi tạo dự án không đúng contract201; cần đối chiếu kết quả.')
           command.receipt = response.data
+          projectsInFlight = null
           saveProjectCommand(actor, command)
         }
         const createdId = command.receipt.projectId || command.receipt.id
@@ -585,7 +596,11 @@ export const projectService = {
         const description = await readProjectDescription(createdId, epoch)
         if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả dự án cũ.')
         const createdHub = { ...mapBackendProjectToHub(readBack), region: description, location_detail: '' }
-        if (createdHub.pm_user_id?.toLowerCase() !== command.body.primaryPmId.toLowerCase()) throw new Error('Đã tạo dự án nhưng phân công PM đọc lại chưa khớp. Chỉ đọc lại kết quả, không tạo mới.')
+        // BE chỉ trả PM chính trong danh sách khi membership đã hiệu lực (ValidFrom = ngày bàn giao). Ngày bàn giao ở tương lai => PM null là bình thường;
+        // khi đó đối chiếu PM bằng receipt 201 (BE trả lại primaryProjectManagerUserId đã lưu).
+        const pmNotEffectiveYet = !createdHub.pm_user_id && command.body.handoverDate > new Date().toISOString().slice(0, 10) &&
+          String(command.receipt.primaryProjectManagerUserId || command.receipt.primaryPmId || '').toLowerCase() === command.body.primaryPmId.toLowerCase()
+        if (!pmNotEffectiveYet && createdHub.pm_user_id?.toLowerCase() !== command.body.primaryPmId.toLowerCase()) throw new Error('Đã tạo dự án nhưng phân công PM đọc lại chưa khớp. Chỉ đọc lại kết quả, không tạo mới.')
         if (projectCreateCommand === command) { projectCreateCommand = null; saveProjectCommand(actor, null) }
         return createdHub
       } catch (err: any) {

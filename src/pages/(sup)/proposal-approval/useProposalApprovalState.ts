@@ -5,6 +5,7 @@ import { repairWorkflowService, type RepairItem } from '../../../api/services/re
 import { readProposalPackages, type ProposalRead } from '../../../api/services/proposalReadModel'
 import { exportError } from '../../../api/services/projectExportService'
 import { useAuthStore } from '../../../store/authStore'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 import { ItemApprovalStatus, RepairItemDetail } from './types'
 
 const NO_SOURCE = '—'
@@ -28,6 +29,7 @@ export function useProposalApprovalState(id: string | undefined) {
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [revision, setRevision] = useState(0)
+  const approveGuard = useSubmitGuard()
 
   // Đọc gói + hạng mục thật từ BE (GET repair-packages, items, road-coverage, defects)
   useEffect(() => {
@@ -218,9 +220,12 @@ export function useProposalApprovalState(id: string | undefined) {
       const held = repairWorkflowService.pending(activeProjectId, activePackageId, itemId, 'approve')
       const reason = held?.body.reason || window.prompt('Nhập lý do phê duyệt hạng mục:') || ''
       if (!reason.trim()) return showToast('Cần nhập lý do để phê duyệt.')
-      const row = await approveOne(itemId, reason)
-      showToast(`Đã GET đối chiếu hạng mục ${row.id.slice(0, 8).toUpperCase()}: ${row.state}.`)
-      setRevision((n) => n + 1)
+      if (!approveGuard.acquire()) return
+      try {
+        const row = await approveOne(itemId, reason)
+        showToast(`Đã GET đối chiếu hạng mục ${row.id.slice(0, 8).toUpperCase()}: ${row.state}.`)
+        setRevision((n) => n + 1)
+      } finally { approveGuard.release() }
     } catch (e) {
       showToast(exportError(e))
     }
@@ -248,6 +253,7 @@ export function useProposalApprovalState(id: string | undefined) {
     const reason = window.prompt(`Nhập lý do phê duyệt ${targets.length} hạng mục:`) || ''
     if (!reason.trim()) return showToast('Cần nhập lý do để phê duyệt.')
     let done = 0
+    if (!approveGuard.acquire()) return
     try {
       for (const it of targets) {
         await approveOne(it.id, reason)
@@ -256,7 +262,7 @@ export function useProposalApprovalState(id: string | undefined) {
       showToast(`Đã duyệt và GET đối chiếu ${done}/${targets.length} hạng mục.`)
     } catch (e) {
       showToast(`Đã duyệt ${done}/${targets.length}; dừng do lỗi: ${exportError(e)}`)
-    }
+    } finally { approveGuard.release() }
     setRevision((n) => n + 1)
   }
 

@@ -8,6 +8,7 @@ import { ComparisonViewer } from './evidence-closeout/ComparisonViewer'
 import { TechnicalCriteriaCard } from './evidence-closeout/TechnicalCriteriaCard'
 import { CloseoutModals } from './evidence-closeout/CloseoutModals'
 import { acceptanceService, AcceptancePackage } from '../../api/services/acceptanceService'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 export type { RepairTrackType, ItemReviewStatus, CaseItem }
 
@@ -33,6 +34,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const [caseItems, setCaseItems] = useState<CaseItem[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const writeGuard = useSubmitGuard()
   const [selectedItemId, setSelectedItemId] = useState<string>('')
 
   // Load dữ liệu từ Mock API
@@ -122,6 +124,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
   const handleSubmitRework = async () => {
     if (!currentItem) return
     if (reworkChecklist.other_defect && !otherDefectText.trim()) return
+    if (!writeGuard.acquire()) return
 
     const selectedIssues: string[] = []
     if (reworkChecklist.bond_coat) selectedIssues.push('Mép nối thảm nhựa chưa được tưới đủ nhũ tương dính bám')
@@ -152,11 +155,12 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       showToast(`Đã phát lệnh yêu cầu sửa lại cho hạng mục ${currentItem.item_code}!`)
     } catch (err) {
       showToast('Không gửi được yêu cầu sửa lại: ' + beErrorText(err))
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleAcceptItem = async () => {
     if (!currentItem) return
+    if (!writeGuard.acquire()) return
     try {
       const updated = await acceptanceService.acceptCloseoutItem(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
@@ -167,11 +171,12 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       showToast(`Giám sát đã chấp thuận nghiệm thu đạt hạng mục ${currentItem.item_code}!`)
     } catch (err) {
       showToast('Không xác nhận được nghiệm thu: ' + beErrorText(err))
-    }
+    } finally { writeGuard.release() }
   }
 
   const handlePMCloseFastTrack = async () => {
     if (!currentItem) return
+    if (!writeGuard.acquire()) return
     try {
       const updated = await acceptanceService.closeFastTrackItem(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
@@ -182,7 +187,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       showToast(`PM đã chấp thuận và đóng lỗi xử lý nhanh ${currentItem.item_code} (BR-25)!`)
     } catch (err) {
       showToast('Có lỗi khi đóng lỗi xử lý nhanh.')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handlePMSubmitToSupervisor = () => {
@@ -191,6 +196,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
 
   const handleConfirmDeclaration = async (evidenceIds: string[], notes: string) => {
     if (!currentItem) return
+    if (!writeGuard.acquire()) return
     try {
       const updated = await acceptanceService.submitItemToSupervisor(currentItem.id)
       setCaseItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)))
@@ -203,7 +209,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       )
     } catch (err) {
       showToast('Có lỗi khi gửi khai báo hoàn thành thi công.')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleConfirmCloseCase = async () => {
@@ -211,6 +217,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       showToast('Chưa thể đóng gói/vụ việc khi còn hạng mục chưa nghiệm thu đạt!')
       return
     }
+    if (!writeGuard.acquire()) return
     try {
       const caseCode = currentPackage?.case_code
       if (!caseCode) {
@@ -223,7 +230,7 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       showToast(`Đã đóng gói ${currentPackage?.code || caseCode} thành công! Hồ sơ đã lưu trữ bảo hành.`)
     } catch (err: any) {
       showToast(err.message || 'Có lỗi khi đóng vụ việc.')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleTriggerExport = () => {

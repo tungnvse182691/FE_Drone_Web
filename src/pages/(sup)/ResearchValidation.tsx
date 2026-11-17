@@ -15,6 +15,7 @@ import { TrainingLabelsPanel } from './research/TrainingLabelsPanel'
 import { AiRunDetailPanel } from './research/AiRunDetailPanel'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 const beErrorText = (err: unknown): string => {
   const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
@@ -39,6 +40,7 @@ export const ResearchValidation: React.FC = () => {
   // Filter & Interaction State
   const [sampleFilter, setSampleFilter] = useState<'ALL' | 'INCLUDED' | 'EXCLUDED' | 'OUTLIER'>('ALL')
   const [isRunningVal, setIsRunningVal] = useState<boolean>(false)
+  const writeGuard = useSubmitGuard()
   const [isExporting, setIsExporting] = useState<boolean>(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
@@ -119,6 +121,7 @@ export const ResearchValidation: React.FC = () => {
 
   // Xử lý nút Chạy kiểm định mới (HTTP 202 - FR-31)
   const handleTriggerValidation = async () => {
+    if (!writeGuard.acquire()) return
     try {
       setIsRunningVal(true)
       const { job, run } = await validationService.triggerValidationRun(selectedProject)
@@ -129,6 +132,7 @@ export const ResearchValidation: React.FC = () => {
     } catch (err) {
       showToast(beErrorText(err))
     } finally {
+      writeGuard.release()
       setIsRunningVal(false)
     }
   }
@@ -136,12 +140,15 @@ export const ResearchValidation: React.FC = () => {
   // Xử lý hủy tiến trình nền
   const handleCancelJob = async () => {
     if (!activeJob) return
+    if (!writeGuard.acquire()) return
     try {
       await validationService.cancelValidationJob(activeJob.id)
       setActiveJob(null)
       showToast('Đã dừng an toàn tiến trình kiểm định nền.')
     } catch (err) {
       showToast(beErrorText(err))
+    } finally {
+      writeGuard.release()
     }
   }
 

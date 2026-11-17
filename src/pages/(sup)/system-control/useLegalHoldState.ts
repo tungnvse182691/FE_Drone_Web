@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { LegalHoldProject, DataDeletionRequest } from '../../../types/domain'
 import { retentionService } from '../../../api/services/retentionService'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 export function useLegalHoldState(
   currentUser: { id?: string; full_name?: string } | null,
@@ -10,6 +11,7 @@ export function useLegalHoldState(
   const [legalHoldProjects, setLegalHoldProjects] = useState<LegalHoldProject[]>([])
   const [deletionRequests, setDeletionRequests] = useState<DataDeletionRequest[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const writeGuard = useSubmitGuard()
 
   const [showCreateDeletionRequestModal, setShowCreateDeletionRequestModal] = useState<boolean>(false)
   const [newDelProject, setNewDelProject] = useState<string>('proj-04')
@@ -70,6 +72,7 @@ export function useLegalHoldState(
     reference?: string
   }) => {
     if (!projectToSetLegalHold) return
+    if (!writeGuard.acquire()) return
 
     try {
       await retentionService.setLegalHold(projectToSetLegalHold.project_id, payload)
@@ -81,7 +84,7 @@ export function useLegalHoldState(
       )
     } catch (err: unknown) {
       alert((err as Error).message || 'Có lỗi xảy ra khi cập nhật phong tỏa pháp lý')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleToggleLegalHold = async (projectId: string) => {
@@ -96,6 +99,7 @@ export function useLegalHoldState(
       alert('Chỉ Supervisor mới có quyền phê duyệt xóa dữ liệu lưu trữ.')
       return
     }
+    if (!writeGuard.acquire()) return
 
     try {
       await retentionService.decideDeletion(requestId, 'APPROVE')
@@ -103,13 +107,14 @@ export function useLegalHoldState(
       triggerNotice('Đã phê duyệt giải phóng dữ liệu hồ sơ thành công!')
     } catch (err: unknown) {
       alert((err as Error).message || 'Không thể phê duyệt yêu cầu xóa')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleRejectDeletion = async (requestId: string) => {
     if (!isSupervisor) return
     const reason = prompt('Nhập lý do từ chối yêu cầu xóa dữ liệu:', 'Chưa đủ căn cứ pháp lý theo quy định')
     if (reason === null) return
+    if (!writeGuard.acquire()) return
 
     try {
       await retentionService.decideDeletion(requestId, 'REJECT', reason)
@@ -117,7 +122,7 @@ export function useLegalHoldState(
       triggerNotice('Đã từ chối yêu cầu xóa dữ liệu.')
     } catch (err: unknown) {
       alert((err as Error).message || 'Không thể từ chối yêu cầu')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleCreateDeletionSubmit = async (e: React.FormEvent) => {
@@ -133,6 +138,7 @@ export function useLegalHoldState(
       alert('HỆ THỐNG TỰ ĐỘNG CHẶN: Hồ sơ chưa đủ thời hạn 5 năm sau bảo hành theo quy định BR-45!')
       return
     }
+    if (!writeGuard.acquire()) return
 
     try {
       const created = await retentionService.requestDeletion({
@@ -156,7 +162,7 @@ export function useLegalHoldState(
       setShowDetailModal(true)
     } catch (err: unknown) {
       alert((err as Error).message || 'Có lỗi xảy ra khi gửi yêu cầu')
-    }
+    } finally { writeGuard.release() }
   }
 
   const handleViewDetail = (req: DataDeletionRequest) => {

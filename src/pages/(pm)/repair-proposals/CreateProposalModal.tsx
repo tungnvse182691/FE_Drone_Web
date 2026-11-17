@@ -86,7 +86,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 text-xs">
           {createApi?.error&&<p role="alert" className="text-rose-700">{createApi.error}</p>}
-          {createApi?.onResumeOriginal&&<button type="button" onClick={createApi.onResumeOriginal} className="border rounded-lg px-3 py-2 text-[#8C6D1F]">Mở biểu mẫu Fast Track đang giữ lệnh để đối chiếu</button>}
+          {createApi?.onResumeOriginal&&<button type="button" onClick={createApi.onResumeOriginal} className="rg-btn text-[#8C6D1F]">Mở biểu mẫu Fast Track đang giữ lệnh để đối chiếu</button>}
           <fieldset disabled={createApi?.busy||createApi?.locked} className="space-y-5">
           {/* Tên gói */}
           <div className="space-y-1.5">

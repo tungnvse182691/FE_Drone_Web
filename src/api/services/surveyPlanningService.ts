@@ -119,14 +119,16 @@ export const surveyPlanningService = {
     if (kind === 'TASK' && !data.operatorId) throw new Error('Task thiếu Operator ID server.')
     return {...data,recordKind:kind}
   },
-  async describe(record: SurveyRecord): Promise<SurveyPresentation> {
+  async describe(record: SurveyRecord, cache?: Map<string, Promise<any>>): Promise<SurveyPresentation> {
     const current=session(), scopes: SurveyPresentation['scopes']=[]
+    // Gom đọc trùng giữa các bản ghi cùng dự án/phạm vi trong một lượt missions() (cache theo lượt, không lưu lâu dài).
+    const memo=<T,>(key:string,read:()=>Promise<T>):Promise<T>=>{if(!cache)return read();let p=cache.get(key);if(!p){p=read();cache.set(key,p)}return p as Promise<T>}
     validateScope(record.scope!)
-    const context=await alignmentService.readProjectContext(record.projectId);current()
+    const context=await memo(`ctx:${record.projectId}`,()=>alignmentService.readProjectContext(record.projectId));current()
     if(context.projectId!==record.projectId)throw new Error('Không đọc được tên tuyến đúng dự án.')
     for(const scope of record.scope!){
       // Explicit historical pins are read as saved, never replaced by today's publication.
-      const {data:p}=await apiClient.get(`/projects/${record.projectId}/geometry-package`,{params:{routeVersionId:scope.routeVersionId,segmentSetId:scope.segmentSetId}});current()
+      const {data:p}=await memo(`gp:${record.projectId}:${scope.routeVersionId}:${scope.segmentSetId}`,()=>apiClient.get(`/projects/${record.projectId}/geometry-package`,{params:{routeVersionId:scope.routeVersionId,segmentSetId:scope.segmentSetId}}));current()
       if(p?.projectId!==record.projectId||p.route?.projectId!==record.projectId||p.route.routeVersionId!==scope.routeVersionId||p.segmentSet?.id!==scope.segmentSetId||p.segmentSet.routeVersionId!==scope.routeVersionId||!['PUBLISHED','SUPERSEDED'].includes(p.segmentSet.status)||p.route.metadataStatus!=='COMPLETE'||p.segmentSet.metadataStatus!=='COMPLETE'||!Array.isArray(p.segmentSet.segments))throw new Error('Không đọc được phạm vi tuyến/phân đoạn đúng bản ghi khảo sát.')
       const road=context.roadSections.find(r=>r.roadSectionId===p.route.roadSectionId)
       if(!road)throw new Error('Tuyến tham chiếu không thuộc dự án đang đọc.')
@@ -139,7 +141,7 @@ export const surveyPlanningService = {
     }
     let operatorName: string | undefined
     if(record.recordKind==='TASK'){
-      const members=await this.page<{userId:string;role:string;displayName?:string}>(`/projects/${record.projectId}/members`);current()
+      const members=await memo(`members:${record.projectId}`,()=>this.page<{userId:string;role:string;displayName?:string}>(`/projects/${record.projectId}/members`));current()
       const names=[...new Set(members.filter(m=>m.userId===record.operatorId&&m.role==='OPERATOR'&&m.displayName?.trim()).map(m=>m.displayName!.trim()))]
       if(names.length>1)throw new Error('Tên Operator không nhất quán trong membership dự án.')
       operatorName=names[0]||'Chưa tải được thông tin người được giao'
@@ -147,14 +149,14 @@ export const surveyPlanningService = {
     return {scopes,operatorName}
   },
   async missions(projects: SurveyProject[], signal?: AbortSignal): Promise<SurveyMissionItem[]> {
-    const current=session()
+    const current=session(), describeCache=new Map<string, Promise<any>>()
     const rows: SurveyMissionItem[] = []
     for (const project of projects) {
       const [plans,tasks] = await Promise.all([this.records(project.projectId,'PLAN',signal),this.records(project.projectId,'TASK',signal)])
       // No planId or surveyType read contract at 4b46a6a. Keep independent records and unknown metadata.
       for (const record of [...plans,...tasks]) {
         let presentation:SurveyPresentation|undefined,readError='',fresh=record
-        try{fresh=await this.detail(project.projectId,record.id,record.recordKind);presentation=await this.describe(fresh)}catch(e:any){current();readError=`Không tải được thông tin khảo sát: ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`}
+        try{fresh=await this.detail(project.projectId,record.id,record.recordKind);presentation=await this.describe(fresh,describeCache)}catch(e:any){current();readError=`Không tải được thông tin khảo sát: ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`}
         current();if(signal?.aborted)throw new Error('Đã hủy đọc khảo sát.')
         rows.push({id:record.id,code:record.id,title:record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát',serverRecordKind:record.recordKind,
         survey_type:null,survey_type_label:'API chưa trả loại khảo sát',project_id:project.projectId,project_name:`${project.projectCode} · ${project.name}`,

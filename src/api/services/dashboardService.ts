@@ -241,7 +241,7 @@ export const dashboardService = {
     await apiClient.post(
       `/projects/${clock.projectId}/clocks/${clock.id}/extensions`,
       { newDueAt, reason },
-      { headers: { 'If-Match': clock.version, 'Idempotency-Key': crypto.randomUUID() } }
+      { headers: { 'If-Match': clock.version.startsWith('"') ? clock.version : `"${clock.version}"`, 'Idempotency-Key': crypto.randomUUID() } }
     )
   },
 }

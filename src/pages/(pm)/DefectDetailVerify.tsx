@@ -20,6 +20,7 @@ import { DefectBoundingBoxViewer, BoundingBoxCoords } from './defect-verify/Defe
 import { DefectTemporalComparison } from './defect-verify/DefectTemporalComparison'
 import { DefectGisMapViewer } from './defect-verify/DefectGisMapViewer'
 import { DefectVerifyForm } from './defect-verify/DefectVerifyForm'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 const STANDARD_DEFECT_CODES = new Set<string>([
   DefectType.LONGITUDINAL_CRACK,
@@ -181,6 +182,8 @@ export const DefectDetailVerify: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [isSavingBbox, setIsSavingBbox] = useState<boolean>(false)
+  const decisionGuard = useSubmitGuard()
+  const bboxGuard = useSubmitGuard()
   const [apiError, setApiError] = useState<string | null>(null)
 
   const [allDetections, setAllDetections] = useState<
@@ -539,6 +542,7 @@ export const DefectDetailVerify: React.FC = () => {
   const handleSaveBbox = async (bboxToSave?: BoundingBoxCoords) => {
     if (!defect) return
     const targetBbox = bboxToSave || liveBbox || defect.bounding_box
+    if (!bboxGuard.acquire()) return
     setIsSavingBbox(true)
     try {
       await surveyService.saveAiCandidateOverride(defect.id, {
@@ -553,6 +557,7 @@ export const DefectDetailVerify: React.FC = () => {
     } catch (err: any) {
       showToast(`❌ Không thể lưu tọa độ khung nhận diện: ${err?.message || 'Lỗi kết nối'}`)
     } finally {
+      bboxGuard.release()
       setIsSavingBbox(false)
     }
   }
@@ -590,6 +595,7 @@ export const DefectDetailVerify: React.FC = () => {
       resolvedTypeCode = 'CRACK'
     }
 
+    if (!decisionGuard.acquire()) return
     setIsSubmitting(true)
     setApiError(null)
 
@@ -679,6 +685,7 @@ export const DefectDetailVerify: React.FC = () => {
       setApiError(errMsg)
       showToast(`❌ Lỗi Backend: ${errMsg}`)
     } finally {
+      decisionGuard.release()
       setIsSubmitting(false)
     }
   }
@@ -686,6 +693,7 @@ export const DefectDetailVerify: React.FC = () => {
   const handleResetDecision = async () => {
     if (!defect || defect.source_kind !== 'AI_DETECTION') return
     const isUnlink = defect.decision_kind === 'LINK_EXISTING'
+    if (!decisionGuard.acquire()) return
     setIsSubmitting(true)
     setApiError(null)
 
@@ -730,6 +738,7 @@ export const DefectDetailVerify: React.FC = () => {
       setApiError(errMsg)
       showToast(`❌ Lỗi Backend: ${errMsg}`)
     } finally {
+      decisionGuard.release()
       setIsSubmitting(false)
     }
   }
@@ -740,6 +749,7 @@ export const DefectDetailVerify: React.FC = () => {
     notesText: string
   ) => {
     if (!defect) return
+    if (!decisionGuard.acquire()) return
     setIsSubmitting(true)
     setApiError(null)
 
@@ -790,6 +800,7 @@ export const DefectDetailVerify: React.FC = () => {
       setApiError(errMsg)
       showToast(`❌ Lỗi Backend: ${errMsg}`)
     } finally {
+      decisionGuard.release()
       setIsSubmitting(false)
     }
   }

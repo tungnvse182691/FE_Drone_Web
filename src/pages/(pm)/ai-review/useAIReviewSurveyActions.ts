@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuthStore } from '../../../store/authStore'
 import { TriageCase } from './types'
 import { triageService } from '../../../api/services/triageService'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 export interface UseAIReviewSurveyActionsProps {
   setCases: React.Dispatch<React.SetStateAction<TriageCase[]>>
@@ -28,6 +29,7 @@ export const useAIReviewSurveyActions = ({
     'Tổ đo đạc hiện trường 01 (Km 1020 - Km 1035)'
   )
   const [surveySlaHours, setSurveySlaHours] = useState<number>(24)
+  const submitGuard = useSubmitGuard()
 
   const handleOpenRequestSurveyModal = (c?: TriageCase) => {
     const target = c || selectedCase
@@ -47,6 +49,7 @@ export const useAIReviewSurveyActions = ({
     const targetId = targetTriageCase ? targetTriageCase.id : selectedCase.id
     const targetCode = targetTriageCase ? targetTriageCase.code : selectedCase.code
     const epoch = useAuthStore.getState().authEpoch
+    if (!submitGuard.acquire()) return
     try {
       const result = await triageService.concludeCase(targetId, {
         outcome: 'NEEDS_EVIDENCE', reason: finalReason,
@@ -60,7 +63,7 @@ export const useAIReviewSurveyActions = ({
       if (useAuthStore.getState().authEpoch !== epoch) return
       if (error.serverCase) setCases(prev => prev.map(item => item.id === targetId ? { ...item, ...error.serverCase, project_name: item.project_name } : item))
       showToast(error.message || 'Không thể ghi nhận yêu cầu bổ sung bằng chứng.')
-    }
+    } finally { submitGuard.release() }
   }
 
   return {

@@ -254,7 +254,7 @@ export const TriageProjectModal: React.FC<TriageProjectModalProps> = ({
 
         {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
         {comparison && <p role="status" className="text-xs text-slate-600">{comparison}</p>}
-        <div className="flex flex-wrap gap-2 text-xs">{onRetry && <button type="button" disabled={busy} onClick={onRetry} className="border rounded-lg px-3 py-1">{retryLabel || 'Đối chiếu yêu cầu đang chờ'}</button>}{onReview && <button type="button" disabled={busy} onClick={onReview} className="border rounded-lg px-3 py-1">Đọc lại hồ sơ để đối chiếu</button>}{onAcceptReviewed && <button type="button" disabled={busy} onClick={onAcceptReviewed} className="border rounded-lg px-3 py-1">Tiếp tục với hồ sơ vừa đọc</button>}</div>
+        <div className="flex flex-wrap gap-2 text-xs">{onRetry && <button type="button" disabled={busy} onClick={onRetry} className="rg-btn">{retryLabel || 'Đối chiếu yêu cầu đang chờ'}</button>}{onReview && <button type="button" disabled={busy} onClick={onReview} className="rg-btn">Đọc lại hồ sơ để đối chiếu</button>}{onAcceptReviewed && <button type="button" disabled={busy} onClick={onAcceptReviewed} className="rg-btn">Tiếp tục với hồ sơ vừa đọc</button>}</div>
         {/* Modal Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100 gap-2">
           <span className="text-[11px] text-slate-500 font-medium truncate">

@@ -270,7 +270,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
   return (
     <div className="rounded-[20px] overflow-hidden border border-[#E2E5E9] bg-white shadow-2xs">
-      {selectedProjectId!=='ALL' && onOpenFastTrack && <div className="flex flex-wrap items-center gap-3 p-3 border-b border-slate-200 text-xs"><p className="text-slate-600">{linkedDefectId?'Liên kết đang giữ khiếm khuyết nguồn; mở form để đọc và chọn trước khi tạo FIELD.':'FIELD là hồ sơ đo đạc; quyền thi công Fast Track phải đánh giá riêng.'}</p><button type="button" className="border rounded-lg px-3 py-2" onClick={()=>onOpenFastTrack(selectedDefectId || (availableDefects.some(d=>d.id===linkedDefectId)?linkedDefectId:undefined))}>Mở phương án &amp; Điều phối nhanh</button></div>}
+      {selectedProjectId!=='ALL' && onOpenFastTrack && <div className="flex flex-wrap items-center gap-3 p-3 border-b border-slate-200 text-xs"><p className="text-slate-600">{linkedDefectId?'Liên kết đang giữ khiếm khuyết nguồn; mở form để đọc và chọn trước khi tạo FIELD.':'FIELD là hồ sơ đo đạc; quyền thi công Fast Track phải đánh giá riêng.'}</p><button type="button" className="rg-btn" onClick={()=>onOpenFastTrack(selectedDefectId || (availableDefects.some(d=>d.id===linkedDefectId)?linkedDefectId:undefined))}>Mở phương án &amp; Điều phối nhanh</button></div>}
       {/* Banner thông báo khi được chuyển tiếp từ Triage */}
       {highlightCode && (
         <div className="p-3 bg-amber-50 border-b border-amber-200 flex items-center justify-between gap-3 text-slate-800 text-xs">
@@ -385,16 +385,16 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
         <table className="w-full text-left border-collapse text-xs">
           <thead>
             <tr className="border-b border-[#EDEFF2] bg-[#F8F9FA] text-slate-600">
-              <th className="sticky left-0 bg-[#F8F9FA] z-10 py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[1px_0_0_#EDEFF2] whitespace-nowrap">
+              <th className="sticky left-0 bg-[#F8F9FA] z-10 py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 shadow-[1px_0_0_#EDEFF2] whitespace-nowrap">
                 Mã Nhiệm Vụ
               </th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Khiếm Khuyết & Vị Trí</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Phương Pháp Đo</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Số Đo Thực Tế</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Kỹ Sư Phụ Trách</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ảnh Đối Chứng</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 text-center whitespace-nowrap">Trạng Thái</th>
-              <th className="py-3.5 px-4 text-xs font-semibold uppercase tracking-wider text-slate-600 text-right whitespace-nowrap">Thao Tác</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Khiếm Khuyết & Vị Trí</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Phương Pháp Đo</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Số Đo Thực Tế</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Kỹ Sư Phụ Trách</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ảnh Đối Chứng</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 text-center whitespace-nowrap">Trạng Thái</th>
+              <th className="sticky right-0 z-10 bg-[#F8F9FA] py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 text-right whitespace-nowrap shadow-[-1px_0_0_#EDEFF2]">Thao Tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EDEFF2]">
@@ -437,7 +437,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     }`}
                   >
                     {/* Mã nhiệm vụ (Sticky trái) */}
-                    <td className={`sticky left-0 z-10 py-3.5 px-4 font-mono font-medium text-slate-800 shadow-[1px_0_0_#EDEFF2] transition-colors ${
+                    <td className={`sticky left-0 z-10 whitespace-nowrap py-3.5 px-3 font-mono font-medium text-slate-800 shadow-[1px_0_0_#EDEFF2] transition-colors ${
                       isHighlighted ? 'bg-amber-50/90' : 'bg-white group-hover:bg-slate-50/90'
                     }`}>
                       <button
@@ -454,10 +454,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </td>
 
                     {/* Khiếm khuyết & Vị trí */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-mono font-semibold text-slate-900">{task.defect_code}</div>
+                    <td className="py-3.5 px-3">
+                      <div className="font-mono font-semibold text-slate-900 max-w-[150px] truncate" title={task.defect_code}>{task.defect_code}</div>
                       {task.defect_name && (
-                        <div className="text-[11px] text-slate-600 line-clamp-1">{task.defect_name}</div>
+                        <div className="text-[11px] text-slate-600 line-clamp-1 max-w-[150px]" title={task.defect_name}>{task.defect_name}</div>
                       )}
                       <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
                         Km {task.chainage_km} {task.lane ? `• ${task.lane}` : ''}
@@ -465,12 +465,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </td>
 
                     {/* Phương pháp đo */}
-                    <td className="py-3.5 px-4 text-slate-700 max-w-xs">
+                    <td className="py-3.5 px-3 text-slate-700 max-w-[110px]">
                       <div className="line-clamp-2 leading-relaxed text-xs">{task.measurement_type}</div>
                     </td>
 
                     {/* Số đo thực tế */}
-                    <td className="py-3.5 px-4 font-mono">
+                    <td className="py-3.5 px-3 font-mono">
                       {task.status === 'ASSIGNED' ? (
                         <span className="text-slate-400 italic text-[11px]">Chưa đo</span>
                       ) : task.status === 'IN_PROGRESS' ? (
@@ -486,12 +486,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </td>
 
                     {/* Kỹ sư phụ trách */}
-                    <td className="py-3.5 px-4 text-slate-700 text-xs">
-                      <span>{task.technician_name}</span>
+                    <td className="py-3.5 px-3 text-slate-700 text-xs max-w-[120px]">
+                      <span className="block truncate" title={task.technician_name}>{task.technician_name}</span>
                     </td>
 
                     {/* Ảnh đối chứng (Cặp Trước - Sau: Hiện trạng vs Thước đo) */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-3">
                       <div className="flex items-center gap-2">
                         {/* 1. ẢNH TRƯỚC (Before): Hiện trạng ban đầu hoặc Ảnh phản ánh được duyệt API-084 */}
                         {task.reused_evidence ? (
@@ -594,35 +594,35 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </td>
 
                     {/* Trạng thái (Pill 999px chuẩn spec) */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <td className="py-3.5 px-3 text-center whitespace-nowrap">
                       {task.status === 'ASSIGNED' ? (
-                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                        <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
                           CẦN THỰC HIỆN
                         </span>
                       ) : task.status === 'IN_PROGRESS' ? (
-                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0F9FF] text-[#1E40AF] border border-[#B8C5D9]">
+                        <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0F9FF] text-[#1E40AF] border border-[#B8C5D9]">
                           ĐANG ĐO ĐẠC
                         </span>
                       ) : task.status === 'SUBMITTED' ? (
-                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
+                        <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
                           ĐÃ CÓ SỐ ĐO
                         </span>
                       ) : (
-                        <span className="inline-block px-[14px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
+                        <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
                           {task.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':task.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
                         </span>
                       )}
                     </td>
 
                     {/* Thao tác */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className={`sticky right-0 z-10 py-3.5 px-3 text-right whitespace-nowrap shadow-[-1px_0_0_#EDEFF2] transition-colors ${isHighlighted ? 'bg-amber-50' : 'bg-white group-hover:bg-slate-50'}`}>
                       {isProcessing ? (
                         <span className="text-[11px] text-slate-400 flex items-center justify-end gap-1">
                           <Icon name="sync" size={13} className="animate-spin" />
                           <span>Đang lưu...</span>
                         </span>
                       ) : (
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        <div className="flex flex-col items-end justify-center gap-1.5">
                           {/* Nút Tái sử dụng ảnh phản ánh (API-084) - Chỉ hiện khi chưa có ảnh đo thực tế hoặc đã được duyệt tái sử dụng */}
                           {task.reused_evidence ? (
                             <button
@@ -905,8 +905,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 />
               </div>
 
-              <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="w-full border rounded-lg p-2"><option value="">Chọn loại đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Phạm vi xói vai đường</option><option value={4}>Diện tích</option></select></label>
-              <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="w-full border rounded-lg p-2" /></label>
+              <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="rg-field w-full"><option value="">Chọn loại đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Phạm vi xói vai đường</option><option value={4}>Diện tích</option></select></label>
+              <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="rg-field w-full" /></label>
               <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.enabled===enabled&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,enabled,pins:enabled?pins:undefined})} />
               <p>Chỉ tạo phiếu từ phản ánh đã ghi nhận và đối chiếu được nguồn. Nguồn khảo sát chưa có đủ thông tin đối chiếu sẽ bị chặn.</p>
               </fieldset>

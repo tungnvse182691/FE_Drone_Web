@@ -156,7 +156,7 @@ export const CreateSurvey: React.FC = () => {
     )
   }
 
-  const projectSelect=<label className="text-xs text-slate-600 block">Dự án server<select aria-label="Dự án khảo sát server" value={projectCatalogue.find(p=>p.projectId===queryProject||p.projectCode===queryProject)?.projectId||''} onChange={e=>navigate(`/pm/surveys/create${e.target.value?`?projectId=${encodeURIComponent(e.target.value)}`:''}`)} className="ml-2 border rounded-lg p-2 max-w-full"><option value="">Chọn dự án được phép đọc</option>{projectCatalogue.map(p=><option key={p.projectId} value={p.projectId}>{p.projectCode} · {p.name}</option>)}</select></label>
+  const projectSelect=<label className="text-xs text-slate-600 block">Dự án server<select aria-label="Dự án khảo sát server" value={projectCatalogue.find(p=>p.projectId===queryProject||p.projectCode===queryProject)?.projectId||''} onChange={e=>navigate(`/pm/surveys/create${e.target.value?`?projectId=${encodeURIComponent(e.target.value)}`:''}`)} className="rg-field ml-2 max-w-full"><option value="">Chọn dự án được phép đọc</option>{projectCatalogue.map(p=><option key={p.projectId} value={p.projectId}>{p.projectCode} · {p.name}</option>)}</select></label>
   if (readError) return <div>{projectSelect}<div role="alert" className="bg-white border rounded-xl p-6 text-sm">{readError}<button type="button" onClick={()=>setReload(n=>n+1)} className="ml-3 underline">Thử lại</button></div></div>
 
   if (!currentProject) {
@@ -168,7 +168,7 @@ export const CreateSurvey: React.FC = () => {
           Theo quy chuẩn kỹ thuật bay trắc địa mặt đường UAV, dự án cần được Chỉ huy trưởng (PM) lập tim tuyến và được Giám sát (Supervisor) phê duyệt trước khi ban hành lệnh bay.
         </p>
         {projectSelect}
-        <select aria-label="Chọn tuyến server" value={projectId} onChange={e=>handleProjectChange(e.target.value)} className="border rounded-lg p-2 max-w-full"><option value="">{routes.length ? 'Chọn tuyến' : queryProject ? 'Chưa có route đã xác nhận trong dự án' : 'Chọn dự án trước'}</option>{routes.map(r=><option key={r.id} value={r.id}>{r.parentProjectCode} · {r.code} · {r.name}</option>)}</select>
+        <select aria-label="Chọn tuyến server" value={projectId} onChange={e=>handleProjectChange(e.target.value)} className="rg-field max-w-full"><option value="">{routes.length ? 'Chọn tuyến' : queryProject ? 'Chưa có route đã xác nhận trong dự án' : 'Chọn dự án trước'}</option>{routes.map(r=><option key={r.id} value={r.id}>{r.parentProjectCode} · {r.code} · {r.name}</option>)}</select>
         <div className="flex items-center gap-3 mt-4">
           <button
             onClick={() => navigate('/pm/projects')}

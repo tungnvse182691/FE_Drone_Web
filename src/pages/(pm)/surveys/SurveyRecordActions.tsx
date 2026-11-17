@@ -4,6 +4,9 @@ import { surveyActions } from '../../../api/services/surveyActions'
 import { surveyPlanningService, surveyStatusLabel, type SurveyRecord, type SurveyScope } from '../../../api/services/surveyPlanningService'
 import type { AvailablePilot } from '../create-survey/types'
 import { exportError } from '../../../api/services/projectExportService'
+import { Feedback, Field, PanelButton, PanelShell, SectionTitle } from '../../../components/ui/PanelKit'
+import { Icon } from '../../../components/ui/Icon'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 type TaskAct = 'reassign' | 'cancel' | 'supplement'
 const BAND_LABEL: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Lề trái', RIGHT_EDGE: 'Lề phải' }
@@ -21,6 +24,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   const saved = (() => { try { return JSON.parse(sessionStorage.getItem(memo) || '{}') as { message?: string; childId?: string } } catch { return {} } })()
   const [childId, setChildId] = useState(saved.childId || '')
   const [busy, setBusy] = useState(false)
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState(saved.message || '')
   const [params, setParams] = useSearchParams()
@@ -34,8 +38,8 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
     return () => { alive = false }
   }, [isTask, closed, record.projectId])
 
-  if (closed && message) return <p role="status" className="text-xs text-emerald-800 border-t border-[#E2E5E9] pt-3">{message}</p>
-  if (closed) return <p className="text-xs text-slate-500 border-t border-[#E2E5E9] pt-3">Bản ghi ở trạng thái {surveyStatusLabel(record.status)}: không còn thao tác.</p>
+  if (closed && message) return <div className="rg-alert rg-alert-ok mt-4"><Icon name="check_circle" size={16} className="mt-px" /><p role="status" className="min-w-0">{message}</p></div>
+  if (closed) return <div className="rg-empty mt-4 text-xs"><Icon name="lock" size={18} className="text-slate-400" /><p>Bản ghi ở trạng thái {surveyStatusLabel(record.status)}: không còn thao tác.</p></div>
 
   const supplementScope = (): SurveyScope[] => (record.scope || [])
     .map((s, i) => ({ routeVersionId: s.routeVersionId, segmentSetId: s.segmentSetId, targetBand: s.targetBand, segmentIds: s.segmentIds.filter((id) => picked[`${i}:${id}`]) }))
@@ -43,7 +47,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   const hasSupplementScope = supplementScope().length > 0
 
   const submit = async () => {
-    if (busy) return
+    if (!guard.acquire()) return
     setBusy(true); setError(''); setMessage(''); setChildId('')
     try { sessionStorage.removeItem(memo) } catch { /* không bắt buộc */ }
     let createdChild = ''
@@ -62,52 +66,60 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
     } catch (e) {
       setError(exportError(e))
     } finally {
-      setBusy(false)
+      setBusy(false); guard.release()
     }
   }
   const openChild = () => { const next = new URLSearchParams(params); next.set('surveyRecordId', childId); next.set('surveyRecordKind', 'TASK'); setParams(next) }
   const needOperator = isTask && (act === 'reassign' || act === 'supplement')
-  const cls = 'w-full border border-[#E2E5E9] rounded-lg p-2'
+  const cls = 'rg-field w-full'
 
   return (
-    <section className="space-y-2 text-xs border-t border-[#E2E5E9] pt-4" data-testid="survey-record-actions">
-      <h4 className="font-bold text-[#1A1D20]">{isTask ? 'PM giao lại, hủy hoặc bổ sung nhiệm vụ khảo sát' : 'PM hoãn kế hoạch khảo sát'}</h4>
-      {isTask && (
-        <select aria-label="Thao tác nhiệm vụ khảo sát" disabled={busy} value={act} onChange={(e) => setAct(e.target.value as TaskAct)} className={cls}>
-          <option value="reassign">Giao lại cho Operator khác</option>
-          <option value="supplement">Tạo nhiệm vụ bổ sung</option>
-          <option value="cancel">Hủy nhiệm vụ</option>
-        </select>
-      )}
-      {needOperator && (
-        <select aria-label="Operator nhận nhiệm vụ" disabled={busy} value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className={cls}>
-          <option value="">Chọn Operator</option>
-          {operators.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
-        </select>
-      )}
-      {isTask && act === 'reassign' && (
-        <input aria-label="Hạn hoàn thành mới" type="datetime-local" disabled={busy} value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={cls} />
-      )}
+    <PanelShell icon={isTask ? 'edit_note' : 'event_busy'} title={isTask ? 'PM giao lại, hủy hoặc bổ sung nhiệm vụ khảo sát' : 'PM hoãn kế hoạch khảo sát'} className="mt-4" data-testid="survey-record-actions">
+      <div className="rg-grid">
+        {isTask && (
+          <Field label="Thao tác nhiệm vụ khảo sát" span="col-span-12 md:col-span-6">
+            <select aria-label="Thao tác nhiệm vụ khảo sát" disabled={busy} value={act} onChange={(e) => setAct(e.target.value as TaskAct)} className={cls}>
+              <option value="reassign">Giao lại cho Operator khác</option>
+              <option value="supplement">Tạo nhiệm vụ bổ sung</option>
+              <option value="cancel">Hủy nhiệm vụ</option>
+            </select>
+          </Field>
+        )}
+        {needOperator && (
+          <Field label="Operator nhận nhiệm vụ" span="col-span-12 md:col-span-6">
+            <select aria-label="Operator nhận nhiệm vụ" disabled={busy} value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className={cls}>
+              <option value="">Chọn Operator</option>
+              {operators.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
+            </select>
+          </Field>
+        )}
+        {isTask && act === 'reassign' && (
+          <Field label="Hạn hoàn thành mới" span="col-span-12 md:col-span-6">
+            <input aria-label="Hạn hoàn thành mới" type="datetime-local" disabled={busy} value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={cls} />
+          </Field>
+        )}
+      </div>
       {isTask && act === 'supplement' && (
-        <div className="space-y-2" data-testid="supplement-scope">
-          <p className="font-semibold">Phạm vi cần bổ sung (chọn phân đoạn của nhiệm vụ gốc)</p>
+        <div className="rg-subcard" data-testid="supplement-scope">
+          <SectionTitle icon="route">Phạm vi cần bổ sung (chọn phân đoạn của nhiệm vụ gốc)</SectionTitle>
           {(record.scope || []).map((s, i) => (
-            <div key={i} className="rounded-lg border border-[#E2E5E9] p-2 space-y-1">
+            <div key={i} className="rounded-lg border border-brand-border bg-white p-3 space-y-2">
               <p>Dải khảo sát: <b>{BAND_LABEL[s.targetBand] || s.targetBand}</b> (BE chỉ nhận phạm vi nằm trong bộ dữ liệu đã nộp của nhiệm vụ gốc)</p>
-              <div className="flex flex-wrap gap-3">
-                {s.segmentIds.map((id) => (<label key={id} className="flex items-center gap-1"><input type="checkbox" disabled={busy} checked={!!picked[`${i}:${id}`]} onChange={() => setPicked((p) => ({ ...p, [`${i}:${id}`]: !p[`${i}:${id}`] }))} />#{id.slice(0, 8)}</label>))}
+              <div className="flex flex-wrap gap-2">
+                {s.segmentIds.map((id) => (<label key={id} className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors ${picked[`${i}:${id}`] ? 'border-brand-navy bg-brand-navy/5 text-brand-navy' : 'border-brand-border hover:bg-brand-surfaceAlt'}`}><input type="checkbox" className="accent-brand-navy" disabled={busy} checked={!!picked[`${i}:${id}`]} onChange={() => setPicked((p) => ({ ...p, [`${i}:${id}`]: !p[`${i}:${id}`] }))} />#{id.slice(0, 8)}</label>))}
               </div>
             </div>
           ))}
         </div>
       )}
-      <textarea aria-label="Lý do thao tác khảo sát" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={cls} />
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
-      {childId && <button type="button" onClick={openChild} className="underline text-emerald-800">Mở nhiệm vụ bổ sung #{childId.slice(0, 8)}</button>}
-      <button type="button" disabled={busy || !reason.trim() || (needOperator && !operatorId) || (isTask && act === 'supplement' && !hasSupplementScope)} onClick={() => { void submit() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">
-        {busy ? 'Đang gửi…' : !isTask ? 'Xác nhận hoãn kế hoạch' : act === 'cancel' ? 'Xác nhận hủy nhiệm vụ' : act === 'supplement' ? 'Xác nhận tạo nhiệm vụ bổ sung' : 'Xác nhận giao lại'}
-      </button>
-    </section>
+      <Field label="Lý do thao tác khảo sát"><textarea aria-label="Lý do thao tác khảo sát" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={cls} /></Field>
+      <Feedback error={error} message={message} />
+      <div className="rg-footer">
+        {childId && <PanelButton onClick={openChild}>Mở nhiệm vụ bổ sung #{childId.slice(0, 8)}</PanelButton>}
+        <PanelButton variant={isTask && act === 'cancel' ? 'danger' : 'primary'} loading={busy} disabled={busy || !reason.trim() || (needOperator && !operatorId) || (isTask && act === 'supplement' && !hasSupplementScope)} onClick={() => { void submit() }}>
+          {busy ? 'Đang gửi…' : !isTask ? 'Xác nhận hoãn kế hoạch' : act === 'cancel' ? 'Xác nhận hủy nhiệm vụ' : act === 'supplement' ? 'Xác nhận tạo nhiệm vụ bổ sung' : 'Xác nhận giao lại'}
+        </PanelButton>
+      </div>
+    </PanelShell>
   )
 }

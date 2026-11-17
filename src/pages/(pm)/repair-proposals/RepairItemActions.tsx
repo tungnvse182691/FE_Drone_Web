@@ -1,7 +1,10 @@
 import React, { useState } from 'react'
 import { repairItemActions, type CorrectionResult } from '../../../api/services/repairItemActions'
 import type { RepairItem } from '../../../api/services/repairWorkflowService'
+import { Feedback, Field, PanelButton, PanelShell } from '../../../components/ui/PanelKit'
+import { Icon } from '../../../components/ui/Icon'
 import { exportError } from '../../../api/services/projectExportService'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 type ActionKey = 'cancel' | 'continue' | 'correct' | 'review'
 const ACTION_LABEL: Record<ActionKey, string> = {
@@ -36,12 +39,13 @@ export const RepairItemActions: React.FC<RepairItemActionsProps> = ({ projectId,
   const [result, setResult] = useState<CorrectionResult>('UNREPAIRED')
   const [basis, setBasis] = useState('')
   const [busy, setBusy] = useState(false)
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   if (!actions.length || items.length === 0) return null
 
   const submit = async () => {
-    if (busy || !itemId) return
+    if (!itemId || !guard.acquire()) return
     setBusy(true); setError(''); setMessage('')
     try {
       if (action === 'cancel') await repairItemActions.cancel(projectId, packageId, itemId, reason.trim())
@@ -54,7 +58,7 @@ export const RepairItemActions: React.FC<RepairItemActionsProps> = ({ projectId,
     } catch (e) {
       setError(exportError(e))
     } finally {
-      setBusy(false)
+      setBusy(false); guard.release()
     }
   }
   // BE: hiệu chỉnh quyết định do Giám sát làm với hạng mục Normal, do PM làm với hạng mục Fast Track.
@@ -63,34 +67,42 @@ export const RepairItemActions: React.FC<RepairItemActionsProps> = ({ projectId,
   const ready = !!itemId && !!reason.trim() && !correctionDenied && (action !== 'continue' || (!!repairPlan.trim() && !!checklistVersion.trim())) && (action !== 'correct' || !!basis.trim())
 
   return (
-    <div className="space-y-2 text-xs border-t pt-3 mt-3" data-testid="repair-item-actions">
-      <p className="font-semibold">Thao tác hạng mục sửa chữa</p>
-      <select aria-label="Hạng mục thao tác" value={itemId} disabled={busy} onChange={(e) => setItemId(e.target.value)} className="w-full border rounded-lg p-2">
-        <option value="">Chọn hạng mục</option>
-        {items.map((i) => (<option key={i.id} value={i.id}>{i.mode} · {i.state} · {i.id.slice(0, 8).toUpperCase()}</option>))}
-      </select>
-      <select aria-label="Loại thao tác hạng mục" value={action} disabled={busy} onChange={(e) => setAction(e.target.value as ActionKey)} className="w-full border rounded-lg p-2">
-        {actions.map((a) => (<option key={a} value={a}>{ACTION_LABEL[a]}</option>))}
-      </select>
-      {action === 'continue' && (
-        <>
-          <textarea aria-label="Phương án sửa chữa" rows={2} disabled={busy} value={repairPlan} onChange={(e) => setRepairPlan(e.target.value)} placeholder="Phương án sửa chữa" className="w-full border rounded-lg p-2" />
-          <input aria-label="Phiên bản checklist" disabled={busy} value={checklistVersion} onChange={(e) => setChecklistVersion(e.target.value)} placeholder="Phiên bản checklist (ví dụ v1)" className="w-full border rounded-lg p-2" />
-        </>
-      )}
-      {action === 'correct' && (
-        <>
-          <select aria-label="Kết quả sau hiệu chỉnh" disabled={busy} value={result} onChange={(e) => setResult(e.target.value as CorrectionResult)} className="w-full border rounded-lg p-2">
-            {(Object.keys(RESULT_LABEL) as CorrectionResult[]).map((k) => (<option key={k} value={k}>{RESULT_LABEL[k]}</option>))}
+    <PanelShell as="div" icon="build_circle" title="Thao tác hạng mục sửa chữa" className="mt-4" data-testid="repair-item-actions">
+      <div className="rg-grid">
+        <Field label="Hạng mục thao tác">
+          <select aria-label="Hạng mục thao tác" value={itemId} disabled={busy} onChange={(e) => setItemId(e.target.value)} className="rg-field w-full">
+            <option value="">Chọn hạng mục</option>
+            {items.map((i) => (<option key={i.id} value={i.id}>{i.mode} · {i.state} · {i.id.slice(0, 8).toUpperCase()}</option>))}
           </select>
-          <textarea aria-label="Căn cứ hiệu chỉnh" rows={2} disabled={busy} value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Căn cứ hiệu chỉnh (bắt buộc)" className="w-full border rounded-lg p-2" />
-        </>
-      )}
-      <textarea aria-label="Lý do thao tác hạng mục" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className="w-full border rounded-lg p-2" />
-      {correctionDenied && <p className="text-amber-700">Hiệu chỉnh quyết định: hạng mục Normal do Giám sát thực hiện, hạng mục Fast Track do PM thực hiện.</p>}
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
-      <button type="button" disabled={busy || !ready} onClick={() => { void submit() }} className="border rounded-lg px-3 py-2">{busy ? 'Đang gửi…' : 'Gửi thao tác'}</button>
-    </div>
+        </Field>
+        <Field label="Loại thao tác hạng mục">
+          <select aria-label="Loại thao tác hạng mục" value={action} disabled={busy} onChange={(e) => setAction(e.target.value as ActionKey)} className="rg-field w-full">
+            {actions.map((a) => (<option key={a} value={a}>{ACTION_LABEL[a]}</option>))}
+          </select>
+        </Field>
+        {action === 'continue' && (
+          <>
+            <Field label="Phương án sửa chữa"><textarea aria-label="Phương án sửa chữa" rows={2} disabled={busy} value={repairPlan} onChange={(e) => setRepairPlan(e.target.value)} placeholder="Phương án sửa chữa" className="rg-field w-full" /></Field>
+            <Field label="Phiên bản checklist"><input aria-label="Phiên bản checklist" disabled={busy} value={checklistVersion} onChange={(e) => setChecklistVersion(e.target.value)} placeholder="Phiên bản checklist (ví dụ v1)" className="rg-field w-full" /></Field>
+          </>
+        )}
+        {action === 'correct' && (
+          <>
+            <Field label="Kết quả sau hiệu chỉnh">
+              <select aria-label="Kết quả sau hiệu chỉnh" disabled={busy} value={result} onChange={(e) => setResult(e.target.value as CorrectionResult)} className="rg-field w-full">
+                {(Object.keys(RESULT_LABEL) as CorrectionResult[]).map((k) => (<option key={k} value={k}>{RESULT_LABEL[k]}</option>))}
+              </select>
+            </Field>
+            <Field label="Căn cứ hiệu chỉnh"><textarea aria-label="Căn cứ hiệu chỉnh" rows={2} disabled={busy} value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Căn cứ hiệu chỉnh (bắt buộc)" className="rg-field w-full" /></Field>
+          </>
+        )}
+        <Field label="Lý do thao tác hạng mục"><textarea aria-label="Lý do thao tác hạng mục" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className="rg-field w-full" /></Field>
+      </div>
+      {correctionDenied && <div className="rg-alert rg-alert-warn"><Icon name="warning" size={16} className="mt-px" /><p>Hiệu chỉnh quyết định: hạng mục Normal do Giám sát thực hiện, hạng mục Fast Track do PM thực hiện.</p></div>}
+      <Feedback error={error} message={message} />
+      <div className="rg-footer">
+        <PanelButton variant={action === 'cancel' ? 'danger' : 'primary'} loading={busy} disabled={busy || !ready} onClick={() => { void submit() }}>{busy ? 'Đang gửi…' : 'Gửi thao tác'}</PanelButton>
+      </div>
+    </PanelShell>
   )
 }

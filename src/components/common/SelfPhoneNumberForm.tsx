@@ -106,8 +106,8 @@ export const SelfPhoneNumberForm: React.FC = () => {
           className="px-3 py-2 rounded-lg bg-slate-800 text-white text-xs disabled:opacity-50">
           {saving ? 'Đang lưu số điện thoại...' : 'Lưu số điện thoại'}
         </button>
-        <button type="button" disabled={loading || saving} onClick={refresh} className="px-3 py-2 rounded-lg border text-xs">Tải lại số điện thoại</button>
-        {pending && <button type="button" disabled={loading || saving || pending.busy || !fact} onClick={() => save(true)} className="px-3 py-2 rounded-lg border text-xs">Gửi lại đúng lệnh</button>}
+        <button type="button" disabled={loading || saving} onClick={refresh} className="rg-btn text-xs">Tải lại số điện thoại</button>
+        {pending && <button type="button" disabled={loading || saving || pending.busy || !fact} onClick={() => save(true)} className="rg-btn text-xs">Gửi lại đúng lệnh</button>}
       </div>
     </div>
   )

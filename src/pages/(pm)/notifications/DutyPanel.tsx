@@ -3,6 +3,8 @@ import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { dutyService, type DutyClock, type DutyProject, type DutyRequest, type WeeklyDigest } from '../../../api/services/dutyService'
 import { exportError } from '../../../api/services/projectExportService'
+import { Empty, Feedback, KV, Loading, PanelButton, PanelShell, SectionTitle } from '../../../components/ui/PanelKit'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 const fmt = (v?: string | null) => (v ? new Date(v).toLocaleString('vi-VN') : '—')
 type Assignee = { id: string; name: string }
@@ -25,6 +27,7 @@ export const DutyPanel: React.FC = () => {
   const [digest, setDigest] = useState<WeeklyDigest | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState('')
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -48,41 +51,50 @@ export const DutyPanel: React.FC = () => {
   useEffect(() => { setDigest(null); void load() }, [load])
 
   const run = async (key: string, fn: () => Promise<unknown>, done: string) => {
-    if (busy) return
+    if (!guard.acquire()) return
     setBusy(key); setError(''); setMessage('')
-    try { await fn(); setMessage(done); await load() } catch (e) { setError(exportError(e)) } finally { setBusy('') }
+    try { await fn(); setMessage(done); await load() } catch (e) { setError(exportError(e)) } finally { setBusy(''); guard.release() }
   }
-  const cls = 'border border-[#E2E5E9] rounded-lg p-2 text-xs'
+  const cls = 'rg-field'
 
   return (
-    <section className="bg-white rounded-[16px] border border-[#E2E5E9] p-5 space-y-5 text-xs" data-testid="duty-panel">
-      <div className="flex flex-wrap items-center gap-3">
-        <h3 className="font-bold text-base text-[#1A1D20]">Yêu cầu tiếp nhận và phân công nghiệp vụ</h3>
-        <select aria-label="Dự án" value={projectId} disabled={loading || !!busy} onChange={(e) => setProjectId(e.target.value)} className={cls}>
+    <PanelShell icon="assignment_ind" title="Yêu cầu tiếp nhận và phân công nghiệp vụ" className="!p-5 space-y-5" data-testid="duty-panel"
+      actions={<>
+        <select aria-label="Dự án" value={projectId} disabled={loading || !!busy} onChange={(e) => setProjectId(e.target.value)} className={`${cls} min-w-[14rem]`}>
           {projects.map((p) => (<option key={p.projectId} value={p.projectId}>{p.projectCode ? `${p.projectCode} · ` : ''}{p.name || p.projectId}</option>))}
         </select>
-        <button type="button" disabled={loading || !projectId} onClick={() => { void load() }} className={cls}>{loading ? 'Đang tải…' : 'Tải lại'}</button>
-      </div>
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
+        <PanelButton disabled={loading || !projectId} loading={loading} onClick={() => { void load() }}>{loading ? 'Đang tải…' : 'Tải lại'}</PanelButton>
+      </>}>
+      <Feedback error={error} message={message} />
 
       <div data-testid="duty-requests" className="space-y-2">
-        <p className="font-semibold">Yêu cầu tiếp nhận ({requests.length})</p>
-        {!loading && requests.length === 0 && <p className="text-slate-500">Không có yêu cầu tiếp nhận nào trong CSDL.</p>}
+        <SectionTitle icon="inbox">Yêu cầu tiếp nhận ({requests.length})</SectionTitle>
+        {loading && requests.length === 0 && <Loading />}
+        {!loading && requests.length === 0 && <Empty icon="inbox">Không có yêu cầu tiếp nhận nào trong CSDL.</Empty>}
         {requests.map((r) => {
           const mine = r.responsibleActorId === user?.id
           const canAck = mine && !r.acknowledgedAt && !r.completedAt
           const canAppoint = isSupervisor && r.kind === 'SupervisorEscalation' && !r.completedAt
           return (
-            <div key={r.id} className="rounded-xl border border-[#E2E5E9] p-3 space-y-2">
-              <p>{r.kind} · nguồn {r.sourceKind} · trạng thái <b>{r.receivingState}</b> · người chịu trách nhiệm {r.responsibleRole || '—'}{mine ? ' (bạn)' : ''}</p>
-              <p>Yêu cầu lúc {fmt(r.requestedAt)} · hạn {fmt(r.currentDueAt)} · đã xác nhận {fmt(r.acknowledgedAt)}{r.completedAt ? ` · hoàn tất ${fmt(r.completedAt)}` : ''}</p>
-              {canAck && <button type="button" disabled={!!busy} onClick={() => { void run('ack' + r.id, () => dutyService.ack(r.projectId, r.id), 'Đã xác nhận tiếp nhận yêu cầu.') }} className={cls}>{busy === 'ack' + r.id ? 'Đang gửi…' : 'Xác nhận đã nhận'}</button>}
+            <div key={r.id} className="rg-row space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-brand-dark">{r.kind}</span>
+                <span className="text-slate-500">nguồn {r.sourceKind}</span>
+                <span>trạng thái <b className="rg-pill rg-pill-info align-middle">{r.receivingState}</b></span>
+                <span className="text-slate-500">người chịu trách nhiệm {r.responsibleRole || '—'}{mine ? ' (bạn)' : ''}</span>
+              </div>
+              <KV items={[
+                { k: 'Yêu cầu lúc', v: fmt(r.requestedAt) },
+                { k: 'Hạn', v: fmt(r.currentDueAt) },
+                { k: 'Đã xác nhận', v: fmt(r.acknowledgedAt) },
+                ...(r.completedAt ? [{ k: 'Hoàn tất', v: fmt(r.completedAt) }] : []),
+              ]} />
+              {canAck && <div className="rg-footer"><PanelButton variant="primary" disabled={!!busy} loading={busy === 'ack' + r.id} onClick={() => { void run('ack' + r.id, () => dutyService.ack(r.projectId, r.id), 'Đã xác nhận tiếp nhận yêu cầu.') }}>{busy === 'ack' + r.id ? 'Đang gửi…' : 'Xác nhận đã nhận'}</PanelButton></div>}
               {canAppoint && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center gap-2 border-t border-brand-border pt-2">
                   <select aria-label="Người được chỉ định nhận yêu cầu" value={pick[r.id] || ''} disabled={!!busy} onChange={(e) => setPick((p) => ({ ...p, [r.id]: e.target.value }))} className={cls}><option value="">Chọn Giám sát</option>{assignees.sup.map((a) => (<option key={a.id} value={a.id}>{a.name}</option>))}</select>
-                  <input aria-label="Lý do chỉ định yêu cầu" value={reason[r.id] || ''} disabled={!!busy} onChange={(e) => setReason((p) => ({ ...p, [r.id]: e.target.value }))} placeholder="Lý do" className={cls} />
-                  <button type="button" disabled={!!busy || !pick[r.id] || !(reason[r.id] || '').trim()} onClick={() => { void run('ap' + r.id, () => dutyService.appointRequest(r.projectId, r.id, pick[r.id], reason[r.id]), 'Đã chỉ định người nhận yêu cầu.') }} className={cls}>Chỉ định</button>
+                  <input aria-label="Lý do chỉ định yêu cầu" value={reason[r.id] || ''} disabled={!!busy} onChange={(e) => setReason((p) => ({ ...p, [r.id]: e.target.value }))} placeholder="Lý do" className={`${cls} flex-1 min-w-[10rem]`} />
+                  <PanelButton disabled={!!busy || !pick[r.id] || !(reason[r.id] || '').trim()} onClick={() => { void run('ap' + r.id, () => dutyService.appointRequest(r.projectId, r.id, pick[r.id], reason[r.id]), 'Đã chỉ định người nhận yêu cầu.') }}>Chỉ định</PanelButton>
                 </div>
               )}
             </div>
@@ -92,17 +104,17 @@ export const DutyPanel: React.FC = () => {
 
       {isSupervisor && (
         <div data-testid="duty-clocks" className="space-y-2">
-          <p className="font-semibold">Chỉ định người phụ trách đồng hồ thời hạn</p>
-          {!loading && clocks.length === 0 && <p className="text-slate-500">Không có đồng hồ thời hạn nào trong CSDL.</p>}
+          <SectionTitle icon="timer">Chỉ định người phụ trách đồng hồ thời hạn</SectionTitle>
+          {!loading && clocks.length === 0 && <Empty icon="timer_off">Không có đồng hồ thời hạn nào trong CSDL.</Empty>}
           {clocks.filter((c) => !c.completedAt).map((c) => {
             const pmDuty = c.kind === 'ProjectManagerReview'
             const options = pmDuty ? assignees.pm : assignees.sup
             return (
-              <div key={c.id} className="rounded-xl border border-[#E2E5E9] p-3 flex flex-wrap items-center gap-2">
-                <span className="mr-2">{c.kind} · #{c.targetId.slice(0, 8)} · hạn {fmt(c.currentDueAt)} · phụ trách {c.appointedRole || '—'}</span>
+              <div key={c.id} className="rg-row flex flex-wrap items-center gap-2">
+                <span className="mr-2 min-w-0 flex-1 basis-64"><b className="text-brand-dark">{c.kind}</b> · <span className="font-mono">#{c.targetId.slice(0, 8)}</span> · hạn {fmt(c.currentDueAt)} · phụ trách {c.appointedRole || '—'}</span>
                 <select aria-label={`Người phụ trách đồng hồ ${c.id.slice(0, 8)}`} value={pick[c.id] || ''} disabled={!!busy} onChange={(e) => setPick((p) => ({ ...p, [c.id]: e.target.value }))} className={cls}><option value="">{pmDuty ? 'Chọn PM' : 'Chọn Giám sát'}</option>{options.map((a) => (<option key={a.id} value={a.id}>{a.name}</option>))}</select>
                 <input aria-label={`Lý do chỉ định đồng hồ ${c.id.slice(0, 8)}`} value={reason[c.id] || ''} disabled={!!busy} onChange={(e) => setReason((p) => ({ ...p, [c.id]: e.target.value }))} placeholder="Lý do" className={cls} />
-                <button type="button" disabled={!!busy || !pick[c.id] || !(reason[c.id] || '').trim()} onClick={() => { void run('ck' + c.id, () => dutyService.appointClock(c, pick[c.id], reason[c.id]), 'Đã chỉ định người phụ trách đồng hồ.') }} className={cls}>Chỉ định</button>
+                <PanelButton disabled={!!busy || !pick[c.id] || !(reason[c.id] || '').trim()} onClick={() => { void run('ck' + c.id, () => dutyService.appointClock(c, pick[c.id], reason[c.id]), 'Đã chỉ định người phụ trách đồng hồ.') }}>Chỉ định</PanelButton>
               </div>
             )
           })}
@@ -110,19 +122,23 @@ export const DutyPanel: React.FC = () => {
       )}
 
       <div data-testid="duty-digest" className="space-y-2">
-        <p className="font-semibold">Bản tóm tắt tuần</p>
-        <div className="flex gap-2">
-          <input aria-label="Mã bản tóm tắt tuần" value={digestId} disabled={!!busy} onChange={(e) => setDigestId(e.target.value)} placeholder="Mã bản tóm tắt (GUID, lấy từ thông báo tóm tắt tuần)" className={`${cls} flex-1`} />
-          <button type="button" disabled={!!busy || !projectId || !digestId.trim()} onClick={() => { void run('digest', async () => setDigest(await dutyService.digest(projectId, digestId)), 'Đã đọc bản tóm tắt tuần.') }} className={cls}>Đọc</button>
+        <SectionTitle icon="summarize">Bản tóm tắt tuần</SectionTitle>
+        <div className="flex items-end gap-2">
+          <div className="flex-1"><span className="rg-label">Mã bản tóm tắt tuần</span><input aria-label="Mã bản tóm tắt tuần" value={digestId} disabled={!!busy} onChange={(e) => setDigestId(e.target.value)} placeholder="Mã bản tóm tắt (GUID, lấy từ thông báo tóm tắt tuần)" className={`${cls} w-full font-mono`} /></div>
+          <PanelButton disabled={!!busy || !projectId || !digestId.trim()} onClick={() => { void run('digest', async () => setDigest(await dutyService.digest(projectId, digestId)), 'Đã đọc bản tóm tắt tuần.') }}>Đọc</PanelButton>
         </div>
         {digest && (
-          <div className="rounded-xl border border-[#E2E5E9] p-3 space-y-1">
-            <p>Lên lịch {fmt(digest.scheduledAtUtc)} · khôi phục {fmt(digest.recoveredAtUtc)} · kỳ bù: {digest.recoveryPeriods?.join(', ') || '—'}</p>
-            {(digest.pendingAtRecovery || []).length === 0 && <p className="text-slate-500">Không có nghĩa vụ tồn đọng.</p>}
-            {(digest.pendingAtRecovery || []).map((d) => (<p key={d.clockId}>{d.kind} · #{d.targetId.slice(0, 8)} · hạn {fmt(d.dueAtRecoveryUtc)}</p>))}
+          <div className="rg-subcard">
+            <KV items={[
+              { k: 'Lên lịch', v: fmt(digest.scheduledAtUtc) },
+              { k: 'Khôi phục', v: fmt(digest.recoveredAtUtc) },
+              { k: 'Kỳ bù', v: digest.recoveryPeriods?.join(', ') || '—' },
+            ]} />
+            {(digest.pendingAtRecovery || []).length === 0 && <Empty icon="task_alt">Không có nghĩa vụ tồn đọng.</Empty>}
+            {(digest.pendingAtRecovery || []).map((d) => (<p key={d.clockId} className="rounded-lg bg-white border border-brand-border px-3 py-2">{d.kind} · <span className="font-mono">#{d.targetId.slice(0, 8)}</span> · hạn {fmt(d.dueAtRecoveryUtc)}</p>))}
           </div>
         )}
       </div>
-    </section>
+    </PanelShell>
   )
 }

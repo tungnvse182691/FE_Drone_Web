@@ -98,7 +98,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   ].filter(Boolean).join('; ')
   const reportSelector=<label className="grid min-w-0 gap-1">
     Phản ánh nguồn
-    <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
+    <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="rg-field w-full min-w-0 max-w-full">
       {reports.length!==1&&<option value="">Chọn phản ánh nguồn</option>}
       {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'}</option>)}
     </select>
@@ -129,7 +129,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     <div className="grid min-w-0 grid-cols-1 gap-2">
       <label className="grid min-w-0 gap-1">
         Loại lỗi
-        <select aria-label="Loại lỗi" value={defectTypeCode} disabled={commandBusy||!activeCatalog||!!activeCatalog.error||!activeCatalog.items.length} onChange={e=>changeForm('defectTypeCode',e.target.value)} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
+        <select aria-label="Loại lỗi" value={defectTypeCode} disabled={commandBusy||!activeCatalog||!!activeCatalog.error||!activeCatalog.items.length} onChange={e=>changeForm('defectTypeCode',e.target.value)} className="rg-field w-full min-w-0 max-w-full">
           <option value="">{!activeCatalog?'Đang tải loại lỗi…':activeCatalog.error?'Lỗi tải danh mục':!activeCatalog.items.length?'Chưa có loại lỗi hiệu lực':'Chọn loại lỗi'}</option>
           {activeCatalog?.items.map(t=><option key={t.code} value={t.code}>{t.name}</option>)}
         </select>
@@ -138,7 +138,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       </label>
       <label className="grid min-w-0 gap-1">
         Mức độ nghiêm trọng
-        <select aria-label="Mức độ nghiêm trọng" value={severity} onChange={event => changeForm('severity', event.target.value)} disabled={!allowed} className="w-full min-w-0 max-w-full rounded border bg-white p-2">
+        <select aria-label="Mức độ nghiêm trọng" value={severity} onChange={event => changeForm('severity', event.target.value)} disabled={!allowed} className="rg-field w-full min-w-0 max-w-full">
           <option value="">Chọn mức độ</option>
           <option value="LOW">Thấp</option>
           <option value="MEDIUM">Trung bình</option>
@@ -149,14 +149,14 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     </div>
     <label className="grid min-w-0 gap-1">
       Lý do ghi nhận khiếm khuyết
-      <textarea aria-label="Lý do ghi nhận khiếm khuyết" value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="w-full min-w-0 max-w-full rounded border bg-white p-2" />
+      <textarea aria-label="Lý do ghi nhận khiếm khuyết" value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="rg-field w-full min-w-0 max-w-full" />
     </label>
-    <label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
-    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="w-full min-w-0 rounded border p-2"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}</label>
+    <label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="rg-field w-full min-w-0"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
+    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="rg-field w-full min-w-0"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}</label>
     {journalError&&<p role="alert">{journalError}</p>}
     {(roadError||currentPackage?.error)&&<p role="alert">{roadError||currentPackage?.error}</p>}
     <p className="text-slate-600 break-words">{missing ? `Còn thiếu: ${missing}` : 'Đã đủ dữ liệu form; máy chủ vẫn kiểm quyền và hiệu lực.'}</p>
-    <button type="button" disabled={!canSave} onClick={()=>{void execute()}} className="border rounded-lg px-3 py-2 text-xs font-semibold">{commandBusy?'Đang ghi nhận…':'Xác nhận ghi nhận khiếm khuyết'}</button>
+    <button type="button" disabled={!canSave} onClick={()=>{void execute()}} className="rg-btn text-xs font-semibold">{commandBusy?'Đang ghi nhận…':'Xác nhận ghi nhận khiếm khuyết'}</button>
     {heldDecision&&<button type="button" disabled={commandBusy} onClick={()=>{void execute()}} className="text-xs underline">Đối chiếu yêu cầu ghi nhận đang chờ</button>}
     {command.scope===scope&&command.error&&<p role="alert">{command.error}</p>}
     {selectedCase.case_status === 'OPEN' && current?.error && <p className="text-slate-600">Nếu Case thiếu phạm vi, dùng “Cập nhật phạm vi” trong khối Thông Tin Hồ Sơ; PM giữ nguyên dự án và chọn tuyến/bộ PUBLISHED. Chỉ ghi nhận khi GET nguồn trả đủ phiên bản hợp lệ.</p>}

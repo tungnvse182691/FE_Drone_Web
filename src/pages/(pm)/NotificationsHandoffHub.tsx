@@ -256,7 +256,7 @@ export const NotificationsHandoffHub: React.FC = () => {
         onToggleUnreadOnly={() => setUnreadOnly(!unreadOnly)}
       />
 
-      <div className="flex flex-wrap gap-2 text-xs"><button type="button" disabled={loading} onClick={()=>setReload(n=>n+1)} className="border rounded-lg px-3 py-2">Tải lại thông báo</button>{loading&&<p role="status">Đang đọc thông báo…</p>}{apiError&&<p role="alert" className="text-rose-700">{apiError}</p>}</div>
+      <div className="flex flex-wrap gap-2 text-xs"><button type="button" disabled={loading} onClick={()=>setReload(n=>n+1)} className="rg-btn">Tải lại thông báo</button>{loading&&<p role="status">Đang đọc thông báo…</p>}{apiError&&<p role="alert" className="text-rose-700">{apiError}</p>}</div>
       <p className="text-xs text-slate-500">Danh sách thuộc người nhận hiện tại. Máy chủ chưa cung cấp mức ưu tiên, người gửi và thời hạn SLA trong dữ liệu thông báo; các trường này không được suy diễn. Danh sách rỗng nghĩa là chưa có thông báo phù hợp trong CSDL.</p>
       {/* MAIN TWO-COLUMN WORKSPACE: 70% Feed / 30% Delivery SLA Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

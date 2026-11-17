@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import { HubProject } from './types'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 interface CloseProjectModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
   const [irrevocableAcknowledge, setIrrevocableAcknowledge] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const submitGuard = useSubmitGuard()
 
   if (!isOpen || !project) return null
 
@@ -59,6 +61,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
       return
     }
 
+    if (!submitGuard.acquire()) return
     try {
       setIsSubmitting(true)
       setErrorMsg(null)
@@ -70,6 +73,7 @@ export const CloseProjectModal: React.FC<CloseProjectModalProps> = ({
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi khi đóng dự án')
     } finally {
+      submitGuard.release()
       setIsSubmitting(false)
     }
   }

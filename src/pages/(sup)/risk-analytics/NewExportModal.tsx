@@ -75,7 +75,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
           {/* Phạm vi dự án */}
           <div className="space-y-1">
             <label className="font-medium text-slate-700">Dự án & Phân đoạn bảo hành</label>
-            <input aria-label="Dự án xuất hồ sơ" readOnly value={exportForm.scope} className="w-full border rounded-lg p-2" />
+            <input aria-label="Dự án xuất hồ sơ" readOnly value={exportForm.scope} className="rg-field w-full" />
             <p className="text-slate-500">Xuất toàn bộ phạm vi được phép đọc của dự án đã chọn.</p>
           </div>
 
@@ -122,7 +122,7 @@ export const NewExportModal: React.FC<NewExportModalProps> = ({
             </label>
           </div>
 
-          <label className="grid gap-1">Định dạng<select aria-label="Định dạng xuất hồ sơ" value={exportForm.format} onChange={e=>setExportForm({...exportForm,format:e.target.value,includeOriginalFiles:e.target.value==='PDF'?false:exportForm.includeOriginalFiles})} className="border rounded-lg p-2"><option value="">Chọn PDF hoặc ZIP</option><option value="PDF">PDF</option><option value="ZIP">ZIP</option></select></label>
+          <label className="grid gap-1">Định dạng<select aria-label="Định dạng xuất hồ sơ" value={exportForm.format} onChange={e=>setExportForm({...exportForm,format:e.target.value,includeOriginalFiles:e.target.value==='PDF'?false:exportForm.includeOriginalFiles})} className="rg-field"><option value="">Chọn PDF hoặc ZIP</option><option value="PDF">PDF</option><option value="ZIP">ZIP</option></select></label>
           </fieldset>
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

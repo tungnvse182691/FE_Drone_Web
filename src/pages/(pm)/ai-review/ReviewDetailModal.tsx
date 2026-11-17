@@ -63,7 +63,7 @@ export const ReviewDetailModal: React.FC<ReviewDetailModalProps> = ({
         {loading || error || !drawerProps.selectedCase.id ? <div className="p-6 space-y-3">
           {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : <p role="status" className="text-sm text-slate-500">Đang tải chi tiết hồ sơ...</p>}
           {error && <button type="button" onClick={onRetry} className="text-xs underline">Thử lại</button>}
-          <button type="button" onClick={onClose} className="text-xs px-3 py-2 border rounded-lg">Đóng lại</button>
+          <button type="button" onClick={onClose} className="rg-btn text-xs">Đóng lại</button>
         </div> : <ReviewDetailDrawer {...drawerProps} onClose={onClose} />}
       </div>
     </div>

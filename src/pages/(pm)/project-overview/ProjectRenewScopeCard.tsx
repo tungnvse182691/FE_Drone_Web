@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { lifecycleRenewService, type LifecycleView } from '../../../api/services/lifecycleRenewService'
 import { exportError } from '../../../api/services/projectExportService'
+import { Empty, Feedback, Field, KV, Loading, PanelButton, PanelShell, SectionTitle } from '../../../components/ui/PanelKit'
+import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 
 /** Giám sát: gia hạn phạm vi xử lý sau khi dự án đã đóng vận hành. Dữ liệu vòng đời đọc từ BE. */
 export const ProjectRenewScopeCard: React.FC<{ projectId: string }> = ({ projectId }) => {
@@ -10,6 +12,7 @@ export const ProjectRenewScopeCard: React.FC<{ projectId: string }> = ({ project
   const [basis, setBasis] = useState('')
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const guard = useSubmitGuard()
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
@@ -21,40 +24,54 @@ export const ProjectRenewScopeCard: React.FC<{ projectId: string }> = ({ project
 
   const closures = view ? lifecycleRenewService.closures(view) : []
   const submit = async () => {
-    if (!view || busy) return
+    if (!view || !guard.acquire()) return
     setBusy(true); setError(''); setMessage('')
     try {
       await lifecycleRenewService.renew(projectId, view, { operationalClosureId: closureId, reason, handlingScope: scope, basis })
       setMessage('Đã ghi nhận gia hạn phạm vi xử lý.'); setScope(''); setBasis(''); setReason(''); await load()
-    } catch (e) { setError(exportError(e)) } finally { setBusy(false) }
+    } catch (e) { setError(exportError(e)) } finally { setBusy(false); guard.release() }
   }
-  const cls = 'border border-[#E2E5E9] rounded-lg p-2 text-xs w-full'
+  const cls = 'rg-field w-full'
 
   return (
-    <section className="bg-white rounded-[16px] border border-[#E2E5E9] p-5 space-y-2 text-xs" data-testid="project-renew-scope">
-      <h3 className="font-bold text-sm text-[#1A1D20]">Gia hạn phạm vi xử lý sau đóng vận hành</h3>
-      {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {message && <p role="status" className="text-emerald-800">{message}</p>}
-      {view && <p>Đóng vận hành: <b>{view.operationalClosure}</b> · bản ghi lịch sử: {view.history.length}</p>}
-      {view && closures.length === 0 && <p className="text-slate-500">Dự án chưa có bản ghi đóng vận hành, chưa thể gia hạn phạm vi xử lý.</p>}
-      {closures.length > 0 && (
-        <div className="space-y-2">
-          <select aria-label="Bản ghi đóng vận hành" value={closureId} disabled={busy} onChange={(e) => setClosureId(e.target.value)} className={cls}>
-            <option value="">Chọn bản ghi đóng vận hành</option>
-            {closures.map((c) => (<option key={c.id} value={c.id}>#{c.id.slice(0, 8)} · {c.recordedAtUtc ? new Date(c.recordedAtUtc).toLocaleString('vi-VN') : '—'}</option>))}
-          </select>
-          <textarea aria-label="Phạm vi xử lý gia hạn" rows={2} maxLength={4000} disabled={busy} value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Phạm vi xử lý" className={cls} />
-          <textarea aria-label="Căn cứ gia hạn" rows={2} maxLength={2000} disabled={busy} value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Căn cứ" className={cls} />
-          <textarea aria-label="Lý do gia hạn" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={cls} />
-          <button type="button" disabled={busy || !closureId || !scope.trim() || !basis.trim() || !reason.trim()} onClick={() => { void submit() }} className="border border-[#E2E5E9] rounded-lg px-3 py-2">{busy ? 'Đang gửi…' : 'Xác nhận gia hạn'}</button>
+    <PanelShell icon="event_repeat" title="Gia hạn phạm vi xử lý sau đóng vận hành" className="!p-5 !rounded-[16px]" data-testid="project-renew-scope">
+      <Feedback error={error} message={message} />
+      {!view && !error && <Loading />}
+      {view && (
+        <div className="rg-subcard">
+          <KV items={[
+            { k: 'Đóng vận hành', v: String(view.operationalClosure) },
+            { k: 'Bản ghi lịch sử', v: view.history.length },
+          ]} />
         </div>
+      )}
+      {view && closures.length === 0 && <Empty icon="event_busy">Dự án chưa có bản ghi đóng vận hành, chưa thể gia hạn phạm vi xử lý.</Empty>}
+      {closures.length > 0 && (
+        <>
+          <div className="rg-grid">
+            <Field label="Bản ghi đóng vận hành">
+              <select aria-label="Bản ghi đóng vận hành" value={closureId} disabled={busy} onChange={(e) => setClosureId(e.target.value)} className={cls}>
+                <option value="">Chọn bản ghi đóng vận hành</option>
+                {closures.map((c) => (<option key={c.id} value={c.id}>#{c.id.slice(0, 8)} · {c.recordedAtUtc ? new Date(c.recordedAtUtc).toLocaleString('vi-VN') : '—'}</option>))}
+              </select>
+            </Field>
+            <Field label="Phạm vi xử lý gia hạn" span="col-span-12 lg:col-span-4"><textarea aria-label="Phạm vi xử lý gia hạn" rows={2} maxLength={4000} disabled={busy} value={scope} onChange={(e) => setScope(e.target.value)} placeholder="Phạm vi xử lý" className={cls} /></Field>
+            <Field label="Căn cứ gia hạn" span="col-span-12 lg:col-span-4"><textarea aria-label="Căn cứ gia hạn" rows={2} maxLength={2000} disabled={busy} value={basis} onChange={(e) => setBasis(e.target.value)} placeholder="Căn cứ" className={cls} /></Field>
+            <Field label="Lý do gia hạn" span="col-span-12 lg:col-span-4"><textarea aria-label="Lý do gia hạn" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={cls} /></Field>
+          </div>
+          <div className="rg-footer">
+            <PanelButton variant="primary" loading={busy} disabled={busy || !closureId || !scope.trim() || !basis.trim() || !reason.trim()} onClick={() => { void submit() }}>{busy ? 'Đang gửi…' : 'Xác nhận gia hạn'}</PanelButton>
+          </div>
+        </>
       )}
       {view && view.history.length > 0 && (
-        <div data-testid="lifecycle-history" className="space-y-1">
-          <p className="font-semibold">Lịch sử vòng đời</p>
-          {view.history.map((h) => (<p key={h.id}>{String(h.kind)} · {h.recordedAtUtc ? new Date(h.recordedAtUtc).toLocaleString('vi-VN') : '—'}{h.reason ? ` — ${h.reason}` : ''}{h.handlingScope ? ` · phạm vi: ${h.handlingScope}` : ''}</p>))}
+        <div data-testid="lifecycle-history" className="space-y-2">
+          <SectionTitle icon="history">Lịch sử vòng đời</SectionTitle>
+          <div className="space-y-1.5">
+            {view.history.map((h) => (<p key={h.id} className="rg-row !py-2">{String(h.kind)} · {h.recordedAtUtc ? new Date(h.recordedAtUtc).toLocaleString('vi-VN') : '—'}{h.reason ? ` — ${h.reason}` : ''}{h.handlingScope ? ` · phạm vi: ${h.handlingScope}` : ''}</p>))}
+          </div>
         </div>
       )}
-    </section>
+    </PanelShell>
   )
 }

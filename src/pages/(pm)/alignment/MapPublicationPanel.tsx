@@ -71,23 +71,23 @@ export function MapPublicationPanel({ workflow, readOnly }: { workflow: ReturnTy
   }
   const blocked = workflow.loading || workflow.busy || !!workflow.error || !!workflow.pending || !!workflow.asBuilt.active || !!workflow.asBuilt.pending || !source || source.id !== pins.layoutRevisionId || source.projectId !== projectId || source.routeVersionId !== pins.routeVersionId || source.segmentSetId !== pins.segmentSetId
   const metadata = manifest?.layers.find(l=>l.key===layer)
-  return <section className="rounded-lg border p-3 space-y-2 text-xs" aria-label="Công bố bản đồ xem thử">
-    <h4 className="font-semibold">Bản đồ xem thử</h4>
+  return <section className="rg-panel" aria-label="Công bố bản đồ xem thử">
+    <h4 className="rg-panel-title pb-2 border-b border-brand-border">Bản đồ xem thử</h4>
     {source && !blocked && (!manifest || manifest.layoutRevisionId === source.id) && <p>Cấu hình nguồn: {displayStatus(source.kind)} · {pavementSizeLabel(source)}{workflow.layouts.find(row=>row.layoutId===source.id)?.createdAt ? ` · ${readableTime(workflow.layouts.find(row=>row.layoutId===source.id)!.createdAt)}` : ''}</p>}
     {!readOnly && actor.user?.role === RoleCode.PROJECT_MANAGER && !id && <>
-      <label className="block">Lý do công bố<input aria-label="Lý do công bố bản đồ" value={reason} onChange={e=>setReason(e.target.value)} disabled={busy} className="block border rounded p-2 w-full" /></label>
-      <button type="button" disabled={busy||blocked||!reason.trim()} onClick={()=>void publish()} className="border rounded p-2 disabled:opacity-50">Công bố bản đồ xem thử</button>
+      <label className="block">Lý do công bố<input aria-label="Lý do công bố bản đồ" value={reason} onChange={e=>setReason(e.target.value)} disabled={busy} className="rg-field block w-full" /></label>
+      <button type="button" disabled={busy||blocked||!reason.trim()} onClick={()=>void publish()} className="rg-btn disabled:opacity-50">Công bố bản đồ xem thử</button>
       {blocked&&<p>Chọn cấu hình đã lưu, đúng tuyến và bộ phân đoạn; kết thúc bản nhập đang dở trước khi công bố.</p>}
     </>}
-    {!readOnly && !id && <button type="button" disabled={busy} onClick={()=>void revise()} className="border rounded p-2">Đối chiếu / sửa ý định bị từ chối</button>}
+    {!readOnly && !id && <button type="button" disabled={busy} onClick={()=>void revise()} className="rg-btn">Đối chiếu / sửa ý định bị từ chối</button>}
     {id&&<p>Đã có bản công bố</p>}
-    <button type="button" disabled={busy} onClick={()=>setReload(n=>n+1)} className="border rounded p-2">Đọc lại kết quả công bố</button>
+    <button type="button" disabled={busy} onClick={()=>setReload(n=>n+1)} className="rg-btn">Đọc lại kết quả công bố</button>
     {manifest&&<>
       <p>{manifest.sampleOnly ? 'Bản đồ xem thử' : 'Bản đồ chính thức'}</p>
-      <select aria-label="Lớp bản đồ" value={layer} disabled={busy} onChange={e=>{setLayer(e.target.value);setPage(null);setError('');seen.current.clear()}} className="border rounded p-2 w-full"><option value="">Chọn lớp bản đồ</option>{manifest.layers.map(l=><option key={l.key} value={l.key}>{layerLabel(l.key)} · {displayStatus(l.status)} · {l.count}</option>)}</select>
+      <select aria-label="Lớp bản đồ" value={layer} disabled={busy} onChange={e=>{setLayer(e.target.value);setPage(null);setError('');seen.current.clear()}} className="rg-field w-full"><option value="">Chọn lớp bản đồ</option>{manifest.layers.map(l=><option key={l.key} value={l.key}>{layerLabel(l.key)} · {displayStatus(l.status)} · {l.count}</option>)}</select>
       {metadata&&<p role="status">{displayStatus(metadata.status)} · {(metadata.reasonCodes||[]).map(reasonLabel).join(' ')}</p>}
-      <button type="button" disabled={busy||!layer} onClick={()=>void readPage()} className="border rounded p-2">Đọc lớp bản đồ</button>
-      {page&&<><p role="status">{page.features.length ? `${page.features.length} đối tượng trong trang từ máy chủ` : 'Không có dữ liệu trong trang lớp bản đồ.'}</p>{page.nextCursor&&<button type="button" disabled={busy} onClick={()=>void readPage(true)} className="border rounded p-2">Trang tiếp</button>}</>}
+      <button type="button" disabled={busy||!layer} onClick={()=>void readPage()} className="rg-btn">Đọc lớp bản đồ</button>
+      {page&&<><p role="status">{page.features.length ? `${page.features.length} đối tượng trong trang từ máy chủ` : 'Không có dữ liệu trong trang lớp bản đồ.'}</p>{page.nextCursor&&<button type="button" disabled={busy} onClick={()=>void readPage(true)} className="rg-btn">Trang tiếp</button>}</>}
     </>}
     {busy&&<p role="status">Đang gửi/đọc kết quả…</p>}
     {error&&<><p role="alert">Không thể hoàn tất yêu cầu. Kết quả được giữ để đối chiếu; xem chi tiết kỹ thuật.</p><details><summary>Chi tiết kỹ thuật</summary><p>{error}</p></details></>}

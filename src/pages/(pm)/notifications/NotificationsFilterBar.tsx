@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Search
 } from 'lucide-react'
@@ -33,14 +33,34 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
   unreadOnly,
   onToggleUnreadOnly
 }) => {
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const [fade, setFade] = useState({ left: false, right: false })
+  const updateFade = () => {
+    const el = tabsRef.current
+    if (!el) return
+    setFade({ left: el.scrollLeft > 4, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 })
+  }
+  useEffect(() => {
+    const el = tabsRef.current
+    if (!el) return
+    el.querySelector<HTMLElement>('[data-active="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    updateFade()
+    const ro = new ResizeObserver(updateFade)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [activeTab])
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-      {/* Horizontal Category Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+    <div className="flex flex-col 2xl:flex-row items-stretch 2xl:items-center justify-between gap-3">
+      {/* Horizontal Category Tabs (cuộn ngang trong khung, mép mờ khi còn tab bị che) */}
+      <div className="relative min-w-0">
+      {fade.left && <div aria-hidden className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-r from-[#F8F9FA] to-transparent" />}
+      {fade.right && <div aria-hidden className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10 bg-gradient-to-l from-[#F8F9FA] to-transparent" />}
+      <div ref={tabsRef} onScroll={updateFade} className="flex items-center gap-2 overflow-x-auto scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => onChangeTab('ALL')}
-          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          data-active={activeTab === 'ALL'}
+          className={`shrink-0 px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ALL'
               ? 'bg-[#C9A227] text-white shadow-xs'
               : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
@@ -57,7 +77,8 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('ACTION_REQUIRED')}
-          className={`px-5 py-[11px] rounded-[16px] font-bold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          data-active={activeTab === 'ACTION_REQUIRED'}
+          className={`shrink-0 px-5 py-[11px] rounded-[16px] font-bold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ACTION_REQUIRED'
               ? 'bg-[#C9A227] text-white shadow-xs'
               : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
@@ -74,7 +95,8 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('HANDOVER')}
-          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          data-active={activeTab === 'HANDOVER'}
+          className={`shrink-0 px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'HANDOVER'
               ? 'bg-[#C9A227] text-white shadow-xs'
               : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
@@ -91,7 +113,8 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
         <button
           type="button"
           onClick={() => onChangeTab('AI_SYSTEM')}
-          className={`px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+          data-active={activeTab === 'AI_SYSTEM'}
+          className={`shrink-0 px-5 py-[11px] rounded-[16px] font-semibold text-xs transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'AI_SYSTEM'
               ? 'bg-[#C9A227] text-white shadow-xs'
               : 'bg-white text-slate-600 border border-[#E2E5E9] hover:border-[#C9A227]'
@@ -105,9 +128,10 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
           </span>
         </button>
       </div>
+      </div>
 
       {/* Search & Priority Controls */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <div className="relative min-w-[200px]">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -115,7 +139,7 @@ export const NotificationsFilterBar: React.FC<NotificationsFilterBarProps> = ({
             value={searchQuery}
             onChange={(e) => onChangeSearchQuery(e.target.value)}
             placeholder="Tìm mã phiếu, lý trình..."
-            className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-gold"
+            className="w-full h-9 pl-8 pr-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-gold"
           />
         </div>
 

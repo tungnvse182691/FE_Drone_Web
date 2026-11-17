@@ -201,6 +201,8 @@ export const ProjectList: React.FC = () => {
       const pending = projectService.pendingProjectCreate()
       setPendingCreate(!!pending)
       setReceivedCreate(!!pending?.hasReceipt)
+      // BE đã ghi dự án (có receipt 201) dù bước đọc lại lỗi: đọc lại danh sách thật để dự án hiện ra, không tạo lại.
+      if (pending?.hasReceipt) void loadProjects()
       const msg = err.message || 'Lỗi khởi tạo dự án'
       setCreateErrorMessage(msg)
       showToast(msg)

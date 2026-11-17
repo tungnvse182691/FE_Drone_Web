@@ -185,7 +185,8 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
                     {/* 3. Action */}
                     <td className="py-3 px-3">
                       <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${ev.action_badge_style}`}
+                        title={ev.action_label_vi}
+                        className={`inline-block max-w-[190px] truncate align-middle whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${ev.action_badge_style}`}
                       >
                         {ev.action_label_vi}
                       </span>
@@ -224,7 +225,7 @@ export const AuditTrailTable: React.FC<AuditTrailTableProps> = ({
 
                     {/* 6. Event ID */}
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className="font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-[6px] border border-slate-200">
+                      <span title={ev.event_id} className="inline-block max-w-[110px] truncate align-middle font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-[6px] border border-slate-200">
                         {ev.event_id}
                       </span>
                     </td>

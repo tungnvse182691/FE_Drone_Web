@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { surveyService, type SurveyMissionItem } from '../../api/services'
 import { Icon } from '../../components/ui/Icon'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 import { useDroneMissionReview } from './drone-review/useDroneMissionReview'
 import { MissionHeader } from './drone-review/MissionHeader'
@@ -22,6 +23,7 @@ export const DroneMissionAIReview: React.FC = () => {
   const [currentSurvey, setCurrentSurvey] = useState<SurveyMissionItem | null>(null)
   const [isLoadingSurvey, setIsLoadingSurvey] = useState<boolean>(true)
   const [isSimulating, setIsSimulating] = useState<boolean>(false)
+  const simulateGuard = useSubmitGuard()
 
   const {
     isAiOverlayVisible,
@@ -104,6 +106,7 @@ export const DroneMissionAIReview: React.FC = () => {
   // Xử lý mô phỏng bay xong ngay trên trang chi tiết nếu trạng thái là SCHEDULED
   const handleSimulateFlight = async () => {
     if (!currentSurvey) return
+    if (!simulateGuard.acquire()) return
     try {
       setIsSimulating(true)
       const updated = await surveyService.simulateDroneFlightCompletion(currentSurvey.id)
@@ -114,6 +117,7 @@ export const DroneMissionAIReview: React.FC = () => {
     } catch (err) {
       console.error('Lỗi khi mô phỏng bay:', err)
     } finally {
+      simulateGuard.release()
       setIsSimulating(false)
     }
   }

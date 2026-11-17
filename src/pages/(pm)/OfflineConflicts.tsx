@@ -8,6 +8,7 @@ import { SyncConflictItem, HubProject } from '../../types/domain'
 import { Icon } from '../../components/ui/Icon'
 import { ConflictsTab } from './field-tasks/ConflictsTab'
 import { ConflictResolveModal } from './field-tasks/ConflictResolveModal'
+import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 /**
  * ============================================================================
@@ -87,6 +88,7 @@ export const OfflineConflicts: React.FC = () => {
   >(null)
   const [resolutionReason, setResolutionReason] = useState<string>('')
   const [isSubmittingResolution, setIsSubmittingResolution] = useState<boolean>(false)
+  const resolveGuard = useSubmitGuard()
   const [resolutionError, setResolutionError] = useState<string | null>(null)
 
   // Toast Notification State
@@ -176,6 +178,7 @@ export const OfflineConflicts: React.FC = () => {
 
   const handleConfirmResolve = async () => {
     if (!selectedConflict || !pendingDecision) return
+    if (!resolveGuard.acquire()) return
     setIsSubmittingResolution(true)
     setResolutionError(null)
     try {
@@ -206,6 +209,7 @@ export const OfflineConflicts: React.FC = () => {
       setResolutionError(detailError)
       showToast(detailError, 'error')
     } finally {
+      resolveGuard.release()
       setIsSubmittingResolution(false)
     }
   }
