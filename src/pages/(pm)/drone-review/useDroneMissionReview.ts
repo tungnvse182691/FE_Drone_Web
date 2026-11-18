@@ -9,7 +9,7 @@ import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 import type { SurveyMissionItem } from '../../../api/services'
 
 export function useDroneMissionReview(
-  surveyId: string = 'srv-01',
+  surveyId: string = '',
   currentSurvey?: SurveyMissionItem | null
 ) {
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
@@ -23,7 +23,7 @@ export function useDroneMissionReview(
 
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
-  const [selectedDetectionId, setSelectedDetectionId] = useState<string>('DET-01')
+  const [selectedDetectionId, setSelectedDetectionId] = useState<string>('')
 
   const [coveragePercentage, setCoveragePercentage] = useState<number>(100)
   const [hasBlindspot, setHasBlindspot] = useState<boolean>(false)
@@ -56,14 +56,16 @@ export function useDroneMissionReview(
   }
 
   const [detections, setDetections] = useState<AIDetectionItem[]>([])
-  const [isLoadingDetections, setIsLoadingDetections] = useState<boolean>(true)
+  const [isLoadingDetections, setIsLoadingDetections] = useState<boolean>(!!surveyId)
+  const [detectionsError, setDetectionsError] = useState<string>('')
 
   // Tải danh sách detections từ Mock API Service (surveyService)
   useEffect(() => {
     let isMounted = true
     const fetchDetections = async () => {
+      if (!surveyId) { setDetections([]); setDetectionsError(''); setIsLoadingDetections(false); return }
       try {
-        setIsLoadingDetections(true)
+        setIsLoadingDetections(true); setDetectionsError('')
         const data = await surveyService.getSurveyDetections(surveyId)
         if (isMounted) {
           setDetections(data)
@@ -76,6 +78,7 @@ export function useDroneMissionReview(
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách phát hiện AI:', err)
+        if (isMounted) { setDetections([]); setDetectionsError(err instanceof Error ? err.message : 'Không tải được danh sách phát hiện AI từ máy chủ.') }
       } finally {
         if (isMounted) {
           setIsLoadingDetections(false)
@@ -429,6 +432,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
   const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]
 
   return {
+    detectionsError,
     isAiOverlayVisible,
     setIsAiOverlayVisible,
     isPlaying,

@@ -83,7 +83,7 @@ export async function runDraftCommand(projectId: string, command?: DraftCommand)
       const route = receipt as RoadGeometryVersionView
       if (!route.roadSectionId || !route.routeVersionId || route.sourceDraftId !== intent.draftId) throw new Error('Receipt xác nhận thiếu reference hợp lệ.')
       if (intent.sectionId && route.roadSectionId !== intent.sectionId) throw new Error('Receipt xác nhận sai đoạn đường đã pin.')
-      const lookup = await geometrySubmissionService.read(projectId)
+      const lookup = await geometrySubmissionService.read(projectId, { fresh: true })
       current()
       if (!lookup || lookup.status !== 'CONFIRMED' || lookup.draftId !== intent.draftId || lookup.roadSectionId !== route.roadSectionId || lookup.confirmedRouteVersionId !== route.routeVersionId) throw new Error('Lookup sau confirm không khớp receipt.')
       const geometry = await alignmentService.readConfirmedGeometry(projectId, route.roadSectionId, route.routeVersionId)

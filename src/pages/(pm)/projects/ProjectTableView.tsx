@@ -75,7 +75,7 @@ export const ProjectTableView: React.FC<ProjectTableViewProps> = ({
                         prj.open_defects > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                       }`}
                     >
-                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa tải được'}
+                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa có số liệu'}
                     </span>
                   </td>
                   <td className="py-3 px-4">

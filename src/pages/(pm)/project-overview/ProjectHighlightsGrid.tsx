@@ -132,7 +132,7 @@ export const ProjectHighlightsGrid: React.FC<ProjectHighlightsGridProps> = ({
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-bold text-slate-900 font-mono">
-                {defectsReady ? `${project.open_defects} điểm` : 'Chưa tải được'}
+                {defectsReady ? `${project.open_defects} điểm` : 'Chưa có số liệu'}
               </span>
               <span className="text-[11px] font-bold text-[#047857] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                 {packagesReady ? `${project.repair_packages} gói sửa chữa` : 'Chưa tải được'}

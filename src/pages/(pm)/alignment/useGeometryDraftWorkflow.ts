@@ -249,7 +249,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     }
     const current = begin(); if (!current) return
     try {
-      if(model.newSectionDraft){const [context,lookup]=await Promise.all([alignmentService.readProjectContext(projectId),geometrySubmissionService.read(projectId)]);if(!current())return;if(context.projectId!==projectId||context.accessRole!=='PM'||context.status==='CLOSED'||lookup||!context.roadSections.some(r=>r.roadSectionId===model.newSectionDraft&&r.currentVersionId===model.newDraftVersion)||form.sectionId!==model.newSectionDraft)throw new GeometryCommandUiError('Điều kiện lập nháp đã thay đổi; bản nhập được giữ, cần đọc lại trước khi lưu.')}
+      if(model.newSectionDraft){const [context,lookup]=await Promise.all([alignmentService.readProjectContext(projectId),geometrySubmissionService.read(projectId, { fresh: true })]);if(!current())return;if(context.projectId!==projectId||context.accessRole!=='PM'||context.status==='CLOSED'||lookup||!context.roadSections.some(r=>r.roadSectionId===model.newSectionDraft&&r.currentVersionId===model.newDraftVersion)||form.sectionId!==model.newSectionDraft)throw new GeometryCommandUiError('Điều kiện lập nháp đã thay đổi; bản nhập được giữ, cần đọc lại trước khi lưu.')}
       await complete(await runDraftCommand(projectId, draft ? { kind: 'update', sectionId: draft.roadSectionId ?? null, draftId: draft.id, etag: draftVersion!, input } : { kind: 'create', sectionId: form.sectionId, input }), current) }
     catch (error) { await failure(error, current) }
     finally { if (current() && !awaitingAcknowledgement.current) { running.current = false; setBusy(false) } }
@@ -289,7 +289,7 @@ export function useGeometryDraftWorkflow(projectId: string, model: ReadModel, co
     catch (error) { setConfirmModalOpen(true); setConfirmInputError((error as Error).message); return }
     const current = begin(); if (!current) return
     try {
-      const lookup = await geometrySubmissionService.read(projectId)
+      const lookup = await geometrySubmissionService.read(projectId, { fresh: true })
       if (!current()) return
       if (!lookup || lookup.draftId !== draft!.id || lookup.status !== 'SUBMITTED') throw new GeometryCommandUiError('Hồ sơ trình đã thay đổi; đọc lại trước khi xác nhận.')
       const [fresh, ready, context] = await Promise.all([alignmentService.getGeometryDraft(projectId, draft!.id, draft!.roadSectionId), alignmentService.readDraftReadiness(projectId, draft!.id), alignmentService.readProjectContext(projectId)])

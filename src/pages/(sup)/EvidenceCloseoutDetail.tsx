@@ -255,6 +255,13 @@ export const EvidenceCloseoutDetail: React.FC = () => {
       </div>
     )
   }
+  if (!isLoading && !currentItem) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="rg-empty" role="status">Không có hồ sơ nghiệm thu để hiển thị. Chọn một hạng mục từ danh sách nghiệm thu hoặc kiểm tra quyền truy cập dự án.</p>
+      </div>
+    )
+  }
   if (isLoading || !currentItem) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">

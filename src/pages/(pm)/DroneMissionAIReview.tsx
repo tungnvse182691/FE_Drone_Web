@@ -72,14 +72,16 @@ export const DroneMissionAIReview: React.FC = () => {
     handleResetDetection,
     handleSubmitReFlight,
     handleLockBaseline,
-    selectedItem
-  } = useDroneMissionReview(id || 'srv-01', currentSurvey)
+    selectedItem,
+    detectionsError
+  } = useDroneMissionReview(id || '', currentSurvey)
 
   // Tải dữ liệu đợt bay từ Mock API Service
   useEffect(() => {
     let isMounted = true
     const loadSurveyData = async () => {
       if (!id) {
+        setCurrentSurvey(null) // đổi sang route không có :id thì bỏ đợt bay cũ, không hiển thị nhầm
         setIsLoadingSurvey(false)
         return
       }
@@ -236,6 +238,8 @@ export const DroneMissionAIReview: React.FC = () => {
   // TRƯỜNG HỢP: ĐÃ BAY VÀ SẴN SÀNG THẨM ĐỊNH AI CANVAS
   return (
     <div className="space-y-4">
+      {!id && <div role="alert" className="rg-alert rg-alert-warn"><p className="flex-1 min-w-0">Chưa chọn đợt khảo sát: đường dẫn thiếu mã nhiệm vụ. Mở từ danh sách khảo sát để xem phát hiện AI của đúng đợt.</p></div>}
+      {detectionsError && <div role="alert" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">Không tải được danh sách phát hiện AI: {detectionsError}</p></div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
@@ -256,7 +260,7 @@ export const DroneMissionAIReview: React.FC = () => {
         onSubmitReFlight={handleSubmitReFlight}
         selectedItem={selectedItem}
         currentSurveyCode={currentSurvey?.code}
-        currentSurveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : 'Km 1024 - 1030'}
+        currentSurveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : '—'}
         coveragePercentage={coveragePercentage}
         isBaselineModalOpen={isBaselineModalOpen}
         setIsBaselineModalOpen={setIsBaselineModalOpen}

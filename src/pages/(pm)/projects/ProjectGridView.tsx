@@ -210,7 +210,7 @@ export const ProjectGridView: React.FC<ProjectGridViewProps> = ({
                         prj.open_defects > 0 ? 'text-rose-600' : 'text-slate-600'
                       }`}
                     >
-                      {Number.isFinite(prj.open_defects) ? prj.open_defects : 'Chưa tải được'} điểm
+                      {Number.isFinite(prj.open_defects) ? `${prj.open_defects} điểm` : 'Chưa có số liệu'}
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">

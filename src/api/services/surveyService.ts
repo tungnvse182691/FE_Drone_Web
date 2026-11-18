@@ -500,18 +500,24 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
 
     const runs = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.status === 'SUCCEEDED')
     if (runs.length === 0) return []
-    const run = runs[0]
-    const resultRes = await apiClient.get<{ detections: RunDetection[] }>(
-      `/projects/${projectId}/ai-mock-runs/${run.id}/result`
-    )
+    // Đọc kết quả của MỌI lần chạy SUCCEEDED (BE không gắn lần chạy với chuyến bay nên không được chỉ lấy runs[0]);
+    // gộp theo detectionId để phát hiện không bị trùng giữa các lần chạy.
+    const results = await Promise.all(runs.map(async (run) => ({
+      run,
+      detections: (await apiClient.get<{ detections: RunDetection[] }>(`/projects/${projectId}/ai-mock-runs/${run.id}/result`)).data?.detections || []
+    })))
     const defectMap = new Map<string, BackendDefectDto>()
     for (const df of await this.getProjectDefects(projectId)) defectMap.set(df.id.toLowerCase(), df)
 
-    return Promise.all(
-      (resultRes.data?.detections || []).map((d, index) =>
-        buildDetectionItem(projectId, run.id, d, index + 1, defectMap)
-      )
-    )
+    const seen = new Set<string>()
+    const flat: { runId: string; d: RunDetection }[] = []
+    for (const r of results) for (const d of r.detections) {
+      const key = String((d as any).detectionId ?? '').toLowerCase()
+      if (key && seen.has(key)) continue
+      if (key) seen.add(key)
+      flat.push({ runId: r.run.id, d })
+    }
+    return Promise.all(flat.map((x, index) => buildDetectionItem(projectId, x.runId, x.d, index + 1, defectMap)))
   },
 
   /**

@@ -184,7 +184,7 @@ export const fieldTaskService = {
         measurement_type: parsedMethod,
         chainage_km: parsedChainage,
         status: mapBackendTaskStatus(item.status),
-        technician_name: item.assignedToUserId ? `Crew (${item.assignedToUserId})` : 'Chưa phân công',
+        technician_name: item.assignedToUserId ? `Crew ${item.assignedToUserId.slice(0, 8)} (chưa có tên từ máy chủ)` : 'Chưa phân công',
         created_at: undefined,
         lane: parsedLane,
         notes: item.instructions || item.purpose || '',
@@ -241,7 +241,7 @@ export const fieldTaskService = {
       measurement_type: formatMeasurementTypeName(item.requiredMeasurementType),
       chainage_km: null,
       status: mapBackendTaskStatus(item.status),
-      technician_name: item.assignedToUserId ? `Crew (${item.assignedToUserId})` : 'Chưa phân công',
+      technician_name: item.assignedToUserId ? `Crew ${item.assignedToUserId.slice(0, 8)} (chưa có tên từ máy chủ)` : 'Chưa phân công',
       created_at: undefined,
       notes: item.instructions || item.purpose || '',
       version: item.version || null

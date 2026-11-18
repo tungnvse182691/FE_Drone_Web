@@ -154,15 +154,19 @@ export const surveyPlanningService = {
     for (const project of projects) {
       const [plans,tasks] = await Promise.all([this.records(project.projectId,'PLAN',signal),this.records(project.projectId,'TASK',signal)])
       // No planId or surveyType read contract at 4b46a6a. Keep independent records and unknown metadata.
-      for (const record of [...plans,...tasks]) {
+      const records=[...plans,...tasks], built: SurveyMissionItem[] = new Array(records.length)
+      let cursor=0 // đọc chi tiết song song (tối đa 8) thay vì tuần tự; giữ nguyên thứ tự hiển thị
+      const worker=async()=>{ while(cursor<records.length){ const idx=cursor++; const record=records[idx]
         let presentation:SurveyPresentation|undefined,readError='',fresh=record
         try{fresh=await this.detail(project.projectId,record.id,record.recordKind);presentation=await this.describe(fresh,describeCache)}catch(e:any){current();readError=`Không tải được thông tin khảo sát: ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`}
         current();if(signal?.aborted)throw new Error('Đã hủy đọc khảo sát.')
-        rows.push({id:record.id,code:record.id,title:record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát',serverRecordKind:record.recordKind,
+        built[idx]=({id:record.id,code:record.id,title:record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát',serverRecordKind:record.recordKind,
         survey_type:null,survey_type_label:'API chưa trả loại khảo sát',project_id:project.projectId,project_name:`${project.projectCode} · ${project.name}`,
         start_km:'',end_km:'',flight_date:fresh.plannedAt ? surveyPlannedAtLabel(fresh.plannedAt) : '',pilot_name:presentation?.operatorName||'',drone_model:'',scope_summary:presentation?.scopes.map(s=>`${s.routeName} · ${s.band} · ${s.ranges}${s.historical?' · Phân đoạn lịch sử':''}`).join(' / '),read_error:readError,
-        total_photos:Number.NaN,gsd_resolution:'',ai_defects_count:Number.NaN,ai_pending_count:Number.NaN,coverage_percent:Number.NaN,serverStatus:fresh.status,status_label:surveyStatusLabel(fresh.status)})
-      }
+        total_photos:Number.NaN,gsd_resolution:'',ai_defects_count:Number.NaN,ai_pending_count:Number.NaN,coverage_percent:Number.NaN,serverStatus:fresh.status,status_label:surveyStatusLabel(fresh.status)} as SurveyMissionItem)
+      } }
+      await Promise.all(Array.from({length:Math.min(8,records.length)},worker))
+      rows.push(...built)
     }
     return rows
   },

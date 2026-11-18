@@ -269,10 +269,11 @@ export const DefectDetailVerify: React.FC = () => {
       const isDirectDef = defEntries.some((e) => e.dto.id.toLowerCase() === rawTargetId)
 
       if (rawTargetId && !isDirectDet && !isDirectDef) {
+        let lookupErr = ''
         try {
-          const allSurveys = await surveyService.getSurveys().catch(() => [])
+          const allSurveys = await surveyService.getSurveys().catch((e) => { lookupErr = e instanceof Error ? e.message : 'Không tải được danh sách khảo sát'; return [] })
           for (const srv of allSurveys) {
-            const srvDets = await surveyService.getSurveyDetections(srv.id).catch(() => [])
+            const srvDets = await surveyService.getSurveyDetections(srv.id).catch((e) => { lookupErr = lookupErr || (e instanceof Error ? e.message : 'Không tải được phát hiện AI'); return [] })
             const matched = srvDets.find(
               (sd) =>
                 sd.id.toLowerCase() === rawTargetId ||
@@ -290,6 +291,7 @@ export const DefectDetailVerify: React.FC = () => {
               break
             }
           }
+          if (lookupErr && !detEntries.some((e) => e.item.id.toLowerCase() === rawTargetId)) setApiError(`Không tra cứu được phát hiện AI từ máy chủ: ${lookupErr}`)
         } catch {}
       }
 

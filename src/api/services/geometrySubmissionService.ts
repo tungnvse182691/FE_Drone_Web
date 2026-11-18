@@ -25,16 +25,28 @@ export function verifySubmission(value: GeometrySubmission, projectId: string) {
   if (value.previousRejection && (value.previousRejection.outcome !== 'REJECTED' || !value.previousRejection.rejectionReason?.trim() || !review || value.previousRejection.number >= review.number)) throw new Error('Quyết định trước sai contract.')
   return value;
 }
+// Gộp các lần đọc cùng dự án trong vài giây (nhiều màn/hook đọc cùng lúc) để không gọi lặp; khóa theo người dùng + epoch phiên.
+const READ_TTL_MS = 4000;
+const readCache = new Map<string, { at: number; p: Promise<GeometrySubmission | null> }>();
 export const geometrySubmissionService = {
-  async read(projectId: string): Promise<GeometrySubmission | null> {
-    try {
-      return verifySubmission((await apiClient.get(`/projects/${projectId}/road-geometry-submission`)).data, projectId);
-    }
-    catch (e: any) {
-      if (e?.response?.status === 404 && e.response.data?.code === 'road_geometry_submission_not_found')
-        return null;
-      throw e;
-    }
+  async read(projectId: string, opts?: { fresh?: boolean }): Promise<GeometrySubmission | null> {
+    const st = useAuthStore.getState();
+    const ck = `${st.user?.id}:${st.authEpoch}:${projectId}`;
+    const hit = readCache.get(ck);
+    if (!opts?.fresh && hit && Date.now() - hit.at < READ_TTL_MS) return hit.p;
+    const p = (async () => {
+      try {
+        return verifySubmission((await apiClient.get(`/projects/${projectId}/road-geometry-submission`)).data, projectId);
+      }
+      catch (e: any) {
+        if (e?.response?.status === 404 && e.response.data?.code === 'road_geometry_submission_not_found')
+          return null;
+        throw e;
+      }
+    })();
+    readCache.set(ck, { at: Date.now(), p });
+    p.catch(() => { if (readCache.get(ck)?.p === p) readCache.delete(ck); });
+    return p;
   },
   async submit(projectId: string, draftId: string, etag: string, key: string) { return (await apiClient.post<GeometrySubmission>(`/projects/${projectId}/road-geometry-drafts/${draftId}/submit`, {}, { headers: { 'If-Match': etag, 'Idempotency-Key': key } })).data; }
 };
@@ -93,7 +105,7 @@ export async function runSubmission(projectId: string, intent?: {
     const receipt = verifySubmission(h.receipt!, projectId);
     if (receipt.draftId !== h.draftId || (h.kind === 'reject' ? receipt.status !== 'REJECTED' || receipt.currentReview?.rejectionReason !== h.reason : receipt.submittedContentVersion !== h.etag.slice(1, -1)))
       throw new Error('Receipt không khớp nội dung trình.');
-    const lookup = await geometrySubmissionService.read(projectId);
+    const lookup = await geometrySubmissionService.read(projectId, { fresh: true });
     current();
     if (!lookup || lookup.draftId !== h.draftId || (lookup.currentReview && receipt.currentReview ? lookup.currentReview.number < receipt.currentReview.number : lookup.submittedContentVersion !== receipt.submittedContentVersion))
       throw new Error('Lookup không khớp receipt trình.');

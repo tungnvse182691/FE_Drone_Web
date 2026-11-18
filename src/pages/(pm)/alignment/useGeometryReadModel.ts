@@ -42,7 +42,7 @@ export function useGeometryReadModel(projectId: string) {
   useEffect(() => {
     let active=true;setSubmissionLoading(true);setSubmissionError('');setSubmission(null);setSubmissionScope('')
     if(!projectId){setSubmissionLoading(false);return}
-    geometrySubmissionService.read(projectId).then(value=>{if(active){setSubmission(value);setSubmissionScope(scope)}}).catch(e=>{if(active)setSubmissionError(`Không đọc được hồ sơ trình: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e.message}`)}).finally(()=>{if(active)setSubmissionLoading(false)})
+    geometrySubmissionService.read(projectId, { fresh: true }).then(value=>{if(active){setSubmission(value);setSubmissionScope(scope)}}).catch(e=>{if(active)setSubmissionError(`Không đọc được hồ sơ trình: HTTP ${e?.response?.status || ''} ${e?.response?.data?.code || e.message}`)}).finally(()=>{if(active)setSubmissionLoading(false)})
     return()=>{active=false}
   },[scope,reload])
   useEffect(() => {
@@ -183,7 +183,7 @@ export function useGeometryReadModel(projectId: string) {
     const current=()=>entryScope.current===selectedScope&&useAuthStore.getState().authEpoch===auth.authEpoch&&useAuthStore.getState().user?.id===auth.user?.id&&selection.current.roadReference===selectedRoad&&selection.current.versionReference===selectedVersion
     opening.current=true;setNewDraftBusy(true);setNewDraftError('')
     try{
-      const [fresh,lookup]=await Promise.all([alignmentService.readProjectContext(projectId),geometrySubmissionService.read(projectId)])
+      const [fresh,lookup]=await Promise.all([alignmentService.readProjectContext(projectId),geometrySubmissionService.read(projectId, { fresh: true })])
       if(!current())return
       const section=fresh.roadSections.find(r=>r.roadSectionId===sectionId&&r.currentVersionId)
       if(fresh.projectId!==projectId||fresh.accessRole!=='PM'||fresh.status==='CLOSED'||lookup||!section||sectionId!==selectedRoad||section.currentVersionId!==selectedVersion)throw new Error('Quyền, hồ sơ trình hoặc phiên bản tuyến đã thay đổi. Hãy đọc lại trước khi lập nháp.')

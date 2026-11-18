@@ -426,7 +426,9 @@ export const projectService = {
                 openDefects = page.statistics.openDefectsCount
               }
             }
-            if (!Number.isFinite(openDefects)) errors.push('Chưa tải đầy đủ số lỗi mở.')
+            // Giám sát: BE defect-statistics không có "số lỗi mở" (chỉ projectDistinctDefects…) nên để trống, không coi là lỗi tải.
+            const supStatsOk = !isPM && defects.status === 'fulfilled' && !!defects.value.data?.statistics
+            if (!Number.isFinite(openDefects) && !supStatsOk) errors.push('Chưa tải đầy đủ số lỗi mở.')
             if (packages.status === 'fulfilled' && Array.isArray(packages.value.data?.items) && !packages.value.data.nextCursor) {
               repairPackages = packages.value.data.items.length
             }
