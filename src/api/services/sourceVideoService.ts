@@ -52,14 +52,40 @@ async function classify(e: any): Promise<SourceVideoError> {
   return new SourceVideoError('other', e?.message || 'Không tải được video.')
 }
 
+/** Kiểm metadata + thăm dò Range 0-0 (401/403/404/503 hiện đúng nguyên nhân), rồi trả URL same-origin để <video> tự gửi Range (BE hỗ trợ 206/416). */
+async function openStream(ref: SourceVideoRef, signal: AbortSignal): Promise<SourceVideoLoaded> {
+  const epoch = useAuthStore.getState().authEpoch
+  const stale = () => signal.aborted || useAuthStore.getState().authEpoch !== epoch || !useAuthStore.getState().isAuthenticated
+  try {
+    if (!GUID.test(ref.fileId)) throw new SourceVideoError('other', 'Mã tệp nguồn không phải GUID hợp lệ.')
+    if ((ref.purpose || '').toUpperCase() !== SOURCE_VIDEO_PURPOSE) throw new SourceVideoError('mime', 'Tệp này không phải video nguồn (purpose khác SURVEY_VIDEO).')
+    const meta = (await apiClient.get<{ id: string; status?: string | null; mediaType?: string | null; sizeBytes?: number }>(`/files/${ref.fileId}`, { signal })).data
+    if (stale()) throw new SourceVideoError('aborted', 'Phiên đã thay đổi; bỏ kết quả.')
+    if (meta.id?.toLowerCase() !== ref.fileId.toLowerCase()) throw new SourceVideoError('other', 'BE trả metadata sai mã tệp.')
+    if ((meta.status || '').toUpperCase() !== 'VERIFIED') throw new SourceVideoError('pending', `Tệp chưa được xác minh (trạng thái ${meta.status || 'không rõ'}); BE chỉ trả nội dung khi tệp VERIFIED.`)
+    const mediaType = meta.mediaType || ref.mediaType || ''
+    if (!/^video\//i.test(mediaType)) throw new SourceVideoError('mime', `Loại tệp ${mediaType || 'không rõ'} không phải video; không đưa vào trình phát.`)
+    const url = `${apiClient.defaults.baseURL}/files/${ref.fileId}/content`
+    const probe = await fetch(url, { credentials: 'include', headers: { Range: 'bytes=0-0' }, signal })
+    if (stale()) throw new SourceVideoError('aborted', 'Phiên đã thay đổi; bỏ kết quả.')
+    if (!probe.ok) { const body = await probe.blob().catch(() => null); throw await classify({ response: { status: probe.status, data: body } }) }
+    void probe.body?.cancel()
+    return { url, sizeBytes: meta.sizeBytes ?? 0, mediaType, checksumVerified: false, release: () => {} }
+  } catch (e) {
+    throw await classify(e)
+  }
+}
+
 const sha256Hex = async (buf: ArrayBuffer) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', buf)), (b) => b.toString(16).padStart(2, '0')).join('')
 
 export const sourceVideoService = {
+  openStream,
   /**
    * Tải video nguồn của đúng bản nộp. `ref` lấy từ dataset.sourceFiles (không phải frameFileId của AI).
    * Kiểm: GUID, purpose, trạng thái VERIFIED, MIME video/*, kích thước và SHA-256 khớp metadata; hủy khi đổi phiên.
    */
-  async load(ref: SourceVideoRef, signal: AbortSignal, onProgress?: SourceVideoProgress): Promise<SourceVideoLoaded> {
+  /** Tải TOÀN tệp thành Blob (dùng cho "Tải tệp nguồn": kiểm kích thước + SHA-256). Phát video dùng openStream (HTTP Range). */
+  async loadBlob(ref: SourceVideoRef, signal: AbortSignal, onProgress?: SourceVideoProgress): Promise<SourceVideoLoaded> {
     const state = useAuthStore.getState()
     const epoch = state.authEpoch
     const stale = () => signal.aborted || useAuthStore.getState().authEpoch !== epoch || !useAuthStore.getState().isAuthenticated

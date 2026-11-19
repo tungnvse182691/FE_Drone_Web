@@ -400,8 +400,21 @@ export const acceptanceService = {
    * PM chấp thuận và đóng hoàn thành nhánh Fast Track (BR-25)
    * (POST /api/v1/evidence-closeout/items/:id/close-fast-track)
    */
-  async closeFastTrackItem(itemId: string): Promise<CaseItem> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API đóng lỗi Fast Track.')
+async closeFastTrackItem(itemId: string): Promise<CaseItem> {
+    // BE (08_FastTrack): Fast Track kết thúc bằng PM final-confirmation — cùng POST …/items/{itemId}/final-confirmation (Giám sát hoặc PM), If-Match + Idempotency-Key + reason.
+    const index = inMemoryCaseItems.findIndex((it) => it.id === itemId)
+    if (index === -1) throw new Error(`Item ${itemId} not found`)
+    const meta = itemMeta.get(itemId)
+    if (!meta) throw new Error('Thiếu thông tin BE của hạng mục; hãy tải lại trang.')
+    await apiClient.post(
+      `/projects/${meta.projectId}/repair-packages/${meta.packageId}/items/${itemId}/final-confirmation`,
+      { reason: 'PM xác nhận cuối hạng mục xử lý nhanh' },
+      { headers: { 'Idempotency-Key': idemKey(), 'If-Match': await itemEtag(meta.projectId, meta.packageId, itemId) } }
+    )
+    itemMeta.set(itemId, { ...meta, state: 'Confirmed' })
+    inMemoryCaseItems[index] = { ...inMemoryCaseItems[index], status: 'ACCEPTED', status_label: 'ĐÃ NGHIỆM THU ĐẠT' }
+    syncPackageStats(inMemoryCaseItems[index].package_id)
+    return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
   },
 
   /**
@@ -422,42 +435,5 @@ export const acceptanceService = {
     }
     syncPackageStats(inMemoryCaseItems[index].package_id)
     return JSON.parse(JSON.stringify(inMemoryCaseItems[index]))
-  },
-
-  /**
-   * Supervisor Đóng tổng thể vụ việc phức hợp sau khi 100% hạng mục đạt (BR-26)
-   * (POST /api/v1/evidence-closeout/close-case)
-   */
-  async closeCompositeCase(caseCode: string, packageId?: string): Promise<{ success: boolean; caseCode: string }> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API đóng gói/vụ việc.')
-  },
-
-  /**
-   * Công bố kết quả khắc phục lên Citizen App
-   * (POST /api/v1/evidence-closeout/items/:id/publish-citizen)
-   */
-  async publishCitizenResult(itemId: string, published: boolean = true): Promise<CaseItem> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API công bố kết quả cho Citizen App.')
-  },
-
-  /**
-   * Tương thích ngược: Lấy danh sách AcceptanceRecord
-   */
-  async getRecords(): Promise<AcceptanceRecord[]> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API liệt kê biên bản nghiệm thu.')
-  },
-
-  /**
-   * Tương thích ngược: Phê duyệt biên bản
-   */
-  async approveAcceptance(recordId: string, inspectorName: string, notes?: string): Promise<AcceptanceRecord | null> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API phê duyệt biên bản nghiệm thu.')
-  },
-
-  /**
-   * Tương thích ngược: Từ chối biên bản
-   */
-  async rejectAcceptance(recordId: string, inspectorName: string, reason: string): Promise<AcceptanceRecord | null> {
-    throw new Error('Chưa nối máy chủ: BE chưa có API từ chối biên bản nghiệm thu.')
   }
 }

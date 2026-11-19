@@ -190,6 +190,12 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
         if (!current()) return false
         results.forEach((result, index) => { if (result.status === 'fulfilled') memberships.push(...result.value); else errors.push(`Chưa tải thành viên dự án ${projects[index].name}.`) })
       } else errors.push('Phạm vi dự án chưa tải đầy đủ; chưa kết luận phân công.')
+      // PM không đọc được /users: lấy email/SĐT hiện hành từ member-contacts của từng dự án (BE bản mới).
+      const contactByUser = new Map<string, { email: string; phone: string }>()
+      if (projects && user?.role !== RoleCode.SUPERVISOR) {
+        const cs = await Promise.allSettled(projects.map(project => projectService.fetchMemberContacts(project.id)))
+        cs.forEach((r, i) => { if (r.status === 'fulfilled') r.value.forEach(c => { if (c.userId) contactByUser.set(c.userId, { email: c.email || '', phone: c.phoneNumber || '' }) }); else errors.push(`Chưa tải liên hệ thành viên dự án ${projects[i].name}.`) })
+      }
       let accounts: SystemUserAccount[]
       if (user?.role === RoleCode.SUPERVISOR) accounts = [...new Map([...groups.current.staff, ...groups.current.reporter].map(account => [account.id, account])).values()]
       else {
@@ -197,7 +203,7 @@ export function usePersonnelState(triggerNotice: (msg: string, kind?: PersonnelN
         for (const member of memberships as Array<(typeof memberships)[number] & { userId: string }>) {
           if (!byUser.has(member.userId)) {
             const role = personnelRole(member.role)
-            byUser.set(member.userId, { id: member.userId, full_name: (member as any).displayName || 'Chưa có thông tin', email: '', phone: '', role, role_label: getRoleLabel(role), status: 'UNKNOWN', project_scope: '', assigned_project_ids: [], device_info: '', ip_address: '', last_active: '' })
+            byUser.set(member.userId, { id: member.userId, full_name: (member as any).displayName || 'Chưa có thông tin', email: contactByUser.get(member.userId)?.email || '', phone: contactByUser.get(member.userId)?.phone || '', role, role_label: getRoleLabel(role), status: 'UNKNOWN', project_scope: '', assigned_project_ids: [], device_info: '', ip_address: '', last_active: '' })
           }
         }
         // The member read includes displayName; it never supplies account status/contact.

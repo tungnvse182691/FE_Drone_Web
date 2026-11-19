@@ -4,9 +4,22 @@ import { Check, Mail, FolderKanban, ShieldCheck, Lock, Timer } from 'lucide-reac
 export interface InvitationCardProps {
   token?: string
   projectName?: string
+  /** Kết quả POST /invitations/preview */
+  preview?: { role?: string | null; projects?: Array<{ id: string; name: string }> | null; expiresAt?: string | null; inviterName?: string | null } | null
+  previewLoading?: boolean
 }
+const ROLE_VI: Record<string, string> = { PM: 'Chỉ huy trưởng (PM)', PROJECT_MANAGER: 'Chỉ huy trưởng (PM)', OPERATOR: 'Phi công UAV', DRONE_OPERATOR: 'Phi công UAV', CREW: 'Đội thi công hiện trường', REPAIR_CREW: 'Đội thi công hiện trường' }
 
-export const InvitationCard: React.FC<InvitationCardProps> = ({ projectName }) => {
+export const InvitationCard: React.FC<InvitationCardProps> = ({ projectName, preview, previewLoading }) => {
+  const names = preview?.projects?.map((p) => p.name).filter(Boolean) || []
+  const none = previewLoading ? 'Đang đọc từ máy chủ…' : 'Máy chủ không trả thông tin này'
+  const details: Array<[string, string]> = [
+    ['Người gửi lời mời', preview?.inviterName || none],
+    ['Vai trò được phân công', preview?.role ? (ROLE_VI[preview.role.toUpperCase()] || preview.role) : none],
+    ['Phạm vi công việc', names.length ? names.join(', ') : none],
+    ['Thời gian hiệu lực', preview?.expiresAt ? `Đến ${new Date(preview.expiresAt).toLocaleString('vi-VN')}` : none],
+  ]
+  projectName = projectName || names.join(', ')
   return (
     <div>
       {/* Brand & Status Badge Row */}
@@ -62,13 +75,13 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ projectName }) =
             Dự án bảo hành được phân công:
           </span>
           <p className="text-sm sm:text-base font-bold text-slate-900 truncate">
-            {projectName || 'Chưa cập nhật'}
+            {projectName || (previewLoading ? 'Đang đọc từ máy chủ…' : 'Máy chủ không trả tên dự án')}
           </p>
         </div>
       </div>
       <section className="rounded-xl p-4 sm:p-5 mb-6 border border-slate-200 bg-[#FAF8F5] space-y-4">
         <h2 className="text-xs uppercase tracking-wider text-slate-600 font-bold flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-brand-gold" />Chi tiết phân công nhân sự</h2>
-        <dl className="grid sm:grid-cols-2 gap-4 text-xs">{['Người gửi lời mời', 'Vai trò được phân công', 'Phạm vi công việc', 'Thời gian hiệu lực'].map(label => <div key={label}><dt className="text-slate-500 mb-1">{label}</dt><dd className="text-slate-700 font-semibold">Chưa cập nhật</dd></div>)}</dl>
+        <dl className="grid sm:grid-cols-2 gap-4 text-xs">{details.map(([label, value]) => <div key={label}><dt className="text-slate-500 mb-1">{label}</dt><dd className="text-slate-700 font-semibold">{value}</dd></div>)}</dl>
       </section>
       <div className="space-y-3 text-xs text-slate-500"><p className="flex items-start gap-2"><Lock className="w-4 h-4 shrink-0 text-brand-gold" />Chỉ kích hoạt tài khoản bằng lời mời hợp lệ. Quyền truy cập được xác nhận trên máy chủ.</p><p className="flex items-start gap-2"><Timer className="w-4 h-4 shrink-0 text-slate-400" />Thời hạn lời mời: Chưa cập nhật</p></div>
     </div>

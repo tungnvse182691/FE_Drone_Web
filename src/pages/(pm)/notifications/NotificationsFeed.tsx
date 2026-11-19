@@ -15,14 +15,6 @@ interface NotificationsFeedProps {
 }
 
 const renderPriorityDot = (priority: NotificationItem['priority']) => {
-  if (priority === 'EMERGENCY') {
-    return (
-      <span
-        className="w-[10px] h-[10px] rounded-full shrink-0 bg-[#EF4444] shadow-[0_0_0_4px_rgba(239,68,68,0.15)]"
-        aria-hidden="true"
-      />
-    )
-  }
   if (priority === 'HIGH') {
     return (
       <span
@@ -57,7 +49,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
         </div>
       ) : (
         filteredNotifications.map((item) => {
-          const isEmergency = item.priority === 'EMERGENCY'
+          const isEmergency = false
           return (
             <article
               key={item.id}
@@ -75,11 +67,7 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Priority Tag */}
-                    {item.priority === 'EMERGENCY' ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 text-[10px] font-bold">
-                        <span>KHẨN CẤP</span>
-                      </span>
-                    ) : item.priority === 'HIGH' ? (
+                    {item.priority === 'HIGH' ? (
                       <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold flex items-center gap-1">
                         <Clock className="w-3 h-3 text-amber-600" />
                         <span>ƯU TIÊN CAO</span>
@@ -132,16 +120,12 @@ export const NotificationsFeed: React.FC<NotificationsFeedProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* SLA remaining alert tag */}
-                    {item.slaHoursRemaining !== undefined && (
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold ${
-                        item.slaHoursRemaining < 2
-                          ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                      }`}>
-                        <span>SLA còn: {item.slaHoursRemaining}h</span>
+                    {/* Hạn bắt buộc do máy chủ trả trong scope.deadlines (chỉ có sau khi mở chi tiết) */}
+                    {(item.scope?.deadlines || []).map((d, i) => (
+                      <span key={d.clockId || i} className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border ${d.completedAt ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+                        {d.completedAt ? 'Đã hoàn tất' : 'Hạn'} {d.dueAt ? new Date(d.dueAt).toLocaleString('vi-VN') : 'chưa có'}
                       </span>
-                    )}
+                    ))}
 
                     <button
                       type="button"

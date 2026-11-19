@@ -13,7 +13,6 @@ export function useRiskAnalyticsState() {
   const [projectsConfig, setProjectsConfig] = useState<Record<string, ProjectConfig>>({})
   const [selectedProject, setSelectedProject] = useState('ALL')
   const [selectedTimeRange, setSelectedTimeRange] = useState('ALL')
-  const [selectedTrack, setSelectedTrack] = useState('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'PROCESSING' | 'FAILED'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -105,12 +104,11 @@ export function useRiskAnalyticsState() {
       selectedProject,
       statusFilter,
       selectedTimeRange,
-      selectedTrack,
       searchQuery,
       sortField,
       sortAsc
     )
-  }, [exportRecords, selectedProject, statusFilter, selectedTimeRange, selectedTrack, searchQuery, sortField, sortAsc])
+  }, [exportRecords, selectedProject, statusFilter, selectedTimeRange, searchQuery, sortField, sortAsc])
 
   const activeSegment = useMemo(() => {
     return rpt06Segments.find((s) => s.id === activeSegmentId) || rpt06Segments[0]
@@ -443,7 +441,6 @@ export function useRiskAnalyticsState() {
   const resetFilters = () => {
     setSelectedProject('ALL')
     setSelectedTimeRange('ALL')
-    setSelectedTrack('ALL')
     setStatusFilter('ALL')
     setSearchQuery('')
     setSortField('as_of_timestamp')
@@ -459,8 +456,6 @@ export function useRiskAnalyticsState() {
     setSelectedProject,
     selectedTimeRange,
     setSelectedTimeRange,
-    selectedTrack,
-    setSelectedTrack,
     statusFilter,
     setStatusFilter,
     searchQuery,

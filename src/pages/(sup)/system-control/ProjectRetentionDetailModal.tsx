@@ -21,6 +21,8 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
   const [evalError, setEvalError] = useState<string | null>(null)
   const [evalLoading, setEvalLoading] = useState(false)
   const [fileInfo, setFileInfo] = useState<Record<string, string>>({})
+  const [reloadTick, setReloadTick] = useState(0)
+  const [evalBusy, setEvalBusy] = useState(false)
 
   const beErr = (err: unknown): string => {
     const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
@@ -48,7 +50,29 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
       }
     })()
     return () => { active = false }
-  }, [isOpen, project?.project_id])
+  }, [isOpen, project?.project_id, reloadTick])
+
+  // POST /projects/{p}/retention/evaluations (202) → poll GET evaluations/{id} đến khi BE hoàn tất → đọc lại kết quả.
+  const runEvaluation = async () => {
+    if (!project || evalBusy) return
+    setEvalBusy(true); setEvalError(null)
+    try {
+      const created = await retentionService.createRetentionEvaluation(project.project_id, {})
+      if (!created?.id) throw new Error('BE không trả mã đánh giá để đối chiếu.')
+      let status = created.status
+      for (let i = 0; i < 30 && status !== 'COMPLETE' && status !== 'FAILED'; i++) {
+        await new Promise((r) => setTimeout(r, 2000))
+        status = (await retentionService.getRetentionEvaluationDetail(project.project_id, created.id)).status
+      }
+      if (status === 'FAILED') throw new Error('BE báo đánh giá lưu trữ thất bại.')
+      if (status !== 'COMPLETE') throw new Error('Đánh giá chưa hoàn tất sau 60 giây; mở lại để xem kết quả.')
+      setReloadTick((t) => t + 1)
+    } catch (err) {
+      setEvalError(beErr(err))
+    } finally {
+      setEvalBusy(false)
+    }
+  }
 
   const showFile = async (fileId: string) => {
     if (!project) return
@@ -151,7 +175,10 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
 
         {/* Kết quả đánh giá lưu trữ từ BE */}
         <div className="px-5 pt-3 text-xs">
-          <h4 className="font-bold text-slate-800 mb-1.5">Kết quả đánh giá lưu trữ từ hệ thống</h4>
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <h4 className="font-bold text-slate-800">Kết quả đánh giá lưu trữ từ hệ thống</h4>
+            <button type="button" disabled={evalBusy || evalLoading} onClick={() => { void runEvaluation() }} className="px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-[11px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 cursor-pointer">{evalBusy ? 'Đang đánh giá…' : 'Chạy đánh giá mới'}</button>
+          </div>
           {evalLoading && <p className="text-slate-500">Đang tải...</p>}
           {evalError && (
             <p className="p-2 text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">Không tải được đánh giá lưu trữ: {evalError}</p>

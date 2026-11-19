@@ -7,10 +7,6 @@ interface ResearchHeaderProps {
   onSelectProject: (projectId: string) => void
   projectOptions: ValidationProjectOption[]
   activeRun: MeasurementValidationRun
-  isExporting: boolean
-  isRunningVal: boolean
-  onExport: () => void
-  onTriggerValidation: () => void
 }
 
 export const ResearchHeader: React.FC<ResearchHeaderProps> = ({
@@ -18,10 +14,6 @@ export const ResearchHeader: React.FC<ResearchHeaderProps> = ({
   onSelectProject,
   projectOptions,
   activeRun,
-  isExporting,
-  isRunningVal,
-  onExport,
-  onTriggerValidation
 }) => {
   return (
     <>
@@ -65,31 +57,6 @@ export const ResearchHeader: React.FC<ResearchHeaderProps> = ({
             </select>
           </div>
 
-          {/* Nút Xuất tệp CSV */}
-          <button
-            onClick={onExport}
-            disabled={isExporting}
-            type="button"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-2xs transition disabled:opacity-50 cursor-pointer"
-            title="Xuất bảng đối soát số đo thực tế và dự đoán AI theo quy chuẩn RPT-09"
-          >
-            <span className="material-symbols-outlined text-[16px] text-slate-500">download</span>
-            <span className="hidden sm:inline">{isExporting ? 'Đang xuất tệp...' : 'Xuất tệp đối soát (CSV)'}</span>
-            <span className="sm:hidden">Xuất CSV</span>
-          </button>
-
-          {/* Nút Chạy kiểm định mới (1 CTA chính duy nhất màu vàng đồng) */}
-          <button
-            onClick={onTriggerValidation}
-            disabled={isRunningVal}
-            type="button"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-slate-900 bg-brand-gold hover:bg-amber-400 shadow-2xs transition disabled:opacity-50 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px] text-slate-900">
-              {isRunningVal ? 'sync' : 'play_arrow'}
-            </span>
-            <span>{isRunningVal ? 'Đang khởi tạo...' : 'Chạy kiểm định mới'}</span>
-          </button>
         </div>
       </div>
 

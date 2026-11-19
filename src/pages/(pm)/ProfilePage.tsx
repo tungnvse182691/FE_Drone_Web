@@ -4,6 +4,8 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { profileService, UserProfileFact } from '../../api/services/profileService'
 import { userDirectory } from '../../api/services/userDirectory'
+import { apiClient } from '../../api/client'
+import { projectService } from '../../api/services/projectService'
 
 export const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuthStore()
@@ -14,6 +16,24 @@ export const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [saving, setSaving] = useState<boolean>(false)
   const [profile, setProfile] = useState<UserProfileFact | null>(null)
+  // Đơn vị công tác: GET /users/{id}/organization (BE; null = chưa nhập). Không dùng chuỗi cố định.
+  const [organization, setOrganization] = useState<{ value: string | null; error: string } | null>(null)
+  useEffect(() => {
+    const id = profile?.userId
+    if (!id) { setOrganization(null); return }
+    let alive = true
+    const read: Promise<string | null> = isSupervisor
+      ? apiClient.get<{ organization?: string | null }>(`/users/${id}/organization`).then((r) => r.data.organization ?? null)
+      // PM không được đọc /users/{id}/organization (403): lấy đơn vị công tác hiện hành của chính mình từ member-contacts của các dự án đang tham gia.
+      : projectService.fetchProjects().then(async (projects) => {
+          for (const pr of projects) { const me = (await projectService.fetchMemberContacts(pr.id)).find((c) => c.userId?.toLowerCase() === id.toLowerCase()); if (me) return me.organization ?? null }
+          return null
+        })
+    read.then((v) => { if (alive) setOrganization({ value: v, error: '' }) })
+      .catch((e: any) => { if (alive) setOrganization({ value: null, error: `Không đọc được đơn vị công tác (HTTP ${e?.response?.status || 'mạng'})` }) })
+    return () => { alive = false }
+  }, [profile?.userId, isSupervisor])
+  const organizationText = organization ? (organization.value || organization.error || 'Chưa nhập đơn vị công tác') : 'Đang đọc đơn vị công tác…'
 
   // Chỉnh sửa hồ sơ
   const [fullName, setFullName] = useState<string>('')
@@ -166,7 +186,7 @@ export const ProfilePage: React.FC = () => {
                 {profile?.displayName || fullName || 'Nhân sự Hoàng Hải'}
               </h1>
               <p className="text-xs text-slate-500 font-mono">{profile?.email || user?.email}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Công ty TNHH Xây dựng Bê tông Hoàng Hải</p>
+              <p className="text-xs text-slate-500 mt-0.5">{organizationText}</p>
             </div>
           </div>
 
@@ -291,12 +311,12 @@ export const ProfilePage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Đơn vị chủ quản
+                  Đơn vị công tác
                 </label>
                 <input
                   type="text"
                   disabled
-                  value="Công ty TNHH Xây dựng Bê tông Hoàng Hải"
+                  value={organizationText}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-xs text-slate-600 bg-slate-100 cursor-not-allowed"
                 />
               </div>

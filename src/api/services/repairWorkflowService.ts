@@ -3,10 +3,10 @@ import { useAuthStore } from '../../store/authStore'
 import { workflowCollection } from './workflowCollection'
 
 export interface RepairPackage { id: string; projectId: string; defectId: string; allMandatoryResolved: boolean; version: string }
-export interface RepairItem { id: string; projectId: string; defectId: string; obligationId: string; mode: string; state: string; result: string; version: string }
+export interface RepairItem { id: string; projectId: string; defectId: string; obligationId: string; mode: string; state: string; result: string; version: string; effectiveDecisionId?: string | null; repairPlan?: string | null; checklistVersion?: string | null; proposalPlanHash?: string | null; approvedPlanHash?: string | null }
 export interface RepairHistory {
   item: RepairItem
-  decisions: Array<{ id: string; role: string; reason: string; at: string; result: string }>
+  decisions: Array<{ id: string; itemId: string; obligationId: string; defectId: string; role: string; reason: string; at: string; result: string }>
   attempts: Array<{ id: string; taskId: string; performed: boolean; unperformedReason?: string; startedAt?: string; finishedAt?: string; evidence: Array<{fileId: string; verified: boolean; purpose: string}> }>
   reviewRequests: Array<{id: string; role: string; reason: string; at: string}>
 }

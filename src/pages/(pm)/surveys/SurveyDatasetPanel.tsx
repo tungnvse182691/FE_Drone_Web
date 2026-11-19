@@ -61,7 +61,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
   const load = (id: string) => run('load', async () => {
     const { dataset: d, etag: t } = await surveyDatasetService.dataset(id, { taskId: record.id, projectId: record.projectId })
     const c = await surveyDatasetService.coverage(d.id)
-    setDataset(d); setEtag(t); setCoverage(c); setAssessment(null); setScopeIndex(0)
+    setDataset(d); setEtag(t); setCoverage(c); setAssessment(null); setScopeIndex(0); setAiGeometry('')
     setFileId(sourceVideosOf(d.sourceFiles)[0]?.fileId || '') // chỉ mặc định theo video nguồn; telemetry/tệp khác phải do PM chọn
     setRows(d.scope.flatMap((s) => s.segmentIds.map((segmentId) => ({ routeVersionId: s.routeVersionId, segmentSetId: s.segmentSetId, segmentId, targetBand: s.targetBand, positionStatus: 'UNKNOWN' as Verdict, qualityStatus: 'UNKNOWN' as Verdict, coverageStatus: 'UNKNOWN' as Verdict }))))
     if (c.assessmentId) setAssessment(await surveyDatasetService.assessment(d.id, c.assessmentId))
@@ -241,7 +241,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
             <SectionTitle icon="memory">Tạo job xử lý AI</SectionTitle>
             <div className="rg-grid">
               <Field label="Phạm vi xử lý" span="col-span-12 md:col-span-6">
-                <select aria-label="Phạm vi xử lý" disabled={!!busy} value={scopeIndex} onChange={(e) => setScopeIndex(Number(e.target.value))} className={cls}>
+                <select aria-label="Phạm vi xử lý" disabled={!!busy} value={scopeIndex} onChange={(e) => { setScopeIndex(Number(e.target.value)); setAiGeometry('') }} className={cls}>
                   {dataset.scope.map((s, i) => (<option key={i} value={i}>{BAND_LABEL[s.targetBand] || s.targetBand} · {s.segmentIds.length} phân đoạn</option>))}
                 </select>
               </Field>
@@ -262,12 +262,12 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
             <div className="rg-grid">
               <Field label="Giai đoạn AI" span="col-span-12 md:col-span-4"><select aria-label="Giai đoạn AI" disabled={!!busy} value={aiStage} onChange={(e) => setAiStage(e.target.value as 'VIDEO_ANALYSIS' | 'DUPLICATE_MATCHING')} className={cls}><option value="VIDEO_ANALYSIS">VIDEO_ANALYSIS</option><option value="DUPLICATE_MATCHING">DUPLICATE_MATCHING</option></select></Field>
               <Field label="Phiên bản fixture" span="col-span-12 md:col-span-4"><input aria-label="Phiên bản fixture" list="ai-fixtures" disabled={!!busy} value={aiFixture} onChange={(e) => setAiFixture(e.target.value)} placeholder="fixtureVersion" className={cls} /></Field>
-              <Field label="Phiên bản hình học kỳ vọng" span="col-span-12 md:col-span-4"><input aria-label="Phiên bản hình học kỳ vọng" disabled={!!busy} value={aiGeometry} onChange={(e) => setAiGeometry(e.target.value)} placeholder="expectedGeometryVersion" className={cls} /></Field>
+              <Field label="Phiên bản hình học kỳ vọng" span="col-span-12 md:col-span-4"><input aria-label="Phiên bản hình học kỳ vọng" readOnly value={aiGeometry} placeholder="Đọc từ BE theo phạm vi đã chọn" className={cls} /></Field>
             </div>
             <datalist id="ai-fixtures">{aiFixtures.map((f) => (<option key={f} value={f} />))}</datalist>
             <div className="rg-footer">
-              <PanelButton disabled={!!busy} loading={busy === 'hints'} onClick={() => { void run('hints', async () => { const h = await surveyDatasetService.aiRunHints(record.projectId, dataset.scope[scopeIndex].segmentSetId); setAiFixtures(h.fixtures); if (h.geometryVersion) setAiGeometry(h.geometryVersion); setMessage(h.geometryVersion ? 'Đã lấy phiên bản hình học và fixture từ các phát hiện AI đã có.' : 'Chưa có phát hiện AI nào trên cùng bộ phân đoạn để gợi ý phiên bản hình học; nhập tay.') }) }}>{busy === 'hints' ? 'Đang lấy…' : 'Lấy gợi ý từ phát hiện AI đã có'}</PanelButton>
-              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !aiGeometry.trim()} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture, expectedGeometryVersion: aiGeometry }); setMessage(`Đã tạo lần chạy AI ${r.id} (${r.status || '—'}).`) }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
+              <PanelButton disabled={!!busy || !dataset.scope[scopeIndex]} loading={busy === 'hints'} onClick={() => { void run('hints', async () => { const h = await surveyDatasetService.aiRunHints(record.projectId, dataset.scope[scopeIndex]); setAiFixtures(h.fixtures); setAiGeometry(h.geometryVersion); setMessage('Đã đọc phiên bản hình học của phạm vi đã chọn từ BE.') }) }}>{busy === 'hints' ? 'Đang lấy…' : 'Đọc phiên bản hình học và fixture'}</PanelButton>
+              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setMessage(`Đã tạo lần chạy AI ${r.id} (${r.status || '—'}).`) }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
             </div>
           </div>
         </div>

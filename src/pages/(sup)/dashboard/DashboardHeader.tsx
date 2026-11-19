@@ -7,9 +7,6 @@ import {
   ChevronRight,
   Shield,
   RefreshCw,
-  FileDown,
-  Calendar,
-  Globe2,
   FolderKanban,
   RotateCcw
 } from 'lucide-react'
@@ -20,34 +17,22 @@ export interface DashboardHeaderProps {
   projects: SupDashboardProject[]
   asOfText: string | null
   isLoading: boolean
-  selectedMonth: string
-  showToast: (msg: string) => void
   onResetFilters: () => void
-  setSelectedMonth: (m: string) => void
-  selectedRegion: string
-  handleRegionChange: (r: string) => void
   selectedProject: string
   setSelectedProject: (p: string) => void
   isRefreshing: boolean
   handleRefresh: () => void
-  onOpenExportModal: () => void
 }
 
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   projects,
   asOfText,
   isLoading,
-  selectedMonth,
-  showToast,
   onResetFilters,
-  setSelectedMonth,
-  selectedRegion,
-  handleRegionChange,
   selectedProject,
   setSelectedProject,
   isRefreshing,
-  handleRefresh,
-  onOpenExportModal
+  handleRefresh
 }) => {
   const navigate = useNavigate()
   return (
@@ -87,14 +72,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-brand-gold' : ''}`} />
               </button>
 
-              <button
-                onClick={onOpenExportModal}
-                type="button"
-                className="whitespace-nowrap px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
-              >
-                <FileDown className="w-3.5 h-3.5 text-brand-gold" />
-                <span>Xuất báo cáo (RPT-01)</span>
-              </button>
 
               <button
                 onClick={() => navigate('/sup/projects')}
@@ -121,35 +98,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         {/* Filter Controls Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-200/90 text-xs">
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Filter Month */}
-            <div className="relative">
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                disabled
-                title="Máy chủ chưa cung cấp bộ lọc theo kỳ"
-                className="appearance-none pl-8 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs focus:outline-none opacity-60 cursor-not-allowed"
-              >
-                <option value="">Kỳ: Máy chủ chưa cung cấp</option>
-              </select>
-              <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
-            {/* Filter Region */}
-            <div className="relative">
-              <select
-                value={selectedRegion}
-                onChange={(e) => handleRegionChange(e.target.value)}
-                disabled
-                title="Máy chủ chưa cung cấp phân vùng khu vực"
-                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-700 shadow-2xs focus:outline-none opacity-60 cursor-not-allowed"
-              >
-                <option value="ALL">Khu vực: Máy chủ chưa cung cấp</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-
             {/* Filter Project (Tự động lọc theo Khu vực đã chọn) */}
             <div className="relative">
               <select
@@ -177,17 +125,6 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               className="font-medium text-slate-500 hover:text-slate-800 transition cursor-pointer"
             >
               Đặt lại
-            </button>
-            <button
-              onClick={() => {
-                const prjTarget = projects.find((p) => p.projectId === selectedProject)
-                const prjText = prjTarget ? prjTarget.name : 'Tất cả dự án'
-                showToast(`Đã áp dụng bộ lọc: ${prjText}`)
-              }}
-              type="button"
-              className="px-4 py-1.5 font-bold text-white rounded-xl transition shadow-2xs bg-brand-gold hover:bg-[#B38E1F] cursor-pointer"
-            >
-              Áp dụng
             </button>
           </div>
         </div>

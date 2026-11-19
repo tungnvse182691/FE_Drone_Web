@@ -21,7 +21,6 @@ export interface CloseoutHeaderProps {
   onAcceptItem: () => void
   onPMCloseFastTrack: () => void
   onPMSubmitToSupervisor: () => void
-  onOpenCloseCaseModal: () => void
   onNavigateHome: () => void
   onNavigateProposals: () => void
 }
@@ -43,7 +42,6 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
   onAcceptItem,
   onPMCloseFastTrack,
   onPMSubmitToSupervisor,
-  onOpenCloseCaseModal,
   onNavigateHome,
   onNavigateProposals
 }) => {
@@ -182,7 +180,6 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
           onAcceptItem={onAcceptItem}
           onPMCloseFastTrack={onPMCloseFastTrack}
           onPMSubmitToSupervisor={onPMSubmitToSupervisor}
-          onOpenCloseCaseModal={onOpenCloseCaseModal}
         />
       </div>
     </section>

@@ -26,10 +26,10 @@ export const FieldTasks: React.FC = () => {
 
   const navigate = useNavigate()
 
-  // Chuyển hướng ngay sang trang Xử lý xung đột riêng biệt nếu có tham số ?tab=CONFLICTS
+  // ?tab=CONFLICTS (liên kết cũ): BE không có API xung đột → chuyển sang màn Điều phối ngoại tuyến
   useEffect(() => {
     if (tabParam === 'CONFLICTS') {
-      navigate(isSupervisor ? '/sup/conflicts' : '/pm/conflicts', { replace: true })
+      navigate(isSupervisor ? '/sup/offline' : '/pm/offline', { replace: true })
     }
   }, [tabParam, isSupervisor, navigate])
 

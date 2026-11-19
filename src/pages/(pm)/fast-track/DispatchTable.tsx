@@ -321,7 +321,7 @@ export const DispatchTable: React.FC<DispatchTableProps> = ({
         <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-rose-800 font-medium">
             <Icon name="warning" size={18} className="text-rose-600 shrink-0" />
-            <span>Có hạng mục vi phạm tiêu chuẩn xử lý nhanh (Mức độ nghiêm trọng cao hoặc vượt ngưỡng quy chuẩn).</span>
+            <span>Có hạng mục chưa đủ điều kiện giao việc theo máy chủ (thiếu hạng mục Fast Track, chính sách hoặc độ phủ đã xác nhận). Xem lý do ở từng dòng.</span>
           </div>
           {onRemoveViolationItems && !isSupervisor && (
             <button

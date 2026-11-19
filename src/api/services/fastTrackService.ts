@@ -29,6 +29,8 @@ function remember(project: string, row: RepairPolicyView, kind: 'drafts' | 'revi
   localStorage.setItem(fastTrackStorage(project, 'policy-refs'), JSON.stringify(next))
 }
 function proposalChecklist(p:string,pkg:string,item:any):string|undefined {
+  // BE bản mới: RepairItemView có checklistVersion (nguồn chuẩn); journal cục bộ chỉ là dự phòng cho bản BE cũ.
+  if(typeof item?.checklistVersion==='string' && item.checklistVersion)return item.checklistVersion
   const proofs=JSON.parse(localStorage.getItem(fastTrackStorage(p,'proposal-checklists')) || '[]')
   const proof=proofs.find((r:any)=>r.packageId===pkg && r.receipt?.id===item.id && r.receipt.projectId===p && r.receipt.defectId===item.defectId && r.receipt.obligationId===item.obligationId && r.checklistVersion)
   if(proof)return proof.checklistVersion
@@ -89,9 +91,20 @@ export const fastTrackService = {
       defectTypeCode: row.defectTypeCode, stopConditions: row.stopConditions, revision: row.revision, rules: row.measurements}
   },
   async getPolicies(p: string,onWarning?:(message:string)=>void): Promise<RepairPolicyView[]> {
-    // There is no canonical policy collection. References are receipts or explicitly entered IDs, never guessed.
+    // BE bản mới có GET /projects/{p}/repair-policies (PM-only): liệt kê REVISION và DRAFT; vẫn gộp thêm tham chiếu local (receipt/ID nhập tay).
     if (useAuthStore.getState().user?.role !== 'PROJECT_MANAGER') return []
-    const known=refs(p),receipt=fastTrackPending(p,'policy-create')?.receipt
+    const known=refs(p),receipt=fastTrackPending(p,'policy-create')?.receipt,discoveryIssues:string[]=[]
+    for (const kind of ['REVISION','DRAFT'] as const) {
+      try {
+        let cursor: string | undefined, guard = 0
+        do {
+          const {data}=await apiClient.get<{items?:Array<{id:string}>;nextCursor?:string|null}>(`/projects/${p}/repair-policies`,{params:{kind,limit:100,cursor}})
+          if(!Array.isArray(data?.items))throw new Error('Danh mục chính sách sai contract')
+          for(const it of data.items)if(it.id && !known.some(r=>r.id===it.id))known.push({id:it.id,kind:kind==='DRAFT'?'drafts':'revisions'})
+          cursor=data.nextCursor||undefined
+        } while(cursor && ++guard<20)
+      } catch(e:any) { discoveryIssues.push(`Danh mục chính sách ${kind}: HTTP ${e?.response?.status || 'network'} ${e?.response?.data?.code || e?.message || ''}`) }
+    }
     if(receipt?.id && receipt.projectId===p && !known.some(r=>r.id===receipt.id))known.push({id:receipt.id,kind:'drafts'})
     const reads=await Promise.allSettled(known.map(r => this.readPolicy(p,r.id,r.kind))),issues:string[]=[]
     const raw=reads.flatMap((r,i)=>{if(r.status==='fulfilled')return [r.value];issues.push(`Tham chiếu chính sách ${i+1}: HTTP ${r.reason?.response?.status || 'network'} ${r.reason?.response?.data?.code || r.reason?.message || 'không đọc được'}`);return []})
@@ -104,6 +117,7 @@ export const fastTrackService = {
         if(index<0)rows.push(grouped);else rows[index]=grouped
       } else if(!rows.some(r=>r.id===row.id))rows.push(row)
     }
+    issues.push(...discoveryIssues)
     if(issues.length){if(!onWarning)throw new Error(issues.join(' · '));onWarning(issues.join(' · '))}
     return rows
   },
@@ -184,7 +198,9 @@ export const fastTrackService = {
     const result: DefectItem[] = []
     for (const d of defects) {
       const items = (await Promise.all(packages.filter(pkg=>pkg.defectId===d.id).map(async pkg=>(await repairWorkflowService.items(p,pkg.id)).filter(i=>i.mode==='FastTrack').map(i=>({...i,packageId:pkg.id}))))).flat()
-      for (const i of items.length ? items : [null]) {
+      for (const summary of items.length ? items : [null]) {
+        const i=summary && !supervisor && summary.state==='ReadyToAssign'
+          ? {...await repairWorkflowService.detail(p,summary.packageId,summary.id),packageId:summary.packageId} : summary
         let eligible = false, known = false, reason = i ? 'Chưa đánh giá thi công. Giao việc có điều kiện; Crew phải kiểm tra nguồn và số đo trước khi thi công.' : 'Chưa có hạng mục Fast Track. Cần lập gói/nghĩa vụ và đề xuất hạng mục trước khi giao việc.'
         if (i && i.state!=='ReadyToAssign') {
           try {
@@ -266,11 +282,10 @@ export const fastTrackService = {
       const {policyRevisionId,sourceTaskId,...pins}=payload.task
       const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
       const saved=held?.body as {task:typeof requestedTask;policyRevisionId:string;reason:string} | undefined
-      if(!held) {
-        if(!sourceTaskId)throw new Error('Chọn hồ sơ nguồn đã đọc từ hệ thống trước khi giao việc.')
-        const source=await fastTrackFormSources.read(p,sourceTaskId,row.defectId)
-        if(Object.entries(source.pins).some(([key,value])=>(pins as any)[key]!==value))throw new Error('Các tham chiếu không còn khớp hồ sơ nguồn. Chọn lại hồ sơ; không nhập mã thay thế.')
-      }
+      if(!sourceTaskId || sourceTaskId.startsWith('survey:'))throw new Error('Chưa có hồ sơ nguồn đã xác thực từ Backend. Không dùng mã nhiệm vụ khảo sát thay cho mã đợt khảo sát.')
+      const source=await fastTrackFormSources.read(p,sourceTaskId,row.defectId)
+      if(source.requiredMeasurementType!==pins.requiredMeasurementType)throw new Error('Nguồn hoặc loại đo đã thay đổi; chọn lại hồ sơ.')
+      if(Object.entries(source.pins).some(([key,value])=>(pins as any)[key]!==value))throw new Error('Các tham chiếu không còn khớp hồ sơ nguồn. Chọn lại hồ sơ; không nhập mã thay thế.')
       // Never migrate a pending command, including a legacy raw-text scope. Receipts remain GET-only.
       let task=requestedTask
       if(saved) {

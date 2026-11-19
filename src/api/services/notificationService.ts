@@ -1,14 +1,25 @@
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-export interface NotificationDto {id:string;message?:string|null;resourceId?:string|null;read:boolean;occurredAt:string;version?:string|null}
-export interface NotificationScopeDto {notificationId:string;projectId?:string|null;occurrenceId?:string|null;classification?:string|null;sourceKind?:string|null;sourceId:string;eventType?:string|null;resolverVersion?:string|null}
+export interface NotificationDto {id:string;message?:string|null;resourceId?:string|null;read:boolean;occurredAt:string;version?:string|null;priority?:string|null;priorityPolicy?:string|null;priorityReasonCode?:string|null;priorityEvaluatedAt?:string|null}
+export interface NotificationScopeDto {title?:string|null;senderKind?:string|null;deadlines?:Array<{clockId?:string|null;dueAt?:string|null;completedAt?:string|null}>|null;notificationId:string;projectId?:string|null;occurrenceId?:string|null;classification?:string|null;sourceKind?:string|null;sourceId:string;eventType?:string|null;resolverVersion?:string|null}
 const busy=new Set<string>()
 function actorScope(){const s=useAuthStore.getState();if(!s.user||![RoleCode.PROJECT_MANAGER,RoleCode.SUPERVISOR].includes(s.user.role))throw new Error('Chưa có phiên PM/Giám sát để đọc thông báo.');return `${s.authEpoch}:${s.user.id}:${s.user.role}`}
 function active(scope:string,signal?:AbortSignal){if(signal?.aborted||scope!==actorScope())throw new Error('Phiên đọc thông báo đã thay đổi.')}
 function validate(n:NotificationDto){if(!n?.id||typeof n.read!=='boolean'||!n.occurredAt||!n.version)throw new Error('Thông báo thiếu ID/trạng thái/phiên bản từ máy chủ.');return n}
 function etag(v:string){const t=v.startsWith('"')?v:`"${v}"`;if(!/^"[A-Za-z0-9+/]{11}="$/.test(t))throw new Error('ETag thông báo không hợp lệ.');return t}
 export const notificationService={
+ /** POST /notifications/read-batch — đánh dấu đã đọc theo lô (≤100/lô), cùng snapshotVersion + through, key mới mỗi lô; atomic từng lô. */
+ async markAllRead(onBatch?:(updated:number)=>void):Promise<number>{
+  const scope=actorScope(),through=new Date().toISOString();let snapshotVersion:string|null=null,total=0,guard=0
+  while(guard++<200){
+   const {data}:{data:{updated:number;hasMore:boolean;through:string;snapshotVersion?:string|null}}=await apiClient.post('/notifications/read-batch',{through,limit:100,snapshotVersion},{headers:{'Idempotency-Key':crypto.randomUUID()}});active(scope)
+   if(!Number.isInteger(data?.updated)||typeof data.hasMore!=='boolean')throw new Error('Phản hồi đọc theo lô sai contract.')
+   total+=data.updated;snapshotVersion=data.snapshotVersion||snapshotVersion;onBatch?.(total)
+   if(!data.hasMore)return total
+  }
+  throw new Error('Quá nhiều lô đọc thông báo; dừng để tránh vòng lặp.')
+ },
  async list(signal?:AbortSignal):Promise<NotificationDto[]>{
   const scope=actorScope(),rows:NotificationDto[]=[],seen=new Set<string>();let cursor:string|undefined
   do{const {data}=await apiClient.get('/notifications',{params:{limit:100,cursor},signal});active(scope,signal)

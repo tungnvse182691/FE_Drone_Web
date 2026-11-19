@@ -1,5 +1,5 @@
 import { apiClient } from '../client'
-import { LegalHoldProject, DataDeletionRequest } from '../../types/domain'
+import { LegalHoldProject } from '../../types/domain'
 
 // Dữ liệu lưu trữ lấy từ BE. BE không có danh sách lệnh phong tỏa (chỉ GET theo id), nên các lệnh tạo từ giao diện
 // được ghi nhớ mã (holdId) trong sessionStorage để hiển thị trạng thái và gỡ được; lệnh tạo ở nơi khác không liệt kê được.
@@ -12,16 +12,6 @@ const writeHolds = (value: Record<string, StoredHold>) => {
   try { sessionStorage.setItem(HOLD_STORE, JSON.stringify(value)) } catch { /* không có sessionStorage */ }
 }
 const quote = (v: unknown) => { const t = String(v ?? ''); return t.startsWith('"') ? t : `"${t}"` }
-const NO_DELETION = 'BE chưa có luồng yêu cầu xóa dữ liệu lưu trữ (việc xóa dữ liệu đang bị cấm theo thiết kế), nên không thể thực hiện thao tác này.'
-
-export interface CreateDeletionPayload {
-  projectId: string
-  dataType: string
-  sizeGb: number
-  justification: string
-  requestedById: string
-  requestedByName: string
-}
 
 export const retentionService = {
   /**
@@ -68,27 +58,6 @@ export const retentionService = {
     )
     if (changed) writeHolds(holds)
     return rows
-  },
-
-  /** BE không có luồng yêu cầu xóa dữ liệu: danh sách rỗng (không giả lập). */
-  async getDeletionRequests(): Promise<DataDeletionRequest[]> {
-    return []
-  },
-
-  async getDeletionRequest(_requestId: string): Promise<DataDeletionRequest | null> {
-    return null
-  },
-
-  async requestDeletion(_payload: CreateDeletionPayload): Promise<DataDeletionRequest> {
-    throw new Error(NO_DELETION)
-  },
-
-  async decideDeletion(
-    _requestId: string,
-    _decision: 'APPROVE' | 'REJECT',
-    _reason?: string
-  ): Promise<DataDeletionRequest> {
-    throw new Error(NO_DELETION)
   },
 
   /**

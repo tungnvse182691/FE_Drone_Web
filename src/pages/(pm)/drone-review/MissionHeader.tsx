@@ -13,13 +13,12 @@ export interface MissionHeaderProps {
   missionStatus?: 'PENDING_AI_REVIEW' | 'BASELINE_LOCKED' | 'SCHEDULED' | 'PROCESSING_AI'
   setCurrentFrame: (f: number) => void
   showToast: (msg: string) => void
-  coveragePercentage: number
-  hasBlindspot: boolean
+  coveragePercentage?: number
+  hasBlindspot?: boolean
   isBaselineLocked: boolean
   lockedBaselineRange?: string | null
   pendingCount: number
-  onOpenReFlightModal: () => void
-  onLockBaseline: () => void
+  detailHref?: string
   reviewedCount?: number
   totalCount?: number
   approvedCount?: number
@@ -39,8 +38,7 @@ export const MissionHeader: React.FC<MissionHeaderProps> = ({
   isBaselineLocked,
   lockedBaselineRange,
   pendingCount,
-  onOpenReFlightModal,
-  onLockBaseline,
+  detailHref,
   reviewedCount = 0,
   totalCount = 0,
   approvedCount = 0,
@@ -113,71 +111,19 @@ export const MissionHeader: React.FC<MissionHeaderProps> = ({
               </span>
             ) : (
               <>
-                {/* Re-flight Button (Chỉ cho phép khi đợt bay chưa khóa Baseline) */}
-                <div className="relative group">
-                  <button
-                    onClick={() => {
-                      if (!isLocked) onOpenReFlightModal()
-                    }}
-                    disabled={isLocked}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors shadow-2xs ${
-                      isLocked
-                        ? 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
-                    }`}
-                    type="button"
-                  >
-                    <Icon name="flight_takeoff" size={14} className={isLocked ? 'text-slate-400' : 'text-slate-500'} />
-                    <span>Yêu cầu bay bổ sung</span>
-                  </button>
-                  {isLocked && (
-                    <div className="absolute right-0 top-full mt-2 w-64 p-2.5 bg-slate-900 text-white rounded-lg text-xs shadow-xl hidden group-hover:block z-50 pointer-events-none">
-                      <div className="flex items-start gap-1.5">
-                        <Icon name="lock" size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                        <span>
-                          Đợt bay này đã khóa Baseline hoàn công, không thể phát lệnh bay bổ sung. Vui lòng tạo đợt bay mới tại mục Đợt bay Drone.
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Baseline Lock Button with Tooltip */}
-                <div className="flex items-center gap-2">
-                  {isLocked ? (
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold border shadow-2xs bg-emerald-100 text-emerald-800 border-emerald-300">
-                      <Icon name="verified" size={14} className="text-emerald-700" />
-                      <span>{lockedBaselineRange ? `Đã khóa Baseline (${lockedBaselineRange})` : 'Đã khóa Baseline số'}</span>
-                    </span>
-                  ) : (
-                    <div className="relative group">
-                      <button
-                        onClick={onLockBaseline}
-                        disabled={pendingCount > 0}
-                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all shadow-xs ${
-                          pendingCount === 0
-                            ? 'bg-[#C9A227] hover:bg-[#8C6D1F] text-white cursor-pointer active:scale-98'
-                            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                        }`}
-                        type="button"
-                      >
-                        <Icon name="lock" size={14} />
-                        <span>Khóa Baseline đoạn đường</span>
-                      </button>
-
-                      {pendingCount > 0 && (
-                        <div className="absolute right-0 top-full mt-2 w-64 p-2.5 bg-slate-900 text-white rounded-lg text-xs shadow-xl hidden group-hover:block z-50 pointer-events-none">
-                          <div className="flex items-start gap-1.5">
-                            <Icon name="warning" size={14} className="text-amber-400 shrink-0 mt-0.5" />
-                            <span>
-                              Cần hoàn tất thẩm định {pendingCount} mục còn lại trong danh sách trước khi khóa Baseline.
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* BE: bay bổ sung = POST /survey-tasks/{id}/supplements; khóa Baseline = POST /projects/{p}/baseline-selections theo bản nộp đã đánh giá — cả hai làm ở chi tiết nhiệm vụ khảo sát */}
+                {detailHref && (
+                  <Link to={detailHref} className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs">
+                    <Icon name="open_in_new" size={14} className="text-slate-500" />
+                    <span>Chi tiết nhiệm vụ: bản nộp, đánh giá, Baseline, bay bổ sung</span>
+                  </Link>
+                )}
+                {isLocked && (
+                  <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold border shadow-2xs bg-emerald-100 text-emerald-800 border-emerald-300">
+                    <Icon name="verified" size={14} className="text-emerald-700" />
+                    <span>{lockedBaselineRange ? `Đã khóa Baseline (${lockedBaselineRange})` : 'Đã khóa Baseline số'}</span>
+                  </span>
+                )}
               </>
             )}
           </div>

@@ -637,6 +637,8 @@ export interface PasswordRules {
 }
 
 export interface HubProject {
+  /** CRS kỹ thuật của dự án (GET /projects/overviews → engineeringUtmSrid). */
+  engineering_utm_srid?: number | null
   server_data_loaded?: boolean
   server_facts?: import('../api/services/projectServerFacts').ProjectServerFacts
   geometry_read_error?: string

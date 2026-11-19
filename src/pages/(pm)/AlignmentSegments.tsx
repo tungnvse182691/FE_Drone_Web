@@ -15,14 +15,13 @@ import { segmentSetLabel } from './alignment/alignmentLabels'
 import { AlignmentSidebar } from './alignment/AlignmentSidebar'
 import { AlignmentModals } from './alignment/AlignmentModals'
 import { useAlignmentState } from './alignment/useAlignmentState'
-import { SEGMENT_COLORS, PM_ASSIGNED_PROJECTS } from './alignment/data'
+import { SEGMENT_COLORS } from './alignment/data'
 import { AlignmentApprovalList } from './alignment/AlignmentApprovalList'
 import { useGeometrySubmission } from './alignment/useGeometrySubmission'
 import { useSegmentSetWorkflow } from './alignment/useSegmentSetWorkflow'
 import { AlignmentAddBranchModal } from './alignment/AlignmentAddBranchModal'
 
 export type { SegmentItem, SlabItem, AssignedProjectOption } from './alignment/types'
-export { PM_ASSIGNED_PROJECTS } from './alignment/data'
 
 // Retain references required by invariants
 void maplibregl

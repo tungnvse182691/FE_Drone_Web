@@ -5,13 +5,11 @@ import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { surveyService, type SurveyMissionItem } from '../../api/services'
 import { Icon } from '../../components/ui/Icon'
-import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
 import { useDroneMissionReview } from './drone-review/useDroneMissionReview'
 import { MissionHeader } from './drone-review/MissionHeader'
 import { MissionViewer } from './drone-review/MissionViewer'
 import { MissionTriageList } from './drone-review/MissionTriageList'
-import { MissionModals } from './drone-review/MissionModals'
 
 export const DroneMissionAIReview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -22,8 +20,6 @@ export const DroneMissionAIReview: React.FC = () => {
 
   const [currentSurvey, setCurrentSurvey] = useState<SurveyMissionItem | null>(null)
   const [isLoadingSurvey, setIsLoadingSurvey] = useState<boolean>(true)
-  const [isSimulating, setIsSimulating] = useState<boolean>(false)
-  const simulateGuard = useSubmitGuard()
 
   const {
     isAiOverlayVisible,
@@ -40,12 +36,6 @@ export const DroneMissionAIReview: React.FC = () => {
     statusFilter,
     setStatusFilter,
     selectedDetectionId,
-    coveragePercentage,
-    hasBlindspot,
-    isReFlightModalOpen,
-    setIsReFlightModalOpen,
-    pilotNote,
-    setPilotNote,
     toastMessage,
     setToastMessage,
     showToast,
@@ -60,18 +50,11 @@ export const DroneMissionAIReview: React.FC = () => {
     setViewerMode,
     corridorMapContainerRef,
     isBaselineLocked,
-    canLockBaseline,
-    isBaselineModalOpen,
-    setIsBaselineModalOpen,
     isLockedSuccess,
     lockedBaselineRange,
-    handleConfirmBaseline,
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
-    handleResetDetection,
-    handleSubmitReFlight,
-    handleLockBaseline,
     selectedItem,
     detectionsError
   } = useDroneMissionReview(id || '', currentSurvey)
@@ -104,25 +87,6 @@ export const DroneMissionAIReview: React.FC = () => {
       isMounted = false
     }
   }, [id])
-
-  // Xử lý mô phỏng bay xong ngay trên trang chi tiết nếu trạng thái là SCHEDULED
-  const handleSimulateFlight = async () => {
-    if (!currentSurvey) return
-    if (!simulateGuard.acquire()) return
-    try {
-      setIsSimulating(true)
-      const updated = await surveyService.simulateDroneFlightCompletion(currentSurvey.id)
-      if (updated) {
-        setCurrentSurvey(updated)
-        showToast(`Đã mô phỏng chuyến bay [${updated.code}] hoàn tất và xuất dữ liệu phân tích AI thành công!`)
-      }
-    } catch (err) {
-      console.error('Lỗi khi mô phỏng bay:', err)
-    } finally {
-      simulateGuard.release()
-      setIsSimulating(false)
-    }
-  }
 
   // Trường hợp đang tải
   if (isLoadingSurvey) {
@@ -175,7 +139,7 @@ export const DroneMissionAIReview: React.FC = () => {
             <div className="text-xs text-amber-900 leading-relaxed">
               <p className="font-bold mb-1">Chuyến bay đang ở trạng thái Chuẩn bị / Lên lịch bay:</p>
               <p>
-                Drone chưa cất cánh khảo sát thực địa nên hệ thống chưa nhận được gói ảnh RGB phân giải cao và mô hình AI Road-YOLOv9 chưa kích hoạt trích xuất bounding box. Vui lòng bấm nút <strong>&quot;Mô phỏng bay xong & Chạy AI&quot;</strong> bên dưới để hoàn tất thu thập dữ liệu và chuyển sang màn hình thẩm định AI.
+                Máy chủ chưa có lần chạy AI nào gắn với nhiệm vụ của đợt này (nhiệm vụ chưa nộp bản dữ liệu, hoặc chưa tạo lần chạy AI). Phát hiện AI chỉ xuất hiện sau khi có bản nộp bộ dữ liệu và PM tạo lần chạy AI ở chi tiết nhiệm vụ khảo sát.
               </p>
             </div>
           </div>
@@ -211,24 +175,6 @@ export const DroneMissionAIReview: React.FC = () => {
               <span>Quay lại danh sách khảo sát</span>
             </button>
 
-            <button
-              type="button"
-              disabled={isSimulating}
-              onClick={handleSimulateFlight}
-              className="px-5 py-2.5 text-xs font-bold rounded-lg bg-[#C9A227] hover:bg-[#8C6D1F] active:scale-95 text-white shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-              {isSimulating ? (
-                <>
-                  <Icon name="sync" size={16} className="animate-spin" />
-                  <span>Đang xử lý chuyến bay và nạp AI...</span>
-                </>
-              ) : (
-                <>
-                  <Icon name="play_arrow" size={16} />
-                  <span>Mô phỏng bay xong & Chạy AI</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
       </div>
@@ -251,28 +197,6 @@ export const DroneMissionAIReview: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Yêu Cầu Bay Bổ Sung & Xác Nhận Khóa Baseline */}
-      <MissionModals
-        isReFlightModalOpen={isReFlightModalOpen}
-        setIsReFlightModalOpen={setIsReFlightModalOpen}
-        pilotNote={pilotNote}
-        setPilotNote={setPilotNote}
-        onSubmitReFlight={handleSubmitReFlight}
-        selectedItem={selectedItem}
-        currentSurveyCode={currentSurvey?.code}
-        currentSurveyRange={currentSurvey ? `${currentSurvey.start_km} → ${currentSurvey.end_km}` : '—'}
-        coveragePercentage={coveragePercentage}
-        isBaselineModalOpen={isBaselineModalOpen}
-        setIsBaselineModalOpen={setIsBaselineModalOpen}
-        onConfirmBaseline={handleConfirmBaseline}
-        onOpenReFlightFromBaseline={() => {
-          setIsBaselineModalOpen(false)
-          setIsReFlightModalOpen(true)
-        }}
-        reviewedCount={reviewedCount}
-        totalCount={totalCount}
-      />
-
       {/* Breadcrumb, Topbar, Data Quality Assessment, AI Job Progress */}
       <MissionHeader
         basePath={basePath}
@@ -281,13 +205,10 @@ export const DroneMissionAIReview: React.FC = () => {
         missionStatus={currentSurvey?.status}
         setCurrentFrame={setCurrentFrame}
         showToast={showToast}
-        coveragePercentage={coveragePercentage}
-        hasBlindspot={hasBlindspot}
         isBaselineLocked={isBaselineLocked}
         lockedBaselineRange={lockedBaselineRange}
         pendingCount={pendingCount}
-        onOpenReFlightModal={() => setIsReFlightModalOpen(true)}
-        onLockBaseline={handleLockBaseline}
+        detailHref={currentSurvey?.task_ids?.[0] ? `${basePath}/surveys?surveyRecordId=${currentSurvey.task_ids[0]}&surveyRecordKind=TASK` : undefined}
         droneModel={currentSurvey?.drone_model}
         totalPhotos={currentSurvey?.total_photos}
         aiDetectionsCount={detections.length}
@@ -330,7 +251,6 @@ export const DroneMissionAIReview: React.FC = () => {
           onSelectDetection={handleSelectDetection}
           onApproveDetection={handleApproveDetection}
           onRejectDetection={handleRejectDetection}
-          onResetDetection={handleResetDetection}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           totalCount={totalCount}

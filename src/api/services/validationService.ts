@@ -126,33 +126,6 @@ export const validationService = {
     }
   },
 
-  /** BE không có API liệt kê mẫu đối soát. */
-  async getSamples(
-    _projectId: string = '',
-    _filter: 'ALL' | 'INCLUDED' | 'EXCLUDED' | 'OUTLIER' = 'ALL'
-  ): Promise<ExtendedValidationSample[]> {
-    throw new Error('Chưa nối máy chủ: BE không có API liệt kê mẫu đối soát.')
-  },
-
-  /** Khởi tạo kiểm định: cần danh sách cặp id từ BE (web chưa có nguồn) nên không thể thực hiện. */
-  async triggerValidationRun(_projectId: string = ''): Promise<{
-    job: AsyncValidationJob
-    run: ExtendedValidationRun
-  }> {
-    throw new Error('BE chỉ tạo lần kiểm định từ danh sách cặp id (groundTruthId, derivedMeasurementId) mà web chưa có API để lấy, và API này chưa mở cho cookie web; không thể tạo từ giao diện.')
-  },
-  /** BE không có API hủy tác vụ kiểm định. */
-  async cancelValidationJob(_jobId: string): Promise<boolean> {
-    throw new Error('BE không có API hủy tác vụ kiểm định.')
-  },
-  /** BE không có API xuất CSV đối soát (không có danh sách mẫu để xuất). */
-  async exportValidationCsv(_projectId: string = ''): Promise<{
-    fileName: string
-    csvContent: string
-    totalRows: number
-  }> {
-    throw new Error('BE không có API xuất CSV đối soát.')
-  },
   /**
    * Lấy danh sách các đợt chạy thử nghiệm AI (GET /api/v1/projects/{projectId}/ai-mock-runs)
    */

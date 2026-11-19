@@ -119,64 +119,6 @@ export const ResearchValidation: React.FC = () => {
     return samples.filter((s) => s.inclusion_status === sampleFilter)
   }, [sampleFilter, samples])
 
-  // Xử lý nút Chạy kiểm định mới (HTTP 202 - FR-31)
-  const handleTriggerValidation = async () => {
-    if (!writeGuard.acquire()) return
-    try {
-      setIsRunningVal(true)
-      const { job, run } = await validationService.triggerValidationRun(selectedProject)
-      setActiveJob(job)
-      setActiveRun(run)
-      setRuns((prev) => [run, ...prev])
-      showToast(`Đã khởi tạo đợt kiểm định ${job.code} đối soát mẫu thực địa (HTTP 202)!`)
-    } catch (err) {
-      showToast(beErrorText(err))
-    } finally {
-      writeGuard.release()
-      setIsRunningVal(false)
-    }
-  }
-
-  // Xử lý hủy tiến trình nền
-  const handleCancelJob = async () => {
-    if (!activeJob) return
-    if (!writeGuard.acquire()) return
-    try {
-      await validationService.cancelValidationJob(activeJob.id)
-      setActiveJob(null)
-      showToast('Đã dừng an toàn tiến trình kiểm định nền.')
-    } catch (err) {
-      showToast(beErrorText(err))
-    } finally {
-      writeGuard.release()
-    }
-  }
-
-  // Xử lý nút Xuất CSV theo quy chuẩn RPT-09 (RS06)
-  const handleExportGroundTruth = async () => {
-    try {
-      setIsExporting(true)
-      const { fileName, csvContent, totalRows } =
-        await validationService.exportValidationCsv(selectedProject)
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.setAttribute('href', url)
-      link.setAttribute('download', fileName)
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      showToast(`Đã xuất thành công ${totalRows} mẫu đối soát sang file CSV!`)
-    } catch (err) {
-      showToast(beErrorText(err))
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   const formatMeasurementType = (type: string) => {
     switch (type) {
       case 'DEPRESSION_DEPTH':
@@ -213,23 +155,11 @@ export const ResearchValidation: React.FC = () => {
         onSelectProject={handleSelectProject}
         projectOptions={projectOptions}
         activeRun={activeRun}
-        isExporting={isExporting}
-        isRunningVal={isRunningVal}
-        onExport={handleExportGroundTruth}
-        onTriggerValidation={handleTriggerValidation}
       />
 
       <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
         Màn này chưa có dữ liệu thật: BE chưa có API liệt kê mẫu đối soát hay các đợt kiểm định (chỉ có tạo theo danh sách cặp id số đo và đọc số liệu theo id, và các API đó chưa mở cho cookie web). Các thẻ bên dưới hiển thị 0 vì chưa có dữ liệu, không phải kết quả kiểm định.
       </p>
-
-      {/* 2. Banner Async Job 202 Đang chạy */}
-      {activeJob && (
-        <AsyncValidationJobBanner
-          valProgress={activeJob.progress}
-          onCancel={handleCancelJob}
-        />
-      )}
 
       {/* 3. BỘ 4 THẺ CHỈ SỐ SAI SỐ KỸ THUẬT MET-12 CÓ ĐIỂM NHẤN */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

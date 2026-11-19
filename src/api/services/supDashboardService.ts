@@ -15,14 +15,24 @@ export interface SupDashboardActivity extends TimelineItem {
   projectCode: string
 }
 
+/** GET /projects/overviews (ProjectOverview): chiều dài, bảo hành, số lỗi mở (defect.open.v2). */
+export interface SupDashboardOverview {
+  projectId: string
+  totalLengthMeters?: number | null
+  lengthAvailability?: string | null
+  warranties?: Array<{ id: string; roadSectionId?: string | null; handoverDate?: string; startDate?: string; endDate?: string; status?: string }> | null
+  openDefects?: { value?: number | null; availability?: string | null } | null
+}
+
 export interface SupDashboardData {
+  overviews: Record<string, SupDashboardOverview>
   /** `asOf` do BE trả trong GET /projects. */
   asOf: string | null
   projects: SupDashboardProject[]
   summaries: Record<string, Summary>
   activities: SupDashboardActivity[]
   /** Lỗi theo từng nguồn (HTTP status + code/chi tiết), không fallback mock. */
-  errors: { projects?: string; summaries?: string; timeline?: string }
+  errors: { projects?: string; summaries?: string; timeline?: string; overviews?: string }
 }
 
 interface ProjectPageDto {
@@ -54,7 +64,7 @@ export const supDashboardService = {
    * Mỗi nguồn tải độc lập; lỗi nguồn nào hiển thị lỗi nguồn đó.
    */
   async load(signal?: AbortSignal): Promise<SupDashboardData> {
-    const data: SupDashboardData = { asOf: null, projects: [], summaries: {}, activities: [], errors: {} }
+    const data: SupDashboardData = { asOf: null, projects: [], overviews: {}, summaries: {}, activities: [], errors: {} }
 
     try {
       let cursor: string | null | undefined
@@ -72,6 +82,16 @@ export const supDashboardService = {
       data.errors.projects = dashboardErrorText(e)
       return data
     }
+
+    // Tổng quan nhiều dự án trong một lô (BE tối đa 100 id/lần).
+    try {
+      const ids = data.projects.map((p) => p.projectId)
+      for (let i = 0; i < ids.length; i += 100) {
+        const res = await apiClient.get<SupDashboardOverview[]>('/projects/overviews', { params: { ids: ids.slice(i, i + 100) }, paramsSerializer: { indexes: null }, signal })
+        if (!Array.isArray(res.data)) throw new Error('Tổng quan dự án trả sai contract.')
+        for (const o of res.data) if (o?.projectId) data.overviews[o.projectId] = o
+      }
+    } catch (e) { data.errors.overviews = dashboardErrorText(e) }
 
     const summaryErrors: string[] = []
     const timelineErrors: string[] = []

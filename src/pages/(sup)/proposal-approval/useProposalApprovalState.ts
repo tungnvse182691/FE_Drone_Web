@@ -118,24 +118,8 @@ export function useProposalApprovalState(id: string | undefined) {
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 5
 
-  // Modal States
-  const [activeModalItem, setActiveModalItem] = useState<RepairItemDetail | null>(null)
-  const [modalFeedbackType, setModalFeedbackType] = useState<'EVIDENCE' | 'RECONSIDER' | 'REJECT'>('EVIDENCE')
-  const [modalNotes, setModalNotes] = useState('')
-  const [modalDirectives, setModalDirectives] = useState<{ [key: string]: boolean }>({
-    laser: true,
-    height: false,
-    close_photo: false,
-    core_sample: false
-  })
-
   // Lightbox Modal for Defect Photo
   const [viewingPhotoItem, setViewingPhotoItem] = useState<RepairItemDetail | null>(null)
-
-  // Dispatch Modal
-  const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false)
-  const [dispatchDeadline, setDispatchDeadline] = useState('')
-  const [dispatchNotice, setDispatchNotice] = useState('')
 
   // Batch Approve Modal
   const [isBatchApproveConfirmOpen, setIsBatchApproveConfirmOpen] = useState(false)
@@ -232,19 +216,6 @@ export function useProposalApprovalState(id: string | undefined) {
   }
 
   // Chưa có endpoint BE cho yêu cầu bổ sung/xem lại/từ chối từ màn này: không giả vờ lưu
-  const handleOpenDecisionModal = (item: RepairItemDetail, initialType: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => {
-    setActiveModalItem(item)
-    setModalFeedbackType(initialType)
-    setModalNotes(item.supervisor_notes || '')
-  }
-
-  const handleSubmitDecisionModal = () => {
-    if (!activeModalItem) return
-    showToast(NO_API)
-    setActiveModalItem(null)
-  }
-
-  // Duyệt hàng loạt = lần lượt POST approve cho các hạng mục Normal đang AwaitingApproval
   const handleBatchApproveAll = async () => {
     setIsBatchApproveConfirmOpen(false)
     if (!isSupervisorRole) return showToast('Chỉ Giám sát được phê duyệt hạng mục.')
@@ -264,16 +235,6 @@ export function useProposalApprovalState(id: string | undefined) {
       showToast(`Đã duyệt ${done}/${targets.length}; dừng do lỗi: ${exportError(e)}`)
     } finally { approveGuard.release() }
     setRevision((n) => n + 1)
-  }
-
-  // Chưa có API BE gán đội từ màn này (giao việc dùng POST .../assign ở luồng khác)
-  const handleCrewChange = (_itemId: string, _newCrew: string) => {
-    showToast(NO_API)
-  }
-
-  const handleConfirmDispatch = (_crewName?: string) => {
-    setIsDispatchModalOpen(false)
-    showToast(NO_API)
   }
 
   return {
@@ -297,32 +258,16 @@ export function useProposalApprovalState(id: string | undefined) {
     totalPages,
     filteredItems,
     displayedItems,
-    activeModalItem,
-    setActiveModalItem,
-    modalFeedbackType,
-    setModalFeedbackType,
-    modalNotes,
-    setModalNotes,
-    modalDirectives,
-    setModalDirectives,
     viewingPhotoItem,
     setViewingPhotoItem,
-    isDispatchModalOpen,
-    setIsDispatchModalOpen,
-    dispatchDeadline,
-    setDispatchDeadline,
-    dispatchNotice,
-    setDispatchNotice,
     isBatchApproveConfirmOpen,
     setIsBatchApproveConfirmOpen,
     toastMessage,
     setToastMessage,
     showToast,
     handleQuickApproveItem,
-    handleOpenDecisionModal,
-    handleSubmitDecisionModal,
     handleBatchApproveAll,
-    handleCrewChange,
-    handleConfirmDispatch
+    activeProjectId,
+    activePackageId
   }
 }

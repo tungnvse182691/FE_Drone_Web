@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { DefectPublicationPanel } from './defect-verify/DefectPublicationPanel'
+import { DefectRecurrenceHistory } from './defect-verify/DefectRecurrenceHistory'
+import { DefectRecurrenceForm } from './defect-verify/DefectRecurrenceForm'
+import type { RecurrenceInput } from '../../api/services/defectRecurrenceService'
 import { Card } from '../../components/ui/Card'
 import {
   surveyService,
@@ -16,7 +19,7 @@ import { useAuthStore } from '../../store/authStore'
 import { AIDetectionItem } from './drone-review/types'
 import { Icon } from '../../components/ui/Icon'
 import { DefectVerifyHeader } from './defect-verify/DefectVerifyHeader'
-import { DefectBoundingBoxViewer, BoundingBoxCoords } from './defect-verify/DefectBoundingBoxViewer'
+import { DefectBoundingBoxViewer } from './defect-verify/DefectBoundingBoxViewer'
 import { DefectTemporalComparison } from './defect-verify/DefectTemporalComparison'
 import { DefectGisMapViewer } from './defect-verify/DefectGisMapViewer'
 import { DefectVerifyForm } from './defect-verify/DefectVerifyForm'
@@ -173,7 +176,7 @@ export const DefectDetailVerify: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
   const fallbackReturnUrl = isSupervisor ? '/sup/ai-inbox' : '/pm/ai-inbox'
@@ -181,9 +184,7 @@ export const DefectDetailVerify: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
-  const [isSavingBbox, setIsSavingBbox] = useState<boolean>(false)
   const decisionGuard = useSubmitGuard()
-  const bboxGuard = useSubmitGuard()
   const [apiError, setApiError] = useState<string | null>(null)
 
   const [allDetections, setAllDetections] = useState<
@@ -196,8 +197,6 @@ export const DefectDetailVerify: React.FC = () => {
 
   const [customDefectType, setCustomDefectType] = useState<DefectType | string | null>(null)
   const [customTypeText, setCustomTypeText] = useState<string>('')
-  const [liveBbox, setLiveBbox] = useState<BoundingBoxCoords | undefined>(undefined)
-  const [isBboxModified, setIsBboxModified] = useState<boolean>(false)
   const [severity, setSeverity] = useState<Severity>(Severity.HIGH)
   const [notes, setNotes] = useState('Đã kiểm tra đối chiếu khung nhận diện AI và tọa độ trên CSDL.')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -484,8 +483,6 @@ export const DefectDetailVerify: React.FC = () => {
   useEffect(() => {
     if (defect) {
       setSeverity(defect.severity)
-      setLiveBbox(defect.bounding_box)
-      setIsBboxModified(false)
 
       setCustomDefectType(null)
       setCustomTypeText('')
@@ -541,31 +538,9 @@ export const DefectDetailVerify: React.FC = () => {
     }
   }, [location.pathname])
 
-  const handleSaveBbox = async (bboxToSave?: BoundingBoxCoords) => {
+  const handleVerify = async (newStatus: DefectStatus, recurrence?: RecurrenceInput) => {
     if (!defect) return
-    const targetBbox = bboxToSave || liveBbox || defect.bounding_box
-    if (!bboxGuard.acquire()) return
-    setIsSavingBbox(true)
-    try {
-      await surveyService.saveAiCandidateOverride(defect.id, {
-        bbox: targetBbox
-      })
-      setLiveBbox(targetBbox)
-      setIsBboxModified(false)
-      showToast(
-        `✅ Đã lưu tọa độ khung nhận diện (${targetBbox.x.toFixed(2)}, ${targetBbox.y.toFixed(2)}, ${targetBbox.width.toFixed(2)}, ${targetBbox.height.toFixed(2)}) vào CSDL!`
-      )
-      await loadBackendData()
-    } catch (err: any) {
-      showToast(`❌ Không thể lưu tọa độ khung nhận diện: ${err?.message || 'Lỗi kết nối'}`)
-    } finally {
-      bboxGuard.release()
-      setIsSavingBbox(false)
-    }
-  }
-
-  const handleVerify = async (newStatus: DefectStatus) => {
-    if (!defect) return
+    if (recurrence && (user?.role !== RoleCode.PROJECT_MANAGER || defect.source_kind !== 'AI_DETECTION' || newStatus !== DefectStatus.VERIFIED)) return
     if (!notes.trim()) {
       showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi bấm Chấp nhận hoặc Báo sai!')
       return
@@ -602,16 +577,6 @@ export const DefectDetailVerify: React.FC = () => {
     setApiError(null)
 
     try {
-      // Nếu PM có chỉnh khung nhận diện trên ảnh và bấm Chấp nhận, tự động lưu tọa độ khung mới vào CSDL cùng lúc
-      if (newStatus === DefectStatus.VERIFIED && isBboxModified && liveBbox) {
-        await surveyService.saveAiCandidateOverride(defect.id, {
-          bbox: liveBbox,
-          rawTypeCode: resolvedTypeCode,
-          customTypeLabel: resolvedCustomLabel
-        })
-        setIsBboxModified(false)
-      }
-
       if (defect.source_kind === 'DEFECT') {
         const evidenceIds = await surveyService.resolveDefectEvidenceIds(defect.project_id, defect.id)
 
@@ -633,16 +598,19 @@ export const DefectDetailVerify: React.FC = () => {
         showToast(
           `✅ Đã lưu quyết định (${newStatus === DefectStatus.VERIFIED ? 'Chấp nhận' : 'Báo sai'}) cho [${defect.code}] vào CSDL!`
         )
-        await loadBackendData()
+        await loadBackendData(true)
       } else {
         const decisionRes = await surveyService.decideCandidate(defect.project_id, {
           sourceKind: 'AI_DETECTION',
           sourceId: defect.id,
+          runId: defect.run_id,
+          segmentId: (defect as any).segment_id ?? null,
           decision: newStatus === DefectStatus.VERIFIED ? 'KEEP_NEW' : 'REJECT',
           defectTypeCode: resolvedTypeCode,
           customTypeLabel: resolvedCustomLabel,
           severity: severity as any,
-          reason: notes.trim()
+          reason: notes.trim(),
+          recurrence
         })
 
         const isVerify = newStatus === DefectStatus.VERIFIED
@@ -650,8 +618,7 @@ export const DefectDetailVerify: React.FC = () => {
         setAllDetections((prev) =>
           prev.map((entry) => {
             if (
-              entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
-              entry.item.code.toLowerCase() === defect.code.toLowerCase()
+              entry.projectId === defect.project_id && entry.item.id.toLowerCase() === defect.id.toLowerCase()
             ) {
               return {
                 ...entry,
@@ -671,7 +638,7 @@ export const DefectDetailVerify: React.FC = () => {
           ? `#DEF-${decisionRes.defectId.slice(0, 8).toUpperCase()}`
           : defect.code
 
-        const msg =
+        const msg = recurrence ? `Đã tạo [${newDefCode}] và đối chiếu liên kết tái phát trên máy chủ.` :
           newStatus === DefectStatus.VERIFIED
             ? `✅ Đã lưu quyết định Chấp nhận! Tạo hồ sơ khiếm khuyết [${newDefCode}] từ [${defect.code}].`
             : `✅ Đã lưu quyết định Báo sai cho [${defect.code}].`
@@ -692,59 +659,6 @@ export const DefectDetailVerify: React.FC = () => {
     }
   }
 
-  const handleResetDecision = async () => {
-    if (!defect || defect.source_kind !== 'AI_DETECTION') return
-    const isUnlink = defect.decision_kind === 'LINK_EXISTING'
-    if (!decisionGuard.acquire()) return
-    setIsSubmitting(true)
-    setApiError(null)
-
-    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
-    setAllDetections((prev) =>
-      prev.map((entry) => {
-        if (
-          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
-          entry.item.code.toLowerCase() === defect.code.toLowerCase()
-        ) {
-          return {
-            ...entry,
-            item: {
-              ...entry.item,
-              status: 'PENDING',
-              decisionKind: null,
-              defectId: null,
-              disposition: null
-            }
-          }
-        }
-        return entry
-      })
-    )
-    setIsRecurrent(false)
-    setLinkedPriorCode(null)
-    showToast(
-      isUnlink
-        ? `✅ Đã tách ra thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
-        : `✅ Đã mở lại thành công! Ứng viên AI [${defect.code}] đã trở lại trạng thái Chờ duyệt.`
-    )
-
-    try {
-      await surveyService.resetSurveyDetection(defect.id)
-      await loadBackendData(true)
-    } catch (err: any) {
-      const errMsg =
-        err?.response?.data?.message ||
-        err?.response?.data?.detail ||
-        err?.message ||
-        'Không thể mở lại trạng thái Chờ duyệt trên CSDL.'
-      setApiError(errMsg)
-      showToast(`❌ Lỗi Backend: ${errMsg}`)
-    } finally {
-      decisionGuard.release()
-      setIsSubmitting(false)
-    }
-  }
-
   const handleLinkRecurrence = async (
     targetDefectId: string,
     targetVersion: string,
@@ -755,34 +669,6 @@ export const DefectDetailVerify: React.FC = () => {
     setIsSubmitting(true)
     setApiError(null)
 
-    // 1. Phản hồi giao diện tức thì 0ms (Optimistic Update)
-    setAllDetections((prev) =>
-      prev.map((entry) => {
-        if (
-          entry.item.id.toLowerCase() === defect.id.toLowerCase() ||
-          entry.item.code.toLowerCase() === defect.code.toLowerCase()
-        ) {
-          return {
-            ...entry,
-            item: {
-              ...entry.item,
-              status: 'APPROVED',
-              decisionKind: 'LINK_EXISTING',
-              defectId: targetDefectId
-            }
-          }
-        }
-        return entry
-      })
-    )
-    setIsRecurrent(true)
-    setLinkedPriorCode(`#DEF-${targetDefectId.slice(0, 8).toUpperCase()}`)
-    const auditNote = `[Gom vào hồ sơ cũ] Đã liên kết vào khiếm khuyết #DEF-${targetDefectId.slice(0, 8).toUpperCase()}. ${notesText}`
-    setNotes((prev) => (prev ? `${prev}\n${auditNote}` : auditNote))
-    showToast(
-      `✅ Đã gom [${defect.code}] vào hồ sơ khiếm khuyết [#DEF-${targetDefectId.slice(0, 8).toUpperCase()}] trên CSDL!`
-    )
-
     try {
       await surveyService.decideCandidate(defect.project_id, {
         sourceKind: 'AI_DETECTION',
@@ -792,6 +678,7 @@ export const DefectDetailVerify: React.FC = () => {
         targetVersion,
         reason: notesText.trim() || `Gom ứng viên AI vào hồ sơ khiếm khuyết hiện hữu ${targetDefectId}`
       })
+      showToast(`✅ Đã lưu và đọc lại quyết định gom [${defect.code}] vào [#DEF-${targetDefectId.slice(0, 8).toUpperCase()}].`)
       await loadBackendData(true)
     } catch (err: any) {
       const errMsg =
@@ -892,12 +779,6 @@ export const DefectDetailVerify: React.FC = () => {
                 defect={defectWithAuthImage || defect}
                 currentType={customDefectType || defect.defect_type}
                 customTypeLabel={effectiveCustomLabel}
-                onBboxChange={(newBbox) => {
-                  setLiveBbox(newBbox)
-                  setIsBboxModified(true)
-                }}
-                onSaveBbox={!isSupervisor ? (newBbox) => handleSaveBbox(newBbox) : undefined}
-                isSavingBbox={isSavingBbox}
               />
             )}
 
@@ -912,23 +793,25 @@ export const DefectDetailVerify: React.FC = () => {
             onTypeChange={(newType) => setCustomDefectType(newType)}
             customTypeText={customTypeText}
             onCustomTypeTextChange={setCustomTypeText}
-            liveBbox={liveBbox}
-            isBboxModified={isBboxModified}
-            onSaveBbox={!isSupervisor ? () => handleSaveBbox() : undefined}
-            isSavingBbox={isSavingBbox}
+            liveBbox={defect.bounding_box}
             severity={severity}
             setSeverity={setSeverity}
             notes={notes}
             setNotes={setNotes}
             onVerify={handleVerify}
-            onResetDecision={defect.source_kind === 'AI_DETECTION' ? handleResetDecision : undefined}
             onLinkRecurrence={handleLinkRecurrence}
             existingDefects={projectExistingDefects}
             candidateMatches={candidateMatches}
             isSubmitting={isSubmitting}
             isSupervisor={isSupervisor}
           />
+          {user?.role === RoleCode.PROJECT_MANAGER && defect.source_kind === 'AI_DETECTION' && defect.project_id && !defect.decision_kind && (
+            <DefectRecurrenceForm key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} busy={isSubmitting} onSubmit={input => { void handleVerify(DefectStatus.VERIFIED, input) }} />
+          )}
           {!isSupervisor && defect.status === DefectStatus.VERIFIED && defect.project_id && <DefectPublicationPanel projectId={defect.project_id} defectId={defect.id} />}
+          {user?.role === RoleCode.PROJECT_MANAGER && activeRecord?.kind === 'DEFECT' && defect.id.toLowerCase() === targetId && defect.project_id && (
+            <DefectRecurrenceHistory key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} defectId={defect.id} />
+          )}
         </div>
       </div>
 
@@ -936,7 +819,7 @@ export const DefectDetailVerify: React.FC = () => {
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
           <Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" />
-          <span className="text-xs font-medium">{toastMessage}</span>
+          <span role="status" className="text-xs font-medium">{toastMessage}</span>
           <button
             type="button"
             onClick={() => setToastMessage(null)}

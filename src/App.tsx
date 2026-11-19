@@ -29,7 +29,7 @@ import { DefectDetailVerify } from './pages/(pm)/DefectDetailVerify'
 import { AssignCrew } from './pages/(pm)/AssignCrew'
 import { DroneMissionAIReview } from './pages/(pm)/DroneMissionAIReview'
 import { FieldTasks } from './pages/(pm)/FieldTasks'
-import { OfflineConflicts } from './pages/(pm)/OfflineConflicts'
+import { OfflineCoordination } from './pages/(pm)/OfflineCoordination'
 import { FastTrackDispatch } from './pages/(pm)/FastTrackDispatch'
 import { RepairProposals } from './pages/(pm)/RepairProposals'
 import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
@@ -37,7 +37,6 @@ import { NotificationsHandoffHub } from './pages/(pm)/NotificationsHandoffHub'
 // Supervisor Pages
 import { SupLayout } from './pages/(sup)/SupLayout'
 import { SupDashboard } from './pages/(sup)/SupDashboard'
-import { BatchRejection } from './pages/(sup)/BatchRejection'
 import { ProposalApprovalDetail } from './pages/(sup)/ProposalApprovalDetail'
 import { EvidenceCloseoutDetail } from './pages/(sup)/EvidenceCloseoutDetail'
 import { AcceptanceList } from './pages/(sup)/AcceptanceList'
@@ -103,8 +102,9 @@ export const App: React.FC = () => {
             <Route path="repair-batches/:id/submit" element={<Navigate to="/pm/proposals" replace />} />
             <Route path="repair-batches/assign" element={<AssignCrew />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflicts" element={<OfflineConflicts />} />
-            <Route path="conflict-center" element={<OfflineConflicts />} />
+            <Route path="offline" element={<OfflineCoordination />} />
+            <Route path="conflicts" element={<Navigate to="/pm/offline" replace />} />
+            <Route path="conflict-center" element={<Navigate to="/pm/offline" replace />} />
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="proposals" element={<RepairProposals />} />
@@ -155,8 +155,9 @@ export const App: React.FC = () => {
             <Route path="fast-track" element={<FastTrackDispatch />} />
             <Route path="dispatch" element={<FastTrackDispatch />} />
             <Route path="field-tasks" element={<FieldTasks />} />
-            <Route path="conflicts" element={<OfflineConflicts />} />
-            <Route path="conflict-center" element={<OfflineConflicts />} />
+            <Route path="offline" element={<OfflineCoordination />} />
+            <Route path="conflicts" element={<Navigate to="/sup/offline" replace />} />
+            <Route path="conflict-center" element={<Navigate to="/sup/offline" replace />} />
             <Route path="proposals" element={<RepairProposals />} />
             <Route path="proposals/:id" element={<ProposalApprovalDetail />} />
             <Route path="work-packages" element={<RepairProposals />} />
@@ -164,7 +165,7 @@ export const App: React.FC = () => {
             <Route path="repair-batches" element={<RepairProposals />} />
             <Route path="approvals" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="approvals/:id" element={<ProposalApprovalDetail />} />
-            <Route path="approvals/:id/reject" element={<BatchRejection />} />
+            <Route path="approvals/:id/reject" element={<Navigate to="/sup/proposals" replace />} />
             <Route path="acceptance" element={<AcceptanceList />} />
             <Route path="acceptance/:batchId" element={<EvidenceCloseoutDetail />} />
             <Route path="field-acceptance" element={<Navigate to="/sup/acceptance" replace />} />

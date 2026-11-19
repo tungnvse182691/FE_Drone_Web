@@ -47,7 +47,7 @@ export const SourceVideoPanel: React.FC<{ sourceFiles: SourceVideoRef[]; version
     setOpenId(ref.fileId); setLoading(true)
     const ctl = new AbortController(); abortRef.current = ctl
     try {
-      const v = await sourceVideoService.load(ref, ctl.signal, (l, t) => setProgress({ loaded: l, total: t }))
+      const v = await sourceVideoService.openStream(ref, ctl.signal)
       if (ctl.signal.aborted) { v.release(); return }
       loadedRef.current = v; setLoaded(v)
     } catch (e) {
@@ -65,7 +65,7 @@ export const SourceVideoPanel: React.FC<{ sourceFiles: SourceVideoRef[]; version
     if (downloading) return
     setDownloading(ref.fileId); setDlError(null)
     try {
-      const v = await sourceVideoService.load(ref, new AbortController().signal)
+      const v = await sourceVideoService.loadBlob(ref, new AbortController().signal)
       const a = document.createElement('a')
       a.href = v.url; a.download = `video-nguon-${ref.fileId.slice(0, 8)}.${/webm/i.test(v.mediaType) ? 'webm' : /quicktime/i.test(v.mediaType) ? 'mov' : 'mp4'}`
       document.body.appendChild(a); a.click(); a.remove()
@@ -106,10 +106,7 @@ export const SourceVideoPanel: React.FC<{ sourceFiles: SourceVideoRef[]; version
                   <div className="mt-3 space-y-2">
                     {loading && (
                       <div role="status" className="space-y-1">
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200" aria-label="Tiến độ tải video">
-                          <div className="h-full bg-brand-navy transition-all" style={{ width: `${pct ?? 15}%` }} />
-                        </div>
-                        <p className="text-[11px] text-slate-500">Đang tải toàn bộ tệp{progress ? ` · ${mb(progress.loaded)}${progress.total ? ` / ${mb(progress.total)}` : ''}${pct !== null ? ` (${pct}%)` : ''}` : ''}… BE chưa hỗ trợ phát dần (Range), cần tải xong mới phát.</p>
+                        <p className="text-[11px] text-slate-500">Đang kiểm tra quyền và mở luồng phát (HTTP Range)…</p>
                       </div>
                     )}
                     {error && <Feedback error={error.message} />}
@@ -128,8 +125,7 @@ export const SourceVideoPanel: React.FC<{ sourceFiles: SourceVideoRef[]; version
                         />
                         {mediaError && <Feedback error={mediaError} />}
                         <p className="text-[11px] text-slate-500" data-testid="source-video-info">
-                          {duration !== null ? `Thời lượng ${clock(duration)} · ` : ''}{mb(loaded.sizeBytes)} · {loaded.checksumVerified ? 'SHA-256 khớp metadata' : 'metadata không có SHA-256 để đối chiếu'}. Tua bằng thanh điều khiển của video (không phải timeline khung AI); xem video không tạo đánh giá, baseline hay job.
-                        </p>
+                          {duration !== null ? `Thời lượng ${clock(duration)} · ` : ''}{mb(loaded.sizeBytes)} · phát dần qua HTTP Range, tua bằng thanh điều khiển của video (không phải timeline khung AI). Xem video không tạo đánh giá, baseline hay job. "Tải tệp nguồn" tải toàn tệp và đối chiếu SHA-256.</p>
                       </>
                     )}
                   </div>

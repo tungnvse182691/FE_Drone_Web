@@ -1,8 +1,5 @@
-// Các thao tác ghi cũ chưa có command Web đã xác minh: giữ chữ ký hàm, ném lỗi ngay, không tạo dữ liệu giả.
-function throwLegacyBlocked(): never {
-  throw new Error('Thao tác này chưa được tích hợp bằng command và dữ liệu máy chủ hợp lệ. Chưa thực hiện thay đổi. ')
-}
 import { apiClient } from '../client'
+import { defectRecurrenceService, type RecurrenceInput } from './defectRecurrenceService'
 import { projectService } from './projectService'
 import { useAuthStore } from '../../store/authStore'
 import { ProjectRouteConfig, AvailablePilot } from '../../pages/(pm)/create-survey/types'
@@ -138,6 +135,8 @@ export function formatDefectTypeLabel(typeCode?: string | null, customLabel?: st
 }
 
 export interface SurveyMissionItem {
+  /** Nhiệm vụ thuộc kế hoạch này (survey-tasks.planId) — dùng để gắn lần chạy AI theo surveyTaskId. */
+  task_ids?: string[]
   scope_summary?: string
   read_error?: string
   serverRecordKind?: 'PLAN' | 'TASK'
@@ -216,7 +215,16 @@ async function buildDetectionItem(
   codeIndex: number,
   defectMap: Map<string, BackendDefectDto>
 ): Promise<AIDetectionItem> {
-  const candFacts = await surveyService.getAiCandidateFacts(projectId, d.detectionId)
+  // GET /ai-candidates/{id} hiện chỉ nhận Bearer (cookie web → 401, BE-03). Khi đó dựng từ chính kết quả run (đã có đủ loại, độ tin cậy, khung, ảnh)
+  // và ghi rõ trạng thái thẩm định CHƯA đọc được — không coi là đã/chưa duyệt.
+  let candFactsUnavailable = false
+  const candFacts: AiCandidateFactsDto = await (candidatesBlocked() ? Promise.reject({ response: { status: 401 } }) : surveyService.getAiCandidateFacts(projectId, d.detectionId)).catch((e: any) => {
+    if (e?.response?.status !== 401 && e?.response?.status !== 403) throw e
+    aiCandidatesBlocked = useAuthStore.getState().authEpoch
+    candFactsUnavailable = true
+    const x = d as any
+    return { typeCode: x.typeCode, confidence: x.confidence, timestampMs: x.timestampMs, frameFileId: x.frameFileId, frameFileVersion: x.frameFileVersion, sourceVideoFileId: x.sourceVideoFileId, segmentId: x.segmentId, positionStatus: x.positionStatus, boundingBox: Array.isArray(x.bbox) ? { x: x.bbox[0], y: x.bbox[1], width: x.bbox[2], height: x.bbox[3] } : undefined } as unknown as AiCandidateFactsDto
+  })
   const decisionDto = candFacts.disposition?.decisionId
     ? await surveyService.getCandidateDecision(projectId, candFacts.disposition.decisionId)
     : null
@@ -250,7 +258,7 @@ async function buildDetectionItem(
     type: typeLabel,
     severityLevel: severityLabel,
     confidence: confPct,
-    description: `Khung hình trích xuất tại mốc ${tsMs}ms`,
+    description: `Khung hình trích xuất tại mốc ${tsMs}ms${candFactsUnavailable ? ' · Trạng thái thẩm định chưa đọc được (BE: GET /ai-candidates chỉ nhận Bearer)' : ''}`,
     metrics: {},
     status,
     kmValue: Number.NaN,
@@ -287,6 +295,10 @@ async function buildDetectionItem(
     decisionKind
   }
 }
+
+// GET /ai-candidates/{id} trả 401 với cookie web (BE chỉ cho Bearer): nhớ theo phiên để khỏi gọi lặp mỗi phát hiện.
+let aiCandidatesBlocked: unknown = null
+const candidatesBlocked = () => aiCandidatesBlocked === useAuthStore.getState().authEpoch
 
 export const surveyService = {
 async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
@@ -328,7 +340,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
         this.readSurveyPage(`/projects/${project.id}/survey-tasks`) as Promise<Array<{
           id: string; projectId: string; operatorId?: string; planId?: string
         }>>,
-        this.readSurveyPage(`/projects/${project.id}/ai-mock-runs`) as Promise<Array<{ id: string; status: string }>>,
+        this.readSurveyPage(`/projects/${project.id}/ai-mock-runs`) as Promise<Array<{ id: string; status: string; surveyTaskId?: string | null }>>,
         this.readSurveyPage(`/projects/${project.id}/baseline-selections`).catch((err) => {
           // Chỉ ảnh hưởng nhãn khóa Baseline trong danh sách; trạng thái khóa coi là chưa xác định, không bịa.
           console.warn('[surveyService] Không đọc được baseline-selections:', err?.message)
@@ -339,34 +351,41 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       const memberName = new Map<string, string>()
       for (const m of members) if (m?.userId) memberName.set(String(m.userId).toLowerCase(), m.displayName || '')
 
-      // Đếm kết quả AI/thẩm định từ run SUCCEEDED và quyết định thật trên BE (chỉ tính một lần cho mỗi dự án)
-      const completedRun = aiRuns.find((r) => r.status === 'SUCCEEDED')
-      let detectionsCount = 0
-      let approvedCount = 0
-      let rejectedCount = 0
-      if (completedRun) {
-        try {
+      // BE bản mới: run có surveyTaskId → gắn kết quả AI theo từng kế hoạch (qua nhiệm vụ của kế hoạch). Kết quả/ứng viên đọc một lần cho mỗi run.
+      const succeededRuns = aiRuns.filter((r) => r.status === 'SUCCEEDED')
+      const runDetections = new Map<string, string[]>()
+      const detectionState = new Map<string, 'APPROVED' | 'REJECTED' | 'PENDING'>()
+      try {
+        for (const run of succeededRuns) {
           const resultRes = await apiClient.get<{ detections?: Array<{ detectionId: string }> }>(
-            `/projects/${project.id}/ai-mock-runs/${completedRun.id}/result`
+            `/projects/${project.id}/ai-mock-runs/${run.id}/result`
           )
-          const detections = resultRes.data?.detections || []
-          detectionsCount = detections.length
-          for (const d of detections) {
-            const facts = await this.getAiCandidateFacts(project.id, d.detectionId)
-            if (!facts.disposition?.decisionId) continue
+          const ids = (resultRes.data?.detections || []).map((d) => d.detectionId)
+          runDetections.set(run.id, ids)
+          for (const id of ids) {
+            if (detectionState.has(id)) continue
+            let facts: AiCandidateFactsDto
+            if (candidatesBlocked()) { detectionState.set(id, 'PENDING'); continue }
+            try { facts = await this.getAiCandidateFacts(project.id, id) } catch (e: any) { if (e?.response?.status === 401 || e?.response?.status === 403) { aiCandidatesBlocked = useAuthStore.getState().authEpoch; detectionState.set(id, 'PENDING'); continue } throw e }
+            if (!facts.disposition?.decisionId) { detectionState.set(id, 'PENDING'); continue }
             const decision = await this.getCandidateDecision(project.id, facts.disposition.decisionId)
-            if (decision.decision === 'REJECT') rejectedCount += 1
-            else approvedCount += 1
+            detectionState.set(id, decision.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
           }
-        } catch (err: any) {
-          // Số liệu AI của danh sách chưa đọc được: để 0 (không bịa); màn chi tiết sẽ báo lỗi rõ khi tải phát hiện AI.
-          console.warn('[surveyService] Không đọc được kết quả AI của dự án:', err?.message)
-          detectionsCount = 0; approvedCount = 0; rejectedCount = 0
         }
+      } catch (err: any) {
+        // Số liệu AI của danh sách chưa đọc được: để trống (không bịa); màn chi tiết sẽ báo lỗi rõ khi tải phát hiện AI.
+        console.warn('[surveyService] Không đọc được kết quả AI của dự án:', err?.message)
+        runDetections.clear(); detectionState.clear()
       }
 
       for (const plan of plans) {
         const associatedTasks = tasks.filter((t) => t.planId === plan.id)
+        const planTaskIds = new Set(associatedTasks.map((t) => String(t.id).toLowerCase()))
+        const planRuns = succeededRuns.filter((r) => r.surveyTaskId && planTaskIds.has(String(r.surveyTaskId).toLowerCase()) && runDetections.has(r.id))
+        const planDetectionIds = [...new Set(planRuns.flatMap((r) => runDetections.get(r.id) || []))]
+        const detectionsCount = planDetectionIds.length
+        const approvedCount = planDetectionIds.filter((d) => detectionState.get(d) === 'APPROVED').length
+        const rejectedCount = planDetectionIds.filter((d) => detectionState.get(d) === 'REJECTED').length
         const shortId = plan.id.replace(/-/g, '').slice(0, 8).toUpperCase()
         const missionCode = `#MS-2026-${shortId.slice(0, 4)}`
 
@@ -382,8 +401,8 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
           : survey_type === 'PERIODIC' ? 'Khảo sát định kỳ'
           : ''
 
-        // BE chưa liên kết run AI với kế hoạch bay: chỉ gắn kết quả AI cho đợt Baseline khi dự án có run SUCCEEDED
-        const hasAiResults = survey_type === 'BASELINE' && !!completedRun
+        // Kết quả AI của kế hoạch = các run SUCCEEDED gắn với nhiệm vụ của kế hoạch (surveyTaskId do BE trả)
+        const hasAiResults = planRuns.length > 0
         const planDetectionsCount = hasAiResults ? detectionsCount : 0
         const planReviewedCount = hasAiResults ? approvedCount + rejectedCount : 0
         const planPendingCount = hasAiResults ? Math.max(0, detectionsCount - planReviewedCount) : 0
@@ -402,6 +421,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
         const operatorId = associatedTasks.find((t) => t.operatorId)?.operatorId
         allMissions.push({
           id: plan.id,
+          task_ids: associatedTasks.map((t) => t.id),
           code: missionCode,
           title: `${survey_type_label || 'Khảo sát'} (${project.name})`,
           survey_type,
@@ -434,49 +454,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
    */
   async getSurveyById(id: string): Promise<SurveyMissionItem | undefined> {
     const list = await this.getSurveys()
-    return list.find((s) => s.id === id || s.code === id)
-  },
-
-  /**
-   * Lấy danh sách Tuyến chính của Dự án phục vụ tạo kế hoạch bay (Dữ liệu thật từ CSDL Backend)
-   */
-  async getSurveyRoutes(): Promise<ProjectRouteConfig[]> {
-    throw new Error('Phạm vi tuyến cho form này chưa được tích hợp bằng Web cookie và discovery đã xác minh. Chưa chọn dữ liệu thay thế.')
-  },
-
-  /**
-   * Lấy danh sách phi công UAV được phân công trong dự án (GET /api/v1/projects/{projectId}/members)
-   */
-  async getAvailablePilots(projectId?: string): Promise<AvailablePilot[]> {
-    await ensureBearerToken()
-    if (!projectId) throw new Error('Thiếu mã dự án để tải phi công từ máy chủ.')
-    const members = await this.readSurveyPage(`/projects/${projectId}/members`)
-    return members
-      .filter((m: any) => /OPERATOR|DRONE|PILOT/.test(String(m.role || '').toUpperCase()))
-      .map((m: any) => ({
-        id: m.userId,
-        name: m.displayName || '',
-        roleLabel: m.role || '',
-        phone: '',
-        license: '',
-        device: ''
-      }))
-  },
-
-  /**
-   * Tạo kế hoạch bay khảo sát mới trên CSDL Backend Candidate3 (API-201 / POST /survey-plans)
-   * Kèm gán nhiệm vụ bay cho Operator (API-203 / POST /survey-tasks)
-   */
-  async createSurvey(data: CreateSurveyPayload): Promise<SurveyMissionItem> {
-    throw new Error('BLOCKED: Form hiện tại chỉ có lý trình và tên phi công; chưa có scope/version và Operator ID đã xác minh để gửi command tạo kế hoạch/giao nhiệm vụ. Chưa tạo dữ liệu.')
-  },
-
-  /**
-   * Kích hoạt tiến trình chạy nhận diện Road-YOLOv9 (API-053 / POST /ai-mock-runs)
-   */
-  async simulateDroneFlightCompletion(surveyId: string): Promise<SurveyMissionItem | null> {
-    void surveyId
-    throwLegacyBlocked()
+    return list.find((s) => s.id === id || s.code === id) || list.find((s) => s.task_ids?.some((t) => t.toLowerCase() === id.toLowerCase()))
   },
 
   /**
@@ -493,12 +471,14 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     let target = preloadedMission
     if (!target) {
       const missions = await this.getSurveys()
-      target = missions.find((m) => m.id === surveyId || m.code === surveyId)
+      target = missions.find((m) => m.id === surveyId || m.code === surveyId) || missions.find((m) => m.task_ids?.some((t) => t.toLowerCase() === String(surveyId).toLowerCase()))
     }
     const projectId = preloadedProjectId || target?.project_id
     if (!projectId) throw new Error('Không xác định được dự án của nhiệm vụ khảo sát từ máy chủ.')
 
-    const runs = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.status === 'SUCCEEDED')
+    // Chỉ lấy lần chạy gắn với nhiệm vụ của đợt đang xem (BE trả surveyTaskId; lọc phía FE trên danh sách đã đọc).
+    const taskIds = new Set((target?.task_ids?.length ? target.task_ids : [surveyId]).map((t) => String(t).toLowerCase()))
+    const runs = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.status === 'SUCCEEDED' && r.surveyTaskId && taskIds.has(String(r.surveyTaskId).toLowerCase()))
     if (runs.length === 0) return []
     // Đọc kết quả của MỌI lần chạy SUCCEEDED (BE không gắn lần chạy với chuyến bay nên không được chỉ lấy runs[0]);
     // gộp theo detectionId để phát hiện không bị trùng giữa các lần chạy.
@@ -518,27 +498,6 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       flat.push({ runId: r.run.id, d })
     }
     return Promise.all(flat.map((x, index) => buildDetectionItem(projectId, x.runId, x.d, index + 1, defectMap)))
-  },
-
-  /**
-   * Cập nhật thẩm định phát hiện AI trực tiếp vào CSDL Backend Candidate3
-   * Gọi POST /api/v1/projects/{projectId}/candidate-decisions (SWG-019)
-   */
-  async updateSurveyDetection(
-    surveyId: string,
-    detectionId: string,
-    updates: Partial<AIDetectionItem>
-  ): Promise<AIDetectionItem | null> {
-    void surveyId; void detectionId; void updates
-    throwLegacyBlocked()
-  },
-
-  /**
-   * Đặt lại trạng thái ứng viên AI về Chờ duyệt (Hủy gom / Tách ra)
-   */
-  async resetSurveyDetection(detectionId: string): Promise<void> {
-    void detectionId
-    throwLegacyBlocked()
   },
 
   /**
@@ -587,17 +546,6 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
   },
 
   /**
-   * Lưu tọa độ khung bao (Bounding Box) và loại khiếm khuyết hiệu chỉnh vào CSDL SQL Server
-   */
-  async saveAiCandidateOverride(
-    detectionId: string,
-    override: AiCandidateOverride
-  ): Promise<void> {
-    void detectionId; void override
-    throwLegacyBlocked()
-  },
-
-  /**
    * [SWG-019] POST /api/v1/projects/{projectId}/candidate-decisions
    * Ra quyết định thẩm định ứng viên (KEEP_NEW | LINK_EXISTING | REJECT) chuẩn Candidate3
    */
@@ -608,12 +556,31 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     supersedesDecisionId?: string | null; previousDecisionVersion?: string | null;
     targetDefectId?: string | null; targetVersion?: string | null;
     defectTypeCode?: string; customTypeLabel?: string; severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    roadSectionVersionId?: string; segmentId?: string | null;
+    roadSectionVersionId?: string; segmentId?: string | null; runId?: string | null
+    recurrence?: RecurrenceInput
   }): Promise<CandidateDecisionDto> {
     const actor = useAuthStore.getState().user
     const epoch = useAuthStore.getState().authEpoch
     if (!actor || actor.role !== 'PROJECT_MANAGER') throw new Error('Chỉ PM được quyết định Candidate.')
-    if (!payload.sourceVersion || !payload.geometryVersion || !payload.reason.trim()) throw new Error('Thiếu snapshot sourceVersion/geometryVersion hoặc lý do; phải đọc lại từ server.')
+    if (!payload.reason.trim()) throw new Error('Cần nhập lý do quyết định.')
+    if (payload.recurrence && (payload.decision !== 'KEEP_NEW' || !payload.recurrence.evidenceFileIds.length || !/^[0-9a-f]{64}$/.test(payload.recurrence.expectedLifecycleVersion))) throw new Error('Tái phát cần quyết định KEEP_NEW, bằng chứng và phiên bản vòng đời hợp lệ.')
+    // sourceVersion/geometryVersion: đọc lại từ BE (GET /candidates) ngay trước khi quyết định.
+    if (!payload.sourceVersion || !payload.geometryVersion) {
+      const m = await this.getCandidateMatches(projectId, payload.sourceKind, payload.sourceId)
+      payload = { ...payload, sourceVersion: m.source?.version, geometryVersion: m.geometryVersion }
+      if (!payload.sourceVersion || !payload.geometryVersion) throw new Error('BE không trả snapshot sourceVersion/geometryVersion của ứng viên.')
+    }
+    // KEEP_NEW cần roadSectionVersionId: lấy từ phạm vi bộ dữ liệu của lần chạy AI (run → dataset → scope), khớp segmentId nếu có.
+    if (payload.decision === 'KEEP_NEW' && !payload.roadSectionVersionId && payload.sourceKind === 'AI_DETECTION' && payload.runId) {
+      const run = (await apiClient.get<{ datasetId?: string | null }>(`/projects/${projectId}/ai-mock-runs/${payload.runId}`)).data
+      if (!run?.datasetId) throw new Error('Lần chạy AI chưa gắn bộ dữ liệu nên không xác định được phiên bản tuyến.')
+      const ds = (await apiClient.get<{ scope?: Array<{ routeVersionId: string; segmentIds?: string[] }> }>(`/datasets/${run.datasetId}`)).data
+      const scopes = ds.scope || []
+      const hit = payload.segmentId ? scopes.filter((x) => x.segmentIds?.some((id) => id.toLowerCase() === String(payload.segmentId).toLowerCase())) : scopes
+      const versions = [...new Set(hit.map((x) => x.routeVersionId))]
+      if (versions.length !== 1) throw new Error('Không xác định duy nhất phiên bản tuyến của phát hiện từ phạm vi bộ dữ liệu.')
+      payload = { ...payload, roadSectionVersionId: versions[0] }
+    }
     if (payload.decision === 'KEEP_NEW' && (!payload.defectTypeCode || !payload.severity || !payload.roadSectionVersionId)) throw new Error('Thiếu classification có căn cứ cho KEEP_NEW.')
     if (payload.decision === 'LINK_EXISTING' && (!payload.targetDefectId || !payload.targetVersion)) throw new Error('Thiếu Defect ID/version đích đã đọc.')
     const body = { sourceKind: payload.sourceKind, sourceId: payload.sourceId, sourceVersion: payload.sourceVersion,
@@ -622,7 +589,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       targetVersion: payload.decision === 'LINK_EXISTING' ? payload.targetVersion : null,
       classification: payload.decision === 'KEEP_NEW' ? { defectTypeCode: payload.defectTypeCode, severity: payload.severity,
         roadSectionVersionId: payload.roadSectionVersionId, segmentId: payload.segmentId ?? null, causeCategoryCode: null } : null,
-      supersedesDecisionId: payload.supersedesDecisionId ?? null, previousDecisionVersion: payload.previousDecisionVersion ?? null, recurrence: null }
+      supersedesDecisionId: payload.supersedesDecisionId ?? null, previousDecisionVersion: payload.previousDecisionVersion ?? null, recurrence: payload.recurrence ?? null }
     const fingerprint = JSON.stringify(body)
     const journalKey = `rg_candidate_command_${actor.id}_${projectId}_${payload.sourceId}`
     const saved = sessionStorage.getItem(journalKey)
@@ -638,13 +605,18 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
           headers: { 'Idempotency-Key': command.key }, transformRequest: [(data: unknown) => { current(); return JSON.stringify(data) }] })
         current(); command.receipt = response.data; sessionStorage.setItem(journalKey, JSON.stringify(command))
       }
+      if (!command.receipt.id || !command.receipt.version) throw new Error('BE chưa trả đủ mã và phiên bản biên nhận quyết định.')
       const decision = await this.getCandidateDecision(projectId, command.receipt.id)
       current()
-      if (decision.sourceId !== payload.sourceId || decision.decision !== payload.decision) throw new Error('Quyết định đọc lại không khớp yêu cầu.')
-      if (payload.sourceKind === 'AI_DETECTION') {
-        const candidate = await this.getAiCandidateFacts(projectId, payload.sourceId)
+      // Verify the committed receipt through the Web route; this read does not assert the current AI head.
+      if (decision.id !== command.receipt.id || decision.version !== command.receipt.version ||
+          decision.sourceKind !== payload.sourceKind || decision.sourceId !== payload.sourceId ||
+          decision.decision !== payload.decision || decision.defectId !== command.receipt.defectId ||
+          (payload.decision === 'LINK_EXISTING' && decision.defectId !== payload.targetDefectId) ||
+          (payload.decision === 'KEEP_NEW' && !decision.defectId)) throw new Error('Quyết định đọc lại không khớp yêu cầu hoặc biên nhận.')
+      if (command.body.recurrence) {
+        await defectRecurrenceService.confirm(projectId, decision.defectId!, command.body.recurrence)
         current()
-        if (candidate.disposition?.decisionId !== decision.id) throw new Error('Current head chưa khớp biên nhận; cần đối chiếu, không POST thêm.')
       }
       sessionStorage.removeItem(journalKey)
       return decision
@@ -880,38 +852,5 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     if (useAuthStore.getState().user !== actor) throw new Error('Phiên đã thay đổi; bỏ danh sách AI cũ.')
     return Array.from(new Map(allItems.map(item => [`${item.projectId}:${item.id}`.toLowerCase(), item])).values())
   },
-
-  /**
-   * Yêu cầu bay bổ sung để bù độ phủ trắc địa
-   */
-  async requestReFlight(
-    surveyId: string,
-    payload: {
-      note: string
-      targetKm?: string
-      operatorName?: string
-      surveyType?: 'AD_HOC' | 'PERIODIC'
-      dueDate?: string
-      projectId?: string
-    }
-  ): Promise<{ success: boolean; taskId: string }> {
-    void surveyId; void payload
-    throwLegacyBlocked()
-  },
-
-  /**
-   * Khóa Baseline đoạn đường sau khi thẩm định 100% (API-057 / POST /baseline-selections)
-   */
-  async lockBaseline(surveyId: string, projectId?: string): Promise<boolean> {
-    void surveyId; void projectId
-    throwLegacyBlocked()
-  },
-
-  /**
-   * Đặt lại mock data ban đầu
-   */
-  async resetSurveys(): Promise<void> {
-    throwLegacyBlocked()
-  }
 
 }

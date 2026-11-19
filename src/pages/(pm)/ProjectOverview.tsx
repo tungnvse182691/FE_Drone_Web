@@ -18,6 +18,8 @@ import { ProjectPersonnelCard } from './project-overview/ProjectPersonnelCard'
 import { ProjectCrsProfileCard } from './project-overview/ProjectCrsProfileCard'
 import { CloseProjectModal } from './projects/CloseProjectModal'
 import { ProjectRenewScopeCard } from './project-overview/ProjectRenewScopeCard'
+import { ProjectConstructionCard } from './project-overview/ProjectConstructionCard'
+import { ProjectLocalityCard } from './project-overview/ProjectLocalityCard'
 import { ProjectWarrantyCard } from './project-overview/ProjectWarrantyCard'
 
 export type { Segment, ProjectMember }
@@ -220,7 +222,11 @@ export const ProjectOverview: React.FC = () => {
             onNavigate={navigate}
           />
 
+          {project.id === projectId && (user?.role === RoleCode.SUPERVISOR || user?.role === RoleCode.PROJECT_MANAGER) && (
+            <ProjectConstructionCard key={`${authEpoch}:${user.id}:${project.id}`} projectId={project.id} actorId={user.id} isSupervisor={isSupervisor} />
+          )}
           {isSupervisor && <ProjectRenewScopeCard projectId={project.id} />}
+          {isSupervisor && <ProjectLocalityCard projectId={project.id} onSaved={() => { void loadProjectData() }} />}
 
           <ProjectSegmentsTable
             serverReadOnly={project.server_data_loaded}

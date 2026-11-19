@@ -1,7 +1,6 @@
 import React from 'react'
 import { CaseItem } from './types'
 import { ReworkModal } from './ReworkModal'
-import { VerifyModal } from './VerifyModal'
 import { ExportPdfAModal } from './ExportPdfAModal'
 import { ExportZipModal } from './ExportZipModal'
 import { DeclareConstructionModal } from './DeclareConstructionModal'
@@ -35,9 +34,6 @@ export interface CloseoutModalsProps {
   reworkNotes: string
   setReworkNotes: (s: string) => void
   handleSubmitRework: () => void
-  isCloseCaseModalOpen: boolean
-  setIsCloseCaseModalOpen: (open: boolean) => void
-  onConfirmCloseCase: () => void
   isExportModalOpen: boolean
   setIsExportModalOpen: (open: boolean) => void
   exportFormat: 'PDF_A' | 'ZIP_PACKAGE'
@@ -62,9 +58,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   reworkNotes,
   setReworkNotes,
   handleSubmitRework,
-  isCloseCaseModalOpen,
-  setIsCloseCaseModalOpen,
-  onConfirmCloseCase,
   isExportModalOpen,
   setIsExportModalOpen,
   exportFormat,
@@ -96,15 +89,6 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         onSubmitRework={handleSubmitRework}
       />
 
-      {/* MODAL 2: CLOSE COMPOSITE CASE MODAL (SUPERVISOR CLOSEOUT - BR-26) */}
-      <VerifyModal
-        isOpen={isCloseCaseModalOpen}
-        onClose={() => setIsCloseCaseModalOpen(false)}
-        onConfirm={onConfirmCloseCase}
-        caseItems={caseItems}
-        caseCode={currentPackage?.case_code}
-        projectName={currentPackage?.project_name}
-      />
 
       {/* MODAL 3: EXPORT EVIDENCE DOSSIER RPT-07 */}
       {isExportModalOpen && (

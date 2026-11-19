@@ -23,8 +23,6 @@ export const RiskAnalytics: React.FC = () => {
     setSelectedProject,
     selectedTimeRange,
     setSelectedTimeRange,
-    selectedTrack,
-    setSelectedTrack,
     statusFilter,
     setStatusFilter,
     searchQuery,
@@ -94,8 +92,6 @@ export const RiskAnalytics: React.FC = () => {
         setSelectedProject={setSelectedProject}
         selectedTimeRange={selectedTimeRange}
         setSelectedTimeRange={setSelectedTimeRange}
-        selectedTrack={selectedTrack}
-        setSelectedTrack={setSelectedTrack}
         sortField={sortField}
         setSortField={setSortField}
         sortAsc={sortAsc}

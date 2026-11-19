@@ -12,8 +12,6 @@ interface RiskHeaderProps {
   setSelectedProject: (val: string) => void
   selectedTimeRange: string
   setSelectedTimeRange: (val: string) => void
-  selectedTrack: string
-  setSelectedTrack: (val: string) => void
   sortField: 'as_of_timestamp' | 'code' | 'scope_display' | 'file_size_mb' | 'status'
   setSortField: (val: any) => void
   sortAsc: boolean
@@ -38,8 +36,6 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
   setSelectedProject,
   selectedTimeRange,
   setSelectedTimeRange,
-  selectedTrack,
-  setSelectedTrack,
   sortField,
   setSortField,
   sortAsc,
@@ -174,35 +170,6 @@ export const RiskHeader: React.FC<RiskHeaderProps> = ({
                 <option value="Q2_2026">Quý 2 / 2026 (01/04/2026 - 30/06/2026)</option>
                 <option value="MONTH_08_2026">Tháng 08/2026 (Kỳ giải trình thanh tra)</option>
                 <option value="YTD">Lũy kế 12 tháng gần nhất (Year-To-Date)</option>
-              </select>
-              <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                expand_more
-              </span>
-            </div>
-
-            {/* Workflow Track Selector */}
-            <div className="relative min-w-[220px]">
-              <select
-                disabled title="Chưa có phân loại luồng của export"
-                value={selectedTrack}
-                onChange={(e) => {
-                  setSelectedTrack(e.target.value)
-                  const trackLabel = 
-                    e.target.value === 'FAST_TRACK' 
-                      ? 'Quy trình xử lý nhanh' 
-                      : e.target.value === 'APPROVAL_TRACK' 
-                      ? 'Thẩm duyệt thông thường' 
-                      : e.target.value === 'EMERGENCY'
-                      ? 'Xử lý khẩn cấp (24/7)'
-                      : 'Tất cả quy trình'
-                  showToast(`Đã lọc danh sách theo: ${trackLabel}`)
-                }}
-                className="w-full pl-3 pr-8 py-2 bg-slate-50 text-slate-800 rounded-lg border border-slate-200 focus:outline-none focus:bg-white text-xs cursor-pointer appearance-none font-medium"
-              >
-                <option value="ALL">Tất cả quy trình (Xử lý nhanh, Thẩm duyệt, Khẩn cấp)</option>
-                <option value="FAST_TRACK">Quy trình xử lý nhanh (&lt; 24h)</option>
-                <option value="APPROVAL_TRACK">Thẩm duyệt thông thường (Hồ sơ kỹ thuật)</option>
-                <option value="EMERGENCY">Xử lý khẩn cấp (24/7)</option>
               </select>
               <span className="material-symbols-outlined text-[16px] text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
                 expand_more

@@ -4,6 +4,7 @@ import { ProposalHeader } from './repair-proposals/ProposalHeader'
 import { ProposalStats } from './repair-proposals/ProposalStats'
 import { ProposalTable } from './repair-proposals/ProposalTable'
 import { ProposalModals } from './repair-proposals/ProposalModals'
+import { ObligationTransferPanel } from './repair-proposals/ObligationTransferPanel'
 import { useRepairProposalsState } from './repair-proposals/useRepairProposalsState'
 import type {
   ProposalWorkPackage,
@@ -153,6 +154,8 @@ export const RepairProposals: React.FC = () => {
           showToast('Đã đặt lại tất cả bộ lọc.')
         }}
       />
+
+      <ObligationTransferPanel projects={projects} initialProjectId={currentProject?.id} />
 
       {/* 4. MODALS HUB */}
       <ProposalModals

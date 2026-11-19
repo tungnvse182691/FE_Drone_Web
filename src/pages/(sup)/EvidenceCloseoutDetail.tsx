@@ -1,3 +1,4 @@
+import { projectExportService, exportError } from '../../api/services/projectExportService'
 import React, { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -7,6 +8,7 @@ import { CloseoutHeader } from './evidence-closeout/CloseoutHeader'
 import { ComparisonViewer } from './evidence-closeout/ComparisonViewer'
 import { TechnicalCriteriaCard } from './evidence-closeout/TechnicalCriteriaCard'
 import { CloseoutModals } from './evidence-closeout/CloseoutModals'
+import { DefectClosurePanel } from './evidence-closeout/DefectClosurePanel'
 import { acceptanceService, AcceptancePackage } from '../../api/services/acceptanceService'
 import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 
@@ -22,7 +24,7 @@ const beErrorText = (err: unknown): string => {
 export const EvidenceCloseoutDetail: React.FC = () => {
   const { id, batchId } = useParams<{ id?: string; batchId?: string }>()
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, authEpoch } = useAuthStore()
 
   // Thẩm quyền xác thực trực tiếp từ phiên đăng nhập (KHÔNG dùng widget switcher đổi role giả lập)
   const isSupervisorView = user?.role === RoleCode.SUPERVISOR
@@ -81,7 +83,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
 
   // Modals state
   const [isReworkModalOpen, setIsReworkModalOpen] = useState(false)
-  const [isCloseCaseModalOpen, setIsCloseCaseModalOpen] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isDeclareModalOpen, setIsDeclareModalOpen] = useState(false)
 
@@ -212,31 +213,28 @@ export const EvidenceCloseoutDetail: React.FC = () => {
     } finally { writeGuard.release() }
   }
 
-  const handleConfirmCloseCase = async () => {
-    if (!allItemsAccepted) {
-      showToast('Chưa thể đóng gói/vụ việc khi còn hạng mục chưa nghiệm thu đạt!')
-      return
-    }
+  // Xuất hồ sơ nghiệm thu theo hạng mục: POST /projects/{p}/exports {kind:DOSSIER, repairItemIds:[item]} → poll SUCCEEDED → tải nội dung (BE bản mới).
+  const handleTriggerExport = async () => {
+    const projectId = currentPackage?.project_id
+    if (!currentItem || !projectId) { showToast('Chưa xác định hạng mục/dự án để xuất hồ sơ.'); return }
     if (!writeGuard.acquire()) return
+    setIsExporting(true)
     try {
-      const caseCode = currentPackage?.case_code
-      if (!caseCode) {
-        showToast('Không có mã vụ việc từ máy chủ để đóng.')
-        return
-      }
-      await acceptanceService.closeCompositeCase(caseCode, currentPackage?.id)
-      setIsCloseCaseModalOpen(false)
-      setIsCaseClosed(true)
-      showToast(`Đã đóng gói ${currentPackage?.code || caseCode} thành công! Hồ sơ đã lưu trữ bảo hành.`)
+      const format = exportFormat === 'PDF_A' ? 'PDF' : 'ZIP'
+      const created = await projectExportService.create(projectId, { kind: 'DOSSIER', format, includeOriginalFiles: format === 'ZIP' && includeDroneRawTiff, repairItemIds: [currentItem.id] })
+      let job = created
+      for (let i = 0; i < 60 && !['SUCCEEDED', 'FAILED'].includes(job.status); i++) { await new Promise((r) => setTimeout(r, 2000)); job = await projectExportService.detail(projectId, created.id) }
+      if (job.status === 'FAILED') throw new Error(`Máy chủ không tạo được hồ sơ xuất (${job.errorCode || 'FAILED'}).`)
+      if (job.status !== 'SUCCEEDED') throw new Error('Hồ sơ xuất chưa hoàn tất sau 120 giây; xem lại ở mục "Hồ sơ xuất" của Phân tích rủi ro.')
+      const file = await projectExportService.content(projectId, created.id)
+      const url = URL.createObjectURL(file.blob)
+      const a = document.createElement('a'); a.href = url; a.download = file.fileName; document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+      setIsExportModalOpen(false)
+      showToast(`Đã tạo và tải hồ sơ nghiệm thu (${format})${job.completeness === 'PARTIAL' ? ' — chưa đầy đủ: ' + (job.missingSections || []).join(', ') : ''}.`)
     } catch (err: any) {
-      showToast(err.message || 'Có lỗi khi đóng vụ việc.')
-    } finally { writeGuard.release() }
-  }
-
-  const handleTriggerExport = () => {
-    // Không giả lập "đã tạo file": máy chủ chưa có API xuất hồ sơ nghiệm thu từ màn này.
-    setIsExportModalOpen(false)
-    showToast('Xuất hồ sơ nghiệm thu từ màn này chưa nối máy chủ. Hãy tạo hồ sơ xuất thật ở màn "Phân tích rủi ro" (mục Hồ sơ xuất).')
+      showToast(exportError(err))
+    } finally { setIsExporting(false); writeGuard.release() }
   }
 
   if (loadError) {
@@ -307,7 +305,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         onAcceptItem={handleAcceptItem}
         onPMCloseFastTrack={handlePMCloseFastTrack}
         onPMSubmitToSupervisor={handlePMSubmitToSupervisor}
-        onOpenCloseCaseModal={() => setIsCloseCaseModalOpen(true)}
         onNavigateHome={() => navigate(`${basePath}/dashboard`)}
         onNavigateProposals={() => navigate(`${basePath}/acceptance`)}
       />
@@ -329,6 +326,14 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         onAcceptItem={handleAcceptItem}
       />
 
+      {isSupervisorView && !loadError && currentPackage?.project_id && currentItem.package_id === currentPackage.id && (
+        <DefectClosurePanel
+          key={`${authEpoch}:${currentPackage.project_id}:${currentPackage.id}:${currentItem.id}:${currentItem.status}`}
+          projectId={currentPackage.project_id}
+          packageId={currentPackage.id}
+          itemId={currentItem.id}
+        />
+      )}
       {/* Modals */}
       <CloseoutModals
         currentItem={currentItem}
@@ -342,9 +347,6 @@ export const EvidenceCloseoutDetail: React.FC = () => {
         reworkNotes={reworkNotes}
         setReworkNotes={setReworkNotes}
         handleSubmitRework={handleSubmitRework}
-        isCloseCaseModalOpen={isCloseCaseModalOpen}
-        setIsCloseCaseModalOpen={setIsCloseCaseModalOpen}
-        onConfirmCloseCase={handleConfirmCloseCase}
         isExportModalOpen={isExportModalOpen}
         setIsExportModalOpen={setIsExportModalOpen}
         exportFormat={exportFormat}

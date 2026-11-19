@@ -1,6 +1,6 @@
 import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
-import { RepairItemDetail, CREW_OPTIONS } from './types'
+import { RepairItemDetail } from './types'
 import { Tooltip } from '../../../components/ui/Tooltip'
 import { TruncatedText } from '../../../components/ui/TruncatedText'
 
@@ -9,8 +9,6 @@ export interface ItemsTableRowProps {
   isSupervisor: boolean
   onViewPhoto: (item: RepairItemDetail) => void
   onQuickApprove: (itemId: string) => void
-  onOpenDecisionModal: (item: RepairItemDetail, type: 'EVIDENCE' | 'RECONSIDER' | 'REJECT') => void
-  onCrewChange: (itemId: string, newCrew: string) => void
 }
 
 export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
@@ -18,8 +16,6 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
   isSupervisor,
   onViewPhoto,
   onQuickApprove,
-  onOpenDecisionModal,
-  onCrewChange
 }) => {
   const isItemApproved = item.status === 'APPROVED'
   const isItemEvidence = item.status === 'REQUEST_EVIDENCE'
@@ -229,47 +225,6 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
               </button>
             </Tooltip>
 
-            <Tooltip content="Yêu cầu bổ sung ảnh/thước đo thực địa">
-              <button
-                onClick={() => onOpenDecisionModal(item, 'EVIDENCE')}
-                type="button"
-                className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
-                  isItemEvidence
-                    ? 'bg-[#0284C7] text-white'
-                    : 'bg-white text-slate-500 hover:text-[#0284C7] hover:bg-sky-50'
-                }`}
-              >
-                <Icon name="photo_camera" size={13} />
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Yêu cầu PM xem xét lại giải pháp">
-              <button
-                onClick={() => onOpenDecisionModal(item, 'RECONSIDER')}
-                type="button"
-                className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
-                  isItemReconsider
-                    ? 'bg-[#F59E0B] text-white'
-                    : 'bg-white text-slate-500 hover:text-amber-700 hover:bg-amber-50'
-                }`}
-              >
-                <Icon name="sync" size={13} />
-              </button>
-            </Tooltip>
-
-            <Tooltip content="Từ chối giải pháp kỹ thuật này">
-              <button
-                onClick={() => onOpenDecisionModal(item, 'REJECT')}
-                type="button"
-                className={`w-6 h-6 rounded flex items-center justify-center transition cursor-pointer ${
-                  isItemRejected
-                    ? 'bg-[#E5484D] text-white'
-                    : 'bg-white text-slate-500 hover:text-[#E5484D] hover:bg-rose-50'
-                }`}
-              >
-                <Icon name="close" size={13} />
-              </button>
-            </Tooltip>
           </div>
         ) : (
           <Tooltip content="Quyền thẩm định và phê duyệt thuộc về Giám sát / Chủ đầu tư">
@@ -312,17 +267,7 @@ export const ItemsTableRow: React.FC<ItemsTableRowProps> = ({
           )
         ) : (
           isItemApproved ? (
-            <select
-              value={item.assigned_crew}
-              onChange={(e) => onCrewChange(item.id, e.target.value)}
-              className="w-full bg-white border border-slate-200 text-slate-800 text-[11px] py-1 px-1.5 rounded-lg shadow-2xs focus:outline-none focus:ring-1 focus:ring-brand-gold font-normal cursor-pointer"
-            >
-              {CREW_OPTIONS.map((crew) => (
-                <option key={crew} value={crew}>
-                  {crew}
-                </option>
-              ))}
-            </select>
+            <span className="text-[11px] text-slate-600">{item.assigned_crew || 'Chưa giao'} · PM giao việc ở màn "Phân công đội thi công"</span>
           ) : (
             <Tooltip content="Chỉ phân công đội thi công sau khi Giám sát đã phê duyệt phương án">
               <div className="relative">

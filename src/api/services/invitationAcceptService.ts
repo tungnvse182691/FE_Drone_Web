@@ -2,7 +2,13 @@ import { apiClient } from '../client'
 
 interface AcceptInput {invitationToken:string;displayName:string;password:string}
 let held:{body:AcceptInput;key:string;received:boolean}|null=null,busy=false
+export interface InvitationPreview { role?: string | null; projects?: Array<{ id: string; name: string }> | null; expiresAt?: string | null; inviterName?: string | null }
 export const invitationAcceptService={
+  /** POST /invitations/preview (ẩn danh, chỉ đọc, no-store): vai trò, dự án, hạn, người mời. Không tiêu thụ lời mời. 404 not_found = token sai/hết hạn/thu hồi/đã dùng. */
+  async preview(invitationToken:string,signal?:AbortSignal):Promise<InvitationPreview>{
+    if(!invitationToken)throw new Error('Thiếu mã lời mời trong đường dẫn.')
+    return (await apiClient.post<InvitationPreview>('/invitations/preview',{invitationToken},{signal})).data
+  },
   state:()=>({pending:!!held,busy}),
   async accept(body:AcceptInput){
     if(busy)throw new Error('Đang chấp nhận lời mời. Vui lòng chờ.')

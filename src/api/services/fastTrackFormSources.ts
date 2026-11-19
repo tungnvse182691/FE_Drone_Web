@@ -3,9 +3,11 @@ import { workflowCollection } from './workflowCollection'
 import { triageGeometryService } from './triageGeometryService'
 import type { FastTrackTaskInput } from '../../pages/(pm)/fast-track/types'
 
+
 export interface FastTrackSource {
   id: string; defectId: string; label: string; routeLabel: string
   pins: Pick<FastTrackTaskInput,'sourceKind'|'surveyId'|'segmentSetId'|'layoutRevisionId'|'slabId'|'mapPublicationId'|'crsProfileRevisionId'>
+
   requiredMeasurementType: number
 }
 export const fastTrackFormSources = {
@@ -30,6 +32,7 @@ export const fastTrackFormSources = {
     return {id:task.id,defectId:task.defectId,label:task.instructions || 'Hồ sơ nhiệm vụ hiện trường',routeLabel:road.name || road.code,requiredMeasurementType:task.requiredMeasurementType,
       pins:{sourceKind:task.sourceKind,surveyId:task.surveyId ?? null,segmentSetId:task.segmentSetId ?? null,layoutRevisionId:task.layoutRevisionId ?? null,slabId:task.slabId ?? null,mapPublicationId:task.mapPublicationId ?? null,crsProfileRevisionId:task.crsProfileRevisionId ?? null}}
   },
+  // surveyTaskId đọc từ AI không phải surveyId mà BE yêu cầu cho FIELD.
   async list(project: string, defectIds: string[]): Promise<FastTrackSource[]> {
     const tasks=await workflowCollection<any>(`/projects/${project}/field-inspection-tasks`,project)
     const candidates=tasks.filter(t=>defectIds.includes(t.defectId) && t.mode==='MEASURE_ONLY' && t.status!=='Cancelled')

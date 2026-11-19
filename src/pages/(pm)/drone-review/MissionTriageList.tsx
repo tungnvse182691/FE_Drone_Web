@@ -17,7 +17,6 @@ export interface MissionTriageListProps {
     customSeverityLevel?: string
   ) => void
   onRejectDetection?: (id: string, reason?: string) => void
-  onResetDetection?: (id: string) => void
   statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
   setStatusFilter: (f: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED') => void
   totalCount: number

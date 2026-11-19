@@ -1,7 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react'
 import {useAuthStore} from '../../../store/authStore'
 import {projectWarrantyService,type WarrantyInput,type WarrantySources} from '../../../api/services/projectWarrantyService'
-import {devFileBearerEnabled} from '../../../api/devFileBearer'
 import {exportError} from '../../../api/services/projectExportService'
 import {CoverageDocumentUpload} from '../fast-track/CoverageDocumentUpload'
 const empty={scope:'PROJECT' as WarrantyInput['scope'],roadSectionId:'',handoverDocumentId:'',sourceDocumentId:'',handoverDate:'',warrantyStartDate:'',warrantyEndDate:'',terms:''}
@@ -32,6 +31,6 @@ export function ProjectWarrantyCard({projectId,onOpenCoverage}:{projectId:string
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">{(['handoverDate','warrantyStartDate','warrantyEndDate'] as const).map((field,i)=><label key={field}>{['Ngày bàn giao','Bắt đầu bảo hành','Kết thúc bảo hành'][i]}<input aria-label={['Ngày bàn giao bảo hành','Ngày bắt đầu bảo hành','Ngày kết thúc bảo hành'][i]} required type="date" value={form[field]} onChange={e=>change(field,e.target.value)} className={control}/></label>)}</div>
       {form.warrantyStartDate&&form.handoverDate&&form.warrantyStartDate<form.handoverDate && <p role="alert" className="text-rose-700">Bắt đầu bảo hành không được trước bàn giao.</p>}{form.warrantyEndDate&&form.warrantyStartDate&&form.warrantyEndDate<form.warrantyStartDate && <p role="alert" className="text-rose-700">Kết thúc không được trước bắt đầu bảo hành.</p>}
       <label className="block">Điều khoản (tùy chọn)<textarea aria-label="Điều khoản bảo hành" value={form.terms} maxLength={2000} onChange={e=>change('terms',e.target.value)} className={control}/></label>
-    </fieldset><label className="flex gap-2"><input type="checkbox" aria-label="Xác nhận hồ sơ bảo hành hiệu lực" checked={ack} onChange={e=>setAck(e.target.checked)}/>Tôi đối chiếu hồ sơ và xác nhận tạo bảo hành hiệu lực; không đồng nghĩa đã được thi công.</label><button disabled={busy||!ready||(!held?.receipt&&!ack)||!!journalError||!devFileBearerEnabled()} className="rg-btn font-semibold text-[#8C6D1F] disabled:opacity-40">{busy?'Đang đối chiếu…':held?'Đối chiếu bảo hành đã gửi':'Tạo hồ sơ bảo hành hiệu lực'}</button></form>}
+    </fieldset><label className="flex gap-2"><input type="checkbox" aria-label="Xác nhận hồ sơ bảo hành hiệu lực" checked={ack} onChange={e=>setAck(e.target.checked)}/>Tôi đối chiếu hồ sơ và xác nhận tạo bảo hành hiệu lực; không đồng nghĩa đã được thi công.</label><button disabled={busy||!ready||(!held?.receipt&&!ack)||!!journalError} className="rg-btn font-semibold text-[#8C6D1F] disabled:opacity-40">{busy?'Đang đối chiếu…':held?'Đối chiếu bảo hành đã gửi':'Tạo hồ sơ bảo hành hiệu lực'}</button></form>}
   </section>
 }

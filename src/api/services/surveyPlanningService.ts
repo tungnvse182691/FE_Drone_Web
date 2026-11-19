@@ -154,18 +154,19 @@ export const surveyPlanningService = {
     for (const project of projects) {
       const [plans,tasks] = await Promise.all([this.records(project.projectId,'PLAN',signal),this.records(project.projectId,'TASK',signal)])
       // No planId or surveyType read contract at 4b46a6a. Keep independent records and unknown metadata.
-      const records=[...plans,...tasks], built: SurveyMissionItem[] = new Array(records.length)
-      let cursor=0 // đọc chi tiết song song (tối đa 8) thay vì tuần tự; giữ nguyên thứ tự hiển thị
-      const worker=async()=>{ while(cursor<records.length){ const idx=cursor++; const record=records[idx]
-        let presentation:SurveyPresentation|undefined,readError='',fresh=record
-        try{fresh=await this.detail(project.projectId,record.id,record.recordKind);presentation=await this.describe(fresh,describeCache)}catch(e:any){current();readError=`Không tải được thông tin khảo sát: ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`}
-        current();if(signal?.aborted)throw new Error('Đã hủy đọc khảo sát.')
-        built[idx]=({id:record.id,code:record.id,title:record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát',serverRecordKind:record.recordKind,
-        survey_type:null,survey_type_label:'API chưa trả loại khảo sát',project_id:project.projectId,project_name:`${project.projectCode} · ${project.name}`,
-        start_km:'',end_km:'',flight_date:fresh.plannedAt ? surveyPlannedAtLabel(fresh.plannedAt) : '',pilot_name:presentation?.operatorName||'',drone_model:'',scope_summary:presentation?.scopes.map(s=>`${s.routeName} · ${s.band} · ${s.ranges}${s.historical?' · Phân đoạn lịch sử':''}`).join(' / '),read_error:readError,
-        total_photos:Number.NaN,gsd_resolution:'',ai_defects_count:Number.NaN,ai_pending_count:Number.NaN,coverage_percent:Number.NaN,serverStatus:fresh.status,status_label:surveyStatusLabel(fresh.status)} as SurveyMissionItem)
-      } }
-      await Promise.all(Array.from({length:Math.min(8,records.length)},worker))
+      const built: SurveyMissionItem[] = []
+      // BE bản mới: list đã có summary (operatorDisplayName, scopeSummary[], datasetCount, plannedEndAt) → KHÔNG gọi detail từng bản ghi (hết N+1).
+      // Phạm vi chi tiết (tên tuyến, lý trình) chỉ đọc khi mở chi tiết (describe trong SurveyRecordDetailModal).
+      const BAND: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Mép trái', RIGHT_EDGE: 'Mép phải' }
+      for (const record of [...plans, ...tasks] as any[]) {
+        current(); if (signal?.aborted) throw new Error('Đã hủy đọc khảo sát.')
+        const summary: Array<{ targetBand: string; segmentCount: number }> = Array.isArray(record.scopeSummary) ? record.scopeSummary : []
+        const scopeText = record.scopeAvailability === 'MISSING' || !summary.length ? 'Chưa lưu phạm vi trong bản ghi' : summary.map(x => `${BAND[x.targetBand] || x.targetBand} · ${x.segmentCount} phân đoạn`).join(' / ')
+        built.push({ id: record.id, code: record.id, title: record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát', serverRecordKind: record.recordKind,
+          survey_type: null, survey_type_label: 'API chưa trả loại khảo sát', project_id: project.projectId, project_name: `${project.projectCode} · ${project.name}`,
+          start_km: '', end_km: '', flight_date: record.plannedAt ? surveyPlannedAtLabel(record.plannedAt) : '', pilot_name: record.recordKind === 'TASK' ? (record.operatorDisplayName || 'Chưa có tên người được giao') : '', drone_model: '', scope_summary: scopeText, read_error: '',
+          total_photos: Number.NaN, gsd_resolution: '', ai_defects_count: Number.NaN, ai_pending_count: Number.NaN, coverage_percent: Number.NaN, serverStatus: record.status, status_label: surveyStatusLabel(record.status) } as SurveyMissionItem)
+      }
       rows.push(...built)
     }
     return rows

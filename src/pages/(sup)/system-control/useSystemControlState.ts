@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { RoleCode } from '../../../types/enums'
-import { AIModelVersion } from '../../../types/domain'
 import { defectTypeCatalog, DefectTypeOption } from '../../../api/services/defectTypeCatalog'
 import { useLegalHoldState } from './useLegalHoldState'
 
-export const AI_MODELS_UNAVAILABLE = 'Máy chủ chưa có API danh mục mô hình AI'
 export const DEFECT_CATALOG_READONLY = 'Máy chủ chỉ cho đọc danh mục'
 export const DEFECT_CATALOG_PM_ONLY = 'Máy chủ chỉ cho PM đọc danh mục loại lỗi'
 export const EXPORT_LABELS_UNAVAILABLE = 'Máy chủ chưa có API xuất nhãn huấn luyện'
@@ -21,7 +19,7 @@ export function useSystemControlState(
   isSupervisor: boolean
 ) {
   const isPM = currentUser?.role === RoleCode.PROJECT_MANAGER
-  const [activeTab, setActiveTab] = useState<'retention-legal-hold' | 'ai-models' | 'defect-catalog'>(
+  const [activeTab, setActiveTab] = useState<'retention-legal-hold' | 'defect-catalog'>(
     'retention-legal-hold'
   )
 
@@ -30,9 +28,6 @@ export function useSystemControlState(
       setActiveTab('retention-legal-hold')
     }
   }, [isSupervisor, isPM])
-
-  // BE chưa có API danh mục/phiên bản mô hình AI -> luôn rỗng, không dữ liệu mẫu
-  const aiModels: AIModelVersion[] = []
 
   const [defectCatalog, setDefectCatalog] = useState<DefectTypeOption[]>([])
   const [defectCatalogLoading, setDefectCatalogLoading] = useState(false)
@@ -74,7 +69,6 @@ export function useSystemControlState(
     isPM,
     activeTab,
     setActiveTab,
-    aiModels,
     defectCatalog,
     defectCatalogLoading,
     defectCatalogError,

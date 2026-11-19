@@ -5,6 +5,8 @@ let generation=0
 let pending:AbortController|null=null
 const role=(value:string)=>value==='PM'?'PROJECT_MANAGER':value==='SUP'?'SUPERVISOR':value
 export function devFileBearerEnabled() {
+  // Đã nghỉ hưu: BE bản mới mở Web cookie cho uploads/files/warranties/baseline/processing/ai-mock/retention (xem NGHIEM-THU-THEO-LUONG.md).
+  // Đặt VITE_DEV_FILE_BEARER=true chỉ khi cần tái hiện route Bearer-only trên BE cũ.
   return import.meta.env.DEV && import.meta.env.VITE_DEV_FILE_BEARER==='true' &&
     typeof location!=='undefined' && ['localhost','127.0.0.1','[::1]'].includes(location.hostname)
 }

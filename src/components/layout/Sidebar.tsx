@@ -80,7 +80,7 @@ export const Sidebar: React.FC = () => {
         { label: 'Gói sửa chữa', path: '/pm/proposals', icon: Boxes },
         { label: 'Nghiệm thu', path: '/pm/acceptance', icon: ShieldCheck },
         { label: 'Nhiệm vụ & Đo đạc hiện trường', path: '/pm/field-tasks', icon: ClipboardList },
-        { label: 'Xử lý xung đột ngoại tuyến', path: '/pm/conflicts', icon: GitCompare }
+        { label: 'Điều phối ngoại tuyến', path: '/pm/offline', icon: GitCompare }
       ]
     },
     {
@@ -129,7 +129,7 @@ export const Sidebar: React.FC = () => {
         { label: 'Phê duyệt gói', path: '/sup/proposals', icon: Boxes },
         { label: 'Nghiệm thu đóng đợt', path: '/sup/acceptance', icon: ShieldCheck },
         { label: 'Nghiệm thu hiện trường', path: '/sup/field-tasks', icon: ClipboardList },
-        { label: 'Xử lý xung đột ngoại tuyến', path: '/sup/conflicts', icon: GitCompare }
+        { label: 'Điều phối ngoại tuyến', path: '/sup/offline', icon: GitCompare }
       ]
     },
     {

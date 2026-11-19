@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { validateHandoverFile } from '../../../api/services/handoverUploadService'
 import { Icon } from '../../../components/ui/Icon'
 
 export interface PmOption {
@@ -26,8 +27,9 @@ export interface CreateProjectModalProps {
   onChangeStartDate: (val: string) => void
   endDate: string // warrantyEndDate
   onChangeEndDate: (val: string) => void
-  handoverFiles?: string[]
-  onChangeHandoverFiles?: (files: string[]) => void
+  handoverFile?: File | null
+  onChangeHandoverFile?: (file: File | null) => void
+  stepLabel?: string
   pmLoading?: boolean
   pmError?: string | null
   onRetryPms?: () => void
@@ -55,8 +57,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onChangeStartDate,
   endDate,
   onChangeEndDate,
-  handoverFiles = [],
-  onChangeHandoverFiles,
+  handoverFile = null,
+  onChangeHandoverFile,
+  stepLabel = '',
   pmLoading = false,
   pmError = null,
   onRetryPms,
@@ -79,6 +82,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   }, [startDate, endDate])
 
   const isFormValid = useMemo(() => {
+    if (validateHandoverFile(handoverFile)) return false
     if (pendingCreate) return !isSubmitting
     return (
       ['32648', '32649'].includes(engineeringCrs) &&
@@ -92,7 +96,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       !isDateInvalid &&
       !isSubmitting
     )
-  }, [engineeringCrs, projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pendingCreate, pmOptions])
+  }, [engineeringCrs, projectName, projectCode, projectPM, startDate, endDate, isDateInvalid, isSubmitting, pendingCreate, pmOptions, handoverFile])
 
   if (!isOpen) return null
 
@@ -304,47 +308,45 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 )}
               </section>
 
-              {/* 4. Tài liệu bàn giao */}
+              {/* 4. Tài liệu bàn giao — BẮT BUỘC (BE: thiếu file trả 428 handover_required) */}
               <section className="rounded-xl border border-brand-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="rg-section-title"><Icon name="attach_file" size={16} className="text-brand-navy" /><p>Tài liệu / Biên bản bàn giao ban đầu</p></div>
-                  <span className="rg-pill rg-pill-neutral">Tùy chọn</span>
+                  <span className="rg-pill rg-pill-warn">Bắt buộc</span>
                 </div>
                 <p className="rg-hint">
-                  Sau khi GET xác nhận tạo dự án, mở chi tiết để chuẩn bị tuyến, Crew, tài liệu và bảo hành. Dữ liệu ngày bàn giao không thay thế tệp đã xác minh hoặc xác nhận độ phủ; API hiện chưa có thao tác gắn bổ sung tệp vào hồ sơ bàn giao đã tạo.
+                  Biên bản bàn giao (PDF, tối đa 20 MiB) được tải lên và xác minh trước khi tạo dự án. Điều phối nhanh dùng tài liệu này làm căn cứ bàn giao khi xác nhận độ phủ, nên không thể tạo dự án thiếu biên bản.
                 </p>
-                <label className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-brand-border rounded-lg bg-slate-50/60 text-slate-500 cursor-not-allowed">
-                  <input disabled type="file" multiple className="hidden" />
+                <label htmlFor="project-handover-file" className={`flex items-center justify-center gap-2 p-3 border-2 border-dashed rounded-lg text-slate-600 ${busy ? 'border-brand-border bg-slate-50/60 cursor-not-allowed' : 'border-brand-border bg-slate-50/60 hover:border-brand-gold cursor-pointer'}`}>
+                  <input
+                    id="project-handover-file"
+                    data-testid="project-handover-file"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="hidden"
+                    disabled={busy}
+                    onChange={(e) => { onChangeHandoverFile?.(e.target.files?.[0] || null); e.target.value = '' }}
+                  />
                   <Icon name="upload_file" size={18} className="text-slate-400" />
-                  <span>Chưa hỗ trợ tải tệp trước khi tạo dự án. Có thể tạo không đính kèm.</span>
+                  <span>{handoverFile ? 'Chọn tệp khác' : 'Chọn biên bản bàn giao (PDF)'}</span>
                 </label>
-                {handoverFiles && handoverFiles.length > 0 ? (
-                  <div className="space-y-1">
-                    {handoverFiles.map((file, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white border border-brand-border text-[11px]"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <Icon name="description" size={16} className="text-brand-gold shrink-0" />
-                          <span className="truncate font-medium text-slate-800">{file}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onChangeHandoverFiles?.(handoverFiles.filter((_, i) => i !== idx))}
-                          className="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer"
-                          title="Xóa tài liệu"
-                        >
-                          <Icon name="close" size={14} />
-                        </button>
-                      </div>
-                    ))}
+                {handoverFile ? (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-brand-border text-[11px]">
+                    <div className="flex items-center gap-2 truncate">
+                      <Icon name="description" size={16} className="text-brand-gold shrink-0" />
+                      <span className="truncate font-medium text-slate-800" data-testid="project-handover-name">{handoverFile.name}</span>
+                      <span className="text-slate-500 shrink-0">{(handoverFile.size / 1048576).toFixed(2)} MB</span>
+                    </div>
+                    <button type="button" disabled={busy} onClick={() => onChangeHandoverFile?.(null)} className="text-slate-400 hover:text-rose-600 transition-colors p-1 cursor-pointer" title="Bỏ tệp">
+                      <Icon name="close" size={14} />
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 italic text-center">
-                    Chưa có tài liệu bàn giao nào được đính kèm.
-                  </p>
+                  <p className="text-[11px] text-rose-600 text-center" role="note">Chưa chọn biên bản bàn giao — không thể khởi tạo dự án.</p>
                 )}
+                {handoverFile && validateHandoverFile(handoverFile) && <p className="text-[11px] text-rose-600" role="alert">{validateHandoverFile(handoverFile)}</p>}
+                {pendingCreate && <p className="rg-hint">Có yêu cầu tạo dự án đang chờ đối chiếu: chọn lại đúng tệp PDF đã dùng lần trước.</p>}
+                {isSubmitting && stepLabel && <p className="rg-hint" role="status">{stepLabel}</p>}
               </section>
             </fieldset>
           </div>

@@ -25,7 +25,6 @@ export const SEGMENT_COLORS = [
 // Không còn tim tuyến/dự án mẫu trong FE: tim tuyến và dự án lấy từ API BE
 export const ROUTE_COORDINATES: [number, number][] = []
 export const ROUTE_KM_POINTS: number[] = []
-export const PM_ASSIGNED_PROJECTS: AssignedProjectOption[] = []
 
 // ==========================================
 // 1. Helpers GeoJSON Alignment & Ribbon
@@ -867,8 +866,6 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
     ? p.stationing_text.split('➔')[0].trim()
     : 'Chưa thiết lập tim tuyến'
 
-  const staticMatch = PM_ASSIGNED_PROJECTS.find((m) => m.id === p.id || m.code === p.code)
-
   return {
     id: p.id,
     code: p.code,
@@ -878,13 +875,13 @@ export function buildDynamicProjectAlignment(p: HubProject): AssignedProjectOpti
     stationOriginText: stationText,
     stationOriginKm: startKm,
     endKm: endKm,
-    crs: 'EPSG:32648 (UTM Zone 48N)',
-    lengthKm: lengthKm || staticMatch?.lengthKm || 0.0,
-    defaultCoords: staticMatch?.defaultCoords || [],
-    defaultKmPoints: staticMatch?.defaultKmPoints || [],
-    defaultSegments: staticMatch?.defaultSegments || [],
-    defaultBranches: staticMatch?.defaultBranches || [],
-    defaultManualText: staticMatch?.defaultManualText || ''
+    crs: p.engineering_utm_srid ? `EPSG:${p.engineering_utm_srid}` : 'Chưa có CRS kỹ thuật từ máy chủ',
+    lengthKm,
+    defaultCoords: [],
+    defaultKmPoints: [],
+    defaultSegments: [],
+    defaultBranches: [],
+    defaultManualText: ''
   }
 }
 

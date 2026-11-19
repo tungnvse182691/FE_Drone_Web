@@ -1,11 +1,10 @@
 import { apiClient } from '../client'
-import { devFileBearerEnabled } from '../devFileBearer'
 import { fastTrackStorage } from './fastTrackJournal'
 import { useAuthStore } from '../../store/authStore'
 
 interface Session { id:string;fileId:string;status:string;partSizeBytes:number;version:string }
 interface UploadJournal {
-  body:{purpose:string;projectId:string;targetId:null;fileName:string;mediaType:string;sizeBytes:number;checksumSha256:string}
+  body:{purpose:string;projectId:string;targetId:string|null;fileName:string;mediaType:string;sizeBytes:number;checksumSha256:string}
   key:string;receipt?:Session;parts:Array<{partNumber:number;eTag:string}>;leases:Record<number,string>
   complete?:{key:string;etag:string;body:{parts:Array<{partNumber:number;eTag:string}>;checksumSha256:string};receipt?:Session}
 }
@@ -13,7 +12,6 @@ const running=new Set<string>()
 export const coverageDocumentService={
   pending(project:string):UploadJournal|null {return JSON.parse(localStorage.getItem(fastTrackStorage(project,'document-upload')) || 'null')},
   async upload(project:string,file:File) {
-    if(!devFileBearerEnabled())throw new Error('Tải tài liệu tạm chỉ bật trong dev/test local.')
     const actor=useAuthStore.getState(),epoch=actor.authEpoch
     if(!actor.user || !['PROJECT_MANAGER','SUPERVISOR'].includes(actor.user.role))throw new Error('Chưa có quyền tải tài liệu dự án.')
     const key=fastTrackStorage(project,'document-upload'),active=()=>{if(useAuthStore.getState().authEpoch!==epoch)throw new Error('Phiên đã đổi; giữ tiến độ của tài khoản cũ.')}
@@ -22,7 +20,7 @@ export const coverageDocumentService={
     try {
       if(!file.size || !['application/pdf','image/jpeg','image/png'].includes(file.type))throw new Error('Chọn PDF, JPEG hoặc PNG có nội dung.')
       const bytes=await file.arrayBuffer(),sha=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),v=>v.toString(16).padStart(2,'0')).join('');active()
-      const body={purpose:'DOCUMENT',projectId:project,targetId:null,fileName:file.name,mediaType:file.type,sizeBytes:file.size,checksumSha256:sha}
+      const body={purpose:'DOCUMENT',projectId:project,targetId:project,fileName:file.name,mediaType:file.type,sizeBytes:file.size,checksumSha256:sha}
       let held=this.pending(project)
       if(held && JSON.stringify(held.body)!==JSON.stringify(body))throw new Error('Chọn lại đúng tệp của phiên tải đang chờ; không đổi body/key.')
       if(!held){held={body,key:crypto.randomUUID(),parts:[],leases:{}};localStorage.setItem(key,JSON.stringify(held))}

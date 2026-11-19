@@ -124,7 +124,8 @@ export const ProjectList: React.FC = () => {
     d.setFullYear(d.getFullYear() + 3)
     return d.toISOString().split('T')[0]
   })
-  const [handoverFiles, setHandoverFiles] = useState<string[]>([])
+  const [handoverFile, setHandoverFile] = useState<File | null>(null)
+  const [stepLabel, setStepLabel] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createErrorMessage, setCreateErrorMessage] = useState<string | null>(null)
 
@@ -147,7 +148,7 @@ export const ProjectList: React.FC = () => {
       setNewStartDate(pending.body.handoverDate)
       setNewEndDate(pending.body.warrantyEndDate)
       setNewProjectRegion(pending.body.description || '')
-      setHandoverFiles([])
+      setHandoverFile(null)
       setCreateErrorMessage(null)
       setIsModalOpen(true)
       return
@@ -161,7 +162,7 @@ export const ProjectList: React.FC = () => {
     const d = new Date()
     d.setFullYear(d.getFullYear() + 3)
     setNewEndDate(d.toISOString().split('T')[0])
-    setHandoverFiles([])
+    setHandoverFile(null)
     setCreateErrorMessage(null)
     setIsModalOpen(true)
   }
@@ -185,7 +186,8 @@ export const ProjectList: React.FC = () => {
         primaryPmId: newProjectPM,
         handoverDate: newStartDate,
         warrantyEndDate: newEndDate,
-        handoverFileIds: handoverFiles,
+        handoverFile,
+        onStep: current() ? setStepLabel : undefined,
         region: newProjectRegion
       }, pendingCreate)
       if (!current()) return
@@ -388,8 +390,9 @@ export const ProjectList: React.FC = () => {
         onChangeStartDate={setNewStartDate}
         endDate={newEndDate}
         onChangeEndDate={setNewEndDate}
-        handoverFiles={handoverFiles}
-        onChangeHandoverFiles={setHandoverFiles}
+        handoverFile={handoverFile}
+        onChangeHandoverFile={setHandoverFile}
+        stepLabel={stepLabel}
         isSubmitting={isSubmitting}
         errorMessage={createErrorMessage}
         onSubmit={handleCreateProjectSubmit}

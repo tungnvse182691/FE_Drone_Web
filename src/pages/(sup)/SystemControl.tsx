@@ -1,12 +1,9 @@
 import React from 'react'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
-import { AIModelsTab } from './system-control/AIModelsTab'
 import { DefectCatalogTab } from './system-control/DefectCatalogTab'
 import { RetentionLegalHoldTab } from './system-control/RetentionLegalHoldTab'
 import { SystemControlHeader } from './system-control/SystemControlHeader'
-import { CreateDeletionRequestModal } from './system-control/CreateDeletionRequestModal'
-import { DeletionRequestDetailModal } from './system-control/DeletionRequestDetailModal'
 import { ProjectRetentionDetailModal } from './system-control/ProjectRetentionDetailModal'
 import { LegalHoldModal } from './system-control/LegalHoldModal'
 import { useSystemControlState } from './system-control/useSystemControlState'
@@ -34,7 +31,6 @@ export const SystemControl: React.FC = () => {
       {/* 1. Header chuyên biệt cho Lưu trữ hồ sơ & Phong tỏa pháp lý */}
       <SystemControlHeader
         isSupervisor={isSupervisor}
-        onOpenCreateDeletion={() => s.setShowCreateDeletionRequestModal(true)}
       />
 
       {/* 2. Tabs Navigation (Chỉ hiển thị cho Supervisor khi cần chuyển sang AI Models hoặc Danh mục khiếm khuyết) */}
@@ -74,34 +70,6 @@ export const SystemControl: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => s.setActiveTab('ai-models')}
-            className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-              s.activeTab === 'ai-models'
-                ? 'text-slate-900 font-bold border-b-2 border-[#C9A227]'
-                : 'border-b-2 border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <span
-              className={`material-symbols-outlined text-[18px] ${
-                s.activeTab === 'ai-models' ? 'text-[#C9A227]' : 'text-slate-400'
-              }`}
-            >
-              psychology
-            </span>
-            <span>Mô hình AI &amp; Đánh giá</span>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${
-                s.activeTab === 'ai-models'
-                  ? 'bg-amber-50 text-amber-900 border-amber-200 font-bold'
-                  : 'bg-slate-100 text-slate-600 border-transparent'
-              }`}
-            >
-              Chưa có API
-            </span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => s.setActiveTab('defect-catalog')}
             className={`pb-3 px-4 flex items-center gap-2 text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               s.activeTab === 'defect-catalog'
@@ -135,19 +103,11 @@ export const SystemControl: React.FC = () => {
         {s.activeTab === 'retention-legal-hold' && (
           <RetentionLegalHoldTab
             legalHoldProjects={s.legalHoldProjects}
-            deletionRequests={s.deletionRequests}
             isSupervisor={isSupervisor}
             handleToggleLegalHold={s.handleToggleLegalHold}
             onOpenLegalHoldModal={s.handleOpenLegalHoldModal}
-            handleRejectDeletion={s.handleRejectDeletion}
-            handleApprovePurge={s.handleApprovePurge}
-            onViewDetail={s.handleViewDetail}
             onViewProjectDetail={s.handleViewProjectDetail}
           />
-        )}
-
-        {canSeeTabs && s.activeTab === 'ai-models' && (
-          <AIModelsTab aiModels={s.aiModels} />
         )}
 
         {canSeeTabs && s.activeTab === 'defect-catalog' && (
@@ -160,38 +120,11 @@ export const SystemControl: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Modal tạo yêu cầu xóa dữ liệu (với cơ chế chặn tự động theo BR-45) */}
-      <CreateDeletionRequestModal
-        showCreateDeletionRequestModal={s.showCreateDeletionRequestModal}
-        setShowCreateDeletionRequestModal={s.setShowCreateDeletionRequestModal}
-        newDelProject={s.newDelProject}
-        setNewDelProject={s.setNewDelProject}
-        newDelDataType={s.newDelDataType}
-        setNewDelDataType={s.setNewDelDataType}
-        newDelSize={s.newDelSize}
-        setNewDelSize={s.setNewDelSize}
-        newDelJustification={s.newDelJustification}
-        setNewDelJustification={s.setNewDelJustification}
-        handleCreateDeletionSubmit={s.handleCreateDeletionSubmit}
-        legalHoldProjects={s.legalHoldProjects}
-      />
-
-      {/* 5. Modal xem chi tiết yêu cầu xóa hồ sơ lưu trữ (GET /retention/deletion-requests/{requestId}) */}
-      <DeletionRequestDetailModal
-        request={s.selectedDeletionRequest}
-        isOpen={s.showDetailModal}
-        isSupervisor={isSupervisor}
-        onClose={() => s.setShowDetailModal(false)}
-        onApprove={s.handleApprovePurge}
-        onReject={s.handleRejectDeletion}
-      />
-
       {/* 6. Modal xem chi tiết hồ sơ lưu trữ & quyết định phong tỏa pháp lý của từng dự án */}
       <ProjectRetentionDetailModal
         project={s.selectedProjectForDetail}
         isOpen={s.showProjectDetailModal}
         onClose={() => s.setShowProjectDetailModal(false)}
-        onOpenCreateDeletionForProject={s.handleOpenCreateDeletionForProject}
       />
 
       {/* 7. Modal thiết lập / gỡ bỏ phong tỏa pháp lý (Legal Hold - QT14, BR-45) */}

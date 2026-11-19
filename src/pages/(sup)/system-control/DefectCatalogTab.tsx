@@ -1,7 +1,8 @@
 import React from 'react'
 import { Plus, Edit2, ShieldCheck } from 'lucide-react'
 import { DefectTypeOption } from '../../../api/services/defectTypeCatalog'
-import { DEFECT_CATALOG_PM_ONLY, DEFECT_CATALOG_READONLY } from './useSystemControlState'
+import { DEFECT_CATALOG_READONLY } from './useSystemControlState'
+import { DefectTypeAdminPanel } from './DefectTypeAdminPanel'
 
 export interface DefectCatalogTabProps {
   defectCatalog: DefectTypeOption[]
@@ -36,7 +37,7 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
         </div>
 
         {/* Nút thêm mới loại lỗi */}
-        {(
+        {isPM && (
           <button
             type="button"
             disabled
@@ -50,13 +51,9 @@ export const DefectCatalogTab: React.FC<DefectCatalogTabProps> = ({
       </div>
 
       {/* Danh sách các loại khiếm khuyết */}
-      <p className="text-[11px] text-slate-500">{DEFECT_CATALOG_READONLY}.</p>
+      {isPM && <p className="text-[11px] text-slate-500">{DEFECT_CATALOG_READONLY}.</p>}
 
-      {!isPM && (
-        <div className="p-4 text-center text-xs text-slate-600 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-          {DEFECT_CATALOG_PM_ONLY}
-        </div>
-      )}
+      {!isPM && <DefectTypeAdminPanel />}
       {isPM && loading && (
         <div className="p-4 text-center text-xs text-slate-500">Đang tải danh mục loại lỗi từ máy chủ...</div>
       )}

@@ -1,3 +1,4 @@
+import { taskAssigneeService } from './taskAssigneeService'
 import { apiClient } from '../client'
 import { FieldTask } from '../../types/domain'
 import { projectService } from './projectService'
@@ -148,6 +149,14 @@ export const fieldTaskService = {
     )
 
     const rawTasks = tasksByProject.flat()
+    // Tên người được giao: GET /projects/{p}/task-assignees (batch ≤100); lỗi tên không chặn danh sách, hiện nhãn "chưa có tên từ máy chủ".
+    const assigneeNames = new Map<string, string>()
+    await Promise.all(targetProjectIds.map(async (pId) => {
+      const ids = rawTasks.filter((t) => t.projectId === pId && t.assignedToUserId).map((t) => t.id)
+      if (!ids.length) return
+      try { for (const [k, v] of await taskAssigneeService.currentNames(pId, ids)) assigneeNames.set(k, v) }
+      catch (e: any) { console.warn('[fieldTaskService] Không đọc được task-assignees:', e?.response?.status, e?.response?.data?.code) }
+    }))
 
     // Lấy thông tin phụ trợ (Tên Dự án, Kỹ sư, Khiếm khuyết) từ DB để ánh xạ đầy đủ
     const projectsList = await projectService.fetchProjects()
@@ -184,7 +193,7 @@ export const fieldTaskService = {
         measurement_type: parsedMethod,
         chainage_km: parsedChainage,
         status: mapBackendTaskStatus(item.status),
-        technician_name: item.assignedToUserId ? `Crew ${item.assignedToUserId.slice(0, 8)} (chưa có tên từ máy chủ)` : 'Chưa phân công',
+        technician_name: item.assignedToUserId ? (assigneeNames.get(item.id.toLowerCase()) || `Crew ${item.assignedToUserId.slice(0, 8)} (chưa có tên từ máy chủ)`) : 'Chưa phân công',
         created_at: undefined,
         lane: parsedLane,
         notes: item.instructions || item.purpose || '',

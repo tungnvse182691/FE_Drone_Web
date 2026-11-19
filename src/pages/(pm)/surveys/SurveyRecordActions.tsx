@@ -7,13 +7,14 @@ import { exportError } from '../../../api/services/projectExportService'
 import { Feedback, Field, PanelButton, PanelShell, SectionTitle } from '../../../components/ui/PanelKit'
 import { Icon } from '../../../components/ui/Icon'
 import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
+import { canPostpone, taskActions, type TaskAct } from './surveyActionAvailability'
 
-type TaskAct = 'reassign' | 'cancel' | 'supplement'
+const TASK_LABEL: Record<TaskAct, string> = { reassign: 'Giao lại cho Operator khác', cancel: 'Hủy nhiệm vụ', supplement: 'Tạo nhiệm vụ bổ sung' }
 const BAND_LABEL: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Lề trái', RIGHT_EDGE: 'Lề phải' }
 
 /** PM-06: hoãn kế hoạch khảo sát; giao lại, hủy hoặc tạo nhiệm vụ bổ sung cho nhiệm vụ khảo sát. Hiển thị sau khi đã đọc chi tiết từ BE. */
 export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () => void }> = ({ record, onDone }) => {
-  const [act, setAct] = useState<TaskAct>('reassign')
+  const [selectedAct, setAct] = useState<TaskAct>('reassign')
   const [reason, setReason] = useState('')
   const [operatorId, setOperatorId] = useState('')
   const [dueAt, setDueAt] = useState('')
@@ -29,14 +30,17 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   const [message, setMessage] = useState(saved.message || '')
   const [params, setParams] = useSearchParams()
   const isTask = record.recordKind === 'TASK'
-  const closed = ['CANCELLED', 'POSTPONED'].includes(record.status)
+  const allowed = isTask ? taskActions(record.status, record.supplementTaskId) : []
+  const act = allowed.includes(selectedAct) ? selectedAct : allowed[0]
+  const closed = isTask ? !act : !canPostpone(record.status)
+  const operatorNeeded = allowed.some(action => action !== 'cancel')
 
   useEffect(() => {
-    if (!isTask || closed) return
+    if (!operatorNeeded) return
     let alive = true
     surveyPlanningService.operators(record.projectId).then((rows) => { if (alive) setOperators(rows) }).catch((e) => { if (alive) setError(`Không đọc được danh sách Operator: ${exportError(e)}`) })
     return () => { alive = false }
-  }, [isTask, closed, record.projectId])
+  }, [operatorNeeded, record.projectId])
 
   if (closed && message) return <div className="rg-alert rg-alert-ok mt-4"><Icon name="check_circle" size={16} className="mt-px" /><p role="status" className="min-w-0">{message}</p></div>
   if (closed) return <div className="rg-empty mt-4 text-xs"><Icon name="lock" size={18} className="text-slate-400" /><p>Bản ghi ở trạng thái {surveyStatusLabel(record.status)}: không còn thao tác.</p></div>
@@ -47,7 +51,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   const hasSupplementScope = supplementScope().length > 0
 
   const submit = async () => {
-    if (!guard.acquire()) return
+    if (closed || !guard.acquire()) return
     setBusy(true); setError(''); setMessage(''); setChildId('')
     try { sessionStorage.removeItem(memo) } catch { /* không bắt buộc */ }
     let createdChild = ''
@@ -79,9 +83,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
         {isTask && (
           <Field label="Thao tác nhiệm vụ khảo sát" span="col-span-12 md:col-span-6">
             <select aria-label="Thao tác nhiệm vụ khảo sát" disabled={busy} value={act} onChange={(e) => setAct(e.target.value as TaskAct)} className={cls}>
-              <option value="reassign">Giao lại cho Operator khác</option>
-              <option value="supplement">Tạo nhiệm vụ bổ sung</option>
-              <option value="cancel">Hủy nhiệm vụ</option>
+              {allowed.map(action => <option key={action} value={action}>{TASK_LABEL[action]}</option>)}
             </select>
           </Field>
         )}

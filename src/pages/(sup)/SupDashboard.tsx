@@ -1,17 +1,12 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import { CheckCircle2, AlertTriangle } from 'lucide-react'
 
-import { RiskPortfolioItem } from './dashboard/types'
+import type { SupDashboardData } from '../../api/services/supDashboardService'
 import { useSupDashboardState } from './dashboard/useSupDashboardState'
 import { DashboardHeader } from './dashboard/DashboardHeader'
 import { DashboardTopMetrics } from './dashboard/DashboardTopMetrics'
-import { DashboardRiskMapTable } from './dashboard/DashboardRiskMapTable'
 import { DashboardRightCards } from './dashboard/DashboardRightCards'
-import { DashboardExportModal } from './dashboard/DashboardExportModal'
-
-export type { RiskPortfolioItem } from './dashboard/types'
 
 export const SupDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -20,36 +15,12 @@ export const SupDashboard: React.FC = () => {
     dashboardData,
     isLoading,
     loadError,
-    selectedMonth,
-    setSelectedMonth,
-    selectedRegion,
     selectedProject,
     setSelectedProject,
     isRefreshing,
     toastMessage,
     setToastMessage,
-    sortField,
-    sortAsc,
-    handleToggleSort,
-    handleRegionChange,
-    isExportModalOpen,
-    setIsExportModalOpen,
-    exportFormat,
-    setExportFormat,
-    isExporting,
-    activePinId,
-    mapLayer,
-    setMapLayer,
-    mapContainerRef,
-    showToast,
     handleRefresh,
-    filteredRiskItems,
-    activePinItem,
-    handleZoomIn,
-    handleZoomOut,
-    handleFitBounds,
-    handleFocusPin,
-    handleTriggerExport,
     resetFilters
   } = useSupDashboardState()
 
@@ -73,15 +44,23 @@ export const SupDashboard: React.FC = () => {
     .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt))
     .slice(0, 5)
 
+  const overviews = scopedProjects.map((p) => dashboardData?.overviews[p.projectId]).filter(Boolean) as NonNullable<SupDashboardData['overviews'][string]>[]
+  const overviewsReady = !!dashboardData && !dashboardData.errors.overviews && overviews.length === scopedProjects.length
+  const lengths = overviews.filter((o) => o.lengthAvailability === 'AVAILABLE' && typeof o.totalLengthMeters === 'number')
+  const totalLengthMeters = overviewsReady && lengths.length > 0 ? lengths.reduce((s, o) => s + (o.totalLengthMeters as number), 0) : null
+  const defectMetrics = overviews.map((o) => o.openDefects)
+  const openDefects = overviewsReady && defectMetrics.every((m) => m?.availability === 'AVAILABLE' && typeof m.value === 'number') ? defectMetrics.reduce((s, m) => s + (m!.value as number), 0) : null
+  const soon = Date.now() + 30 * 86400000
+  const expiringSoon = overviewsReady ? overviews.filter((o) => (o.warranties || []).some((w) => w.endDate && Date.parse(w.endDate) >= Date.now() && Date.parse(w.endDate) <= soon)).length : null
+
   const asOfText = dashboardData?.asOf
     ? new Date(dashboardData.asOf).toLocaleString('vi-VN', { hour12: false })
     : null
-  const scopeLabel =
-    selectedProject === 'ALL' ? `Toàn bộ ${projects.length} dự án` : scopedProjects[0]?.name || 'Dự án'
 
   const dashboardErrors = [
     loadError && `Không tải được dữ liệu dashboard: ${loadError}`,
     dashboardData?.errors.projects && `Danh sách dự án (GET /projects): ${dashboardData.errors.projects}`,
+    dashboardData?.errors.overviews && `Tổng quan dự án (GET /projects/overviews): ${dashboardData.errors.overviews}`,
     dashboardData?.errors.summaries && `Báo cáo tổng hợp: ${dashboardData.errors.summaries}`,
     dashboardData?.errors.timeline && `Hoạt động gần đây: ${dashboardData.errors.timeline}`
   ].filter(Boolean) as string[]
@@ -118,71 +97,33 @@ export const SupDashboard: React.FC = () => {
         projects={projects}
         asOfText={asOfText}
         isLoading={isLoading}
-        showToast={showToast}
         onResetFilters={resetFilters}
-        selectedMonth={selectedMonth}
-        setSelectedMonth={setSelectedMonth}
-        selectedRegion={selectedRegion}
-        handleRegionChange={handleRegionChange}
         selectedProject={selectedProject}
         setSelectedProject={setSelectedProject}
         isRefreshing={isRefreshing}
         handleRefresh={handleRefresh}
-        onOpenExportModal={() => setIsExportModalOpen(true)}
       />
 
-      {/* Main Dashboard Grid */}
+      {/* Chỉ các thẻ có API BE: tổng quan dự án, báo cáo tổng hợp, hoạt động gần đây */}
       <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Sub-Column (8 cols): KPIs + Map + Risk Table */}
-          <div className="lg:col-span-8 flex flex-col gap-5">
-            <DashboardTopMetrics
-              totalActiveProjects={totalActiveProjects}
-              isLoading={isLoading}
-            />
-
-            <DashboardRiskMapTable
-              mapContainerRef={mapContainerRef}
-              mapLayer={mapLayer}
-              setMapLayer={setMapLayer}
-              activePinId={activePinId}
-              activePinItem={activePinItem}
-              filteredRiskItems={filteredRiskItems}
-              sortField={sortField}
-              sortAsc={sortAsc}
-              onToggleSort={handleToggleSort}
-              onFocusPin={handleFocusPin}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-              onFitBounds={handleFitBounds}
-            />
-          </div>
-
-          {/* Right Sub-Column (4 cols): SLA, Audit Trail, PCI */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            <DashboardRightCards
-              repairItems={dashboardData ? repairItems : null}
-              activities={activities}
-              isLoading={isLoading}
-              onNavigateAuditTrail={() => navigate('/sup/audit-trail')}
-              onNavigateRiskAnalytics={() => navigate('/sup/risk-analytics')}
-            />
-          </div>
+        <DashboardTopMetrics
+          totalActiveProjects={totalActiveProjects}
+          totalLengthMeters={totalLengthMeters}
+          lengthIncomplete={overviewsReady && lengths.length < scopedProjects.length}
+          expiringSoon={expiringSoon}
+          openDefects={openDefects}
+          isLoading={isLoading}
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          <DashboardRightCards
+            repairItems={dashboardData ? repairItems : null}
+            activities={activities}
+            isLoading={isLoading}
+            onNavigateAuditTrail={() => navigate('/sup/audit-trail')}
+            onNavigateRiskAnalytics={() => navigate('/sup/risk-analytics')}
+          />
         </div>
       </div>
-
-      {/* Export Dossier Modal */}
-      <DashboardExportModal
-        scopeLabel={scopeLabel}
-        asOfText={asOfText}
-        isExportModalOpen={isExportModalOpen}
-        setIsExportModalOpen={setIsExportModalOpen}
-        exportFormat={exportFormat}
-        setExportFormat={setExportFormat}
-        isExporting={isExporting}
-        onTriggerExport={handleTriggerExport}
-        filteredCount={filteredRiskItems.length}
-      />
     </div>
   )
 }

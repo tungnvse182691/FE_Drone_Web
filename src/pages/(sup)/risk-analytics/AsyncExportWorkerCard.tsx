@@ -61,55 +61,12 @@ export const AsyncExportWorkerCard: React.FC<AsyncExportWorkerCardProps> = ({
       </div>
 
       {activeJob && activeJob.status === 'PROCESSING' && (
-        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-[#8C6D1F] animate-spin">
-                sync
-              </span>
-              <span className="font-medium text-slate-800 text-xs sm:text-sm">
-                Đang đóng gói hồ sơ nghiệm thu {activeJob.name}...
-              </span>
-              <span className="font-sansation text-[#8C6D1F] font-bold text-sm">
-                {Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
-              <span>
-                Đã xử lý: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.processedItems)?activeJob.processedItems:'—'}/{Number.isFinite(activeJob.totalItems)?activeJob.totalItems:'—'} mục</strong>
-              </span>
-              <span className="text-slate-300">•</span>
-              <span>
-                Thời gian ước tính: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.estimatedSecondsRemaining)?activeJob.estimatedSecondsRemaining:'—'} giây</strong>
-              </span>
-              <span className="text-slate-300">•</span>
-              <span>
-                Dung lượng: <strong className="text-slate-800 font-semibold font-mono">{Number.isFinite(activeJob.tempSizeMb)?activeJob.tempSizeMb:'—'} MB</strong>
-              </span>
-            </div>
+        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 space-y-2" role="status">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px] text-[#8C6D1F] animate-spin">sync</span>
+            <span className="font-medium text-slate-800 text-xs sm:text-sm">Máy chủ đang tạo hồ sơ xuất {activeJob.name}…</span>
           </div>
-
-          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#C9A227] rounded-full transition-all duration-500"
-              style={{ width: `${Number.isFinite(activeJob.progress)?`${activeJob.progress}%`:'Máy chủ chưa trả tiến độ phần trăm'}` }}
-            ></div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500">
-            <span>
-              Đọc lại trạng thái từ máy chủ; chưa có dữ liệu phần trăm hoặc thời gian hoàn tất.
-            </span>
-            <button
-              disabled title="Chưa có lệnh hủy export trong contract"
-              onClick={handleCancelActiveJob}
-              type="button"
-              className="text-rose-600 hover:text-rose-800 hover:underline self-start sm:self-auto font-medium cursor-pointer"
-            >
-              Hủy tác vụ này
-            </button>
-          </div>
+          <p className="text-xs text-slate-500">BE chỉ trả trạng thái job (QUEUED/RUNNING/SUCCEEDED/FAILED), không có phần trăm, thời gian ước tính hay lệnh hủy. Tải lại danh mục để đọc trạng thái mới.</p>
         </div>
       )}
 

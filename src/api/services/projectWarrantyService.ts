@@ -1,6 +1,5 @@
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
-import { devFileBearerEnabled } from '../devFileBearer'
 import type { RoadCoverageReadFact } from './fastTrackService'
 export interface WarrantyInput {scope:'PROJECT'|'ROAD_SECTION';roadSectionId:string|null;handoverDocumentId:string|null;sourceDocumentId:string;handoverDate:string;warrantyStartDate:string;warrantyEndDate:string;terms:string|null}
 interface WarrantyBody extends WarrantyInput {operationId:string;status:'ACTIVE';retainedValue:null}
@@ -23,7 +22,6 @@ export const projectWarrantyService={
   async create(p:string,input:WarrantyInput){
     const s=useAuthStore.getState(),epoch=s.authEpoch,storage=key(p)
     if(s.user?.role!=='SUPERVISOR')throw new Error('Chỉ Giám sát được tạo hồ sơ bảo hành hiệu lực.')
-    if(!devFileBearerEnabled())throw new Error('API tạo bảo hành chưa hỗ trợ WebSession; transport tạm chỉ bật ở dev/test local.')
     if(running.has(storage))throw new Error('Đang đối chiếu bảo hành.')
     const active=()=>{if(epoch!==useAuthStore.getState().authEpoch || storage!==key(p))throw new Error('Phiên bảo hành đã đổi; giữ tiến độ tài khoản cũ.')}
     let held=this.pending(p);running.add(storage)

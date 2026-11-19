@@ -82,17 +82,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
             </span>
           )}
 
-          {/* Nút Đóng đợt thi công cho Giám sát khi 100% đạt */}
-          {allItemsAccepted && !isCaseClosed && onOpenCloseCaseModal && (
-            <button
-              onClick={onOpenCloseCaseModal}
-              type="button"
-              className="px-3.5 h-8 bg-[#2D3748] hover:bg-[#1A1D20] text-white font-medium text-xs rounded-md shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px] text-[#C9A227]">lock</span>
-              <span>Đóng đợt thi công</span>
-            </button>
-          )}
         </>
       )}
 

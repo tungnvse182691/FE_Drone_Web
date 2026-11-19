@@ -19,6 +19,15 @@ export interface ProcessingJob { id: string; status: string; resultId?: string |
 const quote = (v: string) => (v.startsWith('"') ? v : `"${v}"`)
 const GUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
 
+async function readAiGeometryVersion(projectId: string, { routeVersionId, segmentSetId }: BandScope) {
+  const { data, headers } = await apiClient.get(`/projects/${projectId}/geometry-package`, { params: { routeVersionId, segmentSetId } })
+  if (data?.projectId !== projectId || data.route?.routeVersionId !== routeVersionId || data.segmentSet?.id !== segmentSetId || data.segmentSet.routeVersionId !== routeVersionId) throw new Error('Gói hình học trả về không khớp phạm vi bộ dữ liệu.')
+  if (data.route.metadataStatus !== 'COMPLETE' || data.segmentSet.metadataStatus !== 'COMPLETE') throw new Error('Gói hình học chưa đủ thông tin để chạy AI.')
+  const version = typeof headers.etag === 'string' ? /^"([a-f0-9]{64})"$/.exec(headers.etag)?.[1] : undefined
+  if (!version) throw new Error('BE không trả ETag hợp lệ của gói hình học.')
+  return version
+}
+
 export const surveyDatasetService = {
   /** GET /datasets/{id}. Kiểm dataset đúng nhiệm vụ + dự án đang xem. */
   async dataset(datasetId: string, expect: { taskId: string; projectId: string }) {
@@ -119,28 +128,25 @@ export const surveyDatasetService = {
     const body = { datasetId: dataset.id, scope, mode: input.mode, modelVersionId: input.modelVersionId.trim(), preprocessingVersion: input.preprocessingVersion.trim(), configVersion: input.configVersion.trim() }
     return (await apiClient.post(`/processing-jobs`, body, { headers: { 'Idempotency-Key': crypto.randomUUID() } })).data
   },
-  /** Gợi ý fixtureVersion và expectedGeometryVersion từ các lần chạy/phát hiện AI đã có của dự án (BE không có API riêng cho các giá trị này). */
-  async aiRunHints(projectId: string, segmentSetId: string) {
-    const { data: runs } = await apiClient.get<{ items?: { id: string; fixtureVersion?: string | null; status?: string | null }[] }>(`/projects/${projectId}/ai-mock-runs`)
-    const fixtures = Array.from(new Set((runs?.items || []).map((r) => r.fixtureVersion).filter((v): v is string => !!v)))
-    let geometryVersion = ''
-    for (const r of (runs?.items || []).filter((x) => x.status === 'SUCCEEDED')) {
-      const { data: res } = await apiClient.get<{ detections?: { detectionId: string }[] }>(`/projects/${projectId}/ai-mock-runs/${r.id}/result`)
-      for (const d of res?.detections || []) {
-        const { data: c } = await apiClient.get<{ segmentSetId?: string; geometryVersion?: string }>(`/projects/${projectId}/ai-candidates/${d.detectionId}`)
-        if (c?.segmentSetId === segmentSetId && c.geometryVersion) { geometryVersion = c.geometryVersion; break }
-      }
-      if (geometryVersion) break
-    }
+  /** Fixture tham khảo từ run đã có; phiên bản hình học lấy trực tiếp từ ETag của geometry-package. */
+  async aiRunHints(projectId: string, scope: BandScope) {
+    const [geometryVersion, { data: runs }] = await Promise.all([
+      readAiGeometryVersion(projectId, scope),
+      apiClient.get<{ items: { fixtureVersion?: string | null }[] }>(`/projects/${projectId}/ai-mock-runs`),
+    ])
+    if (!Array.isArray(runs?.items)) throw new Error('BE trả danh sách lần chạy AI sai contract.')
+    const fixtures = Array.from(new Set(runs.items.map((r) => r.fixtureVersion).filter((v): v is string => !!v)))
     return { fixtures, geometryVersion }
   },
   /** POST /projects/{p}/ai-mock-runs — 202; dataset + phạm vi lấy từ bộ dữ liệu đã đọc. */
-  async createAiRun(projectId: string, dataset: DatasetDetail, input: { scopeIndex: number; stage: 'VIDEO_ANALYSIS' | 'DUPLICATE_MATCHING'; modelVersionId: string; preprocessingVersion: string; configVersion: string; fixtureVersion: string; expectedGeometryVersion: string }) {
+  async createAiRun(projectId: string, dataset: DatasetDetail, input: { scopeIndex: number; stage: 'VIDEO_ANALYSIS' | 'DUPLICATE_MATCHING'; modelVersionId: string; preprocessingVersion: string; configVersion: string; fixtureVersion: string }) {
     const scope = dataset.scope[input.scopeIndex]
     if (!scope) throw new Error('Chọn phạm vi dataset.')
     if (!GUID.test(input.modelVersionId.trim())) throw new Error('Cần mã phiên bản mô hình (GUID).')
-    if (!input.preprocessingVersion.trim() || !input.configVersion.trim() || !input.fixtureVersion.trim() || !input.expectedGeometryVersion.trim()) throw new Error('Cần nhập đủ phiên bản tiền xử lý, cấu hình, fixture và phiên bản hình học.')
-    const body = { datasetId: dataset.id, scope, modelVersionId: input.modelVersionId.trim(), preprocessingVersion: input.preprocessingVersion.trim(), configVersion: input.configVersion.trim(), fixtureVersion: input.fixtureVersion.trim(), stage: input.stage, expectedGeometryVersion: input.expectedGeometryVersion.trim() }
+    if (dataset.projectId !== projectId) throw new Error('Bộ dữ liệu không thuộc dự án đang xem.')
+    if (!input.preprocessingVersion.trim() || !input.configVersion.trim() || !input.fixtureVersion.trim()) throw new Error('Cần nhập đủ phiên bản tiền xử lý, cấu hình và fixture.')
+    const expectedGeometryVersion = await readAiGeometryVersion(projectId, scope)
+    const body = { datasetId: dataset.id, scope, modelVersionId: input.modelVersionId.trim(), preprocessingVersion: input.preprocessingVersion.trim(), configVersion: input.configVersion.trim(), fixtureVersion: input.fixtureVersion.trim(), stage: input.stage, expectedGeometryVersion }
     return (await apiClient.post(`/projects/${projectId}/ai-mock-runs`, body, { headers: { 'Idempotency-Key': crypto.randomUUID() } })).data as { id: string; status?: string }
   },
   /** POST /processing-jobs/{jobId}/retry — If-Match = version job. */

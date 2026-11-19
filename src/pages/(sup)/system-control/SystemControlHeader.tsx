@@ -2,12 +2,10 @@ import React from 'react'
 
 interface SystemControlHeaderProps {
   isSupervisor: boolean
-  onOpenCreateDeletion: () => void
 }
 
 export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
-  isSupervisor,
-  onOpenCreateDeletion
+  isSupervisor
 }) => {
   return (
     <div className="flex flex-col gap-3 bg-white border-[1.5px] border-[#E2E5E9] p-5 rounded-[20px] shadow-2xs relative overflow-hidden">
@@ -32,7 +30,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
             </span>
             <span>
               {isSupervisor
-                ? 'Giám sát: Thẩm duyệt lưu trữ & Phong tỏa pháp lý'
+                ? 'Giám sát: Phong tỏa pháp lý & cơ sở lưu trữ'
                 : 'Chỉ huy trưởng: Theo dõi lưu trữ dự án phụ trách'}
             </span>
           </span>
@@ -43,7 +41,7 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
         <div className="space-y-1 max-w-4xl">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">
             {isSupervisor
-              ? 'Quản Trị Lưu Trữ Hồ Sơ, Kiểm Soát AI & Phong Tỏa Pháp Lý'
+              ? 'Quản Trị Lưu Trữ Hồ Sơ & Phong Tỏa Pháp Lý'
               : 'Lưu Trữ Bảo Hành & Phong Tỏa Pháp Lý'}
           </h1>
           <p className="text-xs text-slate-500 leading-relaxed">
@@ -53,18 +51,6 @@ export const SystemControlHeader: React.FC<SystemControlHeaderProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={onOpenCreateDeletion}
-            className="px-3.5 py-2 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px] text-rose-600">
-              delete_forever
-            </span>
-            <span>Lập yêu cầu xóa dữ liệu</span>
-          </button>
-        </div>
       </div>
     </div>
   )

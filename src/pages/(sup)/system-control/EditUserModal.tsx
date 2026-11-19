@@ -4,6 +4,7 @@ import { personnelBlocks } from '../../../api/services/personnelScreen'
 import { RoleCode } from '../../../types/enums'
 import { SystemUserAccount } from '../../../types/domain'
 import { useAuthStore } from '../../../store/authStore'
+import { UserOrganizationEditor } from './UserOrganizationEditor'
 
 export interface EditUserModalProps {
   detailLoading?: boolean
@@ -173,6 +174,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
           </div>
 
+          {!isReporter && isSupervisorUser && <UserOrganizationEditor key={userToEdit.id} userId={userToEdit.id} />}
           <div className={`grid grid-cols-1 ${isReporter ? '' : 'sm:grid-cols-2'} gap-3`}>
             <div className="space-y-1">
               <label className="font-semibold text-slate-700 flex items-center gap-1">

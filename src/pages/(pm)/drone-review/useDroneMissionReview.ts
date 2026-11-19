@@ -25,16 +25,9 @@ export function useDroneMissionReview(
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [selectedDetectionId, setSelectedDetectionId] = useState<string>('')
 
-  const [coveragePercentage, setCoveragePercentage] = useState<number>(100)
-  const [hasBlindspot, setHasBlindspot] = useState<boolean>(false)
-
-  const [isReFlightModalOpen, setIsReFlightModalOpen] = useState<boolean>(false)
-  const [pilotNote, setPilotNote] = useState<string>('')
-
   const isPersistentLocked =
     currentSurvey?.status === 'BASELINE_LOCKED'
 
-  const [isBaselineModalOpen, setIsBaselineModalOpen] = useState<boolean>(false)
   const [isLockedSuccess, setIsLockedSuccess] = useState<boolean>(isPersistentLocked)
   const [lockedBaselineRange, setLockedBaselineRange] = useState<string | null>(
     isPersistentLocked && currentSurvey ? (currentSurvey.start_km + ' → ' + currentSurvey.end_km) : null
@@ -119,7 +112,6 @@ export function useDroneMissionReview(
 }, [isPlaying, playbackSpeed])
 
 const isBaselineLocked = isLockedSuccess
-const canLockBaseline = pendingCount === 0
 
 const handleSelectDetection = (item: AIDetectionItem) => {
   setSelectedDetectionId(item.id)
@@ -280,6 +272,22 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     }
   }, [viewerMode, selectedDetectionId, detections, geo])
 
+  // Quyết định ứng viên AI = POST /projects/{p}/candidate-decisions (PM). BE không có thao tác "mở lại": muốn đổi thì ghi quyết định mới (supersedes) — ở màn chi tiết khiếm khuyết.
+  const decide = async (detId: string, decision: 'KEEP_NEW' | 'REJECT', reason: string, typeCode?: 'POTHOLE' | 'CRACK', severityLevel?: string) => {
+    const det = detections.find((d) => d.id === detId)
+    const projectId = det?.projectId || currentSurvey?.project_id
+    if (!det || !projectId) throw new Error('Không xác định được dự án của phát hiện AI.')
+    const payload: Parameters<typeof surveyService.decideCandidate>[1] = { sourceKind: 'AI_DETECTION', sourceId: det.id, decision, reason, runId: det.runId, segmentId: det.segmentId ?? null }
+    if (decision === 'KEEP_NEW') {
+      const SEV: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'> = { 'Khẩn cấp': 'CRITICAL', 'Nghiêm trọng': 'HIGH', 'Trung bình': 'MEDIUM', 'Nhẹ': 'LOW' }
+      const severity = SEV[severityLevel || '']
+      if (!severity) throw new Error('Chọn mức độ nghiêm trọng hợp lệ trước khi giữ phát hiện.')
+      payload.defectTypeCode = typeCode || det.rawTypeCode
+      payload.severity = severity
+    }
+    return surveyService.decideCandidate(projectId, payload)
+  }
+
   const handleApproveDetection = async (
     detId: string,
     reason?: string,
@@ -289,144 +297,23 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     if (!detectionGuard.acquire()) return
     try {
       const targetDet = detections.find((d) => d.id === detId)
-      const effectiveTypeCode = customTypeCode || (targetDet?.rawTypeCode as 'POTHOLE' | 'CRACK') || 'CRACK'
-      const effectiveSeverity = customSeverityLevel || targetDet?.severityLevel || 'Nghiêm trọng'
-      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-        status: 'APPROVED',
-        projectId: targetDet?.projectId || currentSurvey?.project_id,
-        rawTypeCode: effectiveTypeCode,
-        severityLevel: effectiveSeverity,
-        metrics: {
-          reviewer: 'Chỉ huy trưởng (PM)',
-          dismissReason: reason
-        }
-      })
-      if (updated) {
-        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-        showToast(
-          `Đã lưu phân loại (${updated.type} • Mức độ: ${updated.severityLevel}) → Mã khiếm khuyết ${updated.defectCode || ''} trong CSDL!`
-        )
-      }
+      const d = await decide(detId, 'KEEP_NEW', (reason || 'PM xác nhận phát hiện AI là khiếm khuyết').trim(), customTypeCode, customSeverityLevel || targetDet?.severityLevel)
+      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'APPROVED', decisionKind: d.decision } : x)))
+      showToast('Đã lưu quyết định KEEP_NEW trên máy chủ.')
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.title ||
-        err?.response?.data?.code ||
-        err?.message ||
-        'Lỗi khi lưu quyết định thẩm định AI'
-      showToast(`Lỗi máy chủ: ${msg}`)
+      showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi lưu quyết định thẩm định AI'}`)
     } finally { detectionGuard.release() }
   }
 
   const handleRejectDetection = async (detId: string, reason?: string) => {
     if (!detectionGuard.acquire()) return
     try {
-      const targetDet = detections.find((d) => d.id === detId)
-      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-        status: 'REJECTED',
-        projectId: targetDet?.projectId || currentSurvey?.project_id,
-        metrics: {
-          dismissReason: reason || 'Xác minh thực tế: Nhiễu bóng đổ và phản xạ ánh sáng.'
-        }
-      })
-      if (updated) {
-        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-        showToast(`Đã ghi nhận từ chối (Báo sai AI) vào CSDL cho phát hiện #${detId.slice(0, 8)}.`)
-      }
+      const d = await decide(detId, 'REJECT', (reason || 'PM từ chối phát hiện AI').trim())
+      setDetections((prev) => prev.map((x) => (x.id === detId ? { ...x, status: 'REJECTED', decisionKind: d.decision } : x)))
+      showToast('Đã lưu quyết định REJECT trên máy chủ.')
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.title ||
-        err?.response?.data?.code ||
-        err?.message ||
-        'Lỗi khi bác bỏ phát hiện AI'
-      showToast(`Lỗi máy chủ: ${msg}`)
+      showToast(`Lỗi máy chủ: ${err?.response?.data?.detail || err?.response?.data?.code || err?.message || 'Lỗi khi bác bỏ phát hiện AI'}`)
     } finally { detectionGuard.release() }
-  }
-
-  const handleResetDetection = async (detId: string) => {
-    if (!detectionGuard.acquire()) return
-    try {
-      const targetDet = detections.find((d) => d.id === detId)
-      const updated = await surveyService.updateSurveyDetection(surveyId, detId, {
-        status: 'PENDING',
-        projectId: targetDet?.projectId || currentSurvey?.project_id
-      })
-      if (updated) {
-        setDetections((prev) => prev.map((d) => (d.id === detId ? updated : d)))
-        showToast(`Đã mở lại trạng thái chờ rà soát cho phát hiện #${detId.slice(0, 8)}.`)
-      }
-    } catch (err: any) {
-      showToast(`Không thể mở lại rà soát: ${err?.message || 'Lỗi kết nối CSDL'}`)
-    } finally { detectionGuard.release() }
-  }
-
-  const handleSubmitReFlight = async (payload: {
-    pilot: string
-    surveyType?: 'AD_HOC' | 'PERIODIC'
-    dueDate: string
-    note: string
-    range: string
-  }) => {
-    if (!reFlightGuard.acquire()) return
-    try {
-      const res = await surveyService.requestReFlight(surveyId, {
-        note: payload.note,
-        targetKm: payload.range,
-        operatorName: payload.pilot,
-        surveyType: payload.surveyType,
-        dueDate: payload.dueDate,
-        projectId: currentSurvey?.project_id
-      })
-      if (res.success) {
-        setIsReFlightModalOpen(false)
-        showToast(`Đã phát lệnh bay bổ sung thành công! Hạn hoàn thành: ${payload.dueDate}. Nhiệm vụ đã giao cho [${payload.pilot}].`)
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Phát lệnh bay bù thất bại'
-      showToast(`Lỗi khi phát lệnh bay bù: ${msg}`)
-    } finally { reFlightGuard.release() }
-  }
-
-  const handleLockBaseline = async () => {
-    if (pendingCount > 0) {
-      showToast(`Chưa thể khóa Baseline: Cần hoàn tất thẩm định ${pendingCount} mục còn lại trong danh sách!`)
-      return
-    }
-
-    if (!baselineGuard.acquire()) return
-    try {
-      const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
-      if (success) {
-        setIsLockedSuccess(true)
-        setLockedBaselineRange(`${currentSurvey?.start_km || ''} → ${currentSurvey?.end_km || ''} (Toàn tuyến)`)
-        showToast(`Dự án [${currentSurvey?.project_name || 'Khảo sát'}] đã chính thức KHÓA BASELINE THÀNH CÔNG! Bản đồ hoàn công số đã được kích hoạt.`)
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Khóa Baseline thất bại'
-      showToast(`Lỗi khóa Baseline từ máy chủ: ${msg}`)
-    } finally { baselineGuard.release() }
-  }
-
-  const handleConfirmBaseline = async (isPartial: boolean) => {
-    if (!baselineGuard.acquire()) return
-    try {
-      const success = await surveyService.lockBaseline(surveyId, currentSurvey?.project_id)
-      if (success) {
-        setIsLockedSuccess(true)
-        setIsBaselineModalOpen(false)
-        if (isPartial) {
-          setLockedBaselineRange(`${currentSurvey?.start_km || ''} (Phân đoạn đạt chuẩn)`)
-          showToast('Đã xác nhận và KHÓA BASELINE THÀNH CÔNG phân đoạn đạt chuẩn (Quy tắc BR-40 / DA10)!')
-        } else {
-          setLockedBaselineRange(`${currentSurvey?.start_km || ''} → ${currentSurvey?.end_km || ''} (Toàn tuyến)`)
-          showToast(`Đã KHÓA BASELINE THÀNH CÔNG toàn tuyến! Hồ sơ gốc bàn giao đã được đóng băng số.`)
-        }
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.title || err?.message || 'Khóa Baseline thất bại'
-      showToast(`Lỗi khóa Baseline từ máy chủ: ${msg}`)
-    } finally { baselineGuard.release() }
   }
 
   const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]
@@ -447,12 +334,6 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     statusFilter,
     setStatusFilter,
     selectedDetectionId,
-    coveragePercentage,
-    hasBlindspot,
-    isReFlightModalOpen,
-    setIsReFlightModalOpen,
-    pilotNote,
-    setPilotNote,
     toastMessage,
     setToastMessage,
     showToast,
@@ -467,18 +348,11 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     setViewerMode,
     corridorMapContainerRef,
     isBaselineLocked,
-    canLockBaseline,
-    isBaselineModalOpen,
-    setIsBaselineModalOpen,
     isLockedSuccess,
     lockedBaselineRange,
-    handleConfirmBaseline,
     handleSelectDetection,
     handleApproveDetection,
     handleRejectDetection,
-    handleResetDetection,
-    handleSubmitReFlight,
-    handleLockBaseline,
     selectedItem
   }
 }

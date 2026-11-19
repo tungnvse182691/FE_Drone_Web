@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { buildCoverageInput, coverageDate, coverageFormErrors } from './coverageForm'
+import { HandoverAttachCard } from './HandoverAttachCard'
 import { CoverageDocumentUpload } from './CoverageDocumentUpload'
 import { Icon } from '../../../components/ui/Icon'
 import { fastTrackPending } from '../../../api/services/fastTrackJournal'
@@ -192,7 +193,8 @@ export const RoadCoverageConfirmModal: React.FC<RoadCoverageConfirmModalProps> =
           </div>
 
           <div className="space-y-3">
-            <p className="text-slate-500">Hồ sơ bàn giao cần tệp đã xác minh thuộc đúng dự án. Hiện chưa có thao tác bổ sung tệp bàn giao cho dự án đã tạo; tải căn cứ bảo trì không thay thế điều kiện này.</p>
+            <p className="text-slate-500">Hồ sơ bàn giao cần tệp đã xác minh thuộc đúng dự án. Dự án tạo từ bản mới đã có biên bản; dự án cũ thiếu biên bản được Giám sát bổ sung ngay bên dưới.</p>
+            <HandoverAttachCard projectId={roadCoverage.projectId}/>
             <CoverageDocumentUpload projectId={roadCoverage.projectId}/>
             <button type="button" disabled={isSubmitting} onClick={()=>window.dispatchEvent(new Event('fasttrack-refresh'))} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">Đọc lại nguồn hồ sơ</button>
             <label className="block">Phạm vi nghĩa vụ<select disabled={!!pending} value={scopeId} onChange={e=>{setScopeId(e.target.value);setSupersedesId('')}} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn phạm vi</option>{roadCoverage.scopes?.map((s,i)=><option key={s.obligationId} value={s.obligationId}>Phạm vi {i+1}: {s.from}–{s.to} m, lệch {s.offsetFrom}–{s.offsetTo} m</option>)}</select>{errorAt('scopeId')}</label>

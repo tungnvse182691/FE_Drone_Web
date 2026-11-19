@@ -6,6 +6,8 @@ import {useAuthStore} from '../../../store/authStore'
 import {useNavigate} from 'react-router-dom'
 import {exportError} from '../../../api/services/projectExportService'
 import {RepairItemActions} from './RepairItemActions'
+import {SourceDefectPanel} from './SourceDefectPanel'
+import {PlanningPanel} from './PlanningPanel'
 import {NotificationSupervisorPanel} from './NotificationSupervisorPanel'
 import {RepairSafetyPanel} from './RepairSafetyPanel'
 
@@ -214,6 +216,8 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
 
             {isSupervisor && items.some(i=>i.mode==='Normal') && <div className="space-y-2 text-xs"><label>Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="rg-field block w-full"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&['AwaitingApproval','ReadyToAssign'].includes(i.state)).map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {i.state}</option>)}</select></label><textarea aria-label="Lý do phê duyệt Normal" placeholder={held?'Lý do đang được giữ trong journal':'Nhập căn cứ phê duyệt'} value={held?.body.reason||reason} disabled={busy||!!held} onChange={e=>setReason(e.target.value)} maxLength={2000} className="rg-field block w-full"/><button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="rg-btn text-emerald-800">{held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button></div>}
             <RepairItemActions projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} isPM={isPM} isSupervisor={isSupervisor} onDone={()=>setReload(n=>n+1)} />
+            {isPM && <PlanningPanel key={`plan:${selectedPackageForDetail.id}`} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} onSaved={()=>{setReload(n=>n+1);window.dispatchEvent(new Event('repair-workflow-refresh'))}} />}
+            <SourceDefectPanel key={selectedPackageForDetail.id} projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />
             {isPM && <NotificationSupervisorPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
             {isPM && <RepairSafetyPanel projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} />}
             {items.filter(i=>i.mode==='FastTrack').map((item,n)=><button key={item.id} type="button" onClick={()=>navigate(`${isSupervisor?'/sup':'/pm'}/fast-track?${new URLSearchParams({projectId:selectedPackageForDetail.route_id,defectId:selectedPackageForDetail.defect_id||'',itemId:item.id,open:'prepare'})}`)} className="rg-btn text-xs font-semibold text-[#8C6D1F]">{isPM?'Điều phối Fast Track có điều kiện':'Đọc độ phủ & điều phối Fast Track'} · Hạng mục {n+1}</button>)}

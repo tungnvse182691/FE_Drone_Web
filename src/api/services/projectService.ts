@@ -7,6 +7,7 @@ import { HubProject } from '../../types/domain'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
 import { userDirectory } from './userDirectory'
+import { handoverUploadService, validateHandoverFile } from './handoverUploadService'
 
 export type { HubProject }
 
@@ -20,148 +21,13 @@ export interface ProjectCreatePayload {
   primaryPmId: string
   handoverDate: string
   warrantyEndDate: string
-  handoverFileIds?: string[]
+  /** Biên bản bàn giao (PDF) — BẮT BUỘC; được tải lên staging trước khi tạo dự án. */
+  handoverFile?: File | null
+  onStep?: (label: string) => void
   region?: string
 }
 
-function calculateLineLengthKm(coords?: [number, number][]): number {
-  if (!coords || coords.length < 2) return 0
-  let totalMeters = 0
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p1 = coords[i]
-    const p2 = coords[i + 1]
-    const lat1 = (p1[1] * Math.PI) / 180
-    const lat2 = (p2[1] * Math.PI) / 180
-    const dLat = ((p2[1] - p1[1]) * Math.PI) / 180
-    const dLng = ((p2[0] - p1[0]) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    totalMeters += 6371000 * c
-  }
-  return parseFloat((totalMeters / 1000).toFixed(3))
-}
 
-function enrichProjectWithAlignment(p: HubProject): HubProject {
-  if (p.server_data_loaded) return p
-  // Nếu dự án đã đóng bảo hành, khóa cứng trạng thái và không ghi đè tim tuyến
-  if (p.status === 'CLOSED') {
-    return p
-  }
-
-  const getRawAlignState = (keyId?: string | null) => {
-    if (!keyId) return null
-    try {
-      const v1 = localStorage.getItem(`roadguard_alignment_state_${keyId}`)
-      if (v1) {
-        const parsed = JSON.parse(v1)
-        if (parsed && parsed.status) return parsed
-      }
-      const v2 = localStorage.getItem(`${STORAGE_KEYS.ALIGNMENTS}_${keyId}`)
-      if (v2) {
-        const parsed = JSON.parse(v2)
-        if (parsed && parsed.status) return parsed
-      }
-    } catch {}
-    return null
-  }
-
-  const getRawAlignData = (keyId?: string | null) => {
-    if (!keyId) return null
-    try {
-      const v1 = localStorage.getItem(`roadguard_alignment_data_${keyId}`)
-      if (v1) {
-        const parsed = JSON.parse(v1)
-        if (parsed && (parsed.coords?.length || parsed.segments?.length || parsed.branches?.length)) return parsed
-      }
-      const v2 = localStorage.getItem(`${STORAGE_KEYS.ALIGNMENTS}_data_${keyId}`)
-      if (v2) {
-        const parsed = JSON.parse(v2)
-        if (parsed && (parsed.coords?.length || parsed.segments?.length || parsed.branches?.length)) return parsed
-      }
-    } catch {}
-    return null
-  }
-
-  // Tra cứu theo cả ID (UUID) và Mã dự án (Code: SBX-A, BLL0-SPC-1...)
-  const alignState = getRawAlignState(p.id) || getRawAlignState(p.code) || {}
-  const alignData = getRawAlignData(p.id) || getRawAlignData(p.code) || {}
-
-  const coords = alignData.coords || []
-  const branches = alignData.branches || []
-  const segments = alignData.segments || []
-
-  // CHỈ hiển thị độ dài và trạng thái chờ duyệt/đã duyệt khi PM ĐÃ BẤM 'TRÌNH DUYỆT' (PENDING_APPROVAL) hoặc ĐÃ KHÓA (CONFIRMED)
-  // Nếu status là DRAFT hoặc chưa có: Đây chỉ là bản nháp nội bộ của PM, chưa được xác nhận, hệ thống xem như chưa có tim tuyến
-  const isSubmittedOrConfirmed = alignState.status === 'PENDING_APPROVAL' || alignState.status === 'CONFIRMED'
-
-  if (isSubmittedOrConfirmed && (coords.length >= 2 || branches.length > 0 || segments.length > 0)) {
-    const mainLen = calculateLineLengthKm(coords)
-    const branchLen = branches.reduce((sum: number, b: any) => {
-      const bLen = (b.coords && b.coords.length >= 2 ? calculateLineLengthKm(b.coords) : b.lengthKm) || 0
-      return sum + bLen
-    }, 0)
-    const computedLen = parseFloat((mainLen + branchLen).toFixed(3))
-    const totalLen = computedLen > 0 ? computedLen : (p.length_km || 0)
-
-    let kmlStatus = p.kml_status
-    let status = p.status
-    let statusLabel = p.status_label
-
-    if (alignState.status === 'CONFIRMED') {
-      kmlStatus = 'Đã phê duyệt'
-      status = 'ACTIVE'
-      statusLabel = 'Đang bảo hành'
-    } else if (alignState.status === 'PENDING_APPROVAL') {
-      kmlStatus = 'Chờ duyệt tim tuyến'
-      status = 'PENDING_ALIGNMENT'
-      statusLabel = 'Chờ duyệt tuyến'
-    }
-
-    const stationText = totalLen > 0
-      ? `Km 0+000 → Km ${totalLen >= 1 ? totalLen.toFixed(1) : Math.round(totalLen * 1000) + 'm'}`
-      : p.stationing_text
-
-    return {
-      ...p,
-      length_km: totalLen,
-      end_km: totalLen,
-      kml_status: kmlStatus,
-      status: status as any,
-      status_label: statusLabel,
-      stationing_text: stationText
-    }
-  }
-
-  // Nếu alignState có status PENDING_APPROVAL mà chưa có coords
-  if (alignState.status === 'PENDING_APPROVAL') {
-    return {
-      ...p,
-      kml_status: 'Chờ duyệt tim tuyến',
-      status: 'PENDING_ALIGNMENT' as any,
-      status_label: 'Chờ duyệt tuyến'
-    }
-  } else if (alignState.status === 'CONFIRMED') {
-    return {
-      ...p,
-      kml_status: 'Đã phê duyệt',
-      status: 'ACTIVE' as any,
-      status_label: 'Đang bảo hành'
-    }
-  }
-
-  // Bản nháp DRAFT hoặc chưa thiết lập: Tuyệt đối không tính toán độ dài hay báo Chờ duyệt
-  return {
-    ...p,
-    length_km: 0.0,
-    end_km: 0.0,
-    stationing_text: 'Chưa thiết lập tim tuyến',
-    status: 'PENDING_ALIGNMENT' as any,
-    status_label: 'Chưa thiết lập tim tuyến',
-    kml_status: 'Chưa có tim tuyến'
-  }
-}
 
 // Mapper chuẩn hóa từ Backend Candidate3 DTO sang HubProject Domain Model
 interface UserLookupInfo {
@@ -324,10 +190,10 @@ useAuthStore.subscribe((state, previous) => {
 
 // Persist only command identity/body/receipt, scoped by the authoritative actor.
 // No token/CSRF/cookie is stored. Full reload must not mint another unknown command.
-let projectCreateCommand: { epoch: unknown; fingerprint: string; key: string; body: any; busy: boolean; receipt?: any } | null = null
+let projectCreateCommand: { epoch: unknown; fingerprint: string; key: string; body: any; busy: boolean; receipt?: any; staged?: { fileId: string; etag: string }; fileKey?: string } | null = null
 const projectJournalKey = (actor: string) => `rg_pending_project_create_${actor}`
 function saveProjectCommand(actor: string, command: typeof projectCreateCommand): void {
-  if (command) sessionStorage.setItem(projectJournalKey(actor), JSON.stringify({ fingerprint: command.fingerprint, key: command.key, body: command.body, receipt: command.receipt }))
+  if (command) sessionStorage.setItem(projectJournalKey(actor), JSON.stringify({ fingerprint: command.fingerprint, key: command.key, body: command.body, receipt: command.receipt, staged: command.staged, fileKey: command.fileKey }))
   else sessionStorage.removeItem(projectJournalKey(actor))
 }
 useAuthStore.subscribe((state, previous) => {
@@ -350,7 +216,7 @@ export const projectService = {
       const saved = sessionStorage.getItem(projectJournalKey(state.user.id))
       if (saved) {
         const journal = JSON.parse(saved)
-        if (!journal.key || !journal.body || journal.fingerprint !== JSON.stringify(journal.body)) throw new Error('Bản ghi yêu cầu tạo dự án không hợp lệ; cần đối chiếu trước khi tạo mới.')
+        if (!journal.key || !journal.body || journal.fingerprint !== JSON.stringify({ body: (({ handoverFileIds, ...rest }: any) => rest)(journal.body), fileKey: journal.fileKey || '' })) throw new Error('Bản ghi yêu cầu tạo dự án không hợp lệ; cần đối chiếu trước khi tạo mới.')
         projectCreateCommand = { ...journal, epoch: state.authEpoch, busy: false }
       }
     }
@@ -396,10 +262,21 @@ export const projectService = {
         const descriptionErrors = new Map<string, string>()
         const serverFacts = new Map<string, ProjectServerFacts>()
         const factErrors = new Map<string, string>()
+        // BE bản mới: GET /projects/overviews gộp địa bàn (locality), số lỗi mở (OpenDefectMetric), chiều dài, bảo hành cho nhiều dự án.
+        const overviews = new Map<string, any>()
+        const allIds = [...new Set(rawItems.map(item => String(item.projectId || item.id)))]
+        for (let i = 0; i < allIds.length; i += 20) {
+          try {
+            const { data } = await apiClient.get('/projects/overviews', { params: { ids: allIds.slice(i, i + 20) }, paramsSerializer: { indexes: null } })
+            if (Array.isArray(data)) for (const o of data) if (o?.projectId) overviews.set(String(o.projectId).toLowerCase(), o)
+          } catch (e: any) { console.warn('Không đọc được /projects/overviews:', e?.response?.status, e?.response?.data?.code) }
+        }
         await Promise.all([...new Set(rawItems.map(item => String(item.projectId || item.id)))].map(async id => {
           try {
             const facts = await readProjectServerFacts(id)
-            serverFacts.set(id.toLowerCase(), facts); descriptions.set(id.toLowerCase(), facts.description)
+            serverFacts.set(id.toLowerCase(), facts)
+            const locality = overviews.get(id.toLowerCase())?.locality
+            descriptions.set(id.toLowerCase(), typeof locality === 'string' && locality.trim() ? locality.trim() : facts.description)
             if (facts.descriptionError) descriptionErrors.set(id.toLowerCase(), facts.descriptionError)
           } catch (error: any) {
             const message = `Chưa tải được địa bàn/hồ sơ server: ${error?.response?.status || ''} ${error?.response?.data?.code || error.message}`
@@ -418,7 +295,9 @@ export const projectService = {
             let openDefects = Number.NaN
             let repairPackages = Number.NaN
             const errors: string[] = []
-            if (defects.status === 'fulfilled') {
+            const metric = overviews.get(String(pId).toLowerCase())?.openDefects
+            if (metric?.availability === 'AVAILABLE' && Number.isFinite(metric.value)) openDefects = metric.value
+            else if (defects.status === 'fulfilled') {
               const page = defects.value.data
               if (isPM && Array.isArray(page?.items) && !page.nextCursor) {
                 openDefects = page.items.filter((d: any) => !['RESOLVED', 'CLOSED', 'PASSED'].includes((d.status || d.verificationStatus || '').toUpperCase())).length
@@ -442,7 +321,7 @@ export const projectService = {
           const id = (item.projectId || item.id).toLowerCase()
           const project = mapBackendProjectToHub(item, usersMap, statsMap)
           const facts = serverFacts.get(id), readError = factErrors.get(id)
-          return { ...project, server_data_loaded: true, server_facts: facts,
+          return { ...project, engineering_utm_srid: overviews.get(id)?.engineeringUtmSrid ?? null, server_data_loaded: true, server_facts: facts,
             region: descriptionErrors.has(id) ? 'Chưa tải được địa bàn' : descriptions.get(id)!, location_detail: '',
             length_km: facts?.lengthKm, stationing_text: readError ? 'Không tải được dữ liệu tim tuyến' : facts!.stationing,
             kml_status: readError ? 'Không tải được dữ liệu tim tuyến' : facts!.geometryLabel,
@@ -488,7 +367,7 @@ export const projectService = {
         }
       } catch {}
     }
-    return JSON.parse(JSON.stringify(projectStore.map((p) => enrichProjectWithAlignment(p))))
+    return JSON.parse(JSON.stringify(projectStore))
   },
 
   /**
@@ -519,23 +398,25 @@ export const projectService = {
     return items
   },
 
-  /**
-   * API-109: Lấy thông tin vòng đời bảo hành dự án (GET /projects/{projectId}/lifecycle)
-   */
-  async fetchProjectLifecycle(projectId: string): Promise<any | null> {
-    try {
-      const res = await apiClient.get<any>(`/projects/${projectId}/lifecycle`)
-      return res.data || null
-    } catch (err) {
-      console.warn(`⚠️ Lỗi lấy lifecycle dự án ${projectId}:`, err)
-      return null
-    }
+  /** GET /projects/{p}/member-contacts — liên hệ HIỆN HÀNH (email, SĐT, đơn vị) của thành viên còn hiệu lực; PM/Sup; null = chưa nhập. */
+  async fetchMemberContacts(projectId: string): Promise<Array<{ membershipId: string; userId: string; displayName?: string | null; role?: string | null; email?: string | null; phoneNumber?: string | null; phoneNumberConfirmed?: boolean; organization?: string | null }>> {
+    const epoch = useAuthStore.getState().authEpoch
+    const items: any[] = []
+    const seen = new Set<string>()
+    let cursor: string | undefined
+    do {
+      const res = await apiClient.get(`/projects/${projectId}/member-contacts`, { params: { limit: 100, cursor } })
+      if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ danh bạ liên hệ cũ.')
+      if (!Array.isArray(res.data?.items)) throw new Error('Danh bạ liên hệ dự án trả sai contract.')
+      items.push(...res.data.items)
+      cursor = res.data.nextCursor || undefined
+      if (cursor && seen.has(cursor)) throw new Error('Cursor danh bạ liên hệ bị lặp.')
+      if (cursor) seen.add(cursor)
+    } while (cursor)
+    return items
   },
 
-  getProjectById(id: string): HubProject | undefined {
-    const projects = this.getProjects()
-    return projects.find((p) => p.id === id || p.code === id)
-  },
+
 
   /**
    * API-050: POST /projects (Chỉ Supervisor có quyền - FR-04, BR-01, DA01)
@@ -547,7 +428,6 @@ export const projectService = {
       const epoch = useAuthStore.getState().authEpoch
       const actor = useAuthStore.getState().user?.id
       if (!actor) throw new Error('Chưa xác định được phiên tạo dự án.')
-      if (payload.handoverFileIds?.length) throw new Error('Chưa hỗ trợ upload bàn giao trước dự án; hãy tạo không đính kèm file.')
       if (useAuthStore.getState().user?.role !== RoleCode.SUPERVISOR) throw new Error('Chỉ Giám sát được tạo dự án.')
       const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value
       if (!payload.code.trim() || payload.code.trim().length > 50 || !payload.name.trim() || payload.name.trim().length > 255 ||
@@ -557,19 +437,25 @@ export const projectService = {
       }
       if ((!replay || !projectCreateCommand) && ![32648, 32649].includes(payload.engineeringUtmSrid!)) throw new Error('engineeringUtmSrid: bắt buộc chọn CRS kỹ thuật theo hồ sơ tọa độ (EPSG:32648 hoặc EPSG:32649).')
       const body = { ...(payload.engineeringUtmSrid != null ? { engineeringUtmSrid: payload.engineeringUtmSrid } : {}), name: payload.name.trim(), code: payload.code.trim().toUpperCase(), description: payload.region?.trim() || '',
-        primaryPmId: payload.primaryPmId, handoverDate: payload.handoverDate, warrantyEndDate: payload.warrantyEndDate, handoverFileIds: [] }
-      const fingerprint = JSON.stringify(body)
+        primaryPmId: payload.primaryPmId, handoverDate: payload.handoverDate, warrantyEndDate: payload.warrantyEndDate }
+      const handoverFile = payload.handoverFile
+      const fileKey = handoverFile ? `${handoverFile.name}|${handoverFile.size}|${handoverFile.lastModified}` : ''
+      if (!projectCreateCommand) { const problem = validateHandoverFile(handoverFile); if (problem) throw new Error(problem) }
+      const fingerprint = JSON.stringify({ body, fileKey })
       if (projectCreateCommand && (projectCreateCommand.busy || !replay || fingerprint !== projectCreateCommand.fingerprint)) {
         throw new Error('Yêu cầu trước chưa rõ kết quả. Chỉ gửi lại cùng nội dung và khóa đã giữ; không tạo ý định mới.')
       }
-      const command = projectCreateCommand || { epoch, fingerprint, key: crypto.randomUUID(), body, busy: false }
+      let staged = projectCreateCommand?.staged
+      if (!projectCreateCommand) staged = await handoverUploadService.stage(handoverFile!, payload.onStep)
+      if (useAuthStore.getState().authEpoch !== epoch) throw new Error('Phiên đã thay đổi; bỏ kết quả tạo dự án cũ.')
+      const command = projectCreateCommand || { epoch, fingerprint, key: crypto.randomUUID(), body: { ...body, handoverFileIds: [staged!.fileId] }, staged, fileKey, busy: false }
       projectCreateCommand = command
       command.busy = true
       const current = () => useAuthStore.getState().authEpoch === epoch && useAuthStore.getState().user?.id === actor
       try {
         saveProjectCommand(actor, command)
         if (!command.receipt) {
-          const response = await apiClient.post('/projects', command.body, { headers: { 'Idempotency-Key': command.key } })
+          const response = await apiClient.post('/projects', command.body, { headers: { 'Idempotency-Key': command.key, 'If-Match': command.staged!.etag } })
           if (!current()) throw new Error('Phiên đã thay đổi; bỏ kết quả tạo dự án cũ.')
           if (response.status !== 201 || !(response.data.projectId || response.data.id)) throw new Error('Phản hồi tạo dự án không đúng contract201; cần đối chiếu kết quả.')
           command.receipt = response.data
@@ -652,12 +538,18 @@ export const projectService = {
             }
           }
         }
+        // 3a. Biên bản bàn giao bắt buộc (BE bản mới)
+        else if (status === 428 || code === 'handover_required') {
+          friendlyMessage = 'Thiếu biên bản bàn giao hoặc ETag của phiên tải (handover_required). Chọn lại tệp PDF và gửi lại.'
+        } else if (code === 'handover_file_not_ready') {
+          friendlyMessage = 'Biên bản bàn giao chưa xác minh xong, đã lỗi hoặc đã hết hạn (handover_file_not_ready). Chọn lại tệp PDF.'
+        }
         // 3. Xử lý lỗi 404 Not Found (Không tìm thấy PM hoặc tệp bàn giao)
         else if (status === 404) {
           if (code === 'project_primary_pm_not_found') {
             friendlyMessage = 'Không tìm thấy tài khoản Chỉ huy trưởng (PM) được chỉ định trong CSDL.'
           } else if (code === 'project_handover_file_not_found') {
-            friendlyMessage = 'Tệp biên bản bàn giao đính kèm không tồn tại trên hệ thống.'
+            friendlyMessage = 'Tệp biên bản bàn giao không hợp lệ: sai chủ sở hữu, sai loại tệp, sai phạm vi hoặc đã được dùng cho dự án khác. Chọn lại tệp PDF.'
           } else {
             friendlyMessage = detail || 'Không tìm thấy tài nguyên yêu cầu trên Backend.'
           }
@@ -725,49 +617,5 @@ export const projectService = {
       sessionStorage.removeItem(key)
       return fresh.data
     } finally { closureWrites.delete(key) }
-  },
-
-  /**
-   * API-110: Chuyển trạng thái vòng đời dự án (Kích hoạt, Tạm dừng)
-   * Actor: Chỉ huy trưởng dự án (PM) hoặc Giám sát (Supervisor)
-   * Command: 'activate' | 'suspend'
-   */
-  async updateLifecycleStatus(
-    projectId: string,
-    command: 'activate' | 'suspend',
-    payload?: { reason?: string; actor?: string }
-  ): Promise<HubProject> {
-    // BE không có lệnh activate/suspend (lifecycle/{command} chỉ gồm declarations/confirmations/closures/transfers/recurrences): không giả vờ gọi
-    throw new Error(`Máy chủ chưa có lệnh vòng đời '${command}' cho Web.`)
-  },
-
-  updateProjectAlignment(
-    id: string,
-    data: { length_km?: number; kml_status?: string; stationing_text?: string; status?: HubProject['status'] }
-  ): HubProject | null {
-    let updatedProj: HubProject | null = null
-    projectStore = projectStore.map((p) => {
-      if (p.id === id || p.code === id) {
-        let statusLabel = p.status_label
-        let statusColor = p.status_color
-        if (data.kml_status === 'Chờ duyệt tim tuyến' || data.status === 'PENDING_ALIGNMENT') {
-          statusLabel = 'Chờ duyệt tuyến'
-          statusColor = '#D97706'
-        } else if (data.kml_status === 'Đã phê duyệt' || data.status === 'ACTIVE') {
-          statusLabel = 'Đang bảo hành'
-          statusColor = '#1B5E20'
-        }
-        updatedProj = { ...p, ...data, status_label: statusLabel, status_color: statusColor }
-        return updatedProj
-      }
-      return p
-    })
-    if (updatedProj) {
-      try {
-        sessionStorage.setItem('roadguard_project_store', JSON.stringify(projectStore))
-      } catch {}
-      window.dispatchEvent(new Event('roadguard_state_change'))
-    }
-    return updatedProj
   }
 }

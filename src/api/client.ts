@@ -16,7 +16,7 @@ export const apiClient = axios.create({
 })
 
 function isAuthRequest(url = ''): boolean {
-  return /^\/?auth\//.test(url) || url.includes('/api/v1/auth/') || url.includes('/invitations/accept')
+  return /^\/?auth\//.test(url) || url.includes('/api/v1/auth/') || url.includes('/invitations/accept') || url.includes('/invitations/preview')
 }
 function current(config: WebRequestConfig): boolean {
   const state = useAuthStore.getState()
