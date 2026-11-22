@@ -19,6 +19,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   const [operatorId, setOperatorId] = useState('')
   const [dueAt, setDueAt] = useState('')
   const [operators, setOperators] = useState<AvailablePilot[]>([])
+  const [operatorsLoaded, setOperatorsLoaded] = useState(false)
   const [picked, setPicked] = useState<Record<string, boolean>>({})
   // Kết quả thao tác giữ trong sessionStorage vì chi tiết bản ghi được nạp lại (gỡ khung) ngay sau khi BE đổi trạng thái.
   const memo = `rg_survey_action_${record.id}`
@@ -38,7 +39,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   useEffect(() => {
     if (!operatorNeeded) return
     let alive = true
-    surveyPlanningService.operators(record.projectId).then((rows) => { if (alive) setOperators(rows) }).catch((e) => { if (alive) setError(`Không đọc được danh sách Operator: ${exportError(e)}`) })
+    surveyPlanningService.operators(record.projectId).then((rows) => { if (alive) { setOperators(rows); setOperatorsLoaded(true) } }).catch((e) => { if (alive) setError(`Không đọc được danh sách Operator: ${exportError(e)}`) })
     return () => { alive = false }
   }, [operatorNeeded, record.projectId])
 
@@ -75,6 +76,9 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
   }
   const openChild = () => { const next = new URLSearchParams(params); next.set('surveyRecordId', childId); next.set('surveyRecordKind', 'TASK'); setParams(next) }
   const needOperator = isTask && (act === 'reassign' || act === 'supplement')
+  // Giao lại: không cho chọn lại Operator đang giữ nhiệm vụ (lịch sử Operator cũ vẫn do BE giữ).
+  const candidates = operators.filter((o) => !(isTask && act === 'reassign' && o.id === record.operatorId))
+  const noOtherOperator = isTask && act === 'reassign' && operatorsLoaded && candidates.length === 0
   const cls = 'rg-field w-full'
 
   return (
@@ -91,7 +95,7 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
           <Field label="Operator nhận nhiệm vụ" span="col-span-12 md:col-span-6">
             <select aria-label="Operator nhận nhiệm vụ" disabled={busy} value={operatorId} onChange={(e) => setOperatorId(e.target.value)} className={cls}>
               <option value="">Chọn Operator</option>
-              {operators.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
+              {candidates.map((o) => (<option key={o.id} value={o.id}>{o.name}</option>))}
             </select>
           </Field>
         )}
@@ -115,10 +119,11 @@ export const SurveyRecordActions: React.FC<{ record: SurveyRecord; onDone: () =>
         </div>
       )}
       <Field label="Lý do thao tác khảo sát"><textarea aria-label="Lý do thao tác khảo sát" rows={2} maxLength={2000} disabled={busy} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Lý do" className={cls} /></Field>
+      {noOtherOperator && <p role="alert" className="rg-alert rg-alert-warn text-xs">Không có Operator nào khác trong dự án để giao lại. Nhiệm vụ vẫn giữ Operator hiện tại; không thể xác nhận giao lại.</p>}
       <Feedback error={error} message={message} />
       <div className="rg-footer">
         {childId && <PanelButton onClick={openChild}>Mở nhiệm vụ bổ sung #{childId.slice(0, 8)}</PanelButton>}
-        <PanelButton variant={isTask && act === 'cancel' ? 'danger' : 'primary'} loading={busy} disabled={busy || !reason.trim() || (needOperator && !operatorId) || (isTask && act === 'supplement' && !hasSupplementScope)} onClick={() => { void submit() }}>
+        <PanelButton variant={isTask && act === 'cancel' ? 'danger' : 'primary'} loading={busy} disabled={busy || !reason.trim() || (needOperator && !operatorId) || noOtherOperator || (isTask && act === 'supplement' && !hasSupplementScope)} onClick={() => { void submit() }}>
           {busy ? 'Đang gửi…' : !isTask ? 'Xác nhận hoãn kế hoạch' : act === 'cancel' ? 'Xác nhận hủy nhiệm vụ' : act === 'supplement' ? 'Xác nhận tạo nhiệm vụ bổ sung' : 'Xác nhận giao lại'}
         </PanelButton>
       </div>

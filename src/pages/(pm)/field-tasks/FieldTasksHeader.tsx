@@ -192,7 +192,7 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
           </div>
         </div>
 
-        {/* KPI 3: Đã có số đo */}
+        {/* KPI 3: Đã nộp (có bản nộp từ Crew, chưa chắc đã có giá trị đo) */}
         <div
           className="rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1"
           style={{
@@ -218,14 +218,14 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
                   style={{ backgroundColor: '#B45309', boxShadow: '0 0 0 4px rgba(180, 83, 9, 0.15)' }}
                 />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  Đã có số đo
+                  Đã nộp bản đo
                 </span>
               </div>
               <Icon name="format_list_numbered" size={16} className="text-[#B45309]" />
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-2xl font-bold font-mono text-[#B45309]">{taskStats.submitted}</span>
-              <span className="text-xs text-slate-500 font-medium">chờ duyệt</span>
+              <span className="text-xs text-slate-500 font-medium">chờ PM thẩm định</span>
             </div>
           </div>
         </div>
@@ -256,14 +256,14 @@ export const FieldTasksHeader: React.FC<FieldTasksHeaderProps> = ({
                   style={{ backgroundColor: '#047857', boxShadow: '0 0 0 4px rgba(4, 120, 87, 0.15)' }}
                 />
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  Đã xác minh
+                  FIELD hoàn tất
                 </span>
               </div>
               <Icon name="check_circle" size={16} className="text-[#047857]" />
             </div>
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="text-2xl font-bold font-mono text-[#047857]">{taskStats.verified}</span>
-              <span className="text-xs text-slate-500 font-medium">hoàn tất</span>
+              <span className="text-xs text-slate-500 font-medium">đã review (Defect xét riêng)</span>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { apiClient } from '../client'
 import { FieldTask } from '../../types/domain'
 import { projectService } from './projectService'
 import { surveyService } from './surveyService'
+import { isFieldMeasurementCode, measurementTypeLabel } from './fieldMeasurementTypes'
 
 /**
  * ============================================================================
@@ -72,18 +73,7 @@ export interface BackendFieldTaskViewFact {
 }
 
 function formatMeasurementTypeName(typeNum: number): string {
-  switch (typeNum) {
-    case 1:
-      return 'Độ sâu lún (DepressionDepth)'
-    case 2:
-      return 'Độ chênh cao tấm (SlabFaultingHeight)'
-    case 3:
-      return 'Phạm vi xói lề (ShoulderErosionExtent)'
-    case 4:
-      return 'Diện tích (Area)'
-    default:
-      return 'Đo kích thước hình học hiện trường'
-  }
+  return measurementTypeLabel(typeNum)
 }
 
 function mapBackendTaskStatus(status?: string | null): FieldTask['status'] {
@@ -167,14 +157,13 @@ export const fieldTaskService = {
       const shortId = item.id.replace(/-/g, '').slice(0, 8).toUpperCase()
       const defectShort = item.defectId ? item.defectId.replace(/-/g, '').slice(0, 8).toUpperCase() : 'UNKNOWN'
 
-      let parsedMethod = formatMeasurementTypeName(item.requiredMeasurementType)
+      const parsedMethod = formatMeasurementTypeName(item.requiredMeasurementType)
       let parsedLane = ''
       let parsedChainage: number | null = null
 
       if (item.measurementScope) {
         try {
           const scopeData = JSON.parse(item.measurementScope)
-          if (scopeData.method) parsedMethod = scopeData.method
           if (scopeData.lane) parsedLane = scopeData.lane
           if (scopeData.chainage_km != null) parsedChainage = Number(scopeData.chainage_km)
         } catch {
@@ -281,7 +270,7 @@ export const fieldTaskService = {
     }
     const assignedUserId = payload.assigned_to_user_id
     const typeNum = payload.measurement_type_num
-    if (!typeNum || ![1, 2, 3, 4].includes(typeNum)) throw new Error('Cần loại đo canonical từ nguồn kỹ thuật; không suy từ tên phương pháp.')
+    if (!isFieldMeasurementCode(typeNum)) throw new Error('Cần mã loại đo canonical 1–6 từ BE; không suy từ tên phương pháp.')
     const sourceKind = payload.source_kind
     if (sourceKind !== 'REPORTER' && sourceKind !== 'SURVEY') throw new Error('Thiếu nguồn Defect đã xác minh; không tự phân loại theo UUID.')
     if (sourceKind === 'SURVEY' && !payload.survey_id) throw new Error('Thiếu Survey nguồn; không dùng Survey mẫu.')
@@ -290,7 +279,6 @@ export const fieldTaskService = {
     // measurementScope bắt buộc phải là một chuỗi JSON Object theo chuẩn kiểm định Backend (FieldInspectionTask.ValidateScope)
     const scopeObj = {
       standard: 'TCVN 8819:2011',
-      method: payload.measurement_type || 'Đo đạc kích thước hiện trường',
       lane: payload.lane,
       chainage_km: payload.chainage_km
     }

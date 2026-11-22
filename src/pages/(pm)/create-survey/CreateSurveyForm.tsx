@@ -57,6 +57,7 @@ interface CreateSurveyFormProps {
   hasActiveAdHoc?: boolean
   conflictReason?: string | null
   errorMessage?: string | null
+  errorActions?: React.ReactNode
   onClearError?: () => void
   onSubmit: (e: React.FormEvent) => void
   onCancel: () => void
@@ -85,6 +86,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
   hasActiveAdHoc = false,
   conflictReason = null,
   errorMessage,
+  errorActions,
   onClearError,
   onSubmit,
   onCancel
@@ -334,6 +336,7 @@ export const CreateSurveyForm: React.FC<CreateSurveyFormProps> = ({
       <div className="space-y-3">
         {!recoveryLabel && conflictReason && <p role="alert" className="text-xs text-rose-700">{conflictReason}</p>}
         {errorMessage && <p role="alert" className="text-xs text-rose-700">{errorMessage}</p>}
+        {errorMessage && errorActions}
         {commandBlockedReason && <p role="alert" className="text-xs text-rose-700">{commandBlockedReason}</p>}
         {/* ACTION BUTTONS */}
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EDEFF2]">

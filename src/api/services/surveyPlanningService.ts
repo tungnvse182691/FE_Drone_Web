@@ -13,6 +13,7 @@ export interface SurveyProject { projectId: string; projectCode: string; name: s
 export interface SurveyRecord {
   id: string; projectId: string; status: string; version: string; scope?: SurveyScope[]
   plannedAt?: string; operatorId?: string; supplementTaskId?: string | null
+  dueAt?: string | null; parentTaskId?: string | null; plannedEndAt?: string | null; planId?: string | null
   recordKind: 'PLAN' | 'TASK'
 }
 export interface SurveyPresentation {
@@ -66,7 +67,8 @@ export const surveyPlanningService = {
     if (rows.some(p => !p.projectId || !p.projectCode || !p.name) || new Set(rows.map(p => p.projectId)).size !== rows.length) throw new Error('Danh sách dự án sai ID/contract.')
     return rows
   },
-  async routes(project: SurveyProject): Promise<ProjectRouteConfig[]> {
+  /** onSkip: tuyến có hình học chưa COMPLETE (vd LEGACY_INCOMPLETE) không dùng được để lập khảo sát; bỏ qua và báo, không làm hỏng cả danh sách. */
+  async routes(project: SurveyProject, onSkip?: (message: string) => void): Promise<ProjectRouteConfig[]> {
     const current = session(), context = await alignmentService.readProjectContext(project.projectId)
     current()
     if (context.projectId !== project.projectId) throw new Error('Context trả sai dự án.')
@@ -75,7 +77,8 @@ export const surveyPlanningService = {
       if (!road.currentVersionId) continue
       const geometry = await alignmentService.readConfirmedGeometry(project.projectId, road.roadSectionId, road.currentVersionId)
       current()
-      if (geometry.projectId !== project.projectId || geometry.roadSectionId !== road.roadSectionId || geometry.routeVersionId !== road.currentVersionId || geometry.metadataStatus !== 'COMPLETE') throw new Error('Geometry chưa COMPLETE hoặc sai project/section/version.')
+      if (geometry.projectId !== project.projectId || geometry.roadSectionId !== road.roadSectionId || geometry.routeVersionId !== road.currentVersionId) throw new Error('Geometry sai project/section/version.')
+      if (geometry.metadataStatus !== 'COMPLETE') { onSkip?.(`${road.code}: hình học ở trạng thái ${geometry.metadataStatus}, chưa đủ để lập khảo sát nên không được đưa vào danh sách tuyến.`); continue }
       const pins = {projectId: project.projectId, roadSectionId: road.roadSectionId, routeVersionId: road.currentVersionId}
       const published = publishedSetForRoute(await segmentSetService.list(pins), road.currentVersionId)
       current()
@@ -158,13 +161,22 @@ export const surveyPlanningService = {
       // BE bản mới: list đã có summary (operatorDisplayName, scopeSummary[], datasetCount, plannedEndAt) → KHÔNG gọi detail từng bản ghi (hết N+1).
       // Phạm vi chi tiết (tên tuyến, lý trình) chỉ đọc khi mở chi tiết (describe trong SurveyRecordDetailModal).
       const BAND: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Mép trái', RIGHT_EDGE: 'Mép phải' }
+      // Quan hệ gốc–con của nhiệm vụ bổ sung: BE chỉ trả supplementTaskId (con) trên nhiệm vụ gốc; nhiệm vụ gốc của một nhiệm vụ con suy ra từ chính danh sách này.
+      const parentOf = new Map<string, string>()
+      for (const t of tasks as any[]) if (t.supplementTaskId) parentOf.set(String(t.supplementTaskId), t.id)
+      const operatorsOfPlan = new Map<string, Set<string>>()
+      for (const t of tasks as any[]) if (t.planId && t.operatorDisplayName) { const set = operatorsOfPlan.get(t.planId) || new Set<string>(); set.add(t.operatorDisplayName); operatorsOfPlan.set(t.planId, set) }
+      const shortCode = (kind: 'PLAN' | 'TASK', id: string) => `${kind === 'PLAN' ? 'KH' : 'NV'}-${String(id).replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      const when = (iso?: string | null) => iso ? surveyPlannedAtLabel(iso) : ''
       for (const record of [...plans, ...tasks] as any[]) {
         current(); if (signal?.aborted) throw new Error('Đã hủy đọc khảo sát.')
         const summary: Array<{ targetBand: string; segmentCount: number }> = Array.isArray(record.scopeSummary) ? record.scopeSummary : []
         const scopeText = record.scopeAvailability === 'MISSING' || !summary.length ? 'Chưa lưu phạm vi trong bản ghi' : summary.map(x => `${BAND[x.targetBand] || x.targetBand} · ${x.segmentCount} phân đoạn`).join(' / ')
-        built.push({ id: record.id, code: record.id, title: record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát', serverRecordKind: record.recordKind,
+        built.push({ id: record.id, code: record.id, short_code: shortCode(record.recordKind, record.id), title: record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : parentOf.has(record.id) ? 'Nhiệm vụ khảo sát bổ sung' : 'Nhiệm vụ khảo sát', serverRecordKind: record.recordKind,
+          plan_id: record.recordKind === 'TASK' ? record.planId ?? null : null, supplement_task_id: record.supplementTaskId ?? null, parent_task_id: parentOf.get(record.id) ?? null,
+          due_label: record.recordKind === 'TASK' ? when(record.dueAt) : '',
           survey_type: null, survey_type_label: 'API chưa trả loại khảo sát', project_id: project.projectId, project_name: `${project.projectCode} · ${project.name}`,
-          start_km: '', end_km: '', flight_date: record.plannedAt ? surveyPlannedAtLabel(record.plannedAt) : '', pilot_name: record.recordKind === 'TASK' ? (record.operatorDisplayName || 'Chưa có tên người được giao') : '', drone_model: '', scope_summary: scopeText, read_error: '',
+          start_km: '', end_km: '', flight_date: record.plannedAt ? `${surveyPlannedAtLabel(record.plannedAt)}${record.plannedEndAt ? ` → ${surveyPlannedAtLabel(record.plannedEndAt)}` : ''}` : '', pilot_name: record.recordKind === 'TASK' ? (record.operatorDisplayName || 'Chưa có tên người được giao') : [...(operatorsOfPlan.get(record.id) || [])].join(', '), drone_model: '', scope_summary: scopeText, read_error: '',
           total_photos: Number.NaN, gsd_resolution: '', ai_defects_count: Number.NaN, ai_pending_count: Number.NaN, coverage_percent: Number.NaN, serverStatus: record.status, status_label: surveyStatusLabel(record.status) } as SurveyMissionItem)
       }
       rows.push(...built)

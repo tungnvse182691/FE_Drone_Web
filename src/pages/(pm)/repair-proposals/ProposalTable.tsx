@@ -148,8 +148,8 @@ export const ProposalTable: React.FC<ProposalTableProps> = ({
               <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Thời gian thi công</th>
               <th className="py-3 px-3 whitespace-nowrap w-[125px] min-w-[125px]">Người lập / Ngày trình</th>
               <th className="py-3 px-3 whitespace-nowrap w-[105px] min-w-[105px]">Trạng thái</th>
-              <th className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">Hạng mục có kết quả</th>
-              <th className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 w-[155px] min-w-[155px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
+              <th className="py-3 px-3 whitespace-nowrap w-[130px] min-w-[130px]" title="Số hạng mục đã có quyết định phê duyệt; không phải tiến độ thi công">Quyết định phê duyệt</th>
+              <th className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-[#F8F9FA] z-20 w-[215px] min-w-[215px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
                 Thao tác
               </th>
             </tr>

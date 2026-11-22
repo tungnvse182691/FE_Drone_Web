@@ -24,6 +24,8 @@ export interface DefectItem {
   packageId?: string
   itemId?: string
   obligationId?: string
+  /** Nghĩa vụ nhận chuyển: dự án gốc (Crew, chính sách và nguồn thuộc dự án này). */
+  originProjectId?: string
   checklistVersion?:string
   checklistSource?:string
   canAssign?: boolean

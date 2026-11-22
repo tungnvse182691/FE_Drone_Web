@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { InputField } from '../../components/ui/InputField'
@@ -22,6 +23,10 @@ export const AssignCrew: React.FC = () => {
   const [surveyId, setSurveyId] = useState('')
   const [safetyNotes, setSafetyNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  // Điều hướng từ danh sách/modal gói: ?projectId=&packageId=&itemId= → chọn sẵn hạng mục, không bắt nhập tay.
+  const [params] = useSearchParams()
+  const preselected = useRef(false)
+  const [navNote, setNavNote] = useState('')
 
   const errText = (err: unknown): string => {
     const e = err as { response?: { status?: number; data?: { detail?: string; title?: string; code?: string } }; message?: string }
@@ -44,6 +49,18 @@ export const AssignCrew: React.FC = () => {
   useEffect(() => {
     loadItems()
   }, [])
+
+  useEffect(() => {
+    if (isLoading || preselected.current) return
+    const pid = params.get('projectId'), pkg = params.get('packageId'), iid = params.get('itemId')
+    if (!pid) return
+    preselected.current = true
+    if (loadError) return
+    const pool = items.filter((it) => it.projectId === pid && (!pkg || it.packageId === pkg) && (!iid || it.itemId === iid) && it.mode === 'Normal')
+    if (pool.length === 1) { setSelectedItemKey(`${pool[0].projectId}:${pool[0].itemId}`); setNavNote('') }
+    else if (pool.length === 0) setNavNote('Hạng mục được chọn không còn ở trạng thái chờ giao (ReadyToAssign) hoặc không phải hạng mục Normal.')
+    else setNavNote('Gói có nhiều hạng mục chờ giao — chọn hạng mục cần giao trong danh sách.')
+  }, [isLoading, items, params, loadError])
 
   const selected = items.find((it) => `${it.projectId}:${it.itemId}` === selectedItemKey) || null
 
@@ -132,6 +149,7 @@ export const AssignCrew: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {navNote && <p role="status" className="text-[11px] text-amber-700 mt-1">{navNote}</p>}
                 {!isLoading && !loadError && items.length === 0 && (
                   <p className="text-[11px] text-slate-500 mt-1">
                     Không có hạng mục nào chờ giao việc trong CSDL. Hạng mục thường cần Giám sát duyệt trước khi giao.

@@ -97,6 +97,8 @@ export function useFastTrackPolicy(selectedProjectId:string,showToast:(msg:strin
       if(!activeScope(p,actionEpoch))return
       adopt(row);localStorage.removeItem(fastTrackStorage(p,'policy-pipeline'));if(old)localStorage.removeItem(fastTrackStorage(p,`policy-update:${old.id}`))
       await loadPolicyData(row.id);showToast(`Đã GET đối chiếu ${row.checklistVersion}: ${row.state==='DRAFT'?'Dự thảo':row.state==='REVOKED'?'Đã thu hồi':'Đã xuất bản'}.`)
+      // Công bố xong và đã đọc lại bản đã xuất bản → tự đóng bảng nhập.
+      if(shouldPublish && row.state==='PUBLISHED')setIsPolicyModalOpen(false)
     }catch(e){setPolicyError(exportError(e))}finally{busy.current=false;setPolicyBusy(false)}
   }
   const revokePolicy=async(row:RepairPolicyView,reason:string)=>{

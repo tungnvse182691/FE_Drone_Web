@@ -1,8 +1,11 @@
 import {fieldEvidenceReuseCommands,type ReuseSource} from '../../../api/services/fieldEvidenceReuseCommands'
-import {fieldCreateCommands,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
+import {fieldCreateCommands,FieldInputError,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
 import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
 import type {TriageGeometryPins} from '../../../api/services/triageGeometryService'
-import { FieldTaskReadDetails } from './FieldTaskReadDetails'
+import { FieldTaskReadDetails, type FieldRead } from './FieldTaskReadDetails'
+import { FieldSubmissionPhotos, FieldSubmissionSummary } from './FieldSubmissionBlock'
+import { FIELD_MEASUREMENT_TYPES, measurementTypeLabel } from '../../../api/services/fieldMeasurementTypes'
+import { apiClient } from '../../../api/client'
 import React, { useState, useMemo } from 'react'
 import { Card } from '../../../components/ui/Card'
 import { Icon } from '../../../components/ui/Icon'
@@ -73,16 +76,13 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
 
   // Modal Tạo nhiệm vụ mới
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [createModalError, setCreateModalError] = useState<string | null>(null)
+  const [createModalError, setCreateModalError] = useState<{ kind: 'input' | 'server' | 'check'; message: string } | null>(null)
   const [isSubmittingCreate, setIsSubmittingCreate] = useState(false)
 
 
   const [selectedDefectId, setSelectedDefectId] = useState<string>('')
   const [newDefectCode, setNewDefectCode] = useState('')
   const [newDefectName, setNewDefectName] = useState('')
-  const [newMethod, setNewMethod] = useState('')
-  const [isCustomMethod, setIsCustomMethod] = useState(false)
-  const [customMethodText, setCustomMethodText] = useState('')
   const [newNotes, setNewNotes] = useState('')
 
   const [newMeasurementType,setNewMeasurementType]=useState(0),[newDueAt,setNewDueAt]=useState('')
@@ -95,9 +95,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   const handleSelectDefect=(id:string)=>{setCreateScope({project:selectedProjectId});setNewMeasurementType(0);setSelectedDefectId(id);const d=availableDefects.find(r=>r.id===id);setNewDefectCode(d?.code||'');setNewDefectName(d?.defect_type||'')}
   const handleOpenCreateModal=()=>{
     if(isSupervisor||selectedProjectId==='ALL'){notify('Chọn một dự án thật trước khi tạo FIELD.','error');return}
-    setCreateModalError(null);setIsCustomMethod(false);setCustomMethodText('');setCreateScope({project:selectedProjectId})
+    setCreateModalError(null);setCreateScope({project:selectedProjectId})
     const intended=heldCreate?.input.defectId || (availableDefects.some(d=>d.id===linkedDefectId)?linkedDefectId:''),source=availableDefects.find(d=>d.id===intended)
-    setSelectedDefectId(intended);setNewDefectCode(source?.code||'');setNewDefectName(source?.defect_type||'');setNewMethod(heldCreate?.input.measurementScope||'');setNewNotes(heldCreate?.input.instructions||'');setSelectedCrewId(heldCreate?.input.assignedToUserId||'');setNewMeasurementType(heldCreate?.input.requiredMeasurementType||0);setNewDueAt(heldCreate?.input.dueAt||'');setIsCreateModalOpen(true)
+    setSelectedDefectId(intended);setNewDefectCode(source?.code||'');setNewDefectName(source?.defect_type||'');setNewNotes(heldCreate?.input.instructions||'');setSelectedCrewId(heldCreate?.input.assignedToUserId||'');setNewMeasurementType(heldCreate?.input.requiredMeasurementType||0);setNewDueAt(heldCreate?.input.dueAt||'');setIsCreateModalOpen(true)
   }
 
   // Modal Ghi nhận số đo
@@ -109,6 +109,19 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
   // Modal Xem chi tiết & Ảnh thước đo
   const [selectedDetailTask, setSelectedDetailTask] = useState<FieldTask | null>(null)
   const [modalPhotoTab, setModalPhotoTab] = useState<'RULER' | 'DRONE' | 'SPLIT' | 'REUSED'>('RULER')
+  // Dữ liệu GET thật của nhiệm vụ + bản nộp mới nhất (một nguồn cho khối hồ sơ và khối số đo/ảnh).
+  const [detailRead, setDetailRead] = useState<{ taskId: string; read: FieldRead } | null>(null)
+  const [defectInfo, setDefectInfo] = useState<{ taskId: string; text: string } | null>(null)
+  const liveRead = detailRead && selectedDetailTask && detailRead.taskId === selectedDetailTask.id ? detailRead.read : null
+  React.useEffect(() => {
+    if (!selectedDetailTask?.project_id || !liveRead?.task.defectId) return
+    let on = true
+    const taskId = selectedDetailTask.id
+    apiClient.get(`/projects/${selectedDetailTask.project_id}/defects/${liveRead.task.defectId}`)
+      .then((r) => { if (on) setDefectInfo({ taskId, text: String(r.data?.status || 'Máy chủ không trả trạng thái') }) })
+      .catch((e) => { if (on) setDefectInfo({ taskId, text: e?.response ? `Không đọc được (HTTP ${e.response.status})` : 'Không đọc được' }) })
+    return () => { on = false }
+  }, [selectedDetailTask?.id, liveRead?.task.defectId])
 
   // Modal Lightbox Phóng to ảnh & So sánh song song
   const [lightboxTask, setLightboxTask] = useState<FieldTask | null>(null)
@@ -178,13 +191,13 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     setCreateModalError(null);setIsSubmittingCreate(true)
     try{
       if(selectedProjectId==='ALL')throw new Error('Chọn dự án cụ thể; không tự lấy dự án đầu tiên.')
-      const target=availableDefects.find(d=>d.id===selectedDefectId),method=isCustomMethod?customMethodText.trim():newMethod
-      if(!heldCreate&&(!target||!isSelectedDefectEligible||!method||createScope.project!==selectedProjectId||createScope.enabled&&!createScope.pins))throw new Error('Chọn Defect OPEN, phương pháp và phạm vi PUBLISHED thật.')
-      const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,routeVersionId:target!.route_version_id,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,measurementScope:method,instructions:newNotes,dueAt:newDueAt,...(createScope.pins?{pins:createScope.pins}:{})}
+      const target=availableDefects.find(d=>d.id===selectedDefectId)
+      if(!heldCreate){const missing:string[]=[];if(!target)missing.push('Khiếm khuyết');else if(!isSelectedDefectEligible)missing.push('Khiếm khuyết phải ở trạng thái OPEN');if(createScope.project!==selectedProjectId||createScope.enabled&&!createScope.pins)missing.push('Phạm vi hình học đã công bố (PUBLISHED)');if(missing.length)throw new FieldInputError('Chưa nhập hoặc nhập sai: '+missing.join('; ')+'.')}
+      const choice=heldCreate?.input||{defectId:target!.id,defectVersion:target!.version,routeVersionId:target!.route_version_id,assignedToUserId:selectedCrewId,requiredMeasurementType:newMeasurementType,instructions:newNotes,dueAt:newDueAt,...(createScope.pins?{pins:createScope.pins}:{})}
       const created=await fieldCreateCommands.request(selectedProjectId,choice)
       if(!current())return
       setIsCreateModalOpen(false);await onRefreshTasks();if(current())notify(`Đã GET xác nhận tạo phiếu FIELD ${created.id}.`,'success')
-    }catch(e:any){if(!current())return;const message=e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message;setCreateModalError(message);notify(message,'error')}finally{if(current())setIsSubmittingCreate(false)}
+    }catch(e:any){if(!current())return;const server=!!e?.response,message=server?`HTTP ${e.response.status} ${e.response.data?.code||e.message}${e.response.data?.detail?` — ${e.response.data.detail}`:''}`:e.message;setCreateModalError({kind:e instanceof FieldInputError?'input':server?'server':'check',message});notify(message,'error')}finally{if(current())setIsSubmittingCreate(false)}
   }
 
   // Xử lý chuyển sang trạng thái Đang đo đạc (IN_PROGRESS)
@@ -330,7 +343,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
-            Đã có số đo ({counts.submitted})
+            Đã nộp ({counts.submitted})
           </button>
           <button
             type="button"
@@ -341,7 +354,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
             }`}
           >
-            Đã xác minh ({counts.verified})
+            FIELD hoàn tất ({counts.verified})
           </button>
         </div>
 
@@ -389,7 +402,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 Mã Nhiệm Vụ
               </th>
               <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Khiếm Khuyết & Vị Trí</th>
-              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Phương Pháp Đo</th>
+              <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Loại Đo Yêu Cầu</th>
               <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Số Đo Thực Tế</th>
               <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Kỹ Sư Phụ Trách</th>
               <th className="py-3.5 px-3 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ảnh Đối Chứng</th>
@@ -464,7 +477,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </div>
                     </td>
 
-                    {/* Phương pháp đo */}
+                    {/* Loại đo yêu cầu (requiredMeasurementType) */}
                     <td className="py-3.5 px-3 text-slate-700 max-w-[110px]">
                       <div className="line-clamp-2 leading-relaxed text-xs">{task.measurement_type}</div>
                     </td>
@@ -478,10 +491,12 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           <Icon name="pending" size={13} />
                           <span>Đang thực hiện</span>
                         </span>
-                      ) : (
+                      ) : task.measured_value != null ? (
                         <span className="font-bold text-slate-900 text-xs font-mono">
                           {task.measured_value} mm
                         </span>
+                      ) : (
+                        <span className="text-slate-500 italic text-[11px]">Xem giá trị trong Chi tiết</span>
                       )}
                     </td>
 
@@ -605,7 +620,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         </span>
                       ) : task.status === 'SUBMITTED' ? (
                         <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#FFFBEB] text-[#B45309] border border-[#E3D3AC]">
-                          ĐÃ CÓ SỐ ĐO
+                          ĐÃ NỘP · CHỜ THẨM ĐỊNH
                         </span>
                       ) : (
                         <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
@@ -642,7 +657,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                             !task.reused_evidence &&
                             (task.source_origin === 'CITIZEN_REPORT' ||
                               Boolean(task.linked_case_code)) &&
-                            (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS') ? (
+                            (task.status === 'ASSIGNED' || task.status === 'IN_PROGRESS' || task.status === 'SUPPLEMENT_REQUIRED') ? (
                             <button
                               type="button"
                               onClick={() => handleOpenReuseModal(task)}
@@ -818,66 +833,6 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               
 
               <div className="flex flex-col">
-                <div className="mb-1">
-                  <label className="font-medium text-slate-700">Phương pháp & Thiết bị đo <span className="text-rose-500">*</span></label>
-                </div>
-                {!isCustomMethod ? (
-                  <select
-                    value={newMethod}
-                    onChange={(e) => {
-                      if (e.target.value === 'CUSTOM') {
-                        setIsCustomMethod(true)
-                        setCustomMethodText('')
-                      } else {
-                        setNewMethod(e.target.value)
-                      }
-                    }}
-                    className="w-full bg-white border border-slate-200 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227] cursor-pointer"
-                  >
-                    <option value="">Chọn phương pháp / thiết bị</option>
-                    <option value="Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách">
-                      Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách
-                    </option>
-                    <option value="Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM">
-                      Thước đo kính hiển vi quang học độ mở rộng khe nứt BTXM
-                    </option>
-                    <option value="Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM">
-                      Thước laser trắc địa đo độ chênh cốt hai mép khe co giãn tấm BTXM
-                    </option>
-                    <option value="Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe">
-                      Thước đo độ sâu hố sụt lòng đường & vệt lún bánh xe
-                    </option>
-                    <option value="CUSTOM">[+] Phương pháp & thiết bị khác...</option>
-                  </select>
-                ) : (
-                  <div className="space-y-1.5">
-                    <input
-                      type="text"
-                      value={customMethodText}
-                      onChange={(e) => setCustomMethodText(e.target.value)}
-                      placeholder="Nhập phương pháp / thiết bị chuyên dụng (VD: Khoan lấy mẫu lõi bê tông, Thước đo 3m độ võng bánh xe)..."
-                      className="w-full bg-amber-50/40 border border-amber-300 text-slate-800 text-xs p-2 rounded-lg focus:outline-none focus:border-[#C9A227]"
-                      autoFocus
-                      required
-                    />
-                    <div className="flex items-center justify-between text-[10px] text-slate-400">
-                      <span>PM được phép chỉ định thiết bị đo đặc thù theo yêu cầu kiểm tra kỹ thuật</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCustomMethod(false)
-                          setNewMethod('Đo dưỡng chiều sâu vỡ góc bản BTXM & diện tích bóc tách')
-                        }}
-                        className="text-slate-500 hover:text-slate-800 underline cursor-pointer"
-                      >
-                        Quay lại chọn danh mục
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col">
                 <label className="font-medium text-slate-700 mb-1">Kỹ sư / Tổ đo đạc thực hiện <span className="text-rose-500">*</span></label>
                 <select
                   value={selectedCrewId}
@@ -905,7 +860,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 />
               </div>
 
-              <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="rg-field w-full"><option value="">Chọn loại đo</option><option value={1}>Độ sâu lún</option><option value={2}>Chênh cao tấm</option><option value={3}>Phạm vi xói vai đường</option><option value={4}>Diện tích</option></select></label>
+              <label className="grid gap-1">Chỉ số cần đo<select aria-label="Loại đo FIELD canonical" value={newMeasurementType||''} onChange={e=>setNewMeasurementType(Number(e.target.value))} className="rg-field w-full"><option value="">Chọn loại đo</option>{FIELD_MEASUREMENT_TYPES.map(t=><option key={t.code} value={t.code}>{t.label}</option>)}</select></label>
               <label className="grid gap-1">Hạn xử lý<input aria-label="Hạn xử lý FIELD" type="datetime-local" value={newDueAt} onChange={e=>setNewDueAt(e.target.value)} className="rg-field w-full" /></label>
               <TriageGeometryScope forField projectId={selectedProjectId==='ALL'?'':selectedProjectId} caseId={selectedDefectId} disabled={!!heldCreate||isSubmittingCreate} onChange={(enabled,pins)=>setCreateScope(old=>old.project===selectedProjectId&&old.enabled===enabled&&old.pins?.geometryVersion===(enabled?pins?.geometryVersion:undefined)&&old.pins?.routeVersionId===(enabled?pins?.routeVersionId:undefined)&&old.pins?.segmentSetId===(enabled?pins?.segmentSetId:undefined)?old:{project:selectedProjectId,enabled,pins:enabled?pins:undefined})} />
               <p>Chỉ tạo phiếu từ phản ánh đã ghi nhận và đối chiếu được nguồn. Nguồn khảo sát chưa có đủ thông tin đối chiếu sẽ bị chặn.</p>
@@ -915,8 +870,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 flex items-start gap-2.5 text-xs animate-in fade-in duration-200">
                   <Icon name="error" size={16} className="text-rose-600 shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <div className="font-bold">Lỗi từ máy chủ CSDL:</div>
-                    <div className="mt-0.5 text-rose-800 leading-relaxed font-medium">{createModalError}</div>
+                    <div className="font-bold">{createModalError.kind==='input'?'Thông tin nhập chưa hợp lệ:':createModalError.kind==='server'?'Máy chủ từ chối yêu cầu:':'Đối chiếu dữ liệu trước khi gửi chưa đạt:'}</div>
+                    <div className="mt-0.5 text-rose-800 leading-relaxed font-medium">{createModalError.message}</div>
                   </div>
                   <button
                     type="button"
@@ -1036,7 +991,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
       {/* MODAL 3: XEM CHI TIẾT NHIỆM VỤ & ẢNH THƯỚC ĐO */}
       {selectedDetailTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-xl max-w-3xl w-full p-5 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[92vh] overflow-y-auto p-5 border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1062,7 +1017,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </button>
             </div>
 
-            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status?.toUpperCase()==='COMPLETED'?'VERIFIED':task.status?.replace(/_/g,'').toUpperCase()==='SUPPLEMENTREQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
+            {selectedDetailTask.project_id?<FieldTaskReadDetails projectId={selectedDetailTask.project_id} taskId={selectedDetailTask.id} onLoaded={read=>setDetailRead({taskId:selectedDetailTask.id,read})} onReviewed={task=>{setSelectedDetailTask(old=>old?.id===task.id?{...old,version:task.version,status:task.status?.toUpperCase()==='COMPLETED'?'VERIFIED':task.status?.replace(/_/g,'').toUpperCase()==='SUPPLEMENTREQUIRED'?'SUPPLEMENT_REQUIRED':'UNKNOWN'}:old);void onRefreshTasks()}} />:<p role="alert" className="text-xs text-rose-700">Nhiệm vụ thiếu projectId từ máy chủ; chưa đọc hồ sơ.</p>}
 
             {/* Content: 2 cột */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1300,11 +1255,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-44 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center">
-                      <Icon name="pending" size={28} className="text-slate-300 mb-1" />
-                      <span className="font-medium text-slate-600">Đang chờ Repair Crew đo đạc ngoài hiện trường</span>
-                      <span className="text-[11px] text-slate-400 mt-0.5">Số đo và ảnh thước đo sẽ tự động đồng bộ khi kỹ sư nộp</span>
-                    </div>
+                    <FieldSubmissionPhotos projectId={selectedDetailTask.project_id || ''} taskId={selectedDetailTask.id} read={liveRead} />
                   )}
 
                   {/* Thumbnail chuyển đổi nhanh ở phía dưới */}
@@ -1405,7 +1356,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                       </span>
                     ) : selectedDetailTask.status === 'SUBMITTED' ? (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                        ĐÃ CÓ SỐ ĐO
+                        ĐÃ NỘP · CHỜ THẨM ĐỊNH
                       </span>
                     ) : (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -1436,9 +1387,9 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   </div>
 
                   <div>
-                    <span className="text-slate-500 block text-[11px]">Phương pháp & Thiết bị:</span>
+                    <span className="text-slate-500 block text-[11px]">Loại đo yêu cầu:</span>
                     <span className="text-slate-800 font-medium">
-                      {selectedDetailTask.measurement_type}
+                      {liveRead ? measurementTypeLabel(liveRead.task.requiredMeasurementType) : selectedDetailTask.measurement_type}
                     </span>
                   </div>
 
@@ -1449,26 +1400,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                     </span>
                   </div>
 
-                  {/* Giá trị đo đạc nổi bật */}
-                  <div className="p-3 bg-white rounded-lg border border-slate-200 mt-2">
-                    <span className="text-[11px] font-medium text-slate-500 block">
-                      Kết quả đo thực tế (mm):
-                    </span>
-                    {selectedDetailTask.measured_value ? (
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-2xl font-bold font-mono text-rose-600">
-                          {selectedDetailTask.measured_value} mm
-                        </span>
-                        <span className="text-[11px] text-rose-600 font-medium">
-                          (Vượt ngưỡng kỹ thuật cho phép)
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 italic text-xs mt-1 block">
-                        Chưa có số đo nộp về
-                      </span>
-                    )}
-                  </div>
+                  {/* Số đo, ảnh, READY/INCOMPLETE của bản nộp mới nhất — dữ liệu GET thật, hợp nhất với khối hồ sơ phía trên */}
+                  <FieldSubmissionSummary read={liveRead} defectStatus={defectInfo?.taskId === selectedDetailTask.id ? defectInfo.text : (liveRead ? 'Đang đọc…' : '—')} />
 
                   {/* Thông tin bằng chứng tái sử dụng (API-084) nếu có */}
                   {selectedDetailTask.reused_evidence && (
@@ -1533,7 +1466,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   !selectedDetailTask.reused_evidence &&
                   (selectedDetailTask.source_origin === 'CITIZEN_REPORT' ||
                     Boolean(selectedDetailTask.linked_case_code)) &&
-                  (selectedDetailTask.status === 'ASSIGNED' || selectedDetailTask.status === 'IN_PROGRESS') ? (
+                  (selectedDetailTask.status === 'ASSIGNED' || selectedDetailTask.status === 'IN_PROGRESS' || selectedDetailTask.status === 'SUPPLEMENT_REQUIRED') ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -1825,7 +1758,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </span>
             ) : lightboxTask.status === 'SUBMITTED' ? (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-900/80 text-amber-200">
-                ĐÃ CÓ SỐ ĐO
+                ĐÃ NỘP · CHỜ THẨM ĐỊNH
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-900/80 text-emerald-200">

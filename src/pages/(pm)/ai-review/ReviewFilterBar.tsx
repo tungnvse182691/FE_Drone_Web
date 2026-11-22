@@ -67,7 +67,7 @@ export const ReviewFilterBar: React.FC<ReviewFilterBarProps> = ({
               : 'bg-white text-slate-700 hover:bg-slate-50 border-[#E2E5E9]'
           }`}
         >
-          <span>Chờ xác minh</span>
+          <span>Chưa kết luận</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'PENDING' ? 'bg-amber-100 text-amber-900' : 'bg-amber-100 text-amber-800'
           }`}>

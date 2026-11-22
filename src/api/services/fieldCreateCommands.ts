@@ -5,8 +5,11 @@ import {projectService} from './projectService'
 import {reportKeepNewCommands} from './reportKeepNewCommands'
 import {triageGeometryService,type TriageGeometryPins} from './triageGeometryService'
 import {fieldTaskReadService,type FieldTaskDetail} from './fieldTaskReadService'
+import {isFieldMeasurementCode} from './fieldMeasurementTypes'
+// Lỗi nhập liệu do FE tự kiểm (KHÁC lỗi máy chủ/CSDL): UI hiển thị theo trường, không gán cho máy chủ.
+export class FieldInputError extends Error{constructor(message:string){super(message);this.name='FieldInputError'}}
 export interface FieldDefectOption {id:string;code:string;project_id:string;defect_type:string;status:string;version:string;route_version_id:string}
-export interface FieldCreateChoice {defectId:string;defectVersion:string;assignedToUserId:string;requiredMeasurementType:number;measurementScope:string;instructions:string;dueAt:string;routeVersionId?:string;pins?:TriageGeometryPins}
+export interface FieldCreateChoice {defectId:string;defectVersion:string;assignedToUserId:string;requiredMeasurementType:number;measurementScope?:string;instructions:string;dueAt:string;routeVersionId?:string;pins?:TriageGeometryPins}
 interface Intent {projectId:string;input:FieldCreateChoice;body:{defectId:string;defectVersion:string;routeVersionId:string;segmentSetId?:string;crsProfileRevisionId?:string|null;purpose:string;requiredMeasurementType:number;measurementScope:string;instructions:string;assignedToUserId:string;dueAt:string;sourceKind:string};key:string;received?:boolean;receipt?:FieldTaskDetail}
 const busy=new Set<string>(),journal=(p:string)=>`rg_field_create_${useAuthStore.getState().user?.id}_${p}`
 function actor(){const s=useAuthStore.getState();if(s.user?.role!==RoleCode.PROJECT_MANAGER)throw new Error('Chỉ PM được tạo FIELD từ Defect đã ghi nhận.');return `${s.authEpoch}:${s.user.id}`}
@@ -21,7 +24,7 @@ export const fieldCreateCommands={
   const s=actor(),k=journal(project),held=this.pending(project)
   if(held&&JSON.stringify(held.input)!==JSON.stringify(input))throw new Error('Giữ nguyên key/body của yêu cầu tạo FIELD đang chờ.')
   const routeVersionId=input.routeVersionId||input.pins?.routeVersionId
-  if(!input.defectId||!input.defectVersion||!input.assignedToUserId||![1,2,3,4].includes(input.requiredMeasurementType)||!input.measurementScope.trim()||!Number.isFinite(Date.parse(input.dueAt))||!routeVersionId||input.pins&&(!input.pins.segmentSetId||!/^[a-f0-9]{64}$/i.test(input.pins.geometryVersion)||input.pins.routeVersionId!==routeVersionId))throw new Error('Chọn Defect, Crew, loại đo, tuyến và hạn xử lý thật trước khi tạo FIELD.')
+  {const missing:string[]=[];if(!input.defectId||!input.defectVersion)missing.push('Khiếm khuyết (Defect OPEN)');if(!input.assignedToUserId)missing.push('Kỹ sư / Tổ đo đạc (Crew)');if(!isFieldMeasurementCode(input.requiredMeasurementType))missing.push('Chỉ số cần đo (mã 1–6)');if(!Number.isFinite(Date.parse(input.dueAt)))missing.push('Hạn xử lý');if(!routeVersionId)missing.push('Tuyến của khiếm khuyết');if(input.pins&&(!input.pins.segmentSetId||!/^[a-f0-9]{64}$/i.test(input.pins.geometryVersion)||input.pins.routeVersionId!==routeVersionId))missing.push('Phạm vi hình học đã công bố (bộ phân đoạn)');if(missing.length)throw new FieldInputError('Chưa nhập hoặc nhập sai: '+missing.join('; ')+'.')}
   if(busy.has(k))throw new Error('Đang tạo FIELD.');busy.add(k)
   let c=held
   try{
@@ -33,8 +36,8 @@ export const fieldCreateCommands={
     const route=(await apiClient.get(`/projects/${project}/road-sections/${road.roadSectionId}/versions/${routeVersionId}/geometry`)).data;active(s)
     if(route?.projectId!==project||route.roadSectionId!==road.roadSectionId||route.routeVersionId!==routeVersionId||!Object.prototype.hasOwnProperty.call(route,'crsProfileRevisionId')||route.crsProfileRevisionId!==null&&(typeof route.crsProfileRevisionId!=='string'||!route.crsProfileRevisionId))throw new Error('GET tuyến thiếu hoặc sai reference CRS; chưa tạo FIELD.')
     if(input.pins){const sets=await triageGeometryService.sets(project,road);active(s);if(!sets.some(r=>r.id===input.pins!.segmentSetId))throw new Error('Bộ phân đoạn không còn PUBLISHED.');const geometry=await triageGeometryService.package(project,road,input.pins.segmentSetId);active(s);if(geometry.geometryVersion!==input.pins.geometryVersion)throw new Error('Hash package đã thay đổi; chọn lại phạm vi trước khi tạo FIELD.')}
-    const instructions=[input.measurementScope.trim(),input.instructions.trim()].filter(Boolean).join('\n')
-    if(instructions.length>1000)throw new Error('Phương pháp và ghi chú chỉ dẫn vượt quá 1000 ký tự.')
+    const instructions=[input.measurementScope?.trim(),input.instructions.trim()].filter(Boolean).join('\n')
+    if(instructions.length>1000)throw new FieldInputError('Ghi chú chỉ dẫn vượt quá 1000 ký tự.')
     c={projectId:project,input:JSON.parse(JSON.stringify(input)),body:{defectId:input.defectId,defectVersion:input.defectVersion,routeVersionId:routeVersionId!,...(input.pins?{segmentSetId:input.pins.segmentSetId}:{}),crsProfileRevisionId:route.crsProfileRevisionId,purpose:'PRE_MEASUREMENT',requiredMeasurementType:input.requiredMeasurementType,measurementScope:'{}',instructions,assignedToUserId:input.assignedToUserId,dueAt:new Date(input.dueAt).toISOString(),sourceKind:'REPORTER'},key:crypto.randomUUID()};sessionStorage.setItem(k,JSON.stringify(c))
    }
    // Never rewrite an existing unknown command, even if its original scope was invalid.

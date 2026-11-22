@@ -34,6 +34,12 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
 }) => {
   const navigate = useNavigate()
   const approvalRatio = pkg.total_items > 0 ? (pkg.approved_items / pkg.total_items) * 100 : 0
+  // Quyết định phê duyệt ≠ tiến độ thi công/nghiệm thu: chỉ nói "đã giao Crew" khi BE đã sinh việc giao.
+  const executionText = pkg.status === 'DISPATCHED'
+    ? 'Đã giao Crew — thi công/nghiệm thu đang theo dõi'
+    : pkg.status_label.startsWith('Đã giải quyết')
+    ? 'Nghĩa vụ đã được giải quyết'
+    : 'Chưa giao Crew — chưa thi công'
 
   const hoverBorderClass = (() => {
     switch (pkg.status) {
@@ -144,32 +150,29 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
         )}
       </td>
 
-      {/* Cột 8: Tiến độ phê duyệt */}
-      <td className="py-3 px-3 whitespace-nowrap w-[110px] min-w-[110px]">
-        <div className="flex flex-col gap-1 w-24">
+      {/* Cột 8: Quyết định phê duyệt (khác với tiến độ thi công/nghiệm thu) */}
+      <td className="py-3 px-3 whitespace-nowrap w-[130px] min-w-[130px]">
+        <div className="flex flex-col gap-1 w-28">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium text-slate-700">
-              {pkg.approved_items}/{pkg.total_items}
+            <span className="font-medium text-slate-700" title="Số hạng mục đã có quyết định phê duyệt trên tổng số hạng mục">
+              {pkg.approved_items}/{pkg.total_items} đã duyệt
             </span>
             <span className="font-mono text-slate-500 font-bold">{Math.round(approvalRatio)}%</span>
           </div>
           <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                approvalRatio === 100
-                  ? 'bg-[#047857]'
-                  : approvalRatio > 0
-                  ? 'bg-[#C9A227]'
-                  : 'bg-slate-300'
+                approvalRatio > 0 ? 'bg-[#C9A227]' : 'bg-slate-300'
               }`}
               style={{ width: `${approvalRatio}%` }}
             />
           </div>
+          <span className="text-[10px] text-slate-500 whitespace-normal leading-snug">{executionText}</span>
         </div>
       </td>
 
       {/* Sticky Cột 9: Thao tác — luôn nhìn thấy ở 1440px */}
-      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50/90 z-10 w-[155px] min-w-[155px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
+      <td className="py-3 px-3 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50/90 z-10 w-[215px] min-w-[215px] shadow-[-4px_0_12px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-end gap-1.5 relative whitespace-nowrap">
           {/* Vai trò Supervisor */}
           {isSupervisor && pkg.status === 'SUBMITTED' && (
@@ -223,6 +226,20 @@ export const ProposalTableRow: React.FC<ProposalTableRowProps> = ({
                 </button>
               </Tooltip>
             </>
+          )}
+
+          {/* PM: hạng mục Normal đã được Giám sát duyệt (ReadyToAssign) → sang màn giao việc với đúng dự án/gói */}
+          {isPM && pkg.status_label.startsWith('Normal: đã duyệt') && (
+            <Tooltip content="Giao hạng mục Normal đã duyệt cho Crew">
+              <button
+                onClick={() => navigate(`/pm/repair-batches/assign?${new URLSearchParams({ projectId: pkg.route_id, packageId: pkg.id })}`)}
+                type="button"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-gold hover:bg-brand-goldMuted text-white font-medium text-[12px] whitespace-nowrap shadow-2xs transition-colors cursor-pointer shrink-0"
+              >
+                <Icon name="local_shipping" size={13} className="shrink-0" />
+                <span>Giao việc</span>
+              </button>
+            </Tooltip>
           )}
 
           {/* Nút xem chi tiết / thẩm định */}

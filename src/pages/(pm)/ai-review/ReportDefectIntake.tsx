@@ -85,7 +85,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       const body:ReportKeepNewInput=held?.body||{sourceKind:'REPORT',sourceId:reportId,sourceVersion:read!.sourceVersion!,geometryVersion:read!.geometryVersion!,decision:'KEEP_NEW',classification:{defectTypeCode,severity,roadSectionVersionId:road!.currentVersionId},reason:decisionReason.trim()}
       const result=await reportKeepNewCommands.run(project,body)
       if(canceled.current===start){setRecorded({scope:start,result});setCommand({scope:start,busy:false,error:''});onRecorded?.('Đã ghi nhận khiếm khuyết')}
-    }catch(e:any){if(canceled.current===start)setCommand({scope:start,busy:false,error:`HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`})}
+    }catch(e:any){if(canceled.current===start)setCommand({scope:start,busy:false,error:`HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}${e?.response?.data?.code==='invalid_state_transition'?' — nguồn Report này đã có quyết định chấp nhận trên máy chủ (không ghi nhận lại). Máy chủ chưa có API tra quyết định theo nguồn nên nhãn "Đã ghi nhận" chỉ hiện khi còn tham chiếu của phiên làm việc.':''}`})}
   }
   const current = read?.scope === scope ? read : null
   const sourceStale = command.scope === scope && command.error.includes('Phiên bản nguồn/hình học thay đổi; cần đọc lại trước quyết định mới.')

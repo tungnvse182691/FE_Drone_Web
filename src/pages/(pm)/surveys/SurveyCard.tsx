@@ -7,6 +7,8 @@ interface SurveyCardProps {
   basePath: string
   onNavigate: (path: string) => void
   onOpenSimulator: (mission: SurveyMission) => void
+  /** Mở bản ghi liên quan (kế hoạch ↔ nhiệm vụ, nhiệm vụ gốc ↔ bổ sung) theo ID. */
+  onOpenRelated?: (id: string) => void
 }
 
 export const SurveyCard: React.FC<SurveyCardProps> = ({
@@ -14,7 +16,8 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
   isHighlighted = false,
   basePath,
   onNavigate,
-  onOpenSimulator
+  onOpenSimulator,
+  onOpenRelated
 }) => {
   const [isHovered, setIsHovered] = useState(false)
 
@@ -106,6 +109,10 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
             <h3 className="text-sm font-bold text-slate-900 truncate tracking-tight font-sansation">
               {survey.title}
             </h3>
+            {survey.serverRecordKind && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 border ${survey.serverRecordKind === 'PLAN' ? 'bg-sky-50 text-sky-800 border-sky-200' : 'bg-teal-50 text-teal-800 border-teal-200'}`}>{survey.serverRecordKind === 'PLAN' ? 'KẾ HOẠCH' : 'NHIỆM VỤ'}</span>
+            )}
+            {survey.parent_task_id && <span className="text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 border bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200">Bổ sung</span>}
             {survey.survey_type && (
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 border ${
@@ -140,7 +147,9 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
           <span className="text-slate-800 font-semibold">{survey.project_name}</span>
           {survey.serverRecordKind ? <>
             {survey.pilot_name && <span>Operator: {pilotClean}</span>}
-            {survey.flight_date && <span>Lịch dự kiến: {survey.flight_date}</span>}
+            {survey.serverRecordKind === 'PLAN' && !survey.pilot_name && <span>Operator: chưa có nhiệm vụ giao</span>}
+            {survey.flight_date && <span>Lịch bay dự kiến: {survey.flight_date}</span>}
+            {survey.serverRecordKind === 'TASK' && <span>Hạn hoàn thành: {survey.due_label || 'không đặt'}</span>}
           </> : <><span>•</span>
           <span className="font-mono text-slate-700">{survey.start_km} → {survey.end_km}</span>
           <span>•</span>
@@ -153,6 +162,15 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
         <p role={survey.read_error ? 'alert' : undefined} className="text-xs text-slate-600 leading-relaxed break-words">
           {survey.serverRecordKind ? survey.read_error || survey.scope_summary : <>Nhiệm vụ bay khảo sát trắc địa mặt đường • {Number.isFinite(survey.ai_defects_count) ? `Ghi nhận ${survey.ai_defects_count} khiếm khuyết AI` : 'Chưa đọc được số khiếm khuyết AI'} • Thiết bị: {survey.drone_model}.</>}
         </p>
+
+        {survey.serverRecordKind && (
+          <div className="text-[11px] text-slate-500 flex items-center flex-wrap gap-x-3 gap-y-1">
+            <span>Loại khảo sát: {survey.parent_task_id ? 'Bổ sung (theo nhiệm vụ gốc)' : 'BE chưa trả loại (Cơ sở/Định kỳ/Đột xuất)'}</span>
+            {survey.plan_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.plan_id!) }} className="underline text-brand-navy cursor-pointer">Kế hoạch KH-{survey.plan_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
+            {survey.parent_task_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.parent_task_id!) }} className="underline text-brand-navy cursor-pointer">Nhiệm vụ gốc NV-{survey.parent_task_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
+            {survey.supplement_task_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.supplement_task_id!) }} className="underline text-brand-navy cursor-pointer">Nhiệm vụ bổ sung NV-{survey.supplement_task_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
+          </div>
+        )}
 
         {/* Khối chỉ số nghiệp vụ thực tế */}
         {!survey.serverRecordKind && <div className="flex items-center gap-2 flex-wrap pt-0.5">
@@ -195,7 +213,7 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
         <div className="border-t border-slate-100 pt-3 flex items-center justify-between gap-3 mt-auto">
           {/* Mã đợt bay monospace */}
           <span className="font-mono font-bold text-xs text-slate-800 tracking-wider">
-            {survey.serverRecordKind ? survey.serverRecordKind === 'PLAN' ? 'Kế hoạch khảo sát' : 'Nhiệm vụ khảo sát' : survey.code}
+            {survey.serverRecordKind ? `${survey.serverRecordKind === 'PLAN' ? 'Kế hoạch' : 'Nhiệm vụ'} · ${survey.short_code || survey.id.slice(0, 8)}` : survey.code}
           </span>
 
           {/* Nút hành động */}

@@ -760,6 +760,14 @@ export interface TriageCase {
   disposition_version?: string | null
   decision_kind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
   linked_defect_id?: string | null
+  /** Quyết định Report→Defect (KEEP_NEW) đã đọc lại từ BE. Tách khỏi trạng thái Case và trạng thái xác minh Defect. */
+  decision_recorded?: boolean
+  decision_read_error?: string
+  /** Trạng thái Defect do BE trả (GET /defects/{id}); không suy ra từ Case. */
+  defect_status?: string | null
+  /** Case đã OPEN lại sau khi có bổ sung; kết luận trước đó chuyển vào lịch sử. */
+  reopened_after_conclusion?: boolean
+  previous_conclusion?: { outcome: string; reason?: string; concluded_at?: string } | null
   survey_assignment?: {
     mode: 'MEASURE_ONLY' | 'DRONE_RESURVEY'
     reason: string

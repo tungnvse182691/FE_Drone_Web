@@ -98,6 +98,7 @@ export const SurveyRequests: React.FC = () => {
       const q = searchQuery.toLowerCase()
       return (
         m.code.toLowerCase().includes(q) ||
+        m.short_code?.toLowerCase().includes(q) ||
         m.title.toLowerCase().includes(q) ||
         m.project_name.toLowerCase().includes(q) ||
         m.scope_summary?.toLowerCase().includes(q) ||
@@ -143,11 +144,12 @@ export const SurveyRequests: React.FC = () => {
           basePath={basePath}
           onNavigate={navigateRead}
           onOpenSimulator={mission=>{void openDetail(mission)}}
+          onOpenRelated={id=>{const target=missions.find(m=>m.id===id);if(target)void openDetail(target);else setToastMessage('Bản ghi liên quan không nằm trong danh sách được phép đọc.')}}
           serverReadOnly
         />
       )}
 
-      {detailTarget && <SurveyRecordDetailModal projectName={detailTarget.project_name} record={detail} description={description} loading={detailLoading} error={detailError} onRetry={()=>{void openDetail(detailTarget)}} onChanged={()=>{void fetchMissions();void openDetail(detailTarget)}} onClose={()=>{detailGeneration.current++;setDetailTarget(null);setDetail(null);setDescription(null);const next=new URLSearchParams(searchParams);next.delete('surveyRecordId');next.delete('surveyRecordKind');setSearchParams(next)}} />}
+      {detailTarget && <SurveyRecordDetailModal projectName={detailTarget.project_name} target={detailTarget} planTasks={detailTarget.serverRecordKind==='PLAN'?missions.filter(m=>m.plan_id===detailTarget.id).map(m=>({id:m.id,status:m.serverStatus||''})):undefined} onOpenRelated={id=>{const target=missions.find(m=>m.id===id);if(target)void openDetail(target);else setToastMessage('Bản ghi liên quan không nằm trong danh sách được phép đọc.')}} record={detail} description={description} loading={detailLoading} error={detailError} onRetry={()=>{void openDetail(detailTarget)}} onChanged={()=>{void fetchMissions();void openDetail(detailTarget)}} onClose={()=>{detailGeneration.current++;setDetailTarget(null);setDetail(null);setDescription(null);const next=new URLSearchParams(searchParams);next.delete('surveyRecordId');next.delete('surveyRecordKind');setSearchParams(next)}} />}
       {/* 4. Drone Simulator Modal */}
       <DroneSimulatorModal
         isOpen={sim.isSimulatorOpen}

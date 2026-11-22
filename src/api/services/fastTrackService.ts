@@ -1,6 +1,6 @@
 import { coverageScopeView } from './fastTrackCoverage'
 import { assertPolicyRules } from './fastTrackPolicyRules'
-import { fastTrackFormSources } from './fastTrackFormSources'
+import { fastTrackFormSources, type DerivedRowRef } from './fastTrackFormSources'
 import { defectTypeCatalog } from './defectTypeCatalog'
 import { apiClient } from '../client'
 import { useAuthStore } from '../../store/authStore'
@@ -214,6 +214,21 @@ export const fastTrackService = {
           packageId:i?.packageId,itemId:i?.id,obligationId:i?.obligationId,checklistVersion:i?proposalChecklist(p,i.packageId,i):undefined,checklistSource:i && proposalChecklist(p,i.packageId,i)?'Receipt đề xuất đã GET đối chiếu':undefined,canAssign:!!i && (i.state==='ReadyToAssign' || !!fastTrackPending(p,`assign:${i.id}`)),eligibilityKnown:known,isFastTrackEligible:eligible,violationReason:reason})
       }
     }
+    // Nghĩa vụ đã tiếp nhận từ dự án khác: packageId/currentRepairItemId từ lifecycle (gói không nằm trong collection package của dự án nhận).
+    if(!supervisor){
+      let transferred:Awaited<ReturnType<typeof repairWorkflowService.transferredIn>>=[]
+      try{transferred=await repairWorkflowService.transferredIn(p)}catch{/* lifecycle không đọc được: không có hạng mục nhận chuyển để hiển thị */}
+      for(const t of transferred){
+        if(result.some(r=>r.itemId===t.currentRepairItemId))continue
+        try{
+          const i=await repairWorkflowService.detail(p,t.packageId,t.currentRepairItemId)
+          if(i.mode!=='FastTrack')continue
+          let typeCode='',version=i.version
+          try{const sd=(await apiClient.get<{defectTypeCode?:string;version?:string}>(`/projects/${p}/repair-packages/${t.packageId}/items/${i.id}/source-defect`)).data;typeCode=sd.defectTypeCode||'';version=sd.version||version}catch{/* hiển thị thiếu loại lỗi */}
+          result.push({id:i.id,defectId:i.defectId,code:`DEF-${i.defectId.slice(0,8)} · FT · nhận chuyển`,projectId:p,originProjectId:t.originProjectId,defectTypeCode:typeCode,severity:'Nhận chuyển từ dự án khác',status:i.state,version,packageId:t.packageId,itemId:i.id,obligationId:i.obligationId,checklistVersion:proposalChecklist(p,t.packageId,i),checklistSource:proposalChecklist(p,t.packageId,i)?'Chi tiết hạng mục đã GET đối chiếu':undefined,canAssign:i.state==='ReadyToAssign' || !!fastTrackPending(p,`assign:${i.id}`),eligibilityKnown:false,isFastTrackEligible:false,violationReason:'Nghĩa vụ nhận chuyển: Crew, chính sách và nguồn thuộc dự án gốc; giao việc cần Crew còn quyền ở dự án gốc.'})
+        }catch(e:any){result.push({id:t.currentRepairItemId,defectId:'',code:'Nhận chuyển · không đọc được',projectId:p,originProjectId:t.originProjectId,defectTypeCode:'',severity:'',status:'',isFastTrackEligible:false,canAssign:false,violationReason:`Không đọc được hạng mục nhận chuyển: ${e?.response?.status?'HTTP '+e.response.status+' '+(e.response.data?.code||''):e?.message||'lỗi'}`})}
+      }
+    }
     if(result.some(r=>r.itemId && r.status!=='ReadyToAssign')) {
       for(const row of result) {
         const held=row.itemId && fastTrackPending(p,`assign:${row.itemId}`)
@@ -276,15 +291,18 @@ export const fastTrackService = {
       const operation=`assign:${row.itemId}`
       const held=fastTrackPending(p,operation)
       if(held?.receipt){await fastTrackCommand(p,operation,`${base}/assign`,held.body,async()=>undefined,receipt=>this.readAssignment(p,row,receipt,held.body as any));continue}
-      const crew=(await this.getCrews(p)).find(c=>c.id===payload.crewName)
-      if(!crew || !payload.notes?.trim())throw new Error('Chọn Crew hiện hành, hạng mục và ghi rõ chỉ đạo.')
-      const d=(await versioned<any>(`/projects/${p}/defects/${row.defectId}`)).data
+      // Nghĩa vụ nhận chuyển: Crew, chính sách và nguồn thuộc dự án gốc (BE: assignee_not_authorized nếu Crew chỉ thuộc dự án nhận).
+      const ref:DerivedRowRef={projectId:p,defectId:row.defectId,packageId:row.packageId,itemId:row.itemId,obligationId:row.obligationId,originProjectId:row.originProjectId}
+      const sourceProject=row.originProjectId || p
+      const crew=(await this.getCrews(sourceProject)).find(c=>c.id===payload.crewName)
+      if(!crew || !payload.notes?.trim())throw new Error(row.originProjectId ? 'Chọn Crew còn quyền ở dự án nguồn (nghĩa vụ nhận chuyển) và ghi rõ chỉ đạo.' : 'Chọn Crew hiện hành, hạng mục và ghi rõ chỉ đạo.')
+      const d=await fastTrackFormSources.readDefect(ref)
       const {policyRevisionId,sourceTaskId,...pins}=payload.task
-      const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
+      const requestedTask={...pins,defectId:d.id,defectVersion:d.version,routeVersionId:d.roadSectionVersionId as string,purpose:'POST_REPAIR',assignedToUserId:crew.id,instructions:payload.notes}
       const saved=held?.body as {task:typeof requestedTask;policyRevisionId:string;reason:string} | undefined
       if(!sourceTaskId || sourceTaskId.startsWith('survey:'))throw new Error('Chưa có hồ sơ nguồn đã xác thực từ Backend. Không dùng mã nhiệm vụ khảo sát thay cho mã đợt khảo sát.')
-      const source=await fastTrackFormSources.read(p,sourceTaskId,row.defectId)
-      if(source.requiredMeasurementType!==pins.requiredMeasurementType)throw new Error('Nguồn hoặc loại đo đã thay đổi; chọn lại hồ sơ.')
+      const source=await fastTrackFormSources.resolve(ref,sourceTaskId)
+      if(source.derived ? ![1,2,3,4,5,6].includes(pins.requiredMeasurementType) : source.requiredMeasurementType!==pins.requiredMeasurementType)throw new Error(source.derived ? 'Chọn loại đo yêu cầu (mã 1–6 theo BE).' : 'Nguồn hoặc loại đo đã thay đổi; chọn lại hồ sơ.')
       if(Object.entries(source.pins).some(([key,value])=>(pins as any)[key]!==value))throw new Error('Các tham chiếu không còn khớp hồ sơ nguồn. Chọn lại hồ sơ; không nhập mã thay thế.')
       // Never migrate a pending command, including a legacy raw-text scope. Receipts remain GET-only.
       let task=requestedTask
@@ -304,11 +322,11 @@ export const fastTrackService = {
         if(task.instructions != null && (typeof task.instructions!=='string' || task.instructions.trim().length>1000)) throw new Error('Chỉ dẫn trong lệnh vượt giới hạn runtime hoặc sai kiểu. Giữ nguyên journal; chưa gửi POST.')
       }
       await fastTrackCommand(p,operation,`${base}/assign`,commandBody,async()=> {
-        const current=await versioned<any>(base), policy=await this.getPolicyRevision(p,commandPolicy)
+        const current=await versioned<any>(base), policy=await this.getPolicyRevision(sourceProject,commandPolicy)
         const checklist=proposalChecklist(p,row.packageId!,current.data)
         if(!checklist)throw new Error('Chưa có nguồn checklist của phương án: API đọc item hiện không cung cấp checklist và chưa có receipt đề xuất đã đối chiếu. Không tự lấy checklist từ policy đang xem.')
         if(policy.checklistVersion!==checklist)throw new Error('Policy không khớp checklist phương án; chọn đúng revision, không tự đổi pin.')
-        if (current.data.id!==row.itemId || current.data.projectId!==p || current.data.mode!=='FastTrack' || current.data.state!=='ReadyToAssign' || policy.state!=='PUBLISHED' || policy.defectTypeCode!==d.defectTypeCode) throw new Error('Hạng mục/chính sách không còn phù hợp để giao việc.')
+        if (current.data.id!==row.itemId || (current.data.projectId!==p && current.data.projectId!==row.originProjectId) || current.data.mode!=='FastTrack' || current.data.state!=='ReadyToAssign' || policy.state!=='PUBLISHED' || policy.defectTypeCode!==d.defectTypeCode) throw new Error('Hạng mục/chính sách không còn phù hợp để giao việc.')
         if (!Number.isFinite(Date.parse(task.dueAt)) || Date.parse(task.dueAt)<=Date.now() || !task.measurementScope.trim()) throw new Error('Nhập hạn hoàn thành trong tương lai và phạm vi đo có căn cứ.')
         return current.headers.etag
       },receipt=>this.readAssignment(p,row,receipt,commandBody))
@@ -318,9 +336,14 @@ export const fastTrackService = {
   async readAssignment(p:string,row:DefectItem,receipt:any,body:any) {
     if(receipt?.itemId!==row.itemId || !receipt.taskId || !receipt.assignmentId || receipt.policyRevisionId!==body.policyRevisionId)throw new Error('Receipt giao việc không khớp hạng mục/chính sách.')
     const current=(await versioned<any>(`/projects/${p}/repair-packages/${row.packageId}/items/${row.itemId}`)).data
-    const {data:native}=await versioned<any>(`/projects/${p}/field-inspection-tasks/${receipt.taskId}`)
+    // Nhận chuyển: nhiệm vụ Crew thuộc dự án gốc (BE giữ ProjectId lịch sử); PM dự án nhận có thể chưa đọc được.
+    let native:any
+    try{native=(await versioned<any>(`/projects/${p}/field-inspection-tasks/${receipt.taskId}`)).data}catch(e:any){
+      if(!row.originProjectId)throw e
+      try{native=(await versioned<any>(`/projects/${row.originProjectId}/field-inspection-tasks/${receipt.taskId}`)).data}catch(e2:any){throw new Error(`Đã có receipt giao việc nhưng PM dự án nhận chưa đọc được nhiệm vụ Crew của dự án nguồn (HTTP ${e2?.response?.status||'mạng'}). Giữ receipt; chỉ đọc lại, không giao trùng.`)}
+    }
     // b89a52f only emits repairContext to the assigned Crew. PM verifies the binding receipt and guarded task read.
-    if(current.id!==row.itemId || current.projectId!==p || current.defectId!==row.defectId || current.state==='ReadyToAssign' || native.id!==receipt.taskId || native.projectId!==p || native.defectId!==row.defectId || native.assignedToUserId!==body.task.assignedToUserId || native.assignmentId!==receipt.assignmentId || native.repairContext && (native.repairContext.itemId!==row.itemId || native.repairContext.packageId!==row.packageId))throw new Error('Đã có receipt nhưng chưa đối chiếu được nhiệm vụ Crew. Chỉ đọc lại, không giao trùng.')
+    if(current.id!==row.itemId || (current.projectId!==p && current.projectId!==row.originProjectId) || current.defectId!==row.defectId || current.state==='ReadyToAssign' || native.id!==receipt.taskId || (native.projectId!==p && native.projectId!==row.originProjectId) || native.defectId!==row.defectId || native.assignedToUserId!==body.task.assignedToUserId || native.assignmentId!==receipt.assignmentId || native.repairContext && (native.repairContext.itemId!==row.itemId || native.repairContext.packageId!==row.packageId))throw new Error('Đã có receipt nhưng chưa đối chiếu được nhiệm vụ Crew. Chỉ đọc lại, không giao trùng.')
     if(receipt.obligationId && receipt.obligationId!==current.obligationId || receipt.mode && receipt.mode!==native.mode || receipt.routeVersionId && receipt.routeVersionId!==native.routeVersionId || body.task.routeVersionId && body.task.routeVersionId!==native.routeVersionId)throw new Error('Binding/phiên bản tuyến không khớp nhiệm vụ đã đọc; giữ receipt để đối chiếu.')
     return native
   },

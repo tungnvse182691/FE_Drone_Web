@@ -3,7 +3,7 @@ import { utm48NToWgs84 } from '../../api/services/alignmentService'
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { surveyPlanningService, scopeForStations, type SurveyProject } from '../../api/services/surveyPlanningService'
+import { surveyPlanningService, scopeForStations, surveyStatusLabel, type SurveyProject, type SurveyScope } from '../../api/services/surveyPlanningService'
 import { useAuthStore } from '../../store/authStore'
 import { CreateSurveyHeader } from './create-survey/CreateSurveyHeader'
 import { CreateSurveyForm } from './create-survey/CreateSurveyForm'
@@ -33,6 +33,8 @@ export const CreateSurvey: React.FC = () => {
   const [date, setDate] = useState<string>('')
   const [dueAt,setDueAt]=useState('')
   const [commandBusy,setCommandBusy]=useState(false),[commandReload,setCommandReload]=useState(0)
+  const [skippedRoutes,setSkippedRoutes]=useState<string[]>([])
+  const [conflict,setConflict]=useState<{plans:{id:string;status:string;plannedAt?:string}[];correlationId?:string}|null>(null)
   const [verified,setVerified]=useState<{scope:string;result:Awaited<ReturnType<typeof surveyCreateCommands.run>>}|null>(null)
   const [showResult,setShowResult]=useState(false),[toastMessage,setToastMessage]=useState('')
   const notified=useRef(new Set<string>())
@@ -65,14 +67,16 @@ export const CreateSurvey: React.FC = () => {
   useEffect(() => {
     let active = true
     setIsLoading(true); setReadError(''); setRoutes([]); setProjectCatalogue([]); setProjectId(''); setStartKm(queryStartKm || ''); setEndKm(queryEndKm || '')
-    setTargetBand('');setPilotId('');setPilots([]);setDate('');setDueAt('');setSurveyType('');setCommandBusy(false);setSubmitError(null);setVerified(null);setShowResult(false);setToastMessage('')
+    setTargetBand('');setPilotId('');setPilots([]);setDate('');setDueAt('');setSurveyType('');setCommandBusy(false);setSubmitError(null);setConflict(null);setVerified(null);setShowResult(false);setToastMessage('')
     ;(async()=>{
       const projects = await surveyPlanningService.projects()
       if (!active) return
       setProjectCatalogue(projects)
       const candidates = queryProject ? projects.filter(p=>p.projectId===queryProject||p.projectCode===queryProject) : []
       const result: ProjectRouteConfig[] = []
-      for (const project of candidates) result.push(...await surveyPlanningService.routes(project))
+      const skipped:string[]=[]
+      for (const project of candidates) result.push(...await surveyPlanningService.routes(project,m=>skipped.push(m)))
+      if(active)setSkippedRoutes(skipped)
       if (!active) return
       setRoutes(result)
       const matching = result.filter(r => r.parentProjectId === queryProject || r.parentProjectCode === queryProject)
@@ -132,20 +136,55 @@ export const CreateSurvey: React.FC = () => {
   },[resultScope,currentProject?.id,pendingCommand?.phase,commandReload,!!verifiedResult])
   const handleSubmit = async (e:React.FormEvent)=>{
     e.preventDefault();if(commandBusy||!currentProject)return
-    const selected=submitSelection.current;setCommandBusy(true);setSubmitError(null)
+    const selected=submitSelection.current;setCommandBusy(true);setSubmitError(null);setConflict(null)
+    let sentScope:SurveyScope[]|undefined
     try{
       const old=surveyCreateCommands.pending(currentProject.parentProjectId)
       const alreadyVerified=old?.phase==='DONE'
       if(!old&&(conflictReason||scopeError))throw new Error(conflictReason||scopeError)
       const input:SurveyCreateInput|undefined=old?undefined:{scope:[scopeForStations(currentProject,startKm,endKm,targetBand)],plannedAt:new Date(date).toISOString(),surveyType:surveyType as SurveyCreateInput['surveyType'],operatorId:pilotId,...(dueAt?{dueAt:new Date(dueAt).toISOString()}:{})}
+      sentScope=input?.scope??old?.input.scope
       const result=await surveyCreateCommands.run(currentProject.parentProjectId,input)
       if(selected!==submitSelection.current)return
       setVerified({scope:resultScope,result})
       const notificationKey=`${authEpoch}:${result.plan.id}:${result.task.id}`
       if(!alreadyVerified&&!notified.current.has(notificationKey)){notified.current.add(notificationKey);setToastMessage('Đã tạo kế hoạch và giao nhiệm vụ khảo sát')}
-    }catch(e:any){if(selected===submitSelection.current){const message=`${e.planId?`Đã có kế hoạch ${e.planId}; `:''}Bước ${e.surveyPhase||'kiểm tra'}: HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}${e?.response?.data?.correlationId?` · ${e.response.data.correlationId}`:''}`;setSubmitError(message);toast.error(message)}}
+    }catch(e:any){if(selected===submitSelection.current){
+      const status=e?.response?.status,correlation=e?.response?.data?.correlationId as string|undefined
+      let message=`${e.planId?`Đã có kế hoạch ${e.planId}; `:''}Bước ${e.surveyPhase||'kiểm tra'}: HTTP ${status||''} ${e?.response?.data?.code||e.message}${correlation?` · ${correlation}`:''}`
+      // BE dùng chung mã duplicate_request cho nhiều loại xung đột: chỉ kết luận "trùng kế hoạch" khi GET survey-plans thấy kế hoạch đang hoạt động cùng tuyến/dải.
+      if(status===409&&e.surveyPhase==='PLAN'&&sentScope){
+        let plans:Awaited<ReturnType<typeof surveyCreateCommands.activePlansForScope>>=[],readFailed=''
+        try{plans=await surveyCreateCommands.activePlansForScope(currentProject.parentProjectId,sentScope)}catch(re:any){readFailed=re?.message||'lỗi đọc'}
+        if(plans.length){message=`BE từ chối tạo kế hoạch mới (HTTP 409 ${e?.response?.data?.code||'conflict'}): dự án đã có ${plans.length} kế hoạch đang hoạt động trên cùng tuyến và dải khảo sát. Hãy mở kế hoạch hiện có hoặc đổi tuyến/dải khảo sát. BE không trả loại khảo sát khi đọc nên FE không so được loại khảo sát.${correlation?` Mã tham chiếu: ${correlation}.`:''}`}
+        else message=`BE từ chối tạo kế hoạch (HTTP 409 ${e?.response?.data?.code||'conflict'}) nhưng không thấy kế hoạch đang hoạt động trùng tuyến/dải khảo sát${readFailed?` (không đọc được danh sách kế hoạch: ${readFailed})`:''}. BE dùng mã này cho nhiều loại xung đột nên chưa xác định được nguyên nhân cụ thể.${correlation?` Mã tham chiếu: ${correlation}.`:''}${e.journalReleased?' Chưa có kế hoạch nào được tạo; bạn có thể sửa và gửi lại.':''}`
+        setConflict({plans,correlationId:correlation})
+      }else if(e.journalReleased)message+='. BE từ chối nên chưa có gì được tạo; bạn có thể sửa và gửi lại.'
+      setSubmitError(message);toast.error(message)}}
     finally{if(selected===submitSelection.current){setCommandBusy(false);setCommandReload(n=>n+1)}}
   }
+  // Hủy bỏ: giải phóng yêu cầu dở dang khi an toàn (BE đã từ chối dứt khoát hoặc GET không thấy kế hoạch); không thì giữ lại và nói rõ.
+  const handleCancel=async()=>{
+    if(!currentProject||commandBusy){navigate('/pm/surveys');return}
+    setCommandBusy(true)
+    try{
+      const result=await surveyCreateCommands.discard(currentProject.parentProjectId)
+      if(result.released){navigate('/pm/surveys');return}
+      setConflict(null)
+      setSubmitError(result.reason==='plan-exists'?`Đã có kế hoạch ${result.plan?.id} khớp yêu cầu này. Bấm "Đối chiếu và thử lại đúng yêu cầu" để xác nhận, không bỏ để tránh tạo trùng.`:result.reason==='partial'?`Kế hoạch ${result.planId} đã được tạo nhưng chưa giao nhiệm vụ. Bấm "Tiếp tục giao nhiệm vụ" để hoàn tất, không bỏ để tránh tạo trùng.`:result.reason==='running'?'Đang xử lý yêu cầu; chờ kết quả rồi hủy bỏ.':'Kết quả yêu cầu chưa rõ; giữ nguyên để đối chiếu, chưa bỏ.')
+    }catch(e:any){setSubmitError(`Không đối chiếu được yêu cầu cũ để hủy bỏ: ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`)}
+    finally{setCommandBusy(false);setCommandReload(n=>n+1)}
+  }
+  // Mở trang: journal cũ chưa có biên nhận (vd sau 409 trước khi sửa lỗi) bị khóa form → đối chiếu với BE và giải phóng nếu chắc chắn chưa tạo.
+  useEffect(()=>{
+    if(!queryProject)return
+    let stale:ReturnType<typeof surveyCreateCommands.pending>=null
+    try{stale=surveyCreateCommands.pending(queryProject)}catch{return}
+    if(!stale||stale.phase!=='PLAN'||stale.planReceived||stale.planId)return
+    let active=true
+    surveyCreateCommands.discard(queryProject).then(r=>{if(active&&r.released)setCommandReload(n=>n+1)}).catch(()=>{})
+    return()=>{active=false}
+  },[queryProject,authEpoch])
   useEffect(()=>{if(!currentProject)return;try{const c=surveyCreateCommands.pending(currentProject.parentProjectId);if(c){setDueAt(c.input.dueAt?new Date(new Date(c.input.dueAt).getTime()-new Date(c.input.dueAt).getTimezoneOffset()*60000).toISOString().slice(0,16):'');setDate(new Date(new Date(c.input.plannedAt).getTime()-new Date(c.input.plannedAt).getTimezoneOffset()*60000).toISOString().slice(0,16));setSurveyType(c.input.surveyType);setPilotId(c.input.operatorId);setTargetBand(c.input.scope[0].targetBand);const ss=currentProject.serverSet?.segments.filter(s=>c.input.scope[0].segmentIds.includes(s.id!));if(ss?.length){setStartKm(String(ss[0].startStationMeters/1000));setEndKm(String(ss.at(-1)!.endStationMeters/1000))}}}catch(e){setSubmitError((e as Error).message)}},[currentProject?.id,authEpoch,commandReload])
   if (isLoading && !currentProject) {
     return (
@@ -193,6 +232,7 @@ export const CreateSurvey: React.FC = () => {
       {/* 1. Header */}
       <CreateSurveyHeader onBack={() => navigate('/pm/surveys')} />
       {projectSelect}
+      {skippedRoutes.length>0&&<p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{skippedRoutes.join(' ')}</p>}
       {toastMessage && createPortal(<div role="status" className="fixed bottom-6 right-6 z-[9999] max-w-[calc(100vw-3rem)] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2"><Icon name="check_circle" size={18} className="text-emerald-400 shrink-0" /><span className="text-xs font-medium break-words min-w-0">{toastMessage}</span><button type="button" onClick={()=>setToastMessage('')} className="text-slate-400 hover:text-white cursor-pointer ml-2" aria-label="Đóng thông báo"><Icon name="close" size={16} /></button></div>,document.body)}
       {pendingCommand?.phase==='DONE'&&<button type="button" onClick={()=>{surveyCreateCommands.newRequest(pendingCommand!.projectId);setCommandReload(n=>n+1);setVerified(null);setShowResult(false);setDate('');setDueAt('');setSurveyType('');setPilotId('');setTargetBand('');setStartKm('');setEndKm('')}} className="text-xs underline">Tạo yêu cầu mới</button>}
 
@@ -253,9 +293,10 @@ export const CreateSurvey: React.FC = () => {
             onRetryOperators={()=>setOperatorReload(n=>n+1)}
             conflictReason={conflictReason}
             errorMessage={submitError}
-            onClearError={() => setSubmitError(null)}
+            onClearError={() => { setSubmitError(null); setConflict(null) }}
+            errorActions={conflict&&conflict.plans.length?<div className="flex flex-wrap gap-2">{conflict.plans.map(p=><button key={p.id} type="button" onClick={()=>navigate(`/pm/surveys?surveyRecordId=${encodeURIComponent(p.id)}&surveyRecordKind=PLAN`)} className="text-xs underline text-brand-navy cursor-pointer">Mở kế hoạch KH-{p.id.replace(/-/g,'').slice(0,8).toUpperCase()} ({surveyStatusLabel(p.status)}{p.plannedAt?`, lịch ${new Date(p.plannedAt).toLocaleString('vi-VN')}`:''})</button>)}</div>:undefined}
             onSubmit={handleSubmit}
-            onCancel={() => navigate('/pm/surveys')}
+            onCancel={() => { void handleCancel() }}
           />
           {showResult&&verifiedResult&&<section aria-label="Kết quả kế hoạch và nhiệm vụ" className="mt-4 rounded-xl border border-[#E2E5E9] bg-white p-4 space-y-2 text-xs break-words"><h2 className="font-bold">Kế hoạch và nhiệm vụ đã tạo</h2><p>Kế hoạch: {verifiedResult.plan.id} · {verifiedResult.plan.status}</p><p>Nhiệm vụ: {verifiedResult.task.id} · {verifiedResult.task.status}</p><p>Operator: {pilots.find(p=>p.id===verifiedResult.task.operatorId)?.name||verifiedResult.task.operatorId}</p><div className="flex flex-wrap gap-3"><button type="button" className="underline" onClick={()=>navigate(`/pm/surveys?surveyRecordId=${encodeURIComponent(verifiedResult.plan.id)}&surveyRecordKind=PLAN`)}>Chi tiết kế hoạch</button><button type="button" className="underline" onClick={()=>navigate(`/pm/surveys?surveyRecordId=${encodeURIComponent(verifiedResult.task.id)}&surveyRecordKind=TASK`)}>Chi tiết nhiệm vụ</button></div></section>}
         </div>

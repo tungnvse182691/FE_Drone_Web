@@ -37,8 +37,53 @@ export const DrawerDecisionBanners: React.FC<DrawerDecisionBannersProps> = ({
         ? 'Khẩn cấp (24-48h)'
         : 'Bình thường'
 
+  const previousOutcomeLabel = (outcome?: string) =>
+    outcome === 'CONFIRMED' ? 'Có khiếm khuyết (hợp lệ)'
+      : outcome === 'NO_DEFECT' ? 'Không có khiếm khuyết (báo sai)'
+        : outcome === 'NEEDS_EVIDENCE' ? 'Cần bổ sung bằng chứng'
+          : outcome || 'Chưa rõ'
+
   return (
     <>
+      {selectedCase.reopened_after_conclusion && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-blue-950 animate-in fade-in">
+          <div className="flex items-start gap-2">
+            <Icon name="history" size={20} className="text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-xs block">ĐÃ MỞ LẠI DO CÓ BỔ SUNG</span>
+              <span className="text-[11px] text-blue-800">
+                Máy chủ đã mở lại hồ sơ (trạng thái OPEN) khi người dân bổ sung. Hãy thẩm định tiếp ở khung bên dưới; kết luận trước đó chỉ còn là lịch sử.
+              </span>
+            </div>
+          </div>
+          {selectedCase.previous_conclusion && (
+            <details className="text-[11px] bg-white border border-blue-100 rounded-lg px-2.5 py-1.5">
+              <summary className="cursor-pointer font-semibold text-blue-900">Lịch sử kết luận (không còn hiệu lực hiện tại)</summary>
+              <div className="mt-1 space-y-0.5 text-slate-700">
+                <p>Kết luận trước: <strong>{previousOutcomeLabel(selectedCase.previous_conclusion.outcome)}</strong></p>
+                {selectedCase.previous_conclusion.reason && <p className="italic">Lý do ghi nhận: "{selectedCase.previous_conclusion.reason}"</p>}
+                {selectedCase.previous_conclusion.concluded_at && <p className="text-slate-500">Kết luận lúc: {new Date(selectedCase.previous_conclusion.concluded_at).toLocaleString('vi-VN')}</p>}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+
+      {selectedCase.decision_recorded && (
+        <div className="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-950 animate-in fade-in">
+          <span className="font-bold text-xs block">ĐÃ GHI NHẬN QUYẾT ĐỊNH (KEEP_NEW)</span>
+          <span className="text-[11px] text-teal-800">
+            {selectedCase.linked_defect_id ? <>Khiếm khuyết <strong>#DEF-{selectedCase.linked_defect_id.slice(0, 8).toUpperCase()}</strong></> : 'Khiếm khuyết đã tạo'}
+            {selectedCase.defect_status ? <> • Trạng thái Defect do máy chủ trả: <strong>{selectedCase.defect_status}</strong></> : null}
+            . Trạng thái này tách khỏi trạng thái hồ sơ (Case) và khỏi kết luận Case.
+          </span>
+        </div>
+      )}
+
+      {selectedCase.decision_read_error && (
+        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700">{selectedCase.decision_read_error}</p>
+      )}
+
       {(selectedCase.master_case_id || selectedCase.status === 'MERGED' || selectedCase.decision_kind === 'LINK_EXISTING') && (
         <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between text-purple-950 animate-in fade-in">
           <div className="flex items-center gap-2">

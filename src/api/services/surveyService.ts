@@ -141,6 +141,14 @@ export interface SurveyMissionItem {
   read_error?: string
   serverRecordKind?: 'PLAN' | 'TASK'
   serverStatus?: string
+  /** Mã rút gọn hiển thị (KH-/NV- + 8 ký tự đầu của ID); ID đầy đủ vẫn là `id`. */
+  short_code?: string
+  /** Hạn hoàn thành (nhiệm vụ) đã định dạng; lịch bay của kế hoạch nằm ở `flight_date`. */
+  due_label?: string
+  /** Quan hệ do BE trả: kế hoạch của nhiệm vụ (planId), nhiệm vụ bổ sung con (supplementTaskId của nhiệm vụ gốc), nhiệm vụ gốc suy từ danh sách. */
+  plan_id?: string | null
+  supplement_task_id?: string | null
+  parent_task_id?: string | null
   id: string
   code: string
   title: string
@@ -464,7 +472,9 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
   async getSurveyDetections(
     surveyId: string,
     preloadedMission?: SurveyMissionItem,
-    preloadedProjectId?: string
+    preloadedProjectId?: string,
+    // Ngữ cảnh mở từ "Mở kết quả" của lần chạy AI vừa tạo: chỉ đọc đúng lần chạy (và bản nộp) đó; không có thì giữ hành vi cũ (mọi lần chạy SUCCEEDED của nhiệm vụ).
+    scope?: { runId?: string; datasetId?: string }
   ): Promise<AIDetectionItem[]> {
     await ensureBearerToken()
 
@@ -478,7 +488,14 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
 
     // Chỉ lấy lần chạy gắn với nhiệm vụ của đợt đang xem (BE trả surveyTaskId; lọc phía FE trên danh sách đã đọc).
     const taskIds = new Set((target?.task_ids?.length ? target.task_ids : [surveyId]).map((t) => String(t).toLowerCase()))
-    const runs = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.status === 'SUCCEEDED' && r.surveyTaskId && taskIds.has(String(r.surveyTaskId).toLowerCase()))
+    const taskRuns = (await this.readSurveyPage(`/projects/${projectId}/ai-mock-runs`)).filter((r) => r.surveyTaskId && taskIds.has(String(r.surveyTaskId).toLowerCase()))
+    if (scope?.runId) {
+      const wanted = taskRuns.find((r) => String(r.id).toLowerCase() === scope.runId!.toLowerCase())
+      if (!wanted) throw new Error('Lần chạy AI được chọn không thuộc nhiệm vụ khảo sát này (hoặc máy chủ không còn trả về).')
+      if (scope.datasetId && (wanted as { datasetId?: string | null }).datasetId && String((wanted as { datasetId?: string | null }).datasetId).toLowerCase() !== scope.datasetId.toLowerCase()) throw new Error('Lần chạy AI được chọn không thuộc bản nộp đã chỉ định.')
+      if (wanted.status !== 'SUCCEEDED') throw new Error(`Lần chạy AI chưa có kết quả để thẩm định (trạng thái ${wanted.status || '—'}).`)
+    }
+    const runs = taskRuns.filter((r) => r.status === 'SUCCEEDED' && (!scope?.runId || String(r.id).toLowerCase() === scope.runId.toLowerCase()))
     if (runs.length === 0) return []
     // Đọc kết quả của MỌI lần chạy SUCCEEDED (BE không gắn lần chạy với chuyến bay nên không được chỉ lấy runs[0]);
     // gộp theo detectionId để phát hiện không bị trùng giữa các lần chạy.

@@ -10,8 +10,12 @@ import type { SurveyMissionItem } from '../../../api/services'
 
 export function useDroneMissionReview(
   surveyId: string = '',
-  currentSurvey?: SurveyMissionItem | null
+  currentSurvey?: SurveyMissionItem | null,
+  // Ngữ cảnh từ "Mở kết quả" (lần chạy AI + bản nộp): chỉ đọc phát hiện của đúng lần chạy đó.
+  runScope?: { runId?: string; datasetId?: string }
 ) {
+  const scopeRunId = runScope?.runId || ''
+  const scopeDatasetId = runScope?.datasetId || ''
   const [isAiOverlayVisible, setIsAiOverlayVisible] = useState<boolean>(true)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
   const [currentFrame, setCurrentFrame] = useState<number>(1)
@@ -59,7 +63,7 @@ export function useDroneMissionReview(
       if (!surveyId) { setDetections([]); setDetectionsError(''); setIsLoadingDetections(false); return }
       try {
         setIsLoadingDetections(true); setDetectionsError('')
-        const data = await surveyService.getSurveyDetections(surveyId)
+        const data = await surveyService.getSurveyDetections(surveyId, undefined, undefined, scopeRunId ? { runId: scopeRunId, datasetId: scopeDatasetId || undefined } : undefined)
         if (isMounted) {
           setDetections(data)
           if (data.length > 0) {
@@ -82,7 +86,7 @@ export function useDroneMissionReview(
     return () => {
       isMounted = false
     }
-  }, [surveyId])
+  }, [surveyId, scopeRunId, scopeDatasetId])
 
   const totalCount = detections.length
   const approvedCount = detections.filter((d) => d.status === 'APPROVED').length

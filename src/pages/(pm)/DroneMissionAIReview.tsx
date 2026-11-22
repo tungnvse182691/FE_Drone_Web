@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
@@ -14,6 +14,10 @@ import { MissionTriageList } from './drone-review/MissionTriageList'
 export const DroneMissionAIReview: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  // Ngữ cảnh khi mở từ "Mở kết quả" của lần chạy AI vừa tạo: ?run=<runId>&dataset=<datasetId>.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const runId = searchParams.get('run') || ''
+  const datasetId = searchParams.get('dataset') || ''
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -57,7 +61,7 @@ export const DroneMissionAIReview: React.FC = () => {
     handleRejectDetection,
     selectedItem,
     detectionsError
-  } = useDroneMissionReview(id || '', currentSurvey)
+  } = useDroneMissionReview(id || '', currentSurvey, runId ? { runId, datasetId: datasetId || undefined } : undefined)
 
   // Tải dữ liệu đợt bay từ Mock API Service
   useEffect(() => {
@@ -185,6 +189,17 @@ export const DroneMissionAIReview: React.FC = () => {
   return (
     <div className="space-y-4">
       {!id && <div role="alert" className="rg-alert rg-alert-warn"><p className="flex-1 min-w-0">Chưa chọn đợt khảo sát: đường dẫn thiếu mã nhiệm vụ. Mở từ danh sách khảo sát để xem phát hiện AI của đúng đợt.</p></div>}
+      {runId && (
+        <div role="note" data-testid="ai-run-scope-banner" className="rg-alert bg-brand-surfaceAlt border-brand-border text-slate-700">
+          <Icon name="smart_toy" size={16} className="text-brand-navy shrink-0" />
+          <p className="flex-1 min-w-0 text-xs">
+            Đang xem kết quả của <strong>lần chạy AI</strong> <span className="font-mono">{runId.slice(0, 8)}</span>
+            {datasetId ? <> trên <strong>bản nộp</strong> <span className="font-mono">{datasetId.slice(0, 8)}</span></> : null}.
+            Đây không phải mã job xử lý. Các thao tác thẩm định giữ nguyên.
+          </p>
+          <button type="button" onClick={() => setSearchParams({}, { replace: true })} className="text-xs font-semibold underline cursor-pointer whitespace-nowrap">Xem tất cả lần chạy của nhiệm vụ</button>
+        </div>
+      )}
       {detectionsError && <div role="alert" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">Không tải được danh sách phát hiện AI: {detectionsError}</p></div>}
       {/* Toast Notification */}
       {toastMessage && (

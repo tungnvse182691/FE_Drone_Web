@@ -5,6 +5,7 @@ import { TriageCase } from '../../types/domain'
 import { saveToStorage, STORAGE_KEYS } from './storageHelper'
 import { useAuthStore } from '../../store/authStore'
 import { RoleCode } from '../../types/enums'
+import { reportKeepNewCommands } from './reportKeepNewCommands'
 
 // DTO Interfaces theo OpenAPI Candidate3 (docs/contracts/openapi.json)
 export interface InternalCaseDto {
@@ -100,11 +101,18 @@ function mapBackendCaseToDomain(
   const isAssigned = !!projId && item.status !== 'UNASSIGNED'
 
   let status: TriageCase['status'] = 'PENDING'
-  let status_label = isAssigned ? 'Chờ thẩm định' : 'Chờ Giám sát điều phối'
+  // Case OPEN chỉ nói hồ sơ đã thuộc dự án; KHÔNG đồng nghĩa 'chờ thẩm định'. Quyết định Report→Defect được đọc riêng từ BE (enrichDecisionState).
+  let status_label = isAssigned ? 'Đã phân công — chưa có quyết định' : 'Chờ Giám sát điều phối'
   let conclusion: TriageCase['conclusion'] = null
 
   // Xử lý Candidate3 conclusion (safe navigation vì conclusion có thể bị omit theo AGENTS.md)
-  if (item.conclusion?.outcome) {
+  // BE mở lại Case (CONCLUDED/AWAITING_EVIDENCE → OPEN) khi Reporter bổ sung nhưng vẫn trả kết luận cũ: đó là LỊCH SỬ, không phải kết luận hiện tại.
+  const reopened = item.status === 'OPEN' && !!item.conclusion?.outcome
+  if (reopened) {
+    status = 'PENDING'
+    status_label = 'Đã mở lại do có bổ sung'
+    conclusion = null
+  } else if (item.conclusion?.outcome) {
     const outcome = item.conclusion.outcome
     const reasonLower = (item.conclusion.reason || '').toLowerCase()
     if (outcome === 'CONFIRMED') {
@@ -174,10 +182,12 @@ function mapBackendCaseToDomain(
     ai_area_sqm: 0,
     max_depth_cm: Number.NaN,
     ai_depth_cm: 0,
-    pm_notes: item.conclusion?.reason || '',
+    pm_notes: reopened ? '' : item.conclusion?.reason || '',
 
     conclusion,
-    conclusion_reason: item.conclusion?.reason || undefined,
+    conclusion_reason: reopened ? undefined : item.conclusion?.reason || undefined,
+    reopened_after_conclusion: reopened,
+    previous_conclusion: reopened ? { outcome: String(item.conclusion?.outcome), reason: item.conclusion?.reason || undefined, concluded_at: item.conclusion?.concludedAt || undefined } : null,
     report_ids: item.reportIds || [],
     // Report references are evidence membership, not linked child Case records.
     linked_report_ids: [],
@@ -231,6 +241,37 @@ export class CaseListReadError extends Error {
 }
 
 export const isCaseReadCanceled = isCancel
+
+/**
+ * Case OPEN không nói PM đã quyết định hay chưa. Quyết định Report→Defect (KEEP_NEW) được đọc lại từ BE
+ * (GET candidate-decisions/{id} + GET defects/{id}) theo reference PM đã ghi nhận, rồi gắn nhãn RIÊNG:
+ * 'Đã ghi nhận' (quyết định) và defect_status (trạng thái Defect do BE trả). Lỗi đọc được hiện nguyên văn, không nuốt.
+ */
+async function enrichDecisionState(cases: TriageCase[], signal?: AbortSignal): Promise<TriageCase[]> {
+  if (useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER) return cases
+  return Promise.all(cases.map(async (c) => {
+    if (!c.project_id || !c.report_ids?.length) return c
+    try {
+      const ref = c.report_ids.map((id) => reportKeepNewCommands.reference(c.project_id, id)).find(Boolean)
+      if (!ref) return c
+      const result = await reportKeepNewCommands.read(c.project_id, ref.sourceId, ref.decisionId, signal)
+      if (!result) return c
+      return {
+        ...c,
+        decision_recorded: true,
+        decision_kind: 'KEEP_NEW' as const,
+        linked_defect_id: result.decision.defectId,
+        defect_status: result.defect.status,
+        status_label: c.reopened_after_conclusion ? c.status_label : c.status === 'PENDING' ? 'Đã ghi nhận' : c.status_label
+      }
+    } catch (error: any) {
+      if (isCancel(error) || signal?.aborted) throw error
+      const code = error?.response?.data?.code
+      const http = error?.response?.status ? ' (HTTP ' + error.response.status + (code ? ' ' + code : '') + ')' : ''
+      return { ...c, decision_read_error: 'Không đọc được quyết định đã ghi nhận' + http + ': ' + (error?.message || 'lỗi không xác định') }
+    }
+  }))
+}
 const pendingCaseCommands = new Map<string, { key: string; body: unknown; version: string }>()
 
 // D2 preserves intent/key/version across F5. Repeating the same confirmation explicitly replays it.
@@ -353,7 +394,9 @@ export const triageService = {
       if (failures.length) {
         throw new CaseListReadError(mapped, failures)
       }
-      return mapped
+      const enriched = await enrichDecisionState(mapped, signal)
+      assertCaseReadActive(session, signal)
+      return enriched
     } catch (error) {
       assertCaseReadActive(session, signal)
       throw error

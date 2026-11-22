@@ -26664,6 +26664,41 @@
               "format": "int32",
               "default": 50
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "acceptance",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "statusGroup",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -58204,6 +58239,27 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "statusGroup",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -60311,6 +60367,249 @@
         ],
         "x-roadguard-api-id": "SWG-217",
         "x-contract-evidence": "CURRENT_VERIFIED_SOURCE; execution and business prerequisites are separate."
+      }
+    },
+    "/api/v1/survey-tasks/{taskId}/complete": {
+      "post": {
+        "tags": [
+          "SurveyV"
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyTaskRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyTaskRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyTaskRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyTaskV2ResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyTaskV2ResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyTaskV2ResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          },
+          {
+            "WebSession": [ ],
+            "CsrfToken": [ ],
+            "AntiforgeryCookie": [ ]
+          }
+        ]
       }
     },
     "/api/v1/projects/{projectId}/labels": {
@@ -67963,6 +68262,26 @@
         },
         "additionalProperties": false
       },
+      "CompleteSurveyTaskRequestDto": {
+        "type": "object",
+        "properties": {
+          "datasetId": {
+            "type": "string",
+            "description": "Explicit submitted dataset belonging to this exact task; never implicitly select the newest dataset or a child dataset.",
+            "format": "uuid"
+          },
+          "assessmentId": {
+            "type": "string",
+            "description": "Current pm-evidence-review.v1 assessment of the chosen dataset. Every required task segment/band needs position, quality and coverage PASS.",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CompletedUploadPartDto": {
         "required": [
           "eTag"
@@ -69475,6 +69794,12 @@
           "version": {
             "type": "string",
             "nullable": true
+          },
+          "surveyId": {
+            "type": "string",
+            "description": "Persisted Survey identity of this dataset. Use for FIELD sourceKind SURVEY, never substitute surveyTaskId or dataset id.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -69510,6 +69835,15 @@
           "assessmentId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "processingCounts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "Independent counts of current persisted processing jobs for this dataset: QUEUED, RUNNING, SUCCEEDED, FAILED, CANCELLED, UNKNOWN. Empty object means no jobs; null means unavailable adapter. Includes all jobs, not an arbitrarily selected latest run or assessment.",
             "nullable": true
           }
         },
@@ -71277,7 +71611,18 @@
             "nullable": true
           },
           "requiredMeasurementType": {
+            "maximum": 6,
+            "minimum": 1,
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
             "type": "integer",
+            "description": "Numeric fixed type: 1 DepressionDepth, 2 SlabFaultingHeight, 3 ShoulderErosionExtent, 4 Area, 5 DepressionLength, 6 DepressionWidth. Unknown 0 is rejected for new tasks; submission may contain multiple measurements.",
             "format": "int32"
           },
           "measurementScope": {
@@ -72740,6 +73085,32 @@
             },
             "nullable": true
           },
+          "eventCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "taskProjectId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "datasetId": {
+            "type": "string",
+            "description": "Verified dataset navigation for a survey assessment occurrence; null for unrelated or unverifiable legacy notifications.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assessmentId": {
+            "type": "string",
+            "description": "Exact immutable assessment behind this notification; not an implicit latest assessment or task completion.",
+            "format": "uuid",
+            "nullable": true
+          },
           "priority": {
             "type": "string",
             "nullable": true
@@ -72821,7 +73192,14 @@
             "nullable": true
           },
           "mode": {
+            "enum": [
+              "MEASURE_ONLY",
+              "NORMAL",
+              "CONDITIONAL_FT",
+              null
+            ],
             "type": "string",
+            "description": "Persisted task mode with current binding proof; null for rejected history or missing/ambiguous binding. This summary is not execution eligibility.",
             "nullable": true
           },
           "crewId": {
@@ -72840,6 +73218,41 @@
           "version": {
             "type": "string",
             "nullable": true
+          },
+          "taskCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "assignmentStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptanceOutcome": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rejectedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "isHistory": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -73550,6 +73963,16 @@
           "acceptanceActionId": {
             "type": "string",
             "format": "uuid"
+          },
+          "packageId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "currentRepairItemId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -80633,6 +81056,20 @@
             "nullable": true
           },
           "supplementTaskId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "projectName": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentTaskId": {
             "type": "string",
             "format": "uuid",
             "nullable": true

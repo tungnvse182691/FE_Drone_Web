@@ -36,6 +36,19 @@ export const surveyActions = {
     return (await apiClient.post(`/survey-tasks/${taskId}/reassign`, body, { headers: headers(task.version) })).data
   },
   /**
+   * POST /survey-tasks/{taskId}/complete — PM xác nhận hoàn thành nhiệm vụ (BE develop c0c99ca, 200 + task COMPLETED).
+   * Body {datasetId, assessmentId, reason}; If-Match = ETag của NHIỆM VỤ (không dùng ETag dataset/assessment).
+   * assessmentId phải là đánh giá hiện hành của dataset (GET /datasets/{id}/coverage); BE yêu cầu mọi phân đoạn/dải của cả nhiệm vụ PASS.
+   */
+  async completeTask(projectId: string, taskId: string, input: { datasetId: string; assessmentId: string; reason: string }) {
+    if (!input.datasetId) throw new Error('Chọn bản nộp bộ dữ liệu dùng để xác nhận.')
+    if (!input.assessmentId) throw new Error('Bản nộp chưa có đánh giá hiện hành; tạo đánh giá bằng chứng trước khi hoàn tất.')
+    if (!input.reason.trim()) throw new Error('Cần nhập lý do xác nhận hoàn tất.')
+    const task = await surveyPlanningService.detail(projectId, taskId, 'TASK')
+    if (task.status !== 'SUBMITTED') throw new Error('Nhiệm vụ không còn ở trạng thái đã nộp; không thể hoàn tất.')
+    return (await apiClient.post(`/survey-tasks/${taskId}/complete`, { datasetId: input.datasetId, assessmentId: input.assessmentId, reason: input.reason.trim() }, { headers: headers(task.version) })).data
+  },
+  /**
    * POST /survey-tasks/{taskId}/supplements — tạo nhiệm vụ bổ sung (201). Body {operatorId, reason, scope[]};
    * trả {id, status: SUPPLEMENT_REQUIRED, supplementTaskId, version}, header Location trỏ nhiệm vụ con.
    */

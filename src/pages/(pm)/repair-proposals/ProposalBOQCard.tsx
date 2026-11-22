@@ -5,7 +5,6 @@ import type { UnassignedDefectItem } from './types'
 export interface ProposalBOQCardProps {
   unassignedDefects: UnassignedDefectItem[]
   handleToggleDefect: (id: string) => void
-  handleUpdateDefectSolution: (id: string, solution: string) => void
   modalCalculations: { count: number; description: string }
 }
 
@@ -20,7 +19,6 @@ const COMMON_SOLUTIONS = [
 export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
   unassignedDefects,
   handleToggleDefect,
-  handleUpdateDefectSolution,
   modalCalculations,
 }) => {
   return (
@@ -44,8 +42,6 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
       ) : (
           <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto bg-white custom-scrollbar">
             {unassignedDefects.map((def) => {
-              const currentSolution = def.custom_solution || ''
-
               return (
                 <div
                   key={def.id}
@@ -88,32 +84,6 @@ export const ProposalBOQCard: React.FC<ProposalBOQCardProps> = ({
                         : (def.severity_label || (def.severity ? `Mức độ ${def.severity}` : 'Chưa có nguồn mức độ'))}
                     </span>
                   </div>
-
-                  {/* Vùng tự nhập phương án kỹ thuật riêng khi được tick chọn */}
-                  {def.selected && (
-                    <div className="mt-2.5 ml-7 p-2.5 bg-amber-50/70 border border-amber-200/90 rounded-xl space-y-2 animate-in fade-in duration-100">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[10px] font-bold text-amber-950 uppercase flex items-center gap-1">
-                          <Icon name="build" className="text-xs text-brand-gold" />
-                          <span>Phương án kỹ thuật xử lý (PM nhập theo hồ sơ)</span>
-                        </label>
-                        <span className="text-[9px] text-amber-800 font-medium">
-                          Ánh xạ sang RepairItem chi tiết
-                        </span>
-                      </div>
-
-                      {/* Ô Input cho phép PM gõ tự do bất kỳ phương án nào */}
-                      <input
-                        type="text"
-                        value={currentSolution}
-                        onChange={(e) => handleUpdateDefectSolution(def.id, e.target.value)}
-                        placeholder="Nhập phương án kỹ thuật xử lý cụ thể..."
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold shadow-2xs"
-                      />
-
-                      <p className="text-[10px] text-slate-500">Nhập phương án theo hồ sơ kỹ thuật; chưa có danh mục phương án hệ thống để chọn.</p>
-                    </div>
-                  )}
                 </div>
               )
             })}

@@ -52,7 +52,6 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
   setFormTechnicalMethod,
   unassignedDefects,
   handleToggleDefect,
-  handleUpdateDefectSolution = () => {},
   modalCalculations,
   handleSaveDraft,
   projectMembers = [], createApi,
@@ -198,7 +197,6 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
           <ProposalBOQCard
             unassignedDefects={unassignedDefects}
             handleToggleDefect={handleToggleDefect}
-            handleUpdateDefectSolution={handleUpdateDefectSolution}
             modalCalculations={modalCalculations}
           />
 
@@ -207,7 +205,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="font-bold text-slate-800 uppercase text-[11px] flex items-center gap-1.5">
                 <Icon name="build" className="text-sm text-brand-gold" />
-                <span>Phương án kỹ thuật sửa chữa tổng quát <span className="text-rose-500">*</span></span>
+                <span>Phương án kỹ thuật sửa chữa <span className="text-rose-500">*</span></span>
               </label>
               <span className="text-[10px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
                 {createApi?.fields.mode==='FAST_TRACK'?'PM đề xuất Fast Track — giao có điều kiện':'PM đề xuất Normal — Giám sát duyệt'}
@@ -219,7 +217,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
               rows={3}
               value={formTechnicalMethod} aria-label="Phương án đề xuất gói" maxLength={2000}
               onChange={(e) => setFormTechnicalMethod(e.target.value)}
-              placeholder="Nhập phương án sửa chữa kỹ thuật tổng quát cho các khiếm khuyết được chọn..."
+              placeholder="Nhập phương án kỹ thuật sửa chữa cho khiếm khuyết được chọn..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold leading-relaxed"
             />
           </div>

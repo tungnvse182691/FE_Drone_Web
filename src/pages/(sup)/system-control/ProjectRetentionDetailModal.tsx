@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { LegalHoldProject } from '../../../types/domain'
+import { describeRetentionReason } from './retentionReasonLabels'
 import { retentionService } from '../../../api/services/retentionService'
 import { RetentionBasisForm } from './RetentionBasisForm'
 
@@ -21,6 +22,7 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
   const [evalError, setEvalError] = useState<string | null>(null)
   const [evalLoading, setEvalLoading] = useState(false)
   const [fileInfo, setFileInfo] = useState<Record<string, string>>({})
+  const [fileReasons, setFileReasons] = useState<Record<string, string[]>>({})
   const [reloadTick, setReloadTick] = useState(0)
   const [evalBusy, setEvalBusy] = useState(false)
 
@@ -33,7 +35,7 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
   useEffect(() => {
     if (!isOpen || !project) return
     let active = true
-    setEvalItems([]); setEvalMeta(null); setEvalError(null); setFileInfo({}); setEvalLoading(true)
+    setEvalItems([]); setEvalMeta(null); setEvalError(null); setFileInfo({}); setFileReasons({}); setEvalLoading(true)
     ;(async () => {
       try {
         const list = await retentionService.getRetentionEvaluations(project.project_id)
@@ -78,6 +80,7 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
     if (!project) return
     try {
       const f = await retentionService.getRetentionFile(project.project_id, fileId)
+      setFileReasons((prev) => ({ ...prev, [fileId]: Array.isArray(f.inventoryReasonCodes) ? f.inventoryReasonCodes : [] }))
       setFileInfo((prev) => ({
         ...prev,
         [fileId]: `Phân loại: ${f.classification} • Kiểm kê ${f.inventoryComplete ? 'đầy đủ' : 'chưa đầy đủ'} • Nghĩa vụ bảo hành: ${(f.applicableObligations || []).length} • Lệnh phong tỏa đang hiệu lực: ${f.activeHoldCount}`,
@@ -198,6 +201,13 @@ export const ProjectRetentionDetailModal: React.FC<ProjectRetentionDetailModalPr
                   <div className="text-[11px] text-slate-700 mt-0.5">Điều kiện: <strong>{it.eligibility}</strong></div>
                   {it.reasonCodes?.length > 0 && <div className="text-[11px] text-slate-500 mt-0.5">Lý do: {it.reasonCodes.join(', ')}</div>}
                   {fileInfo[it.fileId] && <div className="text-[11px] text-slate-600 mt-1 pt-1 border-t border-slate-200">{fileInfo[it.fileId]}</div>}
+                  {fileInfo[it.fileId] && (fileReasons[it.fileId] || []).length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-[11px] text-amber-800" aria-label="Lý do kiểm kê chưa đầy đủ">
+                      {(fileReasons[it.fileId] || []).map((code) => { const d = describeRetentionReason(code); return (
+                        <li key={code}><span className="font-mono">{code}</span>{d.text ? ' — ' + d.text + ' · Xử lý: ' + d.owner : ''}</li>
+                      ) })}
+                    </ul>
+                  )}
                   {fileInfo[it.fileId] && !fileInfo[it.fileId].startsWith('Không đọc được') && <RetentionBasisForm projectId={project.project_id} fileId={it.fileId} />}
                 </div>
               ))}

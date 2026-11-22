@@ -26,6 +26,7 @@ export interface RoadCoverage {
   sources: Array<{kind: string; id: string; from?: string; to?: string; provenance?: string}>
   history: Array<{id: string; applicableFromUtc: string; applicableToUtc: string; confirmedAtUtc: string; reason?: string; provenance?: string}>
 }
+export interface RepairResponsibility { obligationId: string; originProjectId: string; currentProjectId: string; acceptanceActionId?: string; packageId?: string | null; currentRepairItemId?: string | null }
 interface Creation {
   uncertain?:boolean
   input: RepairDraft; createKey: string; proposeKey: string
@@ -42,11 +43,24 @@ function identity() {
 }
 function active(s: string, signal?: AbortSignal) { if (signal?.aborted || identity() !== s) throw new Error('Phiên sửa chữa đã thay đổi.') }
 function key(path: string) { return `rg_repair_${useAuthStore.getState().user?.id}_${path}` }
-function validate(row: RepairItem, p: string, id?: string) {
-  if (!row?.id || id && row.id !== id || row.projectId !== p || !row.version || !row.state || !row.mode || !row.obligationId) throw new Error('Hạng mục sửa chữa sai phạm vi hoặc thiếu trạng thái/version.')
+// BE LD06: sau khi dự án nhận tiếp nhận nghĩa vụ, hạng mục đọc dưới URL dự án nhận vẫn mang projectId GỐC (provenance).
+// Chỉ chấp nhận khi lifecycle xác nhận trách nhiệm hiện tại của đúng nghĩa vụ đó thuộc dự án đang xem.
+function validate(row: RepairItem, p: string, id?: string, origins: readonly RepairResponsibility[] = []) {
+  const foreignOk = row?.projectId !== p && origins.some(o => o.obligationId === row.obligationId && o.currentProjectId === p && o.originProjectId === row.projectId)
+  if (!row?.id || id && row.id !== id || (row.projectId !== p && !foreignOk) || !row.version || !row.state || !row.mode || !row.obligationId) throw new Error('Hạng mục sửa chữa sai phạm vi hoặc thiếu trạng thái/version.')
   return row
 }
 export const repairWorkflowService = {
+  /** GET /projects/{p}/lifecycle → responsibilities[] có currentProjectId = p (nghĩa vụ đang thuộc p, kể cả nhận chuyển). */
+  async responsibilities(p: string, signal?: AbortSignal): Promise<RepairResponsibility[]> {
+    const s = identity(), r = await apiClient.get<{ projectId: string; responsibilities?: RepairResponsibility[] }>(`/projects/${p}/lifecycle`, { signal }); active(s, signal)
+    if (r.data?.projectId !== p || (r.data.responsibilities != null && !Array.isArray(r.data.responsibilities))) throw new Error('Vòng đời dự án sai phạm vi/cấu trúc.')
+    return (r.data.responsibilities || []).filter(x => x.currentProjectId === p)
+  },
+  /** Nghĩa vụ dự án p đã tiếp nhận từ dự án khác và còn hạng mục hiện hành: dùng packageId/currentRepairItemId từ lifecycle. */
+  async transferredIn(p: string, signal?: AbortSignal) {
+    return (await this.responsibilities(p, signal)).filter(x => x.originProjectId !== p && !!x.packageId && !!x.currentRepairItemId) as Array<RepairResponsibility & { packageId: string; currentRepairItemId: string }>
+  },
   async coverage(p: string, signal?: AbortSignal) {
     const s = identity(), r = await apiClient.get<RoadCoverage>(`/projects/${p}/road-coverage`, {signal}); active(s, signal)
     if (r.data?.projectId !== p || !Array.isArray(r.data.scopes) || !Array.isArray(r.data.sources) || !Array.isArray(r.data.history) || !r.data.version || r.headers?.etag !== `"${r.data.version}"`) throw new Error('Nguồn độ phủ sai dự án/cấu trúc/ETag.')
@@ -120,14 +134,35 @@ export const repairWorkflowService = {
       throw error
     } finally { busy.delete(k) }
   },
-  packages(p: string, signal?: AbortSignal) { return workflowCollection<RepairPackage>(`/projects/${p}/repair-packages`, p, signal) },
+  async packages(p: string, signal?: AbortSignal) {
+    const path = `/projects/${p}/repair-packages`
+    try { return await workflowCollection<RepairPackage>(path, p, signal) }
+    catch (e: any) {
+      if (!String(e?.message).startsWith('Danh sách sai phạm vi dự án')) throw e
+      // Gói của nghĩa vụ đã nhận chuyển vẫn mang projectId GỐC: chỉ nhận khi lifecycle xác nhận trách nhiệm hiện tại thuộc p trên đúng gói đó.
+      const origins = await this.responsibilities(p, signal)
+      const rows = await workflowCollection<RepairPackage>(path, p, signal, [...new Set(origins.map(o => o.originProjectId))])
+      for (const r of rows) if (r.projectId !== p && !origins.some(o => o.packageId === r.id && o.originProjectId === r.projectId)) throw new Error('Gói sửa chữa mang projectId khác nhưng lifecycle không xác nhận trách nhiệm hiện tại của dự án này.')
+      return rows
+    }
+  },
   async items(p: string, pkg: string, signal?: AbortSignal) {
-    const rows = await workflowCollection<RepairItem>(`/projects/${p}/repair-packages/${pkg}/items`, p, signal)
-    rows.forEach(row => validate(row, p)); return rows
+    const path = `/projects/${p}/repair-packages/${pkg}/items`
+    let origins: RepairResponsibility[] = []
+    let rows: RepairItem[]
+    try { rows = await workflowCollection<RepairItem>(path, p, signal) }
+    catch (e: any) {
+      if (!String(e?.message).startsWith('Danh sách sai phạm vi dự án')) throw e
+      // Có thể là hạng mục nhận chuyển (projectId gốc): đối chiếu trách nhiệm hiện tại từ lifecycle rồi đọc lại.
+      origins = await this.responsibilities(p, signal)
+      rows = await workflowCollection<RepairItem>(path, p, signal, [...new Set(origins.map(o => o.originProjectId))])
+    }
+    rows.forEach(row => validate(row, p, undefined, origins)); return rows
   },
   async detail(p: string, pkg: string, id: string, signal?: AbortSignal) {
     const s = identity(), r = await apiClient.get<RepairItem>(`/projects/${p}/repair-packages/${pkg}/items/${id}`, { signal })
-    active(s, signal); validate(r.data, p, id)
+    active(s, signal)
+    validate(r.data, p, id, r.data?.projectId !== p ? await this.responsibilities(p, signal) : [])
     if (r.headers?.etag !== `"${r.data.version}"`) throw new Error('Hạng mục thiếu ETag khớp version.')
     return r.data
   },

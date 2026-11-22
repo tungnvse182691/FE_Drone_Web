@@ -4,17 +4,41 @@ import { Icon } from '../../../components/ui/Icon'
 export interface CitizenTriageStatusBadgeProps {
   status: string
   conclusion?: string | null
+  /** Case đã OPEN lại sau khi có bổ sung (kết luận cũ nằm trong lịch sử). */
+  reopened?: boolean
+  /** PM đã ghi nhận KEEP_NEW/LINK_EXISTING (đọc lại từ BE). */
+  decisionRecorded?: boolean
+  /** Trạng thái Defect do BE trả — hiển thị riêng, không trộn vào trạng thái Case. */
+  defectStatus?: string | null
+  decisionReadError?: string
 }
 
 export const CitizenTriageStatusBadge: React.FC<CitizenTriageStatusBadgeProps> = ({
   status,
-  conclusion
+  conclusion,
+  reopened,
+  decisionRecorded,
+  defectStatus,
+  decisionReadError
 }) => {
   if (status === 'PENDING') {
+    const main = reopened
+      ? { dot: 'bg-blue-500', text: 'text-blue-700', label: 'Đã mở lại do có bổ sung', pulse: true }
+      : decisionRecorded
+        ? { dot: 'bg-teal-500', text: 'text-teal-700', label: 'Đã ghi nhận', pulse: false }
+        : { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Chưa có quyết định', pulse: true }
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 whitespace-nowrap">
-        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-        <span>Chờ xác minh</span>
+      <span className="inline-flex flex-col gap-0.5">
+        <span className={`inline-flex items-center gap-1.5 text-xs font-medium whitespace-nowrap ${main.text}`}>
+          <span className={`w-2 h-2 rounded-full shrink-0 ${main.dot} ${main.pulse ? 'animate-pulse' : ''}`} />
+          <span>{main.label}</span>
+        </span>
+        {decisionRecorded && defectStatus && (
+          <span className="text-[10px] text-slate-500 whitespace-nowrap">Defect: {defectStatus}</span>
+        )}
+        {decisionReadError && (
+          <span role="alert" className="text-[10px] text-rose-700 max-w-[220px] whitespace-normal" title={decisionReadError}>Không đọc được quyết định từ máy chủ</span>
+        )}
       </span>
     )
   }

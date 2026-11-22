@@ -254,6 +254,10 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
           <CitizenTriageStatusBadge
             status={item.status}
             conclusion={item.conclusion}
+            reopened={item.reopened_after_conclusion}
+            decisionRecorded={item.decision_recorded}
+            defectStatus={item.defect_status}
+            decisionReadError={item.decision_read_error}
           />
         </td>
 

@@ -145,7 +145,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
       return { bg: '#DDE3EE', text: '#1E3A5F', label: 'Cần đo đạc' }
     }
     if (item.status === 'PENDING') {
-      return { bg: '#F0E8D5', text: '#78350F', label: 'Chờ xác minh' }
+      return { bg: '#F0E8D5', text: '#78350F', label: 'Chưa có quyết định' }
     }
     if (item.status === 'MERGED') {
       return { bg: '#F3E8FF', text: '#6B21A8', label: 'Đã gộp trùng' }
@@ -229,6 +229,16 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             >
               {item.case_status ? item.status_label : statusBadge.label}
             </span>
+            {item.decision_recorded && item.defect_status && (
+              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] whitespace-nowrap bg-slate-100 text-slate-600" title="Trạng thái Defect do máy chủ trả, tách khỏi trạng thái hồ sơ">
+                Defect: {item.defect_status}
+              </span>
+            )}
+            {item.decision_read_error && (
+              <span role="alert" className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] bg-rose-50 text-rose-700" title={item.decision_read_error}>
+                Không đọc được quyết định
+              </span>
+            )}
           </div>
         </div>
 

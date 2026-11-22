@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { fastTrackService, type RepairPolicyView } from '../../../api/services/fastTrackService'
 import { fastTrackFormSources, type FastTrackSource } from '../../../api/services/fastTrackFormSources'
+import { FIELD_MEASUREMENT_TYPES, isFieldMeasurementCode, measurementTypeLabel } from '../../../api/services/fieldMeasurementTypes'
 import { exportError } from '../../../api/services/projectExportService'
 import { fastTrackStorage, fastTrackPending } from '../../../api/services/fastTrackJournal'
 import { Icon } from '../../../components/ui/Icon'
@@ -30,7 +31,7 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   selectedItems,
   selectedDispatchCrew,
   setSelectedDispatchCrew,
-  crewTeams,
+  crewTeams: projectCrewTeams,
   dispatchNotes,
   setDispatchNotes,
   handleExecuteDispatch
@@ -45,6 +46,19 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
     const body=held?.body as any
     if(body?.task){const {defectId,defectVersion,routeVersionId,purpose,assignedToUserId,instructions,...pins}=body.task;const description=typeof instructions==='string' && instructions.startsWith(body.reason+'\n') ? instructions.slice(body.reason.length+1) : pins.measurementScope;setTask({...pins,measurementScope:description,policyRevisionId:body.policyRevisionId});setSelectedDispatchCrew(assignedToUserId);setDispatchNotes(body.reason)}
   },[isOpen,projectId,selectedKey])
+  // Nghĩa vụ nhận chuyển: Crew + chính sách thuộc dự án gốc (BE kiểm Crew theo dự án nguồn).
+  const originProjectId=selectedItems.length===1 ? selectedItems[0].originProjectId : undefined
+  const sourceProject=originProjectId || projectId
+  const [originCrews,setOriginCrews]=useState<CrewTeam[]|null>(null),[originCrewError,setOriginCrewError]=useState('')
+  useEffect(()=>{
+    setOriginCrews(null);setOriginCrewError('')
+    if(!isOpen || !originProjectId)return
+    let active=true
+    fastTrackService.getCrews(originProjectId).then(rows=>{if(active)setOriginCrews(rows)}).catch(e=>{if(active){setOriginCrews([]);setOriginCrewError(`Chưa đọc được Crew của dự án gốc (HTTP ${e?.response?.status||'mạng'}). Chỉ Crew còn quyền ở dự án gốc mới được giao.`)}})
+    return()=>{active=false}
+  },[isOpen,originProjectId])
+  const crewTeams=originProjectId ? (originCrews||[]) : projectCrewTeams
+  const [derivedNote,setDerivedNote]=useState('')
   const [sources,setSources]=useState<FastTrackSource[]>([]),[policies,setPolicies]=useState<RepairPolicyView[]>([])
   const [sourceError,setSourceError]=useState(''),[loading,setLoading]=useState(false)
   const [policyWarning,setPolicyWarning]=useState('')
@@ -52,8 +66,12 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   useEffect(()=>{
     let active=true
     if(!isOpen || !selectedItems.length)return
-    setLoading(true);setSourceError('');setPolicyWarning('');setSources([]);setPolicies([])
-    Promise.all([fastTrackFormSources.list(projectId,selectedItems.map(i=>i.defectId || i.id)),fastTrackService.getPolicies(projectId,message=>{if(active)setPolicyWarning(message)})]).then(([rows,p])=>{
+    setLoading(true);setSourceError('');setPolicyWarning('');setSources([]);setPolicies([]);setDerivedNote('')
+    const first=selectedItems[0]
+    // Nguồn = nhiệm vụ FIELD đã xác thực (nếu có) + nguồn dựng theo hợp đồng assign của BE (Report/Survey), không cần nhiệm vụ FIELD giả.
+    const taskRows=originProjectId ? Promise.resolve([] as FastTrackSource[]) : fastTrackFormSources.list(projectId,selectedItems.map(i=>i.defectId || i.id))
+    const derived=selectedItems.length===1 ? fastTrackFormSources.derive({projectId,defectId:first.defectId || first.id,packageId:first.packageId,itemId:first.itemId,obligationId:first.obligationId,originProjectId:first.originProjectId}) : Promise.resolve({sources:[] as FastTrackSource[],issues:[] as string[]})
+    Promise.all([Promise.all([taskRows,derived]).then(([t,d])=>{if(active)setDerivedNote(d.issues.join(' · '));return [...t,...d.sources]}),fastTrackService.getPolicies(sourceProject,message=>{if(active)setPolicyWarning(message)})]).then(([rows,p])=>{
       if(!active)return
       setSources(rows);setPolicies(p.filter(r=>r.state==='PUBLISHED' && r.revision!=null && selectedItems.every(i=>i.defectTypeCode===r.defectTypeCode && !!i.checklistVersion && i.checklistVersion===r.checklistVersion)))
       const held=selectedItems.length===1 && selectedItems[0].itemId ? fastTrackPending(projectId,`assign:${selectedItems[0].itemId}`) : null
@@ -65,15 +83,15 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
   const source=applicableSources.find(s=>s.id===task.sourceTaskId)
   const chooseSource=(id:string)=>{
     const row=sources.find(r=>r.id===id)
-    setTask(previous=>{const next={...previous,sourceTaskId:row?.id || '',sourceKind:row?.pins.sourceKind || '',surveyId:row?.pins.surveyId ?? null,segmentSetId:row?.pins.segmentSetId ?? null,layoutRevisionId:row?.pins.layoutRevisionId ?? null,slabId:row?.pins.slabId ?? null,mapPublicationId:row?.pins.mapPublicationId ?? null,crsProfileRevisionId:row?.pins.crsProfileRevisionId ?? null,requiredMeasurementType:row?.requiredMeasurementType || 0};localStorage.setItem(fastTrackStorage(projectId,'task-form'),JSON.stringify(next));return next})
+    setTask(previous=>{const next={...previous,sourceTaskId:row?.id || '',sourceKind:row?.pins.sourceKind || '',surveyId:row?.pins.surveyId ?? null,segmentSetId:row?.pins.segmentSetId ?? null,layoutRevisionId:row?.pins.layoutRevisionId ?? null,slabId:row?.pins.slabId ?? null,mapPublicationId:row?.pins.mapPublicationId ?? null,crsProfileRevisionId:row?.pins.crsProfileRevisionId ?? null,requiredMeasurementType:row?.derived ? (isFieldMeasurementCode(previous.requiredMeasurementType) ? previous.requiredMeasurementType : 0) : (row?.requiredMeasurementType || 0)};localStorage.setItem(fastTrackStorage(projectId,'task-form'),JSON.stringify(next));return next})
   }
   const pending=selectedItems.length===1 && selectedItems[0].itemId ? fastTrackPending(projectId,`assign:${selectedItems[0].itemId}`) : null
   const mixed=selectedItems.some(i=>i.defectId!==selectedItems[0]?.defectId)
   const instructionLength=[dispatchNotes,task.measurementScope].filter(t=>t.length>0).join('\n').trim().length
   const validDate=Number.isFinite(Date.parse(task.dueAt)) && Date.parse(task.dueAt)>Date.now()
-  const validSource=!!source && Object.entries(source.pins).every(([key,v])=>(task as any)[key]===v) && source.requiredMeasurementType===task.requiredMeasurementType
+  const validSource=!!source && Object.entries(source.pins).every(([key,v])=>(task as any)[key]===v) && (source.derived ? isFieldMeasurementCode(task.requiredMeasurementType) : source.requiredMeasurementType===task.requiredMeasurementType)
   const missingChecklist=selectedItems.some(i=>!i.checklistVersion)
-  const formError=!selectedItems.length ? 'Chọn hạng mục cần giao việc trước khi lập lệnh.' : mixed ? 'Mỗi lệnh sử dụng một hồ sơ nguồn. Chọn các hạng mục cùng một khiếm khuyết.' : !loading && !sources.length ? 'Chưa có hồ sơ nhiệm vụ phù hợp để xác thực nguồn và phiên bản tuyến. Chưa thể giao việc.' : missingChecklist ? 'Chưa đọc được checklist phương án của hạng mục. Không suy checklist từ policy đang xem; hiện chưa thể chọn revision để giao lệnh mới.' : !loading && !policies.length ? 'Chưa có revision đã xuất bản, chưa thu hồi khớp loại lỗi và checklist phương án.' : instructionLength>1000 ? 'Tổng phạm vi và chỉ dẫn vượt 1000 ký tự; cần rút gọn, hệ thống không tự cắt nội dung.' : task.dueAt && !validDate ? 'Hạn hoàn thành phải là thời điểm hợp lệ trong tương lai.' : ''
+  const formError=!selectedItems.length ? 'Chọn hạng mục cần giao việc trước khi lập lệnh.' : mixed ? 'Mỗi lệnh sử dụng một hồ sơ nguồn. Chọn các hạng mục cùng một khiếm khuyết.' : !loading && !sources.length ? `Chưa dựng/đọc được hồ sơ nguồn để giao việc.${derivedNote ? ' Lý do: '+derivedNote : ''}` : missingChecklist ? 'Chưa đọc được checklist phương án của hạng mục. Không suy checklist từ policy đang xem; hiện chưa thể chọn revision để giao lệnh mới.' : !loading && !policies.length ? 'Chưa có revision đã xuất bản, chưa thu hồi khớp loại lỗi và checklist phương án.' : instructionLength>1000 ? 'Tổng phạm vi và chỉ dẫn vượt 1000 ký tự; cần rút gọn, hệ thống không tự cắt nội dung.' : task.dueAt && !validDate ? 'Hạn hoàn thành phải là thời điểm hợp lệ trong tương lai.' : ''
   if (!isOpen) return null
 
   const hasViolation = selectedItems.some((item) => !item.canAssign)
@@ -146,15 +164,17 @@ export const FastTrackDispatchModal: React.FC<FastTrackDispatchModalProps> = ({
           </div>
 
           {actionError && <p role="alert" className="text-red-800">{actionError}</p>}
+          {originCrewError && <p role="alert" className="text-amber-800 text-xs">{originCrewError}</p>}
+          {originProjectId && <p className="text-slate-500 text-xs">Nghĩa vụ nhận chuyển từ dự án khác: Crew và chính sách lấy theo dự án gốc; lệnh vẫn gửi dưới dự án hiện tại. Giao thành công chưa đồng nghĩa đủ điều kiện thi công.</p>}
           {!pending?.receipt && policyWarning && <p role="alert" className="text-amber-800 text-xs">{policyWarning}</p>}
           <p className="text-slate-500 text-xs">Policy đang xem trên thẻ không tự ghim vào lệnh. Chỉ các revision phù hợp checklist phương án được chọn tại đây; BE còn kiểm lại điều kiện.</p>
           {pending?.receipt && <p role="status" className="text-slate-500 text-xs">Đã nhận receipt. Chỉ đọc lại hạng mục và nhiệm vụ đã giao; không gửi thêm lệnh.</p>}
           {!pending?.receipt && (sourceError || formError) && <p role="alert" className="text-red-800">{sourceError || formError}</p>}
           <div className="grid grid-cols-2 gap-3">
             <label className="col-span-2">Policy ghim cho lệnh mới *<select aria-label="Chính sách giao việc" required value={task.policyRevisionId} disabled={loading || !policies.length || !!pending} onChange={e=>update('policyRevisionId',e.target.value)} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang đọc chính sách…':policies.length?'Chọn chính sách':'Chưa có chính sách phù hợp từ nguồn'}</option>{policies.map(p=><option key={p.id} value={p.id}>{p.checklistVersion} · Lần ban hành {p.revision}</option>)}</select></label>
-            <label className="col-span-2">Hồ sơ nguồn khảo sát *<select aria-label="Hồ sơ nguồn giao việc" required value={task.sourceTaskId || ''} onChange={e=>chooseSource(e.target.value)} disabled={loading || !sources.length || !!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang xác thực hồ sơ…':sources.length?'Chọn hồ sơ nguồn':'Chưa có hồ sơ phù hợp'}</option>{applicableSources.map(r=><option key={r.id} value={r.id}>{r.routeLabel} · {r.label}</option>)}</select></label>
+            <label className="col-span-2">Hồ sơ nguồn của khiếm khuyết *<select aria-label="Hồ sơ nguồn giao việc" required value={task.sourceTaskId || ''} onChange={e=>chooseSource(e.target.value)} disabled={loading || !sources.length || !!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">{loading?'Đang xác thực hồ sơ…':sources.length?'Chọn hồ sơ nguồn':'Chưa có hồ sơ phù hợp'}</option>{applicableSources.map(r=><option key={r.id} value={r.id}>{r.routeLabel} · {r.label}</option>)}</select></label>
             <label>Nguồn khiếm khuyết<select aria-label="Nguồn khiếm khuyết giao việc" value={source?.pins.sourceKind || ''} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value="">Chọn hồ sơ nguồn trước</option>{source && <option value={source.pins.sourceKind}>{source.pins.sourceKind==='REPORTER'?'Phản ánh đã xác nhận':'Đợt khảo sát Drone'}</option>}</select></label>
-            <label>Loại số đo theo hồ sơ<select aria-label="Loại số đo giao việc" value={source?.requiredMeasurementType || 0} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value={0}>Chọn hồ sơ nguồn trước</option>{source && <option value={source.requiredMeasurementType}>{({1:'Độ sâu lún (mm)',2:'Chênh cao tấm',3:'Xói lề',4:'Diện tích (m²)'} as Record<number,string>)[source.requiredMeasurementType] || 'Chưa có loại đo được hỗ trợ'}</option>}</select></label>
+            <label>Loại đo yêu cầu{source?.derived ? ' *' : ''}<select aria-label="Loại số đo giao việc" value={source?.derived ? task.requiredMeasurementType : (source?.requiredMeasurementType || 0)} disabled={!source?.derived || !!pending} onChange={e=>update('requiredMeasurementType',Number(e.target.value))} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"><option value={0}>Chọn hồ sơ nguồn trước</option>{source && !source.derived && <option value={source.requiredMeasurementType}>{measurementTypeLabel(source.requiredMeasurementType)}</option>}{source?.derived && FIELD_MEASUREMENT_TYPES.map(t=><option key={t.code} value={t.code}>{t.code} — {t.label} ({t.enumName})</option>)}</select></label>
             {(['surveyId','segmentSetId','layoutRevisionId','slabId','mapPublicationId','crsProfileRevisionId'] as const).map((key,i)=><label key={key}>{['Đợt khảo sát Drone','Bộ phân đoạn đã công bố','Bố trí mặt đường','Tấm','Bản đồ công bố','Hệ tọa độ'][i]}<select aria-label={`Nguồn ${key}`} value={source?.pins[key] || ''} disabled className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1">{source ? <option value={source.pins[key] || ''}>{source.pins[key] ? key==='slabId' ? `Tấm ${source.pins.slabId}` : 'Đã đối chiếu theo hồ sơ nguồn' : 'Không có trong hồ sơ nguồn'}</option> : <option value="">Chọn hồ sơ nguồn trước</option>}</select></label>)}
             <label className="col-span-2">Hạn hoàn thành *<input aria-label="Hạn hoàn thành giao việc" required type="datetime-local" value={task.dueAt ? (task.dueAt.includes('Z') || /[+-]\d\d:\d\d$/.test(task.dueAt) ? new Date(new Date(task.dueAt).getTime()-new Date(task.dueAt).getTimezoneOffset()*60000).toISOString().slice(0,16) : task.dueAt.slice(0,16)) : ''} onChange={e=>update('dueAt',e.target.value)} disabled={!!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"/></label>
             <label className="col-span-2">Mô tả phạm vi đo *<textarea aria-label="Mô tả phạm vi giao việc" required value={task.measurementScope} onChange={e=>update('measurementScope',e.target.value)} disabled={!!pending} className="block w-full px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 font-medium text-slate-800 mt-1"/></label>

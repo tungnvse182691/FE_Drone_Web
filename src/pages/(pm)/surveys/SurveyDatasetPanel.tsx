@@ -6,6 +6,7 @@ import { Empty, Feedback, Field, KV, Loading, PanelButton, PanelShell, Pill, Sec
 import { Icon } from '../../../components/ui/Icon'
 import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
 import { SourceVideoPanel } from './SourceVideoPanel'
+import { AiRunTracker } from './AiRunTracker'
 import { sourceVideosOf } from '../../../api/services/sourceVideoService'
 
 const VERDICT_LABEL: Record<Verdict, string> = { PASS: 'Đạt', FAIL: 'Không đạt', UNKNOWN: 'Chưa rõ' }
@@ -48,6 +49,8 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
   const [cfg, setCfg] = useState('')
   const [modelVersionId, setModelVersionId] = useState('')
   const [scopeIndex, setScopeIndex] = useState(0)
+  const [lastRunId, setLastRunId] = useState('') // lần chạy AI vừa tạo (runId), để làm nổi bật trong AiRunTracker
+  const [trackKey, setTrackKey] = useState(0)
   const [busy, setBusy] = useState('')
   const guard = useSubmitGuard()
   const [error, setError] = useState('')
@@ -267,8 +270,10 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
             <datalist id="ai-fixtures">{aiFixtures.map((f) => (<option key={f} value={f} />))}</datalist>
             <div className="rg-footer">
               <PanelButton disabled={!!busy || !dataset.scope[scopeIndex]} loading={busy === 'hints'} onClick={() => { void run('hints', async () => { const h = await surveyDatasetService.aiRunHints(record.projectId, dataset.scope[scopeIndex]); setAiFixtures(h.fixtures); setAiGeometry(h.geometryVersion); setMessage('Đã đọc phiên bản hình học của phạm vi đã chọn từ BE.') }) }}>{busy === 'hints' ? 'Đang lấy…' : 'Đọc phiên bản hình học và fixture'}</PanelButton>
-              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setMessage(`Đã tạo lần chạy AI ${r.id} (${r.status || '—'}).`) }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
+              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setLastRunId(r.id); setTrackKey((n) => n + 1); setMessage(`Đã tạo lần chạy AI (runId ${r.id}, trạng thái ${r.status || '—'}). Theo dõi ngay bên dưới.`) }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
             </div>
+            <AiRunTracker projectId={record.projectId} taskId={record.id} datasetId={dataset.id} refreshKey={trackKey} highlightRunId={lastRunId}
+              onViewJob={(id) => { setJobId(id); void run('job', async () => { setJob((await surveyDatasetService.job(id)).job) }) }} />
           </div>
         </div>
       )}
@@ -278,10 +283,16 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
           <PanelButton disabled={!!busy} loading={busy === 'jobs'} onClick={() => { void listJobs() }}>{busy === 'jobs' ? 'Đang tải…' : 'Danh sách job của dự án'}</PanelButton>
         </div>
         {jobList.length > 0 && <div data-testid="job-list" className="space-y-1">{jobList.map((j) => (<button key={j.id} type="button" onClick={() => setJobId(j.id)} className={`rg-row block w-full text-left font-mono text-[11px] focus:outline-none focus:ring-2 focus:ring-brand-gold ${jobId === j.id ? '!border-brand-navy' : ''}`}>#{j.id.slice(0, 8)} · {j.jobType || '—'} · {j.status} · lần {j.attemptNumber ?? '—'}</button>))}</div>}
-        <div className="flex items-end gap-2">
-          <div className="flex-1"><span className="rg-label">Mã job xử lý</span><input aria-label="Mã job xử lý" disabled={!!busy} value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="Mã job (GUID)" className={`${cls} font-mono`} /></div>
-          <PanelButton className="whitespace-nowrap" disabled={!!busy || !jobId.trim()} loading={busy === 'job'} onClick={() => { void readJob() }}>{busy === 'job' ? 'Đang đọc…' : 'Đọc job'}</PanelButton>
-        </div>
+        <p className="text-[11px] text-slate-500">Chọn job từ danh sách trên hoặc bấm "Xem job xử lý" ở lần chạy AI; không cần tự nhập mã. Mã job (processingJobId) khác mã lần chạy AI (runId).</p>
+        {jobId && <p className="text-[11px] font-mono break-all" data-testid="selected-job-id"><span className="font-sans font-semibold">Job đang chọn (processingJobId):</span> {jobId}</p>}
+        <details className="text-xs">
+          <summary className="cursor-pointer font-semibold text-slate-600">Nâng cao: nhập mã job thủ công</summary>
+          <div className="flex items-end gap-2 mt-2">
+            <div className="flex-1"><span className="rg-label">Mã job xử lý (processingJobId)</span><input aria-label="Mã job xử lý" disabled={!!busy} value={jobId} onChange={(e) => setJobId(e.target.value)} placeholder="Mã job (GUID)" className={`${cls} font-mono`} /></div>
+            <PanelButton className="whitespace-nowrap" disabled={!!busy || !jobId.trim()} loading={busy === 'job'} onClick={() => { void readJob() }}>{busy === 'job' ? 'Đang đọc…' : 'Đọc job'}</PanelButton>
+          </div>
+        </details>
+        {jobId && !job && <PanelButton disabled={!!busy} loading={busy === 'job'} onClick={() => { void readJob() }}>Đọc job đang chọn</PanelButton>}
         {job && (
           <div className="space-y-2 rounded-lg bg-white border border-brand-border p-3">
             <KV items={[

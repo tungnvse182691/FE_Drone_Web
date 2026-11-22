@@ -133,7 +133,12 @@ export const useAIReviewActions = ({
     showToast('Chưa có contract kết luận OUT_OF_SCOPE hoặc chuyển cơ quan khác. Chưa gửi lệnh; không thay bằng NO_DEFECT.')
   }
 
-  const handleResetConclusion = () => {
+  const handleResetConclusion = (c?: TriageCase) => {
+    // Case đã OPEN (BE tự mở lại khi có bổ sung) thì không cần lệnh mở lại: thẩm định tiếp theo trạng thái OPEN.
+    if ((c || selectedCase)?.case_status === 'OPEN') {
+      showToast('Hồ sơ đang ở trạng thái OPEN: tiếp tục thẩm định ở khung bên dưới, không cần mở lại kết luận.')
+      return
+    }
     showToast('Chưa có command mở lại kết luận Case trong contract. Không thay đổi trạng thái server; hãy bổ sung bằng chứng theo quy trình được phép.')
   }
 

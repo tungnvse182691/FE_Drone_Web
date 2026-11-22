@@ -18,6 +18,7 @@ interface SurveyTableProps {
   basePath: string
   onNavigate: (path: string) => void
   onOpenSimulator: (mission: SurveyMission) => void
+  onOpenRelated?: (id: string) => void
 }
 
 export const SurveyTable: React.FC<SurveyTableProps> = ({
@@ -34,7 +35,8 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
   highlightedCode,
   basePath,
   onNavigate,
-  onOpenSimulator
+  onOpenSimulator,
+  onOpenRelated
 }) => {
   const pendingCount = missions.filter((m) => m.status === 'PENDING_AI_REVIEW').length
   const scheduledCount = missions.filter((m) => m.status === 'SCHEDULED').length
@@ -186,6 +188,7 @@ export const SurveyTable: React.FC<SurveyTableProps> = ({
               basePath={basePath}
               onNavigate={onNavigate}
               onOpenSimulator={onOpenSimulator}
+              onOpenRelated={onOpenRelated}
             />
           ))}
         </div>
