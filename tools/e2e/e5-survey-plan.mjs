@@ -44,7 +44,7 @@ if (MODE === 'all' || MODE === 'a') {
   console.log('   POST:', posts, '| alert:', alertText.slice(0, 400))
   if (/POST \/projects\/\{id\}\/survey-plans 409/.test(posts)) {
     check('POST kế hoạch bị BE từ chối 409', true, posts)
-    check('Thông báo nêu rõ kế hoạch đang hoạt động trùng tuyến/dải (không chỉ duplicate_request)', /kế hoạch đang hoạt động trên cùng tuyến/.test(alertText), alertText.slice(0, 200))
+    check('Thông báo nêu rõ kế hoạch đang hoạt động trùng tuyến/dải (không chỉ duplicate_request)', /đang hoạt động.*cùng tuyến và loại/.test(alertText), alertText.slice(0, 200))
     const btn = await page.evaluate(() => [...document.querySelectorAll('main button')].find((b) => /Mở kế hoạch KH-/.test(b.textContent))?.textContent.trim() || '')
     check('Có nút mở kế hoạch hiện có', !!btn, btn)
     check('Journal được giải phóng sau 409 (sessionStorage trống)', (await journalKeys(page)).length === 0, JSON.stringify(await journalKeys(page)))

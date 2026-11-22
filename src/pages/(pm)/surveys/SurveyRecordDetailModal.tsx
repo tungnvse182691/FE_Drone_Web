@@ -5,8 +5,9 @@ import { RoleCode } from '../../../types/enums'
 import { SurveyRecordActions } from './SurveyRecordActions'
 import { SurveyDatasetPanel } from './SurveyDatasetPanel'
 import { SurveyCompleteCard } from './SurveyCompleteCard'
+import { SurveyPlanCompleteCard } from './SurveyPlanCompleteCard'
 import { SupSourceVideo } from './SupSourceVideo'
-import { surveyStatusLabel, surveyPlannedAtLabel, type SurveyRecord, type SurveyPresentation } from '../../../api/services/surveyPlanningService'
+import { surveyStatusLabel, surveyPlannedAtLabel, surveyTypeLabel, type SurveyRecord, type SurveyPresentation } from '../../../api/services/surveyPlanningService'
 import type { SurveyMissionItem } from '../../../api/services/surveyService'
 
 const shortOf = (kind: 'PLAN' | 'TASK', id: string) => `${kind === 'PLAN' ? 'KH' : 'NV'}-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
@@ -40,7 +41,7 @@ export function SurveyRecordDetailModal({projectName,record,description,loading,
             {record.recordKind==='PLAN'&&record.plannedAt&&<div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="calendar_month" size={16} className="text-[#C9A227]" />Lịch bay dự kiến</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{target?.flight_date||surveyPlannedAtLabel(record.plannedAt)}</p><p className="mt-1 text-[10px] text-slate-400">Giờ Việt Nam</p></div>}
             {record.recordKind==='PLAN'&&<div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="person" size={16} className="text-[#C9A227]" />Operator theo các nhiệm vụ của kế hoạch</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{target?.pilot_name||'Chưa có nhiệm vụ nào được giao'}</p></div>}
             {record.recordKind==='TASK'&&<div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="event" size={16} className="text-[#C9A227]" />Hạn hoàn thành</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{record.dueAt?surveyPlannedAtLabel(record.dueAt):'Không đặt hạn'}</p><p className="mt-1 text-[10px] text-slate-400">Giờ Việt Nam</p></div>}
-            <div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="category" size={16} className="text-[#C9A227]" />Loại khảo sát</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{(record.parentTaskId||target?.parent_task_id)?'Bổ sung (theo nhiệm vụ gốc)':'BE chưa trả loại khảo sát'}</p><p className="mt-1 text-[10px] text-slate-400">BE chỉ nhận Cơ sở / Định kỳ / Đột xuất khi tạo, không trả lại khi đọc.</p></div>
+            <div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="category" size={16} className="text-[#C9A227]" />Loại khảo sát</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{surveyTypeLabel(record.surveyType)}{(record.parentTaskId||target?.parent_task_id)?' · Bổ sung (theo nhiệm vụ gốc)':''}</p><p className="mt-1 text-[10px] text-slate-400">Loại do BE trả khi đọc; nhiệm vụ bổ sung có loại riêng (Đột xuất).</p></div>
             {record.recordKind==='TASK'&&<div className="rounded-xl border border-[#E2E5E9] p-4"><p className="text-[11px] text-slate-500 flex gap-2 items-center"><Icon name="person" size={16} className="text-[#C9A227]" />Người được phân công</p><p className="mt-2 text-sm font-bold text-[#1A1D20]">{loading ? 'Đang tải thông tin người được giao…' : description?.operatorName || 'Chưa tải được thông tin người được giao'}</p><p className="mt-1 text-[11px] text-slate-500">Phi công thiết bị bay</p></div>}
           </div>
           {onOpenRelated&&(()=>{
@@ -54,6 +55,7 @@ export function SurveyRecordDetailModal({projectName,record,description,loading,
           })()}
           {description?.scopes.map((s,i)=><section key={i} className="bg-[#F8F9FA] border border-[#E2E5E9] rounded-xl p-4 space-y-2"><h4 className="text-xs font-bold text-[#1A1D20] flex gap-2 items-center"><Icon name="route" size={16} className="text-[#C9A227]" />Phạm vi khảo sát</h4><p className="text-xs font-semibold text-[#2D3748] break-words">{s.routeName}</p><div className="flex flex-wrap gap-3 text-xs text-slate-600"><span>{s.band}</span><span className="font-mono">{s.ranges}</span></div>{s.historical&&<span className="inline-block text-[10px] rounded-full border border-amber-200 bg-amber-50 text-amber-800 px-2 py-1">Bộ phân đoạn lịch sử</span>}</section>)}
           {isPM&&<SurveyRecordActions record={record} onDone={()=>onChanged?.()} />}
+          {isPM&&record.recordKind==='PLAN'&&<SurveyPlanCompleteCard record={record} planTasks={planTasks||[]} onDone={()=>onChanged?.()} />}
           {isPM&&record.recordKind==='TASK'&&<SurveyCompleteCard record={record} onDone={()=>onChanged?.()} />}
           {isPM&&record.recordKind==='TASK'&&<SurveyDatasetPanel record={record} />}
           {isSup&&record.recordKind==='TASK'&&<SupSourceVideo record={record} />}

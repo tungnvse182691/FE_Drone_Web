@@ -157,3 +157,6 @@ Ghi chú: dữ liệu B1–B6 nằm trong stack cũ `roadguard-dev1` (đã dừn
 ## B10 — Dữ liệu test thêm ở stack `roadguard-v3` (đợt "Cập nhật mới 5h37", 2026-11-22)
 - E5 (SBX-A): nhiệm vụ seed `260cf5b5…` nay **SUPPLEMENT_REQUIRED** và có nhiệm vụ bổ sung con (tạo bằng API, `[TEST-FE]`) — không hoàn tác, nên thẻ "Xác nhận hoàn tất nhiệm vụ khảo sát" không hiện cho nhiệm vụ này; thêm 1 kế hoạch định kỳ và 1 nhiệm vụ mới. Mỗi lần chạy `e5-survey-plan.mjs` tạo thêm kế hoạch/nhiệm vụ.
 - E6 (SBX-A): 3 lần chạy AI mock (fixture `synthetic-road-v1`) trên bản nộp của nhiệm vụ `260cf5b5…`, đều SUCCEEDED; mỗi lần chạy `e6-ai-run.mjs` tạo thêm lần chạy AI.
+
+## B11 — Dữ liệu test thêm ở BE `develop_ABC` (2026-11-22)
+- Nhiệm vụ bổ sung `e29dd031…` (SBX-A) bị hủy bằng API (`[TEST-FE]`); kế hoạch BASELINE `50a7e6d2…` nay COMPLETED với 1 nguồn (đánh giá PASS `899d4178…` tạo bằng API trên bản nộp `ea3f4cdc…`). Không hoàn tất lại được; `e7-plan-complete.mjs` chỉ còn kiểm nhánh đọc/khóa nút nếu không còn kế hoạch IN_PROGRESS BASELINE có bản nộp.

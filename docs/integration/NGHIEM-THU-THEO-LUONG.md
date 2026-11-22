@@ -524,16 +524,12 @@ Môi trường như mục 15 (BE `roadguard-v3`, seed mới, Vite cổng 5180). 
 | 1. Thông báo 409 rõ nguyên nhân khi tạo kế hoạch trùng | Đã làm. Sau 409, FE đọc `GET survey-plans` và đối chiếu kế hoạch đang hoạt động cùng tuyến, bộ phân đoạn, dải; nếu xác định được thì báo trùng kèm nút "Mở kế hoạch KH-…", nếu không thì không kết luận trùng, chỉ báo mã chung và `correlationId` (BE dùng chung `duplicate_request` cho nhiều xung đột). Kiểm: tạo trùng kế hoạch seed → 409 → thông báo và nút mở đúng (8/8) |
 | 2. Theo dõi AI ngay sau khi tạo | Đã làm: khung theo dõi giữ lần chạy vừa tạo, tự đọc lại mỗi 3 giây (tối đa khoảng 5 phút, dừng khi rời màn), hiện `errorCode` của BE khi thất bại, hiện riêng "Mã lần chạy AI (runId)" và "Mã job xử lý (processingJobId)", không bắt nhập GUID. Khi SUCCEEDED, nút "Mở kết quả thẩm định" chuyển tới `/pm/surveys/{taskId}?run=…&dataset=…` và chỉ đọc phát hiện của đúng lần chạy; thao tác thẩm định giữ nguyên. Kiểm: POST 202, runId khác processingJobId và khớp GET, F5 vẫn thấy lần chạy, tự lên SUCCEEDED, số phát hiện khớp kết quả BE (16/16) |
 | 3. Form kẹt sau lỗi tạo kế hoạch | Đã làm. Nguyên nhân gốc: `catch` luôn ghi journal kể cả khi lỗi xảy ra trước khi gửi lệnh. Nay 4xx dứt khoát giải phóng journal; "Hủy bỏ" và F5 đối chiếu bằng GET rồi giải phóng khi an toàn; nếu đã tạo kế hoạch thì tiếp tục đúng bước, không tạo trùng; kết quả chưa rõ thì giữ nguyên key/body. Kiểm: F5 và Hủy bỏ giải phóng journal (5/5); tạo kế hoạch hợp lệ 201 rồi nhiệm vụ 201, GET đọc lại đúng (3/3) |
-| 4. Phân biệt kế hoạch/nhiệm vụ | Đã làm: nhãn KẾ HOẠCH / NHIỆM VỤ / Bổ sung, mã rút gọn `KH-…`/`NV-…`, lịch bay hoặc hạn hoàn thành, phạm vi, Operator, nút mở kế hoạch/nhiệm vụ gốc–con, tìm theo mã rút gọn (9/9). **Loại Cơ sở/Định kỳ/Đột xuất chưa hiện được vì BE không trả `surveyType` khi đọc** (lỗi BE #16); FE ghi "BE chưa trả loại khảo sát" |
+| 4. Phân biệt kế hoạch/nhiệm vụ | Đã làm: nhãn KẾ HOẠCH / NHIỆM VỤ / Bổ sung, mã rút gọn `KH-…`/`NV-…`, lịch bay hoặc hạn hoàn thành, phạm vi, Operator, nút mở kế hoạch/nhiệm vụ gốc–con, tìm theo mã rút gọn (9/9). Loại Cơ sở/Định kỳ/Đột xuất đã hiện sau khi BE trả `surveyType` (mục 17) |
 
 Phát hiện kèm theo (E5): tuyến cũ `DEMO-A` của SBX-A có hình học `LEGACY_INCOMPLETE` từng làm trang tạo yêu cầu báo "Geometry chưa COMPLETE" cho cả dự án; FE nay bỏ qua tuyến này kèm thông báo.
 
 ### 16.2 Lỗi/thiếu phía BE — bổ sung
-| # | API | Hiện tượng | Đề nghị |
-|---|---|---|---|
-| 16 | `GET survey-plans`, `GET survey-tasks` và chi tiết | Không trả `surveyType` (Cơ sở/Định kỳ/Đột xuất), nên FE không hiện được loại khảo sát và không so được "cùng loại" khi giải thích 409 | Trả `surveyType` trong DTO đọc |
-| 17 | `POST survey-plans` / `survey-tasks` | `duplicate_request` dùng chung cho nhiều loại xung đột (trùng kế hoạch, cùng key khác nội dung…), correlation ví dụ `58900b1d-bae5-40a5-b008-5668a893b862` | Mã/ý nghĩa riêng cho từng loại xung đột, hoặc trả đối tượng trùng (id kế hoạch hiện có) |
-| 18 | Danh sách nhiệm vụ (`SurveyTaskSummary`) | Thiếu `parentTaskId` nên danh sách không tự nối được nhiệm vụ gốc–con (chi tiết thì có) | Thêm `parentTaskId` vào bản tóm tắt |
+Cả ba mục #16 (`surveyType`), #17 (`duplicate_request` dùng chung), #18 (`parentTaskId` ở danh sách nhiệm vụ) **đã được BE `develop_ABC` xử lý** và FE đã nối; đã gỡ khỏi danh sách lỗi BE. Xem mục 17.
 
 ### 16.3 Kiểm thử đợt này
 | Lớp | Kết quả |
@@ -548,3 +544,24 @@ Phát hiện kèm theo (E5): tuyến cũ `DEMO-A` của SBX-A có hình học `L
 ### 16.4 Chưa kiểm được
 - Lần chạy AI ở trạng thái FAILED và RUNNING: BE chặn dữ liệu sai ngay ở POST (422 `ai_contract_invalid`) và seed xử lý quá nhanh nên không có lần chạy FAILED hay RUNNING nào để quan sát; đoạn hết hạn tự đọc lại cũng chưa chạy.
 - Nhánh "đã tạo kế hoạch nhưng giao nhiệm vụ bị 4xx" và nhánh timeout thật của form tạo yêu cầu: logic có trong mã, chưa chạy với lỗi thật.
+
+## 17. BE mới `RoadGuardSystem-develop_ABC` — 2026-11-22
+
+BE chạy lại bằng compose project `roadguard-v3` (dữ liệu volume giữ nguyên, không có migration). Tài liệu BE: `deploy/fe-handoff/SURVEY-TYPE-CONFLICT-AND-PLAN-COMPLETION.md`. Báo cáo chi tiết: `fe-theo-be/E7-SURVEYTYPE-PLAN-COMPLETE-20261122.md`.
+
+### 17.1 Thay đổi BE và kết quả FE
+| Thay đổi BE | FE | Kiểm trên BE mới |
+|---|---|---|
+| `surveyType` (BASELINE/PERIODIC/AD_HOC/UNKNOWN) ở list/detail kế hoạch và nhiệm vụ | Danh sách và modal hiện loại khảo sát; UNKNOWN hiện "Chưa xác định", không đoán | Đạt (e7) |
+| `parentTaskId` ở danh sách nhiệm vụ | Nối nhiệm vụ gốc–con trực tiếp từ BE (bỏ suy luận từ `supplementTaskId`) | Đạt |
+| 409 `survey_active_plan_conflict` kèm `existingPlanId`, `existingPlanStatus` | Thông báo rõ "đã có kế hoạch đang hoạt động cùng tuyến và loại" + nút mở đúng kế hoạch; mã `survey_source_scope_invalid`, `survey_plan_state_conflict`, `survey_task_plan_mismatch` có thông báo riêng | Đạt (e5 21/21) |
+| `POST /survey-plans/{id}/complete` (PM, If-Match = ETag kế hoạch) | Thẻ "Xác nhận hoàn tất kế hoạch khảo sát": PM chọn bản nộp từng nhiệm vụ (gốc + bổ sung), FE đọc `assessmentId` hiện hành, gửi `sources[]` + lý do; 409 `survey_plan_completion_blocked` hiện lý do tiếng Việt theo `reasonCode`; kế hoạch COMPLETED hiện "Căn cứ đóng kế hoạch" từ `completion` | Đạt: nhánh bổ sung chưa giải quyết → BE chặn `plan_unhandled_task_branch` (UI báo đúng); PM hủy nhánh rồi đóng → 200, GET đọc lại COMPLETED kèm `completion` |
+
+### 17.2 Lưu ý dữ liệu test (không hoàn tác)
+Kế hoạch `50a7e6d2…` (BASELINE, SBX-A) nay **COMPLETED**; nhiệm vụ bổ sung `e29dd031…` đã bị hủy. Có thể tạo kế hoạch BASELINE mới cho cùng tuyến.
+
+### 17.3 Kiểm thử
+`tsc`, `vite build` sạch; smoke route đạt; readback 17/17; flows-ui 21/21; e5 21/21; e7 (`e7-plan-complete.mjs`) đạt.
+
+### 17.4 Chưa kiểm được
+Đóng kế hoạch với nguồn thực sự phủ nhiều bản nộp (gốc + bổ sung đã nộp bởi Operator) vì nộp bổ sung cần app Operator (mobile); các mã chặn còn lại (`plan_scope_not_satisfied`, `plan_source_scope_mismatch`…) có thông báo trong mã nhưng chưa tái hiện từng mã.

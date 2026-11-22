@@ -14,8 +14,12 @@ export interface SurveyRecord {
   id: string; projectId: string; status: string; version: string; scope?: SurveyScope[]
   plannedAt?: string; operatorId?: string; supplementTaskId?: string | null
   dueAt?: string | null; parentTaskId?: string | null; plannedEndAt?: string | null; planId?: string | null
+  surveyType?: string; completion?: PlanCompletion | null
   recordKind: 'PLAN' | 'TASK'
 }
+export interface PlanCompletion { id: string; at: string; actorId: string; reason: string; sources: { taskId: string; datasetId: string; assessmentId: string }[] }
+export const surveyTypeOf = (raw?: string | null): 'BASELINE' | 'PERIODIC' | 'AD_HOC' | null => { const t = String(raw ?? '').toUpperCase(); return t === 'BASELINE' || t === 'PERIODIC' || t === 'AD_HOC' ? t : null }
+export const surveyTypeLabel = (raw?: string | null) => { const t = surveyTypeOf(raw); return t ? {BASELINE:'Khảo sát cơ sở (Baseline)',PERIODIC:'Khảo sát định kỳ',AD_HOC:'Khảo sát đột xuất'}[t] : 'Chưa xác định (BE trả UNKNOWN)' }
 export interface SurveyPresentation {
   operatorName?: string
   scopes: {routeName: string; band: string; ranges: string; historical: boolean}[]
@@ -156,14 +160,14 @@ export const surveyPlanningService = {
     const rows: SurveyMissionItem[] = []
     for (const project of projects) {
       const [plans,tasks] = await Promise.all([this.records(project.projectId,'PLAN',signal),this.records(project.projectId,'TASK',signal)])
-      // No planId or surveyType read contract at 4b46a6a. Keep independent records and unknown metadata.
-      const built: SurveyMissionItem[] = []
+            const built: SurveyMissionItem[] = []
       // BE bản mới: list đã có summary (operatorDisplayName, scopeSummary[], datasetCount, plannedEndAt) → KHÔNG gọi detail từng bản ghi (hết N+1).
       // Phạm vi chi tiết (tên tuyến, lý trình) chỉ đọc khi mở chi tiết (describe trong SurveyRecordDetailModal).
       const BAND: Record<string, string> = { SURFACE: 'Mặt đường', LEFT_EDGE: 'Mép trái', RIGHT_EDGE: 'Mép phải' }
       // Quan hệ gốc–con của nhiệm vụ bổ sung: BE chỉ trả supplementTaskId (con) trên nhiệm vụ gốc; nhiệm vụ gốc của một nhiệm vụ con suy ra từ chính danh sách này.
       const parentOf = new Map<string, string>()
       for (const t of tasks as any[]) if (t.supplementTaskId) parentOf.set(String(t.supplementTaskId), t.id)
+      for (const t of tasks as any[]) if (t.parentTaskId) parentOf.set(String(t.id), t.parentTaskId)
       const operatorsOfPlan = new Map<string, Set<string>>()
       for (const t of tasks as any[]) if (t.planId && t.operatorDisplayName) { const set = operatorsOfPlan.get(t.planId) || new Set<string>(); set.add(t.operatorDisplayName); operatorsOfPlan.set(t.planId, set) }
       const shortCode = (kind: 'PLAN' | 'TASK', id: string) => `${kind === 'PLAN' ? 'KH' : 'NV'}-${String(id).replace(/-/g, '').slice(0, 8).toUpperCase()}`
@@ -175,7 +179,7 @@ export const surveyPlanningService = {
         built.push({ id: record.id, code: record.id, short_code: shortCode(record.recordKind, record.id), title: record.recordKind === 'PLAN' ? 'Kế hoạch khảo sát' : parentOf.has(record.id) ? 'Nhiệm vụ khảo sát bổ sung' : 'Nhiệm vụ khảo sát', serverRecordKind: record.recordKind,
           plan_id: record.recordKind === 'TASK' ? record.planId ?? null : null, supplement_task_id: record.supplementTaskId ?? null, parent_task_id: parentOf.get(record.id) ?? null,
           due_label: record.recordKind === 'TASK' ? when(record.dueAt) : '',
-          survey_type: null, survey_type_label: 'API chưa trả loại khảo sát', project_id: project.projectId, project_name: `${project.projectCode} · ${project.name}`,
+          survey_type: surveyTypeOf(record.surveyType), survey_type_label: surveyTypeLabel(record.surveyType), project_id: project.projectId, project_name: `${project.projectCode} · ${project.name}`,
           start_km: '', end_km: '', flight_date: record.plannedAt ? `${surveyPlannedAtLabel(record.plannedAt)}${record.plannedEndAt ? ` → ${surveyPlannedAtLabel(record.plannedEndAt)}` : ''}` : '', pilot_name: record.recordKind === 'TASK' ? (record.operatorDisplayName || 'Chưa có tên người được giao') : [...(operatorsOfPlan.get(record.id) || [])].join(', '), drone_model: '', scope_summary: scopeText, read_error: '',
           total_photos: Number.NaN, gsd_resolution: '', ai_defects_count: Number.NaN, ai_pending_count: Number.NaN, coverage_percent: Number.NaN, serverStatus: record.status, status_label: surveyStatusLabel(record.status) } as SurveyMissionItem)
       }

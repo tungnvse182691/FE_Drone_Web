@@ -49,6 +49,19 @@ export const surveyActions = {
     return (await apiClient.post(`/survey-tasks/${taskId}/complete`, { datasetId: input.datasetId, assessmentId: input.assessmentId, reason: input.reason.trim() }, { headers: headers(task.version) })).data
   },
   /**
+   * POST /survey-plans/{planId}/complete — PM đóng kế hoạch (BE develop_ABC, 200 + plan COMPLETED).
+   * Body {sources:[{taskId,datasetId,assessmentId}], reason}; If-Match = ETag của KẾ HOẠCH. PM chỉ rõ bản nộp từng nhiệm vụ (gốc + bổ sung);
+   * assessmentId là đánh giá hiện hành pm-evidence-review.v1 của bản nộp đó; BE kiểm các nguồn phủ PASS toàn bộ scope đã ghim của kế hoạch.
+   */
+  async completePlan(projectId: string, planId: string, input: { sources: { taskId: string; datasetId: string; assessmentId: string }[]; reason: string }) {
+    if (!input.sources.length) throw new Error('Chọn ít nhất một nguồn (nhiệm vụ + bản nộp) để đóng kế hoạch.')
+    if (new Set(input.sources.map((x) => x.datasetId)).size !== input.sources.length) throw new Error('Mỗi bản nộp chỉ được chọn một lần.')
+    if (!input.reason.trim()) throw new Error('Cần nhập lý do đóng kế hoạch.')
+    const plan = await surveyPlanningService.detail(projectId, planId, 'PLAN')
+    if (plan.status !== 'IN_PROGRESS') throw new Error('Kế hoạch không còn ở trạng thái đang thực hiện; không thể đóng.')
+    return (await apiClient.post(`/survey-plans/${planId}/complete`, { sources: input.sources, reason: input.reason.trim() }, { headers: headers(plan.version) })).data
+  },
+  /**
    * POST /survey-tasks/{taskId}/supplements — tạo nhiệm vụ bổ sung (201). Body {operatorId, reason, scope[]};
    * trả {id, status: SUPPLEMENT_REQUIRED, supplementTaskId, version}, header Location trỏ nhiệm vụ con.
    */

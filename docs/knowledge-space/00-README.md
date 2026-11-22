@@ -45,7 +45,7 @@ Hệ thống quản lý **bảo hành và sửa chữa mặt đường** cho nh�
 - Đã nghiệm thu bằng giao diện thật: W01 (lời mời), W02 (hoàn thành thi công), W04 (quyết định thẩm định), W05 (chạy AI), W07 (duyệt/giao Normal, xuất hồ sơ, chuyển nghĩa vụ), W10 (đánh giá lưu trữ, phong tỏa).
 - **Chưa chạy được vì phụ thuộc BE:** Fast Track giao việc (thiếu `surveyId`), gỡ phong tỏa pháp lý (thiếu API liệt kê), một số quyền (Giám sát xuất hồ sơ bị 403).
 - **Chưa kiểm vì cần thao tác mobile:** duyệt đo (W06), nghiệm thu/ký sau thi công, thiết bị offline (W09).
-- Có 18 mục lỗi/thiếu phía BE đã ghi để gửi (bảng 13.2, 15.3 và 16.2 trong `NGHIEM-THU-THEO-LUONG.md`). Mới nhất: loại đo FIELD 5 và 6 bị BE trả 500 dù handoff nói nhận 1–6 (trigger SQL cũ).
+- Có 15 mục lỗi/thiếu phía BE còn mở (bảng 13.2 và 15.3 trong `NGHIEM-THU-THEO-LUONG.md`). Mới nhất: loại đo FIELD 5 và 6 bị BE trả 500 dù handoff nói nhận 1–6 (trigger SQL cũ).
 - **BE mới (c0c99ca) đã giải quyết** việc thiếu `surveyId`: Fast Track giao được cho cả nguồn Reporter và Survey. FE nối thêm lệnh mới "hoàn tất nhiệm vụ khảo sát".
 - Môi trường test hiện là stack `roadguard-v3` với **dữ liệu seed mới** (dữ liệu và ghi chú của stack cũ ở các mục trước không còn trên stack này).
 - Cảnh báo: một số thao tác test **không hoàn tác được** — đọc mục 3 của [03-huong-dan-test.md](03-huong-dan-test.md) trước khi bấm.

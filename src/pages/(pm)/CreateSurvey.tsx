@@ -154,6 +154,20 @@ export const CreateSurvey: React.FC = () => {
       let message=`${e.planId?`Đã có kế hoạch ${e.planId}; `:''}Bước ${e.surveyPhase||'kiểm tra'}: HTTP ${status||''} ${e?.response?.data?.code||e.message}${correlation?` · ${correlation}`:''}`
       // BE dùng chung mã duplicate_request cho nhiều loại xung đột: chỉ kết luận "trùng kế hoạch" khi GET survey-plans thấy kế hoạch đang hoạt động cùng tuyến/dải.
       if(status===409&&e.surveyPhase==='PLAN'&&sentScope){
+        const data=e?.response?.data,code=data?.code as string|undefined
+        // BE mới (SURVEY-TYPE-CONFLICT-AND-PLAN-COMPLETION): mã riêng cho từng xung đột; survey_active_plan_conflict kèm existingPlanId để mở đúng kế hoạch.
+        if(code==='survey_active_plan_conflict'&&data?.existingPlanId){
+          const exId=String(data.existingPlanId),exStatus=String(data.existingPlanStatus||'')
+          setConflict({plans:[{id:exId,status:exStatus}],correlationId:correlation})
+          const m=`Đã có kế hoạch khảo sát đang hoạt động (${surveyStatusLabel(exStatus)}) cùng tuyến và loại khảo sát này: BE chỉ cho một kế hoạch hoạt động mỗi (tuyến, loại khảo sát). Hãy mở kế hoạch hiện có; nếu đã đủ hồ sơ, PM đóng kế hoạch đó rồi mới tạo kỳ mới.${correlation?` Mã tham chiếu: ${correlation}.`:''}${e.journalReleased?' Chưa có gì được tạo.':''}`
+          setSubmitError(m);toast.error('Đã có kế hoạch khảo sát đang hoạt động cùng tuyến và loại')
+          return
+        }
+        if(code==='survey_source_scope_invalid'||code==='survey_plan_state_conflict'||code==='survey_task_plan_mismatch'){
+          const why=code==='survey_source_scope_invalid'?'Nguồn tuyến/bộ phân đoạn/dải không hợp lệ (không phải trùng kế hoạch).':code==='survey_plan_state_conflict'?'Trạng thái kế hoạch không cho tạo nhiệm vụ theo quy trình hiện hành.':'Loại hoặc phạm vi nhiệm vụ không thuộc kế hoạch.'
+          const m=`BE từ chối (HTTP 409 ${code}): ${why}${correlation?` Mã tham chiếu: ${correlation}.`:''}${e.journalReleased?' Chưa có gì được tạo; bạn có thể sửa và gửi lại.':''}`
+          setSubmitError(m);toast.error(m);return
+        }
         let plans:Awaited<ReturnType<typeof surveyCreateCommands.activePlansForScope>>=[],readFailed=''
         try{plans=await surveyCreateCommands.activePlansForScope(currentProject.parentProjectId,sentScope)}catch(re:any){readFailed=re?.message||'lỗi đọc'}
         if(plans.length){message=`BE từ chối tạo kế hoạch mới (HTTP 409 ${e?.response?.data?.code||'conflict'}): dự án đã có ${plans.length} kế hoạch đang hoạt động trên cùng tuyến và dải khảo sát. Hãy mở kế hoạch hiện có hoặc đổi tuyến/dải khảo sát. BE không trả loại khảo sát khi đọc nên FE không so được loại khảo sát.${correlation?` Mã tham chiếu: ${correlation}.`:''}`}

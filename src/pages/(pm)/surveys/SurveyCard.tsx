@@ -165,7 +165,7 @@ export const SurveyCard: React.FC<SurveyCardProps> = ({
 
         {survey.serverRecordKind && (
           <div className="text-[11px] text-slate-500 flex items-center flex-wrap gap-x-3 gap-y-1">
-            <span>Loại khảo sát: {survey.parent_task_id ? 'Bổ sung (theo nhiệm vụ gốc)' : 'BE chưa trả loại (Cơ sở/Định kỳ/Đột xuất)'}</span>
+            <span>Loại khảo sát: {survey.survey_type_label}{survey.parent_task_id ? ' · Bổ sung (theo nhiệm vụ gốc)' : ''}</span>
             {survey.plan_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.plan_id!) }} className="underline text-brand-navy cursor-pointer">Kế hoạch KH-{survey.plan_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
             {survey.parent_task_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.parent_task_id!) }} className="underline text-brand-navy cursor-pointer">Nhiệm vụ gốc NV-{survey.parent_task_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
             {survey.supplement_task_id && onOpenRelated && <button type="button" onClick={e => { e.stopPropagation(); onOpenRelated(survey.supplement_task_id!) }} className="underline text-brand-navy cursor-pointer">Nhiệm vụ bổ sung NV-{survey.supplement_task_id.replace(/-/g, '').slice(0, 8).toUpperCase()}</button>}
