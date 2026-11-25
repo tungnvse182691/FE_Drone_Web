@@ -18,6 +18,7 @@ export const DroneMissionAIReview: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const runId = searchParams.get('run') || ''
   const datasetId = searchParams.get('dataset') || ''
+  const detParam = searchParams.get('det') || ''
   const { user } = useAuthStore()
   const isSupervisor = user?.role === RoleCode.SUPERVISOR
   const basePath = isSupervisor ? '/sup' : '/pm'
@@ -60,8 +61,16 @@ export const DroneMissionAIReview: React.FC = () => {
     handleApproveDetection,
     handleRejectDetection,
     selectedItem,
-    detectionsError
-  } = useDroneMissionReview(id || '', currentSurvey, runId ? { runId, datasetId: datasetId || undefined } : undefined)
+    detectionsError,
+    selectionError,
+    retryDetection
+  } = useDroneMissionReview(id || '', currentSurvey, {
+    runId: runId || undefined,
+    datasetId: datasetId || undefined,
+    detectionId: detParam || undefined,
+    // Giữ detectionId (cùng run/dataset) trên URL để F5/điều hướng lại đúng phát hiện đang xem.
+    onSelect: (detectionId) => setSearchParams((prev) => { const n = new URLSearchParams(prev); n.set('det', detectionId); return n }, { replace: true })
+  })
 
   // Tải dữ liệu đợt bay từ Mock API Service
   useEffect(() => {
@@ -201,6 +210,7 @@ export const DroneMissionAIReview: React.FC = () => {
         </div>
       )}
       {detectionsError && <div role="alert" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">Không tải được danh sách phát hiện AI: {detectionsError}</p></div>}
+      {selectionError && <div role="alert" data-testid="ai-detection-not-found" className="rg-alert rg-alert-error"><p className="flex-1 min-w-0">{selectionError}</p></div>}
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
@@ -264,6 +274,7 @@ export const DroneMissionAIReview: React.FC = () => {
           detections={detections}
           selectedDetectionId={selectedDetectionId}
           onSelectDetection={handleSelectDetection}
+          onRetryDetection={retryDetection}
           onApproveDetection={handleApproveDetection}
           onRejectDetection={handleRejectDetection}
           statusFilter={statusFilter}

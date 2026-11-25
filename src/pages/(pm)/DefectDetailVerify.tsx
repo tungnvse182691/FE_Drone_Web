@@ -12,6 +12,7 @@ import {
   formatDefectTypeLabel
 } from '../../api/services/surveyService'
 import { projectService } from '../../api/services/projectService'
+import { aiApiErrorText } from '../../api/services/aiRunDetailService'
 import { triageService } from '../../api/services/triageService'
 import { DefectStatus, Severity, DefectType, RoleCode } from '../../types/enums'
 import { Defect } from '../../types/domain'
@@ -244,6 +245,7 @@ export const DefectDetailVerify: React.FC = () => {
           }
         } catch (err) {
           console.warn(`Không thể tải AI detections của dự án ${proj.id}:`, err)
+          setApiError(aiApiErrorText(err, `Không tải được phát hiện AI của dự án ${proj.name}`))
         }
 
         try {
@@ -261,9 +263,7 @@ export const DefectDetailVerify: React.FC = () => {
         (e) =>
           e.item.id.toLowerCase() === rawTargetId ||
           ((e.item as any).legacyId && (e.item as any).legacyId.toLowerCase() === rawTargetId) ||
-          e.item.code.toLowerCase() === rawTargetId ||
-          rawTargetId.startsWith(e.item.id.toLowerCase()) ||
-          e.item.id.toLowerCase().startsWith(rawTargetId)
+          e.item.code.toLowerCase() === rawTargetId
       )
       const isDirectDef = defEntries.some((e) => e.dto.id.toLowerCase() === rawTargetId)
 
@@ -277,9 +277,7 @@ export const DefectDetailVerify: React.FC = () => {
               (sd) =>
                 sd.id.toLowerCase() === rawTargetId ||
                 ((sd as any).legacyId && (sd as any).legacyId.toLowerCase() === rawTargetId) ||
-                sd.code.toLowerCase() === rawTargetId ||
-                rawTargetId.startsWith(sd.id.toLowerCase()) ||
-                sd.id.toLowerCase().startsWith(rawTargetId)
+                sd.code.toLowerCase() === rawTargetId
             )
             if (matched) {
               detEntries.push({
@@ -337,9 +335,7 @@ export const DefectDetailVerify: React.FC = () => {
       (d) =>
         d.item.id.toLowerCase() === targetId ||
         ((d.item as any).legacyId && (d.item as any).legacyId.toLowerCase() === targetId) ||
-        d.item.code.toLowerCase() === targetId ||
-        targetId.startsWith(d.item.id.toLowerCase()) ||
-        d.item.id.toLowerCase().startsWith(targetId)
+        d.item.code.toLowerCase() === targetId
     )
     if (matchedDet) {
       const companion = allDetections.find(
@@ -373,34 +369,7 @@ export const DefectDetailVerify: React.FC = () => {
       }
     }
 
-    if (allDetections.length > 0) {
-      const first = allDetections[0]
-      const companion = allDetections.find(
-        (other) =>
-          other.projectId === first.projectId &&
-          other.item.id !== first.item.id &&
-          other.item.runId !== first.item.runId
-      )
-      return {
-        kind: 'AI_DETECTION' as const,
-        segmentSetId: first.item.segmentSetId,
-        segmentId: first.item.segmentId,
-        rawTypeCode: first.item.rawTypeCode,
-        defect: mapDetectionToDefect(first.item, first.projectId, first.projectName, companion?.item || null)
-      }
-    }
-
-    if (allDefects.length > 0) {
-      const firstDef = allDefects[0]
-      return {
-        kind: 'DEFECT' as const,
-        segmentSetId: undefined as string | undefined,
-        segmentId: firstDef.dto.segmentId,
-        rawTypeCode: firstDef.dto.defectTypeCode,
-        defect: mapBackendDefectDtoToDomain(firstDef.dto, firstDef.projectId, firstDef.projectName)
-      }
-    }
-
+    // Không tìm thấy đúng ID trên URL: trả null để báo rõ, KHÔNG chọn bản ghi đầu tiên thay thế.
     return null
   }, [allDetections, allDefects, targetId])
 
@@ -418,17 +387,37 @@ export const DefectDetailVerify: React.FC = () => {
 
   const [resolvedImageUrl, setResolvedImageUrl] = useState<string>('')
   const [resolvedPrevImageUrl, setResolvedPrevImageUrl] = useState<string>('')
+  const [imageError, setImageError] = useState<string>('')
+  const [retrying, setRetrying] = useState(false)
 
-  // Tải nội dung ảnh an toàn qua Bearer Token / Blob URL để tránh lỗi 401 Unauthorized
+  // Phát hiện AI đang xem: nếu không đọc được trạng thái thẩm định (khác "chưa có quyết định") thì khóa mọi thao tác ghi.
+  const detectionItem = activeRecord?.kind === 'AI_DETECTION' && defect
+    ? allDetections.find((d) => d.item.id.toLowerCase() === defect.id.toLowerCase())?.item
+    : undefined
+  const writeLocked = !!detectionItem?.stateUnknown
+  const retryDetectionState = async () => {
+    if (!detectionItem) return
+    setRetrying(true)
+    try {
+      const fresh = await surveyService.refreshDetection(detectionItem)
+      setAllDetections((prev) => prev.map((e) => (e.item.id === fresh.id ? { ...e, item: fresh } : e)))
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Không đọc lại được trạng thái phát hiện AI.')
+    } finally { setRetrying(false) }
+  }
+
+  // Tải nội dung ảnh bằng phiên Web cookie (GET /files/{id}/content) rồi tạo Blob URL; lỗi hiển thị thật, không im lặng.
   useEffect(() => {
     let isMounted = true
+    setImageError('')
 
     const currentFrameId = activeRecord?.defect?.frame_file_id
     if (currentFrameId) {
+      setResolvedImageUrl('')
       surveyService.getFileContentUrl(currentFrameId).then((url) => {
-        if (isMounted && url) {
-          setResolvedImageUrl(url)
-        }
+        if (!isMounted) return
+        if (url) setResolvedImageUrl(url)
+        else setImageError(surveyService.fileContentError(currentFrameId) || 'Không tải được ảnh khung hình từ máy chủ.')
       })
     } else {
       setResolvedImageUrl('')
@@ -540,6 +529,7 @@ export const DefectDetailVerify: React.FC = () => {
 
   const handleVerify = async (newStatus: DefectStatus, recurrence?: RecurrenceInput) => {
     if (!defect) return
+    if (writeLocked) { showToast('Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.'); return }
     if (recurrence && (user?.role !== RoleCode.PROJECT_MANAGER || defect.source_kind !== 'AI_DETECTION' || newStatus !== DefectStatus.VERIFIED)) return
     if (!notes.trim()) {
       showToast('Vui lòng nhập ý kiến / lý do thẩm định trước khi bấm Chấp nhận hoặc Báo sai!')
@@ -665,6 +655,7 @@ export const DefectDetailVerify: React.FC = () => {
     notesText: string
   ) => {
     if (!defect) return
+    if (writeLocked) { showToast('Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.'); return }
     if (!decisionGuard.acquire()) return
     setIsSubmitting(true)
     setApiError(null)
@@ -716,7 +707,7 @@ export const DefectDetailVerify: React.FC = () => {
             Không có dữ liệu khiếm khuyết trong CSDL
           </h2>
           <p className="text-xs text-slate-600 max-w-md mx-auto">
-            {apiError || 'Không tìm thấy bản ghi ứng viên AI hoặc Defect tương ứng trong CSDL Backend.'}
+            {`Không tìm thấy phát hiện AI hoặc Defect có ID "${id || ''}" trong CSDL Backend. Không hiển thị bản ghi khác thay thế.`}{apiError ? ` ${apiError}` : ''}
           </p>
         </div>
         <button
@@ -753,6 +744,20 @@ export const DefectDetailVerify: React.FC = () => {
             <Icon name="close" size={16} />
           </button>
         </div>
+      )}
+
+      {writeLocked && detectionItem && (
+        <div role="alert" data-testid="ai-detection-state-unknown" className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start justify-between gap-3 text-xs">
+          <div>
+            <div className="font-bold">Chưa xác định được trạng thái thẩm định của {detectionItem.code}</div>
+            <div className="mt-0.5 break-words">{detectionItem.stateError}</div>
+            <div className="mt-0.5">Các thao tác ghi quyết định đang bị khóa để tránh tạo quyết định trùng. Phát hiện khác không bị ảnh hưởng.</div>
+          </div>
+          <button type="button" disabled={retrying} onClick={() => { void retryDetectionState() }} className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-amber-300 font-bold cursor-pointer disabled:opacity-50">{retrying ? 'Đang đọc…' : 'Thử lại'}</button>
+        </div>
+      )}
+      {imageError && (
+        <div role="alert" data-testid="ai-frame-image-error" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs break-words">{imageError}</div>
       )}
 
       {/* 1. Header & Switcher */}
@@ -802,11 +807,11 @@ export const DefectDetailVerify: React.FC = () => {
             onLinkRecurrence={handleLinkRecurrence}
             existingDefects={projectExistingDefects}
             candidateMatches={candidateMatches}
-            isSubmitting={isSubmitting}
+            isSubmitting={isSubmitting || writeLocked}
             isSupervisor={isSupervisor}
           />
           {user?.role === RoleCode.PROJECT_MANAGER && defect.source_kind === 'AI_DETECTION' && defect.project_id && !defect.decision_kind && (
-            <DefectRecurrenceForm key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} busy={isSubmitting} onSubmit={input => { void handleVerify(DefectStatus.VERIFIED, input) }} />
+            <DefectRecurrenceForm key={`${authEpoch}:${defect.project_id}:${defect.id}`} projectId={defect.project_id} busy={isSubmitting || writeLocked}onSubmit={input => { void handleVerify(DefectStatus.VERIFIED, input) }} />
           )}
           {!isSupervisor && defect.status === DefectStatus.VERIFIED && defect.project_id && <DefectPublicationPanel projectId={defect.project_id} defectId={defect.id} />}
           {user?.role === RoleCode.PROJECT_MANAGER && activeRecord?.kind === 'DEFECT' && defect.id.toLowerCase() === targetId && defect.project_id && (

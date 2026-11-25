@@ -1,6 +1,7 @@
 import { apiClient } from '../client'
 import { defectRecurrenceService, type RecurrenceInput } from './defectRecurrenceService'
 import { projectService } from './projectService'
+import { aiApiErrorText } from './aiRunDetailService'
 import { useAuthStore } from '../../store/authStore'
 import { ProjectRouteConfig, AvailablePilot } from '../../pages/(pm)/create-survey/types'
 import { AIDetectionItem } from '../../pages/(pm)/drone-review/types'
@@ -109,6 +110,7 @@ export interface FileMetadataDto {
 }
 
 const fileBlobUrlCache = new Map<string, string>()
+const fileContentErrors = new Map<string, string>()
 
 export const DEFECT_TYPE_LABELS: Record<string, string> = {
   CRACK: 'Vết nứt mặt đường',
@@ -216,31 +218,45 @@ const SEVERITY_VI: Record<string, string> = {
 }
 
 // Dựng một phát hiện AI hoàn toàn từ dữ liệu BE (kết quả run + ai-candidates + candidate-decisions + defects)
+/** Mã hiển thị ổn định của một phát hiện: suy ra từ detectionId, không phụ thuộc thứ tự/phạm vi tải (danh sách và chi tiết luôn cùng mã). */
+export const detectionDisplayCode = (detectionId: string) => `DET-${String(detectionId).replace(/-/g, '').slice(-6).toUpperCase()}`
+
+/**
+ * Đọc lại trạng thái thẩm định của MỘT phát hiện từ BE: ai-candidates/{id} → disposition.decisionId → candidate-decisions/{id}.
+ * Lỗi của phát hiện này chỉ ảnh hưởng chính nó (không chặn cả phiên, không nhớ trạng thái "blocked"); tải lại là thử lại thật.
+ * "Chưa có quyết định" (disposition rỗng) khác "không đọc được" (error).
+ */
+async function readCandidateState(projectId: string, detectionId: string): Promise<{ facts: AiCandidateFactsDto | null; decision: CandidateDecisionDto | null; error?: string }> {
+  let facts: AiCandidateFactsDto
+  try { facts = await surveyService.getAiCandidateFacts(projectId, detectionId) } catch (e: any) {
+    if (e?.name === 'CanceledError') throw e
+    return { facts: null, decision: null, error: aiApiErrorText(e, `Không đọc được ứng viên AI ${detectionDisplayCode(detectionId)} (GET ai-candidates)`) }
+  }
+  if (!facts.disposition?.decisionId) return { facts, decision: null }
+  try { return { facts, decision: await surveyService.getCandidateDecision(projectId, facts.disposition.decisionId) } } catch (e: any) {
+    if (e?.name === 'CanceledError') throw e
+    return { facts, decision: null, error: aiApiErrorText(e, `Không đọc được quyết định đã lưu của ${detectionDisplayCode(detectionId)} (GET candidate-decisions, chỉ PM đọc được)`) }
+  }
+}
+
 async function buildDetectionItem(
   projectId: string,
   runId: string,
   d: RunDetection,
-  codeIndex: number,
   defectMap: Map<string, BackendDefectDto>
 ): Promise<AIDetectionItem> {
-  // GET /ai-candidates/{id} hiện chỉ nhận Bearer (cookie web → 401, BE-03). Khi đó dựng từ chính kết quả run (đã có đủ loại, độ tin cậy, khung, ảnh)
-  // và ghi rõ trạng thái thẩm định CHƯA đọc được — không coi là đã/chưa duyệt.
-  let candFactsUnavailable = false
-  const candFacts: AiCandidateFactsDto = await (candidatesBlocked() ? Promise.reject({ response: { status: 401 } }) : surveyService.getAiCandidateFacts(projectId, d.detectionId)).catch((e: any) => {
-    if (e?.response?.status !== 401 && e?.response?.status !== 403) throw e
-    aiCandidatesBlocked = useAuthStore.getState().authEpoch
-    candFactsUnavailable = true
-    const x = d as any
-    return { typeCode: x.typeCode, confidence: x.confidence, timestampMs: x.timestampMs, frameFileId: x.frameFileId, frameFileVersion: x.frameFileVersion, sourceVideoFileId: x.sourceVideoFileId, segmentId: x.segmentId, positionStatus: x.positionStatus, boundingBox: Array.isArray(x.bbox) ? { x: x.bbox[0], y: x.bbox[1], width: x.bbox[2], height: x.bbox[3] } : undefined } as unknown as AiCandidateFactsDto
-  })
-  const decisionDto = candFacts.disposition?.decisionId
-    ? await surveyService.getCandidateDecision(projectId, candFacts.disposition.decisionId)
-    : null
+  // Khi không đọc được ứng viên, dựng phần hiển thị từ chính kết quả run (loại, độ tin cậy, khung, ảnh) và đánh dấu stateUnknown — không coi là chưa duyệt.
+  const read = await readCandidateState(projectId, d.detectionId)
+  const stateUnknown = !!read.error
+  const x = d as any
+  const candFacts: AiCandidateFactsDto = read.facts || { typeCode: x.typeCode, confidence: x.confidence, timestampMs: x.timestampMs, frameFileId: x.frameFileId, frameFileVersion: x.frameFileVersion, sourceVideoFileId: x.sourceVideoFileId, segmentId: x.segmentId, positionStatus: x.positionStatus, boundingBox: Array.isArray(x.bbox) ? { x: x.bbox[0], y: x.bbox[1], width: x.bbox[2], height: x.bbox[3] } : undefined } as unknown as AiCandidateFactsDto
+  const decisionDto = read.decision
   const decisionKind = decisionDto?.decision || null
   const defectId = decisionDto?.defectId || null
   const status: AIDetectionItem['status'] = decisionKind === 'REJECT' ? 'REJECTED'
     : decisionKind === 'KEEP_NEW' || decisionKind === 'LINK_EXISTING' ? 'APPROVED' : 'PENDING'
-  const linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
+  let linkedDbDefect = defectId ? defectMap.get(defectId.toLowerCase()) : undefined
+  if (defectId && !linkedDbDefect) linkedDbDefect = (await surveyService.getDefectById(projectId, defectId).catch(() => null))?.defect
   const bboxX = candFacts.boundingBox?.x ?? d.bbox[0]
   const bboxY = candFacts.boundingBox?.y ?? d.bbox[1]
   const bboxW = candFacts.boundingBox?.width ?? d.bbox[2]
@@ -258,7 +274,7 @@ async function buildDetectionItem(
 
   return {
     id: d.detectionId,
-    code: `DET-${String(codeIndex).padStart(2, '0')}`,
+    code: detectionDisplayCode(d.detectionId),
     defectCode: defectId ? `#DEF-${defectId.slice(0, 8).toUpperCase()}` : undefined,
     defectId,
     stationing: 'Chưa có lý trình từ server',
@@ -266,7 +282,9 @@ async function buildDetectionItem(
     type: typeLabel,
     severityLevel: severityLabel,
     confidence: confPct,
-    description: `Khung hình trích xuất tại mốc ${tsMs}ms${candFactsUnavailable ? ' · Trạng thái thẩm định chưa đọc được (BE: GET /ai-candidates chỉ nhận Bearer)' : ''}`,
+    description: `Khung hình trích xuất tại mốc ${tsMs}ms${stateUnknown ? ' · Chưa xác định được trạng thái thẩm định (không đọc được từ máy chủ)' : ''}`,
+    stateUnknown,
+    stateError: read.error,
     metrics: {},
     status,
     kmValue: Number.NaN,
@@ -304,11 +322,17 @@ async function buildDetectionItem(
   }
 }
 
-// GET /ai-candidates/{id} trả 401 với cookie web (BE chỉ cho Bearer): nhớ theo phiên để khỏi gọi lặp mỗi phát hiện.
-let aiCandidatesBlocked: unknown = null
-const candidatesBlocked = () => aiCandidatesBlocked === useAuthStore.getState().authEpoch
-
 export const surveyService = {
+/** Đọc lại đúng một phát hiện (nút "Thử lại"): không gọi lại KEEP_NEW, chỉ GET candidate → decision → defect. */
+async refreshDetection(item: AIDetectionItem): Promise<AIDetectionItem> {
+    if (!item.projectId || !item.runId) throw new Error('Phát hiện thiếu projectId/runId để đọc lại.')
+    const defectMap = new Map<string, BackendDefectDto>()
+    for (const df of await this.getProjectDefects(item.projectId)) defectMap.set(df.id.toLowerCase(), df)
+    const b = item.rawBbox || { x: 0, y: 0, width: 0, height: 0 }
+    const raw = { detectionId: item.id, typeCode: item.rawTypeCode || '', confidence: item.confidence, bbox: [b.x, b.y, b.width, b.height], frameFileId: item.frameFileId, timestampMs: item.timestampMs } as unknown as RunDetection
+    return buildDetectionItem(item.projectId, item.runId, raw, defectMap)
+  },
+
 async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     const epoch = useAuthStore.getState().authEpoch
     const items: any[] = [], seen = new Set<string>()
@@ -362,7 +386,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       // BE bản mới: run có surveyTaskId → gắn kết quả AI theo từng kế hoạch (qua nhiệm vụ của kế hoạch). Kết quả/ứng viên đọc một lần cho mỗi run.
       const succeededRuns = aiRuns.filter((r) => r.status === 'SUCCEEDED')
       const runDetections = new Map<string, string[]>()
-      const detectionState = new Map<string, 'APPROVED' | 'REJECTED' | 'PENDING'>()
+      const detectionState = new Map<string, 'APPROVED' | 'REJECTED' | 'PENDING' | 'UNKNOWN'>()
       try {
         for (const run of succeededRuns) {
           const resultRes = await apiClient.get<{ detections?: Array<{ detectionId: string }> }>(
@@ -372,12 +396,10 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
           runDetections.set(run.id, ids)
           for (const id of ids) {
             if (detectionState.has(id)) continue
-            let facts: AiCandidateFactsDto
-            if (candidatesBlocked()) { detectionState.set(id, 'PENDING'); continue }
-            try { facts = await this.getAiCandidateFacts(project.id, id) } catch (e: any) { if (e?.response?.status === 401 || e?.response?.status === 403) { aiCandidatesBlocked = useAuthStore.getState().authEpoch; detectionState.set(id, 'PENDING'); continue } throw e }
-            if (!facts.disposition?.decisionId) { detectionState.set(id, 'PENDING'); continue }
-            const decision = await this.getCandidateDecision(project.id, facts.disposition.decisionId)
-            detectionState.set(id, decision.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
+            // Mỗi phát hiện đọc độc lập: một lỗi chỉ làm phát hiện đó "chưa xác định", không chặn các phát hiện khác.
+            const st = await readCandidateState(project.id, id)
+            if (st.error) { detectionState.set(id, 'UNKNOWN'); continue }
+            detectionState.set(id, !st.decision ? 'PENDING' : st.decision.decision === 'REJECT' ? 'REJECTED' : 'APPROVED')
           }
         }
       } catch (err: any) {
@@ -514,7 +536,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       if (key) seen.add(key)
       flat.push({ runId: r.run.id, d })
     }
-    return Promise.all(flat.map((x, index) => buildDetectionItem(projectId, x.runId, x.d, index + 1, defectMap)))
+    return Promise.all(flat.map((x) => buildDetectionItem(projectId, x.runId, x.d, defectMap)))
   },
 
   /**
@@ -816,15 +838,19 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
       if (res.data) {
         const url = URL.createObjectURL(res.data)
         fileBlobUrlCache.set(fileId, url)
+        fileContentErrors.delete(fileId)
         return url
       }
     } catch (err: any) {
-      if (err?.response?.status !== 403 && err?.response?.status !== 404) {
-        console.warn(`[surveyService] Không tải được nội dung file ${fileId}:`, err)
-      }
+      // responseType blob: thân lỗi cũng là Blob — đọc lại thành ProblemDetails để có code/correlationId.
+      if (err?.response?.data instanceof Blob) { try { err.response.data = JSON.parse(await err.response.data.text()) } catch { /* không phải JSON */ } }
+      // Lỗi không bị nuốt: lưu status/code/correlationId thật để màn hình hiển thị; không cache lỗi nên bấm thử lại là gọi lại thật.
+      fileContentErrors.set(fileId, aiApiErrorText(err, 'Không tải được ảnh (GET files/{id}/content, phiên Web cookie)'))
     }
     return null
   },
+  /** Lỗi tải ảnh gần nhất của một tệp (undefined nếu chưa lỗi / đã tải được). */
+  fileContentError(fileId: string): string | undefined { return fileContentErrors.get(fileId) },
 
   /**
    * Lấy toàn bộ danh sách ứng viên AI từ tất cả các AI Mock Runs SUCCEEDED trong CSDL
@@ -842,7 +868,6 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
     }
 
     const allItems: AIDetectionItem[] = []
-    let globalIdx = 0
 
     for (const proj of projects) {
       try {
@@ -857,8 +882,7 @@ async readSurveyPage(path: string, signal?: AbortSignal): Promise<any[]> {
             `/projects/${proj.id}/ai-mock-runs/${run.id}/result`
           )
           for (const d of resultRes.data?.detections || []) {
-            globalIdx += 1
-            allItems.push(await buildDetectionItem(proj.id, run.id, d, globalIdx, defectMap))
+            allItems.push(await buildDetectionItem(proj.id, run.id, d, defectMap))
           }
         }
       } catch (err) {

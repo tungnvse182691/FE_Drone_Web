@@ -17,7 +17,8 @@ export function devFileBearerEndpoint(method:string,url:string,baseURL='') {
   const id='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
   if(tempBearerRoute(method,path)&&tempBearerHeld())return true // [TEMP-BEARER] chỉ khi đang giữ token; không thì dùng cookie như thường
   return method.toUpperCase()==='POST' && (path==='/uploads' || new RegExp(`^/uploads/${id}/(part-urls|complete)$`).test(path) || new RegExp(`^/projects/${id}/warranties$`).test(path)) ||
-    method.toUpperCase()==='GET' && (new RegExp(`^/uploads/${id}$`).test(path) || new RegExp(`^/files/${id}(/content)?$`).test(path))
+    // GET /files/{id} và /files/{id}/content đã WebCookieEligible trên BE (UploadsController): luôn dùng cookie, không ép Bearer.
+    method.toUpperCase()==='GET' && new RegExp(`^/uploads/${id}$`).test(path)
 }
 export function clearDevFileBearer() {held=null;generation++;pending?.abort();pending=null}
 const same=(a:DevBearerOwner,b:DevBearerOwner)=>a.id===b.id && a.role===b.role && a.epoch===b.epoch
@@ -57,10 +58,7 @@ const TEMP_BEARER_ROUTES:Array<[string,string]>=[
   ['POST',`/processing-jobs/${GUID}/retry`],
   ['POST',`/projects/${GUID}/validation-runs`],
   ['GET',`/validation-runs/${GUID}`],
-  ['POST',`/projects/${GUID}/ai-mock-runs`],
-  ['GET',`/projects/${GUID}/ai-mock-runs/${GUID}`],
-  ['GET',`/projects/${GUID}/ai-mock-runs/${GUID}/result`],
-  ['GET',`/projects/${GUID}/ai-candidates/${GUID}`],
+  // Đã gỡ: ai-mock-runs (POST/GET/result) và GET ai-candidates/{id} — AiMockRunsController đã WebCookieEligible.
   ['GET',`/projects/${GUID}/baseline-selections`],
   ['GET',`/projects/${GUID}/baseline-selections/${GUID}`],
   ['POST',`/projects/${GUID}/baseline-selections`],

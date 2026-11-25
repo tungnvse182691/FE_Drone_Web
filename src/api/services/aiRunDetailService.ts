@@ -8,6 +8,27 @@ export interface AiRunDetail {
   processingJobId?: string | null; attemptId?: string | null; manifestHash?: string | null; resultId?: string | null
   fixtureVersion?: string | null; errorCode?: string | null; version?: string | null
   datasetId?: string | null; datasetVersionNo?: number | null; surveyTaskId?: string | null; createdAt?: string | null
+  originCorrelationId?: string | null
+  failure?: { reasonCode?: string | null; step?: string | null; field?: string | null; recovery?: string | null; originCorrelationId?: string | null } | null
+}
+
+/**
+ * Văn bản lỗi API cho khu vực AI: status thật, code, reasonCode/step/field/recovery (BE mới) và correlationId của request.
+ * 401 và 403 được mô tả riêng (không gộp, không nói "chỉ nhận Bearer").
+ */
+export function aiApiErrorText(e: any, context = ''): string {
+  const r = e?.response
+  const prefix = context ? `${context}: ` : ''
+  if (!r) return `${prefix}${e?.message || 'Không kết nối được máy chủ'}`
+  const d = (r.data && typeof r.data === 'object' ? r.data : {}) as Record<string, any>
+  const hint = r.status === 401 ? 'phiên Web chưa xác thực hoặc đã hết hạn' : r.status === 403 ? 'tài khoản không đủ quyền với tài nguyên này' : ''
+  const cid = d.correlationId || r.headers?.['x-correlation-id']
+  const parts = [
+    `HTTP ${r.status}`, d.code || d.title, hint,
+    d.reasonCode && `reasonCode ${d.reasonCode}`, d.step && `bước ${d.step}`, d.field && `trường ${d.field}`,
+    d.detail, d.recovery && `Hướng xử lý: ${d.recovery}`, cid && `correlationId ${cid}`,
+  ].filter(Boolean)
+  return `${prefix}${parts.join(' · ')}`
 }
 
 export const AI_RUN_TERMINAL = ['SUCCEEDED', 'FAILED']
@@ -33,6 +54,8 @@ export const aiRunDetailService = {
       cursor = data.nextCursor || undefined
       if (!cursor) break
     }
-    return rows.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    // Danh sách không có originCorrelationId/failure (chỉ GET run đơn có): đọc bổ sung từng run để hiển thị chẩn đoán.
+    const full = await Promise.all(rows.map((r) => this.read(projectId, r.id, signal)))
+    return full.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
   },
 }

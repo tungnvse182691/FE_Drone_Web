@@ -55,4 +55,7 @@ export interface AIDetectionItem {
   disposition?: { decisionId: string; version: string } | null
   decisionKind?: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT' | null
   defectId?: string | null
+  /** Không đọc được trạng thái thẩm định từ BE (khác với "chưa có quyết định"): khóa thao tác ghi, cho thử lại. */
+  stateUnknown?: boolean
+  stateError?: string
 }

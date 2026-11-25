@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { surveyDatasetService, type AssessmentItem, type AssessmentView, type DatasetCoverage, type DatasetDetail, type DatasetListItem, type ProcessingJob, type Verdict } from '../../../api/services/surveyDatasetService'
 import type { SurveyRecord } from '../../../api/services/surveyPlanningService'
 import { exportError } from '../../../api/services/projectExportService'
+import { aiApiErrorText } from '../../../api/services/aiRunDetailService'
 import { Empty, Feedback, Field, KV, Loading, PanelButton, PanelShell, Pill, SectionTitle } from '../../../components/ui/PanelKit'
 import { Icon } from '../../../components/ui/Icon'
 import { useSubmitGuard } from '../../../hooks/useSubmitGuard'
@@ -39,6 +40,7 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
   const [dsNext, setDsNext] = useState<string | null>(null)
   const [aiStage, setAiStage] = useState<'VIDEO_ANALYSIS' | 'DUPLICATE_MATCHING'>('VIDEO_ANALYSIS')
   const [aiFixture, setAiFixture] = useState('')
+  const [aiError, setAiError] = useState('') // lỗi POST ai-mock-runs hiện ngay tại form (code/reasonCode/step/field/recovery/correlationId)
   const [aiFixtures, setAiFixtures] = useState<string[]>([])
   const [aiGeometry, setAiGeometry] = useState('')
   const [jobList, setJobList] = useState<ProcessingJob[]>([])
@@ -267,10 +269,11 @@ export const SurveyDatasetPanel: React.FC<{ record: SurveyRecord }> = ({ record 
               <Field label="Phiên bản fixture" span="col-span-12 md:col-span-4"><input aria-label="Phiên bản fixture" list="ai-fixtures" disabled={!!busy} value={aiFixture} onChange={(e) => setAiFixture(e.target.value)} placeholder="fixtureVersion" className={cls} /></Field>
               <Field label="Phiên bản hình học kỳ vọng" span="col-span-12 md:col-span-4"><input aria-label="Phiên bản hình học kỳ vọng" readOnly value={aiGeometry} placeholder="Đọc từ BE theo phạm vi đã chọn" className={cls} /></Field>
             </div>
+            {aiError && <p role="alert" data-testid="ai-run-create-error" className="rg-alert rg-alert-error text-xs break-words">{aiError}</p>}
             <datalist id="ai-fixtures">{aiFixtures.map((f) => (<option key={f} value={f} />))}</datalist>
             <div className="rg-footer">
               <PanelButton disabled={!!busy || !dataset.scope[scopeIndex]} loading={busy === 'hints'} onClick={() => { void run('hints', async () => { const h = await surveyDatasetService.aiRunHints(record.projectId, dataset.scope[scopeIndex]); setAiFixtures(h.fixtures); setAiGeometry(h.geometryVersion); setMessage('Đã đọc phiên bản hình học của phạm vi đã chọn từ BE.') }) }}>{busy === 'hints' ? 'Đang lấy…' : 'Đọc phiên bản hình học và fixture'}</PanelButton>
-              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setLastRunId(r.id); setTrackKey((n) => n + 1); setMessage(`Đã tạo lần chạy AI (runId ${r.id}, trạng thái ${r.status || '—'}). Theo dõi ngay bên dưới.`) }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
+              <PanelButton variant="primary" disabled={!!busy || !pre.trim() || !cfg.trim() || !modelVersionId.trim() || !aiFixture.trim() || !dataset.scope[scopeIndex]} loading={busy === 'ai-run'} onClick={() => { void run('ai-run', async () => { setAiError(''); try { const r = await surveyDatasetService.createAiRun(record.projectId, dataset, { scopeIndex, stage: aiStage, modelVersionId, preprocessingVersion: pre, configVersion: cfg, fixtureVersion: aiFixture }); setLastRunId(r.id); setTrackKey((n) => n + 1); setMessage(`Đã tạo lần chạy AI (runId ${r.id}, trạng thái ${r.status || '—'}). Theo dõi ngay bên dưới.`) } catch (e) { setAiError(aiApiErrorText(e, 'Không tạo được lần chạy AI (POST ai-mock-runs)')) } }) }}>{busy === 'ai-run' ? 'Đang gửi…' : 'Chạy AI mock'}</PanelButton>
             </div>
             <AiRunTracker projectId={record.projectId} taskId={record.id} datasetId={dataset.id} refreshKey={trackKey} highlightRunId={lastRunId}
               onViewJob={(id) => { setJobId(id); void run('job', async () => { setJob((await surveyDatasetService.job(id)).job) }) }} />

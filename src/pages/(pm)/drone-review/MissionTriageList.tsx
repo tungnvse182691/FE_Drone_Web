@@ -17,6 +17,7 @@ export interface MissionTriageListProps {
     customSeverityLevel?: string
   ) => void
   onRejectDetection?: (id: string, reason?: string) => void
+  onRetryDetection?: (item: AIDetectionItem) => void
   statusFilter: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
   setStatusFilter: (f: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED') => void
   totalCount: number
@@ -33,6 +34,7 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
   detections,
   selectedDetectionId,
   onSelectDetection,
+  onRetryDetection,
   statusFilter,
   setStatusFilter,
   totalCount,
@@ -48,6 +50,15 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
   const { user } = useAuthStore()
   const location = useLocation()
   const basePath = user?.role === RoleCode.SUPERVISOR ? '/sup' : '/pm'
+
+  // Ngữ cảnh run/dataset giữ trên URL: sang màn chi tiết và quay lại đều mang theo, kèm detectionId đang xem.
+  const datasetParam = new URLSearchParams(location.search).get('dataset') || ''
+  const backParams = (item: AIDetectionItem) => {
+    const p = new URLSearchParams(location.search)
+    if (item.runId) p.set('run', item.runId)
+    p.set('det', item.id)
+    return p.toString()
+  }
 
   const filteredDetections = detections.filter((d) => {
     if (statusFilter === 'PENDING') return d.status === 'PENDING'
@@ -240,6 +251,18 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
                   </span>
                 </div>
 
+                {item.stateUnknown && (
+                  <div role="alert" data-testid="ai-detection-state-unknown" className="pl-2">
+                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-[11px] text-rose-800 break-words">
+                      <p className="font-semibold">Chưa xác định được trạng thái thẩm định — các thao tác ghi quyết định đang bị khóa để tránh tạo trùng.</p>
+                      <p className="mt-0.5">{item.stateError}</p>
+                      {onRetryDetection && (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); onRetryDetection(item) }} className="mt-1 underline font-semibold cursor-pointer">Thử lại</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* TẦNG 2: MÔ TẢ KỸ THUẬT */}
                 <div className="pl-2">
                   <p
@@ -323,8 +346,8 @@ export const MissionTriageList: React.FC<MissionTriageListProps> = ({
 
                       {/* Nút duy nhất dẫn sang màn hình Thẩm định chi tiết (Màn 08 & 09) */}
                       <Link
-                        to={`${basePath}/defects/${item.id}/verify-a`}
-                        state={{ from: location.pathname }}
+                        to={`${basePath}/defects/${item.id}/verify-a${item.runId ? `?run=${encodeURIComponent(item.runId)}${datasetParam ? `&dataset=${encodeURIComponent(datasetParam)}` : ''}` : ''}`}
+                        state={{ from: `${location.pathname}?${backParams(item)}` }}
                         onClick={(e) => e.stopPropagation()}
                         className={`w-full py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs ${
                           isPending && basePath === '/pm' && !isBaselineLocked

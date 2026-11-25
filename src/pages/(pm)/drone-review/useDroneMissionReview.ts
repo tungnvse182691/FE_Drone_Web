@@ -12,7 +12,7 @@ export function useDroneMissionReview(
   surveyId: string = '',
   currentSurvey?: SurveyMissionItem | null,
   // Ngữ cảnh từ "Mở kết quả" (lần chạy AI + bản nộp): chỉ đọc phát hiện của đúng lần chạy đó.
-  runScope?: { runId?: string; datasetId?: string }
+  runScope?: { runId?: string; datasetId?: string; detectionId?: string; onSelect?: (detectionId: string) => void }
 ) {
   const scopeRunId = runScope?.runId || ''
   const scopeDatasetId = runScope?.datasetId || ''
@@ -27,7 +27,10 @@ export function useDroneMissionReview(
 
   const [isCanvasFullscreen, setIsCanvasFullscreen] = useState<boolean>(false)
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
+  // detectionId yêu cầu từ URL (?det=): chỉ đọc lúc mở; khớp theo detectionId, không có thì báo rõ — không chọn bản ghi đầu.
+  const wantedDetectionId = useRef((runScope?.detectionId || '').toLowerCase())
   const [selectedDetectionId, setSelectedDetectionId] = useState<string>('')
+  const [selectionError, setSelectionError] = useState<string>('')
 
   const isPersistentLocked =
     currentSurvey?.status === 'BASELINE_LOCKED'
@@ -66,11 +69,19 @@ export function useDroneMissionReview(
         const data = await surveyService.getSurveyDetections(surveyId, undefined, undefined, scopeRunId ? { runId: scopeRunId, datasetId: scopeDatasetId || undefined } : undefined)
         if (isMounted) {
           setDetections(data)
-          if (data.length > 0) {
-            setSelectedDetectionId((prev) => {
-              const matched = data.find((d) => d.id === prev || d.code === prev)
-              return matched ? matched.id : data[0].id
-            })
+          const wanted = wantedDetectionId.current
+          if (wanted && !data.some((d) => d.id.toLowerCase() === wanted)) {
+            setSelectionError(`Không tìm thấy phát hiện AI có ID ${wanted} trong ${scopeRunId ? 'lần chạy AI đã chọn' : 'nhiệm vụ này'}. Không hiển thị phát hiện khác thay thế.`)
+            setSelectedDetectionId('')
+          } else {
+            setSelectionError('')
+            if (data.length > 0) {
+              setSelectedDetectionId((prev) => {
+                const target = prev || wanted
+                const matched = target ? data.find((d) => d.id.toLowerCase() === target.toLowerCase()) : undefined
+                return matched ? matched.id : data[0].id
+              })
+            }
           }
         }
       } catch (err) {
@@ -119,6 +130,9 @@ const isBaselineLocked = isLockedSuccess
 
 const handleSelectDetection = (item: AIDetectionItem) => {
   setSelectedDetectionId(item.id)
+    setSelectionError('')
+    wantedDetectionId.current = item.id.toLowerCase()
+    runScope?.onSelect?.(item.id)
     const frameMap: Record<string, number> = {}
     if (frameMap[item.id]) {
       setCurrentFrame(frameMap[item.id])
@@ -281,6 +295,7 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     const det = detections.find((d) => d.id === detId)
     const projectId = det?.projectId || currentSurvey?.project_id
     if (!det || !projectId) throw new Error('Không xác định được dự án của phát hiện AI.')
+    if (det.stateUnknown) throw new Error('Chưa xác định được trạng thái thẩm định của phát hiện này (không đọc được từ máy chủ). Bấm Thử lại trước khi ghi quyết định để tránh tạo trùng.')
     const payload: Parameters<typeof surveyService.decideCandidate>[1] = { sourceKind: 'AI_DETECTION', sourceId: det.id, decision, reason, runId: det.runId, segmentId: det.segmentId ?? null }
     if (decision === 'KEEP_NEW') {
       const SEV: Record<string, 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'> = { 'Khẩn cấp': 'CRITICAL', 'Nghiêm trọng': 'HIGH', 'Trung bình': 'MEDIUM', 'Nhẹ': 'LOW' }
@@ -320,10 +335,21 @@ const handleSelectDetection = (item: AIDetectionItem) => {
     } finally { detectionGuard.release() }
   }
 
-  const selectedItem = detections.find((d) => d.id === selectedDetectionId) || detections[0]
+  // Thử lại đọc trạng thái của đúng một phát hiện (GET candidate → decision → defect); không gọi lại KEEP_NEW.
+  const retryDetection = async (item: AIDetectionItem) => {
+    try {
+      const fresh = await surveyService.refreshDetection(item)
+      setDetections((prev) => prev.map((x) => (x.id === item.id ? fresh : x)))
+      showToast(fresh.stateUnknown ? 'Vẫn chưa đọc được trạng thái thẩm định từ máy chủ.' : 'Đã đọc lại trạng thái thẩm định từ máy chủ.')
+    } catch (err) { showToast(`Lỗi máy chủ: ${err instanceof Error ? err.message : 'không đọc lại được phát hiện AI'}`) }
+  }
+
+  const selectedItem = detections.find((d) => d.id === selectedDetectionId)
 
   return {
     detectionsError,
+    selectionError,
+    retryDetection,
     isAiOverlayVisible,
     setIsAiOverlayVisible,
     isPlaying,

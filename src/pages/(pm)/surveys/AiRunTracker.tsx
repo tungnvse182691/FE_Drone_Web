@@ -67,7 +67,8 @@ export const AiRunTracker: React.FC<{
           </div>
           <p className="text-[11px] font-mono break-all"><span className="font-sans font-semibold">Mã lần chạy AI (runId):</span> {r.id}</p>
           <p className="text-[11px] font-mono break-all"><span className="font-sans font-semibold">Mã job xử lý (processingJobId):</span> {r.processingJobId || '—'}</p>
-          {/^FAIL/i.test(String(r.status)) && <p role="alert" className="text-xs text-rose-700">Lần chạy thất bại: {r.errorCode ? `BE báo mã lỗi ${r.errorCode}` : 'BE không trả mã lỗi'}.</p>}
+          <p className="text-[11px] font-mono break-all" data-testid="ai-run-origin"><span className="font-sans font-semibold">Mã đối chiếu gốc của lần chạy (originCorrelationId):</span> {r.originCorrelationId || '—'}</p>
+          {/^FAIL/i.test(String(r.status)) && <p role="alert" className="text-xs text-rose-700 break-words">Lần chạy thất bại: {r.errorCode ? `BE báo mã lỗi ${r.errorCode}` : 'BE không trả mã lỗi'}{r.failure?.reasonCode ? ` · reasonCode ${r.failure.reasonCode}` : ''}{r.failure?.step ? ` · bước ${r.failure.step}` : ''}{r.failure?.field ? ` · trường ${r.failure.field}` : ''}{r.failure?.recovery ? ` · Hướng xử lý: ${r.failure.recovery}` : ''}{r.failure?.originCorrelationId || r.originCorrelationId ? ` · originCorrelationId ${r.failure?.originCorrelationId || r.originCorrelationId}` : ''}.</p>}
           {!isAiRunTerminal(r.status) && <p className="text-[11px] text-slate-500">Đang chờ BE xử lý, tự đọc lại sau mỗi {POLL_MS / 1000} giây…</p>}
           <div className="rg-footer">
             {r.processingJobId && <PanelButton onClick={() => onViewJob(r.processingJobId!)}>Xem job xử lý</PanelButton>}
