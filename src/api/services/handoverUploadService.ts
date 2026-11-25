@@ -72,23 +72,34 @@ export const handoverUploadService = {
   },
 }
 
+export interface HandoverDocumentRow { id: string; documentNo?: string | null; handoverDate?: string | null; fileId: string | null; version: string; isMapped: boolean; canAttachFile: boolean }
+
+/** GET /projects/{p}/handover-documents (chỉ Supervisor): kiểm kê TOÀN BỘ hồ sơ bàn giao, kể cả hồ sơ thiếu tệp. items rỗng = chưa có hồ sơ. */
+export async function listHandoverDocuments(projectId: string): Promise<HandoverDocumentRow[]> {
+  const { data } = await apiClient.get<{ projectId?: string; items?: HandoverDocumentRow[] }>(`/projects/${projectId}/handover-documents`)
+  if (data?.projectId !== projectId || !Array.isArray(data.items) || data.items.some((x) => !x?.id)) throw new Error('BE trả kiểm kê hồ sơ bàn giao sai dự án/cấu trúc.')
+  return data.items
+}
+
 /**
- * Bổ sung biên bản bàn giao cho dự án ĐÃ tồn tại (Supervisor): upload DOCUMENT gắn dự án → GET road-coverage lấy ETag →
- * POST /projects/{p}/handover-documents {fileId, documentNo?, handoverDate?} (If-Match + Idempotency-Key). Trả road-coverage mới.
+ * Bổ sung biên bản bàn giao cho dự án ĐÃ tồn tại (Supervisor): upload DOCUMENT gắn dự án → GET road-coverage lấy ETag tổng hợp →
+ * POST /projects/{p}/handover-documents (If-Match + Idempotency-Key). Hai nhánh:
+ *  - attach (existingDocumentId): {fileId, handoverDocumentId}; KHÔNG gửi documentNo/handoverDate;
+ *  - tạo mới (không có existingDocumentId): {fileId, documentNo, handoverDate}.
+ * Sau khi gắn đọc lại road-coverage; trả road-coverage mới.
  */
-export async function attachHandoverDocument(projectId: string, file: File, input: { documentNo?: string; handoverDate?: string }, onStep?: (label: string) => void) {
+export async function attachHandoverDocument(projectId: string, file: File, input: { documentNo?: string; handoverDate?: string }, onStep?: (label: string) => void, existingDocumentId?: string) {
+  if (!existingDocumentId && (!input.documentNo?.trim() || !input.handoverDate)) throw new Error('Dự án chưa có hồ sơ bàn giao: cần số hiệu văn bản và ngày bàn giao thực tế.')
   const staged = await handoverUploadService.stage(file, onStep, { projectId })
   onStep?.('Đang gắn biên bản vào hồ sơ bàn giao…')
   const cov = await apiClient.get(`/projects/${projectId}/road-coverage`)
   const etag = (cov.headers.etag as string | undefined) || (cov.data?.version ? `"${cov.data.version}"` : '')
   if (!etag) throw new Error('BE không trả ETag của hồ sơ độ phủ.')
-  const hasHandover = (cov.data?.sources || []).some((s: any) => s.kind === 'HANDOVER')
   const body: Record<string, string> = { fileId: staged.fileId }
-  if (!hasHandover) {
-    if (!input.documentNo?.trim() || !input.handoverDate) throw new Error('Dự án chưa có hồ sơ bàn giao: cần số hiệu văn bản và ngày bàn giao thực tế.')
-    body.documentNo = input.documentNo.trim(); body.handoverDate = input.handoverDate
-  }
-  const res = await apiClient.post(`/projects/${projectId}/handover-documents`, body, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': etag } })
-  if (!(res.data?.sources || []).some((s: any) => s.kind === 'HANDOVER' && s.fileId === staged.fileId)) throw new Error('Đã gửi nhưng chưa đọc lại thấy nguồn HANDOVER có tệp vừa tải; kiểm tra lại độ phủ.')
-  return res.data
+  if (existingDocumentId) body.handoverDocumentId = existingDocumentId
+  else { body.documentNo = input.documentNo!.trim(); body.handoverDate = input.handoverDate! }
+  await apiClient.post(`/projects/${projectId}/handover-documents`, body, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': etag } })
+  const after = await apiClient.get(`/projects/${projectId}/road-coverage`)
+  if (!(after.data?.sources || []).some((x: any) => x.kind === 'HANDOVER' && x.fileId === staged.fileId)) throw new Error('Đã gửi nhưng đọc lại độ phủ chưa thấy nguồn HANDOVER có tệp vừa tải (có thể chưa đủ điều kiện nguồn); kiểm tra lại độ phủ.')
+  return after.data
 }

@@ -19,12 +19,15 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(''), [message, setMessage] = useState('')
+  const [readFailed, setReadFailed] = useState(false)
   const guard = useSubmitGuard()
+  // Hạng mục nhận chuyển mang projectId gốc; URL dùng dự án chịu trách nhiệm hiện hành. Không đổi projectId, không thay bằng dữ liệu rỗng.
+  const originProject = items.find((i) => i.projectId !== projectId)?.projectId
   const isPkg = target === 'package'
   const path = isPkg ? `/projects/${projectId}/repair-packages/${packageId}/planning` : `/projects/${projectId}/repair-packages/${packageId}/items/${target}/planning`
 
   const load = useCallback(async () => {
-    setLoading(true); setError(''); setMessage(''); setEtag('')
+    setLoading(true); setError(''); setMessage(''); setEtag(''); setReadFailed(false)
     try {
       const r = await apiClient.get<any>(path)
       const v = (r.headers.etag as string | undefined) || (r.data?.version ? `"${r.data.version}"` : '')
@@ -32,7 +35,7 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
       setEtag(v)
       if (isPkg) { setName(r.data.name || ''); setDescription(r.data.description || ''); setDue(r.data.plannedDueAt ? String(r.data.plannedDueAt).slice(0, 10) : '') }
       else { setQty(r.data.plannedQuantity != null ? String(r.data.plannedQuantity) : ''); setUnit(r.data.plannedUnit || ''); setMaterials(r.data.plannedMaterials || '') }
-    } catch (e) { setError(`Không đọc được kế hoạch: ${exportError(e)}`) } finally { setLoading(false) }
+    } catch (e) { setReadFailed(true); setError(`Không đọc được kế hoạch: ${exportError(e)}`) } finally { setLoading(false) }
   }, [path, isPkg])
   useEffect(() => { void load() }, [load])
 
@@ -71,6 +74,9 @@ export const PlanningPanel: React.FC<{ projectId: string; packageId: string; ite
       </select>
       {loading && <Loading>Đang đọc kế hoạch…</Loading>}
       <Feedback error={error} message={message} />
+      {readFailed && !loading && (
+        <div className="rg-alert rg-alert-warn" data-testid="planning-read-failed"><p className="min-w-0 break-words">Không đọc được kế hoạch — đây không phải trạng thái "chưa nhập kế hoạch". {originProject ? `Hồ sơ thuộc dự án gốc ${originProject.slice(0, 8)}; dự án chịu trách nhiệm hiện hành (đang xem) là ${projectId.slice(0, 8)}. Máy chủ hiện yêu cầu dự án gốc và trách nhiệm hiện hành cùng khớp khi đọc kế hoạch (cần BE xác nhận nguồn đọc cho PM dự án nhận); FE không tự đổi dự án hay dùng dữ liệu thay thế.` : 'Kiểm tra quyền/dự án rồi thử lại.'}</p><PanelButton onClick={() => { void load() }}>Thử lại</PanelButton></div>
+      )}
       {!loading && etag && (
         <div className="space-y-3">
           {isPkg ? (

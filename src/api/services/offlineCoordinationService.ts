@@ -40,3 +40,36 @@ export const offlineCoordinationService = {
     await apiClient.post(`/projects/${projectId}/offline/${kind}/${id}/revoke`, { reason: reason.trim() }, { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': quote(d.etag) } })
   },
 }
+
+/** Mục manifest đã ký của gói (nguồn: GET …/offline/packages/{id}.signedManifestJson) — dùng nguyên văn làm phạm vi cấp quyền, không tự dựng. */
+export interface GrantItemScope { originId: string; kind: string; corePayloadHash: string; envelopeHash: string; taskId: string; assignmentId: string; snapshotId: string; repairResourceId: string | null }
+export interface GrantPackageView { items: GrantItemScope[]; recipients: Array<{ actorId: string; deviceId: string }>; sourceDeviceRegistrationId: string }
+const pick = (o: any, k: string) => (o && typeof o === 'object' ? (o[k] ?? o[k[0].toUpperCase() + k.slice(1)]) : undefined)
+
+export const offlineGrantService = {
+  /** GET …/offline/packages/{id}: đọc manifest đã ký + danh sách người nhận được mã hóa. Lỗi/thiếu cấu trúc → ném lỗi (không coi là rỗng). */
+  async packageView(projectId: string, packageId: string): Promise<GrantPackageView> {
+    const { data } = await apiClient.get<Record<string, unknown>>(`/projects/${projectId}/offline/packages/${packageId}`)
+    if (pick(data, 'id') !== packageId) throw new Error('BE trả gói ngoại tuyến không khớp mã đã chọn.')
+    let manifest: any, cipher: any
+    try { manifest = JSON.parse(String(pick(data, 'signedManifestJson'))); cipher = JSON.parse(String(pick(data, 'cipherPackageJson'))) } catch { throw new Error('Không đọc được manifest/gói mã hóa của gói ngoại tuyến (sai cấu trúc).') }
+    const rawItems = pick(manifest, 'items')
+    if (!Array.isArray(rawItems) || !rawItems.length) throw new Error('Gói ngoại tuyến không có mục nào trong manifest đã ký.')
+    const items: GrantItemScope[] = rawItems.map((x: any) => {
+      const it = { originId: pick(x, 'originId'), kind: pick(x, 'kind'), corePayloadHash: pick(x, 'corePayloadHash'), envelopeHash: pick(x, 'envelopeHash'), taskId: pick(x, 'taskId'), assignmentId: pick(x, 'assignmentId'), snapshotId: pick(x, 'snapshotId'), repairResourceId: pick(x, 'repairResourceId') ?? null }
+      if (![it.originId, it.kind, it.corePayloadHash, it.envelopeHash, it.taskId, it.assignmentId, it.snapshotId].every((v) => typeof v === 'string' && v)) throw new Error('Manifest của gói thiếu trường bắt buộc cho phạm vi cấp quyền.')
+      return it as GrantItemScope
+    })
+    const recipients = (pick(cipher, 'recipients') as any[] | undefined)?.map((r) => ({ actorId: String(pick(r, 'actorId')), deviceId: String(pick(r, 'deviceId')) })) ?? []
+    return { items, recipients, sourceDeviceRegistrationId: String(pick(data, 'sourceDeviceRegistrationId')) }
+  },
+  /** POST …/offline/grants (Giám sát): phạm vi lấy nguyên từ manifest đã ký; người nhận là thiết bị còn hiệu lực có trong danh sách người nhận của gói. */
+  async issue(projectId: string, input: { packageId: string; recipientDeviceRegistrationId: string; items: GrantItemScope[]; reason: string }, idempotencyKey: string) {
+    if (!input.reason.trim()) throw new Error('Cần nhập lý do cấp quyền.')
+    if (!input.items.length) throw new Error('Gói chưa có phạm vi để cấp quyền.')
+    const r = await apiClient.post<Record<string, unknown>>(`/projects/${projectId}/offline/grants`, { packageId: input.packageId, recipientDeviceRegistrationId: input.recipientDeviceRegistrationId, items: input.items, reason: input.reason.trim() }, { headers: { 'Idempotency-Key': idempotencyKey } })
+    const id = pick(r.data, 'id') as string | undefined
+    if (!id) throw new Error('BE không trả mã cấp quyền; cần đối chiếu danh sách cấp quyền, không gửi lại.')
+    return { id, status: r.status }
+  },
+}

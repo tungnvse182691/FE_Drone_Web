@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useSubmitGuard } from '../../hooks/useSubmitGuard'
 import { RoleCode } from '../../types/enums'
 import { Empty, Feedback, KV, Loading, PanelButton, PanelShell, Pill } from '../../components/ui/PanelKit'
+import { OfflineSupervisorActions } from './OfflineSupervisorActions'
 
 const KIND_LABEL: Record<OfflineKind, string> = { devices: 'Thiết bị', packages: 'Gói ngoại tuyến', grants: 'Cấp quyền bàn giao' }
 const when = (v: unknown) => (typeof v === 'string' && Number.isFinite(Date.parse(v)) ? new Date(v).toLocaleString('vi-VN') : '')
@@ -96,6 +97,7 @@ export const OfflineCoordination: React.FC = () => {
           </ul>
         )}
       </PanelShell>
+      {isSup && projectId && <OfflineSupervisorActions projectId={projectId} onChanged={() => { setKind('grants'); void load() }} />}
       {selected && (
         <PanelShell icon="info" title={`Chi tiết ${KIND_LABEL[kind].toLowerCase()} ${short(selected.id)}`} subtitle="Chỉ hiển thị các trường đơn giản máy chủ trả; payload mật mã/riêng tư không hiển thị">
           {selected.loading && <Loading>Đang đọc chi tiết…</Loading>}
