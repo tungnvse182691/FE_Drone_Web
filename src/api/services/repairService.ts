@@ -84,6 +84,7 @@ export interface AssignableRepairItem {
   itemId: string
   itemCode: string
   defectId: string
+  obligationId?: string
   mode: string
 }
 
@@ -488,6 +489,7 @@ export const repairService = {
             itemId: it.id,
             itemCode: `ITEM-${String(it.id).slice(0, 8).toUpperCase()}`,
             defectId: it.defectId,
+            obligationId: it.obligationId,
             mode: it.mode,
           })
         }
@@ -511,17 +513,23 @@ export const repairService = {
     instructions: string
     sourceKind: 'REPORTER' | 'SURVEY'
     surveyId?: string
-  }): Promise<{ taskId: string }> {
+    /** Bộ pin dựng từ nguồn BE (fastTrackFormSources.derive): khớp locationVersion của nghĩa vụ. Thiếu thì dùng bộ phân đoạn công bố của tuyến. */
+    pins?: { segmentSetId: string | null; layoutRevisionId: string | null; slabId: string | null; mapPublicationId: string | null; crsProfileRevisionId: string | null }
+  }): Promise<{ taskId: string; itemState: string; taskAssignee: string | null }> {
     const p = input.projectId
     const defect = await apiClient.get<any>(`/projects/${p}/defects/${input.defectId}`)
-    const wp = await apiClient.get<any>(`/projects/${p}/work-package`)
-    const section = (wp.data?.roadSections || []).find((s: any) => s.currentVersionId === defect.data?.roadSectionVersionId)
-    if (!section) throw new Error('Không tìm thấy tuyến hiện hành chứa khuyết tật của hạng mục.')
-    const sets = await apiClient.get<any>(
-      `/projects/${p}/road-sections/${section.roadSectionId}/versions/${section.currentVersionId}/segment-sets`
-    )
-    const set = (sets.data?.items || []).find((s: any) => s.status === 'PUBLISHED')
-    if (!set) throw new Error('Tuyến chưa có bộ phân đoạn đã công bố để giao việc.')
+    let set: { id: string | null } | undefined
+    if (input.pins) set = { id: input.pins.segmentSetId }
+    else {
+      const wp = await apiClient.get<any>(`/projects/${p}/work-package`)
+      const section = (wp.data?.roadSections || []).find((s: any) => s.currentVersionId === defect.data?.roadSectionVersionId)
+      if (!section) throw new Error('Không tìm thấy tuyến hiện hành chứa khuyết tật của hạng mục.')
+      const sets = await apiClient.get<any>(
+        `/projects/${p}/road-sections/${section.roadSectionId}/versions/${section.currentVersionId}/segment-sets`
+      )
+      set = (sets.data?.items || []).find((s: any) => s.status === 'PUBLISHED')
+      if (!set) throw new Error('Tuyến chưa có bộ phân đoạn đã công bố để giao việc.')
+    }
     const base = `/projects/${p}/repair-packages/${input.packageId}/items/${input.itemId}`
     const item = await apiClient.get<any>(base)
     const version = item.headers?.['etag'] || item.data?.version
@@ -536,6 +544,7 @@ export const repairService = {
           ...(input.sourceKind === 'SURVEY' && input.surveyId ? { surveyId: input.surveyId } : {}),
           routeVersionId: defect.data.roadSectionVersionId,
           segmentSetId: set.id,
+          ...(input.pins ? { layoutRevisionId: input.pins.layoutRevisionId, slabId: input.pins.slabId, mapPublicationId: input.pins.mapPublicationId, crsProfileRevisionId: input.pins.crsProfileRevisionId } : {}),
           purpose: 'POST_REPAIR',
           requiredMeasurementType: 1,
           measurementScope: '{}',
@@ -547,7 +556,22 @@ export const repairService = {
       },
       { headers: { 'Idempotency-Key': crypto.randomUUID(), 'If-Match': String(version).startsWith('"') ? version : `"${version}"` } }
     )
-    return { taskId: res.data?.taskId }
+    const taskId = res.data?.taskId
+    if (!taskId) throw new Error('BE không trả mã nhiệm vụ cho lệnh giao việc; cần đối chiếu, không gửi lại.')
+    try { return { taskId, ...(await this.readAssignment(p, input.packageId, input.itemId, taskId)) } } catch (e: any) {
+      const err: any = new Error(`Máy chủ đã nhận lệnh giao việc nhưng chưa đối chiếu được kết quả: ${e?.message || e}. Cần đối chiếu; không gửi lại.`)
+      err.taskId = taskId; err.pendingReconcile = true
+      throw err
+    }
+  },
+
+  /** Đối chiếu kết quả giao việc: GET hạng mục (đã sang trạng thái giao) và GET nhiệm vụ FIELD (có người được giao). Ném lỗi nếu chưa xác nhận được. */
+  async readAssignment(p: string, packageId: string, itemId: string, taskId: string): Promise<{ itemState: string; taskAssignee: string | null }> {
+    const item = await apiClient.get<any>(`/projects/${p}/repair-packages/${packageId}/items/${itemId}`)
+    if (item.data?.id !== itemId || !['Assigned', 'InProgress', 'Submitted', 'Reviewed', 'Confirmed'].includes(item.data?.state)) throw new Error(`Chưa xác nhận được hạng mục đã sang trạng thái giao (đọc được: ${item.data?.state || 'không rõ'}).`)
+    const task = await apiClient.get<any>(`/projects/${p}/field-inspection-tasks/${taskId}`)
+    if (task.data?.id !== taskId) throw new Error('Nhiệm vụ đọc lại không khớp mã nhiệm vụ đã nhận.')
+    return { itemState: item.data.state, taskAssignee: task.data.assignedToUserId ?? null }
   },
 
   async assignItemApi(

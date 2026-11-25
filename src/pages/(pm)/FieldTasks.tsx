@@ -114,7 +114,7 @@ export const FieldTasks: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 animate-bounce ${
+          className={`fixed top-4 right-4 z-[10000] max-w-[calc(100vw-2rem)] p-4 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 animate-bounce ${
             toast.type === 'error'
               ? 'bg-rose-50 text-rose-800 border-rose-300'
               : toast.type === 'info'

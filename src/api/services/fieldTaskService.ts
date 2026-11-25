@@ -89,7 +89,20 @@ function mapBackendTaskStatus(status?: string | null): FieldTask['status'] {
   }
   if (s === 'NEWASSIGNED' || s === 'NEW_ASSIGNED' || s === 'ASSIGNED' || s === 'ACCEPTED') return 'ASSIGNED'
   if (s === 'SUPPLEMENTREQUIRED' || s === 'SUPPLEMENT_REQUIRED') return 'SUPPLEMENT_REQUIRED'
+  if (s === 'CANCELLED' || s === 'CANCELED') return 'CANCELLED'
+  if (s === 'REJECTED') return 'REJECTED'
   return 'UNKNOWN'
+}
+
+/** Nhãn tiếng Việt cho trạng thái nhiệm vụ FIELD (đủ các giá trị FieldInspectionTaskStatus của BE: NewAssigned, Accepted, Rejected, InProgress, SupplementRequired, Submitted, Completed, Cancelled). */
+export function fieldTaskStatusLabel(status?: string | null): string {
+  switch (status) {
+    case 'VERIFIED': return 'ĐÃ HOÀN TẤT FIELD'
+    case 'SUPPLEMENT_REQUIRED': return 'CẦN BỔ SUNG'
+    case 'CANCELLED': return 'ĐÃ HỦY'
+    case 'REJECTED': return 'ĐÃ TỪ CHỐI'
+    default: return 'CHƯA ÁNH XẠ TRẠNG THÁI'
+  }
 }
 
 function generateUuid(): string {

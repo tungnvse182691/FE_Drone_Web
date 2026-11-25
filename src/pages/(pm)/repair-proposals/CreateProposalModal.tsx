@@ -2,6 +2,7 @@ import React from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { RouteSegmentOption, UnassignedDefectItem, ProposalCreateApi } from './types'
 import { ProposalBOQCard } from './ProposalBOQCard'
+import { ProposalSourcePanel } from './ProposalSourcePanel'
 
 export interface CreateProposalModalProps {
   createApi?:ProposalCreateApi
@@ -57,10 +58,11 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
   projectMembers = [], createApi,
 }) => {
   if (!isCreateModalOpen) return null
+  const picked = createApi ? unassignedDefects.find((d) => d.selected) : undefined
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="w-full max-w-3xl max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className={`w-full ${picked ? 'max-w-6xl' : 'max-w-3xl'} max-h-[92vh] bg-white rounded-2xl shadow-2xl border border-brand-border flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200`}>
         {/* Modal Header */}
         <div className="p-5 bg-slate-50 border-b border-slate-100 flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -83,7 +85,8 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-5 text-xs">
+        <div className={picked ? 'flex flex-1 min-h-0' : 'contents'}>
+        <div className={`p-6 overflow-y-auto space-y-5 text-xs ${picked ? 'flex-1 min-w-0' : ''}`}>
           {createApi?.error&&<p role="alert" className="text-rose-700">{createApi.error}</p>}
           {createApi?.onResumeOriginal&&<button type="button" onClick={createApi.onResumeOriginal} className="rg-btn text-[#8C6D1F]">Mở biểu mẫu Fast Track đang giữ lệnh để đối chiếu</button>}
           <fieldset disabled={createApi?.busy||createApi?.locked} className="space-y-5">
@@ -222,6 +225,12 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
             />
           </div>
           </fieldset>
+        </div>
+        {picked && createApi && (
+          <div className="w-80 shrink-0 overflow-y-auto border-l border-slate-200 p-4">
+            <ProposalSourcePanel key={`${formRouteId}:${picked.id}`} projectId={formRouteId} defectId={picked.id} defectCode={picked.code} segmentSetLabel={(() => { const s = currentRouteSegments.find((x) => x.id === formSegmentId); return s ? `${s.code} - ${s.name}` : undefined })()} range={createApi.fields} />
+          </div>
+        )}
         </div>
 
         {/* Modal Footer */}

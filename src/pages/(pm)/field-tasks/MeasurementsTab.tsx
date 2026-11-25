@@ -1,4 +1,6 @@
 import {fieldEvidenceReuseCommands,type ReuseSource} from '../../../api/services/fieldEvidenceReuseCommands'
+import {ReuseSavedResult} from './ReuseSavedResult'
+import {fieldTaskStatusLabel} from '../../../api/services/fieldTaskService'
 import {fieldCreateCommands,FieldInputError,type FieldDefectOption} from '../../../api/services/fieldCreateCommands'
 import {TriageGeometryScope} from '../ai-review/TriageGeometryScope'
 import type {TriageGeometryPins} from '../../../api/services/triageGeometryService'
@@ -276,7 +278,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
     try {
       const result=await fieldEvidenceReuseCommands.request(taskForReuse.project_id,taskForReuse.id,reuseHeld?null:reuseSource||null,reuseHeld?.body.expectedChecksum||reusePhoto?.checksum||'',reuseHeld?.body.reason||reuseReason,reuseHeld?.version||taskForReuse.version||'')
       if(latestReuse.current!==scope||!context.active)return
-      setReuseResult(result);await onRefreshTasks();if(latestReuse.current===scope&&context.active)notify('Đã đối chiếu receipt và GET bằng chứng tái sử dụng.','success')
+      setReuseResult(result);await onRefreshTasks();if(latestReuse.current===scope&&context.active)notify('Đã xác nhận tái sử dụng ảnh','success')
     } catch(e:any){if(latestReuse.current===scope&&context.active)setReuseError(e?.response?`HTTP ${e.response.status} ${e.response.data?.code||e.message}`:e.message)}
     finally{if(latestReuse.current===scope&&context.active)setIsSubmittingReuse(false)}
   }
@@ -438,7 +440,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               filteredTasks.map((task) => {
                 const isHighlighted =
                   Boolean(highlightCode) &&
-                  (task.defect_code.toLowerCase().includes(highlightCode!.toLowerCase()) ||
+                  (task.id===highlightCode || task.defect_code.toLowerCase().includes(highlightCode!.toLowerCase()) ||
                     task.code.toLowerCase().includes(highlightCode!.toLowerCase()))
                 const isProcessing = actionLoadingId === task.id
 
@@ -623,8 +625,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                           ĐÃ NỘP · CHỜ THẨM ĐỊNH
                         </span>
                       ) : (
-                        <span className="inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold bg-[#F0FDF7] text-[#047857] border border-[#A7C4B8]">
-                          {task.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':task.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
+                        <span className={`inline-block px-[10px] py-[5px] rounded-full text-[11px] font-bold border ${task.status==='CANCELLED'||task.status==='REJECTED'?'bg-slate-100 text-slate-700 border-slate-300':'bg-[#F0FDF7] text-[#047857] border-[#A7C4B8]'}`}>
+                          {fieldTaskStatusLabel(task.status)}
                         </span>
                       )}
                     </td>
@@ -1359,8 +1361,8 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                         ĐÃ NỘP · CHỜ THẨM ĐỊNH
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {selectedDetailTask.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':selectedDetailTask.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${selectedDetailTask.status==='CANCELLED'||selectedDetailTask.status==='REJECTED'?'bg-slate-100 text-slate-700 border-slate-300':'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                        {fieldTaskStatusLabel(selectedDetailTask.status)}
                       </span>
                     )}
                   </div>
@@ -1540,9 +1542,10 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
             </div>
 
             {reuseLoading&&<p role="status">Đang đọc bằng chứng nguồn…</p>}
-            {(reuseError||reuseJournalError)&&<p role="alert" className="text-rose-700 text-xs">{reuseError||reuseJournalError}</p>}
+            {(reuseError||reuseJournalError)&&<p role="alert" data-testid="reuse-error" className="text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-xs break-words">{reuseError||reuseJournalError}</p>}
             {reuseHeld&&<p role="status" className="text-xs break-all">Giữ yêu cầu {reuseHeld.key} cho file {reuseHeld.body.fileId}; không thay body/key/version.</p>}
-            {reuseResult&&<p role="status" className="text-emerald-800 text-xs break-all">Đã GET đối chiếu file {reuseResult.receipt.fileId} · checksum {reuseResult.receipt.fileChecksum}. Receipt {reuseResult.receipt.id} · {reuseResult.receipt.reason}</p>}
+            {reuseResult&&taskForReuse.project_id&&<ReuseSavedResult projectId={taskForReuse.project_id} taskId={taskForReuse.id} receipt={reuseResult.receipt} file={reuseResult.file} />}
+            {!reuseResult&&(<>
             <select aria-label="Bằng chứng Report tái sử dụng" disabled={isSubmittingReuse||!!reuseHeld||!!reuseResult} value={reuseChoice} onChange={e=>{setReuseChoice(e.target.value);setReuseError('')}} className="w-full border border-slate-200 rounded-lg p-2 text-xs"><option value="">{reuseLoading?'Đang tải bằng chứng':reuseError?'Chưa tải được bằng chứng':'Chọn bằng chứng Report'}</option>{reuseSources.map(r=><option key={r.evidence.evidenceId} value={r.evidence.evidenceId}>{r.report.reportId} • {r.evidence.evidenceId}{r.evidence.supplementId?' • Bổ sung':' • Gốc'}</option>)}</select>
             {!reuseLoading&&!reuseError&&!reuseSources.length&&<p className="text-xs">Không có bằng chứng của Report trong dữ liệu nguồn.</p>}
             {/* Modal Body */}
@@ -1681,6 +1684,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </div>
             </div>
 
+</>)}
             {/* Modal Footer */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-100">
               <span className="text-[11px] text-slate-400 font-medium">
@@ -1691,11 +1695,11 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
                   type="button"
                   onClick={() => setIsReuseModalOpen(false)}
                   disabled={isSubmittingReuse}
-                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  className={reuseResult?"px-4 py-1.5 text-xs font-semibold bg-[#C9A227] hover:bg-[#b08d20] text-white rounded-lg cursor-pointer":"px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"}
                 >
-                  Hủy bỏ
+                  {reuseResult?'Đóng':'Hủy bỏ'}
                 </button>
-                {!isSupervisor ? (
+                {reuseResult ? null : !isSupervisor ? (
                   <button
                     type="button"
                     onClick={handleConfirmReuseEvidence}
@@ -1762,7 +1766,7 @@ export const MeasurementsTab: React.FC<MeasurementsTabProps> = ({
               </span>
             ) : (
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-900/80 text-emerald-200">
-                {lightboxTask.status==='VERIFIED'?'ĐÃ HOÀN TẤT FIELD':lightboxTask.status==='SUPPLEMENT_REQUIRED'?'CẦN BỔ SUNG':'CHƯA ÁNH XẠ TRẠNG THÁI'}
+                {fieldTaskStatusLabel(lightboxTask.status)}
               </span>
             )
           }

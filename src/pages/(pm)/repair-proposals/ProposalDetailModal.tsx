@@ -10,6 +10,7 @@ import {SourceDefectPanel} from './SourceDefectPanel'
 import {PlanningPanel} from './PlanningPanel'
 import {NotificationSupervisorPanel} from './NotificationSupervisorPanel'
 import {RepairSafetyPanel} from './RepairSafetyPanel'
+import {useToastStore} from '../../../store/toastStore'
 
 export interface ProposalDetailModalProps {
   selectedPackageForDetail: ProposalWorkPackage | null
@@ -34,7 +35,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
   isSupervisor,
   isPM,
 }) => {
-  const auth=useAuthStore(),navigate=useNavigate(),scope=`${auth.authEpoch}:${selectedPackageForDetail?.route_id}:${selectedPackageForDetail?.id}`,latest=useRef(scope);latest.current=scope
+  const auth=useAuthStore(),toast=useToastStore(),navigate=useNavigate(),scope=`${auth.authEpoch}:${selectedPackageForDetail?.route_id}:${selectedPackageForDetail?.id}`,latest=useRef(scope);latest.current=scope
   const [read,setRead]=useState<{scope:string;items:RepairItem[]}|null>(null),[error,setError]=useState(''),[message,setMessage]=useState(''),[itemId,setItemId]=useState(''),[reason,setReason]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0)
   const [details,setDetails]=useState<{scope:string;rows:Record<string,DetailRead>}>({scope:'',rows:{}})
   useEffect(()=>{const c=new AbortController();setRead(null);setError('');setMessage('');setItemId('');setReason('');if(selectedPackageForDetail)repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id,c.signal).then(items=>{if(!c.signal.aborted)setRead({scope,items})}).catch(e=>{if(!c.signal.aborted)setError(exportError(e))});return()=>c.abort()},[scope,reload])
@@ -52,7 +53,7 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
   const detailOf=(id:string):DetailRead|undefined=>details.scope===scope?details.rows[id]:undefined
   let held:ReturnType<typeof repairWorkflowService.pending>=null,journalError=''
   try{if(isSupervisor&&selectedPackageForDetail&&itemId)held=repairWorkflowService.pending(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve')}catch(e){journalError=exportError(e)}
-  const approve=async()=>{if(!selectedPackageForDetail||!itemId||!isSupervisor||busy||journalError)return;const start=scope;setBusy(true);setError('');try{const r=await repairWorkflowService.decide(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve',held?.body.reason||reason);if(latest.current!==start)return;setMessage(`Đã GET đối chiếu hạng mục: ${r.state}.`);const fresh=await repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id);if(latest.current!==start)return;setRead({scope,items:fresh});window.dispatchEvent(new Event('repair-workflow-refresh'))}catch(e){if(latest.current===start)setError(exportError(e))}finally{if(latest.current===start)setBusy(false)}}
+  const approve=async()=>{if(!selectedPackageForDetail||!itemId||!isSupervisor||busy||journalError)return;const start=scope;setBusy(true);setError('');try{const r=await repairWorkflowService.decide(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve',held?.body.reason||reason);if(latest.current!==start)return;const fresh=await repairWorkflowService.items(selectedPackageForDetail.route_id,selectedPackageForDetail.id);if(latest.current!==start)return;setRead({scope,items:fresh});setItemId('');setReason('');const ok=`Đã phê duyệt hạng mục ${r.id.slice(0,8).toUpperCase()}; máy chủ xác nhận trạng thái ${r.state}.`;setMessage(ok);toast.success(ok);window.dispatchEvent(new Event('repair-workflow-refresh'))}catch(e){if(latest.current===start){let msg=exportError(e);try{if(repairWorkflowService.pending(selectedPackageForDetail.route_id,selectedPackageForDetail.id,itemId,'approve')?.received)msg=`Lệnh phê duyệt đã gửi nhưng chưa đối chiếu được kết quả từ máy chủ (${msg}). Cần đối chiếu; không gửi lệnh mới, chỉ bấm "Đối chiếu quyết định đã gửi".`}catch{/* journal lỗi đã hiển thị riêng */}setError(msg)}}finally{if(latest.current===start)setBusy(false)}}
   if (!selectedPackageForDetail) return null
 
   // Phương án chung của gói: lấy từ GET chi tiết hạng mục; không khẳng định "API thiếu" khi chưa đọc xong hoặc đang lỗi.
@@ -216,9 +217,11 @@ export const ProposalDetailModal: React.FC<ProposalDetailModalProps> = ({
           {isSupervisor && items.some(i=>i.mode==='Normal') && (
             <div className="rg-subcard space-y-2 text-xs">
               <h4 className="font-bold text-sm text-brand-dark flex items-center gap-1.5"><Icon name="fact_check" size={16} className="text-emerald-700"/>Phê duyệt hạng mục Normal</h4>
-              <label className="block">Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="rg-field block w-full"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&['AwaitingApproval','ReadyToAssign'].includes(i.state)).map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {i.state}</option>)}</select></label>
+              <label className="block">Hạng mục Normal cần duyệt<select aria-label="Hạng mục Normal phê duyệt" value={itemId} disabled={busy} onChange={e=>{setItemId(e.target.value);setReason('')}} className="rg-field block w-full"><option value="">Chọn hạng mục từ hồ sơ</option>{items.filter(i=>i.mode==='Normal'&&i.state==='AwaitingApproval').map((i,n)=><option key={i.id} value={i.id}>Hạng mục {n+1} · {i.state}</option>)}</select></label>
               <textarea aria-label="Lý do phê duyệt Normal" placeholder={held?'Lý do đang được giữ trong journal':'Nhập căn cứ phê duyệt'} value={held?.body.reason||reason} disabled={busy||!!held} onChange={e=>setReason(e.target.value)} maxLength={2000} className="rg-field block w-full"/>
-              <button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="rg-btn text-emerald-800">{held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button>
+              <button type="button" disabled={busy||!!journalError||!itemId||(!held&&!reason.trim())||(!held&&items.find(i=>i.id===itemId)?.state!=='AwaitingApproval')} onClick={approve} className="rg-btn text-emerald-800">{busy?'Đang gửi…':held?'Đối chiếu quyết định đã gửi':'Phê duyệt hạng mục Normal'}</button>
+              {items.some(i=>i.mode==='Normal'&&i.state==='AwaitingApproval')&&<p data-testid="sup-reject-limit" className="rg-hint">Giới hạn hiện tại: máy chủ chưa có API cho Giám sát yêu cầu sửa/từ chối đề xuất Normal đang chờ duyệt (chỉ có phê duyệt). Không dùng "Hiệu chỉnh quyết định" thay thế; cần BE bổ sung thao tác.</p>}
+              {items.filter(i=>i.mode==='Normal'&&i.state!=='AwaitingApproval').map((i,n)=>{const d=detailOf(i.id);return <div key={i.id} data-testid="approval-readonly" className="text-[11px] text-slate-600 border-t border-slate-100 pt-1">Hạng mục {i.id.slice(0,8).toUpperCase()}: <strong className="text-slate-800">{i.state}</strong> · kết quả BE: <strong className="text-slate-800">{(d?.item?.result||i.result)||'Chưa có'}</strong>{i.effectiveDecisionId?' · đã có quyết định hiệu lực':''} <span className="text-slate-400">(chỉ đọc)</span></div>})}
             </div>
           )}
           <RepairItemActions projectId={selectedPackageForDetail.route_id} packageId={selectedPackageForDetail.id} items={items} isPM={isPM} isSupervisor={isSupervisor} onDone={()=>setReload(n=>n+1)} />
