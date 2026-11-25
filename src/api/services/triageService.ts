@@ -189,6 +189,7 @@ function mapBackendCaseToDomain(
     reopened_after_conclusion: reopened,
     previous_conclusion: reopened ? { outcome: String(item.conclusion?.outcome), reason: item.conclusion?.reason || undefined, concluded_at: item.conclusion?.concludedAt || undefined } : null,
     report_ids: item.reportIds || [],
+    defect_ids: item.defectIds || [],
     // Report references are evidence membership, not linked child Case records.
     linked_report_ids: [],
     is_assigned: isAssigned,
@@ -254,15 +255,17 @@ async function enrichDecisionState(cases: TriageCase[], signal?: AbortSignal): P
     try {
       const ref = c.report_ids.map((id) => reportKeepNewCommands.reference(c.project_id, id)).find(Boolean)
       if (!ref) return c
-      const result = await reportKeepNewCommands.read(c.project_id, ref.sourceId, ref.decisionId, signal)
+      const result = await reportKeepNewCommands.readDecision(c.project_id, ref.sourceId, ref.decisionId, signal)
       if (!result) return c
+      // Quyết định mới (KEEP_NEW/LINK_EXISTING/REJECT nguồn Report) là trạng thái chính; 'Đã mở lại do có bổ sung' chỉ là nhãn phụ (reopened_after_conclusion).
+      const kind = result.decision.decision as 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'
       return {
         ...c,
         decision_recorded: true,
-        decision_kind: 'KEEP_NEW' as const,
+        decision_kind: kind,
         linked_defect_id: result.decision.defectId,
-        defect_status: result.defect.status,
-        status_label: c.reopened_after_conclusion ? c.status_label : c.status === 'PENDING' ? 'Đã ghi nhận' : c.status_label
+        defect_status: result.defect?.status ?? null,
+        status_label: c.status === 'PENDING' ? (kind === 'REJECT' ? 'Đã từ chối nguồn Report' : 'Đã ghi nhận') : c.status_label
       }
     } catch (error: any) {
       if (isCancel(error) || signal?.aborted) throw error
@@ -652,6 +655,12 @@ export const triageService = {
       const reportIds = [...new Set(payload.reportIds || [])]
       if (!reportIds.length || reportIds.some(id => !detail.data.reportIds?.includes(id))) throw new Error('Thiếu hoặc sai recipient report thuộc Case; chưa gửi publication.')
       if (!payload.summary?.trim() || payload.summary.trim().length > 1000) throw new Error('Nội dung công bố cần từ 1 đến 1.000 ký tự.')
+      // Nhánh công bố theo contract BE: không Defect chỉ khi Case đã kết luận NO_DEFECT; còn lại phải chọn Defect thuộc Case.
+      const noDefect = detail.data.conclusion?.outcome === 'NO_DEFECT' && detail.data.status !== 'OPEN'
+      const chosenDefects = [...new Set(payload.defectIds || [])]
+      if (noDefect && chosenDefects.length) throw new Error('Case đã kết luận NO_DEFECT: công bố không kèm Defect.')
+      if (!noDefect && !chosenDefects.length) throw new Error('Chọn ít nhất một Defect của Case để công bố; BE chỉ cho công bố không Defect khi Case đã kết luận NO_DEFECT.')
+      if (chosenDefects.some(id => !detail.data.defectIds?.includes(id))) throw new Error('Defect được chọn không thuộc Case theo máy chủ; chưa gửi publication.')
       return { body: { summary: payload.summary.trim(), reportIds, evidenceIds: [...new Set(payload.evidenceIds || [])], defectIds: [...new Set(payload.defectIds || [])] }, version: normalizeETag(payload.version || detail.headers?.etag || detail.data.version || undefined) }
     })
     const data = receipt.data

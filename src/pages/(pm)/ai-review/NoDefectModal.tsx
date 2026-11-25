@@ -26,16 +26,24 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
   onReviewNoDefect,
 }) => {
   const media = useCaseReportMedia(), epoch = useAuthStore(state => state.authEpoch)
-  const [evidenceId, setEvidenceId] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const [evidenceId, setEvidenceId] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [showErrors, setShowErrors] = useState(false)
   const [held, setHeld] = useState<ReturnType<typeof caseNoDefectService.pending>>(null)
   const scope = `${epoch}:${isOpen}:${targetTriageCase?.id}`, active = useRef(scope); active.current = scope
   const running = useRef(false)
   useEffect(() => {
-    setEvidenceId(''); setBusy(false); setError(''); running.current = false
+    setEvidenceId(''); setBusy(false); setError(''); setShowErrors(false); running.current = false
     try { setHeld(targetTriageCase?.id ? caseNoDefectService.pending(targetTriageCase.id) : null) }
     catch (e) { setHeld(null); setError(reportError(e)) }
   }, [scope])
   const evidence = media && media.caseId === targetTriageCase?.id ? media.reports.flatMap(report => [...report.originalEvidence, ...report.supplements.flatMap(s => s.evidence)].map(item => ({reportId: report.reportId, item}))) : []
+  const problems: Record<string, string> = {}
+  if (!noDefectReason.trim()) problems.reason = 'Nhập lý do kết luận kỹ thuật (bắt buộc).'
+  else if (noDefectReason.trim().length > 1000) problems.reason = 'Lý do tối đa 1.000 ký tự (đang nhập ' + noDefectReason.trim().length + ').'
+  if (!evidenceId) problems.evidence = 'Chọn bằng chứng dùng để kết luận (bắt buộc).'
+  else if (!evidence.some(e => e.item.evidenceId === evidenceId)) problems.evidence = 'Bằng chứng đã chọn không còn trong hồ sơ; chọn lại.'
+  if (media?.reportsError) problems.source = 'Chưa đọc được bằng chứng của hồ sơ; tải lại trước khi gửi.'
+  else if (media?.reportsLoading) problems.source = 'Đang đọc bằng chứng; chờ hoàn tất.'
+  const fieldError = (k: string) => showErrors && problems[k] ? <p role="alert" data-testid={`nodefect-err-${k}`} className="text-rose-700 font-semibold">{problems[k]}</p> : null
   const review = async () => {
     if (!onReviewNoDefect || running.current || !held?.rejected) return
     const selected = scope, oldEvidence = held.body.evidenceIds[0]
@@ -48,7 +56,8 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
     finally { if (active.current === selected) { running.current = false; setBusy(false) } }
   }
   const confirm = async () => {
-    if (running.current || held?.rejected || !held && (!noDefectReason.trim() || !evidenceId || !evidence.some(e => e.item.evidenceId === evidenceId))) return
+    if (running.current || held?.rejected) return
+    if (!held && Object.keys(problems).length) { setShowErrors(true); return }
     const selected = scope; running.current = true; setBusy(true); setError('')
     try { await onConfirmNoDefect(held?.body.evidenceIds[0] || evidenceId) }
     catch (e) { if (active.current === selected) { setError(reportError(e)); try { setHeld(caseNoDefectService.pending(targetTriageCase!.id)) } catch (readError) { setError(reportError(readError)) } } }
@@ -88,6 +97,7 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
               {targetTriageCase.code} ({targetTriageCase.stationing})
             </span>
             <p className="text-slate-500">{targetTriageCase.defect_title}</p>
+            <p className="text-[11px] text-slate-500">Đây là kết luận của CASE (NO_DEFECT). Từ chối một Report nguồn (REJECT) là thao tác khác trong khung “Quyết định nguồn Report”.</p>
           </div>
 
           <div className="flex flex-col">
@@ -103,6 +113,7 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
               className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-gold focus:border-brand-gold"
               required
             />
+            {fieldError('reason')}
           </div>
 
           <label className="flex flex-col gap-1 font-bold text-slate-700">
@@ -112,7 +123,9 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
               {evidence.map((e, i) => <option key={`${e.reportId}:${e.item.evidenceId}`} value={e.item.evidenceId}>{e.item.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'} {i + 1}{e.item.capturedAt ? ` · ${e.item.capturedAt}` : ''}</option>)}
               {held && !evidence.some(e => e.item.evidenceId === held.body.evidenceIds[0]) && <option value={held.body.evidenceIds[0]}>Bằng chứng của yêu cầu đang chờ</option>}
             </select>
+            {fieldError('evidence')}
           </label>
+          {fieldError('source')}
           {media?.reportsLoading && <p role="status">Đang đọc bằng chứng…</p>}
           {media?.reportsError && <p role="alert">{media.reportsError}</p>}
           {!media?.reportsLoading && !media?.reportsError && !evidence.length && <p>Chưa có bằng chứng được phép đọc để kết luận.</p>}
@@ -139,7 +152,7 @@ export const NoDefectModal: React.FC<NoDefectModalProps> = ({
           <button
             type="button"
             onClick={() => { void confirm() }}
-            disabled={busy || !!held?.rejected || !held && (!noDefectReason.trim() || !evidenceId || !!media?.reportsError || !!media?.reportsLoading || !evidence.some(e => e.item.evidenceId === evidenceId))}
+            disabled={busy || !!held?.rejected}
             className="px-4 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <Icon name="check" size={16} />

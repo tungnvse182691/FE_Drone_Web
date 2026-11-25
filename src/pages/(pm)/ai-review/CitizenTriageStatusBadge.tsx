@@ -8,6 +8,8 @@ export interface CitizenTriageStatusBadgeProps {
   reopened?: boolean
   /** PM đã ghi nhận KEEP_NEW/LINK_EXISTING (đọc lại từ BE). */
   decisionRecorded?: boolean
+  /** Loại quyết định nguồn Report đã đọc lại (REJECT khác kết luận Case NO_DEFECT). */
+  decisionKind?: string | null
   /** Trạng thái Defect do BE trả — hiển thị riêng, không trộn vào trạng thái Case. */
   defectStatus?: string | null
   decisionReadError?: string
@@ -18,14 +20,16 @@ export const CitizenTriageStatusBadge: React.FC<CitizenTriageStatusBadgeProps> =
   conclusion,
   reopened,
   decisionRecorded,
+  decisionKind,
   defectStatus,
   decisionReadError
 }) => {
   if (status === 'PENDING') {
-    const main = reopened
-      ? { dot: 'bg-blue-500', text: 'text-blue-700', label: 'Đã mở lại do có bổ sung', pulse: true }
-      : decisionRecorded
-        ? { dot: 'bg-teal-500', text: 'text-teal-700', label: 'Đã ghi nhận', pulse: false }
+    // Quyết định mới là trạng thái chính; 'Đã mở lại do có bổ sung' chỉ là nhãn phụ khi đã có quyết định.
+    const main = decisionRecorded
+      ? { dot: 'bg-teal-500', text: 'text-teal-700', label: decisionKind === 'REJECT' ? 'Đã từ chối nguồn Report' : 'Đã ghi nhận', pulse: false }
+      : reopened
+        ? { dot: 'bg-blue-500', text: 'text-blue-700', label: 'Đã mở lại do có bổ sung', pulse: true }
         : { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Chưa có quyết định', pulse: true }
     return (
       <span className="inline-flex flex-col gap-0.5">
@@ -34,7 +38,10 @@ export const CitizenTriageStatusBadge: React.FC<CitizenTriageStatusBadgeProps> =
           <span>{main.label}</span>
         </span>
         {decisionRecorded && defectStatus && (
-          <span className="text-[10px] text-slate-500 whitespace-nowrap">Defect: {defectStatus}</span>
+          <span className="text-[10px] text-slate-500">Defect: {defectStatus}</span>
+        )}
+        {decisionRecorded && reopened && (
+          <span className="text-[10px] text-blue-700">Đã mở lại do có bổ sung</span>
         )}
         {decisionReadError && (
           <span role="alert" className="text-[10px] text-rose-700 max-w-[220px] whitespace-normal" title={decisionReadError}>Không đọc được quyết định từ máy chủ</span>

@@ -194,8 +194,8 @@ export const TriageCard: React.FC<TriageCardProps> = ({
       {/* 2. Thân thẻ */}
       <div className="p-[20px_22px] flex flex-col justify-between flex-1 gap-3.5">
         {/* Hàng 1: Chấm màu tròn 10px + Halo 4px + Tên lỗi + Badges (Ưu tiên & Trạng thái) */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 basis-40">
             <span
               className="w-[10px] h-[10px] rounded-full shrink-0"
               style={{
@@ -210,9 +210,9 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               {item.defect_title}
             </h3>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          <div data-testid="card-badges" className="flex items-center gap-1.5 min-w-0 max-w-full flex-wrap justify-end">
             <span
-              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] whitespace-nowrap"
+              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
                 backgroundColor: priorityBadge.bg,
                 color: priorityBadge.text
@@ -221,7 +221,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               {priorityBadge.label}
             </span>
             <span
-              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] whitespace-nowrap"
+              className="rounded-full text-[11px] font-bold px-[14px] py-[5px] max-w-full break-words"
               style={{
                 backgroundColor: statusBadge.bg,
                 color: statusBadge.text
@@ -229,8 +229,13 @@ export const TriageCard: React.FC<TriageCardProps> = ({
             >
               {item.case_status ? item.status_label : statusBadge.label}
             </span>
+            {item.reopened_after_conclusion && item.decision_recorded && (
+              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] max-w-full break-words bg-blue-50 text-blue-700" title="Máy chủ đã mở lại hồ sơ khi có bổ sung; kết luận cũ chỉ còn trong lịch sử">
+                Đã mở lại do có bổ sung
+              </span>
+            )}
             {item.decision_recorded && item.defect_status && (
-              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] whitespace-nowrap bg-slate-100 text-slate-600" title="Trạng thái Defect do máy chủ trả, tách khỏi trạng thái hồ sơ">
+              <span className="rounded-full text-[11px] font-semibold px-[10px] py-[5px] max-w-full break-words bg-slate-100 text-slate-600" title="Trạng thái Defect do máy chủ trả, tách khỏi trạng thái hồ sơ">
                 Defect: {item.defect_status}
               </span>
             )}

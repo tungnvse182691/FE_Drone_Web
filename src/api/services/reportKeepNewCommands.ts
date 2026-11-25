@@ -4,8 +4,10 @@ import { defectTypeCatalog } from './defectTypeCatalog'
 import { RoleCode } from '../../types/enums'
 export interface ReportKeepNewInput {sourceKind:'REPORT';sourceId:string;sourceVersion:string;geometryVersion:string;decision:'KEEP_NEW';classification:{defectTypeCode:string;severity:string;roadSectionVersionId:string;segmentId?:string|null};reason:string}
 interface Intent {projectId:string;body:ReportKeepNewInput;key:string;received?:boolean;receipt?:{id:string;sourceKind:string;sourceId:string;decision:string;defectId:string;version:string}}
+// REJECT không tạo/gắn Defect: defect = null. KEEP_NEW/LINK_EXISTING luôn có Defect do máy chủ trả.
 export interface KeepNewResult {decision:{id:string;sourceKind:string;sourceId:string;decision:string;defectId:string;version:string};defect:{id:string;projectId:string;roadSectionVersionId:string;defectTypeCode:string;severity:string;status:string;version:string}}
-interface Reference {projectId:string;sourceId:string;decisionId:string;defectId?:string;commandKey?:string}
+export type ReportDecisionResult = Omit<KeepNewResult,'decision'|'defect'> & {decision:Omit<KeepNewResult['decision'],'defectId'>&{defectId:string|null};defect:KeepNewResult['defect']|null}
+interface Reference {projectId:string;sourceId:string;decisionId:string;defectId?:string;commandKey?:string;decision?:'KEEP_NEW'|'LINK_EXISTING'|'REJECT'}
 const referenceKey=(project:string,report:string)=>`rg_keep_reference_${useAuthStore.getState().user?.id}_${project}_${report}`
 const running=new Set<string>(),key=(project:string,report:string)=>`rg_keep_report_${useAuthStore.getState().user?.id}_${project}_${report}`
 export const reportKeepNewCommands={
@@ -20,7 +22,13 @@ export const reportKeepNewCommands={
     if(r.projectId!==project||r.sourceId!==report||!r.decisionId)throw new Error('Reference KEEP_NEW sai phạm vi; chưa tạo quyết định mới.')
     return r
   },
+  /** Đọc KEEP_NEW/LINK_EXISTING (có Defect). REJECT không có Defect nên ném lỗi rõ ràng cho các màn cần Defect. */
   async read(project:string,report:string,decisionId?:string,signal?:AbortSignal):Promise<KeepNewResult|null> {
+    const r=await this.readDecision(project,report,decisionId,signal);if(!r)return null
+    if(!r.defect||!r.decision.defectId)throw new Error('Quyết định nguồn Report là REJECT: không có Defect.')
+    return r as KeepNewResult
+  },
+  async readDecision(project:string,report:string,decisionId?:string,signal?:AbortSignal):Promise<ReportDecisionResult|null> {
     const a=useAuthStore.getState(),epoch=a.authEpoch
     if(a.user?.role!==RoleCode.PROJECT_MANAGER)throw new Error('Chỉ PM được đọc kết quả ghi nhận Report.')
     const saved=this.reference(project,report),held=this.pending(project,report)
@@ -28,15 +36,20 @@ export const reportKeepNewCommands={
     if(!id)return null
     const active=()=>{if(signal?.aborted||useAuthStore.getState().authEpoch!==epoch||useAuthStore.getState().user?.id!==a.user?.id)throw new Error('Phiên đọc kết quả đã thay đổi.')}
     const decision=(await apiClient.get(`/projects/${project}/candidate-decisions/${encodeURIComponent(id)}`,{signal})).data;active()
-    if(decision?.id!==id||decision.sourceKind!=='REPORT'||decision.sourceId!==report||decision.decision!=='KEEP_NEW'||!decision.defectId||!decision.version)throw new Error('GET quyết định không khớp Report/reference KEEP_NEW.')
+    const kind=decision?.decision as 'KEEP_NEW'|'LINK_EXISTING'|'REJECT'
+    if(decision?.id!==id||decision.sourceKind!=='REPORT'||decision.sourceId!==report||!['KEEP_NEW','LINK_EXISTING','REJECT'].includes(kind)||(kind!=='REJECT'&&!decision.defectId)||!decision.version)throw new Error('GET quyết định không khớp Report/reference quyết định đã ghi nhận.')
+    if(saved?.decision&&saved.decision!==kind)throw new Error('GET quyết định khác loại quyết định reference đã ghi nhận.')
     if(saved?.decisionId===id&&saved.defectId&&saved.defectId!==decision.defectId)throw new Error('GET quyết định khác Defect reference đã ghi nhận.')
+    if(kind==='REJECT'){sessionStorage.setItem(referenceKey(project,report),JSON.stringify({projectId:project,sourceId:report,decisionId:id,decision:kind}));return {decision,defect:null}}
     const defect=(await apiClient.get(`/projects/${project}/defects/${encodeURIComponent(decision.defectId)}`,{signal})).data;active()
     if(defect?.id!==decision.defectId||defect.projectId!==project||!defect.version||typeof defect.status!=='string'||!defect.status)throw new Error('GET Defect không khớp project/reference hoặc thiếu trạng thái.')
     // A read reference is not acknowledgement of a different pending command/key.
-    const reference:Reference={projectId:project,sourceId:report,decisionId:id,defectId:defect.id,...(saved?.decisionId===id?{commandKey:saved.commandKey}:{})}
+    const reference:Reference={projectId:project,sourceId:report,decisionId:id,defectId:defect.id,decision:kind,...(saved?.decisionId===id?{commandKey:saved.commandKey}:{})}
     sessionStorage.setItem(referenceKey(project,report),JSON.stringify(reference))
     return {decision,defect}
   },
+  /** Lưu reference quyết định LINK_EXISTING/REJECT đã được máy chủ biên nhận (đọc lại bằng read()). */
+  recordReference(project:string,report:string,decisionId:string,decision:'KEEP_NEW'|'LINK_EXISTING'|'REJECT',defectId?:string|null){sessionStorage.setItem(referenceKey(project,report),JSON.stringify({projectId:project,sourceId:report,decisionId,decision,...(defectId?{defectId}:{})}))},
   pending(project:string,report:string):Intent|null {const raw=sessionStorage.getItem(key(project,report));if(!raw)return null;const c=JSON.parse(raw);if(c.projectId!==project||c.body?.sourceId!==report||!c.key)throw new Error('Journal quyết định sai phạm vi.');return c},
   async run(project:string,body:ReportKeepNewInput){
     const a=useAuthStore.getState(),epoch=a.authEpoch;if(a.user?.role!==RoleCode.PROJECT_MANAGER)throw new Error('Chỉ PM được ghi nhận khiếm khuyết.')

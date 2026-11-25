@@ -256,6 +256,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
             conclusion={item.conclusion}
             reopened={item.reopened_after_conclusion}
             decisionRecorded={item.decision_recorded}
+            decisionKind={item.decision_kind}
             defectStatus={item.defect_status}
             decisionReadError={item.decision_read_error}
           />

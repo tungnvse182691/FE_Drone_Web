@@ -11,7 +11,7 @@ export function ReportEvidence({ reportId, evidence }: { caseId: string; reportI
   const located = (evidence.locationSource || 'UNKNOWN') !== 'UNKNOWN' && typeof location?.latitude === 'number' && typeof location.longitude === 'number' && Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
   return <section className="border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
     <p>{evidence.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'} · Thời gian chụp: {evidence.capturedAt || 'Chưa cập nhật'}</p>
-    <p>GPS: {located ? `${location.latitude}, ${location.longitude}` : 'UNKNOWN — chưa có vị trí được xác nhận'}</p>
+    <p data-testid="evidence-gps-detail">GPS ảnh/bằng chứng: {located ? `${location.latitude}, ${location.longitude}` : 'UNKNOWN — chưa có vị trí được xác nhận'}</p>
     {located && <a href={`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}`} target="_blank" rel="noreferrer">Xem vị trí evidence</a>}
     <button type="button" onClick={() => media?.select(reportId, evidence)} className="rg-btn text-[#8C6D1F]">{selected ? 'Đang xem ảnh' : 'Xem ảnh'}</button>
   </section>

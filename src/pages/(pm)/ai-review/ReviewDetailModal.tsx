@@ -14,9 +14,6 @@ export interface ReviewDetailModalProps {
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
-  detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
-  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
-  drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
   currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
   currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
@@ -37,7 +34,6 @@ export interface ReviewDetailModalProps {
   onNavigateFastTrack: (c?: TriageCase) => void
   onUnlinkReport: (code: string) => void
   onOpenTriageProject: (c: TriageCase) => void
-  onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
   onOpenMergeModal: (c: TriageCase) => void
   onToggleClusterItem: (code: string) => void

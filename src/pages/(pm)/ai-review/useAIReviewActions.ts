@@ -155,7 +155,7 @@ export const useAIReviewActions = ({
   const latestPublication = useRef({ scope: publicationScope })
   if (latestPublication.current.scope !== publicationScope) latestPublication.current = { scope: publicationScope }
   const publishing = useRef(false)
-  const handleConfirmPublishResult = async (reportIds: string[] = []) => {
+  const handleConfirmPublishResult = async ({ reportIds = [], defectIds = [], evidenceIds = [] }: { reportIds?: string[]; defectIds?: string[]; evidenceIds?: string[] } = {}) => {
     if (publishing.current || useAuthStore.getState().user?.role !== RoleCode.PROJECT_MANAGER) return
     const target = targetTriageCase || selectedCase
     if (!publishPublicNote.trim()) { showToast('Vui lòng nhập nội dung công bố.'); return }
@@ -168,7 +168,9 @@ export const useAIReviewActions = ({
       const result = await triageService.publishCase(target.id, {
         summary: publishPublicNote,
         version: target.version,
-        reportIds
+        reportIds,
+        defectIds,
+        evidenceIds
       })
 
       if (!isCurrent() || useAuthStore.getState().authEpoch !== publicationEpoch || latestPublication.current !== publicationContext) return

@@ -4,8 +4,24 @@ import { useAuthStore } from '../../../store/authStore'
 import { Icon } from '../../../components/ui/Icon'
 
 export function reportError(error: any): string {
-  console.warn('[Case reports]', { status: error?.response?.status, code: error?.response?.data?.code, correlationId: error?.response?.data?.correlationId })
-  return error?.response?.status === 403 ? 'Bạn không có quyền đọc phản ánh hoặc bằng chứng này.' : 'Không thể tải phản ánh hoặc ảnh. Vui lòng thử lại.'
+  const status = error?.response?.status, code = error?.response?.data?.code
+  const correlationId = error?.response?.data?.correlationId || error?.response?.headers?.['x-correlation-id']
+  console.warn('[Case reports]', { status, code, correlationId })
+  const ref = correlationId ? ` Mã đối chiếu: ${correlationId}.` : ''
+  if (status === 401) return `Phiên đăng nhập không hợp lệ hoặc đã hết hạn (HTTP 401${code ? ' ' + code : ''}). Đăng nhập lại rồi thử lại.${ref}`
+  if (status === 403) return `Bạn không có quyền đọc phản ánh hoặc bằng chứng này (HTTP 403${code ? ' ' + code : ''}).${ref}`
+  if (status === 404) return `Không tìm thấy phản ánh/bằng chứng trên máy chủ (HTTP 404${code ? ' ' + code : ''}). Bấm Thử lại để đọc lại hồ sơ.${ref}`
+  if (status) return `Không thể tải phản ánh hoặc ảnh (HTTP ${status}${code ? ' ' + code : ''}). Vui lòng thử lại.${ref}`
+  if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') return 'Không kết nối được máy chủ để tải ảnh/phản ánh. Kiểm tra mạng rồi thử lại.'
+  return error?.message ? `Không thể tải phản ánh hoặc ảnh: ${error.message}` : 'Không thể tải phản ánh hoặc ảnh. Vui lòng thử lại.'
+}
+// GPS của đúng evidence đang xem (location + locationSource); không dùng tọa độ Case/ảnh khác, không có tọa độ mặc định.
+export function evidenceGps(evidence?: CaseReportEvidence | null): { located: boolean; text: string; lat?: number; lng?: number; source: string } {
+  const source = evidence?.locationSource || 'UNKNOWN'
+  const lat = evidence?.location?.latitude, lng = evidence?.location?.longitude
+  if (evidence && source !== 'UNKNOWN' && typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng))
+    return { located: true, text: `${lat}, ${lng}`, lat, lng, source }
+  return { located: false, text: evidence ? 'UNKNOWN — chưa có vị trí được xác nhận' : 'Chưa chọn ảnh/bằng chứng', source }
 }
 const evidenceKey = (reportId: string, evidence: CaseReportEvidence) => `${reportId}:${evidence.evidenceId}:${evidence.fileVersion}`
 

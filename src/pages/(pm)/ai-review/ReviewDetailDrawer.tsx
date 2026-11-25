@@ -18,9 +18,6 @@ export interface ReviewDetailDrawerProps {
   selectedCase: TriageCase
   setSelectedCaseId: (id: string) => void
   cases: TriageCase[]
-  detailViewMode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE'
-  setDetailViewMode: (mode: 'PHOTO' | 'GIS_MAP' | 'SIDE_BY_SIDE') => void
-  drawerMapContainerRef: React.RefObject<HTMLDivElement | null>
   currentSeverity: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   setCurrentSeverity: (s: 'UNKNOWN' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => void
   currentUrgency: 'UNKNOWN' | 'NORMAL' | 'URGENT' | 'EMERGENCY'
@@ -41,7 +38,6 @@ export interface ReviewDetailDrawerProps {
   onNavigateFastTrack: (c: TriageCase) => void
   onUnlinkReport: (childId: string) => void
   onOpenTriageProject: (c: TriageCase) => void
-  onOpenGISModal: () => void
   onOpenPhotoZoomModal: () => void
   onOpenMergeModal: (c: TriageCase) => void
   onToggleClusterItem: (code: string) => void
@@ -55,9 +51,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   evidenceRequest,
   setSelectedCaseId,
   cases,
-  detailViewMode,
-  setDetailViewMode,
-  drawerMapContainerRef,
   currentSeverity,
   setCurrentSeverity,
   currentUrgency,
@@ -78,7 +71,6 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
   onNavigateFastTrack,
   onUnlinkReport,
   onOpenTriageProject,
-  onOpenGISModal,
   onOpenPhotoZoomModal,
   onOpenMergeModal,
   onToggleClusterItem,
@@ -116,11 +108,7 @@ export const ReviewDetailDrawer: React.FC<ReviewDetailDrawerProps> = ({
             <DrawerMediaViewer
               sourceLabel={sourceLabel}
               selectedCase={selectedCase}
-              detailViewMode={detailViewMode}
-              setDetailViewMode={setDetailViewMode}
-              drawerMapContainerRef={drawerMapContainerRef}
               onOpenPhotoZoomModal={onOpenPhotoZoomModal}
-              onOpenGISModal={onOpenGISModal}
             />
 
             <DrawerClusterDeduplication

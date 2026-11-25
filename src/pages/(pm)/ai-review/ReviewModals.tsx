@@ -1,7 +1,6 @@
 import React from 'react'
 import type { TriageCase } from './types'
 import { SpatialMergeModal } from './SpatialMergeModal'
-import { GisMapModal } from './GisMapModal'
 import { PhotoZoomModal } from './PhotoZoomModal'
 import { LinkReportsModal } from './LinkReportsModal'
 import { TriageProjectModal } from './TriageProjectModal'
@@ -22,13 +21,6 @@ export interface ReviewModalsProps {
   isMergeModalOpen: boolean
   setIsMergeModalOpen: (open: boolean) => void
   onExecuteMerge: () => void
-
-  // Modal 2: GIS
-  isGISModalOpen: boolean
-  setIsGISModalOpen: (open: boolean) => void
-  modalMapType: 'SATELLITE' | 'STREET'
-  setModalMapType: (type: 'SATELLITE' | 'STREET') => void
-  modalMapContainerRef: React.RefObject<HTMLDivElement | null>
 
   // Modal 3: Photo Zoom
   isPhotoZoomModalOpen: boolean
@@ -66,7 +58,7 @@ export interface ReviewModalsProps {
   setIsPublishModalOpen: (open: boolean) => void
   publishPublicNote: string
   setPublishPublicNote: (note: string) => void
-  onConfirmPublishResult: (reportIds: string[]) => void
+  onConfirmPublishResult: (selection: { reportIds: string[]; defectIds: string[]; evidenceIds: string[] }) => void | Promise<void>
 
   // Modal 8: Request Survey
   isRequestSurveyModalOpen: boolean
@@ -92,11 +84,6 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
   isMergeModalOpen,
   setIsMergeModalOpen,
   onExecuteMerge,
-  isGISModalOpen,
-  setIsGISModalOpen,
-  modalMapType,
-  setModalMapType,
-  modalMapContainerRef,
   isPhotoZoomModalOpen,
   setIsPhotoZoomModalOpen,
   isLinkReportsModalOpen,
@@ -142,16 +129,6 @@ export const ReviewModals: React.FC<ReviewModalsProps> = ({
         onClose={() => setIsMergeModalOpen(false)}
         selectedCase={selectedCase}
         onExecuteMerge={onExecuteMerge}
-      />
-
-      {/* MODAL 2: BẢN ĐỒ GIS PREVIEW */}
-      <GisMapModal
-        isOpen={isGISModalOpen}
-        onClose={() => setIsGISModalOpen(false)}
-        selectedCase={selectedCase}
-        modalMapType={modalMapType}
-        setModalMapType={setModalMapType}
-        modalMapContainerRef={modalMapContainerRef}
       />
 
       {/* MODAL 3: PHÓNG TO ẢNH HIỆN TRƯỜNG */}

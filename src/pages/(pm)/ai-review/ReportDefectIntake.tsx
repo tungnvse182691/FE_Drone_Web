@@ -1,9 +1,10 @@
 import { defectTypeCatalog, type DefectTypeOption } from '../../../api/services/defectTypeCatalog'
 import { triageGeometryService, type TriageRouteReference, type TriagePublishedSet } from '../../../api/services/triageGeometryService'
 import { Link } from 'react-router-dom'
-import { reportKeepNewCommands, type KeepNewResult, type ReportKeepNewInput } from '../../../api/services/reportKeepNewCommands'
+import { reportKeepNewCommands, type KeepNewResult, type ReportDecisionResult, type ReportKeepNewInput } from '../../../api/services/reportKeepNewCommands'
 import React, { useEffect, useRef, useState } from 'react'
 import { apiClient } from '../../../api/client'
+import { surveyService } from '../../../api/services/surveyService'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { useCaseReportMedia } from './useCaseReportMedia'
@@ -18,7 +19,10 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const reportId = reports.length === 1 ? reports[0].reportId : sourceChoice?.scope === caseScope ? sourceChoice.reportId : reports.some(r=>r.reportId===query?.get('reportId'))?query!.get('reportId')!:''
   const report = reports.find(r => r.reportId === reportId)
   const scope = `${auth.authEpoch}:${auth.user?.id}:${selectedCase.id}:${selectedCase.project_id}:${reportId}`
-  const [read, setRead] = useState<{scope: string; sourceVersion?: string; geometryVersion?: string; error?: string} | null>(null)
+  type Match = {defectId: string; version?: string | null; distanceMeters?: number | null; reasonCodes?: string[] | null}
+  const [read, setRead] = useState<{scope: string; sourceVersion?: string; geometryVersion?: string; matches?: Match[]; error?: string} | null>(null)
+  // Quyết định nguồn Report: KEEP_NEW (tạo Defect), LINK_EXISTING (gắn Defect hiện có), REJECT (loại nguồn Report; KHÁC kết luận Case NO_DEFECT).
+  const [kindState, setKindState] = useState<{scope: string; kind: 'KEEP_NEW' | 'LINK_EXISTING' | 'REJECT'; targetId: string; shown: boolean}>({scope: '', kind: 'KEEP_NEW', targetId: '', shown: false})
   const [reload, setReload] = useState(0)
   const [form, setForm] = useState({scope: '', severity: '', reason: '', defectTypeCode:'', roadId:'',setId:''})
   const severity = form.scope === scope ? form.severity : ''
@@ -30,17 +34,17 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     if (!allowed || !report || media?.reportsError || media?.reportsLoading) return () => controller.abort()
     ;(async () => {
       let cursor: string | undefined, sourceVersion: string | undefined, geometryVersion: string | undefined
-      const seen = new Set<string>()
+      const seen = new Set<string>(), matches: Match[] = []
       do {
         const {data} = await apiClient.get(`/projects/${selectedCase.project_id}/candidates`, {params: {sourceKind: 'REPORT', sourceId: report.reportId, pageSize: 50, cursor}, signal: controller.signal})
         if (controller.signal.aborted || useAuthStore.getState().authEpoch !== auth.authEpoch) return
         if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Candidate thiếu hoặc sai Report/phiên bản nguồn/geometryVersion; chưa ghi nhận khiếm khuyết.')
         if (sourceVersion && (sourceVersion !== data.source.version || geometryVersion !== data.geometryVersion)) throw new Error('Phiên bản candidate thay đổi giữa các trang; cần đọc lại.')
-        sourceVersion = data.source.version; geometryVersion = data.geometryVersion; cursor = data.nextCursor || undefined
+        sourceVersion = data.source.version; geometryVersion = data.geometryVersion; matches.push(...data.items.filter((m: any) => typeof m?.defectId === 'string')); cursor = data.nextCursor || undefined
         if (cursor && seen.has(cursor)) throw new Error('Cursor candidate lặp; chưa đọc đầy đủ nguồn.')
         if (cursor) seen.add(cursor)
       } while (cursor)
-      if (!controller.signal.aborted) setRead({scope, sourceVersion, geometryVersion})
+      if (!controller.signal.aborted) setRead({scope, sourceVersion, geometryVersion, matches})
     })().catch(e => { if (!controller.signal.aborted && useAuthStore.getState().authEpoch === auth.authEpoch) setRead({scope, error: e?.response ? `Không đọc được nguồn Report: HTTP ${e.response.status} ${e.response.data?.code || ''}${e.response.data?.correlationId ? ` · Mã đối chiếu ${e.response.data.correlationId}` : ''}` : e.message || 'Không đọc được nguồn Report.'}) })
     return () => controller.abort()
   }, [scope, allowed, !!report, media?.reportsError, media?.reportsLoading, selectedCase.version, reload])
@@ -66,26 +70,51 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   let savedReference:ReturnType<typeof reportKeepNewCommands.reference>=null
   try{if(selectedCase.project_id&&report)savedReference=reportKeepNewCommands.reference?.(selectedCase.project_id,report.reportId)||null}catch(e){journalError=(e as Error).message}
   const referenceId=suppliedReference||savedReference?.decisionId||heldDecision?.receipt?.id||''
-  const [recorded,setRecorded]=useState<{scope:string;result?:KeepNewResult;error?:string;loading?:boolean}|null>(null)
+  const [recorded,setRecorded]=useState<{scope:string;result?:ReportDecisionResult;error?:string;loading?:boolean}|null>(null)
   useEffect(()=>{
     const c=new AbortController();setRecorded(null)
     if(!selectedCase.project_id||!report||!referenceId)return()=>c.abort()
     setRecorded({scope,loading:true})
-    reportKeepNewCommands.read(selectedCase.project_id,report.reportId,referenceId,c.signal).then(result=>{if(!c.signal.aborted&&result)setRecorded({scope,result})})
+    reportKeepNewCommands.readDecision(selectedCase.project_id,report.reportId,referenceId,c.signal).then(result=>{if(!c.signal.aborted&&result)setRecorded({scope,result})})
       .catch(e=>{if(!c.signal.aborted)setRecorded({scope,error:`Không đọc được kết quả: HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}`})})
     return()=>c.abort()
   },[scope,referenceId,reload])
   const currentRecorded=recorded?.scope===scope?recorded:null
-  const canSave=!referenceId&&!currentRecorded?.result&&!heldDecision&&!journalError&&allowed&&!!report&&!currentPackage?.error&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&currentPackage?.version===read.geometryVersion&&!!road&&!!activeCatalog?.items.some(t=>t.code===defectTypeCode)&&!!severity&&!!decisionReason.trim()&&decisionReason.trim().length<=1000&&!commandBusy
+  const kindNow=kindState.scope===scope?kindState:{scope,kind:'KEEP_NEW' as const,targetId:'',shown:false}
+  const kind=kindNow.kind,targetId=kindNow.targetId,showErrors=kindNow.shown
+  const changeKind=(patch:Partial<{kind:'KEEP_NEW'|'LINK_EXISTING'|'REJECT';targetId:string;shown:boolean}>)=>setKindState({...kindNow,scope,...patch})
+  const target=read?.scope===scope?read.matches?.find(m=>m.defectId===targetId):undefined
+  const reasonLen=decisionReason.trim().length
+  const fieldErrors:Record<string,string>={}
+  if(!reasonLen)fieldErrors.reason='Nhập lý do quyết định (bắt buộc).';else if(reasonLen>1000)fieldErrors.reason='Lý do tối đa 1.000 ký tự (đang nhập '+reasonLen+').'
+  if(kind==='KEEP_NEW'){
+    if(!defectTypeCode)fieldErrors.type='Chọn loại lỗi.';else if(!activeCatalog?.items.some(t=>t.code===defectTypeCode))fieldErrors.type='Loại lỗi không còn hiệu lực; chọn lại.'
+    if(!severity)fieldErrors.severity='Chọn mức độ nghiêm trọng.'
+    if(!roadId)fieldErrors.road='Chọn tuyến theo hồ sơ nguồn.';else if(!road)fieldErrors.road='Tuyến đã chọn không còn trong danh sách máy chủ; chọn lại.'
+    if(road&&!setId)fieldErrors.set='Chọn bộ phân đoạn đã công bố.';else if(road&&setId&&currentPackage?.version!==read?.geometryVersion)fieldErrors.set=currentPackage?.error||'Hồ sơ hình học chưa đọc xong hoặc không khớp phiên bản nguồn.'
+  }
+  if(kind==='LINK_EXISTING'){
+    if(!targetId)fieldErrors.target='Chọn Defect đích từ danh sách máy chủ trả về.';else if(!target?.version)fieldErrors.target='Máy chủ không trả phiên bản của Defect đích; không thể gắn.'
+  }
+  const canSave=!referenceId&&!currentRecorded?.result&&!heldDecision&&!journalError&&allowed&&!!report&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&!commandBusy&&!Object.keys(fieldErrors).length&&(kind!=='KEEP_NEW'||!currentPackage?.error)
   const execute=async()=>{
     if(!selectedCase.project_id||!report||commandBusy||referenceId||currentRecorded?.result)return
     const project=selectedCase.project_id,reportId=report.reportId,start=scope
     setCommand({scope:start,busy:true,error:''})
-    try{const held=reportKeepNewCommands.pending(project,reportId);if(!held&&!canSave)throw new Error('Chưa đủ nguồn, phân loại hoặc tuyến.');
+    try{const held=reportKeepNewCommands.pending(project,reportId)
+      if(kind!=='KEEP_NEW'&&!held){
+        if(!canSave)throw new Error('Chưa đủ nguồn hoặc dữ liệu form.')
+        const dec=await surveyService.decideCandidate(project,{sourceKind:'REPORT',sourceId:reportId,decision:kind,reason:decisionReason.trim(),sourceVersion:read!.sourceVersion!,geometryVersion:read!.geometryVersion!,...(kind==='LINK_EXISTING'?{targetDefectId:targetId,targetVersion:target!.version!}:{})})
+        reportKeepNewCommands.recordReference(project,reportId,dec.id,kind,dec.defectId)
+        const result=await reportKeepNewCommands.readDecision(project,reportId,dec.id)
+        if(canceled.current===start){setRecorded({scope:start,result:result||undefined});setCommand({scope:start,busy:false,error:''});onRecorded?.(kind==='REJECT'?'Đã từ chối nguồn Report (không phải kết luận NO_DEFECT của Case)':'Đã gắn Report vào khiếm khuyết hiện có')}
+        return
+      }
+      if(!held&&!canSave)throw new Error('Chưa đủ nguồn, phân loại hoặc tuyến.');
       const body:ReportKeepNewInput=held?.body||{sourceKind:'REPORT',sourceId:reportId,sourceVersion:read!.sourceVersion!,geometryVersion:read!.geometryVersion!,decision:'KEEP_NEW',classification:{defectTypeCode,severity,roadSectionVersionId:road!.currentVersionId},reason:decisionReason.trim()}
       const result=await reportKeepNewCommands.run(project,body)
       if(canceled.current===start){setRecorded({scope:start,result});setCommand({scope:start,busy:false,error:''});onRecorded?.('Đã ghi nhận khiếm khuyết')}
-    }catch(e:any){if(canceled.current===start)setCommand({scope:start,busy:false,error:`HTTP ${e?.response?.status||''} ${e?.response?.data?.code||e.message}${e?.response?.data?.code==='invalid_state_transition'?' — nguồn Report này đã có quyết định chấp nhận trên máy chủ (không ghi nhận lại). Máy chủ chưa có API tra quyết định theo nguồn nên nhãn "Đã ghi nhận" chỉ hiện khi còn tham chiếu của phiên làm việc.':''}`})}
+    }catch(e:any){if(canceled.current===start)setCommand({scope:start,busy:false,error:`${e?.response?.status?`HTTP ${e.response.status} ${e.response.data?.code||''}${e.response.data?.correlationId?` · Mã đối chiếu ${e.response.data.correlationId}`:''}`:`Không gửi được quyết định: ${e.message}`}${e?.response?.data?.code==='invalid_state_transition'?' — nguồn Report này đã có quyết định chấp nhận trên máy chủ (không ghi nhận lại). Máy chủ chưa có API tra quyết định theo nguồn nên nhãn "Đã ghi nhận" chỉ hiện khi còn tham chiếu của phiên làm việc.':''}`})}
   }
   const current = read?.scope === scope ? read : null
   const sourceStale = command.scope === scope && command.error.includes('Phiên bản nguồn/hình học thay đổi; cần đọc lại trước quyết định mới.')
@@ -93,9 +122,10 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const reason = !allowed ? 'Chỉ PM của dự án được ghi nhận khiếm khuyết từ Case OPEN đã phân công.'
     : media?.reportsError ? `Không đọc được Report: ${media.reportsError}` : !report ? 'Cần đọc và chọn Report thuộc đúng hồ sơ.'
     : !current ? 'Đang kiểm tra nguồn Report…' : current.error || (sourceStale || packageMismatch ? 'Phiên bản nguồn hoặc hình học không còn khớp; hãy tải lại dữ liệu ghi nhận.' : 'Đã đọc phiên bản nguồn Report và hình học từ máy chủ.')
-  const missing = [
-    !report?'phản ánh nguồn':'',!current?.sourceVersion?'phiên bản nguồn':'',!current?.geometryVersion?'phiên bản hình học':'',!defectTypeCode?'loại lỗi hiệu lực':'',!road?'tuyến':'',!setId?'bộ phân đoạn đã công bố':'',road&&currentPackage?.version!==current?.geometryVersion?'hồ sơ hình học khớp nguồn':'',!severity?'mức độ':'',!decisionReason.trim()?'lý do':''
-  ].filter(Boolean).join('; ')
+  const missing = [!report?'phản ánh nguồn':'',!current?.sourceVersion?'phiên bản nguồn':'',!current?.geometryVersion?'phiên bản hình học':'',...Object.values(fieldErrors)].filter(Boolean).join('; ')
+  const err=(key:string)=>showErrors&&fieldErrors[key]?<span role="alert" data-testid={`err-${key}`} className="text-rose-700 font-semibold">{fieldErrors[key]}</span>:null
+  const kindLabel=currentRecorded?.result?.decision.decision||(referenceId?savedReference?.decision:'')||'KEEP_NEW'
+
   const reportSelector=<label className="grid min-w-0 gap-1">
     Phản ánh nguồn
     <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="rg-field w-full min-w-0 max-w-full">
@@ -111,22 +141,36 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
     {currentRecorded?.result&&<>
       <p>Đã đọc quyết định ghi nhận và khiếm khuyết tương ứng từ máy chủ.</p>
-      <p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}</p>
-      <p>Nguồn đã ghi nhận; không tạo KEEP_NEW mới. Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
-      <div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>
+      {currentRecorded.result.defect?<p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}{currentRecorded.result.decision.decision==='LINK_EXISTING'?' · Report đã được gắn vào Defect hiện có':''}</p>:<p>Quyết định REJECT nguồn Report: không tạo và không gắn Defect. Đây KHÔNG phải kết luận NO_DEFECT của Case.</p>}
+      <p>{kindLabel==='REJECT'?'Nguồn Report đã bị từ chối; ':'Nguồn đã ghi nhận; không tạo quyết định mới. '}Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
+      {currentRecorded.result.defect&&<div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>}
       <Link className="inline-block underline" to={`/pm/ai-inbox?${new URLSearchParams({projectId:selectedCase.project_id!,caseId:selectedCase.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Liên kết đọc lại kết quả đã lưu</Link>
     </>}
     {heldDecision&&<p role="status" className="break-all">Giữ nguyên journal của yêu cầu {heldDecision.key}. Reference kết quả này không tự giải quyết một yêu cầu khác key/body.</p>}
     <button type="button" disabled={!!currentRecorded?.loading} onClick={()=>setReload(n=>n+1)} className="text-xs underline">Đọc lại kết quả ghi nhận</button>
   </div>
   return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-    <p className="font-bold text-slate-800">Ghi nhận khiếm khuyết</p>
+    <p className="font-bold text-slate-800">Quyết định nguồn Report</p>
     <div className="flex flex-wrap items-center gap-2">
       <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{reason}</p>
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
     {reportSelector}
-    <div className="grid min-w-0 grid-cols-1 gap-2">
+    <label className="grid min-w-0 gap-1">Loại quyết định nguồn Report
+      <select aria-label="Loại quyết định nguồn Report" value={kind} disabled={!allowed||commandBusy||!!heldDecision} onChange={e=>changeKind({kind:e.target.value as 'KEEP_NEW'|'LINK_EXISTING'|'REJECT',targetId:'',shown:false})} className="rg-field w-full min-w-0 max-w-full">
+        <option value="KEEP_NEW">Ghi nhận khiếm khuyết mới (KEEP_NEW)</option>
+        <option value="LINK_EXISTING">Gắn vào khiếm khuyết đã có (LINK_EXISTING)</option>
+        <option value="REJECT">Từ chối nguồn Report (REJECT)</option>
+      </select>
+      {kind==='REJECT'&&<span className="text-slate-600 break-words">Từ chối nguồn Report không tạo Defect và khác kết luận Case “Không có khiếm khuyết” (NO_DEFECT) ở nút “Báo sai”.</span>}
+    </label>
+    {kind==='LINK_EXISTING'&&<label className="grid min-w-0 gap-1">Khiếm khuyết đích (ứng viên do máy chủ trả)
+      <select aria-label="Khiếm khuyết đích" value={targetId} disabled={!allowed||commandBusy||!current?.matches?.length} onChange={e=>changeKind({targetId:e.target.value})} className="rg-field w-full min-w-0 max-w-full">
+        <option value="">{!current?'Đang đọc ứng viên…':current.matches?.length?'Chọn khiếm khuyết đích':'Máy chủ không có ứng viên Defect để gắn'}</option>
+        {current?.matches?.map(m=><option key={m.defectId} value={m.defectId}>#DEF-{m.defectId.slice(0,8).toUpperCase()}{typeof m.distanceMeters==='number'?` · cách ${m.distanceMeters.toFixed(1)} m`:''}{m.reasonCodes?.length?` · ${m.reasonCodes.join(', ')}`:''}</option>)}
+      </select>{err('target')}
+    </label>}
+    {kind==='KEEP_NEW'&&<div className="grid min-w-0 grid-cols-1 gap-2">
       <label className="grid min-w-0 gap-1">
         Loại lỗi
         <select aria-label="Loại lỗi" value={defectTypeCode} disabled={commandBusy||!activeCatalog||!!activeCatalog.error||!activeCatalog.items.length} onChange={e=>changeForm('defectTypeCode',e.target.value)} className="rg-field w-full min-w-0 max-w-full">
@@ -135,6 +179,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
         </select>
         {activeCatalog?.error&&<span role="alert">{activeCatalog.error}</span>}
         {activeCatalog&&!activeCatalog.error&&!activeCatalog.items.length&&<span>Danh mục môi trường chưa có loại lỗi hiệu lực để nghiệm thu.</span>}
+        {err('type')}
       </label>
       <label className="grid min-w-0 gap-1">
         Mức độ nghiêm trọng
@@ -145,18 +190,21 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
           <option value="HIGH">Cao</option>
           <option value="CRITICAL">Nghiêm trọng</option>
         </select>
+        {err('severity')}
       </label>
-    </div>
+    </div>}
     <label className="grid min-w-0 gap-1">
       Lý do ghi nhận khiếm khuyết
-      <textarea aria-label="Lý do ghi nhận khiếm khuyết" value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="rg-field w-full min-w-0 max-w-full" />
+      <textarea aria-label="Lý do ghi nhận khiếm khuyết" aria-invalid={showErrors&&!!fieldErrors.reason} value={decisionReason} onChange={event => changeForm('reason', event.target.value)} disabled={!allowed} rows={2} className="rg-field w-full min-w-0 max-w-full" />
+      {err('reason')}
     </label>
-    <label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="rg-field w-full min-w-0"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select></label>
-    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="rg-field w-full min-w-0"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}</label>
+    {kind==='KEEP_NEW'&&<><label className="grid min-w-0 gap-1">Tuyến hiện hành cho Defect<select aria-label="Tuyến ghi nhận khiếm khuyết" value={roadId} disabled={!allowed||commandBusy} onChange={e=>changeForm('roadId',e.target.value)} className="rg-field w-full min-w-0"><option value="">Chọn tuyến theo hồ sơ nguồn</option>{roads.map(r=><option key={r.roadSectionId} value={r.roadSectionId}>{r.code}{r.name?` — ${r.name}`:''}</option>)}</select>{err('road')}</label>
+    <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="rg-field w-full min-w-0"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}{err('set')}</label></>}
     {journalError&&<p role="alert">{journalError}</p>}
     {(roadError||currentPackage?.error)&&<p role="alert">{roadError||currentPackage?.error}</p>}
     <p className="text-slate-600 break-words">{missing ? `Còn thiếu: ${missing}` : 'Đã đủ dữ liệu form; máy chủ vẫn kiểm quyền và hiệu lực.'}</p>
-    <button type="button" disabled={!canSave} onClick={()=>{void execute()}} className="rg-btn text-xs font-semibold">{commandBusy?'Đang ghi nhận…':'Xác nhận ghi nhận khiếm khuyết'}</button>
+    <button type="button" disabled={!allowed||!report||commandBusy||!!journalError||!!heldDecision} onClick={()=>{if(!canSave){changeKind({shown:true});return};void execute()}} className="rg-btn text-xs font-semibold">{commandBusy?'Đang ghi nhận…':kind==='REJECT'?'Xác nhận từ chối nguồn Report':kind==='LINK_EXISTING'?'Xác nhận gắn vào khiếm khuyết đã có':'Xác nhận ghi nhận khiếm khuyết'}</button>
+    {showErrors&&!canSave&&!Object.keys(fieldErrors).length&&<p role="alert" className="text-rose-700 font-semibold">{current?.error||media?.reportsError||(!current?'Đang kiểm tra nguồn Report; chưa thể gửi.':'Dữ liệu nguồn chưa hợp lệ; đọc lại trước khi gửi.')}</p>}
     {heldDecision&&<button type="button" disabled={commandBusy} onClick={()=>{void execute()}} className="text-xs underline">Đối chiếu yêu cầu ghi nhận đang chờ</button>}
     {command.scope===scope&&command.error&&<p role="alert">{command.error}</p>}
     {selectedCase.case_status === 'OPEN' && current?.error && <p className="text-slate-600">Nếu Case thiếu phạm vi, dùng “Cập nhật phạm vi” trong khối Thông Tin Hồ Sơ; PM giữ nguyên dự án và chọn tuyến/bộ PUBLISHED. Chỉ ghi nhận khi GET nguồn trả đủ phiên bản hợp lệ.</p>}

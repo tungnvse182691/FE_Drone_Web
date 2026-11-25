@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
-import { CaseReportImage, useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMedia'
+import { CaseReportImage, evidenceGps, useCaseReportMedia, reportSourceLabelForCase } from './useCaseReportMedia'
 
 export interface PhotoZoomModalProps {
   isOpen: boolean
@@ -19,6 +19,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
 
   const media = useCaseReportMedia()
   const sourceLabel = reportSourceLabelForCase(selectedCase.id, media, selectedCase.source_label)
+  const gps = evidenceGps(media?.caseId === selectedCase.id ? media.selected?.evidence : null)
+  const gpsText = gps.located ? `${gps.text} (${gps.source})` : gps.text
   if (!isOpen) return null
 
   const severityText =
@@ -97,7 +99,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
             />
             <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-xs border border-white/10 flex items-center gap-2">
               <Icon name="location_on" size={13} className="text-brand-gold" />
-              <span>{selectedCase.gps.lat}° N, {selectedCase.gps.lng}° E</span>
+              <span data-testid="zoom-gps-overlay">GPS ảnh/bằng chứng: {gpsText}</span>
             </div>
           </div>
         ) : (
@@ -119,7 +121,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
                 />
               </div>
               <div className="p-2 bg-slate-950/90 text-[11px] text-slate-300 border-t border-slate-800 flex items-center justify-between">
-                <span>GPS: {selectedCase.gps.lat}°, {selectedCase.gps.lng}°</span>
+                <span>GPS ảnh/bằng chứng: {gpsText}</span>
                 <span className="text-amber-400">
                   {selectedCase.source === 'DRONE_AI' ? 'Thiết bị bay Drone RTK' : 'Thiết bị di động công dân'}
                 </span>
@@ -156,8 +158,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
                       <span className="font-semibold text-slate-200">{selectedCase.lane}</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block">Tọa độ GPS:</span>
-                      <span className="font-mono text-brand-gold">{selectedCase.gps.lat}°, {selectedCase.gps.lng}°</span>
+                      <span className="text-slate-500 block">GPS ảnh/bằng chứng:</span>
+                      <span className="font-mono text-brand-gold">{gpsText}</span>
                     </div>
                   </div>
                 </div>
@@ -208,7 +210,7 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
           <span>
             {selectedCase.source === 'DRONE_AI'
               ? 'Độ phân giải thực: 0.3 cm/px • Thiết bị bay Drone RTK'
-              : `Ảnh phản ánh từ người dân • Thiết bị di động • Tọa độ: ${selectedCase.gps.lat}° N, ${selectedCase.gps.lng}° E`}
+              : `Ảnh phản ánh từ người dân • Thiết bị di động • GPS ảnh/bằng chứng: ${gpsText}`}
           </span>
           <button
             onClick={onClose}

@@ -126,7 +126,7 @@ export interface FieldTask {
   defect_photo_url?: string // Ảnh chụp khiếm khuyết từ Drone (Triage)
   measurement_type: string
   chainage_km: number | null
-  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'SUPPLEMENT_REQUIRED' | 'UNKNOWN'
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'SUPPLEMENT_REQUIRED' | 'CANCELLED' | 'REJECTED' | 'UNKNOWN'
   measured_value?: number
   evidence_photo_url?: string // Ảnh chụp thước đo đối chứng từ hiện trường (Mobile)
   technician_name: string
@@ -741,6 +741,8 @@ export interface TriageCase {
   conclusion?: 'DEFECT_FOUND' | 'NO_DEFECT' | 'OUT_OF_SCOPE' | 'NEED_SURVEY' | 'NEEDS_EVIDENCE' | null
   conclusion_reason?: string
   report_ids?: string[]
+  /** Defect do BE gắn vào Case (InternalCaseDto.defectIds); nguồn cho form công bố. */
+  defect_ids?: string[]
   linked_report_ids?: string[]
   master_case_id?: string
   is_assigned?: boolean

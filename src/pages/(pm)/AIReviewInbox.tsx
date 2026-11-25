@@ -34,9 +34,9 @@ export const AIReviewInbox: React.FC = () => {
     surveyReason, setSurveyReason, surveyAssignedCrew, setSurveyAssignedCrew, surveySlaHours, setSurveySlaHours,
     setSelectedCaseId, isDetailModalOpen, setIsDetailModalOpen, selectedCase, activeTab, setActiveTab,
     sourceFilter, setSourceFilter, lineTypeFilter, setLineTypeFilter, projectFilter, setProjectFilter, priorityFilter, setPriorityFilter,
-    searchQuery, setSearchQuery, toastMessage, setToastMessage, showToast, detailViewMode, setDetailViewMode,
-    modalMapType, setModalMapType, isGISModalOpen, setIsGISModalOpen, isMergeModalOpen, setIsMergeModalOpen,
-    isPhotoZoomModalOpen, setIsPhotoZoomModalOpen, modalMapContainerRef, drawerMapContainerRef,
+    searchQuery, setSearchQuery, toastMessage, setToastMessage, showToast,
+    isMergeModalOpen, setIsMergeModalOpen,
+    isPhotoZoomModalOpen, setIsPhotoZoomModalOpen,
     currentSeverity, setCurrentSeverity, currentUrgency, setCurrentUrgency, currentArea, setCurrentArea,
     currentDepth, setCurrentDepth, currentNotes, setCurrentNotes, filteredCases, pendingCount,
     criticalCount, mergedCount, surveyCount, citizenCount, unassignedCitizenCount, droneAICount, handleSelectCase, handleToggleClusterItem, handleVerifyDefect,
@@ -144,9 +144,6 @@ export const AIReviewInbox: React.FC = () => {
         isSupervisor={isSupervisor}
         setSelectedCaseId={setSelectedCaseId}
         cases={cases}
-        detailViewMode={detailViewMode}
-        setDetailViewMode={setDetailViewMode}
-        drawerMapContainerRef={drawerMapContainerRef}
         currentSeverity={currentSeverity}
         setCurrentSeverity={setCurrentSeverity}
         currentUrgency={currentUrgency}
@@ -166,7 +163,6 @@ export const AIReviewInbox: React.FC = () => {
         onNavigateFastTrack={handleNavigateFastTrack}
         onUnlinkReport={handleUnlinkReport}
         onOpenTriageProject={handleOpenTriageProject}
-        onOpenGISModal={() => setIsGISModalOpen(true)}
         onOpenPhotoZoomModal={() => setIsPhotoZoomModalOpen(true)}
         onOpenMergeModal={(c) => {
           handleSelectCase(c)
@@ -185,11 +181,6 @@ export const AIReviewInbox: React.FC = () => {
         isMergeModalOpen={isMergeModalOpen}
         setIsMergeModalOpen={setIsMergeModalOpen}
         onExecuteMerge={handleExecuteMerge}
-        isGISModalOpen={isGISModalOpen}
-        setIsGISModalOpen={setIsGISModalOpen}
-        modalMapType={modalMapType}
-        setModalMapType={setModalMapType}
-        modalMapContainerRef={modalMapContainerRef}
         isPhotoZoomModalOpen={isPhotoZoomModalOpen}
         setIsPhotoZoomModalOpen={setIsPhotoZoomModalOpen}
         isLinkReportsModalOpen={isLinkReportsModalOpen}

@@ -181,18 +181,10 @@ export const useAIReviewState = () => {
     droneAICount: filters.droneAICount,
 
     // Spread drawer & maps
-    detailViewMode: drawer.detailViewMode,
-    setDetailViewMode: drawer.setDetailViewMode,
-    modalMapType: drawer.modalMapType,
-    setModalMapType: drawer.setModalMapType,
-    isGISModalOpen: drawer.isGISModalOpen,
-    setIsGISModalOpen: drawer.setIsGISModalOpen,
     isMergeModalOpen: drawer.isMergeModalOpen,
     setIsMergeModalOpen: drawer.setIsMergeModalOpen,
     isPhotoZoomModalOpen: drawer.isPhotoZoomModalOpen,
     setIsPhotoZoomModalOpen: drawer.setIsPhotoZoomModalOpen,
-    modalMapContainerRef: drawer.modalMapContainerRef,
-    drawerMapContainerRef: drawer.drawerMapContainerRef,
 
     // Spread link actions
     selectedReportIds: linkActions.selectedReportIds,
