@@ -3,7 +3,7 @@ import { CaseItem } from './types'
 import { ReworkModal } from './ReworkModal'
 import { ExportPdfAModal } from './ExportPdfAModal'
 import { ExportZipModal } from './ExportZipModal'
-import { DeclareConstructionModal } from './DeclareConstructionModal'
+import { DeclareConstructionModal, ReviewModalVariant } from './DeclareConstructionModal'
 import { AcceptancePackage } from '../../../api/services/acceptanceService'
 
 export interface CloseoutModalsProps {
@@ -12,7 +12,10 @@ export interface CloseoutModalsProps {
   currentPackage?: AcceptancePackage | null
   isDeclareModalOpen?: boolean
   setIsDeclareModalOpen?: (open: boolean) => void
-  onConfirmDeclaration?: (evidenceIds: string[], notes: string) => void
+  onConfirmDeclaration?: (notes: string) => void
+  reviewVariant?: ReviewModalVariant
+  busy?: boolean
+  modalError?: string
   isReworkModalOpen: boolean
   setIsReworkModalOpen: (open: boolean) => void
   reworkChecklist: {
@@ -71,7 +74,10 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
   currentPackage,
   isDeclareModalOpen,
   setIsDeclareModalOpen,
-  onConfirmDeclaration
+  onConfirmDeclaration,
+  reviewVariant,
+  busy,
+  modalError
 }) => {
   return (
     <>
@@ -87,6 +93,8 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         reworkNotes={reworkNotes}
         setReworkNotes={setReworkNotes}
         onSubmitRework={handleSubmitRework}
+        busy={busy}
+        error={isReworkModalOpen ? modalError : undefined}
       />
 
 
@@ -119,13 +127,16 @@ export const CloseoutModals: React.FC<CloseoutModalsProps> = ({
         )
       )}
 
-      {/* MODAL 4: DECLARE CONSTRUCTION COMPLETION (API-110) */}
+      {/* MODAL 4: PM REVIEW ACCEPT / FAST TRACK / GIÁM SÁT XÁC NHẬN CUỐI */}
       {isDeclareModalOpen && setIsDeclareModalOpen && onConfirmDeclaration && (
         <DeclareConstructionModal
           isOpen={isDeclareModalOpen}
           onClose={() => setIsDeclareModalOpen(false)}
           currentPackage={currentPackage || null}
           currentItem={currentItem}
+          variant={reviewVariant}
+          busy={busy}
+          error={modalError}
           onConfirmDeclaration={onConfirmDeclaration}
         />
       )}

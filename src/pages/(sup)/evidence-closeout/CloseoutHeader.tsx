@@ -16,6 +16,7 @@ export interface CloseoutHeaderProps {
   isCaseClosed: boolean
   allItemsAccepted: boolean
   acceptedCount: number
+  busy?: boolean
   onOpenExportModal: () => void
   onOpenReworkModal: () => void
   onAcceptItem: () => void
@@ -37,6 +38,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
   isCaseClosed,
   allItemsAccepted,
   acceptedCount,
+  busy,
   onOpenExportModal,
   onOpenReworkModal,
   onAcceptItem,
@@ -66,7 +68,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
             </button>
             <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
             <span className="text-slate-700 font-mono">
-              {currentPackage?.code || 'PKG-2026'}
+              {currentPackage?.code || 'Chưa có dữ liệu'}
             </span>
             <span className="material-symbols-outlined text-[14px] text-slate-400">chevron_right</span>
             <span className="text-slate-900 font-medium">{currentItem.item_code}</span>
@@ -87,11 +89,11 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
           </div>
 
           <p className="text-xs text-slate-500 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span>Dự án: <strong className="font-medium text-slate-800">{currentPackage?.project_name || 'QL1A'}</strong></span>
+            <span>Dự án: <strong className="font-medium text-slate-800">{currentPackage?.project_name || 'Chưa có dữ liệu'}</strong></span>
             <span className="text-slate-300">•</span>
             <span>Đoạn tuyến: <strong className="font-medium text-slate-800">{currentPackage?.chainage_display || currentItem.chainage}</strong></span>
             <span className="text-slate-300">•</span>
-            <span>Đơn vị thi công: <strong className="font-medium text-slate-800">{currentPackage?.contractor_name || currentItem.after_crew}</strong></span>
+            <span>Crew thực hiện: <strong className="font-medium text-slate-800">{currentItem.after_crew}</strong></span>
           </p>
         </div>
 
@@ -138,6 +140,9 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
                   {item.status === 'REWORK_REQUIRED' && (
                     <span className="w-2 h-2 rounded-full bg-[#E5484D]"></span>
                   )}
+                  {item.status === 'CANCELLED' && (
+                    <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                  )}
                   <span>{item.item_code}</span>
                 </button>
               )
@@ -148,7 +153,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
         {/* Tiến độ tổng hợp của gói */}
         <div className="flex items-center gap-2.5 text-xs self-start md:self-auto shrink-0">
           <span className="text-slate-500 font-medium">
-            Tiến độ gói: <strong className="text-slate-900 font-sansation">{acceptedCount}/{caseItems.length}</strong> đạt
+            Tiến độ gói: <strong className="text-slate-900 font-sansation">{acceptedCount}/{caseItems.filter((i) => i.status !== 'CANCELLED').length}</strong> đã nghiệm thu
           </span>
           <div className="w-20 bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
             <div
@@ -175,6 +180,7 @@ export const CloseoutHeader: React.FC<CloseoutHeaderProps> = ({
           isPMView={isPMView}
           allItemsAccepted={allItemsAccepted}
           isCaseClosed={isCaseClosed}
+          busy={busy}
           onOpenExportModal={onOpenExportModal}
           onOpenReworkModal={onOpenReworkModal}
           onAcceptItem={onAcceptItem}

@@ -15,7 +15,7 @@ export function exportPeriod(from:string,to:string){
  if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||start>=end)throw new Error('Khoảng thời gian không hợp lệ: Từ phải trước Đến.')
  return {from:start.toISOString(),to:end.toISOString()}
 }
-export function exportError(e:any){const d=e?.response?.data;return e?.response?`HTTP ${e.response.status} ${d?.code||d?.title||e.message}${d?.correlationId?` · ${d.correlationId}`:''}`:e.message}
+export function exportError(e:any){const d=e?.response?.data;if(e?.response?.status===409&&d?.code==='active_scope_conflict'){const pk=d.conflictingPackageId||d.packageId;return `Phạm vi đề xuất xung đột với hạng mục đang hoạt động. Vui lòng kiểm tra gói hiện có.${typeof pk==='string'?` Gói xung đột: ${pk}.`:''}${d.correlationId?` · ${d.correlationId}`:''}`}return e?.response?`HTTP ${e.response.status} ${d?.code||d?.title||e.message}${d?.correlationId?` · ${d.correlationId}`:''}`:e.message}
 export const projectExportService={
  pending(p:string):Intent|null {actor();const raw=sessionStorage.getItem(key(p));if(!raw)return null;const c=JSON.parse(raw) as Intent;if(c.projectId!==p||!c.key||!c.body?.kind)throw new Error('Journal export sai phạm vi; giữ nguyên để đối chiếu.');return c.rejected&&!c.received?null:c},
  async list(p:string,signal?:AbortSignal){const s=actor(),rows:ExportJob[]=[],seen=new Set<string>();let cursor:string|undefined

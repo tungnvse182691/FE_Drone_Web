@@ -2,6 +2,7 @@ import React from 'react'
 import { CaseItem } from './types'
 import { BeforeViewer } from './BeforeViewer'
 import { AfterViewer } from './AfterViewer'
+import { EvidencePhoto } from './EvidencePhoto'
 
 export interface ComparisonViewerProps {
   currentItem: CaseItem
@@ -77,22 +78,18 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
         <div className="space-y-3">
           <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs select-none bg-slate-900 border border-slate-200">
             {/* Ảnh sau sửa (Lớp nền) */}
-            <img
-              src={currentItem.after_image || undefined}
-              alt="Sau khi hoàn thành sửa chữa"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <div className="absolute inset-0">
+              <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.after_ref} alt="Sau khi hoàn thành sửa chữa" emptyText="Chưa có ảnh sau" zoomable={false} />
+            </div>
 
             {/* Ảnh trước sửa (Lớp phủ được cắt theo sliderPosition) */}
             <div
               className="absolute inset-0 overflow-hidden"
               style={{ clipPath: `polygon(0 0, ${sliderPosition}% 0, ${sliderPosition}% 100%, 0 100%)` }}
             >
-              <img
-                src={currentItem.before_image || undefined}
-                alt="Trước khi sửa chữa"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <div className="absolute inset-0">
+                <EvidencePhoto projectId={currentItem.project_id} photo={currentItem.before_ref} alt="Trước khi sửa chữa" emptyText="Chưa có ảnh trước" zoomable={false} />
+              </div>
               {/* Nhãn TRƯỚC SỬA */}
               <div className="absolute top-3 left-3 bg-rose-600/90 text-white font-medium text-xs px-2.5 py-1 rounded-md shadow-xs backdrop-blur-xs flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
@@ -102,8 +99,7 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
 
             {/* Nhãn SAU SỬA */}
             <div className="absolute top-3 right-3 bg-emerald-600/90 text-white font-medium text-xs px-2.5 py-1 rounded-md shadow-xs backdrop-blur-xs flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[14px]">check</span>
-              <span>Sau khi hoàn thành</span>
+              <span>Ảnh sau (Crew kết thúc thi công)</span>
             </div>
 
             {/* Vạch chia Slider */}
@@ -131,6 +127,22 @@ export const ComparisonViewer: React.FC<ComparisonViewerProps> = ({
             <span className="text-slate-600">← Kéo sang trái: Xem ảnh sau khi sửa</span>
             <span className="font-mono font-medium text-slate-800">Tỷ lệ: {sliderPosition}%</span>
             <span className="text-slate-600">Kéo sang phải: Xem ảnh trước khi sửa →</span>
+          </div>
+        </div>
+      )}
+      {/* Ảnh liên quan khác trong bản nộp hiện hành (nếu có) */}
+      {currentItem.other_refs && currentItem.other_refs.length > 0 && (
+        <div className="pt-3 border-t border-slate-100 space-y-2">
+          <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Ảnh liên quan trong bản nộp ({currentItem.other_refs.length})</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {currentItem.other_refs.map((r) => (
+              <div key={r.fileId} className="space-y-1">
+                <div className="h-24 rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+                  <EvidencePhoto projectId={currentItem.project_id} photo={r} alt={`Ảnh ${r.purpose}`} />
+                </div>
+                <span className="text-[10px] text-slate-500 block">{r.purpose || 'Ảnh'}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
