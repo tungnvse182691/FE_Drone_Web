@@ -212,7 +212,7 @@
         "tags": [
           "AiMockRuns"
         ],
-        "description": "Create ai mock runs resources. Permissions: PM.",
+        "description": "MOCK only. PM creates; PM/Supervisor read within current project scope. Bearer or Web session; Web POST requires CSRF. Errors add reasonCode/step/field/recovery. Run originCorrelationId links enqueue/worker/result; nullable failure preserves safe diagnostics.",
         "parameters": [
           {
             "name": "projectId",
@@ -657,7 +657,7 @@
         "tags": [
           "AiMockRuns"
         ],
-        "description": "Get ai mock runs resources. Permissions: PM / Supervisor; current source authorization (candidate reader uses synthetic fixture provenance).",
+        "description": "MOCK only. PM creates; PM/Supervisor read within current project scope. Bearer or Web session; Web POST requires CSRF. Errors add reasonCode/step/field/recovery. Run originCorrelationId links enqueue/worker/result; nullable failure preserves safe diagnostics.",
         "parameters": [
           {
             "name": "projectId",
@@ -800,7 +800,7 @@
         "tags": [
           "AiMockRuns"
         ],
-        "description": "Result ai mock runs resources. Permissions: PM / Supervisor; current source authorization (candidate reader uses synthetic fixture provenance).",
+        "description": "MOCK only. PM creates; PM/Supervisor read within current project scope. Bearer or Web session; Web POST requires CSRF. Errors add reasonCode/step/field/recovery. Run originCorrelationId links enqueue/worker/result; nullable failure preserves safe diagnostics.",
         "parameters": [
           {
             "name": "projectId",
@@ -962,7 +962,7 @@
         "tags": [
           "AiMockRuns"
         ],
-        "description": "Candidate ai mock runs resources. Permissions: PM / Supervisor; current source authorization (candidate reader uses synthetic fixture provenance).",
+        "description": "PM/Supervisor with current source authority; Bearer or Web session, no CSRF for GET. Read disposition.decisionId, then candidate-decisions/{decisionId} for defectId. Refresh creates nothing. MOCK/SYNTHETIC only.",
         "parameters": [
           {
             "name": "projectId",
@@ -1108,6 +1108,9 @@
         "security": [
           {
             "Bearer": [ ]
+          },
+          {
+            "WebSession": [ ]
           }
         ],
         "x-roadguard-api-id": "SWG-005",
@@ -10873,7 +10876,7 @@
             }
           },
           "409": {
-            "description": "Error codes: duplicate_request.",
+            "description": "survey_active_plan_conflict includes authorized existingPlanId/existingPlanStatus for the exact project + roadSection + surveyType active key. duplicate_request means a reused idempotency key with a different fingerprint. survey_source_scope_invalid means invalid source scope.",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation UUID, emitted by middleware on all responses.",
@@ -11299,7 +11302,7 @@
             }
           },
           "409": {
-            "description": "Error codes: duplicate_request.",
+            "description": "survey_task_plan_mismatch: type/scope incompatible with plan; survey_plan_state_conflict: plan cannot create a task; survey_source_scope_invalid: invalid source; duplicate_request: key/fingerprint conflict. A plan in another project remains 404.",
             "headers": {
               "X-Correlation-ID": {
                 "description": "Request correlation UUID, emitted by middleware on all responses.",
@@ -26140,7 +26143,7 @@
         "tags": [
           "H6NotificationOperations"
         ],
-        "description": "Authenticated Bearer or Web session. Project reads require current PM membership or Supervisor authority. Web writes require X-CSRF-TOKEN from GET /api/v1/auth/web/csrf and browser credentials. Locality/organization writes require Supervisor; planning writes require current project PM. Repair policy discovery remains PM-only. Null means metadata was not stored; names are current account names. Batch limit 1â€“100. First call captures a database rowversion snapshot. Repeat subsequent batches with the returned snapshotVersion and the same through cutoff, using a new key per batch. Newly inserted notifications, including backdated events, are outside this snapshot. Entire batch commits atomically; no partial success.",
+        "description": "Authenticated Bearer or Web session. Project reads require current PM membership or Supervisor authority. Web writes require X-CSRF-TOKEN from GET /api/v1/auth/web/csrf and browser credentials. Locality/organization writes require Supervisor; planning writes require current project PM. Repair policy discovery remains PM-only. Null means metadata was not stored; names are current account names. Batch limit 1–100. First call captures a database rowversion snapshot. Repeat subsequent batches with the returned snapshotVersion and the same through cutoff, using a new key per batch. Newly inserted notifications, including backdated events, are outside this snapshot. Entire batch commits atomically; no partial success.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -44503,6 +44506,233 @@
         "x-contract-evidence": "CURRENT_VERIFIED_SOURCE; execution and business prerequisites are separate."
       }
     },
+    "/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/temporary-safety-obligations": {
+      "get": {
+        "tags": [
+          "RepairPackages"
+        ],
+        "description": "Eligible unused, unresolved TemporarySafety obligations within the current NORMAL formal item scope. Current responsibility determines the project in the URL; source package, Defect and geometry keep their original project. GET requires current PM or Supervisor authority; POST requires current PM authority. Bearer or Web session. ETag/packageVersion identify the package, itemVersion is for safety-measure creation, each obligation has its own version. An empty collection is valid. Appending does not change approval, assignment or item state. After formal transfer, a new creation action establishes safety responsibility without copying transfer acceptance.",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "access_forbidden or csrf_failed"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "concurrency_conflict, idempotency_key_reused, active_scope_conflict, safety_obligation_source_conflict or temporary_safety_not_allowed"
+          },
+          "428": {
+            "description": "precondition_required"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          },
+          {
+            "WebSession": [ ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "RepairPackages"
+        ],
+        "description": "Eligible unused, unresolved TemporarySafety obligations within the current NORMAL formal item scope. Current responsibility determines the project in the URL; source package, Defect and geometry keep their original project. GET requires current PM or Supervisor authority; POST requires current PM authority. Bearer or Web session. ETag/packageVersion identify the package, itemVersion is for safety-measure creation, each obligation has its own version. An empty collection is valid. Appending does not change approval, assignment or item state. After formal transfer, a new creation action establishes safety responsibility without copying transfer acceptance. Web writes require X-CSRF-TOKEN from GET /api/v1/auth/web/csrf and credentials. 201 creates one obligation; 200 replays the stored result after rechecking current authority. Scope must use the original pinned geometry and be contained in the formal scope.",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "packageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "Quoted package ETag from the source collection GET. Stale package returns 409 concurrency_conflict.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Persist the exact key/body/If-Match before sending; retry that same request after timeout.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemporarySafetyObligationInput"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemporarySafetyObligationInput"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemporarySafetyObligationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporarySafetyObligationSourcesView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_error"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "403": {
+            "description": "access_forbidden or csrf_failed"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "concurrency_conflict, idempotency_key_reused, active_scope_conflict, safety_obligation_source_conflict or temporary_safety_not_allowed"
+          },
+          "428": {
+            "description": "precondition_required"
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          },
+          {
+            "WebSession": [ ],
+            "CsrfToken": [ ],
+            "AntiforgeryCookie": [ ]
+          }
+        ]
+      }
+    },
     "/api/v1/projects/{projectId}/repair-packages/{packageId}/items/{itemId}/approve": {
       "post": {
         "tags": [
@@ -55212,12 +55442,139 @@
         },
         "security": [
           {
-            "Bearer": [ ]
+            "Bearer": []
           },
           {
-            "WebSession": [ ],
-            "CsrfToken": [ ],
-            "AntiforgeryCookie": [ ]
+            "WebSession": [],
+            "CsrfToken": [],
+            "AntiforgeryCookie": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "RoadCoverage"
+        ],
+        "description": "Supervisor only; Bearer or Web session, no CSRF for GET. Returns all project documents ordered by SQL uniqueidentifier ID, including missing fileId. An empty items array means no documents, not missing authority. canAttachFile is false for a file already attached or any coverage mapping. This inventory does not prove VERIFIED or REAL_SOURCE eligibility. Use document id to select handoverDocumentId. The item version is document rowversion; after upload VERIFIED, GET road-coverage for its aggregate ETag to POST attach. Cache-Control: no-store.",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDocumentsReadFact"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDocumentsReadFact"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDocumentsReadFact"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "WebSession": []
           }
         ]
       }
@@ -60593,6 +60950,273 @@
                 }
               },
               "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": [ ]
+          },
+          {
+            "WebSession": [ ],
+            "CsrfToken": [ ],
+            "AntiforgeryCookie": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/survey-plans/{planId}/complete": {
+      "post": {
+        "tags": [
+          "SurveyV"
+        ],
+        "description": "Current project PM explicitly completes an IN_PROGRESS BAND_V1 plan using persisted root/supplement lineage, submitted datasets and their current pm-evidence-review.v1 assessments. Exact pinned route/set/segment/band PASS coverage is required. Unhandled branches block completion. Does not complete tasks or change baseline. Completion basis, audit, plan version and receipt commit atomically. Replay rechecks current PM authority; retain the original body, If-Match and Idempotency-Key. GET plan returns completion basis after reload. No legacy backfill.",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "New operation key; retain unchanged request on retry.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "Quoted ETag from GET /api/v1/survey-plans/{id}. Keep original header on retry.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyPlanRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyPlanRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteSurveyPlanRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "ETag": {
+                "description": "New plan rowversion; task and dataset versions are independent.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyPlanV2ResponseDto"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyPlanV2ResponseDto"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SurveyPlanV2ResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "survey_plan_completion_blocked with reasonCode: plan_not_in_progress, plan_lineage_unavailable, plan_scope_unavailable, plan_source_task_invalid, plan_dataset_lineage_invalid, plan_assessment_not_current, plan_source_scope_mismatch, plan_scope_not_satisfied, plan_unhandled_task_branch. duplicate_request: same scoped key with different request.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "auth_concurrency_conflict: stale plan ETag; reload before a new decision.",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized: missing/invalid session or Bearer",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "access_forbidden or csrf_failed for cookie writes",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "survey_plan_not_found",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "survey_validation_failed: invalid reason/source list",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "validation_error: missing If-Match or Idempotency-Key",
+            "headers": {
+              "X-Correlation-ID": {
+                "description": "Server request correlation ID.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -66802,6 +67426,33 @@
         },
         "additionalProperties": false
       },
+      "AiFailureDiagnosticFact": {
+        "type": "object",
+        "properties": {
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "step": {
+            "type": "string",
+            "nullable": true
+          },
+          "field": {
+            "type": "string",
+            "nullable": true
+          },
+          "recovery": {
+            "type": "string",
+            "nullable": true
+          },
+          "originCorrelationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AiMatchResultV1": {
         "type": "object",
         "properties": {
@@ -66910,6 +67561,19 @@
           "createdAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          },
+          "originCorrelationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "failure": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AiFailureDiagnosticFact"
+              }
+            ],
             "nullable": true
           }
         },
@@ -68262,6 +68926,28 @@
         },
         "additionalProperties": false
       },
+      "CompleteSurveyPlanRequestDto": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SurveyPlanCompletionSource"
+            },
+            "description": "Explicit task/dataset/current assessment lineage; dataset IDs must be distinct. Combine exact pinned scope PASS; unresolved branches block.",
+            "nullable": true
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CompleteSurveyTaskRequestDto": {
         "type": "object",
         "properties": {
@@ -69411,6 +70097,11 @@
               "ACCEPT"
             ],
             "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Stored reason of the current SUPPLEMENT review matching this attempt and effective submission; null for other decisions or absent legacy reason. Never taken from notifications or final decisions.",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -73962,7 +74653,8 @@
           },
           "acceptanceActionId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "nullable": true
           },
           "packageId": {
             "type": "string",
@@ -73970,6 +74662,11 @@
             "nullable": true
           },
           "currentRepairItemId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "initialResponsibilityActionId": {
             "type": "string",
             "format": "uuid",
             "nullable": true
@@ -80024,6 +80721,40 @@
         },
         "additionalProperties": false
       },
+      "SafetyObligationScopeView": {
+        "type": "object",
+        "properties": {
+          "physicalRoadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "routeLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "fromMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "toMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "offsetFromMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "offsetToMeters": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
       "SegmentDefinition": {
         "type": "object",
         "properties": {
@@ -80765,6 +81496,53 @@
         },
         "additionalProperties": false
       },
+      "SurveyPlanCompletionSource": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datasetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assessmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SurveyPlanCompletionView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SurveyPlanCompletionSource"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "SurveyPlanStatus": {
         "enum": [
           0,
@@ -80814,6 +81592,17 @@
           },
           "scopeAvailability": {
             "type": "string",
+            "nullable": true
+          },
+          "surveyType": {
+            "enum": [
+              "BASELINE",
+              "PERIODIC",
+              "AD_HOC",
+              "UNKNOWN"
+            ],
+            "type": "string",
+            "description": "Persisted SurveyType of this resource, including the supplement task own type. UNKNOWN for unrecognized data or old receipt without this field; GET current resource after replay.",
             "nullable": true
           }
         },
@@ -80865,6 +81654,20 @@
           "version": {
             "type": "string",
             "nullable": true
+          },
+          "surveyType": {
+            "enum": [
+              "BASELINE",
+              "PERIODIC",
+              "AD_HOC",
+              "UNKNOWN"
+            ],
+            "type": "string",
+            "description": "Persisted SurveyType of this resource, including the supplement task own type. UNKNOWN for unrecognized data or old receipt without this field; GET current resource after replay.",
+            "nullable": true
+          },
+          "completion": {
+            "$ref": "#/components/schemas/SurveyPlanCompletionView"
           }
         },
         "additionalProperties": false
@@ -81004,6 +81807,23 @@
           "scopeAvailability": {
             "type": "string",
             "nullable": true
+          },
+          "surveyType": {
+            "enum": [
+              "BASELINE",
+              "PERIODIC",
+              "AD_HOC",
+              "UNKNOWN"
+            ],
+            "type": "string",
+            "description": "Persisted SurveyType of this resource, including the supplement task own type. UNKNOWN for unrecognized data or old receipt without this field; GET current resource after replay.",
+            "nullable": true
+          },
+          "parentTaskId": {
+            "type": "string",
+            "description": "Persisted direct parent; relationship ID grants no additional access. supplementTaskId remains the separate singular child link.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -81072,6 +81892,17 @@
           "parentTaskId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "surveyType": {
+            "enum": [
+              "BASELINE",
+              "PERIODIC",
+              "AD_HOC",
+              "UNKNOWN"
+            ],
+            "type": "string",
+            "description": "Persisted SurveyType of this resource, including the supplement task own type. UNKNOWN for unrecognized data or old receipt without this field; GET current resource after replay.",
             "nullable": true
           }
         },
@@ -81157,6 +81988,124 @@
           },
           "current": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TemporarySafetyObligationInput": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/RepairActualScopeInput"
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "TemporarySafetyObligationSourcesView": {
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "defectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formalObligationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibilityProjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "packageVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "itemVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "formalScope": {
+            "$ref": "#/components/schemas/SafetyObligationScopeView"
+          },
+          "binding": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RepairTaskBindingView"
+              }
+            ],
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemporarySafetyObligationView"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "TemporarySafetyObligationView": {
+        "type": "object",
+        "properties": {
+          "safetyObligationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formalObligationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "packageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "defectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "nullable": true
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SafetyObligationScopeView"
+          },
+          "resolved": {
+            "type": "boolean"
+          },
+          "originProjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibilityProjectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -81816,6 +82765,56 @@
           "widthMeters": {
             "type": "number",
             "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "HandoverDocumentReadFact": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "handoverDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          },
+          "isMapped": {
+            "type": "boolean"
+          },
+          "canAttachFile": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "HandoverDocumentsReadFact": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HandoverDocumentReadFact"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

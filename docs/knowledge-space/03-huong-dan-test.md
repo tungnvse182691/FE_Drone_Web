@@ -108,7 +108,7 @@ npx vite build             # build, phải sạch
 1. Ghi **POST/PUT qua UI thật** (mã HTTP) và **GET đọc lại độc lập** (trạng thái lưu). Chỉ gọi "Đạt" khi cả hai khớp.
 2. Tách riêng: FE đã nối / tsc+build / GET thật / POST+GET qua UI.
 3. Dữ liệu tạo mới: tiền tố **`[TEST-FE]`** ở lý do/tên; ghi vào `TEST-DATA-LEDGER.md` (id, ai tạo, có hoàn tác được không).
-4. Lỗi thuộc **BE** (mã 4xx/5xx có `code` rõ ràng, thiếu API, dữ liệu lệch): thêm vào bảng ở mục 13.2 `NGHIEM-THU-THEO-LUONG.md` kèm `correlationId`. Lỗi **FE**: sửa luôn, rồi xóa khỏi tài liệu nghiệm thu khi đã kiểm lại.
+4. Lỗi thuộc **BE** (mã 4xx/5xx có `code` rõ ràng, thiếu API, dữ liệu lệch): thêm vào bảng ở mục 4 `NGHIEM-THU-THEO-LUONG.md` kèm `correlationId`. Lỗi **FE**: sửa luôn, rồi xóa khỏi tài liệu nghiệm thu khi đã kiểm lại.
 5. Khi kết quả một lệnh ghi **chưa rõ** (timeout, mất mạng): giữ nguyên key/body/phiên bản, chỉ `GET`; không POST lại.
 
 ## 6. Dữ liệu đang có (2026-11-22, stack `roadguard-v3`, seed mới)

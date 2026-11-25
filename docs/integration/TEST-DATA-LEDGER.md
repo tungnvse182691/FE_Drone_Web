@@ -160,3 +160,31 @@ Ghi chú: dữ liệu B1–B6 nằm trong stack cũ `roadguard-dev1` (đã dừn
 
 ## B11 — Dữ liệu test thêm ở BE `develop_ABC` (2026-11-22)
 - Nhiệm vụ bổ sung `e29dd031…` (SBX-A) bị hủy bằng API (`[TEST-FE]`); kế hoạch BASELINE `50a7e6d2…` nay COMPLETED với 1 nguồn (đánh giá PASS `899d4178…` tạo bằng API trên bản nộp `ea3f4cdc…`). Không hoàn tất lại được; `e7-plan-complete.mjs` chỉ còn kiểm nhánh đọc/khóa nút nếu không còn kế hoạch IN_PROGRESS BASELINE có bản nộp.
+
+## B12 G2 (AI review transport/identity/readback, 2026-11-24)
+- `g2-ai-transport.mjs` mỗi lần chạy tạo 1 lần chạy AI `synthetic-road-v1` (SUCCEEDED) trên bản nộp `4078f40a…` của nhiệm vụ `ada7404e…` (SBX-A), 1 POST fixture sai bị 422 (không tạo dữ liệu), và 1 quyết định KEEP_NEW (Chấp nhận qua UI) + 1 Defect OPEN. Không hoàn tác được.
+- Lần chạy cuối: run `216de61c-9055-453f-ad61-15be0bea2d65`, detection `32780a39-155b-60b2-b57b-d998439b21fd`, decision `3a941f7a-c38b-4c67-bef6-c7edb9a9c97c`, defect `aa1650a9-bca7-4e29-99c8-661b0cd82258`. Hai lần chạy trước (runs `055416f5…` chỉ tạo run; `1fd29432…` KEEP_NEW → defect `1b79c3a9-0065-40f0-9ef3-2537890834d1`).
+
+## B12 G3 (Nghiem thu repair, 2026-11-24)
+- Project A, goi `ebba5817`, hang muc Normal `c3158f95-d423-4c73-a280-3d172424f1c2`: Giam sat duyet (API), PM-a giao Crew-a (API, task `52cf607a-50b3-4eb7-a5d9-76d9cda265d6`). **API-created (gia lap Mobile Crew qua Bearer, g3-seed.mjs):** accept/start, assessment, execution-start/finish, upload 2 anh PNG, submission #1 (BEFORE+AFTER), attempts; SUPPLEMENT lan 1 bang API; Crew bo sung #2 va #3 (supplements) bang API.
+- Qua UI: PM gui SUPPLEMENT (bao `[TEST-FE G3] ... yeu cau bo sung`), PM ACCEPT (reason `[TEST-FE G3] PM chap nhan`), Giam sat final-confirmation (`[TEST-FE G3] Giam sat xac nhan`) -> hang muc **Confirmed, khong hoan tac**.
+- Fast Track B: xem muc ft trong G3-ACCEPTANCE-20261124.md.
+
+## B12 G1 — Hồ sơ thẩm định (2026-11-24, stack `roadguard-v4`, dự án A)
+Tạo bằng `tools/e2e/g1-case-review.mjs` (Reporter API + Giám sát triage + PM UI/API), tiền tố `[TEST-FE G1]`, không hoàn tác được:
+- `#CAS-4E7277E7` (4e7277e7…): Report gốc GPS 9.9498,105.001 + 2 bổ sung (10.0123,105.5456 và UNKNOWN) — kiểm GPS evidence.
+- `#CAS-33147D1F` (33147d1f…): REJECT nguồn Report (Case vẫn OPEN).
+- `#CAS-71730559` (71730559…): thử LINK_EXISTING — BLOCKED (BE không trả ứng viên), Case chưa có quyết định.
+- `#CAS-42B77AE2` (42b77ae2…): kết luận NO_DEFECT (CONCLUDED) + 1 publication NO_DEFECT.
+- `#CAS-29DF28F3` (29df28f3…): KEEP_NEW (Defect OPEN); thử API công bố có Defect không chạy được (BLOCKED, defectIds rỗng).
+- `#CAS-DCE00708` (dce00708…): NO_DEFECT → Reporter bổ sung (OPEN lại) → KEEP_NEW.
+
+
+## B12 G4 — Đề xuất / an toàn / giao việc / chuyển nghĩa vụ / bàn giao / ngoại tuyến (stack `roadguard-v4`, 2026-11-24, dự án SBX-A trừ khi ghi khác)
+- **Gói Normal (UI PM-A tạo, Giám sát duyệt, PM giao):** gói `1a76a722-f08f-4373-be76-867309aec1bb`, hạng mục `70060978-319f-409e-915e-ae0c5da420e9`, nghĩa vụ FormalRepair `041077c7-3c66-496b-8791-cd5b94f02952` (lý trình 40–41 m, lệch 0–1 m, Defect CRACK `1b79c3a9-0065-40f0-9ef3-2537890834d1` nguồn SURVEY). Duyệt qua UI Giám sát (POST approve 201); giao Crew `Synthetic crew-a` qua màn Giao việc (POST assign 201, nguồn Survey lấy từ Defect). Lần đề xuất thứ hai cùng phạm vi bị BE chặn 409 `active_scope_conflict` (không tạo dữ liệu).
+- **Nghĩa vụ an toàn tạm thời + biện pháp (UI PM-A):** POST `temporary-safety-obligations` 201 (lý trình 40.25–40.5 m, lệch 0–0.5 m, nghĩa vụ `7f9a129c…`), rồi POST `safety-measures` 201 (biện pháp `af70b783…`, Crew đúng binding). Không hoàn tác.
+- **FIELD loại đo 1–6 (API-created bằng phiên PM-A, nhãn `[TEST-FE G4]`, không ghi DB):** REPORTER: loại 5 (`49729a69…`, `fef1231a…`), 2 (`8f1ded70…`, `1773622d…`), 3 (`6d702242…`, `22685a35…`), 4 (`95b40714…`, `e2832572…`), 6 (`d0be267f…`), 1 (`89a7779a…`). SURVEY (Defect `1b79c3a9`, surveyId `4752e823-be37-4298-878f-db4b37b697d9` lấy từ dataset thật): loại 5 (`0f0661a6…`), 6 (`9a6364c9…`), 1 (`9d9f00c0…`). Một số lần REPORTER trên Defect nguồn AI trả 409 `source_not_ready` (guard nguồn, không liên quan loại đo); tất cả đều là task `PRE_MEASUREMENT` giao `Synthetic crew-a`, tạo nhiều lần do chạy lặp script.
+- **Hồ sơ bàn giao SBX-B (UI Giám sát):** số hiệu `TEST-FE-G4-BB`, ngày 2026-10-01, tệp `test-handover.pdf`, hồ sơ `ca7b3028-9a78-4f37-8e58-3ca519f2e04c` (tạo mới vì kiểm kê trống). SBX-A vẫn chưa có hồ sơ bàn giao.
+- **Chuyển nghĩa vụ A → B (UI Giám sát, không hoàn tác):** nghĩa vụ `041077c7-3c66-496b-8791-cd5b94f02952` (gói `1a76a722`, hạng mục `70060978`, đã giao Crew và có biện pháp an toàn). Phát hành đề nghị `6c04a72a-9a42-484c-b555-2ac1c2f7290e` (POST obligation-transfers 201), tiếp nhận `9b034471-304f-4ece-8881-4c7e1dbde162` (POST obligation-transfer-acceptances 201). Sau chuyển PM-B đọc planning của gói này nhận 404 `not_found` (xem báo cáo G4, lỗi BE).
+- **Ngoại tuyến:** không tạo dữ liệu (BLOCKED: seed không có gói/thiết bị do Mobile tạo; gói chuẩn bị cần chữ ký khóa thiết bị).
+- Script: `tools/e2e/g4-*.mjs`, `g4-batch.sh`; mỗi lần chạy `g4-field.mjs api` tạo thêm task FIELD `[TEST-FE G4]`.
