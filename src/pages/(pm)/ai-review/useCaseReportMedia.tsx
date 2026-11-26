@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { caseReportService, type CaseReportDetail, type CaseReportEvidence } from '../../../api/services/caseReportService'
 import { useAuthStore } from '../../../store/authStore'
 import { Icon } from '../../../components/ui/Icon'
@@ -27,6 +27,8 @@ const evidenceKey = (reportId: string, evidence: CaseReportEvidence) => `${repor
 
 export function useReportMediaState(caseId: string, caseVersion = '') {
   const epoch = useAuthStore(state => state.authEpoch), scope = `${epoch}:${caseId}:${caseVersion}`
+  const [links, setLinks] = useState<{scope:string; values:Record<string,{defectId:string;decisionId:string}>}>({scope:'',values:{}})
+  const confirmLink = useCallback((reportId:string,defectId:string,decisionId:string) => setLinks(old => old.scope===scope && old.values[reportId]?.decisionId===decisionId ? old : {scope,values:{...(old.scope===scope?old.values:{}),[reportId]:{defectId,decisionId}}}),[scope])
   const [snapshot, setSnapshot] = useState<{scope: string; reports: CaseReportDetail[]; error: string} | null>(null)
   const [reload, setReload] = useState(0), [choice, setChoice] = useState<{scope: string; key: string} | null>(null)
   const [image, setImage] = useState<{scope: string; key: string; url: string; error: string} | null>(null)
@@ -55,7 +57,7 @@ export function useReportMediaState(caseId: string, caseVersion = '') {
     return () => { controller.abort(); if (url) URL.revokeObjectURL(url) }
   }, [scope, key, selected?.evidence.contentPath, imageReload])
   const activeImage = image?.scope === scope && image.key === key ? image : null
-  return {caseId, reports, mapRequest: mapRequest?.scope === scope && mapRequest.key === key ? mapRequest : null,
+  return {caseId, reports, confirmedLinks: links.scope===scope?links.values:{}, confirmLink, mapRequest: mapRequest?.scope === scope && mapRequest.key === key ? mapRequest : null,
     navigateToPhoto: () => { if (selected && evidenceGps(selected.evidence).located) setMapRequest(old => ({ scope, key, serial: (old?.serial || 0) + 1 })) }, reportsLoading: !!caseId && !current, reportsError: current?.error || '', selected,
     url: activeImage?.url || '', imageLoading: !!selected && !activeImage, imageError: activeImage?.error || '',
     select: (reportId: string, item: CaseReportEvidence) => setChoice({scope, key: evidenceKey(reportId, item)}),
@@ -93,4 +95,9 @@ export function reportSourceLabelForCase(caseId: string, media: CaseReportMedia 
   const reports = media.selected ? media.reports.filter(r => r.reportId === media.selected!.reportId) : media.reports
   const uuid = (value: unknown) => typeof value === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value) && !/^0{8}-0{4}-0{4}-0{4}-0{12}$/.test(value)
   return reports.length && reports.every(r => r.caseId === caseId && uuid(r.reportId) && uuid(r.reporterUserId)) ? 'Phản ánh từ người dân' : fallback
+}
+
+export function useConfirmedReportLink(caseId:string, reportIds?:string[]) {
+  const media=useCaseReportMedia()
+  return !!reportIds?.length && media?.caseId===caseId && reportIds.every(id=>!!media.confirmedLinks[id])
 }

@@ -1,3 +1,4 @@
+import { useConfirmedReportLink } from './useCaseReportMedia'
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
@@ -37,6 +38,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
   onOpenMergeModal,
   onUnlinkReport
 }) => {
+  const linkedReport = useConfirmedReportLink(item.id, item.report_ids)
   const isSelected = item.id === selectedCaseId
   const isUnassigned = !item.project_id || item.project_id === ''
   const navigate = useNavigate()
@@ -250,7 +252,7 @@ export const CitizenTriageRow: React.FC<CitizenTriageRowProps> = ({
               onClick={handleOpenDetail}
               className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-gold hover:text-white text-slate-700 text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
             >
-              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion || linkedReport || (item.report_ids?.length===1&&item.decision_recorded&&item.decision_kind==='LINK_EXISTING') ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
             {!isSupervisor && item.cluster_duplicates &&

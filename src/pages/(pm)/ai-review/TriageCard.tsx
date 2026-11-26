@@ -1,3 +1,4 @@
+import { useConfirmedReportLink } from './useCaseReportMedia'
 import React, { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
@@ -35,6 +36,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
   onOpenMergeModal,
   onUnlinkReport
 }) => {
+  const linkedReport = useConfirmedReportLink(item.id, item.report_ids)
   const [isHovered, setIsHovered] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -390,7 +392,7 @@ export const TriageCard: React.FC<TriageCardProps> = ({
               }}
               className="px-3.5 py-1.5 rounded-xl bg-brand-gold hover:bg-brand-goldDark text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             >
-              <span>{isSupervisor || item.conclusion ? 'Xem chi tiết' : 'Thẩm định'}</span>
+              <span>{isSupervisor || item.conclusion || linkedReport || (item.report_ids?.length===1&&item.decision_recorded&&item.decision_kind==='LINK_EXISTING') ? 'Xem chi tiết' : 'Thẩm định'}</span>
               <Icon name="arrow_forward" size={13} />
             </button>
           </div>

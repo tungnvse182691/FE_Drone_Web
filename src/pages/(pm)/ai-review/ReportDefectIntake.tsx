@@ -21,7 +21,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const reportId = reports.length === 1 ? reports[0].reportId : sourceChoice?.scope === caseScope ? sourceChoice.reportId : reports.some(r=>r.reportId===query?.get('reportId'))?query!.get('reportId')!:''
   const report = reports.find(r => r.reportId === reportId)
   const scope = `${auth.authEpoch}:${auth.user?.id}:${selectedCase.id}:${selectedCase.project_id}:${reportId}`
-  type Match = {defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null}
+  type Match = {detail?: { id: string; defectTypeCode?: string; severity?: string; status?: string; description?: string; roadSectionVersionId?: string; geometry?: {srid: number; wkt: string} }; detailError?: string; defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null}
   const [expandState, setExpandState] = useState<{scope: string; on: boolean}>({scope: '', on: false})
   const [read, setRead] = useState<{scope: string; sourceVersion?: string; geometryVersion?: string; matches?: Match[]; error?: string} | null>(null)
   // Quyết định nguồn Report: KEEP_NEW (tạo Defect), LINK_EXISTING (gắn Defect hiện có), REJECT (loại nguồn Report; KHÁC kết luận Case NO_DEFECT).
@@ -41,13 +41,23 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       do {
         const {data} = await apiClient.get(`/projects/${selectedCase.project_id}/candidates`, {params: {sourceKind: 'REPORT', sourceId: report.reportId, pageSize: 50, cursor, expand: expandState.scope === scope && expandState.on ? true : undefined}, signal: controller.signal})
         if (controller.signal.aborted || useAuthStore.getState().authEpoch !== auth.authEpoch) return
-        if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Candidate thiếu hoặc sai Report/phiên bản nguồn/geometryVersion; chưa ghi nhận khiếm khuyết.')
+        if (data?.source?.kind !== 'REPORT' || data.source.id !== report.reportId || typeof data.source.version !== 'string' || !data.source.version || typeof data.geometryVersion !== 'string' || !data.geometryVersion || !Array.isArray(data.items) || data.nextCursor != null && (typeof data.nextCursor !== 'string' || !data.nextCursor)) throw new Error('Nguồn đối chiếu chưa đầy đủ hoặc đã thay đổi; chưa thể gửi quyết định.')
         if (sourceVersion && (sourceVersion !== data.source.version || geometryVersion !== data.geometryVersion)) throw new Error('Phiên bản candidate thay đổi giữa các trang; cần đọc lại.')
         sourceVersion = data.source.version; geometryVersion = data.geometryVersion; matches.push(...data.items.filter((m: any) => typeof m?.defectId === 'string')); cursor = data.nextCursor || undefined
         if (cursor && seen.has(cursor)) throw new Error('Cursor candidate lặp; chưa đọc đầy đủ nguồn.')
         if (cursor) seen.add(cursor)
       } while (cursor)
-      if (!controller.signal.aborted) setRead({scope, sourceVersion, geometryVersion, matches})
+      const detailed = await Promise.all(matches.map(async m => {
+        try {
+          const { data: d } = await apiClient.get(`/projects/${selectedCase.project_id}/defects/${m.defectId}`, { signal: controller.signal })
+          if (d.id !== m.defectId || d.projectId !== selectedCase.project_id) throw new Error('Không đọc được đúng khiếm khuyết đích.')
+          return { ...m, detail: d }
+        } catch (e: any) {
+          if (controller.signal.aborted) throw e
+          return { ...m, detailError: 'Không đọc được thông tin khiếm khuyết đích.' }
+        }
+      }))
+      if (!controller.signal.aborted) setRead({scope, sourceVersion, geometryVersion, matches: detailed})
     })().catch(e => { if (!controller.signal.aborted && useAuthStore.getState().authEpoch === auth.authEpoch) setRead({scope, error: e?.response ? `Không đọc được nguồn Report: HTTP ${e.response.status} ${e.response.data?.code || ''}${e.response.data?.correlationId ? ` · Mã đối chiếu ${e.response.data.correlationId}` : ''}` : e.message || 'Không đọc được nguồn Report.'}) })
     return () => controller.abort()
   }, [scope, allowed, !!report, media?.reportsError, media?.reportsLoading, selectedCase.version, reload, expandState.scope === scope && expandState.on])
@@ -83,6 +93,11 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     return()=>c.abort()
   },[scope,referenceId,reload])
   const currentRecorded=recorded?.scope===scope?recorded:null
+  const linked = media?.caseId===selectedCase.id ? media.confirmedLinks?.[reportId] : undefined
+  useEffect(()=>{
+    const r=currentRecorded?.result
+    if(r?.decision.decision==='LINK_EXISTING'&&r.defect&&r.decision.sourceId===reportId)media?.confirmLink(reportId,r.defect.id,r.decision.id)
+  },[currentRecorded?.result,reportId,media?.confirmLink])
   const kindNow=kindState.scope===scope?kindState:{scope,kind:'KEEP_NEW' as const,targetId:'',shown:false}
   const kind=kindNow.kind,targetId=kindNow.targetId,showErrors=kindNow.shown
   const changeKind=(patch:Partial<{kind:'KEEP_NEW'|'LINK_EXISTING'|'REJECT';targetId:string;shown:boolean}>)=>setKindState({...kindNow,scope,...patch})
@@ -99,18 +114,21 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   if(kind==='LINK_EXISTING'){
     if(!targetId)fieldErrors.target='Chọn Defect đích từ danh sách máy chủ trả về.';else if(!target?.version)fieldErrors.target='Máy chủ không trả phiên bản của Defect đích; không thể gắn.'
   }
-  const canSave=!referenceId&&!currentRecorded?.result&&!heldDecision&&!journalError&&allowed&&!!report&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&!commandBusy&&!Object.keys(fieldErrors).length&&(kind!=='KEEP_NEW'||!currentPackage?.error)
+  const readingReference=!!referenceId&&!currentRecorded
+  const canSave=!readingReference&&!linked&&!currentRecorded?.loading&&!currentRecorded?.result&&!heldDecision&&!journalError&&allowed&&!!report&&!!read&&read.scope===scope&&!read.error&&!!read.sourceVersion&&!commandBusy&&!Object.keys(fieldErrors).length&&(kind!=='KEEP_NEW'||!currentPackage?.error)
   const execute=async()=>{
-    if(!selectedCase.project_id||!report||commandBusy||referenceId||currentRecorded?.result)return
+    if(!selectedCase.project_id||!report||commandBusy||readingReference||linked||currentRecorded?.loading||currentRecorded?.result)return
     const project=selectedCase.project_id,reportId=report.reportId,start=scope
     setCommand({scope:start,busy:true,error:''})
     try{const held=reportKeepNewCommands.pending(project,reportId)
       if(kind!=='KEEP_NEW'&&!held){
         if(!canSave)throw new Error('Chưa đủ nguồn hoặc dữ liệu form.')
         const dec=await surveyService.decideCandidate(project,{sourceKind:'REPORT',sourceId:reportId,decision:kind,reason:decisionReason.trim(),sourceVersion:read!.sourceVersion!,geometryVersion:read!.geometryVersion!,...(kind==='LINK_EXISTING'?{targetDefectId:targetId,targetVersion:target!.version!}:{})})
+        if(dec.sourceKind!=='REPORT'||dec.sourceId!==reportId||dec.decision!==kind||(kind==='LINK_EXISTING'&&dec.defectId!==targetId))throw new Error('Kết quả máy chủ không khớp phản ánh và khiếm khuyết đã chọn.')
         reportKeepNewCommands.recordReference(project,reportId,dec.id,kind,dec.defectId)
         const result=await reportKeepNewCommands.readDecision(project,reportId,dec.id)
-        if(canceled.current===start){setRecorded({scope:start,result:result||undefined});setCommand({scope:start,busy:false,error:''});onRecorded?.(kind==='REJECT'?'Đã từ chối nguồn Report (không phải kết luận NO_DEFECT của Case)':'Đã gắn Report vào khiếm khuyết hiện có')}
+        if(!result||(kind==='LINK_EXISTING'&&(result.decision.decision!=='LINK_EXISTING'||result.defect?.id!==targetId)))throw new Error('Chưa đọc lại được đúng liên kết đã lưu; không gửi quyết định mới.')
+        if(canceled.current===start){setRecorded({scope:start,result:result||undefined});setCommand({scope:start,busy:false,error:''});onRecorded?.(kind==='REJECT'?'Đã từ chối phản ánh nguồn':`Đã liên kết vào khiếm khuyết DEF-${result!.decision.defectId!.slice(0,8).toUpperCase()}`)}
         return
       }
       if(!held&&!canSave)throw new Error('Chưa đủ nguồn, phân loại hoặc tuyến.');
@@ -126,7 +144,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     : media?.reportsError ? `Không đọc được Report: ${media.reportsError}` : !report ? 'Cần đọc và chọn Report thuộc đúng hồ sơ.'
     : !current ? 'Đang kiểm tra nguồn Report…' : current.error || (sourceStale || packageMismatch ? 'Phiên bản nguồn hoặc hình học không còn khớp; hãy tải lại dữ liệu ghi nhận.' : 'Đã đọc phiên bản nguồn Report và hình học từ máy chủ.')
   const err=(key:string)=>showErrors&&fieldErrors[key]?<span role="alert" data-testid={`err-${key}`} className="text-rose-700 font-semibold">{fieldErrors[key]}</span>:null
-  const kindLabel=currentRecorded?.result?.decision.decision||(referenceId?savedReference?.decision:'')||'KEEP_NEW'
+  const kindLabel=currentRecorded?.result?.decision.decision||'KEEP_NEW'
 
   const reportSelector=<label className="grid min-w-0 gap-1">
     Phản ánh nguồn
@@ -135,10 +153,11 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt && Number.isFinite(Date.parse(r.receivedAt)) ? new Date(r.receivedAt).toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'}) : 'Chưa có ngày tiếp nhận'}</option>)}
     </select>
   </label>
-  if(referenceId||currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+  if(linked&&!currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">{reportSelector}<p>Đã liên kết vào khiếm khuyết DEF-{linked.defectId.slice(0,8).toUpperCase()}</p>{currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}<Link className="underline" to={`/pm/defects/${linked.defectId}/verify`}>Xem khiếm khuyết đã liên kết</Link></div>
+  if(currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
     <p className="font-bold text-slate-800">Kết quả ghi nhận phản ánh</p>
     <ul data-testid="source-state" className="list-disc pl-4 text-slate-700">
-      <li>Liên kết nguồn (Report → Defect): {currentRecorded?.result ? (currentRecorded.result.decision.decision === 'REJECT' ? 'Đã từ chối nguồn Report (không có Defect)' : `${currentRecorded.result.decision.decision} → #DEF-${(currentRecorded.result.decision.defectId || '').slice(0, 8).toUpperCase()} (Defect: ${currentRecorded.result.defect?.status || 'chưa đọc'})`) : currentRecorded?.loading ? 'đang đọc từ máy chủ…' : 'chưa đọc được từ máy chủ'}</li>
+      <li>{kindLabel==='LINK_EXISTING'?'Đã liên kết vào khiếm khuyết':kindLabel==='REJECT'?'Đã từ chối phản ánh nguồn':'Đã ghi nhận khiếm khuyết'}{currentRecorded.result.defect ? ` DEF-${currentRecorded.result.defect.id.slice(0,8).toUpperCase()}` : ''}</li>
       <li>Kết luận Case: {selectedCase.case_status === 'CONCLUDED' ? 'Đã có kết luận' : 'Chưa kết luận'}</li>
       <li>Kết quả chưa tự công bố cho người dân từ thao tác liên kết.</li>
     </ul>
@@ -148,6 +167,7 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     {currentRecorded?.result&&<>
       {currentRecorded.result.defect?<p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}{currentRecorded.result.decision.decision==='LINK_EXISTING'?' · Report đã được gắn vào Defect hiện có':''}</p>:<p>Quyết định REJECT nguồn Report: không tạo và không gắn Defect. Đây KHÔNG phải kết luận NO_DEFECT của Case.</p>}
       <p>{kindLabel==='REJECT'?'Nguồn Report đã bị từ chối; ':'Nguồn đã ghi nhận; không tạo quyết định mới. '}Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
+      {currentRecorded.result.defect&&<Link className="inline-block underline" to={`/pm/defects/${currentRecorded.result.defect.id}/verify`}>Xem khiếm khuyết DEF-{currentRecorded.result.defect.id.slice(0,8).toUpperCase()}</Link>}
       {currentRecorded.result.defect&&<div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>}
       <Link className="inline-block underline" to={`/pm/ai-inbox?${new URLSearchParams({projectId:selectedCase.project_id!,caseId:selectedCase.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Liên kết đọc lại kết quả đã lưu</Link>
     </>}
@@ -161,7 +181,9 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
     {reportSelector}
-    {allowed && !!report && selectedCase.project_id && <ReportMatchingPanel projectId={selectedCase.project_id} reportId={report.reportId} evidenceId={media?.selected?.reportId === report.reportId ? media.selected.evidence.evidenceId : null} sourceVersion={current?.sourceVersion} geometryVersion={current?.geometryVersion} matches={current?.matches} loading={!current} error={current?.error} expanded={expandState.scope === scope && expandState.on} onExpand={() => setExpandState({scope, on: true})} onChanged={() => setReload(n => n + 1)} />}
+    {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
+    {!referenceId&&<p className="text-slate-600">Chưa khôi phục được kết quả xử lý trước đó từ máy chủ.</p>}
+    {allowed && !!report && selectedCase.project_id && <ReportMatchingPanel typeNames={Object.fromEntries((activeCatalog?.items||[]).map(t=>[t.code,t.name]))} sourceDescription={report.description} sourceReceivedAt={report.receivedAt} targetNames={Object.fromEntries(roads.map(r=>[r.currentVersionId,r.name || r.code]))} projectId={selectedCase.project_id} reportId={report.reportId} evidenceId={media?.selected?.reportId === report.reportId ? media.selected.evidence.evidenceId : null} sourceVersion={current?.sourceVersion} geometryVersion={current?.geometryVersion} matches={current?.matches} loading={!current} error={current?.error} expanded={expandState.scope === scope && expandState.on} onExpand={() => setExpandState({scope, on: true})} onChanged={() => setReload(n => n + 1)} />}
     <label className="grid min-w-0 gap-1">Hướng xử lý
       <select aria-label="Loại quyết định nguồn Report" value={kind} disabled={!allowed||commandBusy||!!heldDecision} onChange={e=>changeKind({kind:e.target.value as 'KEEP_NEW'|'LINK_EXISTING'|'REJECT',targetId:'',shown:false})} className="rg-field w-full min-w-0 max-w-full">
         <option value="KEEP_NEW">Ghi nhận khiếm khuyết mới</option>
@@ -173,8 +195,9 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     {kind==='LINK_EXISTING'&&<label className="grid min-w-0 gap-1">Khiếm khuyết cần liên kết
       <select aria-label="Khiếm khuyết đích" value={targetId} disabled={!allowed||commandBusy||!current?.matches?.length} onChange={e=>changeKind({targetId:e.target.value})} className="rg-field w-full min-w-0 max-w-full">
         <option value="">{!current?'Đang đọc ứng viên…':current.matches?.length?'Chọn khiếm khuyết đích':'Chưa có khiếm khuyết để liên kết'}</option>
-        {current?.matches?.map(m=><option key={m.defectId} value={m.defectId}>#DEF-{m.defectId.slice(0,8).toUpperCase()}{typeof m.distanceMeters==='number'&&Number.isFinite(m.distanceMeters)?` · cách ${m.distanceMeters.toFixed(1)} m`:''}</option>)}
+        {current?.matches?.map(m=><option key={m.defectId} value={m.defectId}>DEF-{m.defectId.slice(0,8).toUpperCase()}{m.detail?.defectTypeCode ? ` · ${activeCatalog?.items.find(t=>t.code===m.detail!.defectTypeCode)?.name || m.detail.defectTypeCode}` : ''}{m.detail?.status ? ` · ${m.detail.status}` : ''}</option>)}
       </select>{err('target')}
+      {targetId && <span>Đích đang chọn: DEF-{targetId.slice(0,8).toUpperCase()}. Chưa liên kết cho đến khi máy chủ xác nhận.</span>}
     </label>}
     {kind==='KEEP_NEW'&&<div className="grid min-w-0 grid-cols-1 gap-2">
       <label className="grid min-w-0 gap-1">

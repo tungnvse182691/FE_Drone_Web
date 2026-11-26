@@ -2,12 +2,20 @@ import React, { useEffect, useState } from 'react'
 import { reportMatchingService, matchingError, type MatchingLocationView } from '../../../api/services/reportMatchingService'
 import { useAuthStore } from '../../../store/authStore'
 
-export interface MatchRow { defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null; historySummary?: { sourceLinkCount?: number } | null }
+export interface MatchRow { detail?: {defectTypeCode?: string; status?: string; description?: string; roadSectionVersionId?: string; geometry?:{srid:number;wkt:string}}; detailError?: string; defectId: string; version?: string | null; distanceMeters?: number | null; accuracyMeters?: number | null; distanceStatus?: string | null; distanceMethod?: string | null; overlapStatus?: string | null; reasonCodes?: string[] | null; historySummary?: { sourceLinkCount?: number } | null }
 const STATUS_LABEL: Record<string, string> = { GPS_MISSING: 'Ảnh thiếu GPS', GPS_UNCONFIRMED: 'Có GPS nhưng PM chưa xác nhận', GPS_CONFIRMED: 'PM đã xác nhận GPS ảnh', SCOPE_CONFIRMED: 'PM đã xác nhận phạm vi segment', MATCHING_LOCATION_STALE: 'Cần xác nhận lại vị trí' }
 
+function pointLocation(geometry?: {srid:number;wkt:string}) {
+  if(geometry?.srid!==4326)return null
+  const point=/^POINT\s*\(\s*([+-]?[\d.eE]+)\s+([+-]?[\d.eE]+)\s*\)$/i.exec(geometry.wkt)
+  if(!point)return null
+  const lng=Number(point[1]),lat=Number(point[2])
+  return Number.isFinite(lng)&&Number.isFinite(lat)&&Math.abs(lng)<=180&&Math.abs(lat)<=90?`${lat}, ${lng}`:null
+}
+
 // B1: matching-location confirmation and explicit project-wide candidate search.
-export function ReportMatchingPanel({ projectId, reportId, evidenceId, matches, loading, error, expanded, onExpand, onChanged }: {
-  projectId: string; reportId: string; evidenceId: string | null; sourceVersion?: string; geometryVersion?: string
+export function ReportMatchingPanel({ projectId, reportId, evidenceId, sourceDescription, sourceReceivedAt, targetNames, typeNames, matches, loading, error, expanded, onExpand, onChanged }: {
+  typeNames?:Record<string,string>; sourceDescription?: string; sourceReceivedAt?: string; targetNames?: Record<string,string>; projectId: string; reportId: string; evidenceId: string | null; sourceVersion?: string; geometryVersion?: string
   matches?: MatchRow[]; loading: boolean; error?: string; expanded: boolean; onExpand: () => void; onChanged: () => void
 }) {
   const epoch = useAuthStore(s => s.authEpoch)
@@ -31,15 +39,18 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, matches, 
       const held = reportMatchingService.pending(projectId, reportId)
       const input = replay && held ? held.body : { sourceVersion: v!.data!.sourceVersion, geometryVersion: v!.data!.geometryVersion, evidenceId, segmentIds: [], reason }
       const fresh = await reportMatchingService.confirm(projectId, reportId, input)
-      setView({ scope, data: fresh }); setOk('Đã lưu xác nhận vị trí ảnh và đọc lại từ máy chủ.'); onChanged()
+      setView({ scope, data: fresh }); setOk('Đã xác nhận vị trí ảnh. Chưa xác nhận trùng hoặc liên kết khiếm khuyết.'); onChanged()
     } catch (e) { setErr(matchingError(e)); setReload(n => n) } finally { setBusy(false) }
   }
   const refs = matches || []
   return <div className="rounded-lg border border-slate-200 bg-white p-2 space-y-2" data-testid="matching-panel">
     <p className="font-semibold text-slate-800">Đối chiếu khiếm khuyết đã có</p>
+    <p>Phản ánh nguồn RPT-{reportId.slice(0,8).toUpperCase()}{sourceReceivedAt && Number.isFinite(Date.parse(sourceReceivedAt)) ? ` · ${new Date(sourceReceivedAt).toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'})}` : ''}</p>
+    {sourceDescription && <p className="whitespace-pre-wrap">{sourceDescription}</p>}
     {!v && <p role="status" className="text-slate-500">Đang đọc xác nhận vị trí…</p>}
     {v?.error && <p role="alert" className="text-rose-700">{v.error} <button type="button" className="underline" onClick={() => setReload(n => n + 1)}>Thử lại</button></p>}
     {v?.data && <>
+      <p className="text-slate-600">Xác nhận vị trí ảnh chưa đồng nghĩa xác nhận trùng hoặc đã liên kết.</p>
       <p data-testid="matching-status" className="text-slate-600">{STATUS_LABEL[v.data.status] || 'Chưa xác nhận vị trí'}</p>
       {hasGps && !pending && v.data.confirmation?.evidenceId !== evidenceId && <div className="space-y-1">
         <input aria-label="Lý do xác nhận vị trí ảnh" value={reason} maxLength={1000} onChange={e => setReason(e.target.value)} placeholder="Lý do xác nhận vị trí ảnh" className="rg-field w-full" />
@@ -51,12 +62,25 @@ export function ReportMatchingPanel({ projectId, reportId, evidenceId, matches, 
     {err && <p role="alert" className="text-rose-700">{err}</p>}{ok && <p role="status" className="text-emerald-700">{ok}</p>}
     <div className="border-t pt-2 space-y-1" data-testid="matching-results">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-slate-600">{expanded ? 'Đã tìm toàn dự án' : 'Khiếm khuyết trong phạm vi đối chiếu'}</p>
+        <p className="text-slate-600">{expanded ? 'Đối chiếu mở rộng trong cùng dự án; không phải kết luận trùng' : 'Kết quả matching theo phạm vi vị trí nguồn'}</p>
         {!expanded && <button type="button" disabled={loading} onClick={onExpand} className="rg-btn text-xs" data-testid="matching-expand">Tìm trong dự án</button>}
       </div>
       {loading && <p role="status" className="text-slate-500">Đang tìm khiếm khuyết…</p>}
       {error && <p role="alert" className="text-rose-700">{error}</p>}
-      {!loading && !error && <p data-testid={refs.length === 0 ? 'matching-empty' : undefined} className="text-slate-600">{refs.length ? `Có ${refs.length} khiếm khuyết để đối chiếu. Chọn “Gắn vào khiếm khuyết đã có” bên dưới để liên kết.` : 'Chưa tìm thấy khiếm khuyết trong phạm vi đã tìm.'}</p>}
+      {!loading && !error && <>
+        {!refs.length && <p data-testid="matching-empty">Chưa tìm thấy khiếm khuyết trong phạm vi đã tìm.</p>}
+        {refs.map(m=><div key={m.defectId} className="space-y-1 border-t pt-2">
+          <p className="font-semibold">Khiếm khuyết DEF-{m.defectId.slice(0,8).toUpperCase()}</p>
+          {m.detailError && <p role="alert">{m.detailError}</p>}
+          {m.detail?.description && <p>{m.detail.description}</p>}
+          {m.detail?.defectTypeCode && <p>Loại: {typeNames?.[m.detail.defectTypeCode]||m.detail.defectTypeCode}</p>}
+          {m.detail?.status && <p>Trạng thái: {m.detail.status}</p>}
+          {pointLocation(m.detail?.geometry) && <p>Vị trí khiếm khuyết: {pointLocation(m.detail?.geometry)}</p>}
+          {!m.detail?.description && !m.detailError && <p className="text-slate-500">Hồ sơ đọc được chưa cung cấp mô tả.</p>}
+          {m.detail?.roadSectionVersionId && targetNames?.[m.detail.roadSectionVersionId] ? <p>Tuyến: {targetNames[m.detail.roadSectionVersionId]}</p> : !m.detailError && <p className="text-slate-500">Chưa có vị trí tuyến đọc được để hiển thị.</p>}
+          {typeof m.distanceMeters==='number' && Number.isFinite(m.distanceMeters) && m.distanceMeters>=0 && <p>Khoảng cách theo API: {m.distanceMeters.toLocaleString('vi-VN',{maximumFractionDigits:1})} m</p>}
+        </div>)}
+      </>}
     </div>
   </div>
 }
