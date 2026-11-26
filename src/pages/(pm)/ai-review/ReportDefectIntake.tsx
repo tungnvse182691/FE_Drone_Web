@@ -125,7 +125,6 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
   const reason = !allowed ? 'Chỉ PM của dự án được ghi nhận khiếm khuyết từ Case OPEN đã phân công.'
     : media?.reportsError ? `Không đọc được Report: ${media.reportsError}` : !report ? 'Cần đọc và chọn Report thuộc đúng hồ sơ.'
     : !current ? 'Đang kiểm tra nguồn Report…' : current.error || (sourceStale || packageMismatch ? 'Phiên bản nguồn hoặc hình học không còn khớp; hãy tải lại dữ liệu ghi nhận.' : 'Đã đọc phiên bản nguồn Report và hình học từ máy chủ.')
-  const missing = [!report?'phản ánh nguồn':'',!current?.sourceVersion?'phiên bản nguồn':'',!current?.geometryVersion?'phiên bản hình học':'',...Object.values(fieldErrors)].filter(Boolean).join('; ')
   const err=(key:string)=>showErrors&&fieldErrors[key]?<span role="alert" data-testid={`err-${key}`} className="text-rose-700 font-semibold">{fieldErrors[key]}</span>:null
   const kindLabel=currentRecorded?.result?.decision.decision||(referenceId?savedReference?.decision:'')||'KEEP_NEW'
 
@@ -133,22 +132,20 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     Phản ánh nguồn
     <select aria-label="Report nguồn ghi nhận khiếm khuyết" value={reportId} disabled={commandBusy || !!media?.reportsLoading || !!media?.reportsError || !reports.length} onChange={event=>setSourceChoice({scope:caseScope,reportId:event.target.value})} className="rg-field w-full min-w-0 max-w-full">
       {reports.length!==1&&<option value="">Chọn phản ánh nguồn</option>}
-      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt||'Chưa có ngày tiếp nhận'}</option>)}
+      {reports.map((r,i)=><option key={r.reportId} value={r.reportId}>Phản ánh {i+1} · {r.receivedAt && Number.isFinite(Date.parse(r.receivedAt)) ? new Date(r.receivedAt).toLocaleString('vi-VN', {timeZone:'Asia/Ho_Chi_Minh'}) : 'Chưa có ngày tiếp nhận'}</option>)}
     </select>
-    <span className="text-slate-600 break-words">Phản ánh nguồn không đổi khi chuyển ảnh đang xem.</span>
   </label>
   if(referenceId||currentRecorded?.result)return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
     <p className="font-bold text-slate-800">Kết quả ghi nhận phản ánh</p>
     <ul data-testid="source-state" className="list-disc pl-4 text-slate-700">
       <li>Liên kết nguồn (Report → Defect): {currentRecorded?.result ? (currentRecorded.result.decision.decision === 'REJECT' ? 'Đã từ chối nguồn Report (không có Defect)' : `${currentRecorded.result.decision.decision} → #DEF-${(currentRecorded.result.decision.defectId || '').slice(0, 8).toUpperCase()} (Defect: ${currentRecorded.result.defect?.status || 'chưa đọc'})`) : currentRecorded?.loading ? 'đang đọc từ máy chủ…' : 'chưa đọc được từ máy chủ'}</li>
-      <li>Kết luận Case: {selectedCase.case_status === 'CONCLUDED' ? 'Đã có kết luận' : 'Chưa kết luận (ghi nhận nguồn không phải kết luận Case; Case.defectIds chỉ cập nhật khi có kết luận)'}</li>
-      <li>Công bố cho người dân: thao tác riêng, không suy ra từ liên kết nguồn.</li>
+      <li>Kết luận Case: {selectedCase.case_status === 'CONCLUDED' ? 'Đã có kết luận' : 'Chưa kết luận'}</li>
+      <li>Kết quả chưa tự công bố cho người dân từ thao tác liên kết.</li>
     </ul>
     {reportSelector}
     {currentRecorded?.loading&&<p role="status">Đang đọc quyết định và khiếm khuyết từ máy chủ…</p>}
     {currentRecorded?.error&&<p role="alert">{currentRecorded.error}</p>}
     {currentRecorded?.result&&<>
-      <p>Đã đọc quyết định ghi nhận và khiếm khuyết tương ứng từ máy chủ.</p>
       {currentRecorded.result.defect?<p>Trạng thái Defect: {currentRecorded.result.defect.status} · Mức độ: {currentRecorded.result.defect.severity}{currentRecorded.result.decision.decision==='LINK_EXISTING'?' · Report đã được gắn vào Defect hiện có':''}</p>:<p>Quyết định REJECT nguồn Report: không tạo và không gắn Defect. Đây KHÔNG phải kết luận NO_DEFECT của Case.</p>}
       <p>{kindLabel==='REJECT'?'Nguồn Report đã bị từ chối; ':'Nguồn đã ghi nhận; không tạo quyết định mới. '}Ghi nhận không đồng nghĩa đã xác minh kỹ thuật.</p>
       {currentRecorded.result.defect&&<div className="flex flex-wrap gap-2"><Link className="border rounded-lg px-3 py-2" to={`/pm/field-tasks?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,reportId,decisionId:currentRecorded.result.decision.id})}`}>Lập phiếu hiện trường cho khiếm khuyết này</Link><Link className="border rounded-lg px-3 py-2" to={`/pm/fast-track?${new URLSearchParams({projectId:selectedCase.project_id!,defectId:currentRecorded.result.defect.id,open:'prepare'})}`}>Lập phương án Fast Track</Link></div>}
@@ -158,25 +155,25 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     <button type="button" disabled={!!currentRecorded?.loading} onClick={()=>setReload(n=>n+1)} className="text-xs underline">Đọc lại kết quả ghi nhận</button>
   </div>
   return <div className="min-w-0 max-w-full space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-    <p className="font-bold text-slate-800">Quyết định nguồn Report</p>
+    <p className="font-bold text-slate-800">Xử lý phản ánh</p>
     <div className="flex flex-wrap items-center gap-2">
-      <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{reason}</p>
+      {(!current || current.error || media?.reportsError || sourceStale || packageMismatch) && <p role={current?.error || media?.reportsError || sourceStale || packageMismatch ? 'alert' : 'status'} className="text-slate-600 break-words">{reason}</p>}
       {(current?.error || sourceStale || packageMismatch) && <button type="button" disabled={!allowed || !report || commandBusy} onClick={() => { if (sourceStale) setCommand(old => ({...old, error: ''})); setReload(n => n + 1) }} className="text-xs underline">Thử tải lại dữ liệu ghi nhận</button>}
     </div>
     {reportSelector}
     {allowed && !!report && selectedCase.project_id && <ReportMatchingPanel projectId={selectedCase.project_id} reportId={report.reportId} evidenceId={media?.selected?.reportId === report.reportId ? media.selected.evidence.evidenceId : null} sourceVersion={current?.sourceVersion} geometryVersion={current?.geometryVersion} matches={current?.matches} loading={!current} error={current?.error} expanded={expandState.scope === scope && expandState.on} onExpand={() => setExpandState({scope, on: true})} onChanged={() => setReload(n => n + 1)} />}
-    <label className="grid min-w-0 gap-1">Loại quyết định nguồn Report
+    <label className="grid min-w-0 gap-1">Hướng xử lý
       <select aria-label="Loại quyết định nguồn Report" value={kind} disabled={!allowed||commandBusy||!!heldDecision} onChange={e=>changeKind({kind:e.target.value as 'KEEP_NEW'|'LINK_EXISTING'|'REJECT',targetId:'',shown:false})} className="rg-field w-full min-w-0 max-w-full">
-        <option value="KEEP_NEW">Ghi nhận khiếm khuyết mới (KEEP_NEW)</option>
-        <option value="LINK_EXISTING">Gắn vào khiếm khuyết đã có (LINK_EXISTING)</option>
-        <option value="REJECT">Từ chối nguồn Report (REJECT)</option>
+        <option value="KEEP_NEW">Ghi nhận khiếm khuyết mới</option>
+        <option value="LINK_EXISTING">Gắn vào khiếm khuyết đã có</option>
+        <option value="REJECT">Từ chối phản ánh nguồn</option>
       </select>
       {kind==='REJECT'&&<span className="text-slate-600 break-words">Từ chối nguồn Report không tạo Defect và khác kết luận Case “Không có khiếm khuyết” (NO_DEFECT) ở nút “Báo sai”.</span>}
     </label>
-    {kind==='LINK_EXISTING'&&<label className="grid min-w-0 gap-1">Khiếm khuyết đích (ứng viên do máy chủ trả)
+    {kind==='LINK_EXISTING'&&<label className="grid min-w-0 gap-1">Khiếm khuyết cần liên kết
       <select aria-label="Khiếm khuyết đích" value={targetId} disabled={!allowed||commandBusy||!current?.matches?.length} onChange={e=>changeKind({targetId:e.target.value})} className="rg-field w-full min-w-0 max-w-full">
-        <option value="">{!current?'Đang đọc ứng viên…':current.matches?.length?'Chọn khiếm khuyết đích':'Máy chủ không có ứng viên Defect để gắn'}</option>
-        {current?.matches?.map(m=><option key={m.defectId} value={m.defectId}>#DEF-{m.defectId.slice(0,8).toUpperCase()}{typeof m.distanceMeters==='number'?` · cách ${m.distanceMeters.toFixed(1)} m`:''}{m.reasonCodes?.length?` · ${m.reasonCodes.join(', ')}`:''}</option>)}
+        <option value="">{!current?'Đang đọc ứng viên…':current.matches?.length?'Chọn khiếm khuyết đích':'Chưa có khiếm khuyết để liên kết'}</option>
+        {current?.matches?.map(m=><option key={m.defectId} value={m.defectId}>#DEF-{m.defectId.slice(0,8).toUpperCase()}{typeof m.distanceMeters==='number'&&Number.isFinite(m.distanceMeters)?` · cách ${m.distanceMeters.toFixed(1)} m`:''}</option>)}
       </select>{err('target')}
     </label>}
     {kind==='KEEP_NEW'&&<div className="grid min-w-0 grid-cols-1 gap-2">
@@ -208,12 +205,10 @@ export function ReportDefectIntake({ selectedCase, onRecorded }: { selectedCase:
     <label className="grid min-w-0 gap-1">Bộ phân đoạn đã công bố<select aria-label="Bộ phân đoạn ghi nhận khiếm khuyết" value={setId} disabled={!allowed||commandBusy||!sets.length} onChange={e=>changeForm('setId',e.target.value)} className="rg-field w-full min-w-0"><option value="">{roadId?'Chọn bộ phân đoạn từ server':'Chọn tuyến trước'}</option>{sets.map((s,i)=><option key={s.id} value={s.id}>Bộ đã công bố {i+1}</option>)}</select>{setError&&<span role="alert">{setError}</span>}{err('set')}</label></>}
     {journalError&&<p role="alert">{journalError}</p>}
     {(roadError||currentPackage?.error)&&<p role="alert">{roadError||currentPackage?.error}</p>}
-    <p className="text-slate-600 break-words">{missing ? `Còn thiếu: ${missing}` : 'Đã đủ dữ liệu form; máy chủ vẫn kiểm quyền và hiệu lực.'}</p>
     <button type="button" disabled={!allowed||!report||commandBusy||!!journalError||!!heldDecision} onClick={()=>{if(!canSave){changeKind({shown:true});return};void execute()}} className="rg-btn text-xs font-semibold">{commandBusy?'Đang ghi nhận…':kind==='REJECT'?'Xác nhận từ chối nguồn Report':kind==='LINK_EXISTING'?'Xác nhận gắn vào khiếm khuyết đã có':'Xác nhận ghi nhận khiếm khuyết'}</button>
     {showErrors&&!canSave&&!Object.keys(fieldErrors).length&&<p role="alert" className="text-rose-700 font-semibold">{current?.error||media?.reportsError||(!current?'Đang kiểm tra nguồn Report; chưa thể gửi.':'Dữ liệu nguồn chưa hợp lệ; đọc lại trước khi gửi.')}</p>}
     {heldDecision&&<button type="button" disabled={commandBusy} onClick={()=>{void execute()}} className="text-xs underline">Đối chiếu yêu cầu ghi nhận đang chờ</button>}
     {command.scope===scope&&command.error&&<p role="alert">{command.error}</p>}
     {selectedCase.case_status === 'OPEN' && current?.error && <p className="text-slate-600">Nếu Case thiếu phạm vi, dùng “Cập nhật phạm vi” trong khối Thông Tin Hồ Sơ; PM giữ nguyên dự án và chọn tuyến/bộ PUBLISHED. Chỉ ghi nhận khi GET nguồn trả đủ phiên bản hợp lệ.</p>}
-    <p className="text-slate-600">Chưa mở Kết luận có lỗi: cần Defect đã xác minh và bằng chứng đúng phạm vi.</p>
   </div>
 }
