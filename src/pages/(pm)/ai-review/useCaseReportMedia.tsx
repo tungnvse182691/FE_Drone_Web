@@ -31,6 +31,7 @@ export function useReportMediaState(caseId: string, caseVersion = '') {
   const [reload, setReload] = useState(0), [choice, setChoice] = useState<{scope: string; key: string} | null>(null)
   const [image, setImage] = useState<{scope: string; key: string; url: string; error: string} | null>(null)
   const [imageReload, setImageReload] = useState(0)
+  const [mapRequest, setMapRequest] = useState<{ scope: string; key: string; serial: number } | null>(null)
   useEffect(() => {
     const controller = new AbortController()
     setSnapshot(null)
@@ -54,7 +55,8 @@ export function useReportMediaState(caseId: string, caseVersion = '') {
     return () => { controller.abort(); if (url) URL.revokeObjectURL(url) }
   }, [scope, key, selected?.evidence.contentPath, imageReload])
   const activeImage = image?.scope === scope && image.key === key ? image : null
-  return {caseId, reports, reportsLoading: !!caseId && !current, reportsError: current?.error || '', selected,
+  return {caseId, reports, mapRequest: mapRequest?.scope === scope && mapRequest.key === key ? mapRequest : null,
+    navigateToPhoto: () => { if (selected && evidenceGps(selected.evidence).located) setMapRequest(old => ({ scope, key, serial: (old?.serial || 0) + 1 })) }, reportsLoading: !!caseId && !current, reportsError: current?.error || '', selected,
     url: activeImage?.url || '', imageLoading: !!selected && !activeImage, imageError: activeImage?.error || '',
     select: (reportId: string, item: CaseReportEvidence) => setChoice({scope, key: evidenceKey(reportId, item)}),
     retry: () => setReload(n => n + 1), retryImage: () => setImageReload(n => n + 1),

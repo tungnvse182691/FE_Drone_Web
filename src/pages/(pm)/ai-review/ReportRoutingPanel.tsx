@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { routingMapService, routingError, type RoutingCandidatesResult, type RoutingDecision, type RoutingDecisionAttestation } from '../../../api/services/routingMapService'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { routingMapService, routingError, type RoutingCandidate, type RoutingCandidatesResult, type RoutingDecision, type RoutingDecisionAttestation } from '../../../api/services/routingMapService'
 import { useAuthStore } from '../../../store/authStore'
 import { RoleCode } from '../../../types/enums'
 import { useCaseReportMedia, evidenceGps } from './useCaseReportMedia'
@@ -11,22 +11,25 @@ const RELATION_NOTE = 'UNKNOWN nghĩa là chưa đủ căn cứ, không phải "
 const num = (v: number | null | undefined, unit: string) => typeof v === 'number' && Number.isFinite(v) ? `${v.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} ${unit}` : null
 type Cands = { key: string; loading?: boolean; error?: string; data?: RoutingCandidatesResult }
 
-function CandidateList({ c }: { c: RoutingCandidatesResult }) {
+function CandidateList({ c, onRoute }: { c: RoutingCandidatesResult; onRoute: (route: RoutingCandidate['route']) => void }) {
+  const missingGps = c.missingReasons.includes('GPS_MISSING')
   return <div className="space-y-2" data-testid="routing-candidates">
-    <details><summary className="cursor-pointer text-slate-500">Chi tiết nguồn đối chiếu</summary><p className="text-slate-600" data-testid="candidates-meta">Phạm vi tìm: {c.searchScope} · {c.completeness === 'COMPLETE' ? 'đủ dữ liệu' : `chưa đủ (${c.completeness})`} · đã đọc {c.pages} trang · {c.candidates.length} tuyến ứng viên · thuật toán {c.algorithmVersion}</p></details>
-    {c.missingReasons.includes('GPS_MISSING') ? <p role="status" data-testid="candidates-missing" className="text-slate-600">Ảnh này chưa có GPS để gợi ý tuyến.</p> : <>
-      {c.source.latitude != null && c.source.longitude != null && <p data-testid="candidates-source">Vị trí nguồn: {c.source.latitude}, {c.source.longitude}{num(c.source.accuracyMeters, 'm') != null && ` · Sai số GPS: ${num(c.source.accuracyMeters, 'm')}`}</p>}
-      {c.missingReasons.length > 0 && <p role="status" className="text-amber-800">Chưa đủ căn cứ để quyết định.</p>}
-      {c.candidates.length === 0 && <p className="text-slate-500">Máy chủ không trả tuyến ứng viên.</p>}
-    </>}
-    {c.missingReasons.length > 0 && <details><summary className="cursor-pointer">Chi tiết đối chiếu</summary><p>{c.missingReasons.join(', ')}</p><p>{RELATION_NOTE}</p></details>}
-    <ul className="space-y-1.5">{c.candidates.map(x => <li key={x.route.routeVersionId} data-testid="candidate" className="border border-slate-200 rounded-lg p-2 space-y-0.5 bg-white">
-      <p className="font-semibold">{x.route.projectName} <span className="font-normal text-slate-500">({x.route.projectStatus})</span> · {x.route.roadSectionCode}{x.route.roadSectionName ? ` — ${x.route.roadSectionName}` : ''} · v{x.route.versionNo}{x.route.isCurrent ? '' : ' (lịch sử)'}</p>
-      <p>Khoảng cách: {num(x.distanceMeters, 'm') ? `${num(x.distanceMeters, 'm')} (${x.distanceMethod || 'chưa có phương pháp'}; đo trên lưới chiếu, không phải khoảng cách mặt đất)` : 'Chưa tính được (null)'} · Trạng thái chồng lấn/quan hệ không gian: {x.spatialRelation} · Sai số: {x.uncertaintyStatus} · Trách nhiệm: {x.responsibility}</p>
-      {x.missingReasons.length > 0 && <p className="text-slate-500">Lý do thiếu: {x.missingReasons.join(', ')}</p>}
-      {(x.route.coveragePins || []).length > 0 && <p className="text-slate-500">Độ phủ: {(x.route.coveragePins || []).map(p => `${p.sourceKind}/${p.provenance}`).join(', ')}</p>}
-    </li>)}</ul>
-    <p className="text-slate-500">{RELATION_NOTE} Khoảng cách chỉ hỗ trợ đối chiếu, không chứng minh hai hồ sơ cùng hư hỏng hay trách nhiệm.</p>
+    {missingGps ? <p role="status" data-testid="candidates-missing" className="text-slate-600">Ảnh này chưa có GPS để gợi ý tuyến.</p>
+      : (c.completeness !== 'COMPLETE' || c.missingReasons.length > 0) && <p role="status" className="text-amber-800">Chưa đủ căn cứ để quyết định.</p>}
+    <details data-testid="candidate-list"><summary className="cursor-pointer font-semibold">Tuyến ứng viên ({c.candidates.length})</summary>
+      {!c.candidates.length && !missingGps && <p>Máy chủ không trả tuyến ứng viên.</p>}
+      <ul className="mt-2 space-y-2">{c.candidates.map(x => <li key={x.route.routeVersionId} data-testid="candidate" className="border-b border-slate-200 pb-2 space-y-1">
+        {x.route.roadSectionName?.trim() ? <button type="button" data-route-version-id={x.route.routeVersionId} className="text-left font-semibold underline text-brand-navy" onClick={() => onRoute(x.route)}>{x.route.roadSectionName}</button> : <span>Chưa có tên tuyến</span>}
+        <span className="ml-2 text-slate-600">{num(x.distanceMeters, 'm') || 'Chưa tính được khoảng cách'}{!x.route.isCurrent && ' · Tuyến lịch sử'}</span>
+        {x.responsibility === 'UNKNOWN' && <span className="ml-2 text-amber-800">Chưa xác định trách nhiệm</span>}
+        <details><summary className="cursor-pointer text-slate-500">Chi tiết đối chiếu</summary>
+          <dl className="break-all"><dt>Dự án / tuyến</dt><dd>{x.route.projectName} · {x.route.roadSectionCode}</dd><dt>Phiên bản tuyến</dt><dd>{x.route.routeVersionId} · v{x.route.versionNo} · {x.route.geometryHash}</dd><dt>Phương pháp / quan hệ / sai số / trách nhiệm</dt><dd>{x.distanceMethod || 'Không có phương pháp'} · {x.spatialRelation} · {x.uncertaintyStatus} · {x.responsibility}</dd><dt>Lý do thiếu</dt><dd>{x.missingReasons.join(', ') || 'Không có mã thiếu'}</dd></dl>
+          {!!x.route.coveragePins?.length && <pre className="whitespace-pre-wrap break-all">{JSON.stringify(x.route.coveragePins, null, 2)}</pre>}
+          {!!x.route.policyPins?.length && <pre className="whitespace-pre-wrap break-all">{JSON.stringify(x.route.policyPins, null, 2)}</pre>}
+        </details>
+      </li>)}</ul>
+    </details>
+    <details><summary className="cursor-pointer text-slate-500">Chi tiết đối chiếu</summary><p data-testid="candidates-meta">{c.searchScope} · {c.completeness} · {c.pages} trang · {c.algorithmVersion}</p><p className="break-all">{c.evaluationVersion} · {c.source.reportId} · {c.source.evidenceId}</p><p>{c.missingReasons.join(', ')}</p><p>{RELATION_NOTE}</p><pre className="whitespace-pre-wrap break-all">{JSON.stringify(c.source, null, 2)}</pre></details>
   </div>
 }
 
@@ -41,7 +44,12 @@ export function ReportRoutingPanel({ caseId, caseVersion, caseStatus, onCaseChan
   const target = selected ? { reportId: selected.reportId, evidenceId: selected.evidence.evidenceId } : reports.length === 1 ? { reportId: reports[0].reportId, evidenceId: null as string | null } : null
   const tKey = target ? `${epoch}:${caseId}:${target.reportId}:${target.evidenceId}` : ''
   const [cands, setCands] = useState<Cands>({ key: '' }), [reloadC, setReloadC] = useState(0)
-  const [highlight, setHighlight] = useState('')
+  const mapBox = useRef<HTMLDivElement>(null)
+  const [focus, setFocus] = useState<{ key: string; serial: number; route?: RoutingCandidate['route'] } | null>(null)
+  const activeFocus = focus?.key === tKey ? focus : null
+  const scrollMap = () => mapBox.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const navigateRoute = (route: RoutingCandidate['route']) => { setFocus(old => ({ key: tKey, serial: (old?.serial || 0) + 1, route })); scrollMap() }
+  useEffect(() => { if (media?.mapRequest) { setFocus(old => ({ key: tKey, serial: (old?.serial || 0) + 1 })); scrollMap() } }, [media?.mapRequest, tKey])
 
   useEffect(() => {
     if (!target) { setCands({ key: '' }); return }
@@ -61,13 +69,13 @@ export function ReportRoutingPanel({ caseId, caseVersion, caseStatus, onCaseChan
     {!ready && <p role="status" className="text-slate-500">{media?.reportsError || 'Đang đọc phản ánh để chọn ảnh…'}</p>}
     {ready && !target && <p className="text-slate-500">{reports.length ? 'Hãy chọn một ảnh/bằng chứng của phản ánh để đối chiếu.' : 'Hồ sơ chưa có Report để đối chiếu.'}</p>}
     {target && <p data-testid="routing-target" className="break-all text-slate-700">Đang đối chiếu: Report {target.reportId.slice(0, 8)} · {target.evidenceId ? `ảnh ${target.evidenceId.slice(0, 8)}` : 'Report không có ảnh'} · GPS ảnh: {gps.located ? `${gps.text} (${gps.source})` : '—'}</p>}
-    {isSup && <RoutingMapView gps={gps.located ? { lat: gps.lat!, lng: gps.lng! } : null} highlightRouteVersionId={highlight} />}
-    {!isSup && <p className="text-slate-500">Bản đồ toàn công ty chỉ dành cho Giám sát; PM chỉ xem ứng viên trong dự án của hồ sơ.</p>}
+    <div ref={mapBox}><RoutingMapView key={caseId} company={isSup} selectionKey={tKey} gps={gps.located ? { lat: gps.lat!, lng: gps.lng! } : null} focus={activeFocus} /></div>
+    {!isSup && <p className="text-slate-500">Bản đồ toàn công ty chỉ dành cho Giám sát; PM chỉ đọc tuyến cụ thể được phép trong dự án của hồ sơ.</p>}
     {target && <div className="space-y-2">
       <div className="flex items-center justify-between"><h4 className="font-semibold">Ứng viên tuyến cho ảnh đã chọn</h4><button type="button" disabled={cur.loading} onClick={() => setReloadC(n => n + 1)} className="rg-btn text-xs">Đối chiếu lại</button></div>
       {cur.loading && <p role="status" className="text-slate-500">Đang đọc đủ các trang ứng viên…</p>}
       {cur.error && <p role="alert" className="text-rose-700">{cur.error} <button type="button" className="underline" onClick={() => setReloadC(n => n + 1)}>Thử lại</button></p>}
-      {cur.data && <><CandidateList c={cur.data} />{isSup && cur.data.candidates.length > 0 && <div className="flex flex-wrap gap-1.5">{cur.data.candidates.map(x => <button key={x.route.routeVersionId} type="button" onClick={() => setHighlight(h => h === x.route.routeVersionId ? '' : x.route.routeVersionId)} className="rg-btn text-[11px]">{highlight === x.route.routeVersionId ? 'Bỏ nổi bật' : 'Nổi bật'} {x.route.projectName}/{x.route.roadSectionCode}</button>)}</div>}</>}
+      {cur.data && <CandidateList key={tKey} c={cur.data} onRoute={navigateRoute} />}
     </div>}
     {isSup && <RoutingDecisionBlock caseId={caseId} caseVersion={caseVersion || ''} caseStatus={caseStatus} target={target} evaluationVersion={cur.data?.evaluationVersion} onCaseChanged={onCaseChanged} onNotify={onNotify} />}
   </section>

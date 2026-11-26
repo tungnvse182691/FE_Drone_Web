@@ -1,3 +1,4 @@
+import { PhotoMapButton } from './PhotoMapButton'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
@@ -83,6 +84,8 @@ export const PhotoZoomModal: React.FC<PhotoZoomModalProps> = ({
             </button>
           </div>
         </div>
+
+        <PhotoMapButton onNavigate={onClose} />
 
         {/* Modal Body: Single View or Side-by-Side View */}
         {viewMode === 'SINGLE' ? (

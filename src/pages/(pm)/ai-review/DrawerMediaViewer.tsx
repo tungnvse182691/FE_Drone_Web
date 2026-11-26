@@ -1,3 +1,4 @@
+import { PhotoMapButton } from './PhotoMapButton'
 import React, { useState } from 'react'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
@@ -37,6 +38,8 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
           <span className="px-3 py-1 rounded-md bg-white text-brand-dark shadow-2xs font-bold">Ảnh chụp hiện trường</span>
         </div>
       </div>
+
+      <PhotoMapButton />
 
       {/* Photo Viewport with Telemetry HUD */}
       <div className="relative w-full rounded-xl overflow-hidden bg-slate-900 shadow-inner group h-80 lg:h-[380px]">
