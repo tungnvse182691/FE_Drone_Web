@@ -30,3 +30,17 @@ Excluded ZIP env, node_modules/dist/cache/tsbuildinfo/tmp, seed state, screensho
 No full regression/E2E/visual acceptance claim. Authenticated routing/safety/export/offline grant, F5/recovery and protected-page runtime retests NOT_RUN; ZIP historical evidence is from another environment. Backend compatibility not asserted from build. No backend switch/seed to satisfy tests.
 
 LOCAL commits only; no push/tag/PR.
+
+## Workspace activation and exact ZIP verification
+
+User subsequently confirmed the actual archive is D:/hoctap/kì 9/vnr202/FE_Drone_Web-hoang.zip (the requested (10) filename was not present). SHA-256: 4afba777bdc17343e7addfa6c4d2728586bd51bc152e4234f9690f6b0e49f8eb.
+
+All 473 ZIP src files match hoang after newline normalization; package.json, package-lock.json, API client and auth store also match. No missing source update and no duplicate feature commit needed. Local proxy remains 28443 rather than ZIP 18443.
+
+Original refactor_UI tracked and untracked WIP was preserved using stash --include-untracked with message `preserve refactor_UI before switching main workspace to hoang zip10 20261127`; stash was NOT applied on hoang. Ignored local environment/dependencies remain local.
+
+Backup branch codex/backup-hoang-before-zip10-20261127 points to 2e7ef0e4a071ee0a745cce181feda9273c7f7f67. Previous integration worktree is detached at that commit. Current main workspace D:/hoctap/kì 9/đồ án/FE_Drone_Web is now on hoang, preserving all three integration commits.
+
+Re-ran npm run build: PASS, same Tailwind/bundle warnings. Re-ran check-field-review-api.cjs: 4 groups PASS. git diff --check: PASS. Prior read/reuse harness limitations remain as documented; not claimed full regression PASS.
+
+FE dev server restarted only for this workspace on 127.0.0.1:5173 to avoid serving refactor_UI state. No backend/container/database changes, no push/PR.
