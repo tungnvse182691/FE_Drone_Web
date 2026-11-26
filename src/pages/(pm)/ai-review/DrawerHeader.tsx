@@ -44,7 +44,7 @@ export const DrawerHeader: React.FC<DrawerHeaderProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tạo hồ sơ lúc {selectedCase.created_at} • {sourceLabel} • {formattedSourceDetail}
+            Tạo hồ sơ lúc {selectedCase.created_at && Number.isFinite(Date.parse(selectedCase.created_at)) ? new Date(selectedCase.created_at).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'chưa có thời gian'} • {sourceLabel} • {formattedSourceDetail}
           </p>
         </div>
       </div>

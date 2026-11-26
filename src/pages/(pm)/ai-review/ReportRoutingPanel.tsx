@@ -13,10 +13,13 @@ type Cands = { key: string; loading?: boolean; error?: string; data?: RoutingCan
 
 function CandidateList({ c }: { c: RoutingCandidatesResult }) {
   return <div className="space-y-2" data-testid="routing-candidates">
-    <p className="text-slate-600" data-testid="candidates-meta">Phạm vi tìm: {c.searchScope} · {c.completeness === 'COMPLETE' ? 'đủ dữ liệu' : `chưa đủ (${c.completeness})`} · đã đọc {c.pages} trang · {c.candidates.length} tuyến ứng viên · thuật toán {c.algorithmVersion}</p>
-    <p data-testid="candidates-source">Vị trí nguồn: {c.source.latitude != null && c.source.longitude != null ? `${c.source.latitude}, ${c.source.longitude} (${c.source.locationSource})` : 'Thiếu GPS (UNKNOWN)'} · Sai số GPS: {num(c.source.accuracyMeters, 'm') || 'Chưa có (UNKNOWN)'} · Thời điểm chụp (do thiết bị khai): {c.source.capturedAt || 'Chưa có'}</p>
-    {c.missingReasons.length > 0 && <p role="status" className="text-amber-800" data-testid="candidates-missing">Thiếu căn cứ: {c.missingReasons.join(', ')}. {c.missingReasons.includes('GPS_MISSING') ? 'Thiếu GPS KHÔNG đồng nghĩa ngoài phạm vi.' : ''}</p>}
-    {c.candidates.length === 0 && <p className="text-slate-500">{c.missingReasons.includes('GPS_MISSING') ? 'Không có ứng viên vì ảnh thiếu GPS.' : 'Máy chủ không trả tuyến ứng viên (đã đọc hết các trang).'}</p>}
+    <details><summary className="cursor-pointer text-slate-500">Chi tiết nguồn đối chiếu</summary><p className="text-slate-600" data-testid="candidates-meta">Phạm vi tìm: {c.searchScope} · {c.completeness === 'COMPLETE' ? 'đủ dữ liệu' : `chưa đủ (${c.completeness})`} · đã đọc {c.pages} trang · {c.candidates.length} tuyến ứng viên · thuật toán {c.algorithmVersion}</p></details>
+    {c.missingReasons.includes('GPS_MISSING') ? <p role="status" data-testid="candidates-missing" className="text-slate-600">Ảnh này chưa có GPS để gợi ý tuyến.</p> : <>
+      {c.source.latitude != null && c.source.longitude != null && <p data-testid="candidates-source">Vị trí nguồn: {c.source.latitude}, {c.source.longitude}{num(c.source.accuracyMeters, 'm') != null && ` · Sai số GPS: ${num(c.source.accuracyMeters, 'm')}`}</p>}
+      {c.missingReasons.length > 0 && <p role="status" className="text-amber-800">Chưa đủ căn cứ để quyết định.</p>}
+      {c.candidates.length === 0 && <p className="text-slate-500">Máy chủ không trả tuyến ứng viên.</p>}
+    </>}
+    {c.missingReasons.length > 0 && <details><summary className="cursor-pointer">Chi tiết đối chiếu</summary><p>{c.missingReasons.join(', ')}</p><p>{RELATION_NOTE}</p></details>}
     <ul className="space-y-1.5">{c.candidates.map(x => <li key={x.route.routeVersionId} data-testid="candidate" className="border border-slate-200 rounded-lg p-2 space-y-0.5 bg-white">
       <p className="font-semibold">{x.route.projectName} <span className="font-normal text-slate-500">({x.route.projectStatus})</span> · {x.route.roadSectionCode}{x.route.roadSectionName ? ` — ${x.route.roadSectionName}` : ''} · v{x.route.versionNo}{x.route.isCurrent ? '' : ' (lịch sử)'}</p>
       <p>Khoảng cách: {num(x.distanceMeters, 'm') ? `${num(x.distanceMeters, 'm')} (${x.distanceMethod || 'chưa có phương pháp'}; đo trên lưới chiếu, không phải khoảng cách mặt đất)` : 'Chưa tính được (null)'} · Trạng thái chồng lấn/quan hệ không gian: {x.spatialRelation} · Sai số: {x.uncertaintyStatus} · Trách nhiệm: {x.responsibility}</p>
@@ -57,7 +60,7 @@ export function ReportRoutingPanel({ caseId, caseVersion, caseStatus, onCaseChan
       <p className="text-[11px] text-slate-500">Chọn đúng ảnh bằng nút "Xem ảnh" ở từng phản ánh phía trên; chỉ GPS của ảnh/bằng chứng đó được dùng, không mượn GPS ảnh khác.</p></header>
     {!ready && <p role="status" className="text-slate-500">{media?.reportsError || 'Đang đọc phản ánh để chọn ảnh…'}</p>}
     {ready && !target && <p className="text-slate-500">{reports.length ? 'Hãy chọn một ảnh/bằng chứng của phản ánh để đối chiếu.' : 'Hồ sơ chưa có Report để đối chiếu.'}</p>}
-    {target && <p data-testid="routing-target" className="break-all text-slate-700">Đang đối chiếu: Report {target.reportId.slice(0, 8)} · {target.evidenceId ? `ảnh ${target.evidenceId.slice(0, 8)}` : 'Report không có ảnh'} · GPS ảnh: {gps.located ? `${gps.text} (${gps.source})` : 'UNKNOWN — chưa có vị trí được xác nhận'}</p>}
+    {target && <p data-testid="routing-target" className="break-all text-slate-700">Đang đối chiếu: Report {target.reportId.slice(0, 8)} · {target.evidenceId ? `ảnh ${target.evidenceId.slice(0, 8)}` : 'Report không có ảnh'} · GPS ảnh: {gps.located ? `${gps.text} (${gps.source})` : '—'}</p>}
     {isSup && <RoutingMapView gps={gps.located ? { lat: gps.lat!, lng: gps.lng! } : null} highlightRouteVersionId={highlight} />}
     {!isSup && <p className="text-slate-500">Bản đồ toàn công ty chỉ dành cho Giám sát; PM chỉ xem ứng viên trong dự án của hồ sơ.</p>}
     {target && <div className="space-y-2">

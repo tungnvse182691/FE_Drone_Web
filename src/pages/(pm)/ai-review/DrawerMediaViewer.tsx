@@ -20,15 +20,16 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
   const sel = media?.caseId === selectedCase.id ? media.selected : null
   const report = sel ? media?.reports.find(r => r.reportId === sel.reportId) : undefined
   const ev = sel?.evidence
-  const rows: Array<[string, string]> = sel && report && ev ? [
-    ['Người gửi', report.reporterDisplayName || 'Chưa có dữ liệu'],
-    ['SĐT người gửi', report.reporterPhoneNumber || 'Chưa có dữ liệu'],
+  const date = (value?: string | null) => value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : null
+  const received = ev?.supplementId ? report?.supplements.find(x => x.id === ev.supplementId)?.receivedAt : report?.receivedAt
+  const rows = (sel && report && ev ? [
+    ['Người gửi', report.reporterDisplayName || null], ['SĐT người gửi', report.reporterPhoneNumber || null],
     ['Loại ảnh', ev.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'],
-    ['Thời điểm chụp (thiết bị khai)', ev.capturedAt || 'Chưa có dữ liệu'],
-    ['Thời điểm máy chủ nhận', (ev.supplementId ? report.supplements.find(x => x.id === ev.supplementId)?.receivedAt : report.receivedAt) || 'Chưa có dữ liệu'],
-    ['Nguồn GPS', ev.locationSource || 'UNKNOWN'],
-    ['Sai số GPS', typeof ev.location?.accuracyMeters === 'number' ? `${ev.location.accuracyMeters} m` : 'Chưa có dữ liệu (UNKNOWN)']
-  ] : []
+    ['Thời điểm chụp (thiết bị khai)', date(ev.capturedAt)],
+    [ev.supplementId ? 'Tiếp nhận bổ sung' : 'Tiếp nhận phản ánh', date(received)],
+    ['Nguồn GPS', ev.locationSource && ev.locationSource !== 'UNKNOWN' ? ev.locationSource : null],
+    ['Sai số GPS', typeof ev.location?.accuracyMeters === 'number' && Number.isFinite(ev.location.accuracyMeters) ? `${ev.location.accuracyMeters} m` : null]
+  ] : []).filter((row): row is [string, string] => row[1] != null)
   return (
     <>
       <div className="flex items-center justify-between">
@@ -42,7 +43,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
         <CaseReportImage caseId={selectedCase.id} alt={selectedCase.defect_title}
           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
         {/* Top-left GPS ảnh/bằng chứng đang xem */}
-        <div data-testid="evidence-gps-overlay" className="absolute top-2.5 left-2.5 max-w-[calc(100%-1.25rem)] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
+        {gps.located && <div data-testid="evidence-gps-overlay" className="absolute top-2.5 left-2.5 max-w-[calc(100%-1.25rem)] bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-full text-white font-mono text-[10px] flex items-center gap-2 shadow-md border border-white/10">
           <div className="flex items-center gap-1 font-bold text-brand-gold">
             <Icon name="location_on" size={12} className="text-brand-gold" />
             <span>GPS ảnh/bằng chứng: {gps.located ? `${gps.text} (${gps.source})` : gps.text}</span>
@@ -65,7 +66,7 @@ export const DrawerMediaViewer: React.FC<DrawerMediaViewerProps> = ({
               <span className="opacity-90 text-amber-300">Ghi nhận từ thiết bị tuần tra</span>
             </>
           )}
-        </div>
+        </div>}
 
         {rows.length > 0 && <div className="absolute top-11 left-2.5 max-w-[calc(100%-1.25rem)] text-white">
           <button type="button" onClick={() => setShowInfo(v => !v)} className="bg-slate-950/80 border border-white/10 rounded-full px-2.5 py-0.5 text-[10px] font-semibold cursor-pointer">{showInfo ? 'Ẩn bảng thông tin ảnh' : 'Hiện bảng thông tin ảnh'}</button>

@@ -296,8 +296,10 @@ async function enrichDecisionState(cases: TriageCase[], signal?: AbortSignal): P
   return Promise.all(cases.map(async (c) => {
     if (!c.project_id || !c.report_ids?.length) return c
     try {
-      const ref = c.report_ids.map((id) => reportKeepNewCommands.reference(c.project_id, id)).find(Boolean)
-      if (!ref) return c
+      const refs = c.report_ids.map((id) => reportKeepNewCommands.reference(c.project_id, id)).filter(Boolean)
+      // Không gán một Defect đại diện tùy tiện khi nhiều Report có quyết định riêng.
+      if (refs.length !== 1) return c
+      const ref = refs[0]!
       const result = await reportKeepNewCommands.readDecision(c.project_id, ref.sourceId, ref.decisionId, signal)
       if (!result) return c
       // Quyết định mới (KEEP_NEW/LINK_EXISTING/REJECT nguồn Report) là trạng thái chính; 'Đã mở lại do có bổ sung' chỉ là nhãn phụ (reopened_after_conclusion).
@@ -510,6 +512,35 @@ export const triageService = {
    * API-019: GET /api/v1/cases/{caseId}
    * Lấy chi tiết một ca khiếm khuyết theo ID từ Backend Candidate3 (kèm ETag)
    */
+  /** Chỉ đọc Defect theo ID Case trả; không lấy ứng viên matching làm liên kết đã quyết định. */
+  async readCaseClassifications(caseId: string, signal?: AbortSignal) {
+    const session = getCaseSessionKey()
+    const { data: c } = await apiClient.get<InternalCaseDto>(`/cases/${caseId}`, { signal })
+    assertCaseReadActive(session, signal)
+    if (c.id !== caseId) throw new Error('Nguồn phân loại không khớp Case.')
+    const ids = [...new Set(c.defectIds || [])]
+    const rows = await Promise.all(ids.map(async id => {
+      if (!c.projectId) throw new Error('Case chưa có dự án để đọc Defect liên kết.')
+      const { data: d } = await apiClient.get(`/projects/${c.projectId}/defects/${id}`, { signal })
+      assertCaseReadActive(session, signal)
+      if (d.id !== id || d.projectId !== c.projectId || !d.version) throw new Error('Defect không khớp nguồn Case.')
+      return { id, reportId: null as string | null, type: d.defectTypeCode as string | null, severity: d.severity as string | null, status: d.status as string | null }
+    }))
+    if (c.projectId && useAuthStore.getState().user?.role === RoleCode.PROJECT_MANAGER) {
+      for (const reportId of c.reportIds || []) {
+        const ref = reportKeepNewCommands.reference(c.projectId, reportId)
+        if (!ref) continue
+        const result = await reportKeepNewCommands.readDecision(c.projectId, reportId, ref.decisionId, signal)
+        assertCaseReadActive(session, signal)
+        if (result?.defect && !rows.some(row => row.id === result.defect!.id)) {
+          const d = result.defect
+          rows.push({ id: d.id, reportId, type: d.defectTypeCode, severity: d.severity, status: d.status })
+        }
+      }
+    }
+    return { rows, reportCount: c.reportIds?.length || 0 }
+  },
+
   async getCaseById(id: string, signal?: AbortSignal): Promise<TriageCase | null> {
     const session = getCaseSessionKey()
     const cacheRequest = caseCacheRequest

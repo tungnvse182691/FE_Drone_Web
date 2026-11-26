@@ -1,6 +1,7 @@
+import { CaseClassification } from './CaseClassification'
 import { ReportDefectIntake } from './ReportDefectIntake'
 import type { CaseEvidenceRequestState } from './useCaseEvidenceRequest'
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../../../components/ui/Icon'
 import type { TriageCase } from './types'
@@ -52,6 +53,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
   onOpenPublishModal,
   onNavigateFastTrack,
 }) => {
+  const [classificationRead, setClassificationRead] = useState(0)
   const navigate = useNavigate()
   const basePath = isSupervisor ? '/sup' : '/pm'
 
@@ -76,18 +78,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
           <span className="text-slate-400 text-[11px] block font-medium">Nguồn tiếp nhận:</span>
           <span className="font-semibold text-slate-800 text-xs mt-0.5 block">{sourceLabel}</span>
         </div>
-        <div>
-          <span className="text-slate-400 text-[11px] block font-medium">
-            Phân loại khiếm khuyết sơ bộ:
-          </span>
-          <span className="font-bold text-slate-800 text-xs mt-0.5 block">
-            {selectedCase.defect_type === 'POTHOLE'
-              ? 'Ổ gà mặt đường'
-              : selectedCase.defect_type === 'CRACK'
-              ? 'Vết nứt mặt đường'
-              : selectedCase.defect_type || 'Chưa phân loại'}
-          </span>
-        </div>
+        <CaseClassification key={`${selectedCase.id}:${classificationRead}`} caseId={selectedCase.id} version={selectedCase.version} />
         {selectedCase.fixture_version && (
           <div>
             <span className="text-slate-400 text-[11px] block font-medium">Mô hình nhận diện AI:</span>
@@ -146,7 +137,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
             {!selectedCase.conclusion && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 <Icon name="hourglass_empty" size={14} className="text-slate-500" />
-                {selectedCase.case_status === 'UNASSIGNED' ? 'Chờ Giám sát điều phối' : 'Đang chờ PM thẩm định'}
+                {selectedCase.case_status === 'UNASSIGNED' ? 'Chờ Giám sát điều phối' : 'Chưa có kết luận Case'}
               </span>
             )}
           </div>
@@ -231,7 +222,7 @@ export const DrawerDecisionForm: React.FC<DrawerDecisionFormProps> = ({
       ) : (
         /* Khi hồ sơ chưa thẩm định: Hiển thị bộ nút thao tác thẩm định chuẩn nghiệp vụ */
         <div className="space-y-2.5 pt-1">
-          <ReportDefectIntake selectedCase={selectedCase} onRecorded={onDefectRecorded} />
+          <ReportDefectIntake selectedCase={selectedCase} onRecorded={message => { setClassificationRead(n => n + 1); onDefectRecorded?.(message) }} />
           <details className="rounded-xl border border-slate-200 p-3 space-y-2">
             <summary className="cursor-pointer text-xs font-bold text-slate-800">Yêu cầu bổ sung bằng chứng</summary>
             <label className="block text-xs font-semibold text-slate-700">

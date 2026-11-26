@@ -10,8 +10,8 @@ export function ReportEvidence({ reportId, evidence }: { caseId: string; reportI
   const location = evidence.location
   const located = (evidence.locationSource || 'UNKNOWN') !== 'UNKNOWN' && typeof location?.latitude === 'number' && typeof location.longitude === 'number' && Number.isFinite(location.latitude) && Number.isFinite(location.longitude)
   return <section className="border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
-    <p>{evidence.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'} · Thời gian chụp: {evidence.capturedAt || 'Chưa cập nhật'}</p>
-    <p data-testid="evidence-gps-detail">GPS ảnh/bằng chứng: {located ? `${location.latitude}, ${location.longitude}` : 'UNKNOWN — chưa có vị trí được xác nhận'}</p>
+    <p>{evidence.supplementId ? 'Ảnh bổ sung' : 'Ảnh gốc'}{evidence.capturedAt && Number.isFinite(Date.parse(evidence.capturedAt)) ? ` · Chụp: ${new Date(evidence.capturedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}` : ''}</p>
+    {located && <p data-testid="evidence-gps-detail">GPS ảnh/bằng chứng: {location.latitude}, {location.longitude}</p>}
     {located && <a href={`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}`} target="_blank" rel="noreferrer">Xem vị trí evidence</a>}
     <button type="button" onClick={() => media?.select(reportId, evidence)} className="rg-btn text-[#8C6D1F]">{selected ? 'Đang xem ảnh' : 'Xem ảnh'}</button>
   </section>
@@ -56,7 +56,7 @@ export function DrawerReportDetails({ caseId, caseStatus, onSplit }: { caseId: s
     {reports.map(report => <article key={report.reportId} data-report-id={report.reportId} className="bg-white rounded-xl border border-slate-200 p-3 space-y-3 text-xs">
       <p className="font-mono text-slate-500 break-all">Report {report.reportId}</p>
       <div className="grid grid-cols-2 gap-2"><div><p className="text-slate-400">Người phản ánh</p><p className="font-semibold">{report.reporterDisplayName || 'Chưa cập nhật'}</p></div><div><p className="text-slate-400">Liên hệ</p><p>{report.reporterPhoneNumber || 'Chưa có thông tin'} · {report.reporterPhoneNumberConfirmed === true ? 'Đã xác minh' : report.reporterPhoneNumberConfirmed === false ? 'Chưa xác minh' : 'Chưa có dữ liệu xác minh'}</p></div></div>
-      <p className="text-slate-500">Tiếp nhận: {report.receivedAt || 'Chưa có thời gian tiếp nhận'}</p><p className="whitespace-pre-wrap">{report.description || 'Chưa có nội dung phản ánh trong response.'}</p>
+      <p className="text-slate-500">Tiếp nhận: {report.receivedAt && Number.isFinite(Date.parse(report.receivedAt)) ? new Date(report.receivedAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa có thời gian tiếp nhận'}</p><p className="whitespace-pre-wrap">{report.description || 'Chưa có nội dung phản ánh trong response.'}</p>
       {!report.originalEvidence.length && <p className="text-slate-500">Chưa có bằng chứng gốc trong dữ liệu đã đọc.</p>}
       {report.originalEvidence.map(evidence => <ReportEvidence key={evidence.evidenceId} caseId={caseId} reportId={report.reportId} evidence={evidence} />)}
       {report.supplements.map(supplement => <section key={supplement.id} className="border-t pt-3 space-y-2"><h4 className="font-semibold">Bổ sung phản ánh · {supplement.receivedAt}</h4><p className="whitespace-pre-wrap">{supplement.description || 'Chưa có nội dung bổ sung trong response.'}</p>{supplement.evidence.map(evidence => <ReportEvidence key={evidence.evidenceId} caseId={caseId} reportId={report.reportId} evidence={evidence} />)}</section>)}

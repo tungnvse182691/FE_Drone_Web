@@ -19,7 +19,7 @@ export function reportError(error: any): string {
 export function evidenceGps(evidence?: CaseReportEvidence | null): { located: boolean; text: string; lat?: number; lng?: number; source: string } {
   const source = evidence?.locationSource || 'UNKNOWN'
   const lat = evidence?.location?.latitude, lng = evidence?.location?.longitude
-  if (evidence && source !== 'UNKNOWN' && typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng))
+  if (evidence && source !== 'UNKNOWN' && typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
     return { located: true, text: `${lat}, ${lng}`, lat, lng, source }
   return { located: false, text: evidence ? 'UNKNOWN — chưa có vị trí được xác nhận' : 'Chưa chọn ảnh/bằng chứng', source }
 }

@@ -57,9 +57,9 @@ export function RoutingMapView({ gps, highlightRouteVersionId, onSnapshot }: { g
     ;(map.getSource('routes') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features })
     for (const f of data?.features || []) {
       const c = f.geometry.coordinates, mid = c[Math.floor(c.length / 2)]
-      if (!mid) continue
+      if (!mid || !f.properties.roadSectionName?.trim()) continue
       const el = document.createElement('div')
-      el.textContent = `${f.properties.projectName} · ${f.properties.roadSectionCode}${f.properties.isCurrent ? '' : ` (v${f.properties.versionNo})`}`
+      el.textContent = f.properties.roadSectionName
       el.setAttribute('data-testid', 'route-label')
       el.style.cssText = `pointer-events:none;font:600 11px sans-serif;padding:1px 6px;border-radius:9999px;background:#fff;border:1.5px solid ${colorOf(f.properties.projectId)};color:#0f172a;white-space:nowrap`
       labels.current.push(new maplibregl.Marker({ element: el }).setLngLat([mid[0], mid[1]]).addTo(map))
@@ -103,7 +103,7 @@ export function RoutingMapView({ gps, highlightRouteVersionId, onSnapshot }: { g
     </div>
     <div className="relative">
       <div ref={box} className="w-full h-72 rounded-lg border border-slate-200 bg-slate-100" />
-      {!gps && <p className="absolute left-2 bottom-2 right-2 text-[11px] bg-white/90 rounded px-2 py-1 text-slate-600" data-testid="map-no-gps">Ảnh/bằng chứng đang chọn không có GPS: bản đồ không điều hướng tới điểm nào (chỉ hiển thị tổng quan tuyến công ty).</p>}
+
     </div>
     {mapError && <p role="alert" className="text-xs text-rose-700">{mapError}</p>}
     {loading && <p role="status" className="text-xs text-slate-500">{progress}</p>}
@@ -111,7 +111,7 @@ export function RoutingMapView({ gps, highlightRouteVersionId, onSnapshot }: { g
     {data && <div className="text-[11px] text-slate-600 space-y-1">
       <p data-testid="map-summary">{data.features.length} tuyến hiển thị · {projects.length} dự án · đọc đủ {data.pages} trang{data.unavailable.length ? ` · ${data.unavailable.length} tuyến không có hình học hiển thị được (không phải ngoài phạm vi)` : ''}</p>
       {data.features.length === 0 && <p>Chưa có tuyến nào trong phạm vi đọc được (đã đọc hết các trang).</p>}
-      <ul className="flex flex-wrap gap-x-3 gap-y-1">{projects.map(([id, p]) => <li key={id} className="flex items-center gap-1"><span className="inline-block w-3 h-1.5 rounded" style={{ background: colorOf(id) }} /><span className="font-semibold text-slate-800">{p.name}</span><span>({p.status} · {p.routes.join(', ')})</span></li>)}</ul>
+
       {data.unavailable.length > 0 && <details><summary className="cursor-pointer">Tuyến không dựng được hình học ({data.unavailable.length})</summary><ul className="list-disc pl-4">{data.unavailable.map(u => <li key={u.routeVersionId} className="break-all">{u.routeVersionId}: {u.missingReasons.join(', ') || 'Chưa có lý do'} (bbox: {u.bboxRelation})</li>)}</ul></details>}
       <p className="text-slate-500">Hình học chỉ để hiển thị, không chứng minh trách nhiệm. Đường nét đứt là phiên bản lịch sử.</p>
     </div>}
