@@ -27,7 +27,6 @@ export function CaseClassification({ caseId, version }: { caseId: string; versio
       <p>Mức độ nghiêm trọng: {d.severity && d.severity !== 'UNKNOWN' ? (['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(d.severity) ? severityLabel(d.severity as Parameters<typeof severityLabel>[0]) : `Mã mức độ chưa nhận diện: ${d.severity}`) : 'Defect chưa có mức độ được phân loại.'}</p>
       {d.status && <p>Trạng thái Defect: {d.status}</p>}
     </div>)}
-    {current?.value && !current.value.rows.length && <p className="text-slate-600">API Case chưa cung cấp Defect liên kết để đọc phân loại đã lưu.</p>}
-    {current?.value && <details className="text-slate-500"><summary>Chi tiết nguồn phân loại</summary><p>Nguồn: Case.defectIds → GET Defect. Không dùng mức độ mặc định của Case. API hiện chưa cung cấp quan hệ lâu dài Report → quyết định cho phiên mới; danh sách này không tự gán từng Defect cho từng ảnh/phản ánh.</p></details>}
+    {current?.value && !current.value.rows.length && <p className="text-slate-600">Chưa đọc được kết quả phân loại</p>}
   </section>
 }
