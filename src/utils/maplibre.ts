@@ -1,4 +1,9 @@
 import * as maplibregl from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+
+// MapLibre 6 resolves its default worker relative to import.meta.url. Let Vite
+// bundle the worker and its imports instead of requesting a missing /assets/*.mjs.
+maplibregl.setWorkerUrl(workerUrl)
 
 /**
  * Cấu hình MapLibre GL chuẩn hóa theo chuẩn https://maplibre.org/
